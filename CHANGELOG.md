@@ -117,3 +117,6 @@ Use before/after kernel-ring evidence for HNAT readback rather than comparing di
 
 ## 0.5.0-alpha5
 Handle bounded kernel-ring rollover without reusing stale HNAT evidence.
+
+## 0.5.0-alpha6
+Accept timezone-qualified Windows deadline precision on router Python 3.9.

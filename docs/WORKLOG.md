@@ -52,3 +52,6 @@ On-device printk and Python monotonic timestamps differ; comparing their values 
 
 ## 0.5.0-alpha5 — bounded kernel ring rollover
 Device ring is full: new hook records replace oldest entries. Match the unique prior tail record and parse only following new records; absent/ambiguous marker refuses. Three regression methods cover rollover, stale reuse and lost/ambiguous baseline. Actual trial pending.
+
+## 0.5.0-alpha6 — Windows deadline / Python 3.9
+Device traceback confirmed Python 3.9 rejects seven fractional digits emitted by Windows DateTimeOffset. Normalise excess fractional digits only when a timezone is present; malformed/missing timezone remains refused. Three regressions. Live switch did not start before this correction.

@@ -73,7 +73,8 @@ def journal_read():
 def deadline(value):
     try:return float(value or 0)
     except ValueError:
-        parsed=datetime.fromisoformat(value.replace('Z','+00:00'))
+        normal=re.sub(r'(\.\d{6})\d+(?=[+-]\d{2}:\d{2}$)',r'\1',value.replace('Z','+00:00'))
+        parsed=datetime.fromisoformat(normal)
         if parsed.tzinfo is None:raise Refused('DEADLINE-TIMEZONE-REQUIRED')
         return parsed.timestamp()
 
