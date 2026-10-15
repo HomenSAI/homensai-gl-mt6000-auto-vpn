@@ -1,31 +1,40 @@
-# Current status / Текущее состояние
+# Project state
 
-15.10.2026: candidate 0.5.0-alpha1; actual device 0.4.0-alpha7, monitor/native DISABLED. Existing-rule experimental adapter added, no live switch verified. HNAT state and LAN verification remain blockers. Remote-work continuity takes priority. See NATIVE-EXPERIMENTAL.md and WORKLOG.md. The dated text below is historical context, not current installation status.
+Updated: 2026-10-15, Europe/Berlin. This file separates device evidence, laboratory evidence and unfinished product work.
 
-# Состояние HomenSAI Auto VPN
+## Device and software
 
-Дата: 14.10.2026. Ветка текущей публикации: feature/openwrt-native-alpha. Продукт связан с https://homensai.com. Название исходного репозитория gl-mt6000-alta-vpn сохранено.
+- GL.iNet GL-MT6000 / Flint 2; GL.iNet firmware 4.11.0; OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc; kernel 5.4.238; aarch64_cortex-a53; Python 3.9.15.
+- LuCI base git-22.335.71649-0ecaf74. Exact recorded environment: TESTED-ENVIRONMENT.en.md and the redacted JSON passport.
+- Installed application: 0.5.0-alpha11. HomenS.AI Style core 1.14.3 assets are pinned and retain their original licences.
+- The sidebar dashboard15/ui13 is a local candidate under development; it is not yet the installed router interface. Its fixture is explicitly synthetic and does not verify a real LuCI settings form.
+- No router packages were removed. mtkhnat remains loaded; runtime hook disable was verified. Kill Switch remained enabled and direct-WAN fallback disabled during accepted tests.
 
-## Работающая локальная демонстрация
+## Confirmed live results
 
-Адрес http://127.0.0.1:8798/; Docker-контейнер alta-vpn-demo, loopback-публикация. См. [инструкции](../demo/README.md).
+- Anonymous UCI sections now use semantic identities excluding generated .name/.index metadata. Reordering resolves current names and checks the stable order/fingerprint after commit. Real changes and indistinguishable duplicates refuse application.
+- 18:21:20–18:22:03: client-confirmed transition to reserve and original-path return passed.
+- 18:23:37: controlled primary-path traffic failure; 18:24:53 automatic APPLYING; 18:25:20 COMMITTED/CLIENT-CONFIRMED. Approximately 76.15 seconds to apply start and 102.43 seconds to reserve confirmation; these are not continuously measured application downtime.
+- 18:26:07: independent fault timer removed its test rule. 18:27:26: independent rollback completed. Separate client checks confirmed original exit/order, DNS/HTTPS and no guard. The first helper completion reported CLIENT-CHECK-FAILED and is not counted as a successful helper exit.
+- A second bounded automatic observation window was started until 19:07:56. Its final helper check reported CLIENT-CABLE-NOT-LOCAL. At 19:09 the router independently reported STOPPED, journal ROLLED-BACK and guard absent. Both Windows adapters were up; the precise client-route-change cause remains unknown. Own automation configuration was then saved disabled.
+- NordVPN on Windows blocked port-53 replies through its DNS Leak Protection WFP filter. The owner approved a temporary service stop; DNS immediately worked. The service was restarted after testing and Running was verified. Wi-Fi remained the default communications path, while only selected cable probes used temporary /32 routes.
+- Successful network transition/rollback is a narrow two-connected-profile result. It does not certify production unattended operation, arbitrary topologies, inactive-profile startup, full IPv6 leak protection or physical power-loss recovery.
 
-Реализованы на модельных данных: редактирование имён/описаний, добавление каналов и серверов OpenVPN/WireGuard, приоритеты, архивирование, моделирование отказов DNS/WAN/VPN, переходы внутри/между каналами и протоколами, неудачная попытка с откатом, графики и уникальные счётчики переходов, доступность с отдельным покрытием, журнал кодов и экспорт, месячный модельный VPN-трафик с границей Europe/Berlin, рейтинг серверов по текущему тесту и средним за период, ручное принятие рекомендаций, краткий монитор модельных служб.
+## Laboratory evidence
 
-Пользовательские настройки/имена сохраняются в браузере; история, трафик и состояния при обновлении страницы заменяются искусственными. Прототип работает на компьютере в Docker, не на роутере. UI и модель не получают реальные сетевые показатели. Частичные интервалы месячного периода учитываются пропорционально; WAN и отдельные специальные правила не входят в модельный VPN-трафик.
+- 90 Python unit tests passed after the UCI identity correction. Windows SelfTest and cable CheckOnly passed. Six Telegram formatter/delivery tests passed after English-text changes; the updated formatter has not yet been installed or live-delivered.
+- Historical model/stress reports are in qa/. Synthetic combinations and Docker child-process crashes are not router power failures or complete native driver acceptance.
+- The old ab28c58 soak was deliberately stopped after discovery that a fake PID could reach real killpg. Tests now mock that syscall. Preserve that limitation with the old release evidence.
 
-## Проверки
+## Remaining work
 
-Отдельно подготовлен [стенд отказов и восстановления транзакций](../qa/ROUTER_FAULT_REPORT.md): 200 модельных комбинаций, семь регрессий и 20 реальных SIGKILL собственных дочерних Linux-процессов с файловым журналом. Всё прошло. Пять случаев повреждения обеих копий журнала ожидаемо сохраняют блокировку; это не потеря LAN-управления. Стенд не является GL.iNet драйвером и не интегрирован с интерфейсом. Настоящие питание, flash, IPv6/conntrack и RPC роутера не испытывались.
+1. Finish/deploy the sidebar UI using the pinned Style core; verify actual LuCI language switching, reload persistence, forms, sorting, operator controls and selected/failed-card order.
+2. Complete system and Telegram-channel wizards, preserving secret-field exclusion and distinguishing supported modes from planned hierarchy.
+3. Add an authenticated, bounded operator failure test with independent cleanup and real acceptance. The manually run timed failure script is not yet a shipped RPC/button.
+4. Extend selection from the currently supported pair to server → channel → protocol only after native adapters and tests cover that hierarchy. Wi-Fi/Ethernet are uplinks, not VPN protocols.
+5. Validate external-writer coordination, actual executor-crash recovery, IPv6 and broader device compatibility before calling the system production-ready.
+6. Keep diagnostics, error histories, fixes and test reports in English. English is the first-entry UI default; optional Russian UI and installation guides are separate. Never translate operator-supplied profile/channel names automatically.
 
-Дополнительно выполнены [массовые испытания модели](../qa/STRESS_REPORT.md): 1200 разных seed, 540 000 шагов и 21 962 002 проверки условий; 4096 сочетаний флагов, 50 000 непрерывных шагов, 400 профилей и 12 регрессионных сценариев. На окончательном коде все прошли. Исходные ошибки и исправления сохранены в отчёте. Месячный накопитель и статистика переходов теперь независимы от вытесняемых подробных логов, но всё ещё живут только в RAM страницы.
+## Publication discipline
 
-33 теста JS-модели, 4 теста статического HTTP-сервера и 30 тестов исходного Python-контроллера проходят. Браузером подтверждены переименование, OpenVPN→WireGuard в модели, рейтинг и ручное применение без смены выхода. Проверены отсутствие ошибок консоли и ссылка в названии на сайт.
-
-## Дальнейшая интеграция
-
-Подготовлена первая [нативная сборка наблюдения](../router/README.md): procd/UCI, собственный rpcd объект, LuCI, инвентаризация профилей без ключей, привязанные IPv4 HTTPS/DNS-пробы, quality aggregates и checkpoint месячных счётчиков. Собран ipk all. Проверки — [NATIVE_BUILD_REPORT.md](../qa/NATIVE_BUILD_REPORT.md). На устройство не установлено, Python в текущем Installed не найден. Нативное автоматическое переключение, GL.iNet apply/rollback и подтверждение LAN/IPv6 остаются незавершёнными; не считать успешную сборку доказательством работы на роутере.
-
-Не реализованы: реальный тест пропускной способности, доказанный маршрут LAN-проб, проверка checkpoint после аварии именно на роутере, единое production-ядро, GL.iNet apply/rollback и автоматическое переключение, совместимость штатных workers, IPv6 и специальные банковские правила. procd/UCI/LuCI и ipk уже написаны, но их установка на устройство не проверена.
-
-Нативные испытания и установку выполнять отдельным этапом после доверенного доступа и проверки совместимости. Исходная цель — GL.iNet GL-MT6000, прошивка 4.11.0/OpenWrt ARM64. main сохраняет согласованный первый коммит; дальнейший код публикуется отдельной веткой feature/openwrt-native-alpha.
+Canonical local Git/Gitea first, then an identical verified public GitHub tree. Public repository: https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn. Do not publish private configuration, passwords, tokens, sessions, host fingerprints, exit IPs, device identifiers or packet/log captures. Published release tags remain immutable.

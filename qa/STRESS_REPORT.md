@@ -1,49 +1,49 @@
-# Испытания модели HomenSAI Auto VPN
+# HomenSAI Auto VPN model tests
 
-Дата: 14.10.2026. Объект: локальная JavaScript-модель demo/model.js и демонстрационный интерфейс. Тесты не подключались к роутеру и не меняли его VPN.
+Historical report dated 2026-10-14. Target: local JavaScript demo/model.js and demonstration UI. These tests neither connected to the router nor changed VPN settings.
 
-## Итог после исправлений
+## Results after fixes
 
-| Набор | Объём | Результат |
-| --- | --- | --- |
-| Генерируемые сценарии, seeds 1–600 | 600 последовательностей × 300 шагов | 600 прошли, stress-1.json |
-| Независимые сценарии, seeds 1001–1600 | 600 последовательностей × 600 шагов | 600 прошли, stress-2.json |
-| Полная матрица 12 булевых флагов | 4096 сочетаний × 3 шага | 4096 прошли |
-| Целевые регрессии | 12 сценариев найденных дефектов | 12 прошли |
-| Длительные и ёмкостные испытания | 5 проверок, в том числе 50 000 непрерывных шагов и 400 профилей | 5 прошли |
-| Прежние тесты JS-модели | 33 сценария | 33 прошли |
-| Python-контроллер и HTTP-сервер | 30 + 4 теста | Все прошли |
+| Suite | Scope | Result |
+|---|---|---|
+| Generated scenarios, seeds 1–600 | 600 sequences × 300 steps | 600 passed; stress-1.json |
+| Independent scenarios, seeds 1001–1600 | 600 sequences × 600 steps | 600 passed; stress-2.json |
+| Full 12-boolean matrix | 4096 combinations × 3 steps | 4096 passed |
+| Targeted regressions | 12 defect scenarios | 12 passed |
+| Endurance/capacity | 5 checks, including 50,000 uninterrupted steps and 400 profiles | 5 passed |
+| Earlier JS-model tests | 33 scenarios | 33 passed |
+| Python controller and HTTP server | 30 + 4 tests | All passed |
 
-Две группы генеративных сценариев содержат 1200 различных начальных seed и суммарно 540 000 шагов (по пять модельных секунд). Повторные запуски одних и тех же seed не считаются дополнительными уникальными сценариями. Подробные численные результаты и число проверок условий находятся в JSON-отчётах рядом.
+The generated groups contain 1200 distinct initial seeds and 540,000 total steps of five model seconds each. Replaying a seed is not another unique scenario. Adjacent JSON reports hold assertion counts and detailed numeric results.
 
-## Что варьировалось
+## Variations
 
-В каждом сценарии — от одного до шести исходных каналов с одним–семью серверами, затем добавление новых профилей/каналов. Применяются 22 вида действий: обрыв туннеля, blackhole, DNS, неизвестный путь, WAN, отказ всех VPN, восстановление, ручной выбор, настройки автоматики/возврата/WAN fallback, неудачная попытка применения, переименование, изменение протокола, архивирование, приоритеты и принятие рейтинга.
+Each scenario starts with one to six channels, each with one to seven servers, then adds profiles/channels. There are 22 action kinds: tunnel failure, blackhole, DNS, unknown path, WAN, all-VPN failure, recovery, manual selection, automation/failback/WAN-fallback settings, failed apply, renaming, protocol changes, archiving, priorities and ranking acceptance.
 
-Начальные даты включают обычный день, границы января/октября/декабря и смену летнего/зимнего времени. Проверяется монотонность месячных счётчиков внутри месяца и точное совпадение с отдельным расчётом по исходным интервалам. Неизвестное время исключается из доступности и полноты месячных измерений.
+Initial dates cover ordinary days, January/October/December boundaries and DST transitions. Tests check monthly counter monotonicity within a month and agreement with an independent interval calculation. Unknown time is excluded from availability and measurement completeness.
 
-Матрица перебирает все сочетания четырёх признаков здоровья основного, четырёх признаков резерва и WAN/автоматики/приоритета доступности/разрешения WAN. Она исчерпывает именно эти 4096 сочетаний, а не все возможные последовательности работы системы.
+The matrix exhausts four primary-health flags, four reserve-health flags and WAN/automation/availability-priority/WAN-permission flags: exactly 4096 combinations, not every possible system sequence.
 
-## Найденные и исправленные дефекты
+## Defects found and fixed in the model
 
-1. Снятие разрешения прямого WAN не закрывало уже выбранный обход. Теперь разрешение отзывается сразу, без ожидания возврата VPN.
-2. Обрыв WAN не сбрасывал накопленную уверенность в восстановлении основного. Теперь успешные проверки должны накопиться заново.
-3. Рейтинг доверял старому успеху после нового отказа, при недоступном WAN и после истечения срока свежести. Теперь кандидат должен быть здоров сейчас, а результат — подтверждённым и не старше 60 модельных секунд.
-4. Месячный объём зависел от короткой истории графика и мог уменьшаться при её вытеснении. Теперь используется отдельный накопитель по календарным месяцам, до 18 месяцев в RAM модели.
-5. Время восстановления всегда показывало 15 секунд, даже после неудачи и ожидания повторной попытки. Теперь оно считается от начала известного сбоя до успешного восстановления.
-6. Повторные попытки одного сбоя получали разные episode_id. Теперь цепочка сохраняет общий эпизод.
-7. Здоровое ручное переключение ошибочно считалось восстановлением после простоя. Теперь recovery=null, и оно не портит среднее время восстановления.
-8. После появления готового VPN прямой WAN мог удерживаться пять минут. Теперь уход с WAN ждёт готовности кандидата и короткого cooldown, а не выдержки возврата между VPN.
-9. Добавление профиля могло автоматически выбрать VPN поверх состояния usingWan. Создание профиля теперь не меняет текущий выход.
-10. Очистка ограниченного журнала уменьшала счётчик переключений. Теперь статистика хранится отдельными агрегатами за восемь дней, журнал ограничен 1000 строками.
+1. Revoking WAN permission left an already selected bypass active. Permission is now withdrawn immediately without waiting for VPN recovery.
+2. WAN failure retained primary-recovery confidence. Successful probes must now accumulate again.
+3. Ranking trusted an old success after failure, during WAN loss or after freshness expiry. Candidates must be healthy now, with verified results no older than 60 model seconds.
+4. Monthly traffic depended on short chart history and could decrease after eviction. A separate calendar-month accumulator retains up to 18 months in model RAM.
+5. Recovery always showed 15 seconds despite failed attempts/retry delay. It now spans known-failure start to successful recovery.
+6. Retries for one incident received different episode_id values. The recovery chain now retains one episode.
+7. Healthy manual switching counted as downtime recovery. recovery=null prevents distortion of recovery-time averages.
+8. Direct WAN could remain selected for five minutes after a VPN became ready. Leaving WAN now waits for candidate readiness and a short cooldown rather than VPN failback hold time.
+9. Adding a profile could select VPN over usingWan. Profile creation no longer changes active exit.
+10. Trimming bounded logs decreased switch counts. Separate eight-day aggregates preserve statistics; the log is limited to 1000 rows.
 
-Отдельно добавлен backoff повторных неудачных применений: 30, 60, 120, 240, затем максимум 300 секунд. За 30 модельных минут постоянных ошибок тест зафиксировал девять попыток, без повторения каждые 30 секунд.
+Retry backoff after repeated apply failures is 30, 60, 120, 240, then at most 300 seconds. A 30-model-minute permanent-failure case produced nine attempts instead of retrying every 30 seconds.
 
-Первичные десять целевых проверок падали до исправлений. Пилот из 100 генерируемых сценариев выявил конфликт создания профиля с WAN-резервом в 30 последовательностях. Это сохранено как диагностические исходные результаты; итоговая оценка относится к повторным запускам после исправлений.
+The first ten targeted checks failed before fixes. A 100-scenario pilot found a profile-creation/WAN-reserve conflict in 30 sequences. Initial diagnostic failures are retained separately; final results refer to reruns after correction.
 
-## Воспроизведение
+## Reproduction
 
-Из корня репозитория, Node.js 22 и Python 3:
+From repository root with Node.js 22 and Python 3:
 
 ```sh
 node demo/test_model.js
@@ -56,12 +56,10 @@ python -m unittest discover -s demo -q
 python -m unittest discover -s prototype -q
 ```
 
-stress_model.js принимает путь JSON-отчёта первым аргументом. Переменные ALTA_RUNS, ALTA_STEPS, ALTA_SEED_START задают число последовательностей, длину и диапазон seed. JSON сохраняет seed и последние действия при ошибке.
+stress_model.js accepts a JSON-report path as its first argument. ALTA_RUNS, ALTA_STEPS and ALTA_SEED_START control sequence count, length and seed range; errors retain seed and recent actions in JSON.
 
-## Практические границы
+## Practical limits
 
-Проверена логика модели. Реальные VPN-серверы, задержки Linux, потеря питания, flash, IPv6, conntrack, штатные workers GL.iNet, отказ RPC и настоящее применение/откат на устройстве в этот прогон не входят. 400 профилей проверены в Node.js на компьютере; это не обещание ёмкости роутера.
+This proves model logic. Real VPN servers, Linux delays, device power loss, flash, IPv6, conntrack, GL.iNet writers, RPC failures and actual device apply/rollback are outside this run. 400 profiles were tested in desktop Node.js, not proven as router capacity.
 
-Накопители модели живут в RAM страницы: обновление страницы пересоздаёт искусственные данные. Отдельный месячный накопитель переживает очистку графика, но пока не перезагрузку браузера или устройства. Для роутерной версии постоянное хранилище и независимые стендовые испытания остаются обязательными.
-
-Изменения находятся в локальной ветке feature/dashboard-prototype. Нового коммита и отправки в Gitea этим этапом не выполнялось.
+Model accumulators live in page RAM; refresh recreates synthetic data. The separate monthly accumulator survives chart trimming but not browser/device restart. Persistent router storage and independent native tests remained required. At the historical checkpoint, changes were in feature/dashboard-prototype and no new commit/Gitea push occurred during that stage.

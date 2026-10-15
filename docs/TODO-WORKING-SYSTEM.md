@@ -1,37 +1,41 @@
-# TODO: доведение HomenSAI Auto VPN до рабочего состояния
+# Working-system completion checklist
 
-Дата: 15.10.2026. Владелец поручил выполнить все пункты. Испытательное окно до 14:00 подтверждено владельцем; дополнительно требуется подтверждённая пауза соседних задач. Текущая удалённая работа имеет приоритет: до отдельного окна не выполнять действия с возможным обрывом. Отмечать выполненным только после указанной проверки; стенд не заменяет устройство.
+Updated 2026-10-15. Check a task only after its stated evidence exists. Laboratory tests do not replace device acceptance. The detailed chronology is WORKLOG.md; exact firmware/model details are TESTED-ENVIRONMENT.en.md.
 
-## Подготовка и безопасность
+## Completed with stated scope
 
-- [x] Зафиксировать текущий режим: устройство alpha7, монитор включён, эксперимент выключен; три активных профиля проходят IPv4 HTTPS/DNS. Кандидат alpha8 отдельно.
-- [x] Запустить изолированные автоматические испытания двух снимков и наблюдение реальных статусов до 14:00.
-- [ ] Подтвердить фактическое отключение HNAT. Учитывать ответы debugfs через журнал ядра; старые сообщения и намерение отключить не считать доказательством. Проверка: свежие достоверные данные на устройстве, отсутствие обхода защитного правила.
-- [ ] Согласовать и проверить работу со штатными writers/hotplug GL.iNet. Проверка: конкурирующая смена политики не затирается, переключение/откат не оставляют рассогласованные маршруты, DNS и firewall.
-- [ ] Подготовить независимый LAN-клиент и путь восстановления управления. Проверка: управление доступно при отказе выбранного VPN. Окно до 14:00 подтверждено. Компьютер исполнения использует другой шлюз; независимая LAN-проверка не завершена.
+- [x] Preserve original own settings and recover Internet after the experimental UCI-alias defect; verify cable DNS/HTTPS and original exit/order, keeping Wi-Fi available.
+- [x] Verify disabled HNAT hook at runtime without forced unload or package removal. Loaded mtkhnat is not claimed unloaded.
+- [x] Correct anonymous-section identity, retaining all semantic policy fields and rejecting duplicates/real changes. 90 Python tests and actual reorder/return passed.
+- [x] Persist bounded checksummed controller history with previous-good backup, deduplication and monthly counters; exclude credentials, transaction tokens, exit IP and kernel logs.
+- [x] Implement typed client-confirmation and Stop RPC, durable stop latch, trial nonce, bounded deadline/attempt count/cooldown and a separate supervisor.
+- [x] Verify one live client-confirmed transition/return, one controlled-failure automatic transition and independent rollback between two already connected profiles.
+- [x] Add source-bound cable probe routes while Wi-Fi stays default; temporary routes are removed on completion. This verifies selected IPv4 probes only.
+- [x] Record exact failures, causes, changes, timestamps and limits; local Gitea precedes an identical GitHub snapshot.
+- [x] Translate work log, diagnostic catalogue, changelog and QA reports into English. English report text is tested but awaits next package deployment.
 
-## Код и интерфейс
+## Device and production acceptance still required
 
-- [x] Сохранять историю переходов и ошибок после перезапуска: ограниченный журнал, контроль целостности, резервная копия, месячные счётчики. Проверка: восстановление из резервной копии, отсутствие дублей, отказ записи не разрешает новый switch; секреты/exit IP/токены в историю не попадают.
-- [ ] Добавить понятный wizard испытания: основной сервер, резерв, срок, допуск разрыва сессий, запуск/остановка и причины блокировки. Проверка: EN/RU, английский по умолчанию, без обхода preflight и поддельного ACK.
-- [x] Реализовать клиентское подтверждение DNS/HTTPS и ожидаемого VPN-выхода. Проверка: неверный выход или отсутствие подтверждения приводят к откату; интернет компьютера с другим шлюзом не считается доказательством.
-- [x] Вывести историю, коды ошибок и статистику переходов в интерфейсе и отчётах. Отделять тестовые попытки от автоматических переходов, общий профиль от реально выбранного пути и неизвестное время от доступности.
-- [ ] Добавить проверку неактивных серверов с честной областью измерения: reachability endpoint отдельно от работоспособности VPN; полноценное подключение только в испытательном окне. Рейтинг RTT не называть скоростью загрузки.
-- [x] Проверить ограничения повторов, cooldown, отсутствие переключения по неизвестным/устаревшим данным, отказ записи, перезапуск контроллера и окончание окна. Проверка: воспроизводимые регрессии нового адаптера, а не только прежней модели.
+- [ ] Prove shared coordination with GL.iNet writers/hotplug, not merely a private lock plus before/after fingerprints.
+- [ ] Test actual executor-crash recovery and independent rollback on device. Physical power cuts require their own explicit test and must not be inferred from Docker child crashes.
+- [ ] Validate IPv6 handling/leak protection with an independent client; current acceptance is IPv4 with router IPv6 disabled.
+- [ ] Diagnose the final CLIENT-CABLE-NOT-LOCAL in the bounded observation window. Adapters being up does not establish the selected client route.
+- [ ] Verify final helper completion after transient-network retry changes. Independent router rollback passed, but a previous helper exit was not successful.
+- [ ] Define and validate unattended production operation; current mode is a bounded, client-confirmed experiment.
 
-Отметки в разделе кода означают проверенный код/стенд, не установку на устройство. Для alpha0.5: 76 Python-теста, Lua 5.1 с проверкой исключения секретов, PowerShell 7 SelfTest и отрицательная проверка неверного шлюза. Четыре аварии собственных процессов истории пройдены. EN/RU проверены на явно синтетическом UI; настоящая форма LuCI и положительный клиентский тест остаются частью приёмки.
+## Interface and configuration
 
-## Приёмка на устройстве
+- [ ] Finish left navigation, real-data cards/charts, version top right and author-logo website link; verify desktop/mobile layouts.
+- [ ] Verify English default, optional Russian switching and reload persistence on the actual LuCI page. Diagnostics remain English in either locale.
+- [ ] Add table sorting/search and visual card order based on actual policy/confirmed health: selected healthy first, failed last; green/red/pale-yellow/neutral states must not equate Connected with Internet availability.
+- [ ] Complete system wizard: import existing profiles, names, supported priorities, supported mode/return settings, readiness summary and explicit start/stop workflow.
+- [ ] Complete Telegram-channel wizard: private token entry, destination, bot send permissions, deliberate test delivery and reporting schedule. Never prefill or publish a stored token.
+- [ ] Ship a bounded operator fault button with independent cleanup and test it end-to-end. A manually executed test script is not a completed product feature.
+- [ ] Extend native selection to server/channel/protocol hierarchy only after adapters and tests support it; do not imply Wi-Fi is a VPN protocol.
+- [ ] Probe inactive profiles safely without disturbing normal traffic; current native adapter only uses already connected profiles.
 
-- [ ] Получить от соседних активных задач подтверждения checkpoint и паузы. Отправка в задачи других проектов отклонена автоматической проверкой разрешений; уточнение владельцу запрошено. До подтверждений не начинать эксперимент с обрывом. После подтверждённого восстановления сообщить задачам продолжить.
+## Release
 
-- [ ] Выполнить контролируемый переход OpenVPN ↔ WireGuard между подключёнными резервами, затем вернуть исходное состояние. Проверка: независимый LAN DNS/HTTPS, Kill Switch, IPv6 заблокирован либо проверен, специальные правила и панель доступны.
-- [ ] Проверить настоящий отказ исполнителя и независимый откат на устройстве. Проверка: восстановление подтверждено клиентом, чужие изменения не перезаписаны. Реальные отключения питания — отдельное разрешённое испытание, не обязательная имитация для видимости результата.
-- [ ] После приёмки включить эксплуатационный режим с согласованной политикой возврата и уведомлениями. Проверка: реальное автоматическое восстановление; не включать до предыдущих пунктов.
-
-## Выпуск
-
-- [ ] Обновить паспорт совместимости, EN/RU инструкции, AI-промпт, журнал работы, коды ошибок и результаты испытаний по фактам.
-- [ ] Прогнать проверки, аудит секретов, воспроизводимую сборку и UI-проверку. Сначала локальный Git/Gitea, затем идентичный снимок GitHub; версия видна вверху справа. Не удалять существующие пакеты.
-
-Готовность означает пройденную приёмку на роутере. Прохождение unit/model tests отдельно не закрывает пункты живого применения.
+- [ ] Update compatibility passport and installation/AI prompts after actual device acceptance, retaining truthful limits.
+- [ ] Run change-appropriate checks, privacy audit, reproducible build and real UI verification; publish local Git/Gitea first, exact GitHub snapshot second.
+- [ ] Install the checked UI/reporting package after the active test window has completed; preserve current settings and recoverable state.

@@ -1,11 +1,9 @@
 # Native OpenWrt package
 
-Current version: **0.5.0-alpha1**. Monitor mode only; operational automatic failover is unavailable.
+Current release candidate: **0.5.0-alpha12**. Monitor available; bounded two-connected-profile automatic failover and independent rollback have device evidence. Unattended production operation and multi-level hierarchy remain unvalidated.
 
-[English installation](../docs/INSTALL.en.md) · [Установка](../docs/INSTALL.ru.md) · [Validation](../docs/VALIDATION.md) · [Release history](../CHANGELOG.md)
+[Installation](../docs/INSTALL.en.md) · [Russian installation](../docs/INSTALL.ru.md) · [Validation](../docs/VALIDATION.md) · [Release history](../CHANGELOG.md) · [Current state](../docs/STATE.md)
 
 Build: `python3 router/build_ipk.py releases`. Test: `python3 -m unittest discover -s router/tests -q`.
 
-Native experiment / Нативный эксперимент: see docs/NATIVE-EXPERIMENTAL.md in the repository. Public installation guidance remains MONITOR-only. / Публичная инструкция устанавливает только мониторинг.
-
-[Working-system TODO / План доведения](../docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](../docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.
+Public installation defaults to monitoring. Experimental operation requires the client workflow and supported prerequisites; see [client trial](../docs/CLIENT-TRIAL.md) and [completion checklist](../docs/TODO-WORKING-SYSTEM.md). English diagnostics/report text are default; the sidebar 0.6 UI remains a separately tested candidate.

@@ -1,45 +1,45 @@
-# Журнал работы / Work log
+# Work log
+
+All times are Europe/Berlin unless an entry explicitly states otherwise. Historical entries describe the evidence available at that time; later entries supersede readiness statements. Missing timestamps are explicitly marked rather than invented. Format: timestamp → error → confirmed cause → change → verification → remaining limits.
 
 ## 2026-10-15 · 10:33–11:45 Europe/Berlin
 
-- Пользователь разрешил автоматические стендовые испытания до 14:00 и попросил реализовать автопереключение; позже разрешил отключить мешающее ускорение. Затем приоритетом стала сохранность текущей удалённой рабочей связи. Последнее ограничение отменяет намеренные обрывы во время этой работы.
-- До 14:00 запущен изолированный повторный прогон snapshot 386b4b3, niceness 15, новые seed в каждом цикле, остановка при первой ошибке. Никаких команд роутеру в этом стенде нет.
-- Написан native_switch.py, внутренний Lua-инвентарь, отдельный procd supervisor, журнал с checksum/fsync, восстановление, ограничение числа попыток/дедлайна, внешнее подтверждение и ограниченный nft FORWARD guard. Область: две соседние общие VPN-политики уже подключённых интерфейсов. Не считать полноценной координацией всех vendor writers.
-- Alpha1: установлен первый диагностический адаптер. Найдено, что наличие загруженного ускорителя нельзя считать доказательством его работы/отключения.
-- Alpha2: добавлена проверка runtime HNAT и исправлен перезапуск именно собственного сервиса при обновлении. Без него одинаковая команда procd могла оставить старый Python-процесс.
-- Alpha3: явная подготовка отключения ускорения, сохранение исходных параметров, ограничение повторов. Прямой commit через RPC запрещён; set не означал сохранение. Штатные apply с rollback и confirm прошли. Секреты не сохранялись в публичных файлах.
-- Alpha4: не считать nonzero остановки уже остановленной службы окончательным результатом; проверять реальное состояние. Добавлены этапы диагностики. Три неудачи останавливают подготовку.
-- Alpha5: обычная выгрузка только модулей ускорителей, без force; программный shortcut_fe выгружен. Пакеты сохранены. Mount/debugfs больше не добавляется автоматически новой процедурой.
-- Alpha6: неизвестный формат hook не признаётся disabled; разрешён только обычный fallback, который ядро отклоняет при занятости модуля. mtkhnat остаётся загруженным; успешное аппаратное отключение не объявлялось.
-- Alpha7: установлен на устройство; ограниченное чтение показало пустое тело hook_toggle. Три активных VPN продолжают проходить проверки. Подготовка остановлена, эксперимент явно выключен, запрос подготовки удалён.
-- Alpha8: кандидат только для стенда. Добавлена диагностика свежих сообщений ядра при пустом debugfs; устаревшие сообщения и «going to disable» не являются доказательством. На роутер во время удалённой работы не установлен.
-- Найдены и закрыты поздняя смена политики во время проверки выхода, повторный trial после рестарта, оставшиеся дочерние процессы после ошибки shell, отсутствие клиентского ACK, повреждение журнала. Проверки и ограничения описаны в NATIVE-EXPERIMENTAL.md.
-- 52 теста native monitor/package и 9 тестов лабораторного контракта проходят. На промежуточном checkpoint: 21 цикл старого soak, 105 suite runs, 2100 новых seed, 945000 шагов, 37687012 assertions, 420 child-process crash cases, ошибок 0. Не выдавать за реальные аварии питания роутера или тест нового адаптера.
-- Внешнее наблюдение за реальными статусами запущено каждые 30 секунд до 14:00; расписание текущего чата — каждые 5 минут до 14:00. Реальные наблюдения ограничены IPv4 HTTPS/DNS с роутера. Шлюз исполнения отличается от GL-MT6000; независимая клиентская проверка не выполнена. Автоматическое восстановление интернета не объявлялось.
-- Локальный Git сначала: первый snapshot 0b8d9fe. Финальное исправление/документация — следующий отдельный коммит. Далее точный экспорт на GitHub; личные конфигурации, журналы устройства, адреса, токены, пароли и временные наблюдения исключаются.
-
-Открыто: доказать отключение HNAT; подготовить независимый LAN-клиент и пользовательский trial wizard; проверить guard/apply/rollback на устройстве в отдельном окне; координация hotplug/vendor workers и реальные сбои питания/flash. Продукт остаётся monitor-first.
+- The owner authorised automatic laboratory tests until 14:00 and requested automatic switching, subsequently allowing acceleration to be disabled if it interfered. Preserving the active remote-work connection then took priority; that later restriction prohibited intentional interruptions during remote work.
+- An isolated repeated run of snapshot 386b4b3 was started until 14:00, niceness 15, new seeds each cycle, stopping at the first failure. The laboratory issued no router commands.
+- Implemented native_switch.py, internal Lua inventory, a separate procd supervisor, checksummed/fsynced journal, recovery, bounded attempts/deadline, external confirmation and a scoped nft FORWARD guard. Scope: two adjacent catch-all policies using already connected VPN interfaces. This does not constitute complete coordination with all vendor writers.
+- Internal 0.4 alpha1 installed the diagnostic adapter; a loaded accelerator module was found insufficient to prove either active or disabled acceleration.
+- Internal alpha2 added runtime HNAT inspection and restart of only the own service on upgrades; an unchanged procd command could otherwise retain an older Python process.
+- Internal alpha3 added explicit acceleration preparation, preservation of original parameters and bounded retries. Direct RPC commit was denied; set alone did not persist. Standard apply with rollback and confirm succeeded. Public files excluded secrets.
+- Internal alpha4 stopped treating a nonzero stop result for an already stopped service as conclusive; runtime state was checked and diagnostic stages added. Three failures terminate preparation.
+- Internal alpha5 used normal accelerator-only module removal, without force. Software shortcut_fe was unloaded; packages were retained. The new preparation procedure did not automatically mount debugfs.
+- Internal alpha6 rejected unknown hook output as evidence of disabled acceleration. Only normal removal was allowed; the kernel refused removal of a busy module. mtkhnat remained loaded, with no claim of verified hardware disable.
+- Internal alpha7 was installed. Limited reads returned an empty hook_toggle body; three active VPNs continued to pass probes. Preparation was stopped, the experiment explicitly disabled and the preparation request removed.
+- Internal alpha8 remained a laboratory candidate: fresh kernel responses were inspected when debugfs returned no bytes. Old responses and “going to disable” were not accepted as proof. It was not installed during remote work.
+- Fixed late policy changes during exit checks, trial replay after restart, orphaned children after shell failure, missing client ACK and corrupt journals. Tests and limits are documented in NATIVE-EXPERIMENTAL.md.
+- 52 native monitor/package/controller tests and 9 laboratory contract tests passed. Intermediate baseline checkpoint: 21 cycles, 105 suite runs, 2,100 new seeds, 945,000 steps, 37,687,012 assertions and 420 own child-process crash cases, zero failures. These are neither router power failures nor tests of the new native adapter.
+- External observations ran every 30 seconds until 14:00, with chat checks every five minutes. Scope was router-originated IPv4 HTTPS/DNS. The execution host gateway differed from the GL-MT6000; independent LAN verification had not passed. Automatic Internet recovery was not claimed.
+- Local Git first: initial snapshot 0b8d9fe; final fixes/documentation were to be committed separately, followed by an exact GitHub export. Private configuration, device logs, addresses, tokens, passwords and temporary observations were excluded.
+- Open at that time: prove HNAT disable, prepare an independent LAN client and trial wizard, test guard/apply/rollback in a separate window, coordinate hotplug/vendor writers, and test actual power/flash failures. The product remained monitor-first.
 
 ## 2026-10-15 · 11:46–11:50 Europe/Berlin
 
-- Финальный исходный snapshot ab28c58 сохранён в локальном Gitea вместе с тегом v0.4.0-alpha8. Публичный экспорт дерева проверен идентичным; GitHub commit 45e0ebb, prerelease v0.4.0-alpha8 с IPK и SHA256 опубликован. Тег не передвигается после публикации.
-- С 11:46 запущен второй независимый изолированный soak snapshot ab28c58 до 14:00, включая 52 новых monitor/package/controller tests, 9 lab tests и отдельные новые seed с 200001. Старый soak 386b4b3 продолжается отдельно. Их счётчики и области проверки не смешиваются.
-- Наблюдение реальных статусов с роутера: отдельный процесс каждые 30 секунд, секреты только в памяти, обезличенные записи вне Git. Дополнительный heartbeat текущего чата каждые 5 минут до 14:00 проверяет свежесть, оба стенда и признаки сбоя; здоровое состояние не дублируется сообщениями.
-- Состояние перед завершением публикации: на устройстве alpha7, native DISABLED; подготовительный запрос убран. Аппаратный ускоритель не объявляется выключенным; software shortcut_fe выгружен. Кандидат alpha8 не установлен из-за приоритета удалённой рабочей связи. Автоматическое восстановление интернета не обещается и не считается проверенным.
+- Source snapshot ab28c58 was saved to local Gitea with tag v0.4.0-alpha8. The public tree was verified identical; GitHub commit 45e0ebb and prerelease v0.4.0-alpha8 with IPK/SHA256 were published. Published tags are not moved.
+- A second independent isolated soak of ab28c58 started at 11:46 until 14:00, running 52 monitor/package/controller tests, 9 lab tests and separate seeds starting at 200001. The earlier 386b4b3 soak continued separately; scopes and counters were not combined.
+- A separate process observed live router status every 30 seconds; secrets stayed in memory and sanitised records outside Git. Five-minute thread checks inspected freshness, both laboratory runs and failure evidence; healthy states were not repeatedly announced.
+- Device state at publication: alpha7, native DISABLED, preparation request removed. shortcut_fe was unloaded; hardware disable remained unverified. Candidate alpha8 was not installed because the remote-work connection took priority. Automatic recovery was not considered tested.
 
-## 2026-10-15 · 12:27–13:30 Europe/Berlin · кандидат 0.5.0-alpha1
+## 2026-10-15 · 12:27–13:30 Europe/Berlin · candidate 0.5.0-alpha1
 
-- Создан docs/TODO-WORKING-SYSTEM.md с условиями приёмки. Владелец подтвердил испытательное окно до 14:00 и потребовал сначала checkpoint/паузу соседних задач, затем испытание, восстановление и сообщение о продолжении. Рассылка в другие проекты отклонена автоматической проверкой; уточнение запрошено. Подтверждений паузы нет, сетевой эксперимент не начинался.
-- Добавлены постоянная история с checksum и предыдущей исправной копией, bounded 500 записей / 18 месяцев, дедупликация, месячные счётчики. Из истории исключены tx, exit IP, пароль/токен и kernel log. Проверены новый процесс и четыре SIGKILL только собственных дочерних процессов на границах atomic replace; это не питание роутера.
-- Отдельные native_confirm/native_stop RPC исключают применение UCI ради ACK: оно могло перезапустить ожидающий контроллер. Подтверждение принимается только для свежего ожидающего tx, совпадающего выхода и успешных клиентских DNS/HTTPS. Остановка привязана к текущему trial, сохраняется во flash и не снимается перезапуском.
-- Исправлены отсутствие записи ошибок, сохранение guard после штатной остановки/истечения окна, слишком позднее разрешение рабочего процесса при отказе истории, и отсутствие метаданных кандидатов после Stop. Добавлены cooldown/attempt-limit регрессии. Настройки и guard не менялись на устройстве.
-- Найдена проблема старого тестового harness: фиктивный PID 123 мог попасть в реальный killpg. Старый новый-кандидат soak ab28c58 остановлен после 18 завершённых циклов; результаты сохранены. Во всех таких тестах системный вызов теперь заменён mock. Фактов повреждения других процессов нет; роутер этим контейнерным тестом не управлялся. Повторные тесты alpha8 не рекомендованы до исправленного harness.
-- Создан Windows LAN helper с приватным вводом пароля и безопасной проверкой шлюза/DNS/IPv6 до запуска. SelfTest пройден без сети; CheckOnly на компьютере исполнения корректно отказал CLIENT-GATEWAY-MISMATCH. Это не положительная LAN-проверка. Адрес управления и LAN-адрес проверены; прямого LAN-пути у исполнителя не подтверждено.
-- UI EN/RU проверен на изолированной явно синтетической странице: кнопка Stop, инструкции, история и месячные счётчики. LuCI settings form в fixture не воспроизводилась; её реальная проверка открыта. Подправлена формулировка режима и добавлено оформление кнопок из существующих токенов стиля.
-- Telegram formatter теперь получает native state/history до отправки; убрана безусловная фраза о выключенном переключении. Форматирование проверено без реальной отправки, с отдельными тестовыми/автоматическими результатами и исключением приватных полей.
-- Финальные проверки этапа: 76 Python tests PASS; Lua 5.1 syntax/inventory/credential exclusion PASS в отдельном disposable container, общая среда не менялась; PowerShell 7 SelfTest PASS; негативный CheckOnly ожидаемо отказал. Положительное применение/откат на роутере не заявляется. Устройство пока alpha7/monitor/native disabled.
-
-- Дополнительная проверка завершения выявила риск возврата на отказавший исходный VPN. finish_committed теперь возвращает исходный порядок только после свежей успешной проверки источника; иначе сохраняет резерв, отмечает original_restored=false и не выдаёт неизвестную связь за восстановленную. Коммит не отменяется автоматически при рестарте контроллера. Три регрессии пройдены. Клиентский helper дополнительно ждёт подтверждённый Stop и проверяет конечный путь; таймаут без результата не возвращает успешный exit code. ACK сверяется не только с публичным статусом, но и с checksummed private journal WAIT-CLIENT. Всего 76 тестов PASS.
+- Created TODO-WORKING-SYSTEM.md with acceptance gates. The owner confirmed a window until 14:00 and required neighbouring tasks to checkpoint/pause before interruption, followed by restoration and notification to resume. Cross-project messages were rejected by automatic approval review; clarification was requested. No pause acknowledgments had arrived, so no outage experiment was started.
+- Added persistent checksummed history with a previous-good backup, bounds of 500 events/18 months, deduplication and monthly counters. History excludes transaction tokens, exit IP, passwords/tokens and kernel logs. Restart and four SIGKILL boundaries around atomic replacement were tested only on own child processes, not router power.
+- Typed native_confirm/native_stop RPCs avoid UCI apply for ACK, which could restart the waiting controller. ACK requires a fresh matching transaction/exit and successful client DNS/HTTPS. Stop is trial-bound, persisted to flash and survives restart.
+- Fixed missing error records, retained guard after normal stop/expiry, releasing a worker too late after a history failure, and missing candidate metadata after Stop. Added cooldown/attempt-limit regressions. Device settings and guard were not changed during this stage.
+- Found an old test-harness defect: fake PID 123 could reach real killpg. Candidate soak ab28c58 was stopped after 18 completed cycles and its results retained. All such tests now mock the syscall. No damage to other processes was observed; the container tests did not control the router. Do not rerun the old alpha8 harness without that fix.
+- Added a Windows LAN helper with private password entry and gateway/DNS/IPv6 checks. Offline SelfTest passed; CheckOnly correctly refused CLIENT-GATEWAY-MISMATCH on the execution host. That was a negative result, not successful LAN verification. Management/LAN addresses were checked, but a direct LAN path was unverified.
+- Checked EN/RU UI on an isolated explicitly synthetic fixture: Stop button, instructions, history and monthly counters. The real LuCI settings form was omitted from that fixture and remained unverified. Mode wording and controls were adjusted using existing Style tokens.
+- Telegram formatting now receives native state/history before delivery instead of unconditionally reporting switching disabled. Formatting was tested without live delivery, keeping trial/automatic results separate and excluding private fields.
+- Stage checks: 76 Python tests PASS; Lua 5.1 syntax/inventory/credential exclusion PASS in a disposable container without changing the shared environment; PowerShell 7 SelfTest PASS; CheckOnly correctly failed. Positive device apply/rollback was not claimed. Device remained alpha7/monitor/native disabled.
+- A later review identified unsafe return to an unhealthy source. finish_committed now restores the original order only after a fresh successful source check; otherwise it retains reserve, reports original_restored=false and does not call unknown connectivity restored. Committed state survives controller restart. Three regressions passed. The helper waits for Stop confirmation and verifies the final path; timeout cannot return success. ACK also checks the private checksummed WAIT-CLIENT journal. Total remained 76 tests PASS.
 
 ## 2026-10-15 — 0.5.0-alpha2: router startup compatibility
 SSH log confirmed native controller crash: Python on device lacks time.tzset. Added libc fallback matching existing monitor and three regression cases. Before fix only monitor was running; stale native status must not be treated as live. No successful switching trial claimed. Credentials and device identifiers excluded.
@@ -81,86 +81,105 @@ All observations above distinguish executed checks from planned work. No router 
 ## 0.5.0-alpha7 — nft batch compatibility
 Use private mode-0600 runtime temporary batch file, nft check before apply, and unconditional removal. Avoid missing /dev/stdin without changing device nodes. Regression verifies file permissions, check/apply order, cleanup and no apply on rejected check. Pending live acceptance.
 
-## Подробный журнал инцидентов — 15.10.2026, Europe/Berlin (UTC+02:00)
+## Detailed incident history — 2026-10-15, Europe/Berlin (UTC+02:00)
 
-Время ниже означает время события только при наличии отметки источника. Для восстановленных записей без точной отметки время не выдумывается. Формат последующих записей: дата/время → ошибка → причина → действие → проверка → оставшиеся ограничения.
+Source timestamps are used where available. Reconstructed entries without a timestamp say so explicitly.
 
-### 15.10.2026 16:47:09 — падение native-контроллера (время из logread роутера)
-- Ошибка: `AttributeError: module 'time' has no attribute 'tzset'`, `/usr/lib/homensai-vpn/native_switch.py`, строка 527. procd сообщил crash loop: 6 crashes; в списке процессов был только `agent.py daemon`.
-- Причина: Python роутера не экспортирует `time.tzset`; контроллер безусловно вызывал его до входа в рабочий цикл. Системный Python не переустанавливался.
-- Исправление alpha2: выделена `configure_timezone()`: использовать Python tzset при наличии, иначе `ctypes.CDLL(None).tzset()` как в работающем мониторе.
-- Проверка: три регрессии для основного/резервного пути и ошибки libc; всего 79 тестов PASS. После установки оба процесса наблюдались на устройстве. Точное время установки в этой записи не сохранено.
+### 2026-10-15 16:47:09 — native-controller startup crash (router logread timestamp)
 
-### 15.10.2026 — HNAT ошибочно UNKNOWN (точное время диагностического чтения не сохранено)
-- Ошибка: `HARDWARE-ACCELERATOR-UNVERIFIED` при фактическом ответе драйвера `value=0, hook is disabled now!`.
-- Причина 1: парсер не принимал точный формат драйвера. alpha3 добавила строгую проверку согласованных value/state; старые и противоречивые ответы отвергаются.
-- Причина 2: прямое измерение показало Python monotonic `64495.076409609`, последний свежий printk `64494.965555`; сравнивались разные часы. alpha4 заменила эту проверку сравнением журнала до/после чтения hook.
-- Причина 3: кольцевой журнал заполнен: длина до/после 123214 байт, prefix=False. Новые записи вытесняют старые, поэтому alpha4 оставляла UNKNOWN.
-- Исправление alpha5: найти уникальную последнюю строку предыдущего снимка в новом журнале; разбирать только строки после неё. Нет/несколько совпадений — UNKNOWN, без принятия старого ответа.
-- Проверка: 82 теста PASS; после установки свежий native-status содержит `hnat_runtime=disabled`. Модуль mtkhnat остаётся загруженным: выгрузка драйвера не заявляется.
+- Error: `AttributeError: module 'time' has no attribute 'tzset'`, native_switch.py line 527. procd reported six crashes; only agent.py daemon was running.
+- Cause: router Python does not export time.tzset; the controller called it unconditionally before entering its loop. System Python was not reinstalled.
+- Fix, alpha2: configure_timezone uses Python tzset if available, otherwise ctypes.CDLL(None).tzset(), matching the working monitor.
+- Verification: three regressions cover native/libc paths and libc failure; 79 tests PASS. Both own processes were observed after installation. Exact installation time was not retained.
 
-### 15.10.2026 — ошибка срока теста Windows (точное время обнаружения не сохранено)
-- Ошибка: `ValueError: Invalid isoformat string: '2026-10-15T17:20:32.0404034+02:00'`, функция deadline, строка 76. Это значение срока, а не время возникновения ошибки.
-- Причина: Windows DateTimeOffset отдаёт семь дробных знаков, Python 3.9 устройства их не принимает.
-- Исправление alpha6: ограничить дробную часть шестью знаками только для строки с часовым поясом; некорректный/отсутствующий пояс не разрешать.
-- Проверка: три регрессии; всего 85 PASS. После установки свежий статус DISABLED, blockers=[]; переход ещё не выполнялся.
+### 2026-10-15 — HNAT incorrectly UNKNOWN (exact diagnostic-read time not retained)
 
-### 15.10.2026 17:15:38 — отказ первой транзакции (время native-status)
-- Ошибка: `GUARD-INSTALL-FAILED`, journal phase APPLYING; клиентский помощник сообщил `CONTROLLER-STOPPED-OR-BLOCKED` и запросил Stop.
-- Причина: проверка `nft -c -f -` на устройстве вернула `Could not open file "/dev/stdin": No such file or directory`. Пакет nft читает '-' через отсутствующий узел, а не переданный pipe.
-- Исправление alpha7: уникальный runtime batch-файл mode 0600 через mkstemp; сначала `nft -c -f <file>`, затем атомарный `nft -f <file>`; файл удаляется в finally. Узлы /dev, штатный firewall и пакеты не подменяются.
-- Проверка на стенде: 87 PASS, включая порядок check/apply, права файла, очистку и отсутствие apply после провала check. Старая регрессия была адаптирована с stdin на файл, проверки области FORWARD/IPv6 и запрета flush ruleset сохранены.
-- Проверка устройства после отказа: порядок и hash политики совпали с BEFORE, не с AFTER; guard-таблицы нет; дочернего PID нет; клиентский DNS успешен, HTTPS 200. Авто выключено.
-- Завершение неуспешной попытки: только после этих проверок журнал переведён в ROLLED-BACK с причиной GUARD-FAILED-BEFORE-REORDER, без применения маршрутов. Это подтверждение отсутствия изменения, а не успешный тест отката после переключения.
-- Остаток: alpha7 собрана и сохранена в Gitea; установка/живой guard-тест и автоматическое переключение ещё не подтверждены на момент этой записи.
+- Error: HARDWARE-ACCELERATOR-UNVERIFIED despite driver response `value=0, hook is disabled now!`.
+- Cause 1: the parser did not recognise that exact driver format. Alpha3 added strict matching of consistent value/state; stale or contradictory responses remained rejected.
+- Cause 2: Python monotonic was 64495.076409609 while the fresh printk response was 64494.965555; different clocks were compared. Alpha4 used kernel-ring snapshots before/after the hook read.
+- Cause 3: the ring was full: 123214 bytes before and after, prefix=False. New records replaced oldest records, so alpha4 still returned UNKNOWN.
+- Fix, alpha5: find the unique final record of the previous snapshot in the new ring and parse only following records. Missing/ambiguous markers return UNKNOWN without accepting stale evidence.
+- Verification: 82 tests PASS. Fresh native-status reported hnat_runtime=disabled after installation. mtkhnat remained loaded; successful driver unload is not claimed.
 
-### 15.10.2026 17:24:53 — nftables 0.9.6 отверг синтаксис guard (время из native-status)
-- Ошибка: GUARD-CHECK-FAILED; прямой 
-ft -c -f <temp> показал syntax error, unexpected end of file на однострочной конструкции таблицы.
-- Причина: парсер 0.9.6 ожидает разделение table/chain и закрывающих блоков на отдельные строки.
-- Исправление alpha8: формировать nft batch в многострочном формате, сохранить check перед apply, mode 0600 и очистку файла.
-- Следующая проверка: тесты стенда и 
-ft -c на самом роутере. Маршруты в этой попытке не менялись; guard не прошёл предварительную проверку.
+### 2026-10-15 — Windows deadline parsing failure (exact detection time not retained)
 
-### 15.10.2026 — повторные preflight останавливались старым Stop (точное время последней проверки не сохранено)
-- Ошибка: CLIENT-STOPPED-OR-BLOCKED; native-status STOPPED/CLIENT-STOP сразу после старта helper. Порядок VPN и hash оставались BEFORE.
-- Причина: helper создавал новый trial nonce только после preflight; старый nonce в native-stop.json совпадал с сохранённым trial, поэтому проверка видела latched Stop.
-- Исправление alpha9: создать новый случайный nonce и сохранить его в конфигурации при native_enabled=0 до первой status-проверки. Реальное включение остаётся после успешного preflight и явного TEST.
-- Проверка: source inspection показывает nonce до preflight; автоматическое применение ожидает установку и повторную проверку.
+- Error: `ValueError: Invalid isoformat string: '2026-10-15T17:20:32.0404034+02:00'`, deadline function line 76. This string is the requested deadline, not the incident timestamp.
+- Cause: Windows DateTimeOffset emits seven fractional digits, rejected by device Python 3.9.
+- Fix, alpha6: truncate excess precision to six digits only when a timezone is present; malformed/missing timezone remains refused.
+- Verification: three regressions; 85 tests PASS. Fresh device status was DISABLED with blockers=[]; switching had not yet occurred.
 
-### 15.10.2026 17:58:26 Europe/Berlin — интернет по кабелю восстановлен
-- Симптом: после последней попытки пользователь сообщил отсутствие интернета через GL-MT6000. Wi-Fi TP-Link сохранил связь.
-- Диагностика по SSH: native state BLOCKED, код EXTERNAL-POLICY-CHANGE-GUARD-RETAINED; journal phase APPLYING; наша nft guard-таблица присутствовала; текущий порядок/hash не совпадал с сохранёнными BEFORE/AFTER. native_enabled был 1.
-- Причина, подтверждённая сравнением секций: после перестановки анонимных UCI-секций изменились их автоматически вычисляемые идентификаторы. Текущие VPN-интерфейсы оказались привязаны к другим cfg-идентификаторам, поэтому сравнение raw order/hash ошибочно распознало собственное изменение как внешнее. Guard остался закрытым и блокировал клиентский трафик. Это дефект экспериментального контроллера.
-- Восстановление: сохранены приватные резервные копии политики и журнала на устройстве; native_enabled=0; собственный сервис остановлен. По фактическому интерфейсу возвращён основной OpenVPN перед резервным WireGuard, выполнен штатный apply. До снятия guard проверены Kill Switch, запрет прямого WAN, здоровье источника и совпадение всех остальных семантических полей политики с состоянием до восстановления. Снята только наша nft-таблица.
-- Дополнительная ошибка восстановления: nohup отсутствует на прошивке. Подготовленный скрипт запущен через subprocess.Popen(start_new_session=True), без замены системных компонентов.
-- Подтверждение с ноутбука: временный /32 маршрут только к тестовому HTTPS-адресу через кабель; привязка клиента к кабельному IPv4. DNS через роутер — 2 A-ответа; HTTPS через кабель — 200, curl exit 0. Отдельно Wi-Fi HTTPS — 200. Временный маршрут удалён; Wi-Fi остаётся основным интернет-путём Windows.
-- Журнал транзакции закрыт фазой RECOVERED-BY-OWNER с отдельным recovery hash; это ручное разрешённое восстановление, не успешный автоматический откат. Авто выключено. Нужны исправление идентификации анонимных секций и новый проверенный тест перед эксплуатацией.
+### 2026-10-15 17:15:38 — first transaction failure (native-status timestamp)
 
-### 15.10.2026 18:04:27 Europe/Berlin — alpha10: устойчивые UCI-идентификаторы и отдельная кабельная проверка
-- Причина предыдущего сбоя: raw .name анонимной секции меняется после UCI commit и не идентифицирует правило.
-- Исправление: идентификатор анонимной секции вычисляется по всем содержательным полям, без .name/.index; именованные секции сохраняют настоящее имя. Fingerprint проверяет все значения; одинаковые неразличимые секции запрещены. Перед каждым reorder текущее имя разрешается заново, после commit проверяются стабильный порядок и fingerprint.
-- Кабельный helper: параметр CableInterface создаёт только два временных /32 HTTPS probe-маршрута через роутер, DNS запрашивается явно у роутера; curl привязан к кабельному IPv4. Wi-Fi default не меняется; временные маршруты удаляются в finally. Это проверка конкретных IPv4 запросов, не всей связи пользователя.
-- Проверки: регрессии смены UCI алиасов, изменения Kill Switch и дубликатов; Windows SelfTest и CableInterface CheckOnly прошли. Реальное применение alpha10 пока ожидает установки.
+- Error: GUARD-INSTALL-FAILED, journal APPLYING. The client reported CONTROLLER-STOPPED-OR-BLOCKED and requested Stop.
+- Cause: device `nft -c -f -` returned `Could not open file "/dev/stdin": No such file or directory`. nft treated '-' as the missing node rather than the supplied pipe.
+- Fix, alpha7: unique runtime batch file through mkstemp, mode 0600; nft check before atomic apply; unconditional removal in finally. Device nodes, vendor firewall and installed packages were not replaced.
+- Laboratory verification: 87 tests PASS, covering check/apply order, permissions, cleanup and no apply after failed check. The older atomicity regression was adapted from stdin to a file while preserving FORWARD/IPv6 scope and prohibiting flush ruleset.
+- Device checks after failure: order/hash matched BEFORE rather than AFTER; no guard table or child PID remained; client DNS passed and HTTPS returned 200. Auto was disabled.
+- Only after these checks, the failed journal was closed as ROLLED-BACK/GUARD-FAILED-BEFORE-REORDER without route application. This proves no change occurred, not successful rollback of an applied switch.
+- At this entry alpha7 was built/saved to Gitea; installation, live guard acceptance and automatic switching remained unconfirmed.
 
-### 15.10.2026 18:19:19 Europe/Berlin — блокировка DNS на Windows NordVPN
-- Ошибка: CLIENT-CHECK-FAILED до включения trial; Win32Exception в Resolve-DnsName. DNS внутри роутера и прямой запрос к VPN DNS-порту отвечали, обычный ответ с порта 53 не доходил до Windows.
-- Причина подтверждена: активный WFP-фильтр NordVPN DNS Leak Protection — DNS block, слой ALE_AUTH_RECV_ACCEPT_V4, действие BLOCK, remote port 53. После согласованной остановки службы запрос через LAN немедленно дал 2 A-ответа.
-- Действие: пользователь явно разрешил временную остановку nordvpn-service и восстановление после теста. Служба остановилась не сразу (StopPending), затем тест продолжился. В finally служба запущена обратно; статус Running подтверждён.
+### 2026-10-15 17:24:53 — nftables 0.9.6 rejected guard syntax (native-status timestamp)
 
-### 15.10.2026 18:21:20–18:22:03 Europe/Berlin — реальный переход и возврат alpha10
-- 18:21:20.447 — APPLYING, реальная перестановка двух подключённых общих VPN-правил.
-- 18:21:41.437 — WAIT-CLIENT; клиент подтвердил DNS и два IPv4 HTTPS probe через резерв с ожидаемым VPN-выходом.
-- 18:22:03.164 — ARMED/TRIAL-PASSED после восстановления исходного пути. Helper подтвердил исходный выход. Стабильные UCI order/hash совпали после commit, несмотря на регенерацию анонимных имён.
-- Результат: первый реальный переход и его возврат прошли. Wi-Fi default сохранён. Это узкий эксперимент двух уже подключённых профилей, не испытание любых топологий.
+- Error: GUARD-CHECK-FAILED. `nft -c -f <temp>` returned `syntax error, unexpected end of file` for the one-line table.
+- Cause identified during diagnosis: nftables 0.9.6 required table/chain blocks and closing delimiters to be separated by lines in this batch.
+- Fix, alpha8: multiline nft batch, retaining check before apply, mode 0600, atomic owned-table replacement and cleanup.
+- Planned verification at that point: laboratory tests and device nft -c. Routes had not changed because the guard failed its precheck. Later device guard installation/removal passed.
 
-### 15.10.2026 18:23:37–18:27:31 Europe/Berlin — автоматическое переключение при контролируемом отказе
-- 18:23:37.651 — установлена отдельная временная fault-таблица, блокирующая исходящий/пересылаемый трафик только основного VPN-интерфейса. Сам интерфейс оставлен connected. Независимый процесс гарантировал снятие fault по таймеру; штатный Kill Switch сохранён.
-- Наблюдение: монитор зарегистрировал VPN-003 на основном пути; резерв проходил проверки, Wi-Fi HTTPS — 200.
-- 18:24:53.798 — автомат сам начал APPLYING после серии отказов и cooldown. Задержка до начала применения относительно fault-start: около 76.15 с.
-- 18:25:15.093 — WAIT-CLIENT; 18:25:20.085 — COMMITTED/CLIENT-CONFIRMED. От fault-start до подтверждённого резерва — около 102.43 с. Это время подтверждения, не непрерывно измеренный простой пользовательских приложений.
-- 18:26:07.807 — независимый процесс снял fault. Здоровье основного VPN подтверждено снова.
-- 18:27:26.002 — независимый контроллер завершил ROLLED-BACK/TRIAL-ENDED; 18:27:31.821 — STOPPED/CLIENT-STOP, guard удалён.
-- Ошибка завершения helper: CLIENT-CHECK-FAILED; точный тип исключения этой попытки не сохранён. Успешный exit helper НЕ заявляется. NordVPN восстановлен в finally.
-- Повторная клиентская проверка: DNS через роутер — 2 ответа, HTTPS по кабелю прошёл; кабельный VPN-выход совпал с приватным baseline, стабильный UCI порядок/hash равен BEFORE, guard отсутствует; Wi-Fi HTTPS — 200. Таким образом сетевой переход и откат подтверждены отдельно от ошибки helper.
-- Alpha11: ограниченные повторные попытки в финальном 90-секундном окне только для сетевых исключений/DNS/HTTPS ошибок; mismatch маршрута или VPN-выхода не превращается в успех. Убран повтор одинакового сообщения TRIAL-PASSED. Повторы — улучшение устойчивости, не доказательство причины предыдущего исключения.
+### 2026-10-15 — earlier Stop blocked repeated preflight (exact last-check time not retained)
+
+- Error: CONTROLLER-STOPPED-OR-BLOCKED with STOPPED/CLIENT-STOP after helper start. VPN order/hash remained BEFORE.
+- Cause addressed: the helper generated a new nonce only after preflight; a stored stop record still matched the previous configured trial.
+- Fix, alpha9: generate/save a fresh nonce while native_enabled=0 before the first status check. Actual enable remains after successful preflight and explicit TEST.
+- Verification at that entry: source inspection confirmed nonce-before-preflight; installation/live recheck remained pending. Later history also distinguished genuine guard failures followed by the helper's Stop from this stale-nonce issue.
+
+### 2026-10-15 17:58:26 — cable Internet restored
+
+- Symptom: the owner reported no Internet through GL-MT6000 after the latest attempt. TP-Link Wi-Fi preserved communication.
+- SSH evidence: BLOCKED/EXTERNAL-POLICY-CHANGE-GUARD-RETAINED, journal APPLYING, owned guard present, current order/hash matching neither stored BEFORE nor AFTER, native_enabled=1.
+- Confirmed cause: anonymous UCI aliases regenerated after reordering. VPN interfaces appeared under different cfg identifiers, so raw order/hash misclassified the controller's own change as external. The retained guard blocked client forwarding. This was an experimental-controller defect.
+- Recovery: private policy/journal backups on device; native_enabled=0 and own service stopped. Primary OpenVPN restored before reserve WireGuard using actual interface identity, followed by vendor apply. Before removing guard, verified Kill Switch, disabled direct WAN, source health and equality of all other semantic policy fields with the pre-recovery snapshot. Removed only the owned nft table.
+- Additional recovery error: firmware lacks nohup. The script was launched using subprocess.Popen(start_new_session=True), without replacing system components.
+- Laptop confirmation: temporary /32 route to one HTTPS target through cable, source-bound client IPv4; router DNS returned 2 A records, cable HTTPS 200/curl exit 0; separate Wi-Fi HTTPS 200. Temporary route removed; Wi-Fi remained the Windows default path.
+- Journal closed RECOVERED-BY-OWNER with a separate recovery hash. This was authorised manual recovery, not successful automatic rollback. Auto remained disabled pending anonymous-identity correction and a new verified trial.
+
+### 2026-10-15 18:04:27 — alpha10: stable UCI identity and isolated cable probes
+
+- Cause: raw .name of an anonymous section changes after UCI commit and is not a stable rule identity.
+- Fix: derive anonymous identity from all semantic fields excluding .name/.index; named sections retain their names. Fingerprint checks all values; indistinguishable duplicates are refused. Resolve current UCI names before each reorder and verify stable order/fingerprint after commit.
+- Cable helper: CableInterface creates only two temporary /32 HTTPS probe routes through router; DNS explicitly targets router and curl binds the cable IPv4. Wi-Fi default remains unchanged; routes are removed in finally. These are specific IPv4 probes, not verification of all user traffic.
+- Checks: alias-regeneration, Kill Switch mutation and duplicate-identity regressions; Windows SelfTest and CableInterface CheckOnly passed. Positive alpha10 device application was pending at this entry.
+
+### 2026-10-15 18:19:19 — Windows NordVPN DNS block
+
+- Error: CLIENT-CHECK-FAILED before trial enable; Win32Exception in Resolve-DnsName. Router-local DNS and the VPN DNS port responded, but normal port-53 replies did not reach Windows.
+- Confirmed cause: active WFP filter “NordVPN DNS Leak Protection — DNS block”, ALE_AUTH_RECV_ACCEPT_V4, BLOCK, remote port 53. After authorised service stop, LAN lookup immediately returned 2 A records.
+- Action: the owner explicitly authorised temporary stop of nordvpn-service and restoration after testing. StopPending took time, then the trial continued. The finally block restarted it; Running was confirmed.
+
+### 2026-10-15 18:21:20–18:22:03 — real alpha10 transition and return
+
+- 18:21:20.447: APPLYING; actual reorder of the two connected catch-all VPN rules.
+- 18:21:41.437: WAIT-CLIENT; client confirmed DNS and two IPv4 HTTPS probes through reserve with the expected exit.
+- 18:22:03.164: ARMED/TRIAL-PASSED after original-path restoration. Helper confirmed original exit. Stable order/hash matched after commit despite regenerated anonymous aliases.
+- Result: the first real transition and return passed. Wi-Fi default was preserved. Scope remains two already connected profiles, not arbitrary topologies.
+
+### 2026-10-15 18:23:37–18:27:31 — automatic failover under controlled failure
+
+- 18:23:37.651: separate temporary fault table blocked output/forwarded traffic only through primary VPN interface; the interface remained connected. An independent timer process ensured fault removal; vendor Kill Switch remained enabled.
+- Monitor recorded VPN-003 on primary; reserve remained healthy and Wi-Fi HTTPS returned 200.
+- 18:24:53.798: automatic APPLYING after failure streak/cooldown; approximately 76.15 seconds from fault-start to apply-start.
+- 18:25:15.093: WAIT-CLIENT; 18:25:20.085: COMMITTED/CLIENT-CONFIRMED, approximately 102.43 seconds from fault-start. This is time to confirmation, not continuously measured application downtime.
+- 18:26:07.807: independent timer removed fault; primary health was verified again.
+- 18:27:26.002: independent controller completed ROLLED-BACK/TRIAL-ENDED; 18:27:31.821: STOPPED/CLIENT-STOP, guard removed.
+- Helper completion error: CLIENT-CHECK-FAILED; the exact exception type for this attempt was not retained. Successful helper exit is NOT claimed. NordVPN was restored in finally.
+- Separate final client check: router DNS returned 2 records; cable HTTPS passed and cable exit matched private baseline; stable UCI order/hash equalled BEFORE and guard was absent; Wi-Fi HTTPS 200. Network transition/rollback are therefore verified independently of the helper completion error.
+- Alpha11 added bounded retries in the final 90-second window for network/DNS/HTTPS failures only; route/exit mismatch cannot become success. Duplicate TRIAL-PASSED output was removed. This improves resilience but does not prove the cause of the previous unspecified exception.
+
+
+### 2026-10-15 19:21:12 Europe/Berlin — English documentation/reporting and alpha12 release preparation
+
+- Request: publish diagnostic history, causes, fixes and error statistics in English, with English first-entry UI default. Optional Russian UI/installation guides remain separate; user-supplied names are preserved.
+- Change: translated current work log, diagnostic catalogue, changelog, historical QA reports, validation, state, checklist and English guides. Historical timestamps and unverified outcomes were retained, not retroactively marked successful.
+- Report formatter now generates English labels; six formatter/delivery tests passed without changing destination, token or reporting interval.
+- Dashboard language selection no longer passes false as a selected attribute. The version badge reads agent version; dashboard16 is a cache-busting resource for the existing interface. Sidebar dashboard15/ui13 remains a local unshipped candidate.
+- Additional packaging issue: after alpha11 installation, source declared alpha11 but imported agent.VERSION returned alpha10. Own bytecode cache contained files validated against reproducible unchanged mtime/size. Removing only five own .pyc files made a fresh import return alpha11. Alpha12 postinst clears only the application's own non-symlink .pyc files before restarting its service; no system Python/package replacement.
+- Publication planned as an explicitly experimental prerelease with IPK/SHA256 and English notes. Source code and package must match, local Gitea first, identical GitHub tree second. Installation/asset verification is recorded only after it occurs.

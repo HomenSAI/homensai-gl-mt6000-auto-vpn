@@ -1,4 +1,4 @@
-# Validation / Испытания
+# Validation
 
 Target: one GL-MT6000, vendor GL.iNet 4.11.0 / OpenWrt 21.02-SNAPSHOT, LuCI git-22.335.71649-0ecaf74, Python 3.9.15. Development/unit tests: Linux Docker on Windows. Interpreted all-architecture ipk; not an SDK-built firmware image.
 
@@ -20,3 +20,9 @@ Exact live-read model/firmware/LuCI/package evidence: [EN](TESTED-ENVIRONMENT.en
 ## 2026-10-15 · 0.4.0-alpha8 candidate
 
 52 monitor/package/native-controller unit tests and 9 lab transaction tests pass. Device installed through alpha7; native mode disabled, three active IPv4 HTTPS/DNS probe paths healthy. Software accelerator unloaded; hardware disable not verified. Candidate alpha8 not installed while owner works remotely. Live native switching/guard/rollback not exercised. Baseline soak intermediate checkpoint: 21 cycles, 105 suite runs, 2100 new seeds, 945000 model steps, 37687012 assertions, 420 container child-process crashes; zero failures. Baseline commit 386b4b3 excludes the new native controller. See NATIVE-EXPERIMENTAL.md and WORKLOG.md; do not claim final 14:00 results.
+
+## 2026-10-15 · real alpha10 failover acceptance
+
+90 Python tests passed after semantic anonymous-UCI identity fixes. At 18:21:20–18:22:03 Europe/Berlin, a real client-confirmed transition and return passed. A separate controlled primary-traffic failure at 18:23:37 triggered automatic APPLYING at 18:24:53 and COMMITTED/CLIENT-CONFIRMED at 18:25:20. Fault was removed by its independent timer at 18:26:07; independent rollback completed at 18:27:26. Separate cable checks confirmed original VPN exit/order, DNS, HTTPS and absent guard; Wi-Fi remained available.
+
+The first helper completion reported CLIENT-CHECK-FAILED, so its exit is not marked PASS. Network transition/rollback were verified separately. Alpha11 adds bounded final network retries. This acceptance covers two already connected catch-all profiles and IPv4 client probes; it does not establish arbitrary topologies, production unattended operation, full IPv6 safety or physical power-loss resilience. Full timestamps, causes and fixes: WORKLOG.md.

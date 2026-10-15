@@ -1,4 +1,4 @@
-# Controlled client trial / Контролируемый клиентский тест
+# Controlled client trial
 
 Candidate 0.5.0-alpha1. Not a production-enable guide. Read TODO-WORKING-SYSTEM.md and NATIVE-EXPERIMENTAL.md first. Owner must authorise a possible outage and neighbouring work must checkpoint/pause before any outage test. Keep an independent management/recovery path.
 
@@ -12,7 +12,7 @@ Stop is stored privately and survives restart. A new explicit trial is required 
 
 An upgrade introducing native_confirm/native_stop refreshes rpcd registration once. An existing LuCI session may need login again; this is distinct from WAN connectivity. Do not disable authentication to fix a stale session. Existing router packages are retained.
 
-RU: Сначала подтвердить паузу соседних задач и испытательное окно. Новый помощник не разрешает обходить HNAT, LAN или прочие блокировки. Шлюз другого устройства не принимается за прямую LAN-проверку. Ввести пароль только локально, проверить источник/резерв и согласиться на TEST. Кнопка остановки означает запрос отката; успех проверяется отдельно. На момент документа эта положительная приёмка на роутере не выполнена.
+Operational prerequisites: obtain task checkpoints and an authorised test window. Do not bypass HNAT or LAN checks. Enter credentials only locally, verify the selected pair and explicitly accept TEST. Stop requests do not prove restoration; verify the final client path. Later real acceptance is recorded in WORKLOG.md.
 
 If the original source is not freshly verified healthy when a client-confirmed switch ends, the controller retains the reserve policy and reports STOPPED-ON-RESERVE / original_restored=false. This is not a successful restoration of original settings. The helper checks the retained client exit and uses exit code 3 for that partial result; exit code 2 means unverified/failure. Unknown source/backup health never becomes an internet-restored claim. A new explicit trial is required to proceed from the held state.
 

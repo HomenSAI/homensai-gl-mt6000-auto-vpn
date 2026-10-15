@@ -1,13 +1,13 @@
-# Проверка нативной сборки OpenWrt
+# Native OpenWrt build verification
 
-Дата: 14.10.2026. Сборка: homensai-auto-vpn 0.1.0-alpha1-1, Architecture all, режим monitor.
+Historical report dated 2026-10-14. Build: homensai-auto-vpn 0.1.0-alpha1-1, Architecture all, monitor mode. Later device results are recorded chronologically in docs/WORKLOG.md.
 
-23 теста Python прошли: привязка сокета к device/mark, отказ при неподтверждённом маршруте, HTTPS quorum/DNS classification, исключение неизвестных проб из рейтинга, месячная граница Europe/Berlin, сбросы kernel counters, ifindex и пропуски, checkpoint/резервная копия, permissions/symlink-защита, ограниченный RPC, один полный цикл службы на mock-системе, воспроизводимость и структура ipk.
+23 Python tests passed: device/mark socket binding, refusing unverified routes, HTTPS quorum/DNS classification, excluding unknown probes from ranking, Europe/Berlin month boundaries, kernel-counter resets, ifindex/gaps, checkpoint/backup, permissions/symlink protection, bounded RPC, one mocked service cycle, reproducibility and IPK structure.
 
-Отдельно Lua 5.1 в одноразовом Docker-контейнере: luac -p прошёл для inventory и legacy LuCI controller. Инвентаризация на UCI fixture вернула два существующих профиля/интерфейса, не выдав специально подставленные пароль, приватный ключ, token и путь к приватному файлу.
+Separately, luac -p under Lua 5.1 passed for inventory and legacy LuCI controller in a disposable Docker container. The UCI fixture returned two existing profiles/interfaces while excluding injected passwords, private keys, token and private-file path.
 
-node --check прошёл для LuCI view; sh -n прошёл для init-службы и RPC wrapper. Реальное отображение этой LuCI view и RPC на GL-MT6000 пока не проверено. Встроенная демонстрация и нативная view — разные страницы, первая не доказывает совместимость второй.
+node --check passed for the LuCI view; sh -n passed for init service and RPC wrapper. At this historical stage the view/RPC had not been verified on GL-MT6000. The embedded demonstration and native view are separate pages; the former does not prove compatibility of the latter.
 
-На живом роутере выполнена только проверка доступа к Software/Installed. Upload Package доступен, Python не найден; доступность зависимости в feed не проверена. Никаких upload/install/update lists на устройстве не выполнялось. Сведения об авторизации и ключи в отчёт не записывались.
+Only Software/Installed access was checked on the live router. Upload Package was available, Python was not found, and dependency-feed availability was unverified. No upload/install/update-lists operation occurred during this stage. Authentication details and keys were excluded from the report.
 
-Пакет проверен собственным parser-тестом и воспроизводимой повторной сборкой; установка opkg/SDK на целевой системе не подтверждена. Источник native_apply=false, маршрутизирующие write-команды отсутствуют. Нативное переключение является незавершённой частью проекта.
+The package passed a parser test and reproducible rebuild. Actual opkg/SDK installation was unconfirmed then. Source had native_apply=false and no routing write commands; native failover remained incomplete.

@@ -1,6 +1,6 @@
 # Verified router and installation · 15 October 2026
 
-[Русский](TESTED-ENVIRONMENT.ru.md) · [Machine-readable snapshot](tested-environment-2026-10-15.json)
+[Russian](TESTED-ENVIRONMENT.ru.md) · [Machine-readable snapshot](tested-environment-2026-10-15.json)
 
 These values were read from the **running router**, not inferred from the package's `Architecture: all` field. This is evidence for one tested configuration, not a compatibility guarantee for every GL.iNet/OpenWrt device.
 

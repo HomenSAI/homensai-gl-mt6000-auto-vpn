@@ -1,55 +1,45 @@
-> Historical report for 0.3.0-alpha1 / Исторический отчёт 0.3.0-alpha1. Current native candidate and device state: [NATIVE-EXPERIMENTAL.md](NATIVE-EXPERIMENTAL.md).
+# Failover and rollback research
 
-# Переключение и откат / Failover and rollback
+Historical report for 0.3.0-alpha1. Later native acceptance and current limits: STATE.md and WORKLOG.md.
 
-## Изученные реализации
+## Implementations studied
 
-1. [mwan3, OpenWrt 21.02 source](https://github.com/openwrt/packages/blob/openwrt-21.02/net/mwan3/files/lib/mwan3/mwan3.sh): резервирование через отдельные таблицы, fwmark/mask, ip rules и пакетную установку правил. Не переносим mwan3 поверх фирменной GL.iNet-маркировки без проверки конфликтов. Эта версия ближе к целевой OpenWrt 21.02, чем инструкции для 24.10.
-2. [VPN Guardian architecture](https://github.com/Yakwilik/openwrt-vpn-guardian/blob/main/docs/architecture.md): подготовка и валидация до активации, разделение direct/protected трафика, локального DNS и bootstrap DNS, backup и восстановление runtime после неудачной самопроверки. Это стек Xray/v2rayA/nftables для другой среды; его установку и замену dnsmasq на нашем роутере не выполняли.
-3. [GL.iNet dashboard](https://docs.gl-inet.com/router/en/4/interface_guide/vpn_dashboard/): штатное резервирование внутри группы не означает переключение между независимыми группами. При включённом Kill Switch отказ может намеренно блокировать трафик.
-4. Сохранённый ранее read-only аудит целевой прошивки: `tunnel-switch.sh` использует собственные PID/noclobber locks, включая общий network-switch lock; hotplug вызывает штатный failover-trigger. `rtp2.sh` обновляет маршруты, DNS и firewall. Его `clean_conntrack` удаляет DNS-состояния по портам 53/служебным портам и вызывает VPN conntrack cleanup. Это не адресная очистка только выбранного клиентского класса. Исходники производителя и сырые дампы не включены в публичный проект; это статические находки, не проверка текущих запущенных workers.
+1. [mwan3, OpenWrt 21.02 source](https://github.com/openwrt/packages/blob/openwrt-21.02/net/mwan3/files/lib/mwan3/mwan3.sh): separate tables, fwmark/mask, ip rules and batched updates. Do not layer it over GL.iNet marks without conflict checks. The 21.02 source is closer to the target than 24.10 instructions.
+2. [VPN Guardian architecture](https://github.com/Yakwilik/openwrt-vpn-guardian/blob/main/docs/architecture.md): preactivation validation, direct/protected traffic separation, local/bootstrap DNS separation, backup and runtime restoration after failed self-check. Its Xray/v2rayA/nftables environment differs; it was not installed and dnsmasq was not replaced.
+3. [GL.iNet dashboard](https://docs.gl-inet.com/router/en/4/interface_guide/vpn_dashboard/): within-group fallback does not establish cross-group switching. Kill Switch may deliberately block traffic after a failure.
+4. Earlier read-only firmware audit: tunnel-switch.sh uses PID/noclobber locks including a network-switch lock; hotplug invokes vendor failover-trigger. rtp2.sh rebuilds routes, DNS and firewall. clean_conntrack removes DNS state on port 53/service ports and invokes VPN conntrack cleanup; it is not scoped only to a selected client class. Vendor sources/raw dumps are excluded publicly. These are static findings, not proof about current running writers.
 
-Изучены механизмы; чужой код в новую реализацию не скопирован. Собственный flock не признаётся согласованием со штатными workers. Нельзя захватить их PID-lock нашим процессом и ожидать сотрудничества: штатная проверка владельца может считать такой lock устаревшим.
+Mechanisms were studied; third-party code was not copied. An own flock does not coordinate vendor writers. Creating a vendor PID lock under an unrelated process is unsafe because its owner check may treat it as stale.
 
-## Что реализовано в 0.3.0-alpha1
+## Implemented in 0.3.0-alpha1
 
-- Нативный монитор публикует `failover_plan` через существующий статус API, без новых RPC-методов и расширения ACL.
-- В LuCI выбираются исходный и резервный существующие профили. Планировщик по умолчанию выключен; он только рекомендует, не применяет.
-- Нужны три последовательных подтверждённых отказа источника и две свежие успешные HTTPS/DNS-проверки резерва. Устаревшие, будущие, дублирующиеся и неизвестные измерения не считаются подтверждением. Неактивный резерв не запускается.
-- Любой план сохраняет `applied=false`, `ready_to_apply=false`, `native_apply=false`. Это не разрешение переключения.
-- В `lab/transaction_engine.py` реализован исполняемый Python-контракт транзакции с lock, durable журналом/fsync, дедлайном, проверками владения, откатом и восстановлением. Это стенд с инъекцией адаптера, **не драйвер GL.iNet** и не часть устанавливаемой службы.
+- Existing status RPC exposes failover_plan without adding methods or expanding ACL.
+- LuCI selects existing source/reserve profiles. Planner defaults off and recommends only.
+- Require three consecutive confirmed source failures and two fresh successful reserve HTTPS/DNS probes. Stale/future/duplicate/unknown samples do not qualify; inactive reserves are not started.
+- Every plan remains applied=false, ready_to_apply=false, native_apply=false; a plan is not permission to switch.
+- lab/transaction_engine.py implements an executable contract with locks, durable journal/fsync, deadline, ownership checks, rollback/recovery and injected adapter. It is a laboratory contract, not an installed GL.iNet driver.
 
-## Последовательность будущей живой транзакции
+## Proposed live transaction requirements at that stage
 
-1. Проверить точную прошивку/схему профилей, область изменяемого трафика, специальные правила и независимый LAN-доступ к панели/SSH.
-2. Получить доказанное согласование со штатными writers; захватить собственный lock и проверить поколение конфигурации. Произвольное отключение штатных служб не допускается.
-3. Сохранить минимальный защищённый snapshot и durable intent. Не копировать VPN-ключи в публичные отчёты.
-4. Взвести **независимый** watchdog, способный восстановить состояние при гибели исполнителя. Затем закрыть только изменяемый клиентский класс, сохранив локальное управление. Kill Switch не снимается временно.
-5. Применить адаптером изменение с проверкой поколения/владельца; не останавливать общий VPN-интерфейс, который обслуживает специальные правила.
-6. Очистить только нужный conntrack-класс по подтверждённой маске/области. Не использовать глобальный flush и не маскировать его эффект обещанием сохранения звонков.
-7. Проверить фактический клиентский IPv4-путь, IPv6-путь либо доказанную блокировку IPv6, клиентский DNS, Kill Switch, локальное управление и специальные правила. Проба с роутера недостаточна.
-8. Зафиксировать только проверенный результат, открыть защищённый класс и снять watchdog. При отказе восстановить собственное предыдущее поколение и проверить его; чужие более новые изменения не затирать. Непроверенный откат оставляет класс закрытым и требует восстановления; интернет не объявляется восстановленным.
+1. Verify exact firmware/profile schema, affected traffic, special policies and independent LAN management.
+2. Establish actual vendor-writer coordination, own lock and configuration generation; do not arbitrarily stop vendor services.
+3. Save a minimal private snapshot and durable intent; exclude VPN keys from public reports.
+4. Arm an independent watchdog before closing only the affected forwarding class; preserve local management and Kill Switch.
+5. Apply through an adapter with generation/ownership checks. Do not stop a shared VPN interface serving special policies.
+6. Clean only a verified conntrack class/mask. Do not promise session preservation around a global flush.
+7. Verify actual client IPv4 path, IPv6 or proven IPv6 blocking, client DNS, Kill Switch, management and special rules. Router-originated requests alone are insufficient.
+8. Commit, reopen protected traffic and disarm watchdog only after checks. Restore only owned changes, preserve newer external edits and retain blocking after unverifiable rollback. Never call unknown connectivity restored.
 
-## Почему живое применение всё ещё заблокировано
+## Historical blocking conditions
 
-Нужен настоящий GL.iNet adapter с подтверждёнными worker coordination, независимым watchdog, scoped DNS/conntrack, management path, специальными правилами и IPv6. Native adapter в этой версии не реализован. Неизвестные проверки всегда блокируют применение. Прямой WAN fallback остаётся выключенным и не добавляется неявно.
+The 0.3.0-alpha1 release lacked a native adapter with verified writer coordination, watchdog, scoped DNS/conntrack, management path, special rules and IPv6. Unknown prerequisites blocked apply. Direct-WAN fallback stayed off. Real tests required an agreed interruption window and independent management/recovery. Changing exit IP can break sessions; rollback cannot restore already lost TCP/UDP sessions.
 
-После адаптера нужны согласованное окно возможного обрыва и проверка с независимого управляющего устройства/сегмента. До этого выполняются только read-only планы и стендовые транзакции. Сессии после смены внешнего IP могут оборваться; откат не возвращает уже потерянные TCP/UDP-сессии.
+## Tests
 
-## Испытания
+36 monitor/package tests and 9 Python transaction-contract tests passed, including 200 synthetic combinations of stage failures, checks, external writers, journal errors, deadlines, apply/recover competition and corruption. Within the 200, 60 crash combinations use BaseException simulation, not router SIGKILL or power cuts. The older JS laboratory and actual Docker child crashes are separate evidence.
 
-36 unit-тестов устанавливаемого монитора/пакета. 9 Python-тестов нового транзакционного контракта включают **200 различных сочетаний** отказов этапов, проверок и внешнего writer, отказ записи журнала, дедлайн, конкуренцию apply/recover и повреждённый журнал. Внутри 200 — 60 симулированных crash-сочетаний через исключение BaseException; это **не** реальные SIGKILL роутера или отключения питания. Отдельный старый JS-стенд и его реальные Docker child-process crashes не выдаются за испытание нового GL.iNet-драйвера.
+The first run found a late gate-opening defect after rollback/open/disarm failure. Reclosing the gate fixed it; if closure also cannot be verified, result is UNVERIFIED. Final tests passed.
 
-В первом прогоне найден дефект позднего открытия gate при ошибке rollback/open/disarm; исправлен повторным закрытием gate с отдельным исходом UNVERIFIED, если закрытие тоже не подтверждено. Итоговые тесты прошли.
+## Historical device integration
 
-## English summary
-
-Release 0.3.0-alpha1 connects the existing native monitor to a **read-only dry-run planner**. It needs three fresh confirmed source failures and two healthy reserve HTTPS/DNS samples. Unknown/stale/future/duplicate observations and inactive reserves never authorise switching. Plans always report `applied=false`, `ready_to_apply=false`, `native_apply=false`.
-
-The new Python transaction engine under `lab/` is an executable, tested adapter contract: durable intent, independent-watchdog requirement, scoped gate preserving management, ownership checks, client DNS/IPv4/IPv6/Kill Switch/special-rule verification, commit/rollback and recovery. It is **not installed as a native GL.iNet apply driver**. A private mutex does not coordinate stock writers. Newer external changes are not overwritten; unverified rollback never claims restored connectivity. Study references above were used for mechanisms, not code copying.
-
-Live operation remains unavailable until a real adapter and independent recovery path are validated. No real VPN, routing, DNS, firewall or conntrack mutation was performed by these tests. 36 monitor/package tests and 9 transaction tests passed, including 200 synthetic combinations. Real client-session continuity, power loss and IPv6 failover remain unproven.
-
-## Device integration check / Проверка на устройстве
-
-0.3.0-alpha1-1 installed on the reference GL-MT6000 with opkg exit code 0; live status reports agent 0.3.0-alpha1 and `failover_plan.state=DISABLED`, `native_apply=false`. Telegram remained enabled. A temporary UCI configuration test did not complete normally; independent committed-inventory reads confirmed planner disabled and source/target unset, matching the original settings. Enabled-planner end-to-end operation on the real device is therefore not claimed. Recommendation selection is covered by unit/integration fixtures. VPN, route, firewall and DNS settings were not written.
+0.3.0-alpha1-1 installed on the reference device with opkg exit 0. Status reported agent 0.3.0-alpha1, planner DISABLED and native_apply=false. Telegram remained enabled. A temporary UCI planner test did not finish normally; independent committed-inventory reads verified planner off and source/target unset, matching original settings. Enabled-planner device operation was not claimed. Recommendation selection was covered by fixtures. This stage made no VPN/route/firewall/DNS writes.

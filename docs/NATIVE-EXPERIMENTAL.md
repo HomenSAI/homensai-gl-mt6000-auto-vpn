@@ -1,4 +1,4 @@
-# Experimental native controller / Экспериментальный контроллер
+# Experimental native controller
 
 2026-10-15. Candidate: **0.4.0-alpha8**. Installed device: **0.4.0-alpha7**, monitor mode, native controller **DISABLED**. Candidate alpha8 has not been installed while the owner works remotely. Production automatic failover is not validated.
 
@@ -32,8 +32,6 @@ Read-only observations run every 30 seconds until 14:00 Europe/Berlin; thread fo
 
 52 monitor/package/controller unit tests and 9 lab transaction tests pass. The 200-case transaction contract remains a model; it is not 200 native GL.iNet driver tests. At the 11:40 Berlin intermediate checkpoint, the separate baseline soak had 21 completed cycles / 105 suite runs: 2,100 distinct new seeded scenarios, 945,000 model steps, 37,687,012 assertions, zero model failures; 420 real child-process crash cases passed. These are container processes, not router power cuts. The baseline soak uses commit 386b4b3, not the new native controller. It continues until 14:00; the above is not the final report.
 
-## Кратко по-русски
+## Historical scope
 
-Написан настоящий экспериментальный адаптер перестановки двух существующих общих VPN-правил, отдельный процесс контроля/отката, журнал, временная nft-защита и требования подтверждения с LAN-клиента. Это узкий испытательный вариант, а не готовый режим эксплуатации. При отказе он должен вернуть собственный порядок; чужие изменения не затирает. Автоматическое включение без пройденного клиентского теста запрещено.
-
-На устройстве установлена alpha7, эксперимент выключен, подготовительный запрос удалён. Программный ускоритель выгружен, отключение аппаратного не подтверждено. Интернет удалённого пользователя важнее испытаний: маршруты/VPN/Firewall не переключались, дальнейшие тесты с обрывом отложены. Alpha8 пока проверена только на стенде. Нужны независимая LAN-проверка, подтверждение HNAT и отдельное окно живых испытаний. Все счётчики выше имеют явно указанный стендовый или реальный источник.
+This candidate report describes the earlier stage. Later verified device results and current limits are recorded in WORKLOG.md and STATE.md.

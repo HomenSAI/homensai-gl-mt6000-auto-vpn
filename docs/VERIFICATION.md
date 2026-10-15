@@ -1,10 +1,10 @@
-# Проверка первого коммита
+# Initial commit verification
 
-Дата: 14.10.2026.
+Historical report dated 2026-10-14.
 
-- 30 локальных тестов логики и replay проходят.
-- Искусственный blackhole-пример выдаёт backup после трёх неуспешных раундов; active остаётся primary, applied=false.
-- router-preflight.sh проходит bash -n. На роутере он не запускался.
-- Проверки не выполняют реального переключения или установки.
+- 30 local logic/replay tests passed.
+- The synthetic blackhole case recommended backup after three failed rounds; active remained primary and applied=false.
+- router-preflight.sh passed bash -n; it was not executed on the router.
+- These checks performed no real switching or installation.
 
-При публикации повторить тесты из подготовленного Git workspace. Проверить состав git ls-files, отсутствие бинарного образа, извлечённого vendor-кода, живых данных и секретов. После push сверить HEAD с refs/heads/main на сервере и подтвердить приватность репозитория.
+Before publication, repeat the prepared-workspace tests and inspect git ls-files for secrets, live data, binary firmware images and extracted vendor code. After push, compare HEAD with server refs/heads/main and verify the repository's intended visibility. This is the original historical procedure; subsequent owner-approved public publication is recorded in WORKLOG.md.

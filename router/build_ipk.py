@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.5.0-alpha11-1'
+VERSION = '0.5.0-alpha12-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -60,6 +60,7 @@ def build(output=None):
 [ -n "$IPKG_INSTROOT" ] && exit 0
 mkdir -p /etc/homensai-vpn
 chmod 0700 /etc/homensai-vpn
+/usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
 if ! ubus -v list 'homensai-vpn' | grep -q 'native_confirm'; then

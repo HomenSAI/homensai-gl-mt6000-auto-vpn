@@ -14,14 +14,14 @@ class TelegramTests(unittest.TestCase):
                 'native_history':{'events':[{'time':now,'state':'COMMITTED','codes':['CLIENT-CONFIRMED'],'trial':False,'token':'TOKEN_SENTINEL'}],
                                   'months':{month:{'attempts':2,'trials_passed':1,'committed':1,'rollbacks':1}}}}
         text=report.format_report(status,60)
-        self.assertIn('COMMITTED',text);self.assertIn('не полный месяц',text)
-        self.assertNotIn('Автоматическое переключение выключено',text)
+        self.assertIn('COMMITTED',text);self.assertIn('partial month',text)
+        self.assertNotIn('Automatic switching disabled',text)
         for secret in ('PRIVATE_SENTINEL','EXIT_SENTINEL','KERNEL_SENTINEL','TOKEN_SENTINEL'):self.assertNotIn(secret,text)
 
     def test_corrupt_native_history_is_reported_without_invented_counts(self):
         text=report.format_report({'native_failover':{'state':'bad value'},'native_history':{'error':'HISTORY-001'}},60)
         self.assertIn('HISTORY-001',text);self.assertIn('UNKNOWN',text)
-        self.assertNotIn('автопереходов',text)
+        self.assertNotIn('automatic commits',text)
 
     def test_disabled_never_sends(self):
         with patch.object(report, 'option', return_value='0'), patch.object(report.urllib.request, 'urlopen') as send:
@@ -46,4 +46,4 @@ class TelegramTests(unittest.TestCase):
             self.assertNotIn('synthetic', str(status))
 
     def test_report_distinguishes_missing_data(self):
-        self.assertIn('нет накопленных', report.format_report({}, 60))
+        self.assertIn('no accumulated', report.format_report({}, 60))

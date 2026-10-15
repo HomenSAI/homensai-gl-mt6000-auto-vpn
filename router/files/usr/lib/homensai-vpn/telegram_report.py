@@ -17,46 +17,46 @@ def option(name):
 
 
 def format_report(status, minutes):
-    lines = ['HomenSAI Auto VPN · мониторинг', datetime.now().strftime('%d.%m.%Y %H:%M Europe/Berlin'),
-             'Интервал отчёта: %s мин' % minutes, 'Текущие подключённые серверы:']
+    lines = ['HomenSAI Auto VPN · monitoring', datetime.now().strftime('%d.%m.%Y %H:%M Europe/Berlin'),
+             'Report interval: %s min' % minutes, 'Currently connected servers:']
     active = [p for p in status.get('profiles', []) if p.get('interface')]
     for p in active:
-        lines.append('%s · %s · %s · HTTPS %s мс' %
+        lines.append('%s · %s · %s · HTTPS %s ms' %
                      (p['name'], p['protocol'], p.get('code') or 'OK', p.get('rtt_ms', '—')))
     if not active:
-        lines.append('Подключённые профили не обнаружены.')
+        lines.append('No connected profiles found.')
     cutoff = time.time()-minutes*60
     events = [e for e in status.get('events', []) if e.get('time', 0) >= cutoff]
-    lines.append('Изменения состояния за интервал: %s' % len(events))
+    lines.append('State changes during the interval: %s' % len(events))
     for event in events[-20:]:
         lines.append('%s · %s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),
-                                      event.get('profile', 'служба'), event.get('code', 'OK')))
+                                      event.get('profile', 'service'), event.get('code', 'OK')))
     accounting = status.get('accounting', {})
     month = datetime.now().strftime('%Y-%m')
     traffic = accounting.get('months', {}).get(month)
     if traffic:
-        lines.append('VPN-трафик %s: %.3f GB (с начала наблюдения)' %
+        lines.append('VPN traffic %s: %.3f GB (since monitoring started)' %
                      (month, (traffic.get('rx', 0)+traffic.get('tx', 0))/1e9))
     else:
-        lines.append('Трафик: пока нет накопленных измерений.')
+        lines.append('Traffic: no accumulated measurements yet.')
     native=status.get('native_failover',{})
     state=native.get('state','UNKNOWN')
     if not isinstance(state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',state):state='UNKNOWN'
-    lines.append('Нативный контроллер: %s (не подтверждение доступности LAN).' % state)
+    lines.append('Native controller: %s (not proof of LAN availability).' % state)
     history=status.get('native_history',{})
-    if history.get('error'):lines.append('История контроллера недоступна: HISTORY-001.')
+    if history.get('error'):lines.append('Controller history unavailable: HISTORY-001.')
     native_events=[e for e in history.get('events',[]) if isinstance(e.get('time'),(int,float)) and e['time']>=cutoff]
-    lines.append('События контроллера за интервал: %s' % len(native_events))
+    lines.append('Controller events during the interval: %s' % len(native_events))
     for event in native_events[-10:]:
         event_state=event.get('state','UNKNOWN')
         if not isinstance(event_state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',event_state):event_state='UNKNOWN'
         codes=[c for c in event.get('codes',[]) if isinstance(c,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',c)]
-        lines.append('%s · %s%s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),event_state,' · тест' if event.get('trial') else '',', '.join(codes)))
+        lines.append('%s · %s%s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),event_state,' · trial' if event.get('trial') else '',', '.join(codes)))
     totals=history.get('months',{}).get(month)
     if totals:
-        lines.append('Контроллер %s, накоплено: попыток %s; тестов пройдено %s; автопереходов %s; откатов %s. Это не полный месяц.' % (month,totals.get('attempts',0),totals.get('trials_passed',0),totals.get('committed',0),totals.get('rollbacks',0)))
-    lines.extend(['Пропуски наблюдения: %s' % accounting.get('gaps', 0),
-                  'Проверки с роутера, IPv4. Причина сбоя определяется только при наличии данных.'])
+        lines.append('Controller %s, accumulated: attempts %s; trials passed %s; automatic commits %s; rollbacks %s. This is a partial month.' % (month,totals.get('attempts',0),totals.get('trials_passed',0),totals.get('committed',0),totals.get('rollbacks',0)))
+    lines.extend(['Observation gaps: %s' % accounting.get('gaps', 0),
+                  'Router-originated IPv4 checks. A failure cause is stated only when supported by evidence.'])
     return '\n'.join(lines)[:4000]
 
 

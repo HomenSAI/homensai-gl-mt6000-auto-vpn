@@ -1,4 +1,4 @@
-# История изменений
+# Changelog
 
 ## 0.5.0-alpha1 — persistent history and client trial workflow
 
@@ -64,47 +64,47 @@
 - Versions through alpha9 were installed and measured on the GL-MT6000; this public version has not yet completed device installation/UI validation.
 
 
-## 0.1.0-alpha9 — подготовлено, установка не подтверждена
+## 0.1.0-alpha9 — prepared; installation unconfirmed
 
-- Номер версии в правом верхнем углу страницы; версия агента, Makefile и пакета согласованы.
-- Мастер первичного подключения Telegram и отдельная кнопка повторной настройки. Сохранённый токен не подставляется в поле; пустое поле при повторной настройке сохраняет прежний токен.
-- Время последней проверки слева в мониторе служб. Неактивные профили без измерения показывают прочерк.
-- При обновлении уже зарегистрированного RPC-плагина больше не выполняется reload rpcd, чтобы не завершать сессии LuCI. Первая установка по-прежнему регистрирует новый плагин.
-- Проверены синтаксис JavaScript и 28 unit-тестов. Проверка дизайна и мастера на устройстве ещё не выполнена: браузерный инструмент возвращает ERR_BLOCKED_BY_CLIENT при открытии LuCI. Последняя подтверждённая установленная версия — alpha8.
+- Version appears top right; agent, Makefile and package versions agree.
+- Added initial Telegram setup wizard and separate reconfiguration button. Stored token is never prefilled; an empty reconfiguration field preserves it.
+- Latest probe time appears on the left in service monitor; inactive profiles without measurements show a dash.
+- Upgrading an already registered RPC plugin avoids rpcd reload/session expiry. Initial installation still registers the plugin.
+- JavaScript syntax and 28 unit tests passed. Device design/wizard check remained pending because the browser returned ERR_BLOCKED_BY_CLIENT on LuCI. Last confirmed installed version was alpha8.
 
 ## 0.1.0-alpha8 — 15.10.2026
 
-- Добавлены оформление страницы, карточки подключённых серверов, четыре сводных показателя, SVG-график реальных HTTPS-измерений и адаптация к узкому экрану.
-- Настройки перенесены в раскрываемый блок. Неактивные профили отображаются нейтрально, а не как ошибка.
-- График показывает последний доступный час; разрывы больше 90 секунд не соединяются. Это HTTPS-задержка, не скорость загрузки.
-- Проверки: синтаксис JavaScript, 28 unit-тестов; пакет установлен на роутер. При обновлении выявлено завершение сессии RPC; исправление запланировано в alpha9.
+- Added page styling, connected-server cards, four summary metrics, SVG chart of real HTTPS measurements and responsive layout.
+- Moved settings into an expandable panel; inactive profiles display neutrally.
+- Chart shows the latest available hour without joining gaps over 90 seconds. Values are HTTPS latency, not download speed.
+- JavaScript syntax and 28 unit tests passed; package installed. Upgrade expired an RPC session; fix planned for alpha9.
 
 ## 0.1.0-alpha7 — 15.10.2026
 
-- Установлено и запущено наблюдение на GL-MT6000, GL.iNet 4.11.0 / OpenWrt 21.02.
-- Проверены реальные HTTPS/DNS-пробы трёх подключённых профилей: два OpenVPN и один WireGuard. Всего обнаружено 12 профилей.
-- Работает накопление трафика уникальных VPN-интерфейсов; объём текущего месяца неполный, с момента начала наблюдения.
-- Добавлены Telegram-отчёты, включение, интервал 5–10080 минут, Chat ID и скрытое поле токена в настройках LuCI. На устройстве проверена отправка при интервале 60 минут.
-- Токен не выдаётся в RPC-инвентаризации, статусе, отчёте или ошибке; конфигурация службы получает права 0600. Токен хранится в UCI на роутере, администратор имеет к нему доступ; резервные копии конфигурации также могут его содержать.
-- Исправлены каталоги в tar-архиве ipk, обработка rpcd session argument, отсутствие Python time.tzset в сборке OpenWrt и согласованность двух меню LuCI.
-- Проверки: 28 локальных unit-тестов, фактическая установка, реальные измерения и отметка успешной отправки Telegram на устройстве.
+- Installed and started monitoring on GL-MT6000, GL.iNet 4.11.0 / OpenWrt 21.02.
+- Real HTTPS/DNS probes verified three connected profiles: two OpenVPN and one WireGuard; 12 profiles discovered overall.
+- Unique VPN-interface traffic accumulates; the current month is partial, beginning with monitoring.
+- Added Telegram reporting, enable flag, interval 5–10080 minutes, Chat ID and hidden token field in LuCI. Device delivery was verified with a 60-minute interval.
+- Token is excluded from RPC inventory, status, reports and errors; service configuration is mode 0600. It remains in device UCI accessible to administrator and may be included in configuration backups.
+- Fixed IPK tar directories, rpcd session argument handling, missing Python time.tzset on OpenWrt and consistency of both LuCI menus.
+- Verified 28 local unit tests, actual installation, real measurements and successful device Telegram delivery status.
 
-### Ограничения
+### Limitations
 
-- Автоматическое переключение VPN отключено. Не проверены LAN-путь и IPv6. Неактивные профили автоматически не подключаются.
-- Интерфейс пока использует таблицы LuCI; оформление и графики локального прототипа не перенесены.
-- Telegram отправляет текущий статус и изменения состояния из памяти процесса, а не полную архивную статистику простоев за неделю/месяц. События могут потеряться после перезапуска. Месячный счётчик и агрегаты сохраняются по checkpoint.
-- Первый отчёт отправляется при включении; следующие — через заданный интервал от успешной отправки, с точностью до раунда наблюдения. При ошибке повторная попытка через 5 минут; длительное отсутствие сети может задержать доставку.
-- Перезагрузка RPC во время установки может потребовать повторного входа в LuCI. Ошибка 403 в старом браузере пока исследуется; IP-бан не подтверждён.
+- Automatic VPN switching disabled. LAN path and IPv6 unverified. Inactive profiles are not started automatically.
+- Interface still uses LuCI tables; local-prototype styling and charts had not been ported.
+- Telegram sends current state and in-memory changes, not complete archived weekly/monthly downtime statistics. Events may be lost on restart; monthly counters/aggregates use checkpoints.
+- First report sends on enable; subsequent reports follow the configured interval after successful delivery, rounded to an observation cycle. Retry after five minutes on error; network loss can delay delivery.
+- RPC reload on installation may require LuCI login again. Old-browser 403 remained under investigation; an IP ban was not confirmed.
 
-### Промежуточные сборки
+### Intermediate builds
 
-- alpha2: проверка RPC после локальной сборки.
-- alpha3: исправлены отсутствующие каталоги ipk.
-- alpha4: совместимость времени OpenWrt, первый успешный запуск.
-- alpha5: Telegram и настройки отчётности.
-- alpha6: версия ресурса интерфейса для обхода старого кэша.
-- alpha7: согласованы legacy controller и menu.d.
+- alpha2: RPC check after local build.
+- alpha3: fixed missing IPK directories.
+- alpha4: OpenWrt time compatibility; first successful startup.
+- alpha5: Telegram and reporting settings.
+- alpha6: versioned UI resource to avoid stale cache.
+- alpha7: aligned legacy controller and menu.d.
 
 ## 0.5.0-alpha2
 Fix native supervisor startup on router Python without time.tzset using libc fallback. Three regression tests. Device acceptance pending.
@@ -137,3 +137,11 @@ Use semantic identities for anonymous UCI rules; resolve current names on reorde
 
 ## 0.5.0-alpha11
 Bound retries for transient final client checks; avoid duplicate trial-pass messages. Real alpha10 trial, automatic failure transition and independent rollback confirmed; original helper final error documented separately.
+
+## 0.5.0-alpha12 — English diagnostics and verified-failover prerelease
+
+- Work log, incident causes/fixes, diagnostic catalogue, validation and historical QA reports are maintained in English with original timestamps and evidence boundaries preserved.
+- Telegram-generated report text is English by default; operator-supplied profile/channel names remain unchanged. Six formatter/delivery tests passed; live delivery is governed by the existing configured schedule.
+- Fixed language-option selected attributes and version badge in the existing dashboard, with a new resource path to avoid stale browser code. The sidebar 0.6 candidate and complete configuration wizards are not part of this release.
+- Clear only this application's Python bytecode cache on update: reproducible source mtimes plus equal file sizes had allowed an older imported version to remain cached. System Python and unrelated caches are retained.
+- Native engine scope remains two connected catch-all profiles. Real alpha10 automatic transition/independent rollback passed; previous helper errors and production limits remain documented. Do not treat this prerelease as broad unattended-production acceptance.

@@ -1,55 +1,55 @@
-# Отказы роутера и восстановление транзакций
+# Router fault and transaction recovery tests
 
-Дата: 14.10.2026. Это испытания отдельного симулятора lab/router_sim.js, а не GL.iNet адаптера на устройстве. Действующая демонстрация и настоящий роутер к стенду не подключены.
+Historical report dated 2026-10-14. Target: the separate lab/router_sim.js simulator, not the GL.iNet device adapter. Neither the running demonstration nor real router was connected to this laboratory.
 
-## Результаты
+## Results
 
-- 200 комбинаций в десяти категориях, по 20 на категорию: все прошли, 1737 проверок условий.
-- 7 дополнительных регрессий: сохранение результатов RPC после перезапуска, повтор старого запроса после новой операции, конфликт ID, живой worker lock, повреждённый журнал, внешняя правка после commit и устаревшее поколение конфигурации — прошли.
-- 20 реальных принудительных завершений собственного дочернего Python-процесса SIGKILL в Linux Docker: проверяются завершённые JSON-файлы, журнал намерения, запись/fsync/replace/fsync каталога и решение об откате. Результаты — process-crash.json.
+- 200 combinations across ten categories, 20 per category: all passed, 1737 assertions.
+- Seven additional regressions passed: RPC-result persistence after restart, old-request replay after a newer operation, conflicting IDs, live worker lock, corrupt journal, external edit after commit and stale configuration generation.
+- 20 actual SIGKILL terminations of own Python child processes in Linux Docker checked completed JSON files, durable intent, write/fsync/replace/directory-fsync and rollback decisions. Results: process-crash.json.
 
-Итог после двух моделируемых перезапусков: 195 случаев дали согласованный проверенный VPN-выход, пять остались заблокированными из-за повреждения обеих копий журнала. Во всех случаях тест требует сохранения LAN-управления. «Тест прошёл» не означает, что интернет обязан восстановиться при невосстановимых данных: безопасная блокировка является отдельным ожидаемым исходом.
+After two simulated restarts, 195 cases produced a consistent verified VPN exit; five remained blocked because both journal copies were corrupt. Every case requires LAN management to remain available in the model. PASS includes expected safe blocking when data is unrecoverable; it does not require impossible Internet recovery.
 
-## Категории 200 сценариев
+## The 200-case categories
 
-| Категория | Что вводится в модель |
-| --- | --- |
-| Задержки Linux | Виртуальные задержки этапов и превышение общего deadline |
-| Потеря питания | Остановка между lock, intent, IPv4, IPv6, conntrack, verify, config, commit и release |
-| Ошибки flash | ENOSPC, EROFS, EIO на реальных этапах модели записи; часть ошибок постоянная до восстановления носителя |
-| Неполный журнал | Обрыв до/после durable-записи, torn record, повреждение обеих копий |
-| RPC | Отказ, таймаут до применения, таймаут после применения с неизвестным исходом |
-| IPv6 | Разошедшиеся маршруты двух семейств, недоступность IPv6, попытка маршрута через WAN; либо согласованный VPN, либо блокировка |
-| Conntrack | Выборочная очистка общего маршрута, ошибка очистки, полная очистка штатным worker |
-| Workers | Живой/мертвый владелец блокировки; worker соблюдает блокировку либо меняет конфигурацию независимо |
-| Сочетания | Одновременные таймауты, питание, WAN и ошибки записи |
-| Повторные запросы | Дедупликация, неизвестный ответ, восстановление и повторный перезапуск |
+| Category | Model injection |
+|---|---|
+| Linux delays | Virtual stage delays and total-deadline overrun |
+| Power loss | Stops between lock, intent, IPv4, IPv6, conntrack, verify, config, commit and release |
+| Flash errors | ENOSPC, EROFS and EIO in model write stages; some persistent until storage recovery |
+| Incomplete journal | Interruption before/after durable write, torn records, corruption of both copies |
+| RPC | Failure, timeout before apply, timeout after apply with unknown outcome |
+| IPv6 | Divergent family routes, IPv6 loss, attempted WAN route; coherent VPN or blocking required |
+| Conntrack | Scoped shared-route cleanup, cleanup failure, vendor global flush |
+| Workers | Live/dead lock owner; cooperative writer or independent configuration change |
+| Combinations | Concurrent timeout, power, WAN and write errors |
+| Repeated requests | Deduplication, unknown reply, recovery and repeated restart |
 
-Подробные состояния каждого этапа: router-faults.json. Файлы содержат только искусственные профили primary/backup/operator и модельные события.
+router-faults.json contains stage details, synthetic primary/backup/operator profiles and model events only.
 
-## Принцип транзакции
+## Transaction model
 
-Сначала прочитать и проверить поколение конфигурации, получить блокировку и сохранить durable intent со снимком предыдущего профиля. Пока семейства маршрутов меняются, forwarding закрыт, LAN-управление остаётся доступным. Затем изменить IPv4/IPv6, очистить только общий conntrack, подтвердить фактический путь и здоровье, записать конфигурацию и commit. Только после повторной проверки открыть forwarding.
+Read/verify configuration generation, acquire lock and persist durable intent with the prior profile. Close forwarding while route families change, preserving LAN management. Change IPv4/IPv6, clean only shared conntrack, verify actual path/health, write configuration and commit; reopen forwarding only after rechecking.
 
-После обрыва перечитать durable-состояние и фактические маршруты. Незавершённое собственное изменение вернуть к предыдущему профилю. Новую внешнюю правку не затирать откатом. При непроверяемом состоянии сохранить блокировку. Занятый живым worker lock не красть и не закрывать уже исправный трафик только из-за занятости.
+After interruption, reread durable state and actual routes. Restore an incomplete owned change; never overwrite a newer external edit. Retain blocking if state cannot be verified. Do not steal a live worker lock or close healthy forwarding merely because the lock is busy.
 
-Таймаут RPC после применения не означает, что операция не выполнена. Модель проверяет наблюдаемое состояние. Результаты последних 64 завершённых transaction ID сохраняются в durable-журнале; повтор не применяет действие заново и возвращает фактический текущий профиль отдельно от первоначального target. Повторный ID с другим target отвергается. Для нативного API обязательным предусловием должен стать expectedGeneration; сейчас симулятор проверяет его при передаче. Поведение старых ID за пределами окна требует отдельной политики срока действия, а не бесконечной дедупликации.
+A timeout after apply does not prove no operation occurred. The model verifies observable state and persists the last 64 completed transaction IDs. Replay does not reapply; it reports the current profile separately from the original target. Reusing an ID with a different target is rejected. A native API should require expectedGeneration; the simulator validates it when supplied. IDs outside the retention window need explicit expiry policy rather than unlimited deduplication.
 
-## Что уточнилось при проверке
+## Defects clarified or corrected
 
-Уточнена модель восстановления: RAM после перезапуска очищается, успешные результаты восстанавливаются из durable-журнала. Исправлены блокирование исправного трафика при занятой блокировке и ошибочное обозначение позднего commit/внешней правки как rollback. Успешное восстановление, откат, сохранённая внешняя правка и безопасная блокировка теперь различаются.
+Restart clears RAM; successful results recover from the durable journal. Fixed blocking healthy traffic on a busy lock and mislabelling late commit/external edits as rollback. Successful recovery, rollback, preserved external edits and safe blocking are distinct outcomes.
 
-В двух сценариях штатный global conntrack flush удалил также банковскую/специальную сессию. Это ожидаемый эффект полной очистки, а не доказательство того, что модуль может сохранить такие соединения. Выборочная очистка сохраняет их только в модельном пути адаптера.
+In two cases, simulated vendor global conntrack flush also removed a banking/special session. This is expected global-flush behaviour, not proof such sessions can be preserved. Scoped cleanup preserves them only in the model adapter path.
 
-## Где заканчиваются доказательства
+## Evidence limits
 
-Flash — модель проверяемых записей с резервной копией; задержки — виртуальные; RPC и conntrack — операции над модельным состоянием. Симулятор предполагает возможность удерживать forwarding gate при смене маршрутов и обнаруживать внешние поколения конфигурации. Реальное поведение UCI, firewall reload и workers GL.iNet этим не подтверждено.
+Flash is a model of checked writes/backup, delays are virtual, RPC/conntrack operate on model state. Forwarding-gate control and external configuration-generation detection are assumptions. Real UCI, firewall reload and GL.iNet writers were not established by these tests.
 
-20 SIGKILL действительно завершали дочерние процессы в Docker и работали с файлами Linux. Они не отключали питание компьютера, не сбрасывали дисковый cache, не воспроизводили износ/контроллер flash, не изменяли iptables/ip rule и не вызывали RPC роутера. kernel.json в этом тесте — описание модельных маршрутов, а не состояние Linux kernel.
+The 20 SIGKILL cases really terminated own Docker children and used Linux files. They did not cut host power, flush hardware cache, reproduce flash wear/controllers, modify iptables/ip rule or invoke router RPC. kernel.json describes simulated routes, not live kernel state.
 
-Настоящее применение/откат на GL-MT6000, packet capture для IPv6, сбои питания устройства и совместимость штатных workers остаются отдельным стендовым этапом. Подготовить конкретный адаптер, резерв конфигурации, out-of-band/LAN-доступ и план восстановления до согласования такого испытания. Сейчас никаких изменений роутера не выполнено.
+Device apply/rollback, IPv6 capture, actual power loss and vendor-worker compatibility required separate acceptance. Prepare a concrete adapter, private backup, independent LAN/management path and recovery plan before that test. No router settings changed in this historical stage.
 
-## Повторный запуск
+## Reproduction
 
 ```sh
 node lab/test_transaction_regressions.js
@@ -57,4 +57,4 @@ node lab/test_router_faults.js /tmp/router-faults.json
 python3 lab/test_process_crash.py /tmp/process-crash.json
 ```
 
-Последнюю команду запускать только внутри Linux-контейнера: она принудительно завершает исключительно свои дочерние helpers и удаляет свои временные каталоги. Изменения находятся в локальной ветке feature/dashboard-prototype, без нового коммита и push.
+Run the final command only in Linux container: it kills only its own children and removes only its temporary directories. At the historical checkpoint these changes were in feature/dashboard-prototype without a new commit/push.

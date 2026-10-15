@@ -4,7 +4,7 @@
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.5.0-alpha1 candidate: monitor available; experimental native controller added, production automatic failover NOT validated. Installed device: alpha7, native disabled.**
+**0.5.0-alpha12 prerelease: native monitoring and bounded two-profile failover. A real automatic transition and independent rollback were verified on the reference device; unattended production operation remains unvalidated. English diagnostics and report text are the default.**
 
 ## Why it exists
 
@@ -13,13 +13,13 @@ The idea came from a real troubleshooting session: VPN profiles showed Connected
 | Mode | Implementation status |
 |---|---|
 | Monitor | Working native service: existing profiles, IPv4 HTTPS/DNS probes, latency, traffic, events and Telegram. |
-| Operation / automatic failover | Experimental existing-rule adapter added but disabled/unvalidated. `native_apply=false` remains the production capability. See [native experiment](docs/NATIVE-EXPERIMENTAL.md). |
+| Operation / automatic failover | Bounded client-confirmed experiment verified for two already connected profiles. Generic production `native_apply=false` remains intentional; inactive-profile startup and a full server/channel/protocol hierarchy are unfinished. See [current state](docs/STATE.md). |
 
 ## Interface and statistics
 
 English by default, explicit English/Russian selector. Server cards, real HTTPS-latency chart, grouped OpenVPN/WireGuard histograms for today, last seven calendar days and current calendar month. Green: healthy observed time; red: confirmed failed time; grey: unobserved time. Inactive reserve profiles are excluded. Counts mean observed inactive-to-active transitions and distinct failure episodes, not probe counts. Startup is not a new connection. Durations are estimates between probes. New history starts with this release.
 
-Calendar-month accounting sums unique VPN interfaces, including overhead, starting when monitoring begins. It is not all WAN traffic or a complete previous month. Simultaneous connected tunnels do not prove which one carried a LAN client's traffic. Checkpoints default to 15 minutes; power loss can lose the latest interval. Detailed events are mostly RAM-only.
+Calendar-month accounting sums unique VPN interfaces, including overhead, starting when monitoring begins. It is not all WAN traffic or a complete previous month. Simultaneous connected tunnels do not prove which one carried a LAN client's traffic. Checkpoints default to 15 minutes; power loss can lose the latest interval. Monitor events are mostly RAM-only; bounded native-controller history has a checksummed persistent backup.
 
 Telegram is optional: setup wizard, private token, personal chat ID and configurable report interval. The token is required even for sending. Router backups may contain it: keep them private.
 
@@ -29,7 +29,7 @@ Telegram is optional: setup wizard, private token, personal chat ID and configur
 
 Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Other hardware/firmware is untested.
 
-Through alpha9, actual installation, three active OpenVPN/WireGuard probe paths, interface accounting and on-device Telegram delivery were verified. Public 0.2.0-alpha2 adds localization and persistent activity histograms; see release notes for its device/UI verification status. Simulation reports under `qa/` are not native failover evidence.
+Earlier releases verified installation, three connected OpenVPN/WireGuard probe paths, accounting and Telegram delivery. On 15 Oct 2026, alpha10 verified a real client-confirmed transition/return and a separate automatic transition under controlled primary traffic failure, followed by independent rollback. Helper completion errors and later checks are documented without being counted as successful helper exits. See [work log](docs/WORKLOG.md) and [validation](docs/VALIDATION.md). Simulation reports under `qa/` are separate evidence.
 
 ## Privacy
 

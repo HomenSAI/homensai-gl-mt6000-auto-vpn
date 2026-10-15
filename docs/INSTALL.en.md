@@ -1,6 +1,6 @@
 # Installation · 0.5.0-alpha1
 
-[Русский](INSTALL.ru.md)
+[Russian](INSTALL.ru.md)
 
 ## Exact tested configuration
 
@@ -23,4 +23,4 @@ SSH is optional and requires independently verified host key and an existing aut
 
 Stop by disabling monitoring or stopping only its Startup service. Upgrade after backup/checksum using Software. Automatic operation is not enabled by upgrading. Removal requires the owner's explicit decision: remove only `homensai-auto-vpn`; never auto-remove shared dependencies. `/etc/homensai-vpn` and `/etc/config/homensai_vpn` are retained intentionally; deleting history/config/secrets requires a separate decision.
 
-Native experiment / Нативный эксперимент: see docs/NATIVE-EXPERIMENTAL.md in the repository. Public installation guidance remains MONITOR-only. / Публичная инструкция устанавливает только мониторинг.
+Native experiment: see docs/NATIVE-EXPERIMENTAL.md in the repository. Public installation guidance remains MONITOR-only.

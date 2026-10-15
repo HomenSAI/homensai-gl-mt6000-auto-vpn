@@ -1,26 +1,26 @@
-# Диагностические коды Alta VPN
+# HomenS.AI Auto VPN diagnostic codes
 
-Статус: каталог конечного продукта. Часть кодов используется в JS-демонстрации на искусственных данных; сопоставление с реальными журналами роутера ещё не реализовано. Исходный Python-контроллер возвращает состояния. Код обозначает подтверждённый симптом или причину, а не предположение.
+This is the product-level catalogue. Some codes are emitted by the native monitor; others describe planned/demo states. Do not assume that every catalogue code is implemented on the device. A code denotes an evidenced symptom or cause, not an unsupported inference.
 
-| Код | Значение | Достаточное основание |
-| --- | --- | --- |
-| WAN-001 | Недоступен внешний интернет через WAN | Независимые проверки WAN; один недоступный шлюз недостаточен для обвинения провайдера |
-| DNS-001 | DNS не отвечает при работающем IP/HTTPS | Проверки DNS и независимый HTTPS с фиксированным IP и правильным SNI |
-| VPN-001 | Не удалось установить VPN | Завершённая попытка и таймаут/событие клиента; причина может оставаться неизвестной |
-| VPN-002 | VPN отклонил авторизацию | Явное сообщение VPN-клиента об отказе авторизации |
-| VPN-003 | Подключённый туннель не передаёт проверочный трафик | Up-интерфейс, подтверждённый путь и последовательные проваленные проверки |
-| VPN-004 | Не разрешается имя VPN-сервера | Ошибка разрешения именно имени endpoint |
-| TLS-001 | Ошибка проверки сертификата | Явный результат TLS-валидации; не отключать проверку автоматически |
-| ROUTE-001 | Фактический маршрут не соответствует выбранному | Проверенный результат маршрутизации/счётчиков, а не общий таймаут |
-| CHECK-001 | Путь проверки не подтверждён | Недостаточно доказательств, состояние неизвестно |
-| SWITCH-001 | Нет готового резервного кандидата | Проверенные состояния кандидатов и очередь выбора |
-| SWITCH-002 | После переключения интернет не восстановился | Подтверждено применение, последующие проверки неуспешны |
-| SWITCH-003 | Не удалось применить смену маршрута | Ошибка адаптера применения; отличать от SWITCH-002 |
-| CONFIG-001 | Автоматика приостановлена после ручной правки | Подтверждённое изменение оператором или явный ручной режим |
-| SYSTEM-001 | Несовместимая прошивка или отсутствует зависимость | Проверка версии/ABI и необходимых средств |
+| Code | Meaning | Required evidence |
+|---|---|---|
+| WAN-001 | External Internet unavailable through WAN | Independent WAN checks; one failed gateway is insufficient to blame the provider |
+| DNS-001 | DNS fails while independent IP/HTTPS checks work | DNS probes and HTTPS with fixed IP/correct SNI |
+| VPN-001 | VPN connection could not be established | Completed attempt plus timeout/client event; cause may remain unknown |
+| VPN-002 | VPN authentication rejected | Explicit authentication rejection from VPN client |
+| VPN-003 | Connected tunnel does not carry probe traffic | Up interface, verified probe path, repeated failed checks |
+| VPN-004 | VPN endpoint name cannot resolve | Resolution failure for the actual endpoint name |
+| TLS-001 | Certificate validation failed | Explicit TLS validation result; never disable validation automatically |
+| ROUTE-001 | Actual route differs from selection | Verified route/counter evidence rather than generic timeout |
+| CHECK-001 | Probe path unverified | Insufficient evidence; state unknown |
+| SWITCH-001 | No ready reserve candidate | Verified candidate states and selection queue |
+| SWITCH-002 | Internet not restored after switching | Apply confirmed, subsequent probes failed |
+| SWITCH-003 | Route change could not be applied | Apply-adapter error, distinguished from SWITCH-002 |
+| CONFIG-001 | Automation paused after manual edit | Confirmed operator change or explicit manual mode |
+| SYSTEM-001 | Unsupported firmware or missing dependency | Version/ABI/tool checks |
 
-Карточка события содержит постоянный event_id, episode_id для цепочки восстановления, время, серьёзность, код, channel_id, server_id, протокол, пользовательские названия на момент события, факты проверки, действие и результат. Все попытки одного эпизода связаны, но каждая имеет собственный attempt_id.
+Planned full event records contain stable event_id, recovery episode_id, timestamp, severity, code, channel_id/server_id, protocol, display names at event time, check evidence, action and result. Each attempt has an attempt_id while all attempts for one incident share its episode. The current bounded native history is a smaller implemented schema; see native_history.py.
 
-Отдельно показывать текущую проблему, последний сбой и историю. Фильтры: код, канал, сервер, протокол, причина/результат. Технические сведения доступны через «Подробнее»; пароли, ключи, токены, cookie и полные конфиги туда не попадают.
+Show current issue, last failure and history separately. Planned filters: code, channel, server, protocol and cause/result. Technical details must exclude passwords, keys, tokens, cookies and complete private configuration.
 
-Текст должен различать «симптом подтверждён», «причина подтверждена» и «причина не установлена». Например, VPN-003 не означает автоматически, что виноват сервер: причиной может быть маршрут или фильтрация. Успешное восстановление не удаляет исходную ошибку из истории.
+Wording must distinguish “symptom confirmed”, “cause confirmed” and “cause unknown”. VPN-003 does not automatically blame a server: routing or filtering may be responsible. Recovery never erases the original failure. Diagnostic descriptions and work-log entries are maintained in English.

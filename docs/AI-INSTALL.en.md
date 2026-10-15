@@ -14,4 +14,4 @@ Explain green/red/grey histogram time, inactive reserves and connection counts. 
 Finish with VERIFIED installed version, service/probe scope, Telegram delivery, remaining errors and how to stop only this service. Removal/history deletion needs a separate explicit request; never auto-remove shared dependencies.
 ```
 
-Native experiment / Нативный эксперимент: see docs/NATIVE-EXPERIMENTAL.md in the repository. Public installation guidance remains MONITOR-only. / Публичная инструкция устанавливает только мониторинг.
+Native experiment: see docs/NATIVE-EXPERIMENTAL.md in the repository. Public installation guidance remains MONITOR-only.
