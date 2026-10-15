@@ -14,6 +14,17 @@ import agent
 
 
 class ControlTests(unittest.TestCase):
+    def test_lua_empty_array_tables_normalize_before_first_profile_setup(self):
+        with patch.object(agent,'command',return_value=b'{"profiles":{},"servers":{},"native_candidates":{},"settings":{}}'):
+            data=agent.inventory()
+        self.assertEqual(data['profiles'],[])
+        self.assertEqual(data['servers'],[])
+        self.assertEqual(data['native_candidates'],[])
+
+    def test_nonempty_object_is_not_accepted_as_profile_array(self):
+        with patch.object(agent,'command',return_value=b'{"profiles":{"bad":1},"settings":{}}'):
+            with self.assertRaises(ValueError):agent.inventory()
+
     def test_exec_signature_uses_json_types_not_type_names(self):
         out=io.StringIO()
         with contextlib.redirect_stdout(out):agent.rpc('list')

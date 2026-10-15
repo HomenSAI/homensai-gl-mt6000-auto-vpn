@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.6.0-alpha2'
+VERSION = '0.6.0-alpha3'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -40,6 +40,13 @@ def command(args, timeout=5):
 
 def inventory():
     data = json.loads(command(['/usr/bin/lua', INVENTORY]))
+    # Lua cjson represents an empty table as {}, including empty array fields.
+    for key in ('profiles','servers','native_candidates'):
+        value=data.get(key,[])
+        if value=={}:value=[]
+        if not isinstance(value,list):raise ValueError('invalid inventory array')
+        data[key]=value
+    if any(not isinstance(p,dict) for p in data['profiles']):raise ValueError('invalid profile row')
     data['profiles'] = [p for p in data.get('profiles', [])
                         if SAFE.fullmatch(p.get('id', '')) and SAFE.fullmatch(p.get('section', ''))]
     # Inventory is already allowlisted by Lua; this guard also bounds names/amounts.

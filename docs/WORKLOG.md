@@ -240,3 +240,11 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Changed list signatures to representative native JSON values (0, false, [] and strings), including native_confirm booleans. Added a signature-contract regression test. Package postinst reloads rpcd when the actual servers:Array schema is absent, rather than only checking method presence.
 - Built separate alpha2 instead of rewriting an installed candidate: 113 Python tests and 10 UI state invariants pass; deterministic package 491756 bytes, SHA256 0e699996b473fe352ea53e167d6f8c7f0fa6ef75ab3468cb180f13aa4d65db4f. Actual setup save and live Start refusal are next acceptance checks.
 - Reference: https://github.com/openwrt/rpcd/blob/master/plugin.c (signature uses blobmsg_type of each JSON value).
+
+
+### 2026-10-15 20:52–20:56 Europe/Berlin — first-run wizard empty-array defect
+
+- Alpha2 introspection now correctly advertises Integer, Boolean and Array. Actual Overview Start returned AUTO-START-REFUSED / BOUNDED-DEADLINE-REQUIRED for the expired window; indicator stayed Off and no new intent or route change was requested.
+- Actual System setup click failed with TypeError custom.filter is not a function. Root cause: Lua cjson encoded the empty own server mapping as {}, while browser code expected an array. Normalized profiles/servers/native_candidates before filtering in Python inventory and defensively normalized wizard input in JS. Reject nonempty object profile arrays instead of iterating them.
+- Added two first-run schema regressions and moved the actual power control before the overview diagnostics, keeping it visible near the top.
+- Alpha3: 115 Python tests plus 10 UI state invariants passed; JS syntax passed; deterministic package 509466 bytes, SHA256 2ece9c506a518613cee46ffebd49fa8c4cd8213d2ddea036c860096a395e4337. Device save/acceptance remains pending until this corrected build is installed.
