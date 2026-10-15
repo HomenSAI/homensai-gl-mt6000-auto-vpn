@@ -1,5 +1,7 @@
 -- Root-only stdin; only the application's UCI config is writable here.
-local c=require('uci').cursor()
+local testroot=os.getenv('HOMENSAI_SETUP_TEST_ROOT')
+if testroot and not testroot:match('^/tmp/homensai%-setup%-test%-[A-Za-z0-9_-]+$') then os.exit(1) end
+local c=testroot and require('uci').cursor(testroot..'/config',testroot..'/delta') or require('uci').cursor()
 local json=require('cjson')
 local input=io.read(65537)
 if not input or #input>65536 then os.exit(1) end
@@ -17,7 +19,7 @@ local ok=pcall(function()
   for _,row in ipairs(data.servers) do
     local section=existing[row.profile] or row.section
     assert(section:match('^[A-Za-z0-9_]+$'))
-    if not c:get('homensai_vpn',section) then assert(c:section('homensai_vpn','server',section)) end
+    if not c:get('homensai_vpn',section) then assert(c:set('homensai_vpn',section,'server')) end
     for _,key in ipairs({'profile','name','channel','priority','enabled'}) do assert(c:set('homensai_vpn',section,key,row[key])) end
   end
   assert(c:save('homensai_vpn'));assert(c:commit('homensai_vpn'))

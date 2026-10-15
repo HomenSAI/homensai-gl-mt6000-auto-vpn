@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.6.0-alpha3'
+VERSION = '0.6.0-alpha4'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -462,7 +462,7 @@ def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
-                          'native_stop': {}, 'native_start': {}, 'telegram_test': {},
+                          'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'setup_check': {},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
                           'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0}}));return
     request = sys.stdin.buffer.read(65537)
@@ -497,7 +497,10 @@ def rpc(method):
         print(json.dumps(save(arguments,'system' if method=='setup_system' else 'telegram')));return
     if arguments:
         raise ValueError('unexpected RPC arguments')
-    if method == 'telegram_test':
+    if method == 'setup_check':
+        from setup_config import self_test
+        print(json.dumps(self_test()));return
+    elif method == 'telegram_test':
         from telegram_report import send_test
         print(json.dumps(send_test()));return
     elif method == 'inventory':

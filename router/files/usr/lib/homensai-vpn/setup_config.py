@@ -76,3 +76,21 @@ def save(arguments, kind):
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'saved':False,'code':'SETUP-SAVE-FAILED'}
     return {'saved':True,'mode':'monitor','requires_lan_certification':True}
+
+
+def self_test():
+    """Exercise the installed raw UCI writer against a synthetic temp config only."""
+    import os
+    from pathlib import Path
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='homensai-setup-test-',dir='/tmp') as directory:
+        root=Path(directory);(root/'config').mkdir();(root/'delta').mkdir()
+        path=root/'config/homensai_vpn';path.write_text("config main 'main'\n option enabled '1'\n")
+        payload={'main':{'interval':'30','setup_complete':'1'},'servers':[
+            {'section':'srv_example','profile':'openvpn:1_1','name':'Example','channel':'Main','priority':'1','enabled':'1'}]}
+        environment=dict(os.environ,HOMENSAI_SETUP_TEST_ROOT=directory)
+        result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps(payload).encode(),
+            stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10,env=environment)
+        text=path.read_text()
+        passed=result.returncode==0 and result.stdout.strip()==b'OK' and 'srv_example' in text and 'openvpn:1_1' in text
+        return {'passed':passed,'scope':'isolated-synthetic-UCI-config','code':'SETUP-CHECK-OK' if passed else 'SETUP-CHECK-FAILED'}

@@ -248,3 +248,13 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Actual System setup click failed with TypeError custom.filter is not a function. Root cause: Lua cjson encoded the empty own server mapping as {}, while browser code expected an array. Normalized profiles/servers/native_candidates before filtering in Python inventory and defensively normalized wizard input in JS. Reject nonempty object profile arrays instead of iterating them.
 - Added two first-run schema regressions and moved the actual power control before the overview diagnostics, keeping it visible near the top.
 - Alpha3: 115 Python tests plus 10 UI state invariants passed; JS syntax passed; deterministic package 509466 bytes, SHA256 2ece9c506a518613cee46ffebd49fa8c4cd8213d2ddea036c860096a395e4337. Device save/acceptance remains pending until this corrected build is installed.
+
+
+### 2026-10-15 20:59–21:07 Europe/Berlin — raw UCI writer compatibility
+
+- Real system wizard review passed, but save failed. A bounded watcher verified config unchanged, token unchanged, primary/reserve unchanged, policy unchanged and native_enabled=0. Failed saves were not labelled successful.
+- Sanitized Lua diagnostics identified writer line 20. Installed require('uci').cursor() exposes set/add but section=nil; section() belongs to a higher-level convenience API. Replaced named-section creation with the supported three-argument raw c:set(config, section, type).
+- Exercised the corrected writer using the actual device Lua/libuci in a synthetic isolated /tmp config/delta directory. Named server creation and commit passed; production application config remained byte-identical. No token was copied into this test namespace.
+- Added authenticated setup_check using that isolated installed-writer test before enabling the system wizard. A failed/unavailable check blocks saving. Async preflight respects Cancel and cannot reopen a cancelled wizard.
+- Reference: https://github.com/openwrt/uci/blob/master/lua/uci.c, uci_lua_set three-argument section-type form.
+- Alpha4 retains bounded experimental native operation. 115 Python tests, 10 UI state invariants and JS syntax checks passed; actual system save is rechecked after installing the corrected writer.

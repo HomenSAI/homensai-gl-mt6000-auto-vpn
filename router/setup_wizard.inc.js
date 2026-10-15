@@ -1,5 +1,6 @@
 function setupWizard(inventory,kind){
-  var step=0,busy=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
+  var setupCheck=kind==='system'?'pending':'passed';
+  var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
   var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval||30,duration:settings.native_duration||10,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority||100,enabled:saved.enabled!==false};})};
   var tg={token:'',chat:'',enabled:true,interval:60};
   function field(title,node){node.setAttribute('aria-label',title);return E('label',{'class':'hv-wizard-field'},[E('span',{},title),node]);}
@@ -10,6 +11,7 @@ function setupWizard(inventory,kind){
     var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
     body.appendChild(E('p',{'class':'hv-eyebrow'},bi('Step ','Шаг ')+(step+1)+' / 3'));
     if(kind==='system'){
+      body.appendChild(E('p',{'role':'status'},setupCheck==='passed'?'SETUP-CHECK-OK: installed UCI writer passed isolated check.':setupCheck==='pending'?'Checking installed UCI writer…':'SETUP-CHECK-FAILED: saving is blocked; see service diagnostics.'));
       if(step===0){
         var primary=choice(draft.source),reserve=choice(draft.target),interval=input(draft.interval,'number'),duration=input(draft.duration,'number'),consent=input('','checkbox');consent.checked=draft.session_loss;
         [field(bi('Primary VPN','Основной VPN'),primary),field(bi('Reserve VPN','Резервный VPN'),reserve),field(bi('Probe interval, seconds (10–300)','Интервал проверки, секунд (10–300)'),interval),field(bi('Trial duration, minutes (1–240)','Длительность теста, минут (1–240)'),duration),field(bi('Allow calls/sessions to reconnect','Разрешить переподключение звонков/сессий'),consent)].forEach(function(n){body.appendChild(n);});
@@ -31,16 +33,18 @@ function setupWizard(inventory,kind){
       }else{body.appendChild(E('h3',{},bi('Review Telegram destination','Проверьте получателя Telegram')));body.appendChild(E('p',{},bi('Destination: ','Получатель: ')+tg.chat));body.appendChild(E('p',{},bi('Reports every ','Отчёты каждые ')+tg.interval+' min'));body.appendChild(E('p',{},bi('After saving, use the separate Test delivery button. The stored token is never shown.','После сохранения используйте отдельную кнопку проверки доставки. Сохранённый токен не показывается.')));}
     }
     var actions=E('div',{'class':'hv-wizard-actions'});
-    actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')));
+    actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){closed=true;ui.hideModal();}},bi('Cancel','Отмена')));
     if(step>0)actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){read();step--;show();}},bi('Back','Назад')));
-    actions.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){
+    actions.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':kind==='system'&&setupCheck!=='passed'?'':null,'click':function(ev){
       if(busy)return;if(!read()){notify('SETUP-VALIDATION: check profiles, names and numeric ranges.');return;}
       if(step<2){step++;show();return;}
       busy=true;ev.target.disabled=true;
       var save=kind==='system'?rpc.declare({object:'homensai-vpn',method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',method:'setup_telegram',params:['token','chat','enabled','interval'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval);
-      return save.then(function(result){if(!result.saved){notify(result.code||'SETUP-SAVE-FAILED');return;}tg.token='';ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;ev.target.disabled=false;});
+      return save.then(function(result){if(!result.saved){notify(result.code||'SETUP-SAVE-FAILED');return;}tg.token='';closed=true;ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;ev.target.disabled=false;});
     }},step<2?bi('Next','Далее'):bi('Save configuration','Сохранить настройки')));
+    if(kind==='system'&&setupCheck!=='passed')body.querySelectorAll('input,select').forEach(function(node){node.disabled=true;});
     body.appendChild(actions);ui.showModal(kind==='system'?bi('System setup wizard','Мастер настройки системы'):bi('Telegram channel wizard','Мастер Telegram-канала'),[body]);
   }
   show();
+  if(kind==='system')rpc.declare({object:'homensai-vpn',method:'setup_check',expect:{}})().then(function(result){if(closed)return;setupCheck=result.passed?'passed':'failed';show();}).catch(function(){if(closed)return;setupCheck='failed';show();});
 }
