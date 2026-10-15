@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.2.0-alpha2'
+VERSION = '0.3.0-alpha1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -376,6 +376,7 @@ def serve():
         accounting, storage_error = Accounting(), 'STORAGE-001'
     events, samples, last_save = [], [], time.monotonic()
     from telegram_report import deliver
+    from failover_plan import plan
     telegram_saved = read_json(PERSIST/'telegram-state.json', {})
     while not STOP:
         started = time.monotonic()
@@ -420,6 +421,7 @@ def serve():
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
             status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
+            status['failover_plan']=plan(status,settings,time.time())
             if delivered:
                 atomic_json(PERSIST/'telegram-state.json', telegram_saved)
             atomic_json(RUNTIME/'status.json', status)

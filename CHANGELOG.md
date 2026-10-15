@@ -1,5 +1,14 @@
 # История изменений
 
+## 0.3.0-alpha1 — read-only failover planning
+
+- Studied mwan3/OpenWrt 21.02, VPN Guardian rollback and the statically audited GL.iNet worker/route/DNS/conntrack paths; no third-party code copied.
+- Added native monitor-backed dry-run plans, explicit source/reserve selection, 3-failure/2-success gates and blocking prerequisites; no apply RPC or VPN write path.
+- Added an executable Python transaction contract to the lab: durable intent, independent-watchdog prerequisite, scoped gate, ownership checks, verify/commit/rollback/recover. No native GL.iNet adapter is supplied.
+- 36 monitor/package tests and 8 transaction tests passed; 200 synthetic combinations include 60 simulated crash cases. Initial late-gate rollback defect was found and fixed. See docs/FAILOVER-RESEARCH.md.
+- No live VPN/network/firewall/DNS mutation; operation mode remains unavailable.
+
+
 ## Documentation revision · 15.10.2026
 
 - Added EN/RU passports of the exact router/firmware/LuCI configuration, read live from the device, plus a redacted JSON snapshot.

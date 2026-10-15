@@ -1,6 +1,6 @@
 # Current status / Текущее состояние
 
-15.10.2026: public alpha 0.2.0-alpha1. See README.md, CHANGELOG.md and VALIDATION.md. Monitor available; automatic operation unavailable. The dated text below is historical context, not current installation status.
+15.10.2026: alpha 0.3.0-alpha1 installed in monitor mode. Read-only failover planning integrated; native automatic application unavailable. See FAILOVER-RESEARCH.md, README.md, CHANGELOG.md and VALIDATION.md. The dated text below is historical context, not current installation status.
 
 # Состояние HomenSAI Auto VPN
 

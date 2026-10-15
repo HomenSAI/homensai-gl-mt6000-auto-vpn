@@ -191,6 +191,8 @@ class NativeTests(unittest.TestCase):
             status=json.loads((runtime/'status.json').read_text())
             self.assertEqual(status['mode'],'monitor')
             self.assertFalse(status['capabilities']['native_apply'])
+            self.assertFalse(status['failover_plan']['applied'])
+            self.assertEqual(status['failover_plan']['mode'],'dry-run')
             self.assertEqual(status['profiles'][0]['rtt_ms'],32)
             agent.STOP=False
 

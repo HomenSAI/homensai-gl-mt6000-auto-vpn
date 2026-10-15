@@ -30,6 +30,9 @@ end)
 local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3'}
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
+  main.plan_enabled=s.plan_enabled=='1'
+  main.plan_source=s.plan_source or ''
+  main.plan_target=s.plan_target or ''
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0
   main.interval=math.max(10,math.min(300,tonumber(s.interval) or 30))
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))

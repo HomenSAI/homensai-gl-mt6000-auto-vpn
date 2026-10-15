@@ -4,7 +4,7 @@
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.2.0-alpha2: monitor available; operational automatic failover is NOT implemented.**
+**0.3.0-alpha1: monitor available; operational automatic failover is NOT implemented.**
 
 ## Why it exists
 
@@ -44,3 +44,5 @@ Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical e
 Independent project, not an official GL.iNet/OpenWrt product. No software licence selected yet. Public visibility is not itself an open-source licence; the book's licence does not automatically apply here.
 
 Current device status: 0.2.0-alpha2 is installed and native monitoring/activity/Telegram configuration was verified. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
+
+[Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
