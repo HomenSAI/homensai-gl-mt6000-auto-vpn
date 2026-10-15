@@ -43,3 +43,6 @@
 
 ## 2026-10-15 — 0.5.0-alpha2: router startup compatibility
 SSH log confirmed native controller crash: Python on device lacks time.tzset. Added libc fallback matching existing monitor and three regression cases. Before fix only monitor was running; stale native status must not be treated as live. No successful switching trial claimed. Credentials and device identifiers excluded.
+
+## 0.5.0-alpha3 — HNAT diagnostic compatibility
+Fresh on-device debugfs read emits exact kernel message value=0, hook is disabled now! Recognise this response only with fresh kernel timestamp and consistent value/state; reject stale or inconsistent messages. Controller startup confirmed after alpha2. Actual switch still not tested.

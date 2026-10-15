@@ -192,6 +192,9 @@ class NativeTests(unittest.TestCase):
         self.assertEqual(native.fresh_hook_state('[ 100.1] hnat hook is disabled',101),'unknown')
         self.assertEqual(native.fresh_hook_state('[ 100.1] hnat hook is going to be disabled !',100),'unknown')
         self.assertEqual(native.fresh_hook_state('[ 100.1] hnat hook is enabled',100),'enabled')
+        self.assertEqual(native.fresh_hook_state('[ 100.1] value=0, hook is disabled now!',100),'disabled')
+        self.assertEqual(native.fresh_hook_state('[ 100.1] value=0, hook is disabled now!',101),'unknown')
+        self.assertEqual(native.fresh_hook_state('[ 100.1] value=1, hook is disabled now!',100),'unknown')
 
     def test_acceleration_requires_explicit_bounded_request(self):
         b=Backend()

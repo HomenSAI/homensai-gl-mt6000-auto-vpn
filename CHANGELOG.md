@@ -108,3 +108,6 @@
 
 ## 0.5.0-alpha2
 Fix native supervisor startup on router Python without time.tzset using libc fallback. Three regression tests. Device acceptance pending.
+
+## 0.5.0-alpha3
+Recognise fresh GL-MT6000 HNAT hook readback; stale/inconsistent responses remain unknown.

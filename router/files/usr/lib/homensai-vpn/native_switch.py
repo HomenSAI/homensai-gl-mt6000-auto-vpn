@@ -85,6 +85,9 @@ def fresh_hook_state(lines,after):
         if not match or float(match[1])<after:continue
         message=match[2].lower()
         if 'going to' in message:continue  # An action request is not proof of resulting state.
+        actual=re.fullmatch(r'value=([01]), hook is (disabled|enabled) now!',message)
+        if actual and actual[2]==('disabled' if actual[1]=='0' else 'enabled'):
+            return actual[2]
         match=re.fullmatch(r'(?:hnat[ _]*)?hook(?:_toggle)?\s*(?:(?:is|state|status|currently|:|=)\s*)*(enabled|disabled)[ !.]*',message)
         if match:return match[1]
     return 'unknown'
