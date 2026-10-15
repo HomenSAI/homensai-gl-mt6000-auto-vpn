@@ -522,9 +522,17 @@ def serve():
             if finish_committed(backend,active,'SERVICE-STOPPED') and backend.order()==(active['before'],active['hash']):backend.unguard()
 
 
-if __name__=='__main__':
+def configure_timezone():
     os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3'
-    time.tzset()
+    if callable(getattr(time,'tzset',None)):
+        time.tzset()
+    else:
+        import ctypes
+        ctypes.CDLL(None).tzset()
+
+
+if __name__=='__main__':
+    configure_timezone()
     def stop(*_):
         global STOP
         STOP=True

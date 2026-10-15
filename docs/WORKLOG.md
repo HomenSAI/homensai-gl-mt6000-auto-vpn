@@ -40,3 +40,6 @@
 - Финальные проверки этапа: 76 Python tests PASS; Lua 5.1 syntax/inventory/credential exclusion PASS в отдельном disposable container, общая среда не менялась; PowerShell 7 SelfTest PASS; негативный CheckOnly ожидаемо отказал. Положительное применение/откат на роутере не заявляется. Устройство пока alpha7/monitor/native disabled.
 
 - Дополнительная проверка завершения выявила риск возврата на отказавший исходный VPN. finish_committed теперь возвращает исходный порядок только после свежей успешной проверки источника; иначе сохраняет резерв, отмечает original_restored=false и не выдаёт неизвестную связь за восстановленную. Коммит не отменяется автоматически при рестарте контроллера. Три регрессии пройдены. Клиентский helper дополнительно ждёт подтверждённый Stop и проверяет конечный путь; таймаут без результата не возвращает успешный exit code. ACK сверяется не только с публичным статусом, но и с checksummed private journal WAIT-CLIENT. Всего 76 тестов PASS.
+
+## 2026-10-15 — 0.5.0-alpha2: router startup compatibility
+SSH log confirmed native controller crash: Python on device lacks time.tzset. Added libc fallback matching existing monitor and three regression cases. Before fix only monitor was running; stale native status must not be treated as live. No successful switching trial claimed. Credentials and device identifiers excluded.
