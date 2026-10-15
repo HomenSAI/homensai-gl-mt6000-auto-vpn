@@ -6,7 +6,7 @@ Updated: 2026-10-15, Europe/Berlin. This file separates device evidence, laborat
 
 - GL.iNet GL-MT6000 / Flint 2; GL.iNet firmware 4.11.0; OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc; kernel 5.4.238; aarch64_cortex-a53; Python 3.9.15.
 - LuCI base git-22.335.71649-0ecaf74. Exact recorded environment: TESTED-ENVIRONMENT.en.md and the redacted JSON passport.
-- Installed application: 0.5.0-alpha11. HomenS.AI Style core 1.14.3 assets are pinned and retain their original licences.
+- Installed application: 0.5.0-alpha12. Version and English formatter verified on the device after installation; native_enabled=0, journal ROLLED-BACK, own guard absent. HomenS.AI Style core 1.14.3 assets are pinned and retain their original licences.
 - The sidebar dashboard15/ui13 is a local candidate under development; it is not yet the installed router interface. Its fixture is explicitly synthetic and does not verify a real LuCI settings form.
 - No router packages were removed. mtkhnat remains loaded; runtime hook disable was verified. Kill Switch remained enabled and direct-WAN fallback disabled during accepted tests.
 
@@ -22,7 +22,7 @@ Updated: 2026-10-15, Europe/Berlin. This file separates device evidence, laborat
 
 ## Laboratory evidence
 
-- 90 Python unit tests passed after the UCI identity correction. Windows SelfTest and cable CheckOnly passed. Six Telegram formatter/delivery tests passed after English-text changes; the updated formatter has not yet been installed or live-delivered.
+- 90 Python unit tests passed after the UCI identity correction. Windows SelfTest and cable CheckOnly passed. Six Telegram formatter/delivery tests passed after English-text changes; the updated formatter is installed and English default output was verified on device; a new live-delivery acknowledgement is not claimed.
 - Historical model/stress reports are in qa/. Synthetic combinations and Docker child-process crashes are not router power failures or complete native driver acceptance.
 - The old ab28c58 soak was deliberately stopped after discovery that a fake PID could reach real killpg. Tests now mock that syscall. Preserve that limitation with the old release evidence.
 
