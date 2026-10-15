@@ -55,3 +55,25 @@ Device ring is full: new hook records replace oldest entries. Match the unique p
 
 ## 0.5.0-alpha6 — Windows deadline / Python 3.9
 Device traceback confirmed Python 3.9 rejects seven fractional digits emitted by Windows DateTimeOffset. Normalise excess fractional digits only when a timezone is present; malformed/missing timezone remains refused. Three regressions. Live switch did not start before this correction.
+
+## 2026-10-15 — chronological real-device preparation and first attempted trial
+
+| Step | Evidence/action | Outcome |
+|---|---|---|
+| LAN | Windows selected router gateway; router DNS and IPv6 prerequisite checked | Passed; secondary Wi-Fi route observed earlier, not assumed absent |
+| SSH | Owner accepted observed host fingerprint; password login succeeded | Diagnostic session works; permanent admin key addition rejected by approval review and NOT applied |
+| alpha1 startup | Device log AttributeError: time.tzset absent | Native process crash loop; monitor continued; old native status was stale |
+| alpha2 | libc tzset fallback; 79 tests | Installed; both own processes observed running |
+| alpha3 | Recognise exact hook readback value=0, hook is disabled now! | Installed; freshness check still rejected response |
+| alpha4 | Replace cross-clock comparison with before/after ring comparison | Installed; full ring rollover invalidated simple prefix assumption |
+| alpha5 | Unique old-tail marker establishes new records despite rollover; 82 tests | Installed; HNAT hook disabled verified; original driver remains loaded |
+| Windows orchestration | Initial credential override scope failed; diagnostic helper prints only exception type/line, no credentials | Corrected in-memory override; no VPN switch at this stage |
+| deadline preflight | Python 3.9 rejects seven decimal fraction digits from Windows | Controller ValueError; no switch |
+| alpha6 | Normalise timezone-qualified deadline precision; 85 tests | Installed; fresh status had empty blockers |
+| outage window | Owner explicitly approved next 10 minutes with possible interruption | Earlier attempts rejected by automatic approval review were NOT executed |
+| real trial attempt | Controller reached APPLYING then GUARD-INSTALL-FAILED | Client helper requested Stop; no success claimed |
+| state verification | Live policy order/hash equals journal BEFORE; differs from AFTER | No VPN rule reorder verified; client DNS successful and HTTPS 200 |
+| guard diagnosis | nft -c -f - reports missing /dev/stdin on device | Root cause identified; fixed-path private temporary batch input required; not yet fixed/tested |
+| safe hold | Own native_enabled saved 0 | Automatic mode off; journal closure and guard fix pending |
+
+All observations above distinguish executed checks from planned work. No router power cut, successful automatic failover or verified native rollback is claimed. Source code commits: alpha2 55d7be1, alpha3 a547e64, alpha4 baee33d, alpha5 a19da23, alpha6 08bc611. Each was pushed to local Gitea before an identical source-tree snapshot was pushed to GitHub. No credentials, host fingerprint, exit IP, chat IDs, profile IDs or private router configuration are included in this log.
