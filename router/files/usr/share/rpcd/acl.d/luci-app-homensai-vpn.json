@@ -2,12 +2,33 @@
   "luci-app-homensai-vpn": {
     "description": "HomenSAI Auto VPN monitor and its own configuration",
     "read": {
-      "ubus": {"homensai-vpn": ["status", "inventory", "events"]},
-      "uci": ["homensai_vpn"]
+      "ubus": {
+        "homensai-vpn": [
+          "status",
+          "inventory",
+          "events"
+        ]
+      },
+      "uci": [
+        "homensai_vpn"
+      ]
     },
     "write": {
-      "ubus": {"homensai-vpn": ["scan", "native_confirm", "native_stop", "native_start"]},
-      "uci": ["homensai_vpn"]
+      "ubus": {
+        "homensai-vpn": [
+          "scan",
+          "native_confirm",
+          "native_stop",
+          "native_start",
+          "setup_system",
+          "setup_telegram",
+          "telegram_test",
+          "setup_check"
+        ]
+      },
+      "uci": [
+        "homensai_vpn"
+      ]
     }
   }
 }

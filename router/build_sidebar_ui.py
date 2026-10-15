@@ -116,5 +116,5 @@ source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};
 source=source.replace('return view.extend({',(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("      showPage(activeTab);window.addEventListener", "      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);\n      showPage(activeTab);window.addEventListener")
 source=source.replace("telegramChat.datatype='integer'","telegramChat.datatype='string'")
-(root/'dashboard23.js').write_text(source,encoding='utf8')
-print('Generated dashboard23.js with sidebar, language persistence and sortable tables')
+(root/'dashboard24.js').write_text(source,encoding='utf8')
+print('Generated dashboard24.js with sidebar, language persistence and sortable tables')

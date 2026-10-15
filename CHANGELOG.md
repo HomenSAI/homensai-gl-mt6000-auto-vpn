@@ -161,3 +161,10 @@ Bound retries for transient final client checks; avoid duplicate trial-pass mess
 - Three-step system and Telegram-channel wizards, strict own-configuration validation and deliberate test delivery. Existing VPN keys/routes are not edited by setup.
 - Correct exec RPC JSON type signatures and reload schema detection. Fix cable helper checks to constrain the intended interface/source address.
 - Full unattended failover and expanded inactive-profile hierarchy remain pending; 113 Python tests and 10 UI state invariants pass.
+
+
+## 0.6.0-alpha3–alpha5 — installed-device setup fixes
+
+- Alpha3 normalizes Lua empty-array tables before first-run setup and moves Auto mode to the top of Overview.
+- Alpha4 uses the actual raw UCI named-section creation API and checks the installed writer in an isolated synthetic configuration before enabling Save.
+- Alpha5 fixes explicit application ACL coverage for setup and Telegram methods, adds an ACL/RPC contract regression and reloads rpcd registration after upgrade. No wildcard or unrelated-object permissions are added.

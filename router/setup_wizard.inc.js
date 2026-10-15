@@ -11,7 +11,7 @@ function setupWizard(inventory,kind){
     var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
     body.appendChild(E('p',{'class':'hv-eyebrow'},bi('Step ','Шаг ')+(step+1)+' / 3'));
     if(kind==='system'){
-      body.appendChild(E('p',{'role':'status'},setupCheck==='passed'?'SETUP-CHECK-OK: installed UCI writer passed isolated check.':setupCheck==='pending'?'Checking installed UCI writer…':'SETUP-CHECK-FAILED: saving is blocked; see service diagnostics.'));
+      body.appendChild(E('p',{'role':'status'},setupCheck==='passed'?'SETUP-CHECK-OK: installed UCI writer passed isolated check.':setupCheck==='pending'?'Checking installed UCI writer…':'SETUP-CHECK-FAILED: saving is blocked. After an upgrade, sign out and sign in to refresh application permissions.'));
       if(step===0){
         var primary=choice(draft.source),reserve=choice(draft.target),interval=input(draft.interval,'number'),duration=input(draft.duration,'number'),consent=input('','checkbox');consent.checked=draft.session_loss;
         [field(bi('Primary VPN','Основной VPN'),primary),field(bi('Reserve VPN','Резервный VPN'),reserve),field(bi('Probe interval, seconds (10–300)','Интервал проверки, секунд (10–300)'),interval),field(bi('Trial duration, minutes (1–240)','Длительность теста, минут (1–240)'),duration),field(bi('Allow calls/sessions to reconnect','Разрешить переподключение звонков/сессий'),consent)].forEach(function(n){body.appendChild(n);});

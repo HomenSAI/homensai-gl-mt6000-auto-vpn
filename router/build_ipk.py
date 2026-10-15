@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.6.0-alpha4-1'
+VERSION = '0.6.0-alpha5-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -63,9 +63,7 @@ chmod 0700 /etc/homensai-vpn
 /usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
-if ! ubus -v list 'homensai-vpn' | grep -q 'setup_check'; then
-    /etc/init.d/rpcd reload
-fi
+/etc/init.d/rpcd reload
 rm -f /tmp/luci-indexcache
 exit 0
 '''

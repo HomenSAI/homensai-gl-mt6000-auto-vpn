@@ -258,3 +258,11 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Added authenticated setup_check using that isolated installed-writer test before enabling the system wizard. A failed/unavailable check blocks saving. Async preflight respects Cancel and cannot reopen a cancelled wizard.
 - Reference: https://github.com/openwrt/uci/blob/master/lua/uci.c, uci_lua_set three-argument section-type form.
 - Alpha4 retains bounded experimental native operation. 115 Python tests, 10 UI state invariants and JS syntax checks passed; actual system save is rechecked after installing the corrected writer.
+
+
+### 2026-10-15 21:12–21:18 Europe/Berlin — application ACL coverage defect
+
+- Installed writer self-test passed through root ubus, but browser wizard preflight still failed. A fresh LuCI login alone did not resolve it. Actual installed ACL inspection showed only scan/native_confirm/native_stop/native_start; setup_system/setup_telegram/telegram_test/setup_check were absent.
+- Root cause: an earlier string replacement assumed native_stop was the last ACL entry; native_start had already been appended, so the replacement silently made no change. Replaced text-based edits with structured JSON assignment of the explicit own-method allowlist.
+- Added a regression requiring registered RPC methods to equal read/write ACL coverage, read scope limited to inventory/status/events, write scope limited to the application's ubus object, and no wildcard grants. Reload rpcd after package upgrade to load the new ACL; users with existing sessions may need to sign out/in.
+- Alpha5: 116 Python tests plus 10 UI state invariants pass. Deterministic package 546598 bytes, SHA256 ea1ae9eca7f89eddd0d7bdc023080e5e4495912ee38b271934cf52967f273058. This fixes application RPC authorization; it is not proof of the historical browser HTTP 403 cause.

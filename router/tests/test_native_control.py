@@ -14,6 +14,19 @@ import agent
 
 
 class ControlTests(unittest.TestCase):
+    def test_every_registered_rpc_has_an_explicit_application_acl(self):
+        out=io.StringIO()
+        with contextlib.redirect_stdout(out):agent.rpc('list')
+        methods=set(json.loads(out.getvalue()))
+        root=Path(__file__).resolve().parents[1]/'files'
+        acl=json.loads((root/'usr/share/rpcd/acl.d/luci-app-homensai-vpn.json').read_text())['luci-app-homensai-vpn']
+        read=set(acl['read']['ubus']['homensai-vpn'])
+        write=set(acl['write']['ubus']['homensai-vpn'])
+        self.assertEqual(methods,read|write)
+        self.assertEqual(read,{'inventory','status','events'})
+        self.assertNotIn('*',write)
+        self.assertEqual(set(acl['write']['ubus']),{'homensai-vpn'})
+
     def test_lua_empty_array_tables_normalize_before_first_profile_setup(self):
         with patch.object(agent,'command',return_value=b'{"profiles":{},"servers":{},"native_candidates":{},"settings":{}}'):
             data=agent.inventory()
