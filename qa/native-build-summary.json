@@ -1,0 +1,13 @@
+{
+  "date": "2026-10-14",
+  "version": "0.1.0-alpha1-1",
+  "mode": "monitor",
+  "native_apply": false,
+  "package": "homensai-auto-vpn_0.1.0-alpha1-1_all.ipk",
+  "bytes": 12136,
+  "sha256": "37f9448ad001a5b100ec956a5545a385200fcd8e2402eabb83bce26d259df7de",
+  "native_tests_passed": 23,
+  "lua51_inventory_passed": true,
+  "installed_on_router": false,
+  "python_installed_on_router": false
+}

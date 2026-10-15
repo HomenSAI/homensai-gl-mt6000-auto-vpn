@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-14",
+  "mode": "offline-simulation",
+  "distinctGeneratedRuns": 1200,
+  "generatedSteps": 540000,
+  "conditionChecks": 21962002,
+  "generatedFailures": 0,
+  "matrixCases": 4096,
+  "matrixFailures": 0,
+  "regressions": 12,
+  "regressionFailures": 0,
+  "soakTicks": 50000,
+  "capacityProfiles": 400,
+  "originalTests": 67,
+  "hashes": {
+    "app.js": "9ebe6e5b7a0be8fcae803e35826fc880201dd6c8a81fcbefd6b579212c671afc",
+    "test_matrix.js": "1d5cbf2f21107ff53b0cd2316fea11d1bb15a7baf8b1f940f6d79f6b85c80e51",
+    "stress_model.js": "c2ce4b548383029248a969ad85befe463cf2b4c8f4abc2aa181f2ce3a955811c",
+    "model.js": "c58a1582af940cc1f8fb487dfa335cf122245c78f2cd442baaf7066d4cd5a16f",
+    "test_soak.js": "a36dd3c3f21d2d960982841b2d3fb557106512dc344d34dbec7f57b647858d54",
+    "test_regressions.js": "84e882fd04a153b05f5ae07fb4eb81627c30c45a8a19b4e38c9aa400fbf447a9"
+  },
+  "hash_encoding": "source UTF-8 normalized to LF for Git publication"
+}

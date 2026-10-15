@@ -1,0 +1,1 @@
+{"time":0,"active":"primary","operator_revision":0,"wan":"up","manual_override":false,"primary":{"interface_up":true,"route_verified":true,"dns_ok":true,"https":{"a":true,"b":true,"c":true}},"backup":{"interface_up":true,"route_verified":true,"dns_ok":true,"https":{"a":true,"b":true,"c":true}},"password":"SENTINEL_DO_NOT_LOG"}

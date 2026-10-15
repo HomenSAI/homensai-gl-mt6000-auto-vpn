@@ -1,0 +1,19 @@
+services:
+  demo:
+    image: local-dev-tools:installed
+    container_name: alta-vpn-demo
+    entrypoint: [python3, /app/demo/server.py]
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8798:8000
+    environment:
+      BIND: 0.0.0.0
+      PORT: '8000'
+    volumes:
+      - ../:/app:ro
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    user: '1000:1000'
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

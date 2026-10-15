@@ -1,0 +1,68 @@
+{
+  "suite": "business-regressions",
+  "total": 10,
+  "passed": 0,
+  "failed": 10,
+  "results": [
+    {
+      "name": "Revoking direct WAN permission closes the bypass",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n",
+      "ms": 32
+    },
+    {
+      "name": "WAN outage invalidates the primary recovery timer",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'id_z1u774dymv9hl6o0'\n- 'id_mfsu2iclmv9hl6o0'\n      ^\n",
+      "ms": 11
+    },
+    {
+      "name": "Recommendations never promote a newly failed server",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\ntrue !== false\n",
+      "ms": 5
+    },
+    {
+      "name": "Recommendations are invalidated while WAN is down",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert(m.ranking(604800000,true).every(r=>!r.eligible))\n",
+      "ms": 12
+    },
+    {
+      "name": "Recommendations reject unmeasured and stale profiles",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert(m.ranking(604800000,true).every(r=>!r.eligible))\n",
+      "ms": 2
+    },
+    {
+      "name": "Monthly counter survives detailed history eviction",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert(m.monthly().rx>=before)\n",
+      "ms": 186
+    },
+    {
+      "name": "Recovery includes a failed first attempt and retry delay",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n15 !== 45\n",
+      "ms": 2
+    },
+    {
+      "name": "Retries share one outage episode",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'id_j1hdork7mv8j8r4t'\n- 'id_lb4h8r33mv8j8r4t'\n      ^\n",
+      "ms": 2
+    },
+    {
+      "name": "Healthy manual switch is not outage recovery",
+      "passed": false,
+      "error": "Expected values to be strictly equal:\n\n5 !== null\n",
+      "ms": 1
+    },
+    {
+      "name": "Usable VPN replaces direct WAN without five-minute hold",
+      "passed": false,
+      "error": "The expression evaluated to a falsy value:\n\n  assert(m.active)\n",
+      "ms": 4
+    }
+  ]
+}

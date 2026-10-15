@@ -1,0 +1,9 @@
+{
+  "suite": "exhaustive-boolean-matrix",
+  "cases": 4096,
+  "passed": 4096,
+  "failed": 0,
+  "steps": 12288,
+  "failures": [],
+  "elapsedMs": 206
+}

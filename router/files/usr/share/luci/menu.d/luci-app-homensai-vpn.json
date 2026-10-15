@@ -1,0 +1,13 @@
+{
+  "admin/services": {
+    "title": "Services",
+    "order": 40,
+    "action": {"type": "firstchild"}
+  },
+  "admin/services/homensai-vpn": {
+    "title": "HomenSAI Auto VPN",
+    "order": 70,
+    "action": {"type": "view", "path": "homensai-vpn/dashboard10"},
+    "depends": {"acl": ["luci-app-homensai-vpn"]}
+  }
+}

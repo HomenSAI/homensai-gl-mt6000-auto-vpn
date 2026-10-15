@@ -1,0 +1,68 @@
+{
+  "suite": "business-regressions",
+  "total": 12,
+  "passed": 12,
+  "failed": 0,
+  "results": [
+    {
+      "name": "Revoking direct WAN permission closes the bypass",
+      "passed": true,
+      "ms": 8
+    },
+    {
+      "name": "WAN outage invalidates the primary recovery timer",
+      "passed": true,
+      "ms": 15
+    },
+    {
+      "name": "Recommendations never promote a newly failed server",
+      "passed": true,
+      "ms": 5
+    },
+    {
+      "name": "Recommendations are invalidated while WAN is down",
+      "passed": true,
+      "ms": 5
+    },
+    {
+      "name": "Recommendations reject unmeasured and stale profiles",
+      "passed": true,
+      "ms": 2
+    },
+    {
+      "name": "Monthly counter survives detailed history eviction",
+      "passed": true,
+      "ms": 195
+    },
+    {
+      "name": "Recovery includes a failed first attempt and retry delay",
+      "passed": true,
+      "ms": 2
+    },
+    {
+      "name": "Retries share one outage episode",
+      "passed": true,
+      "ms": 2
+    },
+    {
+      "name": "Healthy manual switch is not outage recovery",
+      "passed": true,
+      "ms": 2
+    },
+    {
+      "name": "Usable VPN replaces direct WAN without five-minute hold",
+      "passed": true,
+      "ms": 2
+    },
+    {
+      "name": "Adding a profile never selects VPN over an active WAN bypass",
+      "passed": true,
+      "ms": 3
+    },
+    {
+      "name": "Switch totals survive log eviction",
+      "passed": true,
+      "ms": 11
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-14",
+  "modelCases": 200,
+  "modelPassed": 200,
+  "modelAssertions": 1737,
+  "linuxChildCrashCases": 20,
+  "linuxChildCrashPassed": 20,
+  "transactionRegressions": 7,
+  "actualRouterTested": false,
+  "blockedAfterSimulatedBoot": 5,
+  "hashes": {
+    "test_router_faults.js": "99a6f00f0f3db4546f9923d87879d05d1ddb79eb57bcc005c7440aebc35f1d59",
+    "test_process_crash.py": "8f5322302790a749934d45a7c34fd227acf05a1d5078c734a4c9b5997bfbd883",
+    "router_sim.js": "0bb7ebed5db8a35233cce8860a64d607822399dcf1864d6aaef408cb96cf876b",
+    "test_transaction_regressions.js": "ace9f2546ee61a5ebf2ff0bb2f54ce6413e23a3df65144b611b8c5aca6104b60"
+  },
+  "hash_encoding": "source UTF-8 normalized to LF for Git publication"
+}

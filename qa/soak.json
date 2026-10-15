@@ -1,0 +1,44 @@
+{
+  "suite": "long-running-and-capacity",
+  "passed": 5,
+  "failed": 0,
+  "results": [
+    {
+      "name": "400 profiles: independent sampling and ranking",
+      "passed": true,
+      "ms": 9,
+      "profiles": 400,
+      "nodeHeapMB": 5
+    },
+    {
+      "name": "50,000 ticks: month rollover, unknown periods, bounded history",
+      "passed": true,
+      "ms": 1257,
+      "ticks": 50000,
+      "modelHours": 69.44444444444444,
+      "history": 5000,
+      "events": 580,
+      "rx": 278541840840,
+      "tx": 43074900000,
+      "nodeHeapMB": 27
+    },
+    {
+      "name": "Repeated failed applies use backoff instead of 30-second loop",
+      "passed": true,
+      "ms": 2,
+      "modelMinutes": 30,
+      "attempts": 9
+    },
+    {
+      "name": "18-month retention and ledger boundary handling",
+      "passed": true,
+      "ms": 1
+    },
+    {
+      "name": "Manual samples do not change selection or traffic",
+      "passed": true,
+      "ms": 3,
+      "tests": 1000
+    }
+  ]
+}
