@@ -1,3 +1,5 @@
+> Historical report for 0.3.0-alpha1 / Исторический отчёт 0.3.0-alpha1. Current native candidate and device state: [NATIVE-EXPERIMENTAL.md](NATIVE-EXPERIMENTAL.md).
+
 # Переключение и откат / Failover and rollback
 
 ## Изученные реализации

@@ -4,7 +4,7 @@
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.3.0-alpha1: monitor available; operational automatic failover is NOT implemented.**
+**0.4.0-alpha8 candidate: monitor available; experimental native controller added, production automatic failover NOT validated. Installed device: alpha7, native disabled.**
 
 ## Why it exists
 
@@ -13,7 +13,7 @@ The idea came from a real troubleshooting session: VPN profiles showed Connected
 | Mode | Implementation status |
 |---|---|
 | Monitor | Working native service: existing profiles, IPv4 HTTPS/DNS probes, latency, traffic, events and Telegram. |
-| Operation / automatic failover | Planned and unavailable. Native agent hard-codes `native_apply=false`; live apply/rollback, LAN routing and IPv6 are not validated. |
+| Operation / automatic failover | Experimental existing-rule adapter added but disabled/unvalidated. `native_apply=false` remains the production capability. See [native experiment](docs/NATIVE-EXPERIMENTAL.md). |
 
 ## Interface and statistics
 
@@ -43,6 +43,8 @@ Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical e
 
 Independent project, not an official GL.iNet/OpenWrt product. Licensed under [MIT](LICENSE): use, modify and redistribute, including commercially, while retaining the author/site notice and licence. See [licensing scope and third-party notices](LICENSING.md).
 
-Current device status: 0.3.0-alpha1 is installed and native monitoring/activity/Telegram configuration was verified. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
+Current device status: 0.4.0-alpha7 is installed in monitor mode, native switching disabled. Three active probe paths were verified; HNAT disable and client-path validation remain unresolved. Alpha8 is a lab candidate. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
 
 [Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
+
+[Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)

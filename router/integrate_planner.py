@@ -2,7 +2,7 @@
 from pathlib import Path
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
-source=(root/'dashboard11.js').read_text(encoding='utf8').replace('v0.2.0-alpha2','v0.3.0-alpha1')
+source=(root/'dashboard11.js').read_text(encoding='utf8').replace('v0.2.0-alpha2','v0.4.0-alpha8')
 settings="""
     main.option(form.Flag,'plan_enabled',bi('Enable dry-run failover planning','Включить планирование переключения без применения')).default='0';
     var planSource=main.option(form.ListValue,'plan_source',bi('Observed source profile','Наблюдаемый исходный профиль'));
@@ -20,4 +20,10 @@ panel="""
       panel.appendChild(planning);
 """
 source=source.replace("      var table=E('table'",panel+"\n      var table=E('table'",1)
-(root/'dashboard12.js').write_text(source,encoding='utf8')
+native="""
+      var ns=status.native_failover||{state:'SERVICE-STOPPED'};
+      var nativePanel=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Experimental native failover','Экспериментальное автопереключение')),E('strong',{},ns.state||'UNKNOWN'),E('p',{},bi('Existing connected tunnels only. A timed trial, independent rollback supervisor and external LAN confirmation are required. Automatic failback is not included.','Только уже подключённые туннели. Нужны ограниченный по времени тест, независимый контроллер отката и подтверждение с LAN-клиента. Автовозврат на основной пока не включён.')),E('code',{},(ns.blockers||[]).join(' · '))]);
+      panel.appendChild(nativePanel);
+"""
+source=source.replace("      var table=E('table'",native+"\n      var table=E('table'",1)
+(root/'dashboard13.js').write_text(source,encoding='utf8')

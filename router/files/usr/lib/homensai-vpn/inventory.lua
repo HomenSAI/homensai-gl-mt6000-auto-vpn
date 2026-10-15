@@ -31,6 +31,8 @@ local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CE
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
   main.plan_enabled=s.plan_enabled=='1'
+  main.native_enabled=s.native_enabled=='1'
+  main.native_until=s.native_until or ''
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0

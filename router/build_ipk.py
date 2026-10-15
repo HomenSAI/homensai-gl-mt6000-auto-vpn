@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.3.0-alpha1-1'
+VERSION = '0.4.0-alpha8-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -61,7 +61,7 @@ def build(output=None):
 mkdir -p /etc/homensai-vpn
 chmod 0700 /etc/homensai-vpn
 /etc/init.d/homensai-vpn enable
-/etc/init.d/homensai-vpn start
+/etc/init.d/homensai-vpn restart
 if ! ubus list 'homensai-vpn' | grep -q '^homensai-vpn$'; then
     /etc/init.d/rpcd reload
 fi

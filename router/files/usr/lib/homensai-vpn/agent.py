@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.3.0-alpha1'
+VERSION = '0.4.0-alpha8'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -422,6 +422,7 @@ def serve():
                       'storage_error': storage_error}
             status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
             status['failover_plan']=plan(status,settings,time.time())
+            status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             if delivered:
                 atomic_json(PERSIST/'telegram-state.json', telegram_saved)
             atomic_json(RUNTIME/'status.json', status)
@@ -465,6 +466,7 @@ def rpc(method):
         print('{"queued":true}')
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
+        if method == 'status':status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
         print(json.dumps({'events': status.get('events', [])} if method == 'events' else status))
     else:
         raise ValueError('unknown RPC method')

@@ -15,3 +15,8 @@ Installed through the authorised native opkg API, exit code 0. Agent reports 0.2
 33 local tests passed, including binary-font preservation and calendar-day accounting. The branded EN/RU UI/robot/fonts were visually checked in an isolated synthetic fixture; the complete live LuCI settings/wizard rendering was not independently re-verified after the browser-session issue. Do not present fixture images as real router statistics. Original OFL licence whitespace is preserved; project whitespace checks exclude unchanged vendor assets.
 
 Exact live-read model/firmware/LuCI/package evidence: [EN](TESTED-ENVIRONMENT.en.md) · [RU](TESTED-ENVIRONMENT.ru.md) · [JSON snapshot](tested-environment-2026-10-15.json). Captured 15 Oct 2026.
+
+
+## 2026-10-15 · 0.4.0-alpha8 candidate
+
+52 monitor/package/native-controller unit tests and 9 lab transaction tests pass. Device installed through alpha7; native mode disabled, three active IPv4 HTTPS/DNS probe paths healthy. Software accelerator unloaded; hardware disable not verified. Candidate alpha8 not installed while owner works remotely. Live native switching/guard/rollback not exercised. Baseline soak intermediate checkpoint: 21 cycles, 105 suite runs, 2100 new seeds, 945000 model steps, 37687012 assertions, 420 container child-process crashes; zero failures. Baseline commit 386b4b3 excludes the new native controller. See NATIVE-EXPERIMENTAL.md and WORKLOG.md; do not claim final 14:00 results.

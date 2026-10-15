@@ -1,5 +1,14 @@
 # История изменений
 
+## 0.4.0-alpha8 — experimental native controller candidate
+
+- Added a real, narrowly scoped existing-rule adapter, independent supervisor, checksummed journal, guarded apply/rollback and mandatory external client confirmation. Defaults disabled; production switching not validated.
+- Added explicit, bounded acceleration preparation and strict runtime verification. Device alpha7: shortcut_fe unloaded, HNAT disable remains unverified. No force unload or package removal.
+- Fixed own-service upgrade restart, late external changes, orphan child cleanup, trial replay and unconfirmed client timeouts. 52 package/monitor/controller tests and 9 lab tests pass.
+- Owner remote-work priority: device stays alpha7/monitor with native disabled; alpha8 is not installed. No live VPN switch/guard/rollback test claimed.
+- See docs/NATIVE-EXPERIMENTAL.md and docs/WORKLOG.md for actual results, internal alpha1–alpha7 revisions and limits.
+
+
 ## Licensing revision — 2026-10-15
 
 - Selected MIT with author website in the mandatory copyright notice.
