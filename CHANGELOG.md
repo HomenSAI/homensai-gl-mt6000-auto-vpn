@@ -1,5 +1,15 @@
 # История изменений
 
+## 0.2.0-alpha2 — HomenS.AI Style
+
+- Repositories renamed to `homensai-gl-mt6000-auto-vpn`, local Gitea first, GitHub second.
+- Embedded selected HomenS.AI Style 1.14.3 resources: Nordic tokens, original animated robot, author footer and local IBM Plex fonts with notices.
+- Version shown top right, author robot in header, English/Russian UI retained. No private style repository history is copied.
+- ipk builder preserves binary font bytes; regression added. 33 unit tests passed, EN/RU visual checks on an isolated synthetic fixture.
+- Installed on GL-MT6000: agent version, three healthy active paths, 12 activity profiles and hourly Telegram settings verified. Full live LuCI UI verification remains limited by the browser-session issue.
+- Native automatic VPN switching remains unavailable. Live disruption tests need an agreed window and rollback plan; none were performed for this release.
+
+
 ## 0.2.0-alpha1 — public alpha
 
 - English UI by default, English/Russian selector, developer link and version badge.

@@ -1,0 +1,34 @@
+/* HomenS.AI Style · © 2026 Serhii Khomenko · https://homensai.com/ · https://github.com/HomenSAI · https://www.linkedin.com/in/serhii-khomenko-homensai/ */
+/* Карточка автора: робот и ссылки. */
+/* Об авторе: робот и ссылки */
+.author-card { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: center; }
+.author-robot { margin: 0; text-align: center; }
+.robo {
+  width: 13rem; height: 13rem; margin: 0 auto; cursor: pointer; color: var(--text);
+  border: 6px solid transparent; border-radius: 50%;
+  background: linear-gradient(var(--bg), var(--bg)) padding-box, linear-gradient(180deg, var(--gold) 50%, var(--teal) 50%) border-box;
+}
+.robo-svg { width: 100%; height: 100%; display: block; }
+.robot-play { margin-top: .6rem; font: inherit; font-size: .8rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text); background: none; border: 1px solid var(--text); border-radius: 999px; padding: .35rem 1rem; cursor: pointer; }
+.robot-play:hover { background: var(--text); color: var(--surface); }
+.author-info h2 { margin-top: 0; }
+.author-links { list-style: none; margin: .5rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem .5rem; }
+.author-links a { display: inline-block; padding: .3rem .7rem; border: 1px solid var(--line); border-radius: 999px; text-decoration: none; color: var(--text); font-size: .9rem; background: var(--bg); }
+.author-links a:hover { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 700px) { .author-card { grid-template-columns: 1fr; } }
+
+/* Надпись «HomenS.AI» под большим знаком (js/logo-word.js). Пока знак крутится, её нет (.wait); когда он собрался (.on) —
+   буквы по одной поднимаются снизу (0,6 с, задержка 70 мс на букву), «.AI» вспыхивает бирюзовым, под словом выдвигается линия.
+   Без скриптов знака надпись видна сразу. При «уменьшить движение» — сразу, без движения. */
+.robo-word { margin: .9rem 0 0; text-align: center; font-weight: 700; font-size: clamp(1.4rem, 3vw, 2rem); letter-spacing: -.02em; line-height: 1.1; color: var(--text); }
+.robo-word .ai { color: var(--teal); }
+.robo-word::after { content: ""; display: block; width: 4.5rem; height: 2px; margin: .55rem auto 0; border-radius: 2px; background: var(--teal); }
+.robo-word.wait .l { opacity: 0; transform: translateY(.7em) scale(.9); filter: blur(4px); }
+.robo-word.wait::after { width: 0; }
+.robo-word .l { display: inline-block; white-space: pre; transition: opacity .5s ease, transform .6s cubic-bezier(.2, .9, .3, 1.3), filter .5s ease; transition-delay: calc(var(--i, 0) * 70ms); }
+.robo-word::after { transition: width .8s cubic-bezier(.65, 0, .35, 1) .7s; }
+.robo-word.wait.on .l { opacity: 1; transform: none; filter: none; }
+.robo-word.wait.on::after { width: 4.5rem; }
+.robo-word.wait.on .ai .l { animation: hm-wordglow 1.2s ease 1; animation-delay: calc(var(--i, 0) * 70ms + .5s); }
+@keyframes hm-wordglow { 0%, 100% { text-shadow: 0 0 0 transparent; } 40% { text-shadow: 0 0 .6em color-mix(in srgb, var(--teal) 70%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .robo-word .l, .robo-word::after { transition: none; } .robo-word.wait.on .ai .l { animation: none; } }

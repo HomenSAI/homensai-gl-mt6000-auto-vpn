@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.2.0-alpha1-1'
+VERSION = '0.2.0-alpha2-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -46,7 +46,9 @@ def build(output=None):
         name = path.relative_to(ROOT/'files').as_posix()
         if '..' in Path(name).parts:
             raise ValueError('unsafe package member')
-        payload = path.read_bytes().replace(b'\r\n', b'\n')
+        payload = path.read_bytes()
+        if '/style/' not in name and path.suffix.lower() not in ('.woff2','.woff','.ttf','.otf','.png','.jpg','.jpeg','.ico'):
+            payload = payload.replace(b'\r\n', b'\n')
         files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
     data = archive(files)
     control = ('Package: %s\nVersion: %s\nArchitecture: all\n'

@@ -1,9 +1,9 @@
-# Установка · 0.2.0-alpha1
+# Установка · 0.2.0-alpha2
 
 [English](INSTALL.en.md)
 
 1. Проверьте GL-MT6000, GL.iNet 4.11.0 / OpenWrt 21.02-SNAPSHOT и вход в локальную LuCI. Другие версии не проверены — оцените совместимость, не форсируйте установку. Это монитор, не прошивка и не VPN-подписка; нужны существующие профили.
-2. Скачайте ipk и ipk.sha256 одной версии. PowerShell: `Get-FileHash .\homensai-auto-vpn_0.2.0-alpha1-1_all.ipk -Algorithm SHA256`, Linux: `sha256sum homensai-auto-vpn_0.2.0-alpha1-1_all.ipk`. При несовпадении остановитесь.
+2. Скачайте ipk и ipk.sha256 одной версии. PowerShell: `Get-FileHash .\homensai-auto-vpn_0.2.0-alpha2-1_all.ipk -Algorithm SHA256`, Linux: `sha256sum homensai-auto-vpn_0.2.0-alpha2-1_all.ipk`. При несовпадении остановитесь.
 3. Сохраните приватный backup, проверьте RAM/место. Backup может содержать ключи/токен: не отправляйте его в GitHub или AI-чат.
 4. System → Software: обновите только штатные feed. Зависимости: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle. Python занимает больше места, чем приложение. Не меняйте feed, не обновляйте всё, не используйте force-depends, не прошивайте и не удаляйте пакеты.
 5. Software → Upload Package → ipk → проверка зависимостей → Install. Не Flash Firmware. При ошибке opkg остановитесь.

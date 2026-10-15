@@ -1,0 +1,8 @@
+/* HomenS.AI Style · © 2026 Serhii Khomenko · https://homensai.com/ · https://github.com/HomenSAI · https://www.linkedin.com/in/serhii-khomenko-homensai/ */
+/* Шрифты IBM Plex (SIL OFL 1.1, без изменений): кириллица, латиница, немецкие знаки. Файлы — ../fonts/ibm-plex/, лицензия — OFL.txt рядом. */
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/ibm-plex/IBMPlexSans-Regular.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: italic; font-weight: 400; font-display: swap; src: url("../fonts/ibm-plex/IBMPlexSans-Italic.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 500 600; font-display: swap; src: url("../fonts/ibm-plex/IBMPlexSans-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/ibm-plex/IBMPlexSans-Bold.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/ibm-plex/IBMPlexMono-Regular.woff2") format("woff2"); }
+/* Моноширинный — один обычный файл: объявлен только для 400, поэтому полужирные цифры (600) браузер утолщает сам, как в образце процессов. */

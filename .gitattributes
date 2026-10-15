@@ -3,3 +3,4 @@
 *.sh text eol=lf
 *.md text eol=lf
 *.jsonl text eol=lf
+router/files/www/luci-static/resources/view/homensai-vpn/style/** -text

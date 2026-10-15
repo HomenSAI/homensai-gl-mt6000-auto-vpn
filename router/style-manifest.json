@@ -1,0 +1,22 @@
+{
+  "source": "HomenSAI/homensai-style",
+  "version": "1.14.3",
+  "files": {
+    "brand/logo-mark.svg": "1cac2703eb5af3960a78d74b38c9b60a6ceaed92a9ac1016e8ecef015ef9c058",
+    "css/author.css": "62c1df3b449646a215e561f60648f73cfb99c92e98fffd560c8ae178f580b024",
+    "css/charts.css": "6d33a8dea66123d29bc7434bc40a0d82f42122da8ccabea09e04df1ab262afd3",
+    "css/fonts.css": "6c8307b79bbad5de92e33b13c3487fe34871be34e4f1b7791f582483f3ce62a8",
+    "css/tokens.css": "3d512fb0833321bf7709dd1a8e3468b22190683c716d10b7c82d27b53183ed14",
+    "fonts/ibm-plex/IBMPlexMono-Regular.woff2": "ba204497f16b6d334cee9d1e963a831b73e3a56e1d6300a8489d18df7214b350",
+    "fonts/ibm-plex/IBMPlexSans-Bold.woff2": "fa7130d854a660b39a7fc9e6e0f2dc23dba5f1346e2adea3e1fe37b6d884133d",
+    "fonts/ibm-plex/IBMPlexSans-Italic.woff2": "13284fab1821ba6e3652c1580fcf2bbfd8c9309520c69b3d1224dab40b37c597",
+    "fonts/ibm-plex/IBMPlexSans-Regular.woff2": "ba711a3085ff9f27440b6b9c4550cfc47c97bf36591d5da958b975bb3add8c1a",
+    "fonts/ibm-plex/IBMPlexSans-SemiBold.woff2": "f78048030eab62e860efa39a0df79e2e5581bf122eb95b9bc42c0b8a4988d205",
+    "fonts/ibm-plex/NOTICE.txt": "3b8bc029ef1724df3d34ba4778b721d1a254124d0315bc5240579c75f133aaea",
+    "fonts/ibm-plex/OFL.txt": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d",
+    "js/brand-ui.js": "71db4141b5236aa3215c8b89db01dd941241b4b92e2c166e68f6740caa61e92a",
+    "js/brand.js": "44e7a34f1da8a9fc3391295606ec9738f85c14e57224576224d86c5e3a68d046",
+    "js/robot.js": "132515d04af5fcde50557476d70ab9677f2b68aab817522b190252c5c17b7f7e",
+    "LICENSE": "ca95b7411e626e9e912d16537b4889e2193ef826845245143b3f5d29d0850db9"
+  }
+}

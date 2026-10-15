@@ -9,3 +9,5 @@
 Keep configuration backups, captured status/logs, credentials, SSH keys, bot tokens/chat IDs, browser state and device screenshots outside the repository. Author biography/book links come only from the author's public website/profile.
 
 There are two product modes in the roadmap: monitor (implemented) and operation/automatic failover (not implemented). Public documentation must never describe the planned mode as available or device-tested.
+
+Repository names always start with `homensai-`: `homensai-gl-mt6000-auto-vpn`. Local Gitea first, GitHub second.

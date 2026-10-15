@@ -2,7 +2,7 @@
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
-**0.2.0-alpha1: monitor available; operational automatic failover is NOT implemented.**
+**0.2.0-alpha2: monitor available; operational automatic failover is NOT implemented.**
 
 ## Why it exists
 
@@ -27,7 +27,7 @@ Telegram is optional: setup wizard, private token, personal chat ID and configur
 
 Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Other hardware/firmware is untested.
 
-Through alpha9, actual installation, three active OpenVPN/WireGuard probe paths, interface accounting and on-device Telegram delivery were verified. Public 0.2.0-alpha1 adds localization and persistent activity histograms; see release notes for its device/UI verification status. Simulation reports under `qa/` are not native failover evidence.
+Through alpha9, actual installation, three active OpenVPN/WireGuard probe paths, interface accounting and on-device Telegram delivery were verified. Public 0.2.0-alpha2 adds localization and persistent activity histograms; see release notes for its device/UI verification status. Simulation reports under `qa/` are not native failover evidence.
 
 ## Privacy
 
@@ -40,3 +40,5 @@ Public files exclude the author's live router/VPN configuration, Telegram token/
 Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical engineering, software and AI. [Book repository](https://github.com/HomenSAI/two-worlds-one-mind) · [Zenodo / DOI 10.5281/zenodo.23160031](https://zenodo.org/records/23160031). Other public work: [local AI lab](https://github.com/HomenSAI/homensai-local-ai-lab), [RTX 3080 benchmarks](https://github.com/HomenSAI/rtx3080-local-ai-benchmarks).
 
 Independent project, not an official GL.iNet/OpenWrt product. No software licence selected yet. Public visibility is not itself an open-source licence; the book's licence does not automatically apply here.
+
+Current device status: 0.2.0-alpha2 is installed and native monitoring/activity/Telegram configuration was verified. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
