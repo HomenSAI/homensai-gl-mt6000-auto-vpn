@@ -46,3 +46,6 @@ SSH log confirmed native controller crash: Python on device lacks time.tzset. Ad
 
 ## 0.5.0-alpha3 — HNAT diagnostic compatibility
 Fresh on-device debugfs read emits exact kernel message value=0, hook is disabled now! Recognise this response only with fresh kernel timestamp and consistent value/state; reject stale or inconsistent messages. Controller startup confirmed after alpha2. Actual switch still not tested.
+
+## 0.5.0-alpha4 — kernel readback freshness
+On-device printk and Python monotonic timestamps differ; comparing their values falsely rejects new HNAT responses. Read kernel ring before/after the hook and parse only appended entries. Ring replacement or unavailable baseline remains unknown. No stale response accepted.

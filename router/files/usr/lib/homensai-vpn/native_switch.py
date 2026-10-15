@@ -163,7 +163,8 @@ class Linux:
         return values
     def acceleration(self):
         loaded=[m for m in ('mtkhnat','mtk_hnat','shortcut_fe','fast_classifier') if Path('/sys/module',m).exists()]
-        after=time.monotonic()
+        try:kernel_before=command(['dmesg']).decode(errors='replace')
+        except (OSError,ValueError,subprocess.SubprocessError):kernel_before=None
         try:
             with Path('/sys/kernel/debug/hnat/hook_toggle').open() as stream:runtime=stream.read(257).strip()
         except OSError:runtime='unknown'
@@ -171,7 +172,9 @@ class Linux:
         if runtime=='':
             try:
                 kernel=command(['dmesg']).decode(errors='replace')
-                runtime=fresh_hook_state(kernel,after)
+                # printk and Python monotonic clocks differ on this vendor kernel.
+                # Accept only text appended by this read, never an older ring entry.
+                runtime=fresh_hook_state(kernel[len(kernel_before):],0) if kernel_before is not None and kernel.startswith(kernel_before) else 'unknown'
                 hook_log=[line[-200:] for line in kernel.splitlines() if 'hook' in line.lower() and ('hnat' in line.lower() or 'toggle' in line.lower())][-3:]
             except (OSError,ValueError,subprocess.SubprocessError):pass
         return {'loaded':loaded,'hnat_runtime':runtime if runtime in ('enabled','disabled') else 'unknown',
