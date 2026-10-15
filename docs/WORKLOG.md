@@ -184,7 +184,7 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Additional packaging issue: after alpha11 installation, source declared alpha11 but imported agent.VERSION returned alpha10. Own bytecode cache contained files validated against reproducible unchanged mtime/size. Removing only five own .pyc files made a fresh import return alpha11. Alpha12 postinst clears only the application's own non-symlink .pyc files before restarting its service; no system Python/package replacement.
 - Publication planned as an explicitly experimental prerelease with IPK/SHA256 and English notes. Source code and package must match, local Gitea first, identical GitHub tree second. Installation/asset verification is recorded only after it occurs.
 
-### 2026-10-15 — alpha12 device verification before release publication
+### 2026-10-15 19:25:44 Europe/Berlin — alpha12 device-verification record before publication
 
 - Package SHA256 was verified before opkg installation: 54df73497163ce7996ff8beab0904cf9ea53744b9839a706ed8f7ec2ee0f3372, 424895 bytes.
 - Fresh device import reports 0.5.0-alpha12. Default empty-status Telegram report begins “HomenSAI Auto VPN · monitoring” and contains no Cyrillic. User-supplied names remain outside this language assertion.
