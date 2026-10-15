@@ -190,3 +190,13 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Fresh device import reports 0.5.0-alpha12. Default empty-status Telegram report begins “HomenSAI Auto VPN · monitoring” and contains no Cyrillic. User-supplied names remain outside this language assertion.
 - Device configuration native_enabled=0, journal ROLLED-BACK, owned guard absent. Client HTTPS returned 200. Existing private configuration was preserved by opkg.
 - 90 Python tests, JavaScript syntax and reproducible rebuild passed. Publication privacy audit passed for 176 tracked files including nested IPK archives. Actual LuCI wizard/full sidebar acceptance is not claimed for this release.
+
+
+### 2026-10-15 20:02 Europe/Berlin — sidebar UI release candidate
+
+- Request: complete the dark left navigation and light workspace. Scope is UI only; pending auto-toggle code/RPC is preserved separately and excluded from this package.
+- Added eight hash-addressed sections, live version badge, author robot/site link, EN/RU selection with URL/storage persistence, sortable tables and search. Confirmed navigation and language switching in the isolated synthetic fixture; fixture numbers are not router measurements.
+- Search focus/caret is retained during polling; healthy cards precede failed cards, with confirmed failures marked red. Configured routing priorities are not changed by visual sorting.
+- Build preparation errors: default container user could not rewrite root-owned files; root Git required a per-command safe.directory. Recovered the original backend directly from HEAD before editing the version. Moving pending files to /tmp initially failed with cross-device rename; used a copy-and-remove move and excluded the pending JS as well. No router changes during these preparation failures.
+- Tests: 90 Python tests pass; dashboard18 JavaScript syntax passes. Initial build destination router/dist was unwritable; explicit releases destination builds successfully. Final package: 435022 bytes, SHA256 654887a23c77118c337997b91d76ada6e31d703311287cbaa52565e2389a5e8b.
+- Device baseline: alpha12 installed, monitoring running, native_enabled=0. Installation and actual LuCI acceptance are still pending at this entry.

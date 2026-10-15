@@ -145,3 +145,11 @@ Bound retries for transient final client checks; avoid duplicate trial-pass mess
 - Fixed language-option selected attributes and version badge in the existing dashboard, with a new resource path to avoid stale browser code. The sidebar 0.6 candidate and complete configuration wizards are not part of this release.
 - Clear only this application's Python bytecode cache on update: reproducible source mtimes plus equal file sizes had allowed an older imported version to remain cached. System Python and unrelated caches are retained.
 - Native engine scope remains two connected catch-all profiles. Real alpha10 automatic transition/independent rollback passed; previous helper errors and production limits remain documented. Do not treat this prerelease as broad unattended-production acceptance.
+
+
+## 0.5.0-alpha13 — sidebar interface
+
+- Dark HomenSAI left navigation, light workspace, eight sections and live version badge.
+- Author robot/site link; persistent English/Russian language selection.
+- Sortable tables, server search, healthy-first cards and polling-safe search focus.
+- UI-only release: native switching restrictions and existing settings are unchanged. New Auto mode toggle remains a separate pending change.
