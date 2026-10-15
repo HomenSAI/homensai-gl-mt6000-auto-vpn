@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.6.0-alpha1'
+VERSION = '0.6.0-alpha2'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -454,10 +454,10 @@ def serve():
 def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
-                          'native_confirm': {'tx':'String','exit_ipv4':'String','dns_ok':'Boolean','https_ok':'Boolean'},
+                          'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
                           'native_stop': {}, 'native_start': {}, 'telegram_test': {},
-                          'setup_system':{'source':'String','target':'String','interval':'Integer','duration':'Integer','session_loss':'Boolean','servers':'Array'},
-                          'setup_telegram':{'token':'String','chat':'String','enabled':'Boolean','interval':'Integer'}}));return
+                          'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
+                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0}}));return
     request = sys.stdin.buffer.read(65537)
     if len(request) > 65536:
         raise ValueError('oversize RPC input')

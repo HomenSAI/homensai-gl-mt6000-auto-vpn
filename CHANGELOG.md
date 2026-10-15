@@ -153,3 +153,11 @@ Bound retries for transient final client checks; avoid duplicate trial-pass mess
 - Author robot/site link; persistent English/Russian language selection.
 - Sortable tables, server search, healthy-first cards and polling-safe search focus.
 - UI-only release: native switching restrictions and existing settings are unchanged. New Auto mode toggle remains a separate pending change.
+
+
+## 0.6.0-alpha2 — controlled Auto mode and setup wizards
+
+- Overview power toggle and configured protocol/channel/server diagram follow confirmed controller state. Start resumes only an existing LAN-certified bounded window; Stop remains durable and idempotent. UI intent is atomic and does not enable reboot autostart.
+- Three-step system and Telegram-channel wizards, strict own-configuration validation and deliberate test delivery. Existing VPN keys/routes are not edited by setup.
+- Correct exec RPC JSON type signatures and reload schema detection. Fix cable helper checks to constrain the intended interface/source address.
+- Full unattended failover and expanded inactive-profile hierarchy remain pending; 113 Python tests and 10 UI state invariants pass.

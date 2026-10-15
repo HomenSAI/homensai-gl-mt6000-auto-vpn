@@ -231,3 +231,12 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Added three-step system/Telegram wizards with review/cancel/back, whitelisted own-config RPC, existing-profile metadata, private token entry, channel username/numeric destination and deliberate delivery test. Active transactions refuse configuration writes. Tokens travel only in authenticated request/stdin and existing private device config, not logs/status.
 - UI checks found ambiguous accessible labels in wrapped select fields; explicit aria-label fixed automated selection and improves assistive access. Synthetic fixture verified system steps 1–3, Back/Cancel, Telegram review, RU entry and a refused Start without false green. These are not real device save/send results.
 - 112 Python tests and 10 UI state invariants passed; PowerShell helper SelfTest passed. Reproducible candidate 0.6.0-alpha1: 491109 bytes, SHA256 4e77068512167256485fd1a9afd1fb7c6e9525ec24b36443e6dc33e55f651e32. Device installation/acceptance follows separately.
+
+
+### 2026-10-15 20:47 Europe/Berlin — device RPC signature correction
+
+- Alpha1 installed over alpha13, preserving private configuration; own service running and native mode not enabled.
+- Actual ubus introspection exposed incorrect method signatures: exec-plugin list values such as "Integer"/"Boolean"/"Array" were themselves JSON strings, so interval, session_loss and servers were advertised as String. The plugin derives types from JSON values, as confirmed by OpenWrt rpcd/plugin.c rpc_plugin_parse_signature. Existing Python validators remained strict; this was an interface-schema defect, not authorization to bypass them.
+- Changed list signatures to representative native JSON values (0, false, [] and strings), including native_confirm booleans. Added a signature-contract regression test. Package postinst reloads rpcd when the actual servers:Array schema is absent, rather than only checking method presence.
+- Built separate alpha2 instead of rewriting an installed candidate: 113 Python tests and 10 UI state invariants pass; deterministic package 491756 bytes, SHA256 0e699996b473fe352ea53e167d6f8c7f0fa6ef75ab3468cb180f13aa4d65db4f. Actual setup save and live Start refusal are next acceptance checks.
+- Reference: https://github.com/openwrt/rpcd/blob/master/plugin.c (signature uses blobmsg_type of each JSON value).

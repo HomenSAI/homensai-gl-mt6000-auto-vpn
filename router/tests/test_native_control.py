@@ -14,6 +14,16 @@ import agent
 
 
 class ControlTests(unittest.TestCase):
+    def test_exec_signature_uses_json_types_not_type_names(self):
+        out=io.StringIO()
+        with contextlib.redirect_stdout(out):agent.rpc('list')
+        methods=json.loads(out.getvalue())
+        self.assertIs(type(methods['native_confirm']['dns_ok']),bool)
+        self.assertIs(type(methods['setup_system']['interval']),int)
+        self.assertIs(type(methods['setup_system']['session_loss']),bool)
+        self.assertIs(type(methods['setup_system']['servers']),list)
+        self.assertIs(type(methods['setup_telegram']['enabled']),bool)
+
     def invoke(self,method,payload):
         incoming=types.SimpleNamespace(buffer=io.BytesIO(json.dumps(payload).encode()))
         out=io.StringIO()
