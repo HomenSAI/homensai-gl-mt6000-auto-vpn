@@ -50,3 +50,8 @@ Current device status: 0.4.0-alpha7 is installed in monitor mode, native switchi
 [Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
 
 [Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.
+
+
+### Sidebar interface release — 0.5.0-alpha13
+
+Installed and checked on the GL-MT6000: dark left navigation, eight sections, real measurements, EN/RU selection, sorting/search and author website link. This is a UI update; native failover remains experimental and disabled after the completed bounded tests. See docs/WORKLOG.md for exact scope and limitations.

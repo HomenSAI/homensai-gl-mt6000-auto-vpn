@@ -200,3 +200,21 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Build preparation errors: default container user could not rewrite root-owned files; root Git required a per-command safe.directory. Recovered the original backend directly from HEAD before editing the version. Moving pending files to /tmp initially failed with cross-device rename; used a copy-and-remove move and excluded the pending JS as well. No router changes during these preparation failures.
 - Tests: 90 Python tests pass; dashboard18 JavaScript syntax passes. Initial build destination router/dist was unwritable; explicit releases destination builds successfully. Final package: 435022 bytes, SHA256 654887a23c77118c337997b91d76ada6e31d703311287cbaa52565e2389a5e8b.
 - Device baseline: alpha12 installed, monitoring running, native_enabled=0. Installation and actual LuCI acceptance are still pending at this entry.
+
+
+### 2026-10-15 20:12 Europe/Berlin — actual LuCI acceptance and final sidebar package
+
+- Installed alpha13 over alpha12; opkg preserved the modified configuration and placed defaults in the -opkg file. Own monitor is running; native_enabled remains 0 and controller reports STOPPED. Three connected-profile probes were healthy.
+- Actual LuCI navigation to all eight sections passed. English-to-Russian selection translated menu, headings and configuration labels. Diagnostic descriptions remain English; vendor LuCI controls may retain vendor language.
+- Device-only UI defect: LuCI E() rendered an optional null child as literal text in Settings. Filtered null children before passing them to E(). Browser retained the earlier dashboard18 resource, so the final route uses dashboard19 for cache invalidation. Reinstalled only the application's candidate package, preserving its configuration. One intermediate own-service delete returned Not found; final service-running verification passed.
+- Final package SHA256: e2812dd5ed3fdea29dacf8acfbbb9d4ff355005c18397bee6ca07d751daa6069; 448761 bytes. Earlier candidate hashes above are historical, not the final asset.
+- Local Gitea push initially failed host-key verification because the container had no known-hosts file. Read the public ED25519 host key directly from local-gitea and used that verified key with StrictHostKeyChecking=yes; push then succeeded. No SSH verification bypass.
+- Windows HTTPS check initially failed against sandbox proxy 127.0.0.1:9. Direct authorized HTTPS check outside that restricted proxy returned 200; this was an execution-environment proxy failure, not evidence of router Internet loss.
+- This release does not add the pending Auto mode toggle, production unattended mode or new switching algorithms.
+
+
+### 2026-10-15 20:16 Europe/Berlin — legacy theme header collision
+
+- Actual-device screenshot showed that the vendor theme's generic header rule painted the application header black, making the title unreadable. Scoped background/position/size/shadow resets to .hv-app .hv-page-header and set an explicit select height.
+- Final UI resource is dashboard20; CSS has a release-specific cache key. Rebuilt candidate alpha13 before creating its immutable release tag. Previous package hashes in this log refer to superseded acceptance candidates.
+- Final asset: 463399 bytes; SHA256 e5f4407a491f6417967c8800b73281198d6ac4d137548fb0807b6c6e4531ac5f.
