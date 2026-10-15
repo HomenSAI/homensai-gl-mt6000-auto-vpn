@@ -67,7 +67,7 @@ def deliver(status, saved, now):
         minutes = max(5, min(10080, int(option('telegram_interval') or '60')))
         chat = option('telegram_chat')
         token = option('telegram_token')
-        if not re.fullmatch(r'-?[0-9]{1,20}', chat) or not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+', token):
+        if not re.fullmatch(r'(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})', chat) or not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+', token):
             return {'enabled': True, 'code': 'TELEGRAM-CONFIG'}, saved, False
         last = saved.get('sent', 0)
         if now-last < minutes*60:
@@ -86,3 +86,28 @@ def deliver(status, saved, now):
         return {'enabled': True, 'last_sent': now, 'interval_minutes': minutes}, saved, True
     except Exception:
         return {'enabled': True, 'code': 'TELEGRAM-SEND-FAILED'}, saved, False
+
+
+def send_test():
+    """Deliberate authenticated test to the configured destination; never echo secrets."""
+    from agent import RUNTIME, read_json, atomic_json
+    from auto_control import control_lock
+    with control_lock():
+        now=time.time();record=RUNTIME/'telegram-test.json'
+        previous=read_json(record,{})
+        if now-previous.get('attempt',0)<60:
+            return {'delivered':False,'code':'TELEGRAM-TEST-RATE-LIMIT'}
+        token=option('telegram_token');chat=option('telegram_chat')
+        if not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+',token) or not re.fullmatch(r'(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})',chat):
+            return {'delivered':False,'code':'TELEGRAM-CONFIG'}
+        atomic_json(record,{'attempt':now})
+        payload=json.dumps({'chat_id':chat,'text':'HomenSAI Auto VPN: delivery test. This is not router measurement data.'}).encode()
+        request=urllib.request.Request('https://api.telegram.org/bot'+token+'/sendMessage',data=payload,headers={'Content-Type':'application/json'})
+        try:
+            with urllib.request.urlopen(request,timeout=15) as response:
+                result=json.loads(response.read(65536))
+            if result.get('ok') is not True:return {'delivered':False,'code':'TELEGRAM-SEND-REJECTED'}
+            atomic_json(record,{'attempt':now,'confirmed':time.time()})
+            return {'delivered':True,'code':'TELEGRAM-TEST-DELIVERED'}
+        except Exception:
+            return {'delivered':False,'code':'TELEGRAM-SEND-FAILED'}

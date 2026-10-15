@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.5.0-alpha13'
+VERSION = '0.6.0-alpha1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -424,6 +424,8 @@ def serve():
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             from native_history import read_public
             status['native_history']=read_public(PERSIST)
+            from auto_control import public_status
+            status['auto_control']=public_status()
             status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
             if delivered:
                 atomic_json(PERSIST/'telegram-state.json', telegram_saved)
@@ -453,7 +455,9 @@ def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'String','exit_ipv4':'String','dns_ok':'Boolean','https_ok':'Boolean'},
-                          'native_stop': {}}));return
+                          'native_stop': {}, 'native_start': {}, 'telegram_test': {},
+                          'setup_system':{'source':'String','target':'String','interval':'Integer','duration':'Integer','session_loss':'Boolean','servers':'Array'},
+                          'setup_telegram':{'token':'String','chat':'String','enabled':'Boolean','interval':'Integer'}}));return
     request = sys.stdin.buffer.read(65537)
     if len(request) > 65536:
         raise ValueError('oversize RPC input')
@@ -481,23 +485,30 @@ def rpc(method):
             raise ValueError('transaction no longer awaiting confirmation')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
+    if method in ('setup_system','setup_telegram'):
+        from setup_config import save
+        print(json.dumps(save(arguments,'system' if method=='setup_system' else 'telegram')));return
     if arguments:
         raise ValueError('unexpected RPC arguments')
-    if method == 'inventory':
+    if method == 'telegram_test':
+        from telegram_report import send_test
+        print(json.dumps(send_test()));return
+    elif method == 'inventory':
         print(json.dumps(inventory(), ensure_ascii=True))
     elif method == 'scan':
         atomic_json(RUNTIME/'scan.request', {'requested': time.time()})
         print('{"queued":true}')
-    elif method == 'native_stop':
-        internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
-        atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':internal.get('settings',{}).get('native_trial')})
-        print('{"queued":true}')
+    elif method in ('native_start','native_stop'):
+        from auto_control import start, stop
+        print(json.dumps(start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)));return
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':
             from native_history import read_public
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             status['native_history']=read_public(PERSIST)
+            from auto_control import public_status
+            status['auto_control']=public_status()
         print(json.dumps({'events': status.get('events', [])} if method == 'events' else status))
     else:
         raise ValueError('unknown RPC method')

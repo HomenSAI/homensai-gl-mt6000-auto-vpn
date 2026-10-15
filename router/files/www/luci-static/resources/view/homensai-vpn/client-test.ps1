@@ -18,10 +18,12 @@ function Get-TraceIPv4([string]$Text) {
 }
 function Assert-LanPath {
     if($CableInterface -gt 0) {
-        $local=@(Find-NetRoute -RemoteIPAddress $Router.Host|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+        $adapter=@(Get-NetAdapter -IncludeHidden|Where-Object {$_.InterfaceIndex -eq $CableInterface})
+        if($adapter.Count -ne 1 -or $adapter[0].Status -ne 'Up'){throw 'CLIENT-CABLE-LINK-DOWN'}
+        $local=@(Find-NetRoute -InterfaceIndex $CableInterface -LocalIPAddress $script:CableAddress -RemoteIPAddress $Router.Host|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
         if($local.Count -ne 1 -or $local[0].InterfaceIndex -ne $CableInterface -or $local[0].NextHop -ne '0.0.0.0'){throw 'CLIENT-CABLE-NOT-LOCAL'}
         foreach($destination in @('1.1.1.1','1.0.0.1')) {
-            $route=@(Find-NetRoute -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+            $route=@(Find-NetRoute -InterfaceIndex $CableInterface -LocalIPAddress $script:CableAddress -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
             if($route.Count -ne 1 -or $route[0].InterfaceIndex -ne $CableInterface -or $route[0].NextHop -ne $Router.Host){throw 'CLIENT-CABLE-PROBE-ROUTE-MISMATCH'}
         }
         return

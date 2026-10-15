@@ -507,7 +507,8 @@ def serve():
                 active=journal_read()
                 enabled=settings.get('native_enabled')=='1'
                 stopped=read_json(PERSIST/'native-stop.json',{})
-                stop_latched=bool(stopped and stopped.get('trial')==settings.get('native_trial'))
+                from auto_control import effective_intent
+                enabled,stop_latched=effective_intent(settings,stopped,read_json(RUNTIME/'auto-control.json',{}),time.time())
                 if active.get('phase')=='HELD-ON-RESERVE' and (not enabled or stop_latched or settings.get('native_trial')==active.get('trial_nonce')):
                     if backend.order()!=(active['after'],active['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
                     publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':active['source'],
@@ -526,10 +527,10 @@ def serve():
                 blockers,selection=backend.diagnostic()
                 if stop_latched:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
-                    publish({'state':'STOPPED','reason':'CLIENT-STOP','blockers':blockers,'candidates':backend.candidates()});time.sleep(5);continue
+                    publish({'state':'STOPPED','reason':'CLIENT-STOP','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'candidates':backend.candidates()});time.sleep(5);continue
                 if not enabled:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
-                    publish({'state':'DISABLED','blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
+                    publish({'state':'DISABLED','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
                 if until>0 and time.time()>=until:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'EXPIRED','reason':'TRIAL-ENDED'});time.sleep(5);continue

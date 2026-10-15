@@ -1,14 +1,14 @@
 # HomenSAI Auto VPN — completion plan for approval
 
 Prepared: 2026-10-15, Europe/Berlin.
-Status: AWAITING USER APPROVAL. No deployment or further implementation under this plan until approval.
+Status: APPROVED by user on 2026-10-15. Work in progress; checkboxes require evidence.
 
 ## Current baseline
 
-- Installed release last verified: 0.5.0-alpha12. Limited automatic failover and rollback between two already connected VPN profiles were demonstrated on the GL-MT6000, firmware 4.11.0. This is not full production acceptance.
+- Installed release last verified: 0.5.0-alpha13. Limited automatic failover and rollback between two already connected VPN profiles were demonstrated on the GL-MT6000, firmware 4.11.0. This is not full production acceptance.
 - Permanent unattended operation is not certified. The current controller uses bounded windows and LAN-client confirmation.
 - One final client helper run reported CLIENT-CABLE-NOT-LOCAL; its root cause remains unknown.
-- Sidebar UI remains an unshipped candidate.
+- Sidebar UI shipped as 0.5.0-alpha13 and verified on actual LuCI; see UI-ACCEPTANCE-alpha13.md.
 - Auto-mode button candidate was prepared before this approval request: dashboard17, authenticated native_start RPC, readiness checks and six new tests. The Linux suite passed 96 tests and JS syntax checking passed. No alpha13 installation or publication occurred. The candidate is uncommitted; review and hardening are still required.
 - Repeated pause-status automation vpn-2 was changed to PAUSED at the user's request.
 
@@ -113,4 +113,4 @@ Recommended sequence: 1 → 2 → 3 → 4 → 5 → 6 → 7, with phase 8 checks
 
 ## Approval checkpoint
 
-User reviews this file and selects the phase(s) to start. Until then: preserve prepared work; do not install alpha13, enable automatic switching, run disruptive tests, publish a new release or change router configuration.
+User approved the complete plan. Continue independently. Current laptop Ethernet is disconnected and Wi-Fi uses the router itself; preserve communication and defer deliberate outages until an independent client/management path exists. This does not block code, non-disruptive validation or UI releases.

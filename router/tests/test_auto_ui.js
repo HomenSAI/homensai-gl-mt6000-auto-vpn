@@ -1,0 +1,15 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context={};vm.createContext(context);
+vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
+const model=(ns,intent={})=>context.autoControlModel({native_failover:ns,auto_control:intent},1000);
+assert.equal(model({state:'OBSERVING',certified:true,time:999}).on,true);
+assert.equal(model({state:'OBSERVING',certified:false,time:999}).on,false);
+assert.equal(model({state:'COMMITTED',time:900}).on,false);
+assert.equal(model({state:'COMMITTED',time:1100}).on,false);
+assert.equal(model({state:'WAIT-CLIENT',time:999}).stop,true);
+assert.equal(model({state:'STOPPED-ON-RESERVE',time:999,original_restored:false}).returned,false);
+assert.equal(model({state:'STOPPED',time:999,original_restored:true}).returned,true);
+assert.equal(model({state:'STOPPED',time:999,original_restored:false}).returned,false);
+assert.equal(model({state:'STOPPED',time:999},{requested:'on',requested_at:1000}).color,'pending');
+assert.equal(model({state:'STOPPED',time:999},{requested:'on',requested_at:1000}).stop,true);
+console.log('PASS: 10 UI state/confirmation invariants');

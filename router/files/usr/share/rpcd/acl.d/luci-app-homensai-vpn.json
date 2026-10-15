@@ -6,7 +6,7 @@
       "uci": ["homensai_vpn"]
     },
     "write": {
-      "ubus": {"homensai-vpn": ["scan", "native_confirm", "native_stop"]},
+      "ubus": {"homensai-vpn": ["scan", "native_confirm", "native_stop", "native_start"]},
       "uci": ["homensai_vpn"]
     }
   }
