@@ -2,6 +2,8 @@
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
+[Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
+
 **0.2.0-alpha2: monitor available; operational automatic failover is NOT implemented.**
 
 ## Why it exists

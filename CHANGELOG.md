@@ -1,5 +1,13 @@
 # История изменений
 
+## Documentation revision · 15.10.2026
+
+- Added EN/RU passports of the exact router/firmware/LuCI configuration, read live from the device, plus a redacted JSON snapshot.
+- Distinguished LuCI base/UI version from metapackage/module versions, and GL.iNet panel Update Time from an unverified firmware build date.
+- Recorded actual installed package 0.2.0-alpha2-1 and running agent 0.2.0-alpha2; linked the evidence from README, installation and validation guides.
+- Documentation-only change: application/package version and binary unchanged. No serial, device ID, MAC, network addresses, tokens or private profile names published.
+
+
 ## 0.2.0-alpha2 — HomenS.AI Style
 
 - Repositories renamed to `homensai-gl-mt6000-auto-vpn`, local Gitea first, GitHub second.

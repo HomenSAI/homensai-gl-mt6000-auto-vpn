@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-10-15T06:59:48Z",
+  "capture_timezone": "Europe/Berlin",
+  "device": {
+    "manufacturer": "GL.iNet",
+    "model": "GL.iNet GL-MT6000",
+    "product_family": "Flint 2",
+    "board_name": "glinet,gl-mt6000",
+    "processor_reported": "ARMv8 Processor rev 4",
+    "cores_reported_in_panel": 4,
+    "target": "mediatek/mt7986",
+    "package_architecture": "aarch64_cortex-a53",
+    "system_visible_ram_bytes": 1037365248,
+    "storage_total_panel_value": "7.28 GB"
+  },
+  "firmware": {
+    "vendor_version": "4.11.0",
+    "vendor_type": "release",
+    "panel_update_time": "2026-09-24 07:49:08 (UTC+00:00)",
+    "panel_update_time_semantics": "Not independently established; not claimed as build or flash date",
+    "distribution": "OpenWrt",
+    "version": "21.02-SNAPSHOT",
+    "revision": "r15812+1095-46b6ee7ffc",
+    "description": "OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc",
+    "kernel": "5.4.238",
+    "vendor_build_id": null,
+    "pcb_revision": null,
+    "rootfs_type": null
+  },
+  "luci": {
+    "branch": "LuCI openwrt-21.02 branch",
+    "ui_base_version": "git-22.335.71649-0ecaf74",
+    "metapackage_version": "git-20.074.84698-ead5e81"
+  },
+  "packages": {
+    "base-files": "1453-r15812+1095-46b6ee7ffc",
+    "kernel": "5.4.238-1-d4a7d36962bb6218ebd94bf040ac560e",
+    "libc": "1.1.24-3",
+    "luci": "git-20.074.84698-ead5e81",
+    "luci-base": "git-22.335.71649-0ecaf74",
+    "luci-mod-admin-full": "git-19.253.48496-3f93650",
+    "luci-mod-status": "git-22.089.70019-d4f0b06",
+    "luci-mod-system": "git-22.264.46189-30ba277",
+    "rpcd": "2022-02-19-8d26a1ba-1",
+    "rpcd-mod-luci": "20210614",
+    "uhttpd": "2021-03-21-15346de8-2",
+    "uhttpd-mod-ubus": "2021-03-21-15346de8-2",
+    "python3": "3.9.15-1",
+    "python3-base": "3.9.15-1",
+    "openvpn-openssl": "2.6.12-1",
+    "wireguard-tools": "1.0.20210223-2",
+    "gl-sdk4-ui-core": "git-2026.264.27863-0a182fe-1",
+    "gl-sdk4-utils": "git-2026.253.06119-9584225-1",
+    "homensai-auto-vpn": "0.2.0-alpha2-1"
+  },
+  "application": {
+    "installed_package_version": "0.2.0-alpha2-1",
+    "package_architecture": "all",
+    "running_agent_version": "0.2.0-alpha2",
+    "mode": "monitor",
+    "native_apply": false,
+    "service_error": null,
+    "observed_profiles": 12,
+    "connected_profiles": 3,
+    "healthy_connected_protocols": {
+      "openvpn": 2,
+      "wireguard": 1
+    },
+    "telegram_enabled": true,
+    "telegram_interval_minutes": 60,
+    "style_version": "1.14.3"
+  },
+  "evidence_sources": [
+    "system.board",
+    "system.info (memory.total only)",
+    "LuCI version.lua",
+    "Installed package database through authorised opkg API",
+    "GL.iNet System Overview and Upgrade UI",
+    "Application status API"
+  ],
+  "validation_limits": [
+    "One physical router/configuration",
+    "No native automatic switching or rollback validation",
+    "No LAN-route or IPv6 validation",
+    "No power-loss/flash-endurance test",
+    "Branded UI visual checks used an isolated synthetic fixture; full live form/wizard verification incomplete"
+  ],
+  "excluded_private_fields": [
+    "serial_number",
+    "device_id",
+    "MAC_addresses",
+    "hostname_identity",
+    "network_addresses",
+    "VPN_profile_names",
+    "keys",
+    "tokens",
+    "passwords",
+    "browser_sessions",
+    "raw_logs",
+    "raw_configuration"
+  ]
+}

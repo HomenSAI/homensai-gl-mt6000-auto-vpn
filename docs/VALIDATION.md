@@ -13,3 +13,5 @@ Earlier qa/ stress and fault-injection reports are separate simulation evidence:
 Installed through the authorised native opkg API, exit code 0. Agent reports 0.2.0-alpha2, no service error, three active OpenVPN/WireGuard probes healthy, 12 activity profiles and Telegram enabled at 60 minutes with a confirmed prior delivery. Native apply remains false. No VPN profile, route or firewall was changed. New histogram observation starts now.
 
 33 local tests passed, including binary-font preservation and calendar-day accounting. The branded EN/RU UI/robot/fonts were visually checked in an isolated synthetic fixture; the complete live LuCI settings/wizard rendering was not independently re-verified after the browser-session issue. Do not present fixture images as real router statistics. Original OFL licence whitespace is preserved; project whitespace checks exclude unchanged vendor assets.
+
+Exact live-read model/firmware/LuCI/package evidence: [EN](TESTED-ENVIRONMENT.en.md) · [RU](TESTED-ENVIRONMENT.ru.md) · [JSON snapshot](tested-environment-2026-10-15.json). Captured 15 Oct 2026.
