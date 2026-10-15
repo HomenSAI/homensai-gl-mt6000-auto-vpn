@@ -20,7 +20,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.4.0-alpha8'
+VERSION = '0.5.0-alpha1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -420,9 +420,11 @@ def serve():
                       'capabilities': {'native_apply': False, 'reason': 'GL.iNet worker/firewall transaction is not device-validated'},
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
-            status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
             status['failover_plan']=plan(status,settings,time.time())
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+            from native_history import read_public
+            status['native_history']=read_public(PERSIST)
+            status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
             if delivered:
                 atomic_json(PERSIST/'telegram-state.json', telegram_saved)
             atomic_json(RUNTIME/'status.json', status)
@@ -449,7 +451,9 @@ def serve():
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {}}));return
+        print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
+                          'native_confirm': {'tx':'String','exit_ipv4':'String','dns_ok':'Boolean','https_ok':'Boolean'},
+                          'native_stop': {}}));return
     request = sys.stdin.buffer.read(65537)
     if len(request) > 65536:
         raise ValueError('oversize RPC input')
@@ -457,6 +461,26 @@ def rpc(method):
     if not isinstance(arguments, dict):
         raise ValueError('invalid RPC arguments')
     arguments.pop('ubus_rpc_session', None)  # rpcd injects this; never persist or echo it.
+    if method=='native_confirm':
+        if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok'}:
+            raise ValueError('invalid confirmation fields')
+        if not isinstance(arguments['tx'],str) or not re.fullmatch(r'[a-f0-9]{32}',arguments['tx']):
+            raise ValueError('invalid confirmation transaction')
+        address=ipaddress.IPv4Address(arguments['exit_ipv4'])
+        if not address.is_global or arguments['dns_ok'] is not True or arguments['https_ok'] is not True:
+            raise ValueError('unverified client confirmation')
+        pending=read_json(RUNTIME/'native-status.json',{})
+        if pending.get('state')!='WAIT-CLIENT' or pending.get('tx')!=arguments['tx'] or pending.get('expected_exit')!=str(address) or time.time()>pending.get('deadline',0):
+            raise ValueError('no matching pending transaction')
+        envelope=read_json(PERSIST/'native-transaction.json',{})
+        transaction=envelope.get('data')
+        if (envelope.get('schema')!=1 or not isinstance(transaction,dict)
+                or envelope.get('sha256')!=checksum(transaction)
+                or transaction.get('phase')!='WAIT-CLIENT' or transaction.get('tx')!=arguments['tx']
+                or transaction.get('expected_exit')!=str(address) or time.time()>transaction.get('deadline',0)):
+            raise ValueError('transaction no longer awaiting confirmation')
+        atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
+        print('{"accepted":true}');return
     if arguments:
         raise ValueError('unexpected RPC arguments')
     if method == 'inventory':
@@ -464,9 +488,16 @@ def rpc(method):
     elif method == 'scan':
         atomic_json(RUNTIME/'scan.request', {'requested': time.time()})
         print('{"queued":true}')
+    elif method == 'native_stop':
+        internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
+        atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':internal.get('settings',{}).get('native_trial')})
+        print('{"queued":true}')
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
-        if method == 'status':status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+        if method == 'status':
+            from native_history import read_public
+            status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+            status['native_history']=read_public(PERSIST)
         print(json.dumps({'events': status.get('events', [])} if method == 'events' else status))
     else:
         raise ValueError('unknown RPC method')

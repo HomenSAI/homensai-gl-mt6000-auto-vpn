@@ -1,13 +1,13 @@
-# Установка · 0.4.0-alpha8
+# Установка · 0.5.0-alpha1
 
 [English](INSTALL.en.md)
 
 ## Точная проверенная конфигурация
 
-[Паспорт установки](TESTED-ENVIRONMENT.ru.md): GL.iNet GL-MT6000 (Flint 2), фирменная 4.11.0 release, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, Linux 5.4.238, aarch64_cortex-a53, LuCI openwrt-21.02 / luci-base git-22.335.71649-0ecaf74. Пакет 0.4.0-alpha8-1 действительно установлен, работающий монитор проверен отдельно. Другие комбинации автоматически не объявляются совместимыми.
+[Паспорт установки](TESTED-ENVIRONMENT.ru.md): GL.iNet GL-MT6000 (Flint 2), фирменная 4.11.0 release, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, Linux 5.4.238, aarch64_cortex-a53, LuCI openwrt-21.02 / luci-base git-22.335.71649-0ecaf74. Пакет 0.5.0-alpha1-1 действительно установлен, работающий монитор проверен отдельно. Другие комбинации автоматически не объявляются совместимыми.
 
 1. Проверьте GL-MT6000, GL.iNet 4.11.0 / OpenWrt 21.02-SNAPSHOT и вход в локальную LuCI. Другие версии не проверены — оцените совместимость, не форсируйте установку. Это монитор, не прошивка и не VPN-подписка; нужны существующие профили.
-2. Скачайте ipk и ipk.sha256 одной версии. PowerShell: `Get-FileHash .\homensai-auto-vpn_0.4.0-alpha8-1_all.ipk -Algorithm SHA256`, Linux: `sha256sum homensai-auto-vpn_0.4.0-alpha8-1_all.ipk`. При несовпадении остановитесь.
+2. Скачайте ipk и ipk.sha256 одной версии. PowerShell: `Get-FileHash .\homensai-auto-vpn_0.5.0-alpha1-1_all.ipk -Algorithm SHA256`, Linux: `sha256sum homensai-auto-vpn_0.5.0-alpha1-1_all.ipk`. При несовпадении остановитесь.
 3. Сохраните приватный backup, проверьте RAM/место. Backup может содержать ключи/токен: не отправляйте его в GitHub или AI-чат.
 4. System → Software: обновите только штатные feed. Зависимости: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle. Python занимает больше места, чем приложение. Не меняйте feed, не обновляйте всё, не используйте force-depends, не прошивайте и не удаляйте пакеты.
 5. Software → Upload Package → ipk → проверка зависимостей → Install. Не Flash Firmware. При ошибке opkg остановитесь.

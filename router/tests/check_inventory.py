@@ -12,5 +12,7 @@ data=json.loads(result)
 assert len(data['profiles'])==2
 assert data['profiles'][0]['interface']=='ovpnclient3'
 assert data['profiles'][1]['id']=='wireguard:peer_56'
-assert not any(token in result for token in ('PASSWORD_SENTINEL','PRIVATE_KEY_SENTINEL','TOKEN_SENTINEL','PRIVATE_PATH_SENTINEL'))
+assert [v['id'] for v in data['native_candidates']]==['openvpn:12_34','wireguard:peer_56']
+assert [v['order'] for v in data['native_candidates']]==[2,3]
+assert not any(token in result for token in ('PASSWORD_SENTINEL','PRIVATE_KEY_SENTINEL','TOKEN_SENTINEL','PRIVATE_PATH_SENTINEL','SENSITIVE_DOMAIN_SENTINEL'))
 print('Lua 5.1 syntax and credential-exclusion inventory test passed')

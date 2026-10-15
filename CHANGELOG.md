@@ -1,5 +1,16 @@
 # История изменений
 
+## 0.5.0-alpha1 — persistent history and client trial workflow
+
+- Expiry/stop no longer blindly returns to a failed source: retain the reserve with explicit partial-result status, await actual client stop verification, and preserve committed state over restart.
+- Added bounded, checksummed persistent controller history with previous-good backup, monthly counters and deduplication across restart; no transaction tokens, exit IP or kernel logs persisted there.
+- Added typed authenticated native_confirm/native_stop RPCs. ACK no longer requires UCI apply, which could restart the waiting supervisor. Stop is durably latched across restart; a new explicit trial nonce is required to resume.
+- Added Windows PowerShell 7 LAN helper: gateway/DNS/IPv6 checks, explicit router DNS and HTTPS verification, strict exit match, no-proxy/no-redirect router login, private password input and stop-on-exit. Wrong gateway refuses before login.
+- Added EN/RU trial guidance, helper download, restore request, persistent history/monthly counters and explanatory blocker text. Telegram reports use actual controller state and scoped history rather than unconditional disabled text.
+- Fixed history gating before releasing the worker, expiry/stop guard cleanup, late error reporting, and fake PID test syscall mocking. 76 Python tests, Lua 5.1 inventory checks and PowerShell SelfTest pass; four own-process history crash boundaries tested.
+- Native switching, HNAT verification and positive LAN acceptance remain unverified on the real device. No outage test before neighbouring tasks confirm checkpoint/pause. See TODO-WORKING-SYSTEM.md.
+
+
 ## 0.4.0-alpha8 — experimental native controller candidate
 
 - Added a real, narrowly scoped existing-rule adapter, independent supervisor, checksummed journal, guarded apply/rollback and mandatory external client confirmation. Defaults disabled; production switching not validated.

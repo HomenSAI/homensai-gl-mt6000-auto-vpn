@@ -4,7 +4,7 @@
 
 [Точная модель, прошивка, версии LuCI и подтверждение установки](docs/TESTED-ENVIRONMENT.ru.md)
 
-**Кандидат 0.4.0-alpha8: монитор работает, экспериментальный адаптер написан; эксплуатация с автопереключением не проверена. На устройстве alpha7, эксперимент выключен.**
+**Кандидат 0.5.0-alpha1: монитор работает, экспериментальный адаптер написан; эксплуатация с автопереключением не проверена. На устройстве alpha7, эксперимент выключен.**
 
 Идея возникла при реальном сбое: VPN показывал Connected, но интернет пропадал. Штатная панель и объёмные логи не объясняли, какой сервер работает и где проблема. Нужны достоверная статистика и дальнейшее переключение между серверами OpenVPN/WireGuard. Wi-Fi — среда доступа, firewall — фильтрация, не VPN-протоколы.
 
@@ -34,3 +34,5 @@
 [Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
 
 [Нативный адаптер: реальные результаты и ограничения](docs/NATIVE-EXPERIMENTAL.md) · [Журнал работы](docs/WORKLOG.md)
+
+[Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.

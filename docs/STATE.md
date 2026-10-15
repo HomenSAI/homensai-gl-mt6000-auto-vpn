@@ -1,6 +1,6 @@
 # Current status / Текущее состояние
 
-15.10.2026: candidate 0.4.0-alpha8; actual device 0.4.0-alpha7, monitor/native DISABLED. Existing-rule experimental adapter added, no live switch verified. HNAT state and LAN verification remain blockers. Remote-work continuity takes priority. See NATIVE-EXPERIMENTAL.md and WORKLOG.md. The dated text below is historical context, not current installation status.
+15.10.2026: candidate 0.5.0-alpha1; actual device 0.4.0-alpha7, monitor/native DISABLED. Existing-rule experimental adapter added, no live switch verified. HNAT state and LAN verification remain blockers. Remote-work continuity takes priority. See NATIVE-EXPERIMENTAL.md and WORKLOG.md. The dated text below is historical context, not current installation status.
 
 # Состояние HomenSAI Auto VPN
 

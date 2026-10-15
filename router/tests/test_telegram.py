@@ -8,6 +8,21 @@ import telegram_report as report
 
 
 class TelegramTests(unittest.TestCase):
+    def test_native_history_report_is_scoped_and_does_not_expose_private_fields(self):
+        now=report.time.time();month=report.datetime.now().strftime('%Y-%m')
+        status={'native_failover':{'state':'COMMITTED','tx':'PRIVATE_SENTINEL','expected_exit':'EXIT_SENTINEL','acceleration':{'hook_log':'KERNEL_SENTINEL'}},
+                'native_history':{'events':[{'time':now,'state':'COMMITTED','codes':['CLIENT-CONFIRMED'],'trial':False,'token':'TOKEN_SENTINEL'}],
+                                  'months':{month:{'attempts':2,'trials_passed':1,'committed':1,'rollbacks':1}}}}
+        text=report.format_report(status,60)
+        self.assertIn('COMMITTED',text);self.assertIn('не полный месяц',text)
+        self.assertNotIn('Автоматическое переключение выключено',text)
+        for secret in ('PRIVATE_SENTINEL','EXIT_SENTINEL','KERNEL_SENTINEL','TOKEN_SENTINEL'):self.assertNotIn(secret,text)
+
+    def test_corrupt_native_history_is_reported_without_invented_counts(self):
+        text=report.format_report({'native_failover':{'state':'bad value'},'native_history':{'error':'HISTORY-001'}},60)
+        self.assertIn('HISTORY-001',text);self.assertIn('UNKNOWN',text)
+        self.assertNotIn('автопереходов',text)
+
     def test_disabled_never_sends(self):
         with patch.object(report, 'option', return_value='0'), patch.object(report.urllib.request, 'urlopen') as send:
             status, _, sent = report.deliver({}, {}, 10000)

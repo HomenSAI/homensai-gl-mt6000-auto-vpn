@@ -39,9 +39,24 @@ def format_report(status, minutes):
                      (month, (traffic.get('rx', 0)+traffic.get('tx', 0))/1e9))
     else:
         lines.append('Трафик: пока нет накопленных измерений.')
+    native=status.get('native_failover',{})
+    state=native.get('state','UNKNOWN')
+    if not isinstance(state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',state):state='UNKNOWN'
+    lines.append('Нативный контроллер: %s (не подтверждение доступности LAN).' % state)
+    history=status.get('native_history',{})
+    if history.get('error'):lines.append('История контроллера недоступна: HISTORY-001.')
+    native_events=[e for e in history.get('events',[]) if isinstance(e.get('time'),(int,float)) and e['time']>=cutoff]
+    lines.append('События контроллера за интервал: %s' % len(native_events))
+    for event in native_events[-10:]:
+        event_state=event.get('state','UNKNOWN')
+        if not isinstance(event_state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',event_state):event_state='UNKNOWN'
+        codes=[c for c in event.get('codes',[]) if isinstance(c,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',c)]
+        lines.append('%s · %s%s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),event_state,' · тест' if event.get('trial') else '',', '.join(codes)))
+    totals=history.get('months',{}).get(month)
+    if totals:
+        lines.append('Контроллер %s, накоплено: попыток %s; тестов пройдено %s; автопереходов %s; откатов %s. Это не полный месяц.' % (month,totals.get('attempts',0),totals.get('trials_passed',0),totals.get('committed',0),totals.get('rollbacks',0)))
     lines.extend(['Пропуски наблюдения: %s' % accounting.get('gaps', 0),
-                  'Проверки с роутера, IPv4. Причина сбоя определяется только при наличии данных.',
-                  'Автоматическое переключение выключено.'])
+                  'Проверки с роутера, IPv4. Причина сбоя определяется только при наличии данных.'])
     return '\n'.join(lines)[:4000]
 
 

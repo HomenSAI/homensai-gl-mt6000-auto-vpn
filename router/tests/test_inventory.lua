@@ -5,6 +5,10 @@ package.preload['uci']=function()
     ovpnclient={{['.name']='12_34',name='Office',group_id='12',path='PRIVATE_PATH_SENTINEL',password='PASSWORD_SENTINEL'},
                 {['.name']='groups',token='TOKEN_SENTINEL'}},
     wireguard={{['.name']='peer_56',name='Backup',group_id='90',private_key='PRIVATE_KEY_SENTINEL'}},
+    route_policy={{['.name']='global',['.type']='policy'},
+                  {['.name']='special',['.type']='rule',enabled='1',killswitch='1',via='ovpnclient3',to_type='domain',to={'SENSITIVE_DOMAIN_SENTINEL'}},
+                  {['.name']='a',['.type']='rule',enabled='1',killswitch='1',via='ovpnclient3'},
+                  {['.name']='b',['.type']='rule',enabled='1',killswitch='1',via='wgclient1'}},
     homensai_vpn={{['.name']='main',['.type']='main',enabled='1'},
                   {['.name']='custom',['.type']='server',profile='openvpn:12_34',name='My office',channel='Work'}}
   }

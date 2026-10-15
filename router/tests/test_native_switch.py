@@ -35,9 +35,15 @@ class Backend:
     def apply(self):self.calls.append(('apply',))
     def devices(self):return ['wgclient1','tun0']
     def diagnostic(self):return [],self.selection
+    def health(self,identifier):return True
 
 
 class NativeTests(unittest.TestCase):
+    def setUp(self):
+        # Fake PIDs must never reach the actual process-group kill syscall.
+        patcher=patch.object(native.os,'killpg')
+        self.killpg=patcher.start();self.addCleanup(patcher.stop)
+
     def test_exact_supported_policy_and_hash(self):
         data,profiles=fixture();s=native.choose(data,profiles)
         self.assertEqual(s['source_rule'],'a');self.assertEqual(s['target_rule'],'b')
@@ -61,7 +67,7 @@ class NativeTests(unittest.TestCase):
                 with self.assertRaises(native.Refused):native.choose(d,p)
 
     def test_journal_integrity_and_order(self):
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'tx.json'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'tx.json'):
             value={'before':['a','b'],'after':['b','a']};native.journal_write(value)
             self.assertEqual(native.journal_read(),value)
             envelope=json.loads(native.JOURNAL.read_text());envelope['data']['after']=['a','a'];native.JOURNAL.write_text(json.dumps(envelope))
@@ -75,9 +81,34 @@ class NativeTests(unittest.TestCase):
             native.rollback(b,{'hash':b.selection['hash'],'before':b.current,'after':list(reversed(b.current))},'test')
         self.assertEqual(b.calls,[('guard',None)])
 
+    def test_expiry_never_restores_onto_failed_source(self):
+        b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
+        b.health=lambda identifier: identifier==b.profiles[1]['id']
+        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'expected_exit':'9.9.9.9'}
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
+            self.assertFalse(native.finish_committed(b,journal,'TRIAL-ENDED'))
+            self.assertEqual(b.current,after);self.assertFalse(any(c[0] in ('apply','reorder') for c in b.calls))
+            self.assertEqual(native.journal_read()['phase'],'HELD-ON-RESERVE')
+            self.assertFalse(json.loads(native.STATE.read_text())['original_restored'])
+
+    def test_expiry_restores_only_when_source_is_freshly_healthy(self):
+        b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
+        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'):
+            self.assertTrue(native.finish_committed(b,journal,'TRIAL-ENDED'))
+            self.assertEqual(b.current,before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
+
+    def test_unknown_source_and_reserve_do_not_claim_connectivity(self):
+        b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after;b.health=lambda _:None
+        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
+            self.assertFalse(native.finish_committed(b,journal,'CLIENT-STOP'))
+            self.assertFalse(json.loads(native.STATE.read_text())['reserve_healthy'])
+            self.assertEqual(b.current,after)
+
     def test_rollback_restores_only_order_then_restricts_to_vpn(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'tx.json'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'tx.json'):
             native.rollback(b,{'before':before,'after':after,'hash':b.fingerprint},'test')
             self.assertEqual(b.current,before)
             self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
@@ -92,9 +123,9 @@ class NativeTests(unittest.TestCase):
         b=Backend();before=b.current[:];process=MagicMock(pid=123,returncode=0)
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
-            b.data['settings']['native_ack']='t'*32
+            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'t'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
             return process
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=lambda p:'8.8.8.8' if p['id']==b.profiles[0]['id'] else '9.9.9.9'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=lambda p:'8.8.8.8' if p['id']==b.profiles[0]['id'] else '9.9.9.9'):
             native.attempt(b,b.selection,time.time()+120,True)
             self.assertEqual(b.current,before)
             self.assertEqual(json.loads(native.STATE.read_text())['state'],'ARMED')
@@ -102,7 +133,7 @@ class NativeTests(unittest.TestCase):
 
     def test_vendor_failure_rolls_back_without_certificate(self):
         b=Backend();before=b.current[:];process=MagicMock(pid=123,returncode=1)
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',return_value=process):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',return_value=process):
             with self.assertRaisesRegex(native.Refused,'VENDOR-APPLY'):
                 native.attempt(b,b.selection,time.time()+120,False)
             self.assertEqual(b.current,before);self.assertFalse(native.CERT.exists())
@@ -112,22 +143,30 @@ class NativeTests(unittest.TestCase):
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
             return process
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',return_value='9.9.9.9'),patch.object(native.os,'killpg'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',return_value='9.9.9.9'),patch.object(native.os,'killpg'):
             with self.assertRaisesRegex(native.Refused,'CONFIRMATION-TIMEOUT'):
                 native.attempt(b,b.selection,time.time()-1,False)
             self.assertEqual(b.current,before);self.assertFalse(native.CERT.exists())
+
+    def test_history_failure_before_worker_release_never_applies(self):
+        b=Backend();process=MagicMock(pid=123,returncode=0)
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native.subprocess,'Popen',return_value=process),patch.object(native,'publish',side_effect=[None,native.Refused('HISTORY-001'),None]):
+            with self.assertRaisesRegex(native.Refused,'HISTORY-001'):
+                native.attempt(b,b.selection,time.time()+120,False)
+            self.assertEqual(b.calls,[])
+            self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
 
     def test_late_external_change_during_exit_probe_is_rejected(self):
         b=Backend();process=MagicMock(pid=123,returncode=0);calls=[]
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
-            b.data['settings']['native_ack']='t'*32
+            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'t'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
             return process
         def exit_probe(profile):
             calls.append(profile)
             if len(calls)==2:b.fingerprint='external'
             return '9.9.9.9'
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=exit_probe),patch.object(native.os,'killpg'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=exit_probe),patch.object(native.os,'killpg'):
             with self.assertRaisesRegex(native.Refused,'EXTERNAL'):
                 native.attempt(b,b.selection,time.time()+120,False)
             self.assertFalse(native.CERT.exists())

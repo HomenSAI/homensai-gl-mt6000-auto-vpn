@@ -32,6 +32,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
   main.plan_enabled=s.plan_enabled=='1'
   main.native_enabled=s.native_enabled=='1'
+  main.native_session_loss=s.native_session_loss=='1'
+  main.native_duration=math.max(1,math.min(240,tonumber(s.native_duration) or 10))
   main.native_until=s.native_until or ''
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
@@ -40,4 +42,18 @@ uci:foreach('homensai_vpn','main',function(s)
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
 end)
-print(json.encode({profiles=profiles,servers=channels,settings=main}))
+local by_interface={}
+for _,p in ipairs(profiles) do if type(p.interface)=='string' then by_interface[p.interface]=p end end
+local native_candidates={}
+local order=0
+local function empty(value) return value==nil or value=='' or (type(value)=='table' and #value==0) end
+uci:foreach('route_policy',nil,function(s)
+  local p=by_interface[s.via]
+  if s['.type']=='rule' and s.enabled=='1' and s.killswitch=='1' and p
+      and empty(s.from_type) and empty(s.from) and empty(s.to_type) and empty(s.to)
+      and empty(s.to_manual) and empty(s.to_list_external) then
+    native_candidates[#native_candidates+1]={id=p.id,order=order,protocol=p.protocol}
+  end
+  order=order+1
+end)
+print(json.encode({profiles=profiles,servers=channels,settings=main,native_candidates=native_candidates}))

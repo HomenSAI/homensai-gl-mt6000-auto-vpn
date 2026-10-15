@@ -4,7 +4,7 @@
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.4.0-alpha8 candidate: monitor available; experimental native controller added, production automatic failover NOT validated. Installed device: alpha7, native disabled.**
+**0.5.0-alpha1 candidate: monitor available; experimental native controller added, production automatic failover NOT validated. Installed device: alpha7, native disabled.**
 
 ## Why it exists
 
@@ -48,3 +48,5 @@ Current device status: 0.4.0-alpha7 is installed in monitor mode, native switchi
 [Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
 
 [Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
+
+[Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.

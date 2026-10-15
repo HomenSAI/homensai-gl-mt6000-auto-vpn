@@ -23,6 +23,7 @@ from datetime import datetime
 
 from agent import RUNTIME, PERSIST, atomic_json, read_json, command, inventory, probe, bound_socket
 from failover_plan import streak
+from native_history import History, HistoryError
 
 HELPER='/usr/lib/homensai-vpn/native_policy.lua'
 TABLE='homensai_vpn_guard'
@@ -41,6 +42,15 @@ class Refused(Exception):
 
 def digest(value):
     return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
+
+def publish(value):
+    value=dict(value,time=time.time())
+    try:History(PERSIST).record(value)
+    except (OSError,ValueError,KeyError,TypeError):
+        atomic_json(STATE,{'state':'BLOCKED','blockers':['HISTORY-001']})
+        raise Refused('HISTORY-001')
+    atomic_json(STATE,value)
 
 
 def journal_write(value):
@@ -139,6 +149,15 @@ def trace(profile):
 
 class Linux:
     def policy(self):return json.loads(command(['/usr/bin/lua',HELPER]))
+    def candidates(self):
+        data=self.policy();profiles={p.get('interface'):p for p in inventory()['profiles'] if p.get('interface')}
+        values=[]
+        for index,s in enumerate(data['sections']):
+            constrained=any(s.get(k) not in (None,'',[]) for k in ('from_type','from','to_type','to','to_manual','to_list_external'))
+            profile=profiles.get(s.get('via'))
+            if s.get('.type')=='rule' and s.get('enabled')=='1' and s.get('killswitch')=='1' and not constrained and profile:
+                values.append({'id':profile['id'],'order':index,'protocol':profile.get('protocol')})
+        return values
     def acceleration(self):
         loaded=[m for m in ('mtkhnat','mtk_hnat','shortcut_fe','fast_classifier') if Path('/sys/module',m).exists()]
         after=time.monotonic()
@@ -219,9 +238,18 @@ class Linux:
             s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
             if s.get('up') and s.get('l3_device'):devices.append(s['l3_device'])
         return devices
+    def health(self,identifier):
+        profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
+        if not profile or not profile.get('interface'):return False
+        result=probe(profile)
+        if result.get('code') is None and result.get('dns_ok') is True and result.get('https_success',0)>=2:return True
+        if result.get('code') in ('VPN-001','VPN-003','DNS-001','PROFILE-INACTIVE'):return False
+        return None
 
 
 def rollback(backend,journal,reason):
+    if journal.get('phase')=='ARMED' and not journal.get('pid') and backend.order()==(journal['before'],journal['hash']):
+        journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time());journal_write(journal);return
     backend.guard()
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after']):
@@ -235,6 +263,25 @@ def rollback(backend,journal,reason):
     journal_write(journal)
     # Retain the VPN-only guard during the experiment. INPUT/LAN management is unaffected.
     backend.guard(backend.devices())
+
+
+def finish_committed(backend,journal,reason):
+    """A completed, client-confirmed switch must not expire back onto a failed source."""
+    order,fingerprint=backend.order()
+    if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after']):
+        backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+    if order==journal['after'] and backend.health(journal['source']) is not True:
+        healthy=backend.health(journal['target']) is True
+        backend.guard(backend.devices())
+        journal.update(phase='HELD-ON-RESERVE',reason='SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
+        journal_write(journal)
+        publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':journal['source'],
+                 'target':journal['target'],'expected_exit':journal.get('expected_exit'),
+                 'reserve_healthy':healthy,'original_restored':False,'trial':journal.get('trial',False)})
+        return False
+    journal.update(phase='RESTORING');journal_write(journal)
+    rollback(backend,journal,reason)
+    return True
 
 
 def disable_acceleration(backend,request):
@@ -325,11 +372,16 @@ def attempt(backend,selection,until,trial):
     tx=uuid.uuid4().hex
     journal={'tx':tx,'phase':'ARMED','before':before,'after':after,'hash':selection['hash'],
              'source':selection['source']['id'],'target':selection['target']['id'],
-             'deadline':min(until,time.time()+90),'trial':trial,'pid':None,'started':time.time()}
+             'deadline':min(until,time.time()+90),'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
+             'pid':None,'started':time.time()}
+    publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial})
     journal_write(journal)
     process=subprocess.Popen([sys.executable,__file__,'apply',tx],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
-    journal.update(pid=process.pid,phase='APPLYING');journal_write(journal)
+    journal.update(pid=process.pid,phase='APPLYING')
+    released=False
     try:
+        publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial})
+        journal_write(journal);released=True
         process.wait(timeout=max(1,min(50,journal['deadline']-time.time())))
         if process.returncode:raise Refused('VENDOR-APPLY-FAILED')
         if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
@@ -338,21 +390,27 @@ def attempt(backend,selection,until,trial):
         if blockers:raise Refused(blockers[0])
         backend.guard(backend.devices())
         journal.update(phase='WAIT-CLIENT',expected_exit=target_exit);journal_write(journal)
-        atomic_json(STATE,{'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],
+        publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],
                           'requires':'LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback'})
         while time.time()<journal['deadline'] and not STOP:
-            if backend.policy()['settings'].get('native_ack')==tx:
+            stopped=read_json(PERSIST/'native-stop.json',{})
+            if stopped.get('requested',0)>=journal['started']:raise Refused('CLIENT-STOP')
+            confirmation=read_json(RUNTIME/'native-confirm.json',{})
+            if (confirmation.get('tx')==tx and confirmation.get('exit_ipv4')==target_exit
+                    and confirmation.get('dns_ok') is True and confirmation.get('https_ok') is True
+                    and journal['started']<=confirmation.get('time',0)<=time.time()
+                    and time.time()-confirmation.get('time',0)<=30):
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
                 if trace(selection['target'])!=target_exit:raise Refused('EXIT-CHANGED')
                 blockers,_=backend.diagnostic()
                 if blockers:raise Refused(blockers[0])
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
                 journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
-                if trial:rollback(backend,journal,'TRIAL-PASSED')
+                if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
                                  'target':selection['target']['id'],'direction':selection['direction'],'time':time.time(),'until':until})
-                atomic_json(STATE,{'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
-                                  'until':until,'guard':'VPN-only; IPv6 forwarded traffic blocked'})
+                publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
+                                  'until':until,'trial':trial,'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
             time.sleep(1)
         raise Refused('CLIENT-CONFIRMATION-TIMEOUT')
@@ -361,7 +419,10 @@ def attempt(backend,selection,until,trial):
         try:os.killpg(process.pid,signal.SIGKILL)
         except ProcessLookupError:pass
         process.wait()
-        rollback(backend,journal,'TRANSACTION-FAILED')
+        if not released and backend.order()==(before,selection['hash']):
+            journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY');journal_write(journal)
+        else:rollback(backend,journal,'TRANSACTION-FAILED')
+        publish({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial})
         raise
 
 
@@ -372,9 +433,9 @@ def serve():
         backend=Linux()
         try:journal=journal_read()
         except Refused:
-            backend.guard();atomic_json(STATE,{'state':'BLOCKED','blockers':['JOURNAL-INTEGRITY-FAILED'],'guard':'closed'});return
+            backend.guard();publish({'state':'BLOCKED','blockers':['JOURNAL-INTEGRITY-FAILED'],'guard':'closed'});return
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
-        if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED'):
+        if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
             if journal.get('phase')=='APPLYING' and journal.get('pid'):
                 # Kill only a process group whose command line proves this exact child identity.
                 cmd=Path('/proc',str(journal['pid']),'cmdline')
@@ -382,6 +443,9 @@ def serve():
                     try:os.killpg(journal['pid'],signal.SIGKILL)
                     except ProcessLookupError:pass
             rollback(backend,journal,'SUPERVISOR-RECOVERY')
+        elif journal.get('phase')=='COMMITTED':
+            if backend.order()!=(journal['after'],journal['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+            backend.guard(backend.devices())
         consumed=read_json(ATTEMPTS,{})
         last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
         while not STOP:
@@ -389,28 +453,47 @@ def serve():
                 data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
                 active=journal_read()
                 enabled=settings.get('native_enabled')=='1'
+                stopped=read_json(PERSIST/'native-stop.json',{})
+                stop_latched=bool(stopped and stopped.get('trial')==settings.get('native_trial'))
+                if active.get('phase')=='HELD-ON-RESERVE' and (not enabled or stop_latched or settings.get('native_trial')==active.get('trial_nonce')):
+                    if backend.order()!=(active['after'],active['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+                    publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':active['source'],
+                             'target':active['target'],'expected_exit':active.get('expected_exit'),'original_restored':False,
+                             'reserve_healthy':active.get('reserve_healthy',False),'trial':active.get('trial',False)})
+                    time.sleep(5);continue
                 preparation=settings.get('native_prepare_acceleration') or ''
                 if preparation:
                     if active.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED'):raise Refused('ACCELERATION-PREPARE-DURING-TRANSACTION')
                     disable_acceleration(backend,preparation)
-                if active.get('phase')=='COMMITTED' and (time.time()>=until or not enabled):
-                    rollback(backend,active,'TRIAL-ENDED');atomic_json(STATE,{'state':'ROLLED-BACK','reason':'TRIAL-ENDED'})
+                if active.get('phase')=='COMMITTED' and (time.time()>=until or not enabled or stop_latched):
+                    if not finish_committed(backend,active,'TRIAL-ENDED'):time.sleep(5);continue
+                    publish({'state':'ROLLED-BACK','reason':'TRIAL-ENDED'})
+                    active=journal_read()
                     last_trial=settings.get('native_trial')
                 blockers,selection=backend.diagnostic()
+                if stop_latched:
+                    if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
+                    publish({'state':'STOPPED','reason':'CLIENT-STOP','blockers':blockers,'candidates':backend.candidates()});time.sleep(5);continue
                 if not enabled:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
-                    atomic_json(STATE,{'state':'DISABLED','blockers':blockers,'acceleration':backend.acceleration(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
+                    publish({'state':'DISABLED','blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
+                if until>0 and time.time()>=until:
+                    if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
+                    publish({'state':'EXPIRED','reason':'TRIAL-ENDED'});time.sleep(5);continue
                 if settings.get('native_session_loss')!='1':blockers.append('SESSION-LOSS-NOT-ACCEPTED')
                 if not time.time()<until<=time.time()+14400:blockers.append('BOUNDED-DEADLINE-REQUIRED')
                 if blockers:
                     if time.time()>=until and active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
-                    atomic_json(STATE,{'state':'BLOCKED','blockers':blockers});time.sleep(5);continue
-                if active.get('phase')=='COMMITTED':time.sleep(5);continue
+                    publish({'state':'BLOCKED','blockers':blockers});time.sleep(5);continue
+                if active.get('phase')=='COMMITTED':
+                    previous=read_json(STATE,{})
+                    publish(dict(previous,state='COMMITTED',source=active['source'],target=active['target']))
+                    time.sleep(5);continue
                 trial=settings.get('native_trial') or ''
                 forced=bool(trial and trial!=last_trial)
                 if consumed.get('until')!=until:consumed={'until':until,'count':0,'trial':last_trial,'time':last_attempt}
                 if consumed.get('count',0)>=3:
-                    atomic_json(STATE,{'state':'BLOCKED','blockers':['TRIAL-ATTEMPT-LIMIT']});time.sleep(5);continue
+                    publish({'state':'BLOCKED','blockers':['TRIAL-ATTEMPT-LIMIT']});time.sleep(5);continue
                 status=read_json(RUNTIME/'status.json',{})
                 age=90
                 failures=streak(status.get('samples',[]),selection['source']['id'],3,time.time(),age,False)
@@ -422,21 +505,26 @@ def serve():
                     consumed.update(trial=trial,time=last_attempt,count=consumed.get('count',0)+1)
                     atomic_json(ATTEMPTS,consumed)
                     attempt(backend,selection,until,forced)
-                else:atomic_json(STATE,{'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,'source_failures':failures,'reserve_healthy':healthy})
+                else:publish({'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,'source_failures':failures,'reserve_healthy':healthy})
             except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError) as e:
                 # Never log configuration, stderr, credentials or arbitrary exception values.
-                reason=str(e) if isinstance(e,Refused) else type(e).__name__
+                reason=str(e) if isinstance(e,Refused) else 'NATIVE-SYSTEM-001'
                 preparation=read_json(PREPARE,{})
-                atomic_json(STATE,{'state':'BLOCKED','blockers':[reason],'acceleration':backend.acceleration(),
-                                  'preparation':{k:preparation.get(k) for k in ('phase','step','attempts')}})
+                failure={'state':'BLOCKED','blockers':[reason],'error_type':type(e).__name__,'acceleration':backend.acceleration(),
+                         'preparation':{k:preparation.get(k) for k in ('phase','step','attempts')}}
+                try:publish(failure)
+                except Refused:atomic_json(STATE,dict(failure,history_error='HISTORY-001'))
                 pending=journal_read()
                 if 'GUARD-RETAINED' in reason or pending.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT'):return
             time.sleep(5)
         active=journal_read()
-        if active.get('phase')=='COMMITTED':rollback(backend,active,'SERVICE-STOPPED')
+        if active.get('phase')=='COMMITTED':
+            if finish_committed(backend,active,'SERVICE-STOPPED') and backend.order()==(active['before'],active['hash']):backend.unguard()
 
 
 if __name__=='__main__':
+    os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3'
+    time.tzset()
     def stop(*_):
         global STOP
         STOP=True
