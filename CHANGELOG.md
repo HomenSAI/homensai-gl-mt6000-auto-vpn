@@ -123,3 +123,11 @@ Accept timezone-qualified Windows deadline precision on router Python 3.9.
 
 ## 0.5.0-alpha7
 Use checked private nft batch file on firmware lacking /dev/stdin.
+
+## 0.5.0-alpha8
+Format nft batch for OpenWrt nftables 0.9.6; retain syntax check before apply.
+
+
+## 0.5.0-alpha9
+Refresh trial nonce in disabled preflight before evaluating an older latched Stop.
+

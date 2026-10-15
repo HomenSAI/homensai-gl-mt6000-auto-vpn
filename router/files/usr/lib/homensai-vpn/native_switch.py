@@ -246,7 +246,12 @@ class Linux:
         # Vendor nft opens /dev/stdin for '-', but that node is absent here.
         fd,path=tempfile.mkstemp(prefix='guard-',suffix='.nft',dir=str(RUNTIME))
         try:
-            with os.fdopen(fd,'w') as stream:stream.write(script+'\n')
+            with os.fdopen(fd,'w') as stream:
+                if exists:stream.write('delete table inet '+TABLE+';\n')
+                stream.write('table inet '+TABLE+' {\n  chain forward {\n    type filter hook forward priority -310; policy accept;\n')
+                for rule in rules.split(';'):
+                    if rule.strip():stream.write('    '+rule.strip()+';\n')
+                stream.write('  }\n}\n')
             checked=subprocess.run(['nft','-c','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
             if checked.returncode:raise Refused('GUARD-CHECK-FAILED')
             result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)

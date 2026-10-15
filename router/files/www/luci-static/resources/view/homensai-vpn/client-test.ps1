@@ -91,13 +91,13 @@ try {
     if($a.Count -ne 1 -or $b.Count -ne 1){throw 'PROFILES-NOT-ELIGIBLE-GENERIC-RULES'}
     $direction=if($a[0].order -lt $b[0].order){'first'}else{'last'}
     # Save only own metadata first; the controller stays disabled during preflight.
-    Save-OwnSettings @{native_enabled='0';native_order_direction=$direction;native_baseline_exit=$baseline;native_until=$Until.ToString('o')}
+    $trial=[guid]::NewGuid().ToString('N')
+    Save-OwnSettings @{native_enabled='0';native_trial=$trial;native_order_direction=$direction;native_baseline_exit=$baseline;native_until=$Until.ToString('o')}
     Start-Sleep -Seconds 6
     $status=Invoke-Router 'homensai-vpn' 'status' @{}
     if(@($status.native_failover.blockers).Count){throw 'NATIVE-PREFLIGHT-BLOCKED'}
     Write-Host 'A brief outage is possible. Original policy must be restored after the first trial.'
     if((Read-Host 'Type TEST to start') -cne 'TEST'){throw 'CLIENT-CANCELLED'}
-    $trial=[guid]::NewGuid().ToString('N')
     Save-OwnSettings @{native_enabled='1';native_trial=$trial;native_until=$Until.ToString('o');native_session_loss='1'}
     $started=$true;$lastTx=$null;$end=[DateTimeOffset]::UtcNow.AddSeconds(100)
     while([DateTimeOffset]::UtcNow -lt $Until -and [DateTimeOffset]::UtcNow -lt $end) {
