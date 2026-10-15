@@ -17,6 +17,7 @@ import socket
 import ssl
 import subprocess
 import sys
+import tempfile
 import time
 import uuid
 from datetime import datetime
@@ -242,7 +243,14 @@ class Linux:
         else:rules='iifname "br-lan" drop comment "homensai-owned-guard";'
         # One nft transaction: never delete/recreate the table in separate invocations.
         script=('delete table inet '+TABLE+'; ' if exists else '')+'table inet '+TABLE+' { chain forward { type filter hook forward priority -310; policy accept; '+rules+' } }'
-        result=subprocess.run(['nft','-f','-'],input=script.encode(),stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+        # Vendor nft opens /dev/stdin for '-', but that node is absent here.
+        fd,path=tempfile.mkstemp(prefix='guard-',suffix='.nft',dir=str(RUNTIME))
+        try:
+            with os.fdopen(fd,'w') as stream:stream.write(script+'\n')
+            checked=subprocess.run(['nft','-c','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+            if checked.returncode:raise Refused('GUARD-CHECK-FAILED')
+            result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+        finally:os.unlink(path)
         if result.returncode or not self.guard_exists():raise Refused('GUARD-INSTALL-FAILED')
     def unguard(self):
         if self.guard_exists():command(['nft','delete','table','inet',TABLE])

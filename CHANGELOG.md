@@ -120,3 +120,6 @@ Handle bounded kernel-ring rollover without reusing stale HNAT evidence.
 
 ## 0.5.0-alpha6
 Accept timezone-qualified Windows deadline precision on router Python 3.9.
+
+## 0.5.0-alpha7
+Use checked private nft batch file on firmware lacking /dev/stdin.

@@ -77,3 +77,39 @@ Device traceback confirmed Python 3.9 rejects seven fractional digits emitted by
 | safe hold | Own native_enabled saved 0 | Automatic mode off; journal closure and guard fix pending |
 
 All observations above distinguish executed checks from planned work. No router power cut, successful automatic failover or verified native rollback is claimed. Source code commits: alpha2 55d7be1, alpha3 a547e64, alpha4 baee33d, alpha5 a19da23, alpha6 08bc611. Each was pushed to local Gitea before an identical source-tree snapshot was pushed to GitHub. No credentials, host fingerprint, exit IP, chat IDs, profile IDs or private router configuration are included in this log.
+
+## 0.5.0-alpha7 — nft batch compatibility
+Use private mode-0600 runtime temporary batch file, nft check before apply, and unconditional removal. Avoid missing /dev/stdin without changing device nodes. Regression verifies file permissions, check/apply order, cleanup and no apply on rejected check. Pending live acceptance.
+
+## Подробный журнал инцидентов — 15.10.2026, Europe/Berlin (UTC+02:00)
+
+Время ниже означает время события только при наличии отметки источника. Для восстановленных записей без точной отметки время не выдумывается. Формат последующих записей: дата/время → ошибка → причина → действие → проверка → оставшиеся ограничения.
+
+### 15.10.2026 16:47:09 — падение native-контроллера (время из logread роутера)
+- Ошибка: `AttributeError: module 'time' has no attribute 'tzset'`, `/usr/lib/homensai-vpn/native_switch.py`, строка 527. procd сообщил crash loop: 6 crashes; в списке процессов был только `agent.py daemon`.
+- Причина: Python роутера не экспортирует `time.tzset`; контроллер безусловно вызывал его до входа в рабочий цикл. Системный Python не переустанавливался.
+- Исправление alpha2: выделена `configure_timezone()`: использовать Python tzset при наличии, иначе `ctypes.CDLL(None).tzset()` как в работающем мониторе.
+- Проверка: три регрессии для основного/резервного пути и ошибки libc; всего 79 тестов PASS. После установки оба процесса наблюдались на устройстве. Точное время установки в этой записи не сохранено.
+
+### 15.10.2026 — HNAT ошибочно UNKNOWN (точное время диагностического чтения не сохранено)
+- Ошибка: `HARDWARE-ACCELERATOR-UNVERIFIED` при фактическом ответе драйвера `value=0, hook is disabled now!`.
+- Причина 1: парсер не принимал точный формат драйвера. alpha3 добавила строгую проверку согласованных value/state; старые и противоречивые ответы отвергаются.
+- Причина 2: прямое измерение показало Python monotonic `64495.076409609`, последний свежий printk `64494.965555`; сравнивались разные часы. alpha4 заменила эту проверку сравнением журнала до/после чтения hook.
+- Причина 3: кольцевой журнал заполнен: длина до/после 123214 байт, prefix=False. Новые записи вытесняют старые, поэтому alpha4 оставляла UNKNOWN.
+- Исправление alpha5: найти уникальную последнюю строку предыдущего снимка в новом журнале; разбирать только строки после неё. Нет/несколько совпадений — UNKNOWN, без принятия старого ответа.
+- Проверка: 82 теста PASS; после установки свежий native-status содержит `hnat_runtime=disabled`. Модуль mtkhnat остаётся загруженным: выгрузка драйвера не заявляется.
+
+### 15.10.2026 — ошибка срока теста Windows (точное время обнаружения не сохранено)
+- Ошибка: `ValueError: Invalid isoformat string: '2026-10-15T17:20:32.0404034+02:00'`, функция deadline, строка 76. Это значение срока, а не время возникновения ошибки.
+- Причина: Windows DateTimeOffset отдаёт семь дробных знаков, Python 3.9 устройства их не принимает.
+- Исправление alpha6: ограничить дробную часть шестью знаками только для строки с часовым поясом; некорректный/отсутствующий пояс не разрешать.
+- Проверка: три регрессии; всего 85 PASS. После установки свежий статус DISABLED, blockers=[]; переход ещё не выполнялся.
+
+### 15.10.2026 17:15:38 — отказ первой транзакции (время native-status)
+- Ошибка: `GUARD-INSTALL-FAILED`, journal phase APPLYING; клиентский помощник сообщил `CONTROLLER-STOPPED-OR-BLOCKED` и запросил Stop.
+- Причина: проверка `nft -c -f -` на устройстве вернула `Could not open file "/dev/stdin": No such file or directory`. Пакет nft читает '-' через отсутствующий узел, а не переданный pipe.
+- Исправление alpha7: уникальный runtime batch-файл mode 0600 через mkstemp; сначала `nft -c -f <file>`, затем атомарный `nft -f <file>`; файл удаляется в finally. Узлы /dev, штатный firewall и пакеты не подменяются.
+- Проверка на стенде: 87 PASS, включая порядок check/apply, права файла, очистку и отсутствие apply после провала check. Старая регрессия была адаптирована с stdin на файл, проверки области FORWARD/IPv6 и запрета flush ruleset сохранены.
+- Проверка устройства после отказа: порядок и hash политики совпали с BEFORE, не с AFTER; guard-таблицы нет; дочернего PID нет; клиентский DNS успешен, HTTPS 200. Авто выключено.
+- Завершение неуспешной попытки: только после этих проверок журнал переведён в ROLLED-BACK с причиной GUARD-FAILED-BEFORE-REORDER, без применения маршрутов. Это подтверждение отсутствия изменения, а не успешный тест отката после переключения.
+- Остаток: alpha7 собрана и сохранена в Gitea; установка/живой guard-тест и автоматическое переключение ещё не подтверждены на момент этой записи.

@@ -174,10 +174,15 @@ class NativeTests(unittest.TestCase):
 
     def test_guard_transaction_is_atomic_and_scoped(self):
         b=native.Linux()
-        with patch.object(b,'guard_exists',return_value=True),patch.object(native.subprocess,'run',return_value=MagicMock(returncode=0)) as run:
+        scripts=[]
+        def execute(args,**kwargs):
+            scripts.append(Path(args[-1]).read_text())
+            return MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'RUNTIME',Path(d)),patch.object(b,'guard_exists',return_value=True),patch.object(native.subprocess,'run',side_effect=execute) as run:
             b.guard(['wgclient1','tun0']);args=run.call_args
-            self.assertEqual(args.args[0],['nft','-f','-'])
-            script=args.kwargs['input'].decode()
+            self.assertEqual(args.args[0][:2],['nft','-f'])
+            self.assertEqual(len(scripts),2);self.assertEqual(scripts[0],scripts[1])
+            script=scripts[-1]
             self.assertIn('delete table inet homensai_vpn_guard;',script)
             self.assertIn('hook forward',script);self.assertNotIn('hook input',script)
             self.assertIn('meta nfproto ipv6 drop',script);self.assertIn('oifname !=',script)
