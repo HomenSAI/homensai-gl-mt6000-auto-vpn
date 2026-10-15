@@ -51,3 +51,21 @@ class GuardFileCompatibility(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d,patch.object(native,'RUNTIME',Path(d)),patch.object(native.Linux,'guard_exists',return_value=False),patch.object(native.subprocess,'run',return_value=MagicMock(returncode=1)) as run:
             with self.assertRaises(native.Refused):native.Linux().guard()
             self.assertEqual(run.call_count,1);self.assertEqual(list(Path(d).iterdir()),[])
+
+class AnonymousPolicyIdentity(unittest.TestCase):
+    def test_reorder_and_generated_alias_changes_preserve_fingerprint(self):
+        import copy
+        a={'.name':'cfg001','.index':1,'.anonymous':True,'.type':'rule','via':'vpn_a','killswitch':'1'}
+        b={'.name':'cfg002','.index':2,'.anonymous':True,'.type':'rule','via':'vpn_b','killswitch':'1'}
+        changed=copy.deepcopy([b,a]);changed[0]['.name']='cfg101';changed[1]['.name']='cfg102';changed[0]['.index']=1;changed[1]['.index']=2
+        self.assertEqual(native.policy_hash([a,b]),native.policy_hash(changed))
+        self.assertEqual(native.policy_order(changed),list(reversed(native.policy_order([a,b]))))
+    def test_real_rule_change_changes_fingerprint(self):
+        import copy
+        a={'.name':'cfg001','.anonymous':True,'.type':'rule','via':'vpn_a','killswitch':'1'}
+        b=copy.deepcopy(a);b['killswitch']='0'
+        self.assertNotEqual(native.policy_hash([a]),native.policy_hash([b]))
+    def test_identical_anonymous_rules_refused(self):
+        a={'.name':'cfg001','.anonymous':True,'.type':'rule','via':'vpn_a'}
+        b=dict(a,**{'.name':'cfg002'})
+        with self.assertRaises(native.Refused):native.policy_hash([a,b])

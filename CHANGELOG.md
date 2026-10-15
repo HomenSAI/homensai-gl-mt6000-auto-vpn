@@ -131,3 +131,6 @@ Format nft batch for OpenWrt nftables 0.9.6; retain syntax check before apply.
 ## 0.5.0-alpha9
 Refresh trial nonce in disabled preflight before evaluating an older latched Stop.
 
+
+## 0.5.0-alpha10
+Use semantic identities for anonymous UCI rules; resolve current names on reorder. Add isolated cable probe mode preserving Wi-Fi connectivity.

@@ -1,6 +1,6 @@
 # HomenS.AI / Serhii Khomenko / https://homensai.com — MIT
 # Run on an independently connected Windows LAN client. Secrets stay in memory.
-param([uri]$Router='http://192.168.8.1:8080/',[DateTimeOffset]$Until=[DateTimeOffset]::Now.AddMinutes(10),[switch]$CheckOnly,[switch]$SelfTest)
+param([uri]$Router='http://192.168.8.1:8080/',[DateTimeOffset]$Until=[DateTimeOffset]::Now.AddMinutes(10),[int]$CableInterface=0,[switch]$CheckOnly,[switch]$SelfTest)
 $ErrorActionPreference='Stop'
 
 function Assert-LocalRouter([uri]$Value) {
@@ -17,6 +17,15 @@ function Get-TraceIPv4([string]$Text) {
     return $address.ToString()
 }
 function Assert-LanPath {
+    if($CableInterface -gt 0) {
+        $local=@(Find-NetRoute -RemoteIPAddress $Router.Host|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+        if($local.Count -ne 1 -or $local[0].InterfaceIndex -ne $CableInterface -or $local[0].NextHop -ne '0.0.0.0'){throw 'CLIENT-CABLE-NOT-LOCAL'}
+        foreach($destination in @('1.1.1.1','1.0.0.1')) {
+            $route=@(Find-NetRoute -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+            if($route.Count -ne 1 -or $route[0].InterfaceIndex -ne $CableInterface -or $route[0].NextHop -ne $Router.Host){throw 'CLIENT-CABLE-PROBE-ROUTE-MISMATCH'}
+        }
+        return
+    }
     foreach($destination in @('1.1.1.1','8.8.8.8')) {
         $route=@(Find-NetRoute -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
         if($route.Count -ne 1 -or $route[0].NextHop -ne $Router.Host){throw 'CLIENT-GATEWAY-MISMATCH'}
@@ -29,6 +38,16 @@ function Test-ClientInternet {
     Assert-LanPath
     $answers=@(Resolve-DnsName example.com -Type A -Server $Router.Host -DnsOnly|Where-Object {$_.Type -eq 'A'})
     if($answers.Count -eq 0){throw 'CLIENT-DNS-FAILED'}
+    if($CableInterface -gt 0) {
+        $exits=@()
+        foreach($destination in @('1.1.1.1','1.0.0.1')) {
+            $text=& curl.exe --interface $script:CableAddress --connect-timeout 5 --max-time 10 --fail --silent "https://$destination/cdn-cgi/trace"
+            if($LASTEXITCODE -ne 0){throw 'CLIENT-CABLE-HTTPS-FAILED'}
+            $exits+=Get-TraceIPv4 ($text -join "`n")
+        }
+        if($exits[0] -ne $exits[1]){throw 'CLIENT-CABLE-EXIT-INCONSISTENT'}
+        return $exits[0]
+    }
     $page=Invoke-WebRequest 'https://example.com/' -NoProxy -TimeoutSec 10
     if($page.StatusCode -ne 200){throw 'CLIENT-HTTPS-FAILED'}
     $trace=Invoke-WebRequest 'https://1.1.1.1/cdn-cgi/trace' -NoProxy -TimeoutSec 10
@@ -61,12 +80,22 @@ if($SelfTest) {
     Write-Output 'PASS: input validation; no network calls or router changes.';exit 0
 }
 
-$script:Session=$null;$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
+$script:Session=$null;$script:ProbeRoutes=@();$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
 try {
     if($PSVersionTable.PSVersion.Major -lt 7){throw 'POWERSHELL-7-REQUIRED'}
     Assert-LocalRouter $Router
+    if($CableInterface -gt 0) {
+        $script:CableAddress=@(Get-NetIPAddress -InterfaceIndex $CableInterface -AddressFamily IPv4|Where-Object {$_.AddressState -eq 'Preferred' -and $_.IPAddress -notlike '169.254.*'})
+        if($script:CableAddress.Count -ne 1){throw 'CLIENT-CABLE-ADDRESS-AMBIGUOUS'}
+        $script:CableAddress=$script:CableAddress[0].IPAddress
+        foreach($destination in @('1.1.1.1/32','1.0.0.1/32')) {
+            $existing=@(Get-NetRoute -DestinationPrefix $destination -PolicyStore ActiveStore -ErrorAction SilentlyContinue)
+            if($existing.Count){throw 'CLIENT-PROBE-ROUTE-CONFLICT'}
+            $script:ProbeRoutes+=New-NetRoute -DestinationPrefix $destination -InterfaceIndex $CableInterface -NextHop $Router.Host -RouteMetric 1 -PolicyStore ActiveStore
+        }
+    }
     Assert-LanPath
-    if($CheckOnly){Write-Output 'LAN gateway, DNS configuration and IPv6 prerequisites verified; no router changes.';exit 0}
+    if($CheckOnly){Write-Output 'Selected client path prerequisites verified; router unchanged. Cable mode preserves Wi-Fi default.';exit 0}
     if($Until -le [DateTimeOffset]::Now -or $Until -gt [DateTimeOffset]::Now.AddHours(4)){throw 'BOUNDED-DEADLINE-REQUIRED'}
     $baseline=Test-ClientInternet
     $script:Api=([uri]::new($Router,'/ubus/')).AbsoluteUri
@@ -151,5 +180,6 @@ try {
     exit 2
 } finally {
     if($started -and $script:Session -and -not $stopRequested){try {$null=Invoke-Router 'homensai-vpn' 'native_stop' @{};$stopRequested=$true}catch {}}
+    foreach($route in $script:ProbeRoutes){$route|Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue}
     Remove-Variable Session,baseline,exit,body,reply,trial -Scope Script -ErrorAction SilentlyContinue
 }

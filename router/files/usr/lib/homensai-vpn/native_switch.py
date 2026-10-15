@@ -103,8 +103,24 @@ def appended_hook_state(before,after):
     return fresh_hook_state('\n'.join(lines[lines.index(marker)+1:]),0)
 
 
+def semantic_section(section):
+    anonymous=section.get('.anonymous') in (True,'1')
+    return {k:v for k,v in section.items() if k!='.index' and not (anonymous and k=='.name')}
+
+
+def section_id(section):
+    return 'a_'+digest(semantic_section(section))[:60] if section.get('.anonymous') in (True,'1') else section['.name']
+
+
+def policy_order(sections):
+    values=[section_id(s) for s in sections]
+    if len(values)!=len(set(values)):raise Refused('POLICY-DUPLICATE-IDENTITY')
+    return values
+
+
 def policy_hash(sections):
-    return digest(sorted([{k:v for k,v in s.items() if k!='.index'} for s in sections],key=lambda s:s['.name']))
+    policy_order(sections)
+    return digest(sorted([semantic_section(s) for s in sections],key=digest))
 
 
 def choose(data,profiles):
@@ -137,9 +153,9 @@ def choose(data,profiles):
     if source['interface']==target['interface']:raise Refused('SAME-INTERFACE')
     direction=settings.get('native_order_direction')
     if direction not in ('first','last'):raise Refused('POLICY-ORDER-DIRECTION-UNVERIFIED')
-    return {'source':source,'target':target,'source_rule':byvia[source['interface']][1]['.name'],
-            'target_rule':byvia[target['interface']][1]['.name'],
-            'order':[s['.name'] for s in sections],'hash':policy_hash(sections),'direction':direction}
+    return {'source':source,'target':target,'source_rule':section_id(byvia[source['interface']][1]),
+            'target_rule':section_id(byvia[target['interface']][1]),
+            'order':policy_order(sections),'hash':policy_hash(sections),'direction':direction}
 
 
 def trace(profile):
@@ -220,12 +236,21 @@ class Linux:
         if list(Path('/var/run').glob('tunnel-switch*.lock')) or Path('/tmp/run/rtp2.lock').exists():blockers.append('VENDOR-WORKER-BUSY')
         return list(dict.fromkeys(blockers)),selection
     def order(self):
-        data=self.policy();return [s['.name'] for s in data['sections']],policy_hash(data['sections'])
+        data=self.policy();return policy_order(data['sections']),policy_hash(data['sections'])
     def reorder(self,order):
-        for index,section in enumerate(order):
+        sections=self.policy()['sections']
+        current=policy_order(sections)
+        if len(order)!=len(current) or set(order)!=set(current):raise Refused('POLICY-IDENTITY-CHANGED')
+        fingerprint=policy_hash(sections)
+        for index,identifier in enumerate(order):
+            live=self.policy()['sections']
+            if policy_hash(live)!=fingerprint:raise Refused('POLICY-IDENTITY-CHANGED')
+            names={section_id(s):s['.name'] for s in live}
+            section=names[identifier]
             if not SAFE.fullmatch(section):raise Refused('UNSAFE-SECTION')
             command(['uci','reorder','route_policy.'+section+'='+str(index)])
         command(['uci','commit','route_policy'])
+        if self.order()!=(order,fingerprint):raise Refused('POLICY-REORDER-UNVERIFIED')
     def apply(self):command(['/usr/bin/rtp2.sh','not_reload_network'],timeout=45)
     def guard_exists(self):
         result=subprocess.run(['nft','list','table','inet',TABLE],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=5)
