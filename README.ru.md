@@ -27,8 +27,8 @@
 
 На сайте подтверждена книга **Two Worlds. One Mind.**, издание 1.1, о соединении машиностроения, ПО и AI. [Книга](https://github.com/HomenSAI/two-worlds-one-mind) · [Zenodo, DOI 10.5281/zenodo.23160031](https://zenodo.org/records/23160031). [Лаборатория AI](https://github.com/HomenSAI/homensai-local-ai-lab) · [Тесты RTX 3080](https://github.com/HomenSAI/rtx3080-local-ai-benchmarks).
 
-Независимый проект, не официальный GL.iNet/OpenWrt. Лицензия программы пока не выбрана; лицензия книги автоматически не применяется.
+Независимый проект, не официальный GL.iNet/OpenWrt. Лицензия [MIT](LICENSE): разрешены любое использование, изменение и распространение, включая коммерческое, с сохранением лицензии и строки авторства со ссылкой https://homensai.com. [Область лицензии и сторонние компоненты](LICENSING.md).
 
-На роутере установлена 0.2.0-alpha2; подтверждены агент, пробы, накопители и настройки Telegram. Оформление проверено на изолированных тестовых данных; полная визуальная проверка живой LuCI пока не завершена.
+На роутере установлена 0.3.0-alpha1; подтверждены агент, пробы, накопители и настройки Telegram. Оформление проверено на изолированных тестовых данных; полная визуальная проверка живой LuCI пока не завершена.
 
 [Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.

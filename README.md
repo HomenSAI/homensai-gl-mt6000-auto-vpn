@@ -41,8 +41,8 @@ Public files exclude the author's live router/VPN configuration, Telegram token/
 
 Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical engineering, software and AI. [Book repository](https://github.com/HomenSAI/two-worlds-one-mind) · [Zenodo / DOI 10.5281/zenodo.23160031](https://zenodo.org/records/23160031). Other public work: [local AI lab](https://github.com/HomenSAI/homensai-local-ai-lab), [RTX 3080 benchmarks](https://github.com/HomenSAI/rtx3080-local-ai-benchmarks).
 
-Independent project, not an official GL.iNet/OpenWrt product. No software licence selected yet. Public visibility is not itself an open-source licence; the book's licence does not automatically apply here.
+Independent project, not an official GL.iNet/OpenWrt product. Licensed under [MIT](LICENSE): use, modify and redistribute, including commercially, while retaining the author/site notice and licence. See [licensing scope and third-party notices](LICENSING.md).
 
-Current device status: 0.2.0-alpha2 is installed and native monitoring/activity/Telegram configuration was verified. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
+Current device status: 0.3.0-alpha1 is installed and native monitoring/activity/Telegram configuration was verified. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
 
 [Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
