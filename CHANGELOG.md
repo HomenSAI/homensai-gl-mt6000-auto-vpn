@@ -114,3 +114,6 @@ Recognise fresh GL-MT6000 HNAT hook readback; stale/inconsistent responses remai
 
 ## 0.5.0-alpha4
 Use before/after kernel-ring evidence for HNAT readback rather than comparing different kernel clocks.
+
+## 0.5.0-alpha5
+Handle bounded kernel-ring rollover without reusing stale HNAT evidence.

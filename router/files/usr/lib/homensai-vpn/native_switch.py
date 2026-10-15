@@ -93,6 +93,14 @@ def fresh_hook_state(lines,after):
     return 'unknown'
 
 
+def appended_hook_state(before,after):
+    if not before:return 'unknown'
+    marker=before.splitlines()[-1]
+    lines=after.splitlines()
+    if lines.count(marker)!=1:return 'unknown'
+    return fresh_hook_state('\n'.join(lines[lines.index(marker)+1:]),0)
+
+
 def policy_hash(sections):
     return digest(sorted([{k:v for k,v in s.items() if k!='.index'} for s in sections],key=lambda s:s['.name']))
 
@@ -174,7 +182,7 @@ class Linux:
                 kernel=command(['dmesg']).decode(errors='replace')
                 # printk and Python monotonic clocks differ on this vendor kernel.
                 # Accept only text appended by this read, never an older ring entry.
-                runtime=fresh_hook_state(kernel[len(kernel_before):],0) if kernel_before is not None and kernel.startswith(kernel_before) else 'unknown'
+                runtime=appended_hook_state(kernel_before,kernel)
                 hook_log=[line[-200:] for line in kernel.splitlines() if 'hook' in line.lower() and ('hnat' in line.lower() or 'toggle' in line.lower())][-3:]
             except (OSError,ValueError,subprocess.SubprocessError):pass
         return {'loaded':loaded,'hnat_runtime':runtime if runtime in ('enabled','disabled') else 'unknown',
