@@ -66,6 +66,14 @@ function Save-OwnSettings([hashtable]$Values) {
     $null=Invoke-Router 'uci' 'confirm' @{}
 }
 
+function Test-TransientNetworkError($Record) {
+    return ($Record.Exception -is [System.ComponentModel.Win32Exception] -or
+        $Record.Exception -is [System.Net.Http.HttpRequestException] -or
+        $Record.Exception -is [System.TimeoutException] -or
+        $Record.Exception -is [System.Threading.Tasks.TaskCanceledException] -or
+        $Record.Exception.Message -in @('CLIENT-DNS-FAILED','CLIENT-CABLE-HTTPS-FAILED','CLIENT-HTTPS-FAILED','CLIENT-TRACE-FAILED'))
+}
+
 if($SelfTest) {
     Assert-LocalRouter ([uri]'http://192.168.8.1:8080/')
     foreach($url in @('https://example.com/','http://user:password@192.168.8.1/','http://127.0.0.1/','http://8.8.8.8/')) {
@@ -140,8 +148,8 @@ try {
         if($native.state -eq 'ARMED' -and $native.reason -eq 'TRIAL-PASSED') {
             $restored=Test-ClientInternet
             if($restored -ne $baseline){throw 'CLIENT-RESTORE-MISMATCH'}
+            if(-not $trialPassed){Write-Output 'Trial passed and original client path restored. Continue client monitoring until the deadline.'}
             $trialPassed=$true
-            Write-Output 'Trial passed and original client path restored. Continue client monitoring until the deadline.'
             $end=$Until
         }
         if($native.state -eq 'STOPPED-ON-RESERVE') {
@@ -158,13 +166,20 @@ try {
     $null=Invoke-Router 'homensai-vpn' 'native_stop' @{};$stopRequested=$true
     $stopDeadline=[DateTimeOffset]::UtcNow.AddSeconds(90);$verifiedStop=$false
     while([DateTimeOffset]::UtcNow -lt $stopDeadline) {
-        $status=Invoke-Router 'homensai-vpn' 'status' @{};$native=$status.native_failover
+        try {$status=Invoke-Router 'homensai-vpn' 'status' @{};$native=$status.native_failover} catch {
+            if(-not (Test-TransientNetworkError $_)){throw}
+            Start-Sleep -Seconds 2;continue
+        }
         if($native.state -eq 'STOPPED-ON-RESERVE') {
             if((Test-ClientInternet) -ne $native.expected_exit){throw 'CLIENT-RESERVE-NOT-VERIFIED'}
             Write-Output 'Stopped with verified reserve retained; original source not restored.';$verifiedStop=$true;$retainedReserve=$true;break
         }
         if($native.state -in @('STOPPED','EXPIRED','ROLLED-BACK')) {
-            if((Test-ClientInternet) -ne $baseline){throw 'CLIENT-RESTORE-MISMATCH'}
+            try {$restored=Test-ClientInternet} catch {
+                if(-not (Test-TransientNetworkError $_)){throw}
+                Start-Sleep -Seconds 2;continue
+            }
+            if($restored -ne $baseline){throw 'CLIENT-RESTORE-MISMATCH'}
             Write-Output 'Stop and original client path restoration verified.';$verifiedStop=$true;break
         }
         if($native.state -eq 'BLOCKED'){throw 'STOP-RESTORE-UNVERIFIED'}

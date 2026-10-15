@@ -134,3 +134,6 @@ Refresh trial nonce in disabled preflight before evaluating an older latched Sto
 
 ## 0.5.0-alpha10
 Use semantic identities for anonymous UCI rules; resolve current names on reorder. Add isolated cable probe mode preserving Wi-Fi connectivity.
+
+## 0.5.0-alpha11
+Bound retries for transient final client checks; avoid duplicate trial-pass messages. Real alpha10 trial, automatic failure transition and independent rollback confirmed; original helper final error documented separately.
