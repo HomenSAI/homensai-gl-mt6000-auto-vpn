@@ -1,7 +1,7 @@
 // HomenS.AI VPN · © 2026 Serhii Khomenko · https://homensai.com/
 'use strict';
 'require view';
-'require form';
+
 'require rpc';
 'require poll';
 'require ui';
@@ -16,9 +16,9 @@ function bi(en,ru){return locale==='ru'?ru:en;}
 function diagnosticText(value){return translations[value]||value;}
 
 
-var statusCall=rpc.declare({object:'homensai-vpn',method:'status',expect:{}});
-var inventoryCall=rpc.declare({object:'homensai-vpn',method:'inventory',expect:{}});
-var scanCall=rpc.declare({object:'homensai-vpn',method:'scan',expect:{}});
+var statusCall=rpc.declare({object:'homensai-vpn',reject:true,method:'status',expect:{}});
+var inventoryCall=rpc.declare({object:'homensai-vpn',reject:true,method:'inventory',expect:{}});
+var scanCall=rpc.declare({object:'homensai-vpn',reject:true,method:'scan',expect:{}});
 var codes={
   'VPN-001':diagnosticText("Туннель не подключён"), 'VPN-003':diagnosticText("HTTPS через VPN не проходит"),
   'DNS-001':diagnosticText("DNS не отвечает"), 'ROUTE-001':diagnosticText("Маршрут не соответствует VPN"),
@@ -94,7 +94,7 @@ function autoControlModel(status,now){
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
   return {fresh:fresh,on:on,transitioning:transitioning,off:off,awaiting:awaiting,
-    stop:on||transitioning||intent.requested==='on'||ns.state==='STOPPED-ON-RESERVE',
+    stop:on||transitioning||intent.requested==='on'||['COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
     returned:off&&ns.original_restored===true,
     color:!fresh?'unknown':awaiting||transitioning?'pending':on?'on':off?'off':'error'};
 }
@@ -110,9 +110,9 @@ function renderAutoControl(status,inventory){
     'TRANSACTION-IN-PROGRESS':'A transaction is already in progress. Wait or request Stop.',
     'TRIAL-ATTEMPT-LIMIT':'This window reached its attempt limit. Start a new controlled trial.'
   };
-  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-'+model.color,'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy?'':null,'click':function(){
+  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-'+model.color,'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy||inventory.error&&!model.stop?'':null,'click':function(){
     if(autoRequestBusy)return;autoRequestBusy=true;button.disabled=true;
-    return rpc.declare({object:'homensai-vpn',method:model.stop?'native_stop':'native_start',expect:{}})().then(function(result){
+    return rpc.declare({object:'homensai-vpn',reject:true,method:model.stop?'native_stop':'native_start',expect:{}})().then(function(result){
       if(result.accepted===false){ui.addNotification(null,E('div',{},[E('strong',{},'AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+(explanation[code]||'See controller diagnostics in Settings.'));}))]));}
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
     }).catch(function(){ui.addNotification(null,E('p',{},'AUTO-CONTROL-FAILED: no confirmed response; check controller state.'));}).finally(function(){autoRequestBusy=false;button.disabled=false;});
@@ -128,6 +128,7 @@ function renderAutoControl(status,inventory){
 }
 
 function setupWizard(inventory,kind){
+  if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
   var setupCheck=kind==='system'?'pending':'passed';
   var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
   var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval||30,duration:settings.native_duration||10,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority||100,enabled:saved.enabled!==false};})};
@@ -148,8 +149,8 @@ function setupWizard(inventory,kind){
         read=function(){draft.source=primary.value;draft.target=reserve.value;draft.interval=Number(interval.value);draft.duration=Number(duration.value);draft.session_loss=consent.checked;return !!draft.source&&!!draft.target&&draft.source!==draft.target&&Number.isInteger(draft.interval)&&draft.interval>=10&&draft.interval<=300&&Number.isInteger(draft.duration)&&draft.duration>=1&&draft.duration<=240;};
       }else if(step===1){
         body.appendChild(E('p',{},bi('Names and priorities are monitoring metadata. Live route changes require a certified controller trial.','Названия и приоритеты — метаданные мониторинга. Изменение маршрутов требует подтверждённого теста контроллера.')));
-        var editors=draft.servers.map(function(row){var name=input(row.name),channel=input(row.channel),priority=input(row.priority,'number');body.appendChild(E('fieldset',{},[E('legend',{},row.profile),field(bi('Display name','Название'),name),field(bi('Channel group','Группа канала'),channel),field(bi('Priority (1–1000)','Приоритет (1–1000)'),priority)]));return {row:row,name:name,channel:channel,priority:priority};});
-        read=function(){return editors.every(function(e){e.row.name=e.name.value.trim();e.row.channel=e.channel.value.trim();e.row.priority=Number(e.priority.value);return e.row.name.length>0&&e.row.name.length<=64&&e.row.channel.length>0&&e.row.channel.length<=64&&Number.isInteger(e.row.priority)&&e.row.priority>=1&&e.row.priority<=1000;});};
+        var editors=draft.servers.map(function(row){var name=input(row.name),channel=input(row.channel),priority=input(row.priority,'number'),enabled=input('','checkbox');enabled.checked=row.enabled;body.appendChild(E('fieldset',{},[E('legend',{},row.profile),field(bi('Display name','Название'),name),field(bi('Channel group','Группа канала'),channel),field(bi('Priority (1–1000)','Приоритет (1–1000)'),priority),field(bi('Monitor this server','Наблюдать этот сервер'),enabled)]));return {row:row,name:name,channel:channel,priority:priority,enabled:enabled};});
+        read=function(){return editors.every(function(e){e.row.name=e.name.value.trim();e.row.channel=e.channel.value.trim();e.row.priority=Number(e.priority.value);e.row.enabled=e.enabled.checked;return e.row.name.length>0&&e.row.name.length<=64&&e.row.channel.length>0&&e.row.channel.length<=64&&Number.isInteger(e.row.priority)&&e.row.priority>=1&&e.row.priority<=1000;});};
       }else{
         body.appendChild(E('h3',{},bi('Review monitoring configuration','Проверьте настройки мониторинга')));
         var source=profiles.filter(function(p){return p.id===draft.source;})[0],target=profiles.filter(function(p){return p.id===draft.target;})[0];
@@ -180,23 +181,24 @@ function setupWizard(inventory,kind){
       if(busy)return;if(!read()){notify('SETUP-VALIDATION: check profiles, names and numeric ranges.');return;}
       if(step<2){step++;show();return;}
       busy=true;ev.target.disabled=true;
-      var save=kind==='system'?rpc.declare({object:'homensai-vpn',method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly);
+      var save=kind==='system'?rpc.declare({object:'homensai-vpn',reject:true,method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',reject:true,method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly);
       return save.then(function(result){if(!result.saved){notify(result.code||'SETUP-SAVE-FAILED');return;}tg.token='';closed=true;ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;ev.target.disabled=false;});
     }},step<2?bi('Next','Далее'):bi('Save configuration','Сохранить настройки')));
     if(kind==='system'&&setupCheck!=='passed')body.querySelectorAll('input,select').forEach(function(node){node.disabled=true;});
     body.appendChild(actions);ui.showModal(kind==='system'?bi('System setup wizard','Мастер настройки системы'):bi('Telegram channel wizard','Мастер Telegram-канала'),[body]);
   }
   show();
-  if(kind==='system')rpc.declare({object:'homensai-vpn',method:'setup_check',expect:{}})().then(function(result){if(closed)return;setupCheck=result.passed?'passed':'failed';show();}).catch(function(){if(closed)return;setupCheck='failed';show();});
+  if(kind==='system')rpc.declare({object:'homensai-vpn',reject:true,method:'setup_check',expect:{}})().then(function(result){if(closed)return;setupCheck=result.passed?'passed':'failed';show();}).catch(function(){if(closed)return;setupCheck='failed';show();});
 }
 
+var prioritySelections={};
 function speedSettings(inventory){
   var s=inventory.settings||{},enabled=E('input',{type:'checkbox'}),auto=E('input',{type:'checkbox'});enabled.checked=!!s.speed_enabled;auto.checked=!!s.speed_auto_new;
   function number(value,label){var n=E('input',{type:'number','aria-label':label});n.value=value;return n;}
   var budget=number(s.speed_budget_mib||8,bi('Payload budget per server, MiB','Лимит полезного трафика на сервер, МиБ')),duration=number(s.speed_duration||5,bi('Measurement seconds per direction','Секунд измерения на направление')),streams=number(s.speed_streams||2,bi('Parallel streams','Параллельные потоки')),daily=number(s.speed_daily_mib||128,bi('Daily reserved quota, MiB','Суточная резервируемая квота, МиБ')),busy=number(s.speed_busy_mbps||2,bi('Skip above current VPN traffic, Mbps','Не запускать при текущем VPN-трафике выше, Мбит/с'));
   function field(text,node){node.setAttribute('aria-label',text);return E('label',{'class':'hv-wizard-field'},[E('span',{},text),node]);}
   var nodes=[E('h3',{},bi('Optional VPN speed tests','Необязательные тесты скорости VPN')),E('p',{},bi('Tests use HTTPS through the chosen VPN and consume bandwidth. Payload quota excludes protocol overhead. Failed attempts keep their quota reservation.','HTTPS-тесты идут через выбранный VPN и расходуют трафик. Квота полезных данных не включает служебный трафик. Резерв квоты сохраняется и при ошибке.')),field(bi('Enable speed tests (off by default)','Включить тесты скорости (по умолчанию выключено)'),enabled),field(bi('Test after a new server connects','Тестировать после подключения нового сервера'),auto),field(budget.getAttribute('aria-label'),budget),field(duration.getAttribute('aria-label'),duration),field(streams.getAttribute('aria-label'),streams),field(daily.getAttribute('aria-label'),daily),field(busy.getAttribute('aria-label'),busy)];
-  nodes.push(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',method:'setup_speed',params:['enabled','auto_new','budget_mib','duration','streams','daily_mib','busy_mbps'],expect:{}})(enabled.checked,auto.checked,Number(budget.value),Number(duration.value),Number(streams.value),Number(daily.value),Number(busy.value)).then(function(result){if(!result.saved){ui.addNotification(null,E('p',{},result.code||'SPEED-CONFIG-FAILED'));return;}ui.addNotification(null,E('p',{},'SPEED-CONFIG-SAVED'));window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-CONFIG-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Save speed settings','Сохранить настройки скорости')));
+  nodes.push(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_speed',params:['enabled','auto_new','budget_mib','duration','streams','daily_mib','busy_mbps'],expect:{}})(enabled.checked,auto.checked,Number(budget.value),Number(duration.value),Number(streams.value),Number(daily.value),Number(busy.value)).then(function(result){if(!result.saved){ui.addNotification(null,E('p',{},result.code||'SPEED-CONFIG-FAILED'));return;}ui.addNotification(null,E('p',{},'SPEED-CONFIG-SAVED'));window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-CONFIG-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Save speed settings','Сохранить настройки скорости')));
   return E('section',{'class':'hv-chart-card hv-speed-settings'},nodes);
 }
 function speedPanel(status,inventory,period,onPeriod){
@@ -204,8 +206,8 @@ function speedPanel(status,inventory,period,onPeriod){
   var chooser=E('select',{'aria-label':bi('Speed test server','Сервер для теста скорости')},[E('option',{value:'all'},bi('All listed interfaces (up to 8)','Все перечисленные интерфейсы (до 8)'))].concat(active.map(function(p){return E('option',{value:p.id},p.name+' · '+p.protocol);}))),section=E('section',{'class':'hv-chart-card hv-speed-panel'},[E('h3',{},bi('VPN server speed tests','Тесты скорости VPN-серверов')),E('p',{},bi('Bounded HTTPS payload goodput to Cloudflare. This is a sampled application-level result, not an Ookla score or a guarantee of current capacity. Inactive profiles are not started.','Ограниченное измерение полезной скорости HTTPS до Cloudflare. Это выборочный результат на уровне приложения, не оценка Ookla и не гарантия текущей пропускной способности. Неактивные профили не запускаются.'))]);
   var controls=E('div',{'class':'hv-native-actions'},[chooser,E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':s.speed_enabled&&active.length?null:'','click':function(){
     var selected=chooser.value==='all'?active.map(function(p){return p.id;}):[chooser.value],mib=s.speed_budget_mib||8,duration=s.speed_duration||5,streams=s.speed_streams||2;
-    ui.showModal(bi('Review speed test','Проверьте запуск теста'),[E('p',{},bi('Payload quota reservation: ','Резервируемая квота полезного трафика: ')+(selected.length*mib)+' MiB'),E('p',{},bi('Protocol overhead adds traffic; tests may slow other applications.','Служебный трафик расходуется дополнительно; тесты могут замедлить другие приложения.')),E('ul',{},selected.map(function(id){return E('li',{},(profiles.filter(function(p){return p.id===id;})[0]||{}).name||id);})),E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',method:'speed_start',params:['profiles','budget_mib','duration','streams'],expect:{}})(selected,mib,duration,streams).then(function(result){ui.addNotification(null,E('p',{},result.accepted?'SPEED-QUEUED':result.code||'SPEED-START-FAILED'));ui.hideModal();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-START-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Run test','Запустить тест'))]);
-  }},bi('Test speed','Тестировать скорость')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'speed_cancel',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.queued?'SPEED-CANCEL-QUEUED':result.code||'SPEED-NOT-RUNNING'));});}},bi('Cancel current test','Отменить текущий тест'))]);
+    ui.showModal(bi('Review speed test','Проверьте запуск теста'),[E('p',{},bi('Payload quota reservation: ','Резервируемая квота полезного трафика: ')+(selected.length*mib)+' MiB'),E('p',{},bi('Protocol overhead adds traffic; tests may slow other applications.','Служебный трафик расходуется дополнительно; тесты могут замедлить другие приложения.')),E('ul',{},selected.map(function(id){return E('li',{},(profiles.filter(function(p){return p.id===id;})[0]||{}).name||id);})),E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'speed_start',params:['profiles','budget_mib','duration','streams'],expect:{}})(selected,mib,duration,streams).then(function(result){ui.addNotification(null,E('p',{},result.accepted?'SPEED-QUEUED':result.code||'SPEED-START-FAILED'));ui.hideModal();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-START-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Run test','Запустить тест'))]);
+  }},bi('Test speed','Тестировать скорость')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'speed_cancel',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.queued?'SPEED-CANCEL-QUEUED':result.code||'SPEED-NOT-RUNNING'));});}},bi('Cancel current test','Отменить текущий тест'))]);
   section.appendChild(controls);
   section.appendChild(E('p',{},'Speed job: '+(history.state||'IDLE')+(history.code?' · '+history.code:'')+' · '+bi('Completed: ','Завершено: ')+(history.completed||0)));
   if(!s.speed_enabled)section.appendChild(E('p',{},E('a',{href:'#settings'},bi('Enable optional tests in Settings','Включите необязательные тесты в настройках'))));
@@ -214,9 +216,10 @@ function speedPanel(status,inventory,period,onPeriod){
   rows=rows.filter(function(row){return period==='latest'||period==='day'&&dateKey(row.time)===today||period==='week'&&row.time>=now-7*86400||period==='month'&&dateKey(row.time).slice(0,7)===today.slice(0,7);});
   var grouped={};rows.sort(function(a,b){return b.time-a.time;}).forEach(function(row){var group=grouped[row.id]||(grouped[row.id]={last:row,good:[],count:0});group.count++;if(!row.code&&Number.isFinite((row.download||{}).mbps)&&Number.isFinite((row.upload||{}).mbps))group.good.push(row);});
   var ranked=Object.keys(grouped).map(function(id){var g=grouped[id],good=period==='latest'?(g.good[0]===g.last?[g.last]:[]):g.good;function mean(key){return good.length?good.reduce(function(sum,row){return sum+(row[key]||{}).mbps;},0)/good.length:null;}return {id:id,g:g,down:mean('download'),up:mean('upload'),n:good.length};}).sort(function(a,b){return (b.down===null?-1:b.down)-(a.down===null?-1:a.down);});
-  var table=E('table',{'class':'table'},[E('tr',{},[bi('Server','Сервер'),bi('Protocol / channel','Протокол / канал'),'Download, Mbps','Upload, Mbps',bi('Successful / total tests','Успешных / всего тестов'),bi('Latest result','Последний результат'),bi('Last measured · Berlin','Последнее измерение · Берлин')].map(function(label){return E('th',{},label);} ))]);
-  ranked.forEach(function(row){var current=profiles.filter(function(p){return p.id===row.id;})[0],last=row.g.last;table.appendChild(E('tr',{},[current?current.name:last.name,(last.protocol||'unknown')+' / '+(last.channel||'default'),row.down===null?'—':row.down.toFixed(2),row.up===null?'—':row.up.toFixed(2),row.n+' / '+row.g.count,last.code||'OK',new Date(last.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})].map(function(value){return E('td',{},value);})));});
+  var table=E('table',{'class':'table'},[E('tr',{},[bi('Use','Выбрать'),bi('Server','Сервер'),bi('Protocol / channel','Протокол / канал'),'Download, Mbps','Upload, Mbps',bi('Successful / total tests','Успешных / всего тестов'),bi('Latest result','Последний результат'),bi('Last measured · Berlin','Последнее измерение · Берлин')].map(function(label){return E('th',{},label);} ))]);
+  ranked.forEach(function(row){var current=profiles.filter(function(p){return p.id===row.id;})[0],last=row.g.last;var eligible=row.n>0&&!last.code&&current&&current.interface&&current.code==null;var checkbox=E('input',{'type':'checkbox','aria-label':bi('Recommend ','Рекомендовать ')+(current?current.name:last.name),'disabled':eligible?null:'','change':function(){prioritySelections[row.id]=checkbox.checked;}});checkbox.checked=eligible&&!!prioritySelections[row.id];var cells=[current?current.name:last.name,(last.protocol||'unknown')+' / '+(last.channel||'default'),row.down===null?'—':row.down.toFixed(2),row.up===null?'—':row.up.toFixed(2),row.n+' / '+row.g.count,last.code||'OK',new Date(last.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})].map(function(value){return E('td',{},value);});cells.unshift(E('td',{},checkbox));table.appendChild(E('tr',{},cells));});
   section.appendChild(table);
+  section.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){var selected=ranked.filter(function(row){var current=profiles.filter(function(p){return p.id===row.id;})[0];return prioritySelections[row.id]&&row.n>0&&!row.g.last.code&&current&&current.interface&&current.code==null;}).map(function(row){return row.id;});if(!selected.length){ui.addNotification(null,E('p',{},'PRIORITY-SELECT-ELIGIBLE-SERVERS'));return;}return reviewPriorities(selected);}},bi('Review recommended priorities','Проверить рекомендуемые приоритеты')));
   if(!ranked.length)section.appendChild(E('p',{},bi('No real speed measurements for this period.','Реальных измерений скорости за этот период нет.')));
   section.appendChild(E('small',{},bi('Mean of successful tests; failed/cancelled tests are not zero-speed samples. History is sampled, bounded and may be partial.','Среднее успешных тестов; ошибки и отмены не считаются нулевой скоростью. История выборочная, ограниченная и может быть неполной.')));
   if(history.history_error)section.appendChild(E('p',{},history.history_error));
@@ -238,48 +241,93 @@ function trafficHistoryPanel(accounting){
   return section;
 }
 
+function reviewPriorities(ordered){
+  return rpc.declare({object:'homensai-vpn',reject:true,method:'priority_preview',params:['ordered'],expect:{}})(ordered).then(function(result){
+    if(!result.accepted){ui.addNotification(null,E('p',{},result.code||'PRIORITY-PREVIEW-FAILED'));return;}
+    ui.showModal(bi('Review server priorities','Проверьте приоритеты серверов'),[
+      E('p',{},bi('Only application priorities are saved. This does not switch a live route. Unselected profiles follow the selected servers in their existing order.','Сохраняются только приоритеты приложения. Текущий маршрут не переключается. Неотмеченные профили следуют за выбранными в прежнем порядке.')),
+      E('ol',{},result.rows.map(function(row){return E('li',{},row.name+' · '+row.protocol+' / '+row.channel+(row.enabled?'':' · disabled'));})),
+      E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),
+      E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'priority_apply',params:['ordered','revision'],expect:{}})(ordered,result.revision).then(function(saved){ui.addNotification(null,E('p',{},saved.code||'PRIORITY-UNKNOWN'));if(saved.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'PRIORITY-RPC-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},bi('Apply priorities','Применить приоритеты'))
+    ]);
+  }).catch(function(){ui.addNotification(null,E('p',{},'PRIORITY-PREVIEW-UNCONFIRMED'));});
+}
+function recoveryWizard(inventory){
+  if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
+  var settings=inventory.settings||{},step=0;
+  var labels={failures:bi('Consecutive failures before switching (3–10)','Сбоев подряд до переключения (3–10)'),successes:bi('Reserve successes required (2–10)','Успешных проверок резерва (2–10)'),cooldown:bi('Cooldown between attempts, seconds (60–1800)','Пауза между попытками, секунд (60–1800)'),min_dwell:bi('Minimum dwell time, seconds (60–3600)','Минимальное время работы, секунд (60–3600)'),primary_successes:bi('Primary successes before return (2–10)','Успешных проверок основного перед возвратом (2–10)'),primary_stable:bi('Primary stable interval, seconds (30–600)','Период стабильности основного, секунд (30–600)')};
+  var defaults={failures:3,successes:2,cooldown:180,min_dwell:180,return_policy:'healthy_primary',primary_successes:3,primary_stable:60},draft={};
+  Object.keys(defaults).forEach(function(key){draft[key]=settings['recovery_'+key]==null?defaults[key]:settings['recovery_'+key];});
+  function show(){
+    var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
+    body.appendChild(E('p',{},bi('Recovery settings apply only within a certified bounded trial. Wi-Fi/Ethernet are uplinks, not VPN protocols. IPv6/native activation of inactive profiles remain blocked where unsupported.','Настройки действуют только в подтверждённом ограниченном тесте. Wi-Fi/Ethernet — подключения, не протоколы VPN. IPv6 и запуск неактивных профилей блокируются, если не поддерживаются.')));
+    if(step===0){
+      var editors={};Object.keys(labels).forEach(function(key){var node=E('input',{type:'number','aria-label':labels[key]});node.value=draft[key];editors[key]=node;body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},labels[key]),node]));});
+      var policy=E('select',{'aria-label':bi('Return policy','Политика возврата')},[E('option',{value:'healthy_primary'},bi('Return only after stable primary health','Возврат после подтверждения стабильности основного')),E('option',{value:'hold_reserve'},bi('Keep healthy reserve until operator review','Сохранять резерв до решения оператора'))]);policy.value=draft.return_policy;body.appendChild(policy);
+      read=function(){var limits={failures:[3,10],successes:[2,10],cooldown:[60,1800],min_dwell:[60,3600],primary_successes:[2,10],primary_stable:[30,600]};var valid=Object.keys(editors).every(function(key){draft[key]=Number(editors[key].value);return Number.isInteger(draft[key])&&draft[key]>=limits[key][0]&&draft[key]<=limits[key][1];});draft.return_policy=policy.value;return valid;};
+    }else{
+      body.appendChild(E('h3',{},bi('Review recovery settings','Проверьте настройки восстановления')));
+      body.appendChild(E('ul',{},Object.keys(labels).map(function(key){return E('li',{},labels[key]+': '+draft[key]);})));
+      body.appendChild(E('p',{},bi('Return policy: ','Политика возврата: ')+draft.return_policy));
+      body.appendChild(E('p',{},bi('Changes invalidate previous recovery certification. Auto remains off; run the LAN helper again before enabling it.','Изменения требуют повторной проверки восстановления. Авторежим остаётся выключенным; перед включением снова запустите LAN-помощник.')));
+    }
+    var actions=[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена'))];
+    if(step)actions.push(E('button',{'type':'button','class':'cbi-button','click':function(){step=0;show();}},bi('Back','Назад')));
+    actions.push(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){if(!read()){ui.addNotification(null,E('p',{},'RECOVERY-RANGE'));return;}if(!step){step=1;show();return;}var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_recovery',params:['failures','successes','cooldown','min_dwell','return_policy','primary_successes','primary_stable'],expect:{}})(draft.failures,draft.successes,draft.cooldown,draft.min_dwell,draft.return_policy,draft.primary_successes,draft.primary_stable).then(function(result){ui.addNotification(null,E('p',{},result.saved?'RECOVERY-SAVED':result.code||'RECOVERY-SAVE-FAILED'));if(result.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'RECOVERY-SAVE-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},step?bi('Save recovery settings','Сохранить настройки восстановления'):bi('Next','Далее')));
+    body.appendChild(E('div',{'class':'hv-wizard-actions'},actions));ui.showModal(bi('Recovery setup wizard','Мастер восстановления'),[body]);
+  }
+  show();
+}
+
+function monitorPreferences(inventory){
+  if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
+  var settings=inventory.settings||{},interval=E('input',{type:'number','aria-label':bi('Probe interval, seconds','Интервал проверки, секунд')}),checkpoint=E('input',{type:'number','aria-label':bi('Checkpoint interval, seconds','Интервал checkpoint, секунд')}),limit=E('input',{type:'number','aria-label':bi('Profile limit per round','Лимит профилей за раунд')}),planning=E('input',{type:'checkbox','aria-label':bi('Enable read-only planning','Включить планирование без применения')});
+  interval.value=settings.interval||30;checkpoint.value=settings.checkpoint||900;limit.value=settings.probe_limit||16;planning.checked=!!settings.plan_enabled;
+  var body=E('div',{'class':'hv-wizard'},[E('p',{},bi('Only own monitor settings are changed. Short checkpoints increase flash writes. This does not enable Auto or start inactive VPNs.','Меняются только настройки мониторинга. Частые checkpoint увеличивают записи во flash. Авторежим и неактивные VPN не запускаются.'))]);
+  [[bi('Probe interval (10–300 seconds)','Интервал проверки (10–300 секунд)'),interval],[bi('Checkpoint (300–3600 seconds)','Checkpoint (300–3600 секунд)'),checkpoint],[bi('Profile limit (1–16)','Лимит профилей (1–16)'),limit],[bi('Read-only failover planning','Планирование без применения'),planning]].forEach(function(row){body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},row[0]),row[1]]));});
+  body.appendChild(E('div',{'class':'hv-wizard-actions'},[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_monitor',params:['interval','checkpoint','probe_limit','planning_enabled'],expect:{}})(Number(interval.value),Number(checkpoint.value),Number(limit.value),planning.checked).then(function(result){ui.addNotification(null,E('p',{},result.saved?'MONITOR-PREFERENCES-SAVED':result.code||'MONITOR-PREFERENCES-FAILED'));if(result.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-PREFERENCES-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},bi('Save monitoring preferences','Сохранить параметры мониторинга'))]));
+  ui.showModal(bi('Monitoring preferences','Параметры мониторинга'),[body]);
+}
+
+function faultPanel(status,inventory,refresh){
+  var state=status.operator_fault||{},native=status.native_failover||{},settings=inventory.settings||{},profiles=status.profiles||[],sourceId=native.source||settings.plan_source,source=profiles.filter(function(p){return p.id===sourceId;})[0];
+  var ready=native.state==='OBSERVING'&&native.certified===true&&!status.rpc_error&&0<=Date.now()/1000-native.time&&Date.now()/1000-native.time<=30&&0<=Date.now()/1000-status.time&&Date.now()/1000-status.time<=90;
+  var section=E('section',{'class':'hv-chart-card'},[E('h2',{},bi('Controlled VPN failure test','Контролируемый сбой VPN')),E('p',{},bi('This temporarily blocks IPv4 traffic through the selected VPN, keeping its process connected. It reproduces “Connected, but no internet”. Router INPUT, management routes and Kill Switch are unchanged.','Временно блокируется IPv4-трафик выбранного VPN, сам процесс остаётся подключённым. Это моделирует «Подключён, но интернета нет». INPUT роутера, маршруты управления и Kill Switch не меняются.'))]);
+  section.appendChild(E('p',{'role':'status'},'Operator test: '+(state.code||state.state||'IDLE')+(state.until?' · '+bi('Remaining about ','Осталось примерно ')+(state.remaining_seconds==null?Math.max(0,Math.ceil(state.until-Date.now()/1000)):state.remaining_seconds)+' s':'')));
+  var scope=E('select',{'aria-label':bi('Failure scope','Область сбоя')},[E('option',{value:'profile'},bi('Current primary server','Текущий основной сервер')),E('option',{value:'channel'},bi('Its channel group','Его группа канала'))]);
+  var duration=E('select',{'aria-label':bi('Fault duration','Длительность сбоя')},[30,60,120,150,180].map(function(value){return E('option',{value:String(value)},value+' s');}));duration.value='150';
+  section.appendChild(E('p',{},bi('Selected source: ','Выбранный источник: ')+(source?source.name:'—')));
+  section.appendChild(E('div',{'class':'hv-native-actions'},[scope,duration,E('button',{'type':'button','class':'cbi-button cbi-button-negative','disabled':ready&&source?null:'','click':function(){
+    var affected=scope.value==='profile'?[source]:profiles.filter(function(p){return p.interface&&p.channel===source.channel;});
+    ui.showModal(bi('Review deliberate traffic interruption','Подтвердите прерывание трафика'),[E('p',{},bi('Calls and sessions can reconnect. Use only during an agreed local test. A kernel timeout limits the rule even if the watchdog stops. A healthy reserve and enough certified-window time are required.','Звонки и сессии могут переподключиться. Используйте только в согласованном локальном тесте. Правило ограничено таймером ядра даже при остановке watchdog. Нужен исправный резерв и достаточный остаток подтверждённого окна.')),E('ul',{},affected.map(function(p){return E('li',{},p.name+' · '+p.protocol+' / '+p.channel);})),E('p',{},bi('Maximum fault duration: ','Максимальная длительность сбоя: ')+duration.value+' s'),E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'fault_start',params:['profile','scope','duration'],expect:{}})(source.id,scope.value,Number(duration.value)).then(function(result){ui.addNotification(null,E('p',{},result.code||'FAULT-UNKNOWN'));ui.hideModal();return refresh();}).catch(function(){ui.addNotification(null,E('p',{},'FAULT-RPC-UNCONFIRMED: inspect actual test state.'));}).finally(function(){button.disabled=false;});}},bi('Start bounded fault','Запустить ограниченный сбой'))]);
+  }},bi('Simulate failure','Симулировать сбой')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'fault_cancel',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'FAULT-CANCEL-UNKNOWN'));return refresh();});}},bi('Cancel fault now','Отменить сбой сейчас'))]));
+  if(!ready)section.appendChild(E('p',{'class':'alert-message warning'},'FAULT-CERTIFIED-AUTO-REQUIRED: certify the configured source/reserve with the LAN helper and start a bounded trial first.'));
+  section.appendChild(E('small',{},bi('Inactive profiles are not started. This is a traffic fault, not a VPN service stop. Auto mode Stop also requests fault cleanup.','Неактивные профили не запускаются. Это сбой трафика, а не остановка VPN-службы. Остановка авторежима также запрашивает очистку сбоя.')));
+  if(state.history&&state.history.length){var table=E('table',{'class':'table'},[E('tr',{},['Time · Berlin','Code','Profiles','Scope'].map(function(text){return E('th',{},text);} ))]);state.history.slice().reverse().forEach(function(row){table.appendChild(E('tr',{},[new Date(row.time*1000).toLocaleString('en-GB',{timeZone:'Europe/Berlin'}),row.code,(row.profiles||[]).join(', '),row.scope].map(function(value){return E('td',{},value);})));});section.appendChild(table);}
+  return section;
+}
+
+function loadInventory(attempt){
+  return inventoryCall().then(function(data){
+    if(!data||typeof data!=='object'||!Array.isArray(data.profiles)||!Array.isArray(data.servers)||!data.settings||typeof data.settings.enabled!=='boolean')throw new Error('RPC-INVENTORY-INVALID');
+    return data;
+  }).catch(function(){
+    if(attempt<2)return new Promise(function(resolve){setTimeout(resolve,250*(attempt+1));}).then(function(){return loadInventory(attempt+1);});
+    return {profiles:[],servers:[],settings:{},error:'RPC-INVENTORY-UNAVAILABLE'};
+  });
+}
+
 return view.extend({
-  load:function(){return Promise.all([inventoryCall().catch(function(){return {profiles:[]};}),statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};}),loadBrand()]);},
+  handleSave:null,handleSaveApply:null,handleReset:null,
+  load:function(){return Promise.all([loadInventory(0),statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};}),loadBrand()]);},
   render:function(data){
     var configured=!!((data[0].settings||{}).telegram_configured);
-    var setup=!configured||new URLSearchParams(window.location.search).get('setup')==='telegram';
-    var inventory=data[0],m=new form.Map('homensai_vpn','HomenS.AI Auto VPN',
-      tr("Нативный монитор alpha: реальные IPv4 HTTPS/DNS-проверки на роутере. Контролируемое переключение требует клиентской проверки."));
-    var main=m.section(form.NamedSection,'main','main',tr("Служба наблюдения"));
-    main.option(form.Flag,'enabled',tr("Включить наблюдение")).default='0';
-    var interval=main.option(form.Value,'interval',tr("Интервал, секунд"));interval.datatype='range(10,300)';interval.default='30';
-    var limit=main.option(form.Value,'probe_limit',tr("Лимит подключённых профилей за раунд"));limit.datatype='range(1,32)';limit.default='16';
-    var checkpoint=main.option(form.Value,'checkpoint',tr("Сохранение статистики во flash, секунд"));checkpoint.datatype='range(300,3600)';checkpoint.default='900';
-    main.option(form.Flag,'telegram_enabled',tr("Отправлять отчёты в Telegram")).default='0';
-    var telegramInterval=main.option(form.Value,'telegram_interval',tr("Интервал Telegram-отчётов, минут"));telegramInterval.datatype='range(5,10080)';telegramInterval.default='60';
-    var telegramChat=main.option(form.Value,'telegram_chat','Telegram Chat ID');telegramChat.datatype='string';
-    if(setup){
-      var telegramToken=main.option(form.Value,'telegram_token',tr("Токен бота · настройка Telegram"));telegramToken.password=true;telegramToken.rmempty=configured;
-      telegramToken.cfgvalue=function(){return '';};
-      telegramToken.write=function(section,value){if(value)return this.map.data.set('homensai_vpn',section,'telegram_token',value);};
-      telegramToken.remove=function(){};
-      telegramToken.validate=function(section,value){return !value&&configured||/^[0-9]+:[A-Za-z0-9_-]{20,}$/.test(value)?true:tr("Проверьте формат токена BotFather");};
-      telegramToken.description=configured?tr("Оставьте пустым, чтобы сохранить действующий токен."):tr("Токен сохранится на роутере; в отчёты и статус не включается.");
-    }
-
-    main.option(form.Flag,'native_session_loss',bi('Allow calls and sessions to reconnect during a trial','Разрешить переподключение звонков и сессий во время теста')).default='0';
-    var duration=main.option(form.Value,'native_duration',bi('Trial window, minutes (1–240)','Окно испытания, минут (1–240)'));duration.default='10';duration.datatype='range(1,240)';
-    main.option(form.Flag,'plan_enabled',bi('Enable dry-run failover planning','Включить планирование переключения без применения')).default='0';
-    var planSource=main.option(form.ListValue,'plan_source',bi('Primary VPN profile','Основной VPN-профиль'));
-    var planTarget=main.option(form.ListValue,'plan_target',bi('Reserve VPN profile','Резервный VPN-профиль'));
-    [planSource,planTarget].forEach(function(option){option.value('',bi('Select an existing profile','Выберите существующий профиль'));(inventory.profiles||[]).forEach(function(p){option.value(p.id,p.name+' · '+p.protocol);});});
-
-    var servers=m.section(form.GridSection,'server',tr("Каналы и существующие профили"));servers.anonymous=true;servers.addremove=true;
-    var name=servers.option(form.Value,'name',tr("Ваше название"));name.datatype='maxlength(64)';
-    var profile=servers.option(form.ListValue,'profile',tr("Профиль роутера"));profile.rmempty=false;
-    (inventory.profiles||[]).forEach(function(p){profile.value(p.id,p.name+' · '+p.protocol+(p.interface?' · '+p.interface:''));});
-    var channel=servers.option(form.Value,'channel',tr("Ваш канал"));channel.default='main';channel.datatype='maxlength(64)';
-    var priority=servers.option(form.Value,'priority',tr("Приоритет"));priority.datatype='range(1,1000)';priority.default='100';
-    servers.option(form.Flag,'enabled',tr("Наблюдать")).default='1';
+    var setup=new URLSearchParams(window.location.search).get('setup')==='telegram';
+    var inventory=data[0];
     var panel=E('div',{'class':'hv-panel'}),self=this,period='day',speedPeriod='week';
     var lastGoodStatus=data[1];
     var appRoot=null,settingsHost=null,heading=null,sideState=null,versionBadge=null,pages={},sortStates={},searchTerms={};
-    var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['ranking','↕',bi('Server ranking','Рейтинг серверов')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
+    var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['tests','⏻',bi('Operator tests','Операторские тесты')],['statistics','▥',bi('Statistics','Статистика')],['ranking','↕',bi('Server ranking','Рейтинг серверов')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
     function validTab(key){return tabs.some(function(t){return t[0]===key;});}
     var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab='overview';
     function showPage(key){
@@ -372,7 +420,7 @@ return view.extend({
       var nativePanel=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Native failover · controlled trial','Нативное переключение · контролируемый тест')),E('strong',{},stateNames[ns.state]||ns.state||'UNKNOWN'),E('p',{},bi('1. Save a primary and reserve profile below. 2. Accept session reconnection. 3. Run the downloaded helper on a Windows LAN client with PowerShell 7. It checks the gateway, router DNS, HTTPS and VPN exit, and asks before starting. Browser checks alone do not certify router DNS.','1. Сохраните основной и резервный профили ниже. 2. Разрешите переподключение сессий. 3. Запустите скачанный помощник на Windows-клиенте LAN с PowerShell 7. Он проверит шлюз, DNS роутера, HTTPS и VPN-выход, затем спросит перед запуском. Проверка только браузером не подтверждает DNS роутера.'))]);
       var reasons=E('ul',{});(ns.blockers||[]).forEach(function(code){reasons.appendChild(E('li',{},code+' · '+(descriptions[code]||bi('See diagnostic code in the work log','Смотрите код диагностики в журнале работ'))));});nativePanel.appendChild(reasons);
       nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN test helper','Скачать помощник LAN-теста')));
-      nativePanel.appendChild(E('button',{'class':'cbi-button cbi-button-negative','type':'button','click':function(){return rpc.declare({object:'homensai-vpn',method:'native_stop',expect:{}})().then(function(){ui.addNotification(null,E('p',{},bi('Stop requested. Wait for verified rollback status.','Остановка запрошена. Дождитесь подтверждённого состояния отката.')));}).catch(function(){ui.addNotification(null,E('p',{},bi('Stop request failed; recovery is not confirmed.','Запрос остановки не прошёл; восстановление не подтверждено.')));});}},bi('Stop trial and restore','Остановить тест и восстановить')));
+      nativePanel.appendChild(E('button',{'class':'cbi-button cbi-button-negative','type':'button','click':function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'native_stop',expect:{}})().then(function(){ui.addNotification(null,E('p',{},bi('Stop requested. Wait for verified rollback status.','Остановка запрошена. Дождитесь подтверждённого состояния отката.')));}).catch(function(){ui.addNotification(null,E('p',{},bi('Stop request failed; recovery is not confirmed.','Запрос остановки не прошёл; восстановление не подтверждено.')));});}},bi('Stop trial and restore','Остановить тест и восстановить')));
       put('settings',nativePanel);
       var nh=status.native_history||{};
       var historyPanel=E('section',{'class':'hv-chart-card'},[E('h3',{},'Persistent controller history'),E('p',{},'Controller events, not measurements of LAN uptime. Trial results and automatic commits are counted separately.')]);
@@ -404,11 +452,13 @@ return view.extend({
       put('events',E('button',{'class':'btn','click':function(){var blob=new Blob([JSON.stringify({mode:'router-monitor',events:status.events||[]},null,2)],{type:'application/json'});var url=URL.createObjectURL(blob),link=E('a',{href:url,download:'homensai-vpn-events.json'});link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);}},tr("Скачать журнал")));
       put('ranking',speedPanel(status,inventory,speedPeriod,function(value){speedPeriod=value;draw(status);}));
       put('traffic',trafficHistoryPanel(status.accounting||{}));
+      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));
+      if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));
       sortableTables();showPage(activeTab);if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}
     }
     draw(data[1]);
     poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);
-    return m.render().then(function(formNode){
+    return Promise.resolve(E('p',{},bi('Use the setup wizards below. Settings are validated before saving; stored tokens are never loaded into this page.','Используйте мастера ниже. Настройки проверяются до сохранения; сохранённые токены не загружаются на эту страницу.'))).then(function(formNode){
       var robotHost=E('div',{'class':'robo','aria-label':bi('HomenS.AI author robot','Робот автора HomenS.AI')});
       var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');
       setTimeout(function(){var robot=window.HomenS.robot.tvRobot(robotHost);robot.play();},0);
@@ -420,13 +470,15 @@ return view.extend({
       settingsHost=E('section',{'class':'hv-settings','data-hv-page':'settings'},[E('h3',{},bi('Monitoring, Telegram and profile names','Мониторинг, Telegram и названия профилей')),E('a',{'href':L.url('admin/services/homensai-vpn')+'?setup=telegram&lang='+locale+'#settings'},bi('Telegram setup wizard','Мастер настройки Telegram')),setup?E('p',{},bi('Create a bot with BotFather, send /start, then enter its token and your Chat ID. The token stays on the router and is never returned in status.','Создайте бота через BotFather, отправьте /start, затем введите токен и свой Chat ID. Токен хранится на роутере и не возвращается в статусе.')):null,formNode].filter(function(node){return node!=null;}));
       var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);});
       appRoot=E('div',{'class':'hv-app hv-workspace'},[
-        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui13.css')+'?build=070-alpha3'}),
+        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui13.css')+'?build=070-alpha4'}),
         E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},'GL.iNet GL-MT6000 · Flint 2'),E('nav',{'aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('small',{},bi('Real IPv4 router measurements','Реальные IPv4-измерения роутера')),E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{},'HomenS.AI Style 1.14.3')])]),
         E('main',{'class':'hv-main'},[E('header',{'class':'hv-page-header'},[E('div',{},[E('div',{'class':'hv-eyebrow'},bi('AVAILABILITY CONTROL','УПРАВЛЕНИЕ ДОСТУПНОСТЬЮ')),heading,E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))]),E('div',{'class':'hv-page-actions'},[versionBadge,language,E('button',{'type':'button','class':'btn hv-test','click':function(){return scanCall().then(function(){return statusCall().then(draw);}).catch(function(){ui.addNotification(null,E('p',{},bi('Probe request failed. See service status.','Запрос проверки не прошёл. Смотрите состояние службы.')));});}},bi('Probe now','Проверить сейчас'))])]),panel,settingsHost,footer])
       ]);
-      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));
+      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));
+      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));
+      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring preferences','Параметры мониторинга')));
       settingsHost.appendChild(speedSettings(inventory));
-      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);
+      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);
       showPage(activeTab);window.addEventListener('hashchange',function(){showPage(window.location.hash.slice(1));});
       return appRoot;
     });

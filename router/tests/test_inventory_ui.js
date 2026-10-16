@@ -1,0 +1,4 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+let calls=0;const valid={profiles:[],servers:[],settings:{enabled:false}};
+const context={setTimeout:fn=>fn(),inventoryCall:()=>Promise.resolve(++calls===1?7:valid)};vm.createContext(context);vm.runInContext(fs.readFileSync('router/inventory_reliable.inc.js','utf8'),context);
+(async()=>{let result=await context.loadInventory(0);assert.equal(calls,2);assert.equal(result.settings.enabled,false);calls=0;context.inventoryCall=()=>{calls++;return Promise.reject(new Error('unavailable'));};result=await context.loadInventory(0);assert.equal(calls,3);assert.equal(result.error,'RPC-INVENTORY-UNAVAILABLE');assert.deepEqual(Array.from(result.profiles),[]);console.log('PASS: numeric RPC error is not empty configuration; bounded read-only retry and explicit unknown state');})().catch(error=>{console.error(error);process.exitCode=1;});

@@ -36,6 +36,7 @@ class Backend:
     def devices(self):return ['wgclient1','tun0']
     def diagnostic(self):return [],self.selection
     def health(self,identifier):return True
+    def recovery_ready(self,identifier,settings):return self.health(identifier) is True
 
 
 class NativeTests(unittest.TestCase):

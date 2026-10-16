@@ -7,5 +7,5 @@ let row=panel.children[1].children[1];assert.equal(row.children[1].children[0],'
 panel=context.trafficHistoryPanel({});assert(JSON.stringify(panel).includes('No daily observations yet'));
 panel=context.trafficHistoryPanel({rpc_aggregated:true});assert(JSON.stringify(panel).includes('HISTORY-PARTIAL'));
 const generated=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard25.js','utf8');
-assert(generated.includes("p.periods&&p.periods[period]"));assert(generated.includes("[currentMonth]||null"));assert(!generated.includes('monthKeys[monthKeys.length-1]'));
+assert(generated.includes("p.periods&&p.periods[period]"));assert(generated.includes("[currentMonth]||null"));assert(!generated.includes('monthKeys[monthKeys.length-1]'));assert(!generated.includes('new form.Map'));assert(generated.includes('handleSave:null,handleSaveApply:null,handleReset:null'));assert(!generated.includes('var setup=!configured'));
 console.log('PASS: WAN/VPN separation, unknown versus zero, retention warning, aggregate histogram and current-month selection');

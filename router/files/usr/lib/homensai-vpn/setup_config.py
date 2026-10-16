@@ -77,12 +77,26 @@ def speed_payload(arguments):
     return {'main':main,'servers':[]}
 
 
+def monitor_payload(arguments):
+    if set(arguments)!={'interval','checkpoint','probe_limit','planning_enabled'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
+    return {'main':{'interval':integer(arguments['interval'],10,300),'checkpoint':integer(arguments['checkpoint'],300,3600),
+                    'probe_limit':integer(arguments['probe_limit'],1,16),'plan_enabled':'1' if arguments['planning_enabled'] else '0'},'servers':[]}
+
+
 def save(arguments, kind):
     if kind=='system':payload=system_payload(arguments,inventory()['profiles'])
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
+    elif kind=='monitor':payload=monitor_payload(arguments)
+    elif kind=='recovery':
+        from recovery_settings import payload as recovery_payload
+        payload=recovery_payload(arguments)
     else:raise ValueError('SETUP-KIND')
     with control_lock():
+        if kind in ('recovery','monitor'):
+            from configuration_guard import blocked
+            reason=blocked(inventory().get('settings',{}))
+            if reason:return {'saved':False,'code':reason}
         if kind=='telegram' and not arguments['token']:
             from telegram_report import option
             if not re.fullmatch(r'[0-9]+:[A-Za-z0-9_-]+',option('telegram_token')):

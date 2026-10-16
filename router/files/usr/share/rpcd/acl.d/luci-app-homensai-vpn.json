@@ -6,12 +6,10 @@
         "homensai-vpn": [
           "status",
           "inventory",
-          "events"
+          "events",
+          "priority_preview"
         ]
-      },
-      "uci": [
-        "homensai_vpn"
-      ]
+      }
     },
     "write": {
       "ubus": {
@@ -28,12 +26,14 @@
           "speed_cancel",
           "setup_speed",
           "telegram_retry",
-          "monitor_control"
+          "monitor_control",
+          "priority_apply",
+          "setup_recovery",
+          "fault_start",
+          "fault_cancel",
+          "setup_monitor"
         ]
-      },
-      "uci": [
-        "homensai_vpn"
-      ]
+      }
     }
   }
 }

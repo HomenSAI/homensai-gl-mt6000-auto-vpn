@@ -138,7 +138,29 @@ old="Object.keys(p.days||{}).forEach(function(day){"
 assert old in source
 source=source.replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).forEach(function(k){totals[k]=p.periods[period][k]||0;});}else Object.keys(p.days||{}).forEach(function(day){")
 source=source.replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
-source=source.replace('?build=060-alpha1','?build=070-alpha3')
+source=source.replace('?build=060-alpha1','?build=070-alpha4')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
+source=source.replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
+source=source.replace("['statistics','▥'", "['tests','⏻',bi('Operator tests','Операторские тесты')],['statistics','▥'")
+source=source.replace('return view.extend({',(Path(__file__).parent/'fault_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("      sortableTables();showPage(activeTab);", "      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));\n      sortableTables();showPage(activeTab);")
+old="return m.render().then(function(formNode){"
+assert old in source
+source=source.replace(old,"return Promise.resolve(E('p',{},bi('Use the setup wizards below. Settings are validated before saving; stored tokens are never loaded into this page.','Используйте мастера ниже. Настройки проверяются до сохранения; сохранённые токены не загружаются на эту страницу.'))).then(function(formNode){")
+source=source.replace('return view.extend({','return view.extend({\n  handleSave:null,handleSaveApply:null,handleReset:null,',1)
+source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring preferences','Параметры мониторинга')));\n      settingsHost.appendChild(speedSettings(inventory));")
+start=source.index("    var inventory=data[0],m=new form.Map")
+end=source.index("    var panel=E('div',{'class':'hv-panel'})",start)
+source=source[:start]+"    var inventory=data[0];\n"+source[end:]
+source=source.replace("'require form';",'')
+source=source.replace("var setup=!configured||new URLSearchParams(window.location.search).get('setup')==='telegram';", "var setup=new URLSearchParams(window.location.search).get('setup')==='telegram';")
+source=source.replace('return view.extend({',(Path(__file__).parent/'inventory_reliable.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+old="inventoryCall().catch(function(){return {profiles:[]};})"
+assert old in source
+source=source.replace(old,'loadInventory(0)')
+source=source.replace("object:'homensai-vpn',", "object:'homensai-vpn',reject:true,")
+source=source.replace("      sortableTables();showPage(activeTab);", "      if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));\n      sortableTables();showPage(activeTab);")
+source=source.replace("settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}", "settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}")
 (root/'dashboard25.js').write_text(source,encoding='utf8')
 print('Generated dashboard25.js with sidebar, language persistence and sortable tables')

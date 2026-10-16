@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.7.0-alpha3'
+VERSION = '0.7.0-alpha4'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -609,6 +609,9 @@ def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
+                          'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
+                          'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
+                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
                           'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
@@ -643,12 +646,20 @@ def rpc(method):
             raise ValueError('confirmation elapsed-time window expired')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
+    if method in ('fault_start','fault_cancel'):
+        from fault_control import start,cancel,FaultError
+        try:result=start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
+        except FaultError as error:result={'accepted':False,'code':str(error)}
+        print(json.dumps(result));return
+    if method in ('priority_preview','priority_apply'):
+        from priority_config import preview,apply
+        print(json.dumps(preview(arguments) if method=='priority_preview' else apply(arguments)));return
     if method=='monitor_control':
         from monitor_control import change
         print(json.dumps(change(arguments)));return
-    if method in ('setup_system','setup_telegram','setup_speed'):
+    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor'):
         from setup_config import save
-        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed'}[method])
+        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor'}[method])
         except ValueError as error:
             code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'
             result={'saved':False,'code':code}
@@ -679,7 +690,12 @@ def rpc(method):
         print('{"queued":true}')
     elif method in ('native_start','native_stop'):
         from auto_control import start, stop
-        print(json.dumps(start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)));return
+        result=start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)
+        if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
+            from fault_control import cancel,FaultError
+            try:result['fault_cleanup']=cancel().get('cleaned',False)
+            except (FaultError,OSError,ValueError,subprocess.SubprocessError):result['fault_cleanup']=False
+        print(json.dumps(result));return
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':

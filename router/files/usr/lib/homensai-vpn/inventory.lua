@@ -31,6 +31,14 @@ local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CE
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
   main.setup_complete=s.setup_complete=='1'
+  main.recovery_return_policy=s.recovery_return_policy=='hold_reserve' and 'hold_reserve' or 'healthy_primary'
+  main.recovery_failures=math.max(3,math.min(10,tonumber(s.recovery_failures) or 3))
+  main.recovery_successes=math.max(2,math.min(10,tonumber(s.recovery_successes) or 2))
+  main.recovery_cooldown=math.max(60,math.min(1800,tonumber(s.recovery_cooldown) or 180))
+  main.recovery_min_dwell=math.max(60,math.min(3600,tonumber(s.recovery_min_dwell) or 180))
+  main.recovery_primary_successes=math.max(2,math.min(10,tonumber(s.recovery_primary_successes) or 3))
+  main.recovery_primary_stable=math.max(30,math.min(600,tonumber(s.recovery_primary_stable) or 60))
+
   main.speed_enabled=s.speed_enabled=='1'
   main.speed_auto_new=s.speed_auto_new=='1'
   main.speed_budget_mib=math.max(1,math.min(32,tonumber(s.speed_budget_mib) or 8))

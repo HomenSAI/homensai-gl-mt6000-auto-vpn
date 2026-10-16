@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0-alpha4 — reviewed priorities and bounded operator fault candidate
+
+- Add stale-review-protected priority application, recovery/monitoring wizards, stable primary-return conditions and explicit reserve hold.
+- Add certified-trial-only traffic fault/cancel with independent kernel set expiry and watchdog; actual OpenWrt kernel timeout check passed.
+- Remove raw-UCI UI writes/token loading; reject numeric/invalid inventory RPC replies and preserve unknown state instead of empty defaults.
+- 194 Python tests and five Node suites pass. Full native hierarchy, inactive activation and hardware acceptance remain open; see qa/ALPHA4-CHECKPOINT.md. No physical deployment.
+
+
 ## 0.7.0-alpha3 — raised Auto power control (local UI candidate)
 
 - Router-inspired bevelled power button with halo rings, contact shadow, pressed feedback and Start/Stop captions.

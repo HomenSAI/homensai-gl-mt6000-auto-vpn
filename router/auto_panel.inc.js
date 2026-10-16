@@ -7,7 +7,7 @@ function autoControlModel(status,now){
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
   return {fresh:fresh,on:on,transitioning:transitioning,off:off,awaiting:awaiting,
-    stop:on||transitioning||intent.requested==='on'||ns.state==='STOPPED-ON-RESERVE',
+    stop:on||transitioning||intent.requested==='on'||['COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
     returned:off&&ns.original_restored===true,
     color:!fresh?'unknown':awaiting||transitioning?'pending':on?'on':off?'off':'error'};
 }
@@ -23,7 +23,7 @@ function renderAutoControl(status,inventory){
     'TRANSACTION-IN-PROGRESS':'A transaction is already in progress. Wait or request Stop.',
     'TRIAL-ATTEMPT-LIMIT':'This window reached its attempt limit. Start a new controlled trial.'
   };
-  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-'+model.color,'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy?'':null,'click':function(){
+  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-'+model.color,'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy||inventory.error&&!model.stop?'':null,'click':function(){
     if(autoRequestBusy)return;autoRequestBusy=true;button.disabled=true;
     return rpc.declare({object:'homensai-vpn',method:model.stop?'native_stop':'native_start',expect:{}})().then(function(result){
       if(result.accepted===false){ui.addNotification(null,E('div',{},[E('strong',{},'AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+(explanation[code]||'See controller diagnostics in Settings.'));}))]));}

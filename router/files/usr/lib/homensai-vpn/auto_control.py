@@ -45,6 +45,7 @@ def readiness(settings, certificate, consumed, selection, blockers, now):
         certificate.get('target') == selection.get('target', {}).get('id'),
         certificate.get('direction') == selection.get('direction'),
         certificate.get('until', 0) >= until,
+        certificate.get('settings_hash') == selection.get('settings_hash'),
     )):
         reasons.append('LAN-TRIAL-REQUIRED')
     return sorted(set(reasons))

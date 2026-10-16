@@ -141,8 +141,9 @@ def choose(data,profiles):
         # Empty selectors only. A malformed/unknown selector is never treated as catch-all.
         constrained=any(s.get(k) not in (None,'',[]) for k in ('from_type','from','to_type','to','to_manual','to_list_external'))
         (special if constrained else generic).append((index,s))
-    if len(generic)!=2:raise Refused('EXACTLY-TWO-GENERIC-RULES-REQUIRED')
-    if generic[1][0]!=generic[0][0]+1:raise Refused('GENERIC-RULES-NOT-ADJACENT')
+    if not 2<=len(generic)<=16:raise Refused('TWO-TO-SIXTEEN-GENERIC-RULES-REQUIRED')
+    if [index for index,_ in generic]!=list(range(generic[0][0],generic[-1][0]+1)):raise Refused('GENERIC-RULES-NOT-ADJACENT')
+    if len({row.get('via') for _,row in generic})!=len(generic):raise Refused('GENERIC-DUPLICATE-INTERFACE')
     if any(i>generic[0][0] for i,_ in special):raise Refused('SPECIAL-RULES-MUST-PRECEDE-GENERIC')
     pmap={p['id']:p for p in profiles}
     source=pmap.get(settings.get('plan_source')); target=pmap.get(settings.get('plan_target'))
@@ -231,6 +232,8 @@ class Linux:
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')
             metadata=inventory();selection=choose(data,metadata['profiles'])
+            from recovery_settings import fingerprint
+            selection['settings_hash']=fingerprint(data.get('settings',{}))
             groups={s.get('profile'):s.get('channel','default') for s in metadata.get('servers',[])}
             for profile in (selection['source'],selection['target']):profile['channel']=groups.get(profile['id'],profile.get('group_id','default'))
             disabled={s.get('profile') for s in metadata.get('servers',[]) if s.get('enabled') is False}
@@ -295,6 +298,11 @@ class Linux:
             s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
             if s.get('up') and s.get('l3_device'):devices.append(s['l3_device'])
         return devices
+    def recovery_ready(self,identifier,settings):
+        from recovery_settings import normalized,stable_success
+        policy=normalized(settings)
+        status=read_json(RUNTIME/'status.json',{})
+        return stable_success(status.get('samples',[]),identifier,policy['primary_successes'],policy['primary_stable'],time.time()) and self.health(identifier) is True
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
         if not profile or not profile.get('interface'):return False
@@ -327,12 +335,14 @@ def finish_committed(backend,journal,reason):
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after']):
         backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
-    if order==journal['after'] and backend.health(journal['source']) is not True:
+    from recovery_settings import normalized
+    recovery=normalized(backend.policy().get('settings',{}))
+    if order==journal['after'] and (recovery['return_policy']=='hold_reserve' or not backend.recovery_ready(journal['source'],backend.policy().get('settings',{}))):
         healthy=backend.health(journal['target']) is True
         backend.guard(backend.devices())
-        journal.update(phase='HELD-ON-RESERVE',reason='SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
+        journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-HOLD-RESERVE' if recovery['return_policy']=='hold_reserve' else 'SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
         journal_write(journal)
-        publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':journal['source'],
+        publish({'state':'STOPPED-ON-RESERVE','reason':journal['reason'],'source':journal['source'],
                  'target':journal['target'],'expected_exit':journal.get('expected_exit'),
                  'reserve_healthy':healthy,'original_restored':False,'trial':journal.get('trial',False)})
         return False
@@ -507,7 +517,7 @@ def attempt(backend,selection,until,trial):
                 journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
                 if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
-                                 'target':selection['target']['id'],'direction':selection['direction'],'time':time.time(),'until':until})
+                                 'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),'time':time.time(),'until':until})
                 publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
                                   'until':until,'trial':trial,'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
@@ -563,7 +573,7 @@ def serve():
                 lease_expired=time.time()>=until or (lease_end>0 and time.monotonic()>=lease_end) or (active.get('phase')=='COMMITTED' and lease_error is not None)
                 if active.get('phase')=='HELD-ON-RESERVE' and (not enabled or stop_latched or settings.get('native_trial')==active.get('trial_nonce')):
                     if backend.order()!=(active['after'],active['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
-                    publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':active['source'],
+                    publish({'state':'STOPPED-ON-RESERVE','reason':active.get('reason','SOURCE-NOT-VERIFIED'),'source':active['source'],
                              'target':active['target'],'expected_exit':active.get('expected_exit'),'original_restored':False,
                              'reserve_healthy':active.get('reserve_healthy',False),'trial':active.get('trial',False)})
                     time.sleep(5);continue
@@ -602,12 +612,14 @@ def serve():
                 if consumed.get('count',0)>=3:
                     publish({'state':'BLOCKED','blockers':['TRIAL-ATTEMPT-LIMIT']});time.sleep(5);continue
                 status=read_json(RUNTIME/'status.json',{})
-                age=90
-                failures=streak(status.get('samples',[]),selection['source']['id'],3,time.time(),age,False)
-                healthy=streak(status.get('samples',[]),selection['target']['id'],2,time.time(),age,True)
+                from recovery_settings import normalized
+                recovery=normalized(settings)
+                age=max(30,min(900,int(settings.get('interval',30))*3))
+                failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False)
+                healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True)
                 certificate=read_json(CERT,{})
-                certified=certificate.get('hash')==selection['hash'] and certificate.get('source')==selection['source']['id'] and certificate.get('target')==selection['target']['id'] and certificate.get('direction')==selection['direction'] and certificate.get('until',0)>=until
-                if time.time()-last_attempt>=180 and (forced or (certified and failures and healthy)):
+                certified=certificate.get('hash')==selection['hash'] and certificate.get('source')==selection['source']['id'] and certificate.get('target')==selection['target']['id'] and certificate.get('direction')==selection['direction'] and certificate.get('until',0)>=until and certificate.get('settings_hash')==selection.get('settings_hash')
+                if time.time()-last_attempt>=max(recovery['cooldown'],recovery['min_dwell']) and (forced or (certified and failures and healthy)):
                     last_attempt=time.time();last_trial=trial
                     consumed.update(trial=trial,time=last_attempt,count=consumed.get('count',0)+1)
                     atomic_json(ATTEMPTS,consumed)
