@@ -7,7 +7,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.7.0-alpha2-1'
+VERSION = '0.7.0-alpha3-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 

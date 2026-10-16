@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0-alpha3 — raised Auto power control (local UI candidate)
+
+- Router-inspired bevelled power button with halo rings, contact shadow, pressed feedback and Start/Stop captions.
+- Confirmed-state semantics retained; green/on, amber/pending, red/error, neutral/off/unknown. Keyboard focus and reduced-motion support.
+- Local browser/Auto-state/package checks passed. Not deployed to the physical router.
+
+
 ## 0.7.0-alpha2 — local and virtual OpenWrt acceptance
 
 - Added isolated Docker/QEMU OpenWrt 21.02.7 laboratory, explicit VM-only UCI/RPC/procd acceptance and own-monitor process-recovery tests. No physical GL-MT6000 deployment in this increment.

@@ -28,3 +28,21 @@
 
 /* Code-drawn power icon: independent of installed font glyph coverage. */
 .hv-power-symbol{display:inline-block;position:relative;width:30px;height:30px;border:3px solid currentColor;border-top-color:transparent;border-radius:50%;box-sizing:border-box;vertical-align:middle}.hv-power-symbol:before{content:"";position:absolute;width:3px;height:18px;background:currentColor;left:50%;top:-7px;transform:translateX(-50%);border-radius:2px}
+
+/* Router-inspired raised power control, using the pinned Style palette. */
+.hv-auto-power-unit{display:flex;flex:0 0 152px;flex-direction:column;align-items:center;gap:27px;padding:22px 0 3px}
+.hv-app .hv-auto-power{--hv-power-rgb:113,130,147;position:relative;display:flex;align-items:center;justify-content:center;width:110px;height:110px;flex:0 0 110px;padding:0!important;border:1px solid rgba(255,255,255,.95)!important;border-radius:50%!important;color:rgb(var(--hv-power-rgb))!important;background:linear-gradient(155deg,#fff 8%,#f7fafc 48%,#e5edf2 100%)!important;box-shadow:0 12px 18px -9px rgba(var(--hv-power-rgb),.65),0 0 0 10px rgba(var(--hv-power-rgb),.15),0 0 0 21px rgba(var(--hv-power-rgb),.07),inset 0 3px 3px rgba(255,255,255,.98),inset 0 -5px 8px rgba(36,58,76,.14)!important;transition:transform .16s ease,box-shadow .16s ease;color-scheme:light}
+.hv-app .hv-auto-power:after{content:"";position:absolute;inset:9px;border:1px solid rgba(var(--hv-power-rgb),.20);border-radius:50%;box-shadow:inset 0 1px 2px #fff;pointer-events:none}
+.hv-app .hv-auto-power.hv-auto-on{--hv-power-rgb:0,177,155;background:linear-gradient(155deg,#fff 8%,#f6fffc 48%,#dcedea 100%)!important}
+.hv-app .hv-auto-power.hv-auto-pending{--hv-power-rgb:205,151,39}
+.hv-app .hv-auto-power.hv-auto-error{--hv-power-rgb:205,73,91}
+.hv-app .hv-auto-power.hv-auto-unknown{--hv-power-rgb:145,153,164}
+.hv-app .hv-auto-power:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 15px 22px -9px rgba(var(--hv-power-rgb),.65),0 0 0 10px rgba(var(--hv-power-rgb),.19),0 0 0 21px rgba(var(--hv-power-rgb),.09),inset 0 3px 3px #fff,inset 0 -5px 8px rgba(36,58,76,.14)!important}
+.hv-app .hv-auto-power:active:not(:disabled){transform:translateY(2px);background:linear-gradient(155deg,#e5edf2,#f8fbfc)!important;box-shadow:0 4px 8px -4px rgba(var(--hv-power-rgb),.5),0 0 0 10px rgba(var(--hv-power-rgb),.15),0 0 0 21px rgba(var(--hv-power-rgb),.07),inset 0 3px 7px rgba(36,58,76,.19),inset 0 -2px 2px #fff!important}
+.hv-app .hv-auto-power:focus-visible{outline:3px solid var(--primary,#245c9f)!important;outline-offset:25px}
+.hv-auto-power .hv-power-symbol{width:36px;height:36px;border-width:3px;filter:drop-shadow(0 1px 0 #fff)}
+.hv-auto-power .hv-power-symbol:before{height:23px;top:-9px}
+.hv-auto-action{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hv-auto-switch{gap:24px;min-height:185px}
+@media(max-width:600px){.hv-auto-power-unit{flex-basis:138px}.hv-auto-switch{gap:13px}.hv-auto-label{font-size:17px}}
+@media(prefers-reduced-motion:reduce){.hv-app .hv-auto-power{transition:none}}

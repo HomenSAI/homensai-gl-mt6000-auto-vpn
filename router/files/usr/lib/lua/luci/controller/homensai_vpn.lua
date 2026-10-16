@@ -1,4 +1,4 @@
--- UI resource for 0.7.0-alpha2
+-- UI resource for 0.7.0-alpha3
 -- Legacy LuCI 21.02 controller; newer LuCI can also discover menu.d metadata.
 module('luci.controller.homensai_vpn',package.seeall)
 function index()

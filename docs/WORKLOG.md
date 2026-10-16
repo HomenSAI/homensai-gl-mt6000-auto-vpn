@@ -323,3 +323,10 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Saved local/Gitea source commit fbdb0b9, then identical GitHub source commit d50f91f; compared tree 816a46404132e9dbdd73a33c355c93b93d3c36e6 before publication. Local release tag v0.7.0-alpha2 points to that source snapshot.
 - Published GitHub prerelease v0.7.0-alpha2 with explicitly monitor-only guidance and unresolved VM warm-reboot limitations. GitHub asset metadata confirms 414714-byte IPK and SHA256 976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789, matching the tested file. Privacy scan covered 246 tracked files including nested packages and passed.
 - Historical untracked old IPKs/dashboard15/dashboard17 were preserved, not published or deleted; the current builder excludes retired dashboards from the IPK. Native GL.iNet/hardware acceptance remains open.
+
+### 2026-10-16 07:30 Europe/Berlin — raised router-style Auto power button
+
+- Requested visual change: match the GL.iNet round power control with a raised surface. Replaced the flat look with a 110px bevelled face, layered halo rings, inset highlights and contact shadow using the pinned style palette. Added hover lift, pressed recess and Start/Stop action caption; CSS icon has no font dependency.
+- Retained confirmed-state logic and existing native_start/native_stop calls. Green requires fresh confirmed Auto state; pending amber, failure red, off/unknown neutral. No optimistic green on click. Keyboard focus and reduced-motion behavior are included.
+- Local candidate version 0.7.0-alpha3; no physical-router connection, deployment or VPN operation. Preview is explicitly synthetic.
+- Verification: JS syntax PASS; 12 Auto state invariants PASS; three package/reproducibility tests PASS. Browser checked on/off/pending/error styles; Overview at 390px has document width 375px and no horizontal overflow. Screenshot retained outside Git.
