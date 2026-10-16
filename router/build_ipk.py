@@ -6,7 +6,7 @@ from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.6.0-alpha5-1'
+VERSION = '0.7.0-alpha1-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -52,9 +52,9 @@ def build(output=None):
         files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
     data = archive(files)
     control = ('Package: %s\nVersion: %s\nArchitecture: all\n'
-               'Maintainer: HomenSAI <info@homensai.com>\n'
+               'Maintainer: HomenSAI <info@homensai.com>\nLicense: MIT\n'
                'Depends: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle\n'
-               'Description: HomenSAI Auto VPN native monitor alpha; route changes disabled\n'
+               'Description: HomenSAI VPN monitor; bounded controlled native trials; optional speed tests\n'
                'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, len(data))).encode()
     postinst = b'''#!/bin/sh
 [ -n "$IPKG_INSTROOT" ] && exit 0

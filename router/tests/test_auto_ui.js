@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const context={};vm.createContext(context);
 vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
-const model=(ns,intent={})=>context.autoControlModel({native_failover:ns,auto_control:intent},1000);
+const model=(ns,intent={})=>context.autoControlModel({native_failover:ns,auto_control:intent,time:1000},1000);
 assert.equal(model({state:'OBSERVING',certified:true,time:999}).on,true);
 assert.equal(model({state:'OBSERVING',certified:false,time:999}).on,false);
 assert.equal(model({state:'COMMITTED',time:900}).on,false);
@@ -12,4 +12,6 @@ assert.equal(model({state:'STOPPED',time:999,original_restored:true}).returned,t
 assert.equal(model({state:'STOPPED',time:999,original_restored:false}).returned,false);
 assert.equal(model({state:'STOPPED',time:999},{requested:'on',requested_at:1000}).color,'pending');
 assert.equal(model({state:'STOPPED',time:999},{requested:'on',requested_at:1000}).stop,true);
-console.log('PASS: 10 UI state/confirmation invariants');
+assert.equal(context.autoControlModel({native_failover:{state:'COMMITTED',time:999},time:800},1000).on,false);
+assert.equal(context.autoControlModel({native_failover:{state:'COMMITTED',time:999},time:999,rpc_error:'RPC-UNAVAILABLE'},1000).on,false);
+console.log('PASS: 12 UI state/confirmation invariants');

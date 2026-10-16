@@ -1,6 +1,7 @@
 function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
-  var fresh=Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
+  var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
+  var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   var on=fresh&&((ns.state==='OBSERVING'&&ns.certified===true)||ns.state==='COMMITTED');
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;

@@ -21,7 +21,7 @@ def fixture():
               {'.name':'a','.type':'rule','enabled':'1','killswitch':'1','via':'ovpnclient1'},
               {'.name':'b','.type':'rule','enabled':'1','killswitch':'1','via':'wgclient1'}]
     return {'sections':sections,'settings':{'plan_source':profiles[0]['id'],'plan_target':profiles[1]['id'],
-        'native_order_direction':'first','native_baseline_exit':'8.8.8.8'},'ipv6':'0','lan':'br-lan','firewall_defaults':[{}]},profiles
+        'native_order_direction':'first','native_baseline_exit':'8.8.8.8','native_trial':'test'},'ipv6':'0','lan':'br-lan','firewall_defaults':[{}]},profiles
 
 
 class Backend:
@@ -143,9 +143,9 @@ class NativeTests(unittest.TestCase):
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
             return process
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',return_value='9.9.9.9'),patch.object(native.os,'killpg'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',return_value='9.9.9.9'),patch.object(native.os,'killpg'),patch.object(native,'transaction_expired',return_value=True):
             with self.assertRaisesRegex(native.Refused,'CONFIRMATION-TIMEOUT'):
-                native.attempt(b,b.selection,time.time()-1,False)
+                native.attempt(b,b.selection,time.time()+120,False)
             self.assertEqual(b.current,before);self.assertFalse(native.CERT.exists())
 
     def test_history_failure_before_worker_release_never_applies(self):

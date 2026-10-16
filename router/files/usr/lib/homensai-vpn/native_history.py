@@ -49,7 +49,7 @@ class History:
                 envelope=json.loads(path.read_text(encoding='utf8'));data=envelope['data']
                 if envelope.get('schema')!=1 or hashlib.sha256(encoded(data)).hexdigest()!=envelope.get('sha256'):raise HistoryError('HISTORY-CHECKSUM')
                 if not isinstance(data.get('events'),list) or not isinstance(data.get('months'),dict) or not isinstance(data.get('sequence'),int):raise HistoryError('HISTORY-SCHEMA')
-                if len(data['events'])>500 or len(data['months'])>18:raise HistoryError('HISTORY-BOUNDS')
+                if len(data['events'])>500 or len(data['months'])>18 or not isinstance(data.get('days',{}),dict) or len(data.get('days',{}))>400:raise HistoryError('HISTORY-BOUNDS')
                 self.restored=bool(index);return data
             except (OSError,ValueError,KeyError,TypeError):continue
         if found:raise HistoryError('HISTORY-CORRUPT')
@@ -70,27 +70,44 @@ class History:
         for key in ('source','target'):
             identifier=value.get(key)
             if isinstance(identifier,str) and PROFILE.fullmatch(identifier):item[key]=identifier
+        kind=value.get('transition_kind')
+        if kind in ('server','channel','protocol'):item['transition_kind']=kind
         key=hashlib.sha256(encoded(item)).hexdigest()
-        if key==data['last_key']:return False
+        if key==data['last_key']:
+            if data.get('daily_since') is None:
+                old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
+                atomic(self.backup,old);atomic(self.path,self.envelope(data))
+            return False
         old=self.envelope(json.loads(encoded(data)))
         item.update(time=now,sequence=data['sequence']+1)
         data['sequence']+=1;data['last_key']=key;data['last_time']=now
         data['events']=(data['events']+[item])[-self.limit:]
-        month=time.strftime('%Y-%m',time.localtime(now))
-        totals=data['months'].setdefault(month,{'attempts':0,'committed':0,'trials_passed':0,'rollbacks':0,'blocked_episodes':0})
-        if state=='APPLYING':totals['attempts']+=1
-        if state=='COMMITTED':totals['committed']+=1
-        if state=='ARMED' and 'TRIAL-PASSED' in codes:totals['trials_passed']+=1
-        if state=='ROLLED-BACK':totals['rollbacks']+=1
-        if state=='BLOCKED':totals['blocked_episodes']+=1
+        month=time.strftime('%Y-%m',time.localtime(now));day=time.strftime('%Y-%m-%d',time.localtime(now))
+        if data.get('daily_since') is None:data['daily_since']=now
+        daily=data.setdefault('days',{})
+        metrics=('attempts','committed','trials_passed','rollbacks','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches')
+        for totals in (data['months'].setdefault(month,{}),daily.setdefault(day,{})):
+            for metric in metrics:totals.setdefault(metric,0)
+            if state=='APPLYING':
+                totals['attempts']+=1
+                if not item['trial']:totals['automatic_attempts']+=1
+            if state=='COMMITTED':
+                totals['committed']+=1
+                if not item['trial']:
+                    totals['automatic_committed']+=1
+                    if kind in ('server','channel','protocol'):totals[kind+'_switches']+=1
+            if state=='ARMED' and 'TRIAL-PASSED' in codes:totals['trials_passed']+=1
+            if state=='ROLLED-BACK':totals['rollbacks']+=1
+            if state=='BLOCKED':totals['blocked_episodes']+=1
         for retired in sorted(data['months'])[:-18]:del data['months'][retired]
+        for retired in sorted(daily)[:-400]:del daily[retired]
         atomic(self.backup,old);atomic(self.path,self.envelope(data))
         return True
     def public(self):
         data=self.load()
         return {'available':self.path.exists() or self.backup.exists(),'restored_from_backup':self.restored,
                 'timezone':data['timezone'],'sequence':data['sequence'],'events':data['events'][-100:],
-                'months':data['months'],'scope':'controller transitions; not LAN availability or router power-loss proof'}
+                'months':data['months'],'days':data.get('days',{}),'daily_since':data.get('daily_since'),'event_history_truncated':data['sequence']>min(100,len(data['events'])),'scope':'controller transitions; not LAN availability or router power-loss proof'}
 
 
 def read_public(directory):

@@ -1,3 +1,4 @@
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
 """Whitelisted own-configuration setup. VPN keys/routes are never edited."""
 import hashlib
 import json
@@ -43,7 +44,7 @@ def system_payload(arguments, profiles):
 
 
 def telegram_payload(arguments):
-    if set(arguments) != {'token','chat','enabled','interval'} or type(arguments['enabled']) is not bool:
+    if not {'token','chat','enabled','interval'}<=set(arguments) or set(arguments)-{'token','chat','enabled','interval','schedule','hour','weekly','monthly'} or type(arguments['enabled']) is not bool:
         raise ValueError('TELEGRAM-SETUP-FIELDS')
     token=arguments['token'];chat=arguments['chat']
     if not isinstance(token,str) or (token and not re.fullmatch(r'[0-9]{6,15}:[A-Za-z0-9_-]{30,100}',token)):
@@ -53,12 +54,34 @@ def telegram_payload(arguments):
         raise ValueError('TELEGRAM-DESTINATION-FORMAT')
     main={'telegram_chat':chat,'telegram_enabled':'1' if arguments['enabled'] else '0',
           'telegram_interval':integer(arguments['interval'],5,10080)}
+    if 'schedule' in arguments:
+        if arguments['schedule'] not in ('interval','daily'):raise ValueError('TELEGRAM-SCHEDULE')
+        main['telegram_schedule']=arguments['schedule']
+    if 'hour' in arguments:main['telegram_hour']=integer(arguments['hour'],0,23)
+    for flag in ('weekly','monthly'):
+        if flag in arguments:
+            if type(arguments[flag]) is not bool:raise ValueError('TELEGRAM-SCHEDULE')
+            main['telegram_'+flag]='1' if arguments[flag] else '0'
     if token:main['telegram_token']=token
     return {'main':main,'servers':[]}
 
 
+def speed_payload(arguments):
+    fields={'enabled','auto_new','budget_mib','duration','streams','daily_mib','busy_mbps'}
+    if set(arguments)!=fields or type(arguments['enabled']) is not bool or type(arguments['auto_new']) is not bool:
+        raise ValueError('SPEED-CONFIG-FIELDS')
+    main={'speed_enabled':'1' if arguments['enabled'] else '0','speed_auto_new':'1' if arguments['auto_new'] else '0'}
+    for key,low,high in (('budget_mib',1,32),('duration',2,15),('streams',1,4),('daily_mib',1,1024),('busy_mbps',1,1000)):
+        main['speed_'+key]=integer(arguments[key],low,high)
+    if arguments['budget_mib']>arguments['daily_mib']:raise ValueError('SPEED-DAILY-LIMIT')
+    return {'main':main,'servers':[]}
+
+
 def save(arguments, kind):
-    payload=system_payload(arguments,inventory()['profiles']) if kind=='system' else telegram_payload(arguments)
+    if kind=='system':payload=system_payload(arguments,inventory()['profiles'])
+    elif kind=='telegram':payload=telegram_payload(arguments)
+    elif kind=='speed':payload=speed_payload(arguments)
+    else:raise ValueError('SETUP-KIND')
     with control_lock():
         if kind=='telegram' and not arguments['token']:
             from telegram_report import option
@@ -75,6 +98,10 @@ def save(arguments, kind):
             input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'saved':False,'code':'SETUP-SAVE-FAILED'}
+    if kind=='speed' and not arguments['enabled']:
+        from speed_test import cancel
+        try:cancel()
+        except (OSError,ValueError):return {'saved':True,'code':'SPEED-CANCEL-UNVERIFIED','cancel_requested':False}
     return {'saved':True,'mode':'monitor','requires_lan_certification':True}
 
 

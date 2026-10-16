@@ -32,7 +32,7 @@ source=source.replace(anchor,anchor+"""
       panel.querySelectorAll('table').forEach(function(table,index){
         var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');
         function applySort(column,direction){
-          var entries=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1).map(function(row,i){return {row:row,i:i,value:(row.children[column]||{}).textContent||''};});
+          var entries=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1).map(function(row,i){return {row:row,i:i,value:row.children[column]?(row.children[column].getAttribute('data-sort-value')||row.children[column].textContent||''):''};});
           function unknown(v){return !v||/^(—|No data|Нет данных)$/.test(v.trim());}
           entries.sort(function(a,b){if(unknown(a.value)!==unknown(b.value))return unknown(a.value)?1:-1;var x=a.value.trim(),y=b.value.trim(),nx=Number(x.replace(/%$/,'')),ny=Number(y.replace(/%$/,''));var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;});
           entries.forEach(function(entry){table.appendChild(entry.row);});
@@ -116,5 +116,18 @@ source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};
 source=source.replace('return view.extend({',(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("      showPage(activeTab);window.addEventListener", "      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);\n      showPage(activeTab);window.addEventListener")
 source=source.replace("telegramChat.datatype='integer'","telegramChat.datatype='string'")
-(root/'dashboard24.js').write_text(source,encoding='utf8')
-print('Generated dashboard24.js with sidebar, language persistence and sortable tables')
+source=source.replace("var appRoot=null,settingsHost", "var lastGoodStatus=data[1];\n    var appRoot=null,settingsHost")
+source=source.replace("function draw(status){", "function draw(status){\n      if(!status.rpc_error)lastGoodStatus=status;")
+source=source.replace("poll.add(function(){return statusCall().then(draw).catch(function(){draw({error:'SERVICE-STOPPED'});});},10);", "poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);")
+source=source.replace("statusCall().catch(function(){return {error:'SERVICE-STOPPED'};})", "statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};})")
+source=source.replace("data[1].error?bi('Monitor unavailable','Монитор недоступен')", "data[1].rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):data[1].error?bi('Monitor unavailable','Монитор недоступен')")
+source=source.replace("sideState.textContent=status.error?", "sideState.textContent=status.rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):status.error?")
+source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};", "var ns=status.native_failover||{state:'UNKNOWN'};")
+source=source.replace("if(status.error)put('overview',E('p',{},badge(status.error)));", "if(status.rpc_error)put('overview',E('p',{'class':'alert-message warning'},'RPC-UNAVAILABLE: displaying last known measurements. Connectivity and service state are unconfirmed.'));\n      if(status.error)put('overview',E('p',{},badge(status.error)));")
+source=source.replace('return view.extend({',(Path(__file__).parent/'speed_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("period='day';", "period='day',speedPeriod='week';")
+source=source.replace("      sortableTables();showPage(activeTab);", "      put('ranking',speedPanel(status,inventory,speedPeriod,function(value){speedPeriod=value;draw(status);}));\n      sortableTables();showPage(activeTab);")
+source=source.replace("      settingsHost.insertBefore", "      settingsHost.appendChild(speedSettings(inventory));\n      settingsHost.insertBefore")
+source=source.replace("cell(new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))","E('td',{'data-sort-value':event.time},new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))")
+(root/'dashboard25.js').write_text(source,encoding='utf8')
+print('Generated dashboard25.js with sidebar, language persistence and sortable tables')

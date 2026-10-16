@@ -230,7 +230,11 @@ class Linux:
             if any(m in acceleration['loaded'] for m in ('mtkhnat','mtk_hnat')) and (data.get('hnat_enable')!='0' or acceleration['hnat_runtime']!='disabled'):
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')
-            selection=choose(data,inventory()['profiles'])
+            metadata=inventory();selection=choose(data,metadata['profiles'])
+            groups={s.get('profile'):s.get('channel','default') for s in metadata.get('servers',[])}
+            for profile in (selection['source'],selection['target']):profile['channel']=groups.get(profile['id'],profile.get('group_id','default'))
+            disabled={s.get('profile') for s in metadata.get('servers',[]) if s.get('enabled') is False}
+            if selection['source']['id'] in disabled or selection['target']['id'] in disabled:blockers.append('PROFILE-NOT-MONITORED')
         except (Refused,OSError,ValueError,subprocess.SubprocessError) as e:
             blockers.append(str(e) if isinstance(e,Refused) else 'POLICY-READ-FAILED');selection=None
         if list(Path('/var/run').glob('tunnel-switch*.lock')) or Path('/tmp/run/rtp2.lock').exists():blockers.append('VENDOR-WORKER-BUSY')
@@ -403,13 +407,52 @@ def child(tx):
         if journal.get('tx')==tx and journal.get('pid')==os.getpid() and journal.get('phase')=='APPLYING':break
         time.sleep(.1)
     else:raise Refused('WATCHDOG-DID-NOT-ARM')
-    if time.time()>journal['deadline']:raise Refused('TRANSACTION-EXPIRED')
+    if transaction_expired(journal):raise Refused('TRANSACTION-EXPIRED')
     backend=Linux(); blockers,_=backend.diagnostic()
     if blockers:raise Refused(blockers[0])
     if backend.order()!=(journal['before'],journal['hash']):raise Refused('POLICY-GENERATION-CHANGED')
     backend.guard()
     backend.reorder(journal['after'])
     backend.apply()
+
+
+def transition_kind(source,target):
+    source_protocol=source.get('protocol') or source['id'].split(':',1)[0]
+    target_protocol=target.get('protocol') or target['id'].split(':',1)[0]
+    if source_protocol!=target_protocol:return 'protocol'
+    if source.get('channel','default')!=target.get('channel','default'):return 'channel'
+    return 'server'
+
+
+def monotonic_lease(settings,until,wall=None,mono=None):
+    """Freeze the elapsed-time lease on first observation; NTP cannot extend it."""
+    wall=time.time() if wall is None else wall
+    mono=time.monotonic() if mono is None else mono
+    trial=settings.get('native_trial')
+    if not isinstance(trial,str) or not trial or not wall<until<=wall+14400:
+        return 0,'BOUNDED-DEADLINE-REQUIRED'
+    identity=digest({'trial':trial,'until':until})
+    path=RUNTIME/'native-lease.json'
+    try:record=read_json(path)
+    except (OSError,ValueError):return 0,'LEASE-INTEGRITY-FAILED'
+    if record:
+        data=record.get('data')
+        if not isinstance(data,dict) or record.get('sha256')!=digest(data):return 0,'LEASE-INTEGRITY-FAILED'
+        if data.get('identity')==identity:
+            end=data.get('monotonic_until');start=data.get('monotonic_start')
+            if not isinstance(end,(int,float)) or not isinstance(start,(int,float)) or not 0<=start<=mono or not start<=end<=start+14400:
+                return 0,'LEASE-INTEGRITY-FAILED'
+            return end,None
+    data={'identity':identity,'monotonic_start':mono,'monotonic_until':mono+until-wall}
+    try:atomic_json(path,{'data':data,'sha256':digest(data)})
+    except (OSError,ValueError):return 0,'LEASE-STORAGE-FAILED'
+    return data['monotonic_until'],None
+
+
+def transaction_expired(journal,wall=None,mono=None):
+    wall=time.time() if wall is None else wall
+    mono=time.monotonic() if mono is None else mono
+    return wall>=journal['deadline'] or (journal.get('monotonic_deadline') is not None and mono>=journal['monotonic_deadline'])
 
 
 def attempt(backend,selection,until,trial):
@@ -423,9 +466,12 @@ def attempt(backend,selection,until,trial):
         if trace(selection['target'])==baseline:raise Refused('RESERVE-EXIT-NOT-DISTINCT')
     after[i],after[j]=after[j],after[i]
     tx=uuid.uuid4().hex
+    wall=time.time();mono=time.monotonic()
+    lease_end,lease_error=monotonic_lease(backend.policy()['settings'],until,wall,mono)
+    if lease_error:raise Refused(lease_error)
     journal={'tx':tx,'phase':'ARMED','before':before,'after':after,'hash':selection['hash'],
              'source':selection['source']['id'],'target':selection['target']['id'],
-             'deadline':min(until,time.time()+90),'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
+             'deadline':min(until,wall+90),'monotonic_deadline':min(lease_end,mono+90),'lease_monotonic_until':lease_end,'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
              'pid':None,'started':time.time()}
     publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial})
     journal_write(journal)
@@ -435,7 +481,7 @@ def attempt(backend,selection,until,trial):
     try:
         publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial})
         journal_write(journal);released=True
-        process.wait(timeout=max(1,min(50,journal['deadline']-time.time())))
+        process.wait(timeout=max(1,min(50,journal['monotonic_deadline']-time.monotonic())))
         if process.returncode:raise Refused('VENDOR-APPLY-FAILED')
         if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
         target_exit=trace(selection['target'])
@@ -445,7 +491,7 @@ def attempt(backend,selection,until,trial):
         journal.update(phase='WAIT-CLIENT',expected_exit=target_exit);journal_write(journal)
         publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],
                           'requires':'LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback'})
-        while time.time()<journal['deadline'] and not STOP:
+        while not transaction_expired(journal) and not STOP:
             stopped=read_json(PERSIST/'native-stop.json',{})
             if stopped.get('requested',0)>=journal['started']:raise Refused('CLIENT-STOP')
             confirmation=read_json(RUNTIME/'native-confirm.json',{})
@@ -463,7 +509,7 @@ def attempt(backend,selection,until,trial):
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
                                  'target':selection['target']['id'],'direction':selection['direction'],'time':time.time(),'until':until})
                 publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
-                                  'until':until,'trial':trial,'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
+                                  'until':until,'trial':trial,'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
             time.sleep(1)
         raise Refused('CLIENT-CONFIRMATION-TIMEOUT')
@@ -509,6 +555,12 @@ def serve():
                 stopped=read_json(PERSIST/'native-stop.json',{})
                 from auto_control import effective_intent
                 enabled,stop_latched=effective_intent(settings,stopped,read_json(RUNTIME/'auto-control.json',{}),time.time())
+                lease_error=None;lease_end=0
+                if enabled or active.get('phase')=='COMMITTED':lease_end,lease_error=monotonic_lease(settings,until)
+                if active.get('phase')=='COMMITTED':
+                    if not active.get('lease_monotonic_until'):lease_error='LEGACY-LEASE-RECOVERY'
+                    else:lease_end=min(lease_end,active['lease_monotonic_until'])
+                lease_expired=time.time()>=until or (lease_end>0 and time.monotonic()>=lease_end) or (active.get('phase')=='COMMITTED' and lease_error is not None)
                 if active.get('phase')=='HELD-ON-RESERVE' and (not enabled or stop_latched or settings.get('native_trial')==active.get('trial_nonce')):
                     if backend.order()!=(active['after'],active['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
                     publish({'state':'STOPPED-ON-RESERVE','reason':'SOURCE-NOT-VERIFIED','source':active['source'],
@@ -519,7 +571,7 @@ def serve():
                 if preparation:
                     if active.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED'):raise Refused('ACCELERATION-PREPARE-DURING-TRANSACTION')
                     disable_acceleration(backend,preparation)
-                if active.get('phase')=='COMMITTED' and (time.time()>=until or not enabled or stop_latched):
+                if active.get('phase')=='COMMITTED' and (lease_expired or not enabled or stop_latched):
                     if not finish_committed(backend,active,'TRIAL-ENDED'):time.sleep(5);continue
                     publish({'state':'ROLLED-BACK','reason':'TRIAL-ENDED'})
                     active=journal_read()
@@ -531,9 +583,10 @@ def serve():
                 if not enabled:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'DISABLED','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
-                if until>0 and time.time()>=until:
+                if until>0 and lease_expired:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'EXPIRED','reason':'TRIAL-ENDED'});time.sleep(5);continue
+                if lease_error:blockers.append(lease_error)
                 if settings.get('native_session_loss')!='1':blockers.append('SESSION-LOSS-NOT-ACCEPTED')
                 if not time.time()<until<=time.time()+14400:blockers.append('BOUNDED-DEADLINE-REQUIRED')
                 if blockers:

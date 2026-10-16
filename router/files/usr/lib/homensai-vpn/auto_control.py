@@ -1,3 +1,4 @@
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
 """Serialized UI intent; only the supervisor writes network state.
 
 Resume keeps the existing nonce, certified policy and bounded deadline.
@@ -11,6 +12,8 @@ from agent import RUNTIME, PERSIST, atomic_json, read_json
 
 
 @contextmanager
+
+
 def control_lock(directory=None):
     directory = directory or RUNTIME
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)

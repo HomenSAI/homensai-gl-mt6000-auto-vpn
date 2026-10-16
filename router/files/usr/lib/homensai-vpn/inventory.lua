@@ -30,6 +30,14 @@ end)
 local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3'}
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
+  main.setup_complete=s.setup_complete=='1'
+  main.speed_enabled=s.speed_enabled=='1'
+  main.speed_auto_new=s.speed_auto_new=='1'
+  main.speed_budget_mib=math.max(1,math.min(32,tonumber(s.speed_budget_mib) or 8))
+  main.speed_duration=math.max(2,math.min(15,tonumber(s.speed_duration) or 5))
+  main.speed_streams=math.max(1,math.min(4,tonumber(s.speed_streams) or 2))
+  main.speed_daily_mib=math.max(1,math.min(1024,tonumber(s.speed_daily_mib) or 128))
+  main.speed_busy_mbps=math.max(1,math.min(1000,tonumber(s.speed_busy_mbps) or 2))
   main.plan_enabled=s.plan_enabled=='1'
   main.native_enabled=s.native_enabled=='1'
   main.native_session_loss=s.native_session_loss=='1'
@@ -37,6 +45,11 @@ uci:foreach('homensai_vpn','main',function(s)
   main.native_until=s.native_until or ''
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
+  main.telegram_enabled=s.telegram_enabled=='1'
+  main.telegram_schedule=s.telegram_schedule or 'interval'
+  main.telegram_hour=math.max(0,math.min(23,tonumber(s.telegram_hour) or 7))
+  main.telegram_weekly=s.telegram_weekly~='0'
+  main.telegram_monthly=s.telegram_monthly~='0'
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0
   main.interval=math.max(10,math.min(300,tonumber(s.interval) or 30))
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
@@ -56,4 +69,12 @@ uci:foreach('route_policy',nil,function(s)
   end
   order=order+1
 end)
-print(json.encode({profiles=profiles,servers=channels,settings=main,native_candidates=native_candidates}))
+local wan={}
+uci:foreach('firewall','zone',function(s)
+ if s.name=='wan' then
+  local names=s.network or {}
+  if type(names)=='string' then names={names} end
+  for _,name in ipairs(names) do wan[#wan+1]=name end
+ end
+end)
+print(json.encode({profiles=profiles,servers=channels,settings=main,native_candidates=native_candidates,wan_interfaces=wan}))

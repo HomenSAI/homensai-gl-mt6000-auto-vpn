@@ -14,6 +14,14 @@ import agent
 
 
 class ControlTests(unittest.TestCase):
+    def test_disabling_every_profile_does_not_fall_back_to_probing_all(self):
+        data={'profiles':[{'id':'a'},{'id':'b'}],'servers':[{'profile':'a','enabled':False},{'profile':'b','enabled':False}]}
+        self.assertEqual(agent.monitoring_profiles(data)[0],[])
+
+    def test_empty_mapping_preserves_initial_discovery(self):
+        data={'profiles':[{'id':'a'},{'id':'b'}],'servers':[]}
+        self.assertEqual(len(agent.monitoring_profiles(data)[0]),2)
+
     def test_every_registered_rpc_has_an_explicit_application_acl(self):
         out=io.StringIO()
         with contextlib.redirect_stdout(out):agent.rpc('list')

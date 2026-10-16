@@ -9,7 +9,8 @@ local ok=pcall(function()
   local data=json.decode(input)
   local allowed={plan_source=true,plan_target=true,interval=true,native_duration=true,
     native_session_loss=true,setup_complete=true,telegram_chat=true,telegram_token=true,
-    telegram_enabled=true,telegram_interval=true}
+    telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,speed_enabled=true,speed_auto_new=true,
+    speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true}
   for key,value in pairs(data.main) do
     assert(allowed[key] and type(value)=='string')
     assert(c:set('homensai_vpn','main',key,value))

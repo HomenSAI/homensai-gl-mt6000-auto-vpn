@@ -266,3 +266,13 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Root cause: an earlier string replacement assumed native_stop was the last ACL entry; native_start had already been appended, so the replacement silently made no change. Replaced text-based edits with structured JSON assignment of the explicit own-method allowlist.
 - Added a regression requiring registered RPC methods to equal read/write ACL coverage, read scope limited to inventory/status/events, write scope limited to the application's ubus object, and no wildcard grants. Reload rpcd after package upgrade to load the new ACL; users with existing sessions may need to sign out/in.
 - Alpha5: 116 Python tests plus 10 UI state invariants pass. Deterministic package 546598 bytes, SHA256 ea1ae9eca7f89eddd0d7bdc023080e5e4495912ee38b271934cf52967f273058. This fixes application RPC authorization; it is not proof of the historical browser HTTP 403 cause.
+
+### 2026-10-16 06:08 Europe/Berlin — local v0.7 candidate verification
+
+- Scope: local development only, as requested. No router connection, deployment, VPN changes or live fault injection in this run. Installed router version is not changed by this checkpoint.
+- Added opt-in bound-interface speed measurements, conservative persistent payload quotas, owned-worker cancellation and timeout checks. Disabled by default; local tests do not demonstrate real server throughput.
+- Added daily WAN/VPN accounting with explicit observation gaps and retention indicators. Found a missing WAN sampling hook after a text transformation; initialized the device list, restored the sampling call and added a one-loop integration regression.
+- Added calendar Telegram scheduling and a checksummed delivery ledger. Unknown delivery outcomes remain unknown rather than being silently retried. Fixed local 07:00 calculation to use calendar time rather than midnight plus elapsed seconds; tests cover daylight-saving transitions and missing measurements. Telegram transport is mocked in these tests.
+- Added monotonic transaction deadlines so wall-clock adjustments cannot extend the permitted experiment. Device validation remains pending.
+- During development, a Windows default-encoding write produced an invalid Python source byte; the syntax check detected it. Rewrote affected sources as UTF-8 with LF line endings. No affected source was deployed.
+- Verification: 158 Python tests passed. Interface rendering, complete wizard integration, hierarchical failover, operator fault control and hardware acceptance are still pending. This is a development checkpoint, not a production release.

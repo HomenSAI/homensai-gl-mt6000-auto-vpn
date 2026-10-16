@@ -23,7 +23,11 @@
           "setup_system",
           "setup_telegram",
           "telegram_test",
-          "setup_check"
+          "setup_check",
+          "speed_start",
+          "speed_cancel",
+          "setup_speed",
+          "telegram_retry"
         ]
       },
       "uci": [

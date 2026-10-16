@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
 """OpenWrt monitor alpha. No route/firewall/VPN write commands exist here."""
 import argparse
 import base64
@@ -20,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.6.0-alpha5'
+VERSION = '0.7.0-alpha1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -41,7 +42,7 @@ def command(args, timeout=5):
 def inventory():
     data = json.loads(command(['/usr/bin/lua', INVENTORY]))
     # Lua cjson represents an empty table as {}, including empty array fields.
-    for key in ('profiles','servers','native_candidates'):
+    for key in ('profiles','servers','native_candidates','wan_interfaces'):
         value=data.get(key,[])
         if value=={}:value=[]
         if not isinstance(value,list):raise ValueError('invalid inventory array')
@@ -93,8 +94,12 @@ def checksum(value):
 
 
 class Accounting:
-    def __init__(self, data=None):
+
+    def __init__(self, data=None, _nested=False):
         self.months = data.get('months', {}) if data else {}
+        self.days = data.get('days', {}) if data else {}
+        self.retention = data.get('retention', {}) if data else {}
+        self.wan=Accounting(data['wan'],_nested=True) if not _nested and data and isinstance(data.get('wan'),dict) else None
         self.previous = {}  # Never carry kernel counter baselines across reboot.
         self.gaps = int(data.get('gaps', 0)) if data else 0
         self.quality = data.get('quality', {}) if data else {}
@@ -148,6 +153,7 @@ class Accounting:
         old_index, old_rx, old_tx, old_time = previous
         if old_index != ifindex or rx < old_rx or tx < old_tx or now <= old_time or now-old_time > max_gap:
             self.gaps += 1
+            self.note_gap(old_time,now)
             return
         cursor = old_time
         while cursor < now:
@@ -165,8 +171,74 @@ class Accounting:
             if boundary < now:
                 record['boundary_estimated'] = True
             cursor = end
-        for key in sorted(self.months)[:-18]:
-            del self.months[key]
+        cursor=old_time
+        while cursor<now:
+            local=datetime.fromtimestamp(cursor);tomorrow=local.date()+timedelta(days=1)
+            boundary=time.mktime((tomorrow.year,tomorrow.month,tomorrow.day,0,0,0,0,0,-1))
+            end=min(now,boundary);weight=(end-cursor)/(now-old_time);key=local.strftime('%Y-%m-%d')
+            record=self.days.setdefault(key,{'rx':0,'tx':0,'seconds':0,'boundary_estimated':False,'gaps':0,'observed':False})
+            record.update(observed=True,first_sample=min(record.get('first_sample',cursor),cursor),last_sample=max(record.get('last_sample',end),end))
+            record['rx']+=(rx-old_rx)*weight;record['tx']+=(tx-old_tx)*weight;record['seconds']+=end-cursor
+            if boundary<now:record['boundary_estimated']=True
+            cursor=end
+        for key in sorted(self.days)[:-400]:del self.days[key]
+        current_month=datetime.fromtimestamp(now).strftime('%Y-%m')
+        others=[key for key in sorted(self.months) if key!=current_month]
+        keep=17 if current_month in self.months else 18
+        for key in others[:-keep]:del self.months[key]
+
+    def note_gap(self,start,end):
+        # No traffic is invented for missing intervals; gap-only days are unobserved.
+        cursor=min(start,end);finish=max(start,end)
+        cursor=max(cursor,finish-400*86400)
+        while True:
+            local=datetime.fromtimestamp(cursor);key=local.strftime('%Y-%m-%d')
+            row=self.days.setdefault(key,{'rx':0,'tx':0,'seconds':0,'boundary_estimated':False,'gaps':0,'observed':False})
+            row['gaps']=row.get('gaps',0)+1
+            tomorrow=local.date()+timedelta(days=1)
+            boundary=time.mktime((tomorrow.year,tomorrow.month,tomorrow.day,0,0,0,0,0,-1))
+            if boundary>=finish:break
+            cursor=boundary
+        for key in sorted(self.days)[:-400]:del self.days[key]
+
+    def compact(self,limit=3*1024*1024):
+        while len(json.dumps(self.export(),ensure_ascii=True).encode())>limit:
+            buckets=sorted((int(key),profile,key) for profile,value in self.quality.items() for key in value.get('buckets',{}))
+            if buckets:
+                take=max(1,len(buckets)//2)
+                for _,profile,key in buckets[:take]:del self.quality[profile]['buckets'][key]
+                self.retention['quality_buckets_dropped']=self.retention.get('quality_buckets_dropped',0)+take
+                continue
+            days=sorted((key,profile) for profile,value in self.activity.items() for key in value.get('days',{}))
+            if not days:raise ValueError('accounting retention budget exceeded')
+            take=max(1,len(days)//4)
+            for key,profile in days[:take]:del self.activity[profile]['days'][key]
+            self.retention['activity_days_dropped']=self.retention.get('activity_days_dropped',0)+take
+
+    def public_export(self):
+        self.compact();data=dict(self.export())
+        if len(json.dumps(data,ensure_ascii=True).encode())<=500*1024:return data
+        quality={}
+        for identifier,value in self.quality.items():
+            totals={'n':0,'success':0,'rtt_sum':0,'unknown':0}
+            for bucket in value.get('buckets',{}).values():
+                for key in totals:totals[key]+=bucket.get(key,0)
+            quality[identifier]={'last':value.get('last'),'buckets':{'summary':totals}}
+        data['quality']=quality;data['rpc_aggregated']=True
+        if len(json.dumps(data,ensure_ascii=True).encode())<=500*1024:return data
+        today=datetime.now().date();week=(today-timedelta(days=6)).isoformat();month=today.strftime('%Y-%m')
+        activity={}
+        for identifier,value in self.activity.items():
+            periods={}
+            for period in ('day','week','month'):
+                total={key:0 for key in ('up','down','idle','unknown','connections','failures')}
+                for day,bucket in value.get('days',{}).items():
+                    included=day==today.isoformat() if period=='day' else week<=day<=today.isoformat() if period=='week' else day[:7]==month and day<=today.isoformat()
+                    if included:
+                        for key in total:total[key]+=bucket.get(key,0)
+                periods[period]=total
+            activity[identifier]={'name':value.get('name',identifier),'protocol':value.get('protocol','unknown'),'days':{},'periods':periods}
+        data['activity']=activity;return data
 
     def observe(self, result):
         identifier, stamp = result['id'], result['time']
@@ -191,7 +263,7 @@ class Accounting:
             self.quality = {key: self.quality[key] for key in keep}
 
     def export(self):
-        return {'months': self.months, 'gaps': self.gaps, 'quality': self.quality, 'activity': self.activity}
+        return {'months':self.months,'days':self.days,'gaps':self.gaps,'quality':self.quality,'activity':self.activity,'retention':self.retention,'wan':self.wan.export() if self.wan else None}
 
 
 def bound_socket(device, mark, udp=False):
@@ -344,7 +416,27 @@ def sample_counters(profiles, accounting, now, max_gap):
             accounting.gaps += 1
 
 
+def sample_wan_counters(data,accounting,now,max_gap=90):
+    # WAN firewall-zone interfaces are explicit sources, not guessed default routes.
+    devices=[];seen=set()
+    for logical in data.get('wan_interfaces',[]):
+        if not isinstance(logical,str) or not SAFE.fullmatch(logical):continue
+        try:
+            interface=json.loads(command(['ubus','call','network.interface.'+logical,'status']))
+            if not interface.get('up') or interface.get('proto') in ('ovpnclient','wgclient','openvpn','wireguard'):continue
+            device=interface.get('l3_device','')
+            if not SAFE.fullmatch(device) or len(device)>15 or device in seen:continue
+            seen.add(device);root=Path('/sys/class/net')/device
+            if accounting.wan is None:accounting.wan=Accounting()
+            accounting.wan.sample(device,int((root/'ifindex').read_text()),int((root/'statistics/rx_bytes').read_text()),int((root/'statistics/tx_bytes').read_text()),now,max_gap)
+            devices.append({'device':device})
+        except (OSError,ValueError,subprocess.SubprocessError):
+            if accounting.wan:accounting.wan.gaps+=1;accounting.wan.note_gap(now,now)
+    return devices
+
+
 def checkpoint(accounting):
+    accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
     old = read_json(PERSIST/'checkpoint.json')
     if old and old.get('sha256') == checksum(old.get('data')):
@@ -367,10 +459,20 @@ def restore():
                 continue
             acc = Accounting(raw['data']['accounting'])
             acc.gaps += 1
+            acc.note_gap(raw['data'].get('saved',time.time()),time.time())
+            if acc.wan:
+                acc.wan.gaps+=1;acc.wan.note_gap(raw['data'].get('saved',time.time()),time.time())
             return acc, 'STORAGE-RECOVERED' if seen_error else None
         except (OSError, ValueError, KeyError, TypeError):
             seen_error = True
     return Accounting(), 'STORAGE-001' if seen_error else None
+
+
+def monitoring_profiles(data):
+    selected={s['profile']:s for s in data.get('servers',[]) if s.get('enabled')}
+    profiles=data.get('profiles',[])
+    observed=[p for p in profiles if p['id'] in selected] if data.get('servers') else profiles
+    return observed,selected
 
 
 def serve():
@@ -384,7 +486,9 @@ def serve():
     events, samples, last_save = [], [], time.monotonic()
     from telegram_report import deliver
     from failover_plan import plan
-    telegram_saved = read_json(PERSIST/'telegram-state.json', {})
+    from telegram_state import load as load_telegram_state, save as save_telegram_state
+    telegram_saved,telegram_notice=load_telegram_state(PERSIST)
+    speed_previous=None
     while not STOP:
         started = time.monotonic()
         try:
@@ -392,7 +496,7 @@ def serve():
             settings = data['settings']
             profiles = data['profiles']
             selected = {s['profile']: s for s in data.get('servers', []) if s.get('enabled')}
-            observed = [p for p in profiles if p['id'] in selected] if selected else profiles
+            observed = monitoring_profiles(data)[0]
             bound = [p for p in observed if p.get('interface')][:settings['probe_limit']]
             with ThreadPoolExecutor(max_workers=2) as pool:
                 measured = list(pool.map(probe, bound))
@@ -404,8 +508,11 @@ def serve():
                 custom = selected.get(p['id'], {})
                 row['name'] = custom.get('name') or p['name']
                 row['channel'] = custom.get('channel') or 'default'
+                row['priority'] = custom.get('priority',100)
                 rows.append(row)
+            wan_devices=[]
             if time.time() >= 1704067200:
+                wan_devices=sample_wan_counters(data,accounting,time.time(),settings['interval']*3)
                 sample_counters(measured, accounting, time.time(), settings['interval']*3)
                 accounting.track_activity(rows, time.time(), settings['interval']*3)
             else:
@@ -414,6 +521,12 @@ def serve():
                 accounting.observe(row)
                 samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok')})
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*7][-10000:]
+            try:
+                from speed_test import observe_traffic, automatic_new, active_job, cancel as cancel_speed, SpeedError
+                observe_traffic(wan_devices or measured,scope='wan' if wan_devices else 'vpn')
+                if active_job() and any(p.get('code') in ('VPN-001','VPN-003','DNS-001') for p in measured):cancel_speed()
+                speed_previous=automatic_new(rows,speed_previous)
+            except Exception:events.append({'time':time.time(),'code':'SPEED-MONITOR-UNAVAILABLE'})
             current = {p['id']: p.get('code') for p in rows}
             previous = read_json(RUNTIME/'status.json', {}).get('profiles', [])
             old = {p['id']: p.get('code') for p in previous}
@@ -423,7 +536,7 @@ def serve():
             if storage_error:
                 events.append({'time': time.time(), 'code': storage_error})
             status = {'version': VERSION, 'mode': 'monitor', 'time': time.time(), 'profiles': rows,
-                      'accounting': accounting.export(), 'samples': samples[-1000:], 'events': events[-300:],
+                      'accounting': accounting.public_export(), 'samples': samples[-1000:], 'events': events[-300:],
                       'capabilities': {'native_apply': False, 'reason': 'GL.iNet worker/firewall transaction is not device-validated'},
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
@@ -433,9 +546,22 @@ def serve():
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
-            status['telegram'], telegram_saved, delivered = deliver(status, telegram_saved, time.time())
-            if delivered:
-                atomic_json(PERSIST/'telegram-state.json', telegram_saved)
+            try:
+                from speed_test import public_status as speed_status
+                status['speed_tests']=speed_status()
+            except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
+            before_telegram=telegram_saved
+            if telegram_notice=='TELEGRAM-STATE-CORRUPT':
+                status['telegram']={'enabled':bool(settings.get('telegram_enabled')),'code':telegram_notice}
+            else:
+                try:
+                    status['telegram'],telegram_saved,delivered=deliver(dict(status,accounting=accounting.export()),telegram_saved,time.time())
+                    if telegram_notice:status['telegram']['storage_notice']=telegram_notice
+                    if telegram_saved!=before_telegram:
+                        try:save_telegram_state(telegram_saved,PERSIST);telegram_notice=None
+                        except (OSError,ValueError):status['telegram']['storage_error']='TELEGRAM-STATE-WRITE-FAILED'
+                except Exception:
+                    status['telegram']={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
             atomic_json(RUNTIME/'status.json', status)
             if time.monotonic()-last_save >= settings['checkpoint']:
                 try:
@@ -453,18 +579,39 @@ def serve():
                 request.unlink();break
             time.sleep(1)
     try:
+        from speed_test import cancel as cancel_speed
+        cancel_speed()
+    except (OSError,ValueError):pass
+    try:
         checkpoint(accounting)
     except (OSError, ValueError):
         pass
+
+
+def trim_status_reply(status,limit=900000):
+    if len(json.dumps(status,ensure_ascii=True).encode())<=limit:return status
+    for row in status.get('profiles',[]):
+        for key in ('section','group_id','profile_id','device','mark','table','scope','lan_path_verified'):row.pop(key,None)
+    collections=[(status,'samples'),(status,'events'),(status.get('native_history',{}),'events'),(status.get('speed_tests',{}),'results')]
+    while len(json.dumps(status,ensure_ascii=True).encode())>limit:
+        changed=False
+        for parent,key in collections:
+            rows=parent.get(key,[])
+            if len(rows)>2:parent[key]=rows[-max(2,len(rows)//2):];changed=True
+        if not changed:break
+    status['rpc_history_reduced']=True
+    return status
 
 
 def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
-                          'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'setup_check': {},
+                          'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
+                          'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
-                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0}}));return
+                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False}}));return
     request = sys.stdin.buffer.read(65537)
     if len(request) > 65536:
         raise ValueError('oversize RPC input')
@@ -490,14 +637,31 @@ def rpc(method):
                 or transaction.get('phase')!='WAIT-CLIENT' or transaction.get('tx')!=arguments['tx']
                 or transaction.get('expected_exit')!=str(address) or time.time()>transaction.get('deadline',0)):
             raise ValueError('transaction no longer awaiting confirmation')
+        if transaction.get('monotonic_deadline') is not None and time.monotonic()>=transaction['monotonic_deadline']:
+            raise ValueError('confirmation elapsed-time window expired')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
-    if method in ('setup_system','setup_telegram'):
+    if method in ('setup_system','setup_telegram','setup_speed'):
         from setup_config import save
-        print(json.dumps(save(arguments,'system' if method=='setup_system' else 'telegram')));return
+        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed'}[method])
+        except ValueError as error:
+            code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'
+            result={'saved':False,'code':code}
+        print(json.dumps(result));return
+    if method=='speed_start':
+        from speed_test import start, SpeedError
+        try:result=start(arguments)
+        except SpeedError as error:result={'accepted':False,'code':error.code}
+        print(json.dumps(result));return
     if arguments:
         raise ValueError('unexpected RPC arguments')
-    if method == 'setup_check':
+    if method=='telegram_retry':
+        from telegram_report import retry_unknown
+        print(json.dumps(retry_unknown()));return
+    elif method=='speed_cancel':
+        from speed_test import cancel
+        print(json.dumps(cancel()));return
+    elif method == 'setup_check':
         from setup_config import self_test
         print(json.dumps(self_test()));return
     elif method == 'telegram_test':
@@ -512,14 +676,18 @@ def rpc(method):
         from auto_control import start, stop
         print(json.dumps(start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)));return
     elif method in ('status', 'events'):
-        status = read_json(RUNTIME/'status.json', {'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
+        status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':
             from native_history import read_public
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
-        print(json.dumps({'events': status.get('events', [])} if method == 'events' else status))
+            try:
+                from speed_test import public_status as speed_status
+                status['speed_tests']=speed_status()
+            except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
+        print(json.dumps({'events': status.get('events', [])} if method=='events' else trim_status_reply(status)))
     else:
         raise ValueError('unknown RPC method')
 
@@ -542,6 +710,7 @@ def main():
         print(json.dumps(result));return
     if args.action in ('list','call'):
         rpc('list' if args.action == 'list' else args.method);return
+
     def stop(*_):
         global STOP
         STOP = True

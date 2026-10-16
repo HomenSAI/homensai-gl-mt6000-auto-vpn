@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
 import unittest
+import tempfile
+import agent
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
@@ -8,6 +10,10 @@ import telegram_report as report
 
 
 class TelegramTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
+        patcher=patch.object(agent,'RUNTIME',Path(self.tmp.name));patcher.start();self.addCleanup(patcher.stop)
+
     def test_native_history_report_is_scoped_and_does_not_expose_private_fields(self):
         now=report.time.time();month=report.datetime.now().strftime('%Y-%m')
         status={'native_failover':{'state':'COMMITTED','tx':'PRIVATE_SENTINEL','expected_exit':'EXIT_SENTINEL','acceleration':{'hook_log':'KERNEL_SENTINEL'}},
@@ -24,7 +30,7 @@ class TelegramTests(unittest.TestCase):
         self.assertNotIn('automatic commits',text)
 
     def test_disabled_never_sends(self):
-        with patch.object(report, 'option', return_value='0'), patch.object(report.urllib.request, 'urlopen') as send:
+        with patch.object(report,'config_snapshot',return_value={'telegram_enabled':'0'}), patch.object(report.urllib.request, 'urlopen') as send:
             status, _, sent = report.deliver({}, {}, 10000)
             self.assertFalse(sent)
             self.assertFalse(status['enabled'])
@@ -32,7 +38,7 @@ class TelegramTests(unittest.TestCase):
 
     def test_hourly_gate(self):
         options = {'telegram_enabled':'1','telegram_interval':'60','telegram_chat':'123','telegram_token':'123:synthetic'}
-        with patch.object(report, 'option', side_effect=lambda key:options[key]), patch.object(report.urllib.request, 'urlopen') as send:
+        with patch.object(report,'config_snapshot',return_value=options), patch.object(report.urllib.request, 'urlopen') as send:
             status, _, sent = report.deliver({}, {'sent':10000}, 11000)
             self.assertFalse(sent)
             self.assertEqual(status['interval_minutes'], 60)
@@ -40,7 +46,7 @@ class TelegramTests(unittest.TestCase):
 
     def test_error_does_not_expose_secret(self):
         options = {'telegram_enabled':'1','telegram_interval':'60','telegram_chat':'123','telegram_token':'123:synthetic'}
-        with patch.object(report, 'option', side_effect=lambda key:options[key]), patch.object(report.urllib.request, 'urlopen', side_effect=ValueError('123:synthetic')):
+        with patch.object(report,'config_snapshot',return_value=options), patch.object(report.urllib.request, 'urlopen', side_effect=ValueError('123:synthetic')):
             status, _, sent = report.deliver({}, {}, 10000)
             self.assertFalse(sent)
             self.assertNotIn('synthetic', str(status))
