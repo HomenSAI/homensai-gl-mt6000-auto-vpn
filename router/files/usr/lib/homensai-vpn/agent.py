@@ -541,6 +541,8 @@ def serve():
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
             status['failover_plan']=plan(status,settings,time.time())
+            from candidate_hierarchy import rank_candidates
+            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,settings.get('plan_source',''),time.time(),max_age=settings.get('interval',30)*3)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             from native_history import read_public
             status['native_history']=read_public(PERSIST)

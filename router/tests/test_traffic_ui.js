@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context={E:(tag,attrs={},children=[])=>({tag,attrs,children:Array.isArray(children)?children:[children],appendChild(child){this.children.push(child);}}),bi:en=>en,bytes:n=>n+' bytes',Intl,Date};
+vm.createContext(context);vm.runInContext(fs.readFileSync('router/traffic_panel.inc.js','utf8'),context);
+const day=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+let panel=context.trafficHistoryPanel({days:{[day]:{observed:false,rx:0,tx:0,gaps:1}},wan:{days:{[day]:{observed:true,rx:100,tx:20,gaps:0}}}});
+let row=panel.children[1].children[1];assert.equal(row.children[1].children[0],'100 bytes');assert.equal(row.children[3].children[0],'—');assert.equal(row.children[5].children[0],'1');
+panel=context.trafficHistoryPanel({});assert(JSON.stringify(panel).includes('No daily observations yet'));
+panel=context.trafficHistoryPanel({rpc_aggregated:true});assert(JSON.stringify(panel).includes('HISTORY-PARTIAL'));
+const generated=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard25.js','utf8');
+assert(generated.includes("p.periods&&p.periods[period]"));assert(generated.includes("[currentMonth]||null"));assert(!generated.includes('monthKeys[monthKeys.length-1]'));
+console.log('PASS: WAN/VPN separation, unknown versus zero, retention warning, aggregate histogram and current-month selection');

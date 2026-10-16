@@ -46,6 +46,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
   main.telegram_enabled=s.telegram_enabled=='1'
+  main.telegram_destination=s.telegram_chat or ''
+  main.telegram_interval=math.max(5,math.min(10080,tonumber(s.telegram_interval) or 60))
   main.telegram_schedule=s.telegram_schedule or 'interval'
   main.telegram_hour=math.max(0,math.min(23,tonumber(s.telegram_hour) or 7))
   main.telegram_weekly=s.telegram_weekly~='0'

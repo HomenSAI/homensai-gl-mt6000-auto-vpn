@@ -3,14 +3,14 @@
 Prepared: 2026-10-15, Europe/Berlin.
 Status: APPROVED by user on 2026-10-15. Work in progress; checkboxes require evidence.
 
-## Current baseline
+## Current baseline — updated 2026-10-16
 
-- Installed release last verified: 0.5.0-alpha13. Limited automatic failover and rollback between two already connected VPN profiles were demonstrated on the GL-MT6000, firmware 4.11.0. This is not full production acceptance.
-- Permanent unattended operation is not certified. The current controller uses bounded windows and LAN-client confirmation.
-- One final client helper run reported CLIENT-CABLE-NOT-LOCAL; its root cause remains unknown.
-- Sidebar UI shipped as 0.5.0-alpha13 and verified on actual LuCI; see UI-ACCEPTANCE-alpha13.md.
-- Auto-mode button candidate was prepared before this approval request: dashboard17, authenticated native_start RPC, readiness checks and six new tests. The Linux suite passed 96 tests and JS syntax checking passed. No alpha13 installation or publication occurred. The candidate is uncommitted; review and hardening are still required.
-- Repeated pause-status automation vpn-2 was changed to PAUSED at the user's request.
+- Binding scope: LOCAL DEVELOPMENT ONLY. Do not connect to, deploy to, reconfigure or fault-test the router until the user authorizes a new device window.
+- Last installed package recorded: 0.6.0-alpha5. Current local development candidate: 0.7.0-alpha1. Local code is not installed-device evidence.
+- Atomic Auto intent, typed RPC/ACL checks and system-writer fixes have regression coverage. Positive system-wizard save was observed on alpha5; Telegram test delivery remains unconfirmed.
+- Current local suite: 161 Python tests, including 256 hierarchy combinations within one parameterized test; Auto UI and setup/traffic UI regressions are separate Node checks.
+- Native switching remains bounded and requires client certification. Full hierarchy selection is read-only recommendation logic; inactive-profile activation and unattended production are not accepted.
+- Prior cable-helper failure and historical HTTP 403 root causes remain unresolved unless independently evidenced.
 
 ## 1. Recovery and operational safety — priority P0
 
@@ -113,4 +113,15 @@ Recommended sequence: 1 → 2 → 3 → 4 → 5 → 6 → 7, with phase 8 checks
 
 ## Approval checkpoint
 
-User approved the complete plan. Continue independently. Current laptop Ethernet is disconnected and Wi-Fi uses the router itself; preserve communication and defer deliberate outages until an independent client/management path exists. This does not block code, non-disruptive validation or UI releases.
+The user approved local implementation of the complete plan, then explicitly deferred router uploads and live tests. Continue local implementation, verification and local Git/Gitea followed by the identical GitHub tree. Hardware acceptance items remain open; approval of coding does not make their evidence complete.
+
+## Local implementation evidence — 2026-10-16
+
+- [x] Telegram wizard exposes interval/daily hour/weekly/monthly settings and loads saved public defaults without returning the token. Mock RPC tests cover validation, exact arguments and cancellation.
+- [x] Daily WAN/VPN table distinguishes missing data from measured zero and warns that WAN/VPN must not be added together.
+- [x] Current-month Overview cannot substitute a prior month. Histogram accepts aggregated RPC periods and excludes future-day samples.
+- [x] Read-only hierarchy prioritizes eligible same-channel servers, then another channel with the same VPN protocol, then another VPN protocol. 256 health/binding/metadata combinations pass; this is not native application proof.
+- [ ] Browser rendering and interaction acceptance for this candidate, including both languages and mobile layout.
+- [ ] Fresh-install monitoring enable/disable lifecycle and complete supported recovery settings wizard.
+- [ ] Explicit recommendation application and bounded operator fault control.
+- [ ] Native hierarchy adapters, vendor-worker coordination, IPv6 and reboot/power-loss acceptance on device.

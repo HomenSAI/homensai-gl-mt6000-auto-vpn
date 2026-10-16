@@ -276,3 +276,14 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Added monotonic transaction deadlines so wall-clock adjustments cannot extend the permitted experiment. Device validation remains pending.
 - During development, a Windows default-encoding write produced an invalid Python source byte; the syntax check detected it. Rewrote affected sources as UTF-8 with LF line endings. No affected source was deployed.
 - Verification: 158 Python tests passed. Interface rendering, complete wizard integration, hierarchical failover, operator fault control and hardware acceptance are still pending. This is a development checkpoint, not a production release.
+
+
+### 2026-10-16 06:08–06:15 Europe/Berlin — local TODO completion increment
+
+- Telegram calendar settings existed in the backend but the wizard sent only four arguments. Added schedule/hour/weekly/monthly fields, exact eight-argument RPC submission, saved non-secret defaults, review and validation. Stored token remains blank. Mock UI test verifies invalid hour rejection and cancellation without writes.
+- Overview selected the lexicographically latest stored month, which could display a previous month's total as current. Changed lookup to the explicit current Europe/Berlin month; missing current-month observations remain absent.
+- RPC retention can replace activity days with period aggregates; the histogram ignored those aggregates and displayed zero bars. Added period support and excluded future calendar dates. Added daily WAN/VPN rows with missing-versus-zero semantics, gap counts and retention warning; counters overlap and are not summed.
+- Added a read-only hierarchy recommender with fresh two-success HTTPS/DNS admission and operator metadata priorities. Excluded unbound/disabled/unsupported profiles. Tested 256 combinations of failure, interface binding and metadata. Exposed recommendations in monitor status; no native executor behavior is changed by these recommendations.
+- Local tests: 161 Python tests passed, plus 12 Auto UI invariants and separate wizard/traffic UI checks. Reproducible package tests passed. These use local fixtures/mocks; no router or Telegram delivery test occurred.
+- The first privacy scan in the previous checkpoint ran as root and Git refused repository ownership. Retried as the repository user; privacy scan passed. No global safe.directory exception was added.
+- Remaining: browser visual/language acceptance, fresh-install lifecycle, priority application, bounded operator fault feature and hardware-only acceptance. Updated completion plan baseline to remove stale alpha13/uncommitted candidate claims.
