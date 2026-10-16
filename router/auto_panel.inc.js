@@ -29,7 +29,7 @@ function renderAutoControl(status,inventory){
       if(result.accepted===false){ui.addNotification(null,E('div',{},[E('strong',{},'AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+(explanation[code]||'See controller diagnostics in Settings.'));}))]));}
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
     }).catch(function(){ui.addNotification(null,E('p',{},'AUTO-CONTROL-FAILED: no confirmed response; check controller state.'));}).finally(function(){autoRequestBusy=false;button.disabled=false;});
-  }},E('span',{'aria-hidden':'true'},'⏻'));
+  }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
   var source=profile(ns.source||settings.plan_source),target=profile(ns.target||settings.plan_target);

@@ -91,7 +91,7 @@ History(sys.argv[2]).record({'state':'APPLYING'},101)
             self.assertEqual(totals['trials_passed'],1);self.assertEqual(totals['committed'],1)
 
     def test_month_boundary_uses_berlin_timezone(self):
-        previous=os.environ.get('TZ');os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3';time.tzset()
+        previous=os.environ.get('TZ');os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3';__import__("timezone_compat").refresh_timezone()
         try:
             with tempfile.TemporaryDirectory() as d:
                 h=History(d);h.record({'state':'APPLYING'},1793487599);h.record({'state':'COMMITTED'},1793487600)
@@ -100,7 +100,7 @@ History(sys.argv[2]).record({'state':'APPLYING'},101)
         finally:
             if previous is None:os.environ.pop('TZ',None)
             else:os.environ['TZ']=previous
-            time.tzset()
+            __import__("timezone_compat").refresh_timezone()
 
     def test_history_failure_blocks_publish_but_reports_status(self):
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(History,'record',side_effect=OSError('disk')):

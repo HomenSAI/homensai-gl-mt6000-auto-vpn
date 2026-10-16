@@ -1,0 +1,10 @@
+{
+  "scope": "Final x86 QEMU guest, synthetic inactive VPN profiles",
+  "version": "0.7.0-alpha2",
+  "monitor_running": true,
+  "fresh_measurements": true,
+  "native_enabled": false,
+  "source_metadata_retained": true,
+  "speed_enabled": false,
+  "telegram_enabled": false
+}

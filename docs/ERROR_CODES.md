@@ -24,3 +24,17 @@ Planned full event records contain stable event_id, recovery episode_id, timesta
 Show current issue, last failure and history separately. Planned filters: code, channel, server, protocol and cause/result. Technical details must exclude passwords, keys, tokens, cookies and complete private configuration.
 
 Wording must distinguish “symptom confirmed”, “cause confirmed” and “cause unknown”. VPN-003 does not automatically blame a server: routing or filtering may be responsible. Recovery never erases the original failure. Diagnostic descriptions and work-log entries are maintained in English.
+
+
+## Implemented monitor lifecycle codes — 0.7.0-alpha2
+
+| Code | Meaning | Operator action |
+|---|---|---|
+| MONITOR-START-REQUESTED | Own enabled flag saved and own init start returned successfully | Wait for advancing measurements/procd; not yet running proof |
+| MONITOR-STOP-REQUESTED | Safe own-service stop requested | Verify process state; does not claim Internet recovery |
+| MONITOR-STOP-AUTO-FIRST | Native on intent, transaction, retained reserve or guard prevents shutdown | Stop Auto and verify safe recovery; do not kill the supervisor |
+| MONITOR-JOURNAL-UNVERIFIED | Native recovery journal is corrupt or unreadable | Preserve the service/data and diagnose; never delete the journal to force success |
+| MONITOR-SAVE-FAILED | Own UCI writer did not confirm commit | Inspect the redacted error; no service command was issued |
+| MONITOR-SERVICE-UNCONFIRMED | Configuration may be saved but own init action failed/timed out | Check actual process/status; do not show green |
+| MONITOR-INVALID | Invalid typed request or extra fields | Correct request; nothing was written |
+| MONITOR-RPC-UNCONFIRMED | Browser did not receive a confirmed response | Refresh status; do not infer the service stopped |

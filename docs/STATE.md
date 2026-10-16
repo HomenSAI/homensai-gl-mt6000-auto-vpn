@@ -1,40 +1,31 @@
 # Project state
 
-Updated: 2026-10-15, Europe/Berlin. This file separates device evidence, laboratory evidence and unfinished product work.
+Updated 2026-10-16, Europe/Berlin. Keep physical-device evidence, virtual OpenWrt evidence and synthetic UI fixtures distinct.
 
-## Device and software
+## Physical device — historical record only
 
-- GL.iNet GL-MT6000 / Flint 2; GL.iNet firmware 4.11.0; OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc; kernel 5.4.238; aarch64_cortex-a53; Python 3.9.15.
-- LuCI base git-22.335.71649-0ecaf74. Exact recorded environment: TESTED-ENVIRONMENT.en.md and the redacted JSON passport.
-- Installed application: 0.5.0-alpha12. Version and English formatter verified on the device after installation; native_enabled=0, journal ROLLED-BACK, own guard absent. HomenS.AI Style core 1.14.3 assets are pinned and retain their original licences.
-- The sidebar dashboard15/ui13 is a local candidate under development; it is not yet the installed router interface. Its fixture is explicitly synthetic and does not verify a real LuCI settings form.
-- No router packages were removed. mtkhnat remains loaded; runtime hook disable was verified. Kill Switch remained enabled and direct-WAN fallback disabled during accepted tests.
+Last installed application recorded in this task: 0.6.0-alpha5 on GL.iNet GL-MT6000 / Flint 2, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, kernel 5.4.238, Python 3.9.15, LuCI git-22.335.71649-0ecaf74. This work window did not query or change the device.
 
-## Confirmed live results
+Previous bounded IPv4 transitions and rollback were demonstrated between two already-connected catchall VPN profiles. This is not acceptance of arbitrary hierarchy, unattended production, IPv6 or power-loss recovery. The historical CLIENT-CABLE-NOT-LOCAL and browser HTTP 403 causes remain unresolved. See the timestamped WORKLOG and TESTED-ENVIRONMENT.en.md.
 
-- Anonymous UCI sections now use semantic identities excluding generated .name/.index metadata. Reordering resolves current names and checks the stable order/fingerprint after commit. Real changes and indistinguishable duplicates refuse application.
-- 18:21:20–18:22:03: client-confirmed transition to reserve and original-path return passed.
-- 18:23:37: controlled primary-path traffic failure; 18:24:53 automatic APPLYING; 18:25:20 COMMITTED/CLIENT-CONFIRMED. Approximately 76.15 seconds to apply start and 102.43 seconds to reserve confirmation; these are not continuously measured application downtime.
-- 18:26:07: independent fault timer removed its test rule. 18:27:26: independent rollback completed. Separate client checks confirmed original exit/order, DNS/HTTPS and no guard. The first helper completion reported CLIENT-CHECK-FAILED and is not counted as a successful helper exit.
-- A second bounded automatic observation window was started until 19:07:56. Its final helper check reported CLIENT-CABLE-NOT-LOCAL. At 19:09 the router independently reported STOPPED, journal ROLLED-BACK and guard absent. Both Windows adapters were up; the precise client-route-change cause remains unknown. Own automation configuration was then saved disabled.
-- NordVPN on Windows blocked port-53 replies through its DNS Leak Protection WFP filter. The owner approved a temporary service stop; DNS immediately worked. The service was restarted after testing and Running was verified. Wi-Fi remained the default communications path, while only selected cable probes used temporary /32 routes.
-- Successful network transition/rollback is a narrow two-connected-profile result. It does not certify production unattended operation, arbitrary topologies, inactive-profile startup, full IPv6 leak protection or physical power-loss recovery.
+## Current local candidate
 
-## Laboratory evidence
+0.7.0-alpha2: sidebar dashboard25/ui13, English default with optional Russian, Auto state/power control, system/Telegram wizards, calendar reports, bound speed tests with conservative quotas, daily WAN/VPN accounting, read-only hierarchy recommendations and guarded monitor lifecycle control. Speed testing is off by default. Monitor start is separate from native Auto start. Native switching remains bounded and client-certified.
 
-- 90 Python unit tests passed after the UCI identity correction. Windows SelfTest and cable CheckOnly passed. Six Telegram formatter/delivery tests passed after English-text changes; the updated formatter is installed and English default output was verified on device; a new live-delivery acknowledgement is not claimed.
-- Historical model/stress reports are in qa/. Synthetic combinations and Docker child-process crashes are not router power failures or complete native driver acceptance.
-- The old ab28c58 soak was deliberately stopped after discovery that a fake PID could reach real killpg. Tests now mock that syscall. Preserve that limitation with the old release evidence.
+No router installation is authorized now. Continue local Git/Gitea first, then the identical reviewed GitHub tree; do not deploy without a new device window.
 
-## Remaining work
+## Virtual acceptance
 
-1. Finish/deploy the sidebar UI using the pinned Style core; verify actual LuCI language switching, reload persistence, forms, sorting, operator controls and selected/failed-card order.
-2. Complete system and Telegram-channel wizards, preserving secret-field exclusion and distinguishing supported modes from planned hierarchy.
-3. Add an authenticated, bounded operator failure test with independent cleanup and real acceptance. The manually run timed failure script is not yet a shipped RPC/button.
-4. Extend selection from the currently supported pair to server → channel → protocol only after native adapters and tests cover that hierarchy. Wi-Fi/Ethernet are uplinks, not VPN protocols.
-5. Validate external-writer coordination, actual executor-crash recovery, IPv6 and broader device compatibility before calling the system production-ready.
-6. Keep diagnostics, error histories, fixes and test reports in English. English is the first-entry UI default; optional Russian UI and installation guides are separate. Never translate operator-supplied profile/channel names automatically.
+Actual OpenWrt 21.02.7 x86/64 under QEMU TCG inside isolated Docker, kernel 5.4.238 / Python 3.9.16. Installation, typed RPC, real UCI writer, profile-metadata save, monitor start/stop/fresh data, configuration preservation and own-monitor process recovery passed. The guest and Debian suites each passed 169 tests. Exact scope and unresolved warm-reboot behavior: ../qa/OPENWRT-VIRTUAL-REPORT.md.
 
-## Publication discipline
+The native adapter refuses this generic board and missing vendor environment. No real VPN tunnel transition was performed in this virtual acceptance. Do not equate the 256 read-only hierarchy combinations with native switching.
 
-Canonical local Git/Gitea first, then an identical verified public GitHub tree. Public repository: https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn. Do not publish private configuration, passwords, tokens, sessions, host fingerprints, exit IPs, device identifiers or packet/log captures. Published release tags remain immutable.
+## Remaining
+
+- Complete actual LuCI forms/browser acceptance and all responsive sections; current browser language/layout checks use a visibly labelled synthetic fixture.
+- Operator fault button with independent cleanup, native hierarchy adapters, safe inactive-profile activation and vendor writer coordination.
+- Explicit application of ranked priorities and full recovery-settings wizard.
+- Native executor crash, IPv6, router reboot and physical power-loss acceptance in an authorized device window.
+- Telegram delivery acknowledgement and calendar reports against an approved destination; local tests do not send messages.
+
+No full production-readiness claim is justified.

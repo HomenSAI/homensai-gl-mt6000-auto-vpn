@@ -39,3 +39,17 @@ Updated 2026-10-15. Check a task only after its stated evidence exists. Laborato
 - [ ] Update compatibility passport and installation/AI prompts after actual device acceptance, retaining truthful limits.
 - [ ] Run change-appropriate checks, privacy audit, reproducible build and real UI verification; publish local Git/Gitea first, exact GitHub snapshot second.
 - [ ] Install the checked UI/reporting package after the active test window has completed; preserve current settings and recoverable state.
+
+
+## Local / virtual increment — 2026-10-16
+
+- [x] Real x86 OpenWrt guest in isolated Docker/QEMU, official image checksum verified.
+- [x] Actual UCI/RPC/procd integration (14 checks), package update preserves own configuration; native Start refuses unsupported environment.
+- [x] Own monitor process crash and replacement by procd; fresh measurements resume; network/firewall/main IPv4 route preserved. This is not native-executor or Internet recovery acceptance.
+- [x] Monitor lifecycle RPC and Settings action; active/unknown/corrupt native recovery state blocks shutdown.
+- [x] EN/RU switching and reload checked in a labelled synthetic browser fixture; mobile Overview width checked. Actual LuCI form acceptance remains open above.
+- [x] Remove retired generated UI assets from IPK without deleting source history; normalize gzip OS header for matching observed Python 3.9/3.11 builds.
+- [ ] VM warm-reboot acceptance: kernel-decompression hang retained as a failure; preserved-disk cold starts work. Do not infer router hardware reboot behavior.
+- [ ] Native switching on real VPN tunnels and proprietary GL.iNet worker behavior remain device-specific open criteria.
+
+Detailed evidence and limits: ../qa/OPENWRT-VIRTUAL-REPORT.md. Physical router untouched in this increment.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.7.0-alpha2 — local and virtual OpenWrt acceptance
+
+- Added isolated Docker/QEMU OpenWrt 21.02.7 laboratory, explicit VM-only UCI/RPC/procd acceptance and own-monitor process-recovery tests. No physical GL-MT6000 deployment in this increment.
+- Added guarded monitor Start/Stop in Settings. Active, retained, unknown or corrupt native recovery state refuses shutdown; monitor activation never enables Auto.
+- Added Telegram calendar wizard, daily WAN/VPN views, read-only hierarchy recommendations, bounded opt-in throughput tests, persistent quotas and monotonic transaction leases.
+- Fixed reduced OpenWrt Python timezone compatibility, stale-month selection, aggregated histogram consumption, missing power glyph and retired UI files entering IPK.
+- Normalized gzip headers so observed Python 3.9/3.11 package builds match. Diagnostics/work log describe exact failures and fixes.
+- Virtual warm reboot remains unconfirmed: both legacy GRUB and alternate direct-kernel attempts stopped at kernel decompression within the test window. Cold startup preserved data. Native GL.iNet switching, IPv6 and hardware power-loss acceptance remain open.
+- See qa/OPENWRT-VIRTUAL-REPORT.md for current test counts and limits. This is a development prerelease, not production certification.
+
+
 ## 0.5.0-alpha1 — persistent history and client trial workflow
 
 - Expiry/stop no longer blindly returns to a failed source: retain the reserve with explicit partial-result status, await actual client stop verification, and preserve committed state over restart.

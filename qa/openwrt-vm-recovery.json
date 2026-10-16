@@ -1,0 +1,14 @@
+{
+  "scope": "Own monitor process crash in marked x86 OpenWrt VM",
+  "result": "PASS",
+  "process_replaced": true,
+  "fresh_measurements": true,
+  "native_auto_enabled": false,
+  "network_firewall_main_route_preserved": true,
+  "recovery_seconds": 23.45,
+  "not_tested": [
+    "VPN executor crash",
+    "GL.iNet workers",
+    "Physical power loss"
+  ]
+}

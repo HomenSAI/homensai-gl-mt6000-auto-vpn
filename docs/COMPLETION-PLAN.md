@@ -6,9 +6,9 @@ Status: APPROVED by user on 2026-10-15. Work in progress; checkboxes require evi
 ## Current baseline — updated 2026-10-16
 
 - Binding scope: LOCAL DEVELOPMENT ONLY. Do not connect to, deploy to, reconfigure or fault-test the router until the user authorizes a new device window.
-- Last installed package recorded: 0.6.0-alpha5. Current local development candidate: 0.7.0-alpha1. Local code is not installed-device evidence.
+- Last installed package recorded: 0.6.0-alpha5. Current local development candidate: 0.7.0-alpha2. Local code is not installed-device evidence.
 - Atomic Auto intent, typed RPC/ACL checks and system-writer fixes have regression coverage. Positive system-wizard save was observed on alpha5; Telegram test delivery remains unconfirmed.
-- Current local suite: 161 Python tests, including 256 hierarchy combinations within one parameterized test; Auto UI and setup/traffic UI regressions are separate Node checks.
+- Current local suite: 169 Python tests, including 256 hierarchy combinations within one parameterized test; Auto UI and setup/traffic UI regressions are separate Node checks.
 - Native switching remains bounded and requires client certification. Full hierarchy selection is read-only recommendation logic; inactive-profile activation and unattended production are not accepted.
 - Prior cable-helper failure and historical HTTP 403 root causes remain unresolved unless independently evidenced.
 
@@ -122,6 +122,7 @@ The user approved local implementation of the complete plan, then explicitly def
 - [x] Current-month Overview cannot substitute a prior month. Histogram accepts aggregated RPC periods and excludes future-day samples.
 - [x] Read-only hierarchy prioritizes eligible same-channel servers, then another channel with the same VPN protocol, then another VPN protocol. 256 health/binding/metadata combinations pass; this is not native application proof.
 - [ ] Browser rendering and interaction acceptance for this candidate, including both languages and mobile layout.
-- [ ] Fresh-install monitoring enable/disable lifecycle and complete supported recovery settings wizard.
+- [x] Guarded monitor enable/disable RPC verified with actual OpenWrt procd; does not enable Auto.
+- [ ] Complete supported recovery settings wizard.
 - [ ] Explicit recommendation application and bounded operator fault control.
 - [ ] Native hierarchy adapters, vendor-worker coordination, IPv6 and reboot/power-loss acceptance on device.

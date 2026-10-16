@@ -15,11 +15,11 @@ from agent import atomic_json
 
 class CalendarTests(unittest.TestCase):
     def setUp(self):
-        self.old=os.environ.get('TZ');os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3';time.tzset()
+        self.old=os.environ.get('TZ');os.environ['TZ']='CET-1CEST,M3.5.0,M10.5.0/3';__import__("timezone_compat").refresh_timezone()
     def tearDown(self):
         if self.old is None:os.environ.pop('TZ',None)
         else:os.environ['TZ']=self.old
-        time.tzset()
+        __import__("timezone_compat").refresh_timezone()
     def stamp(self,text):return datetime.strptime(text,'%Y-%m-%d %H:%M').timestamp()
 
     def daily(self,text,confirmed):

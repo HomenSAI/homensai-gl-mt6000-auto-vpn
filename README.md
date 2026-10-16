@@ -4,7 +4,9 @@
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.5.0-alpha12 prerelease: native monitoring and bounded two-profile failover. A real automatic transition and independent rollback were verified on the reference device; unattended production operation remains unvalidated. English diagnostics and report text are the default.**
+**0.7.0-alpha2 development prerelease: real OpenWrt virtual acceptance, guarded monitor control, sidebar UI, calendar Telegram scheduling, daily WAN/VPN accounting and optional bounded speed tests. The physical GL-MT6000 was not upgraded in this work window. Native failover remains a bounded, client-confirmed two-profile experiment; unattended production is not certified.**
+
+[Virtual OpenWrt results and unresolved reboot failure](qa/OPENWRT-VIRTUAL-REPORT.md) · [Reproducible Docker/QEMU lab](lab/openwrt-qemu/README.md)
 
 ## Why it exists
 
@@ -19,15 +21,15 @@ The idea came from a real troubleshooting session: VPN profiles showed Connected
 
 English by default, explicit English/Russian selector. Server cards, real HTTPS-latency chart, grouped OpenVPN/WireGuard histograms for today, last seven calendar days and current calendar month. Green: healthy observed time; red: confirmed failed time; grey: unobserved time. Inactive reserve profiles are excluded. Counts mean observed inactive-to-active transitions and distinct failure episodes, not probe counts. Startup is not a new connection. Durations are estimates between probes. New history starts with this release.
 
-Calendar-month accounting sums unique VPN interfaces, including overhead, starting when monitoring begins. It is not all WAN traffic or a complete previous month. Simultaneous connected tunnels do not prove which one carried a LAN client's traffic. Checkpoints default to 15 minutes; power loss can lose the latest interval. Monitor events are mostly RAM-only; bounded native-controller history has a checksummed persistent backup.
+Calendar-month accounting sums unique VPN interfaces, including overhead, starting when monitoring begins. WAN is tracked separately where an explicit WAN device is identifiable; WAN and VPN counters overlap and must not be added. Neither reconstructs an unobserved previous month. Simultaneous connected tunnels do not prove which one carried a LAN client's traffic. Checkpoints default to 15 minutes; power loss can lose the latest interval. Monitor events are mostly RAM-only; bounded native-controller history has a checksummed persistent backup.
 
-Telegram is optional: setup wizard, private token, personal chat ID and configurable report interval. The token is required even for sending. Router backups may contain it: keep them private.
+Telegram is optional: setup wizard, private token, approved chat/channel destination, interval or daily Europe/Berlin hour, weekly/monthly summaries and a persistent deduplication ledger. The token is required even for sending. Router backups may contain it: keep them private.
 
 ## Installation and test evidence
 
 [Install (EN)](docs/INSTALL.en.md) · [Установка (RU)](docs/INSTALL.ru.md) · [AI installation prompt](docs/AI-INSTALL.en.md) · [Промпт для AI](docs/AI-INSTALL.ru.md) · [Validation](docs/VALIDATION.md) · [Changelog](CHANGELOG.md)
 
-Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Other hardware/firmware is untested.
+Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Generic OpenWrt 21.02.7 x86/64 was tested separately in an isolated QEMU guest (kernel 5.4.238 / Python 3.9.16). Its proprietary GL.iNet adapter is intentionally blocked; this does not establish other-hardware failover compatibility.
 
 Earlier releases verified installation, three connected OpenVPN/WireGuard probe paths, accounting and Telegram delivery. On 15 Oct 2026, alpha10 verified a real client-confirmed transition/return and a separate automatic transition under controlled primary traffic failure, followed by independent rollback. Helper completion errors and later checks are documented without being counted as successful helper exits. See [work log](docs/WORKLOG.md) and [validation](docs/VALIDATION.md). Simulation reports under `qa/` are separate evidence.
 
@@ -50,8 +52,3 @@ Current device status: 0.4.0-alpha7 is installed in monitor mode, native switchi
 [Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
 
 [Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.
-
-
-### Sidebar interface release — 0.5.0-alpha13
-
-Installed and checked on the GL-MT6000: dark left navigation, eight sections, real measurements, EN/RU selection, sorting/search and author website link. This is a UI update; native failover remains experimental and disabled after the completed bounded tests. See docs/WORKLOG.md for exact scope and limitations.

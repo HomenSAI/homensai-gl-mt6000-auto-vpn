@@ -26,13 +26,25 @@ class PackageTests(unittest.TestCase):
                 self.assertEqual(archive.extractfile('./fonts/example.woff2').read(),font)
                 self.assertEqual(archive.extractfile('./example.txt').read(),b'line\n')
 
+    def test_retired_generated_dashboards_do_not_enter_package(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);assets=root/'files/www/luci-static/resources/view/homensai-vpn';assets.mkdir(parents=True)
+            for name in ('dashboard.js','dashboard15.js','dashboard997.js','dashboard25.js','ui11.css','ui13.css','client-test.ps1'):(assets/name).write_text('fixture')
+            with patch.object(builder,'ROOT',root):package=builder.build(root/'out').read_bytes()
+            with tarfile.open(fileobj=io.BytesIO(package),mode='r:gz') as outer:data=outer.extractfile('./data.tar.gz').read()
+            with tarfile.open(fileobj=io.BytesIO(data),mode='r:gz') as archive:
+                names=[Path(name).name for name in archive.getnames() if archive.getmember(name).isfile()]
+            self.assertEqual(sorted(names),['client-test.ps1','dashboard25.js','ui13.css'])
+
     def test_reproducible_ipk_and_permissions(self):
         with tempfile.TemporaryDirectory() as d:
             first=builder.build(d).read_bytes();second=builder.build(d).read_bytes()
             self.assertEqual(first,second)
+            self.assertEqual(first[9],255)
             with tarfile.open(fileobj=io.BytesIO(first),mode='r:gz') as outer:
                 self.assertEqual(set(outer.getnames()),{'./debian-binary','./control.tar.gz','./data.tar.gz'})
                 control=outer.extractfile('./control.tar.gz').read();data=outer.extractfile('./data.tar.gz').read()
+                self.assertEqual(control[9],255);self.assertEqual(data[9],255)
             with tarfile.open(fileobj=io.BytesIO(control),mode='r:gz') as tar:
                 metadata=tar.extractfile('./control').read().decode()
                 self.assertIn('Architecture: all',metadata)

@@ -7,7 +7,7 @@ local input=io.read(65537)
 if not input or #input>65536 then os.exit(1) end
 local ok=pcall(function()
   local data=json.decode(input)
-  local allowed={plan_source=true,plan_target=true,interval=true,native_duration=true,
+  local allowed={enabled=true,plan_source=true,plan_target=true,interval=true,native_duration=true,
     native_session_loss=true,setup_complete=true,telegram_chat=true,telegram_token=true,
     telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,speed_enabled=true,speed_auto_new=true,
     speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true}

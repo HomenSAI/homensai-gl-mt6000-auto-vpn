@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.7.0-alpha1'
+VERSION = '0.7.0-alpha2'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -609,7 +609,7 @@ def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
-                          'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -643,6 +643,9 @@ def rpc(method):
             raise ValueError('confirmation elapsed-time window expired')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
+    if method=='monitor_control':
+        from monitor_control import change
+        print(json.dumps(change(arguments)));return
     if method in ('setup_system','setup_telegram','setup_speed'):
         from setup_config import save
         try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed'}[method])
@@ -697,11 +700,8 @@ def rpc(method):
 def main():
     global STOP
     os.environ['TZ'] = 'CET-1CEST,M3.5.0,M10.5.0/3'
-    if hasattr(time, 'tzset'):
-        time.tzset()
-    else:
-        import ctypes
-        ctypes.CDLL(None).tzset()
+    from timezone_compat import refresh_timezone
+    refresh_timezone()
     parser = argparse.ArgumentParser()
     parser.add_argument('action', choices=['daemon','list','call','preflight'])
     parser.add_argument('method', nargs='?')

@@ -2,11 +2,12 @@
 import gzip
 import hashlib
 import io
+import re
 from pathlib import Path
 import tarfile
 
 ROOT = Path(__file__).parent
-VERSION = '0.7.0-alpha1-1'
+VERSION = '0.7.0-alpha2-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -33,7 +34,11 @@ def archive(items):
             info.uid = info.gid = 0
             info.uname = info.gname = 'root'
             tar.addfile(info, io.BytesIO(payload))
-    return gzip.compress(raw.getvalue(), mtime=0)
+    compressed=bytearray(gzip.compress(raw.getvalue(), mtime=0))
+    # Python 3.11 may expose zlib's host OS byte; 3.9 writes unknown (255).
+    # Normalize all nested gzip headers for cross-runtime reproducibility.
+    compressed[9]=255
+    return bytes(compressed)
 
 
 def build(output=None):
@@ -44,6 +49,10 @@ def build(output=None):
         if not path.is_file() or path.is_symlink() or '__pycache__' in path.parts:
             continue
         name = path.relative_to(ROOT/'files').as_posix()
+        ui_root='www/luci-static/resources/view/homensai-vpn/'
+        if name.startswith(ui_root) and '/' not in name[len(ui_root):]:
+            if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!='dashboard25.js':continue
+            if re.fullmatch(r'ui[0-9]+\.css',path.name) and path.name!='ui13.css':continue
         if '..' in Path(name).parts:
             raise ValueError('unsafe package member')
         payload = path.read_bytes()

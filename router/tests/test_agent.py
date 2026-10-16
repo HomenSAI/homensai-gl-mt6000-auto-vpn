@@ -27,7 +27,7 @@ class NativeTests(unittest.TestCase):
     def setUpClass(cls):
         cls.old_tz = os.environ.get('TZ')
         os.environ['TZ'] = 'CET-1CEST,M3.5.0,M10.5.0/3'
-        time.tzset()
+        __import__("timezone_compat").refresh_timezone()
 
     @classmethod
     def tearDownClass(cls):
@@ -35,7 +35,7 @@ class NativeTests(unittest.TestCase):
             os.environ.pop('TZ', None)
         else:
             os.environ['TZ'] = cls.old_tz
-        time.tzset()
+        __import__("timezone_compat").refresh_timezone()
 
     def test_python38_syntax(self):
         ast.parse(AGENT.read_text(), feature_version=8)

@@ -287,3 +287,32 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Local tests: 161 Python tests passed, plus 12 Auto UI invariants and separate wizard/traffic UI checks. Reproducible package tests passed. These use local fixtures/mocks; no router or Telegram delivery test occurred.
 - The first privacy scan in the previous checkpoint ran as root and Git refused repository ownership. Retried as the repository user; privacy scan passed. No global safe.directory exception was added.
 - Remaining: browser visual/language acceptance, fresh-install lifecycle, priority application, bounded operator fault feature and hardware-only acceptance. Updated completion plan baseline to remove stale alpha13/uncommitted candidate claims.
+
+
+### 2026-10-16 06:17–06:55 Europe/Berlin — real OpenWrt virtual lab and alpha2 hardening
+
+- Created an isolated Docker container running QEMU 7.2.22/TCG with the SHA256-verified official OpenWrt 21.02.7 x86 image. Guest kernel 5.4.238 and Python 3.9.16 booted; dependencies/IPK installed. No physical router, Windows interface, VPN route or user Telegram destination was changed.
+- First SSH forwarding failed because QEMU's management user subnet did not match the guest's static LAN. Corrected only QEMU management networking; internal SSH then worked. Initial package update was slower than anticipated but ultimately passed signature checks and dependency configuration.
+- Immediate RPC checks returned Not found. A hypothesized missing rpcd-mod-exec was disproved: that package does not exist here; exec plugins are built into rpcd. The object appeared after asynchronous startup. Acceptance now waits for actual readiness; no bogus dependency was added.
+- First guest regression reported ten errors from absent time.tzset(), including a skipped test class. Reused libc timezone refresh through timezone_compat and added native/fallback regressions. A repeated stale run came from docker cp nesting router inside router-source; corrected to copy contents and exclude nested/pycache data. Subsequent full guest runs passed 165 and then 168 tests.
+- Real UCI/RPC/procd acceptance passed 14 checks, including fixture metadata save, native Auto refusal, speed disabled, invalid Telegram token refusal without sending, monitor start/stop, actual process/fresh data and unchanged network/firewall/main IPv4 route. alpha1 → alpha2 kept the own-config marker.
+- Long serial command exceeded BusyBox interactive line capacity and truncated the completion marker. The guest test succeeded but the helper timed out. Confirmed the saved JSON separately; changed helper to short safely quoted chunks. A first base64 helper failed because this BusyBox lacks base64; removed that dependency.
+- Own monitor SIGKILL test confirmed exact argv before signalling. procd replaced it and fresh status resumed; 23.45 seconds were measured on the guest clock, not user Internet downtime. Native Auto stayed off and configuration/routes stayed equal.
+- Warm reboot did not return management within 180 host seconds. QMP screen remained at Linux decompression before application start; root cause is unconfirmed. Preserved-disk cold startup retained the marker and restored the application. An alternate direct-kernel mode is being checked separately; retain the initial failure rather than declaring reboot accepted.
+- Added monitor_control, writing only own enabled flag and starting/stopping only own init script. No route commands. Active/on-intent/retained-reserve/closed-guard/unknown journal states block shutdown; corrupt journals return MONITOR-JOURNAL-UNVERIFIED without invoking writer or service. UI says requested rather than claiming running.
+- Browser fixture verified EN→RU→reload→EN and Telegram calendar fields. Overview at 390px had no horizontal overflow (document width 375). Found missing power glyph and replaced with CSS icon. These browser observations use synthetic data and omitted LuCI forms, not device UI acceptance.
+- IPK contained retired dashboard/CSS files, including local untracked generated versions. Restricted current packaged UI to dashboard25/ui13; history remains in Git. Found Python 3.9/3.11 gzip OS-byte difference; normalized all nested gzip headers. Independent guest/host package hashes then matched before final journal hardening.
+- Current local suite: 169 Python tests plus Auto/wizard/traffic Node checks PASS. Final candidate is 414714 bytes, SHA256 976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789. See qa/OPENWRT-VIRTUAL-REPORT.md for scope and remaining failures. No production or full native hierarchy acceptance is claimed.
+
+
+### 2026-10-16 06:55 Europe/Berlin — warm-reboot result retained
+
+- Alternate checksum-verified direct-kernel mode also failed to return SSH within the 180-second host-clock deadline; QMP showed running but the screen remained at kernel decompression. This occurs before application initialization. The root cause is not established and is not labelled an application defect or a fixed emulator bug.
+- Preserved both failed/unconfirmed JSON results. Restored only the private QEMU guest by a cold process restart with the same disk; started final package/regression verification. No third warm-reboot trial or physical-router restart.
+
+
+### 2026-10-16 06:57 Europe/Berlin — final guest/host candidate parity
+
+- Final cold-started guest completed all 169 Python tests after the monitor-journal hardening; Debian completed the same count. Both built the same 414714-byte package with SHA256 976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789.
+- Guest force-reinstall was restricted to this application's disposable VM package. opkg retained the modified own configuration and wrote the package default as an -opkg alternate; marker comparison passed. Early Command failed: Not found messages are retained as startup/readiness observations, not ignored as universal harmless errors; actual RPC/procd acceptance was verified separately.
+- No physical deployment. Public guidance remains monitor-only. Updated installation/AI instructions and diagnostic codes for Start/Stop monitor, calendar scheduling and virtual-test limitations.

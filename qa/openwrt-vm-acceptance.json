@@ -1,0 +1,70 @@
+{
+  "scope": "OpenWrt x86 QEMU in isolated Docker; real UCI/rpcd/procd, synthetic profile metadata",
+  "time": 1792125168.9104075,
+  "checks": [
+    {
+      "name": "actual-rpc-ready",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-isolated-UCI-writer",
+      "result": "PASS"
+    },
+    {
+      "name": "fresh-monitor-default-off",
+      "result": "PASS"
+    },
+    {
+      "name": "uncertified-native-start-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "speed-default-disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "invalid-Telegram-token-refused-without-send",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-system-metadata-save",
+      "result": "PASS"
+    },
+    {
+      "name": "metadata-save-does-not-enable-Auto",
+      "result": "PASS"
+    },
+    {
+      "name": "monitor-start-RPC",
+      "result": "PASS"
+    },
+    {
+      "name": "monitor-procd-running",
+      "result": "PASS"
+    },
+    {
+      "name": "monitor-fresh-measurement",
+      "result": "PASS"
+    },
+    {
+      "name": "monitor-stop-RPC",
+      "result": "PASS"
+    },
+    {
+      "name": "monitor-stop-confirmed-by-procd",
+      "result": "PASS"
+    },
+    {
+      "name": "network-firewall-main-route-preserved",
+      "result": "PASS"
+    }
+  ],
+  "passed": 14,
+  "vpn_switching_certified": false,
+  "limits": [
+    "No GL.iNet proprietary workers",
+    "No real VPN server sessions",
+    "No GL-MT6000 hardware validation",
+    "No Telegram delivery attempted"
+  ]
+}

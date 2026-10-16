@@ -27,7 +27,8 @@
           "speed_start",
           "speed_cancel",
           "setup_speed",
-          "telegram_retry"
+          "telegram_retry",
+          "monitor_control"
         ]
       },
       "uci": [
