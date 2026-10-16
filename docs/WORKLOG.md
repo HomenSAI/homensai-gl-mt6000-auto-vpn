@@ -316,3 +316,10 @@ Source timestamps are used where available. Reconstructed entries without a time
 - Final cold-started guest completed all 169 Python tests after the monitor-journal hardening; Debian completed the same count. Both built the same 414714-byte package with SHA256 976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789.
 - Guest force-reinstall was restricted to this application's disposable VM package. opkg retained the modified own configuration and wrote the package default as an -opkg alternate; marker comparison passed. Early Command failed: Not found messages are retained as startup/readiness observations, not ignored as universal harmless errors; actual RPC/procd acceptance was verified separately.
 - No physical deployment. Public guidance remains monitor-only. Updated installation/AI instructions and diagnostic codes for Start/Stop monitor, calendar scheduling and virtual-test limitations.
+
+### 2026-10-16 07:03 Europe/Berlin — publication and final virtual health
+
+- Final VM health: version 0.7.0-alpha2, own monitor running with fresh measurements, synthetic metadata retained, native Auto/speed/Telegram disabled. No physical-router query or deployment.
+- Saved local/Gitea source commit fbdb0b9, then identical GitHub source commit d50f91f; compared tree 816a46404132e9dbdd73a33c355c93b93d3c36e6 before publication. Local release tag v0.7.0-alpha2 points to that source snapshot.
+- Published GitHub prerelease v0.7.0-alpha2 with explicitly monitor-only guidance and unresolved VM warm-reboot limitations. GitHub asset metadata confirms 414714-byte IPK and SHA256 976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789, matching the tested file. Privacy scan covered 246 tracked files including nested packages and passed.
+- Historical untracked old IPKs/dashboard15/dashboard17 were preserved, not published or deleted; the current builder excludes retired dashboards from the IPK. Native GL.iNet/hardware acceptance remains open.
