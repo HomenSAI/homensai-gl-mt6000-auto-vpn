@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.8.0-alpha8'
+VERSION = '0.8.0-alpha9'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -562,6 +562,7 @@ def serve():
                 row = dict(p)
                 row.update(mapped.get(p['id'], {'code': 'PROFILE-INACTIVE' if not p.get('interface') else 'CHECK-LIMIT'}))
                 custom = selected.get(p['id'], {})
+                row['router_name'] = p['name']  # the provider/router profile name; the UI derives the country from it
                 row['name'] = custom.get('name') or p['name']
                 row['channel'] = custom.get('channel') or 'default'
                 row['priority'] = custom.get('priority',100)

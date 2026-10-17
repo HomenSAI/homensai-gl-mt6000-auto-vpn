@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0-alpha9-1 - 2026-10-17
+
+Interactive training, redesigned overview, simple/advanced settings. dashboard50/ui28. Nothing is accepted on the physical router yet.
+
+- Training page (lessons, quiz, score, retry); Overview summary card and "Getting started" checklist; Step 1 / Step 2 wording for the check and Auto.
+- Settings split into simple and advanced; per-step guides with examples; monitor service Start/Stop with a three-lamp light; Tests (with speed-test settings) under Advanced.
+- Country + protocol labels instead of host names; Channels summary; scroll to top; Telegram help rewritten; HOW-IT-WORKS documents.
+- Design layer and light/dark/system theme switch. UI only: no controller, RPC or packaging logic changed except the version strings.
+
 ## 0.8.0-alpha8-1 - 2026-10-17
 
 Experimental-software terms: documents, GitHub README and a first-run acceptance screen. dashboard49/ui27.

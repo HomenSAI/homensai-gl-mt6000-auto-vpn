@@ -221,6 +221,8 @@ def must_replace(old,new):
     assert old in source,old[:80]
     source=source.replace(old,new,1)
 must_replace("E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service'","E('section',{'class':'hv-chart-card hv-card-monitor'},[E('h3',{},bi('Monitor service'")
+must_replace('return view.extend({',(Path(__file__).parent/'setup_guides.inc.js').read_text(encoding='utf8')+(Path(__file__).parent/'monitor_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("['tests','⏻',bi('Diagnostics','Диагностика')]","['tests','⏻',bi('Tests','Тесты')]")
 must_replace("(descriptions[code]||bi('See diagnostic code in the work log','Смотрите код диагностики в журнале работ'))","autoBlockerText(code)")
 must_replace("E('p',{},bi('1. Save a primary and reserve profile below. 2. Accept session reconnection. 3. Run the downloaded helper on a Windows LAN client with PowerShell 7. It checks the gateway, router DNS, HTTPS and VPN exit, and asks before starting. Browser checks alone do not certify router DNS.','1. Сохраните основной и резервный профили ниже. 2. Разрешите переподключение сессий. 3. Запустите скачанный помощник на Windows-клиенте LAN с PowerShell 7. Он проверит шлюз, DNS роутера, HTTPS и VPN-выход, затем спросит перед запуском. Проверка только браузером не подтверждает DNS роутера.'))",
  "E('p',{},bi('Auto can be started only after a passed LAN trial. The Overview page shows exactly which step is missing. The helper runs on a Windows computer with PowerShell 7 connected to the LAN; it checks the gateway, router DNS, HTTPS and the VPN exit, and asks before it starts. Browser checks alone do not certify the LAN path.','Авторежим можно запустить только после успешного LAN-теста. Страница «Обзор» показывает, какого именно шага не хватает. Помощник запускается на компьютере Windows с PowerShell 7 в локальной сети: он проверяет шлюз, DNS роутера, HTTPS и VPN-выход и спрашивает подтверждение перед началом. Проверка только браузером не подтверждает путь LAN.'))")
@@ -229,21 +231,25 @@ must_replace("E('h3',{},'Persistent controller history'),E('p',{},'Controller ev
 reorganizer = """      (function(){
         var monitorCard=settingsHost.querySelector('.hv-card-monitor'),speedCard=settingsHost.querySelector('.hv-speed-settings');
         while(settingsHost.firstChild)settingsHost.removeChild(settingsHost.firstChild);
-        function launcher(label,hint,action,primary){return E('div',{'class':'hv-setup-item'},[E('button',{'type':'button','class':'cbi-button'+(primary?' cbi-button-action':''),'click':action},label),E('p',{},hint)]);}
+        function launcher(label,hint,action,primary,guide){return E('div',{'class':'hv-setup-item'},[E('button',{'type':'button','class':'cbi-button'+(primary?' cbi-button-action':''),'click':action},label),E('p',{},hint),guide?setupGuide(guide):null].filter(Boolean));}
         var testDelivery=function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});};
         settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
           E('h3',{},bi('Setup','Настройка')),
-          E('p',{},bi('Every wizard validates your input and shows a review before saving. Stored tokens are never shown again.','Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются.')),
-          setup?E('p',{},bi('Create a bot with BotFather, send /start, then enter its token and your Chat ID. The token stays on the router and is never returned in status.','Создайте бота через BotFather, отправьте /start, затем введите токен и свой Chat ID. Токен хранится на роутере и не возвращается в статусе.')):null,
+          E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
           E('div',{'class':'hv-setup-grid'},[
-            launcher(bi('1 · System','1 · Система'),bi('Primary and reserve profiles, names, channels, priorities and accepted reconnection.','Основной и резервный профили, названия, каналы, приоритеты и допустимость переподключения.'),function(){setupWizard(inventory,'system');},true),
-            launcher(bi('2 · Recovery rules','2 · Правила восстановления'),bi('Failures before switching, reserve checks, cooldown and return policy.','Сколько сбоев до переключения, проверки резерва, пауза и политика возврата.'),function(){recoveryWizard(inventory);}),
-            launcher(bi('3 · Monitoring','3 · Мониторинг'),bi('Check interval, profile limit and statistics saving.','Интервал проверок, лимит профилей и сохранение статистики.'),function(){monitorPreferences(inventory);}),
-            launcher(bi('4 · Telegram','4 · Telegram'),bi('Bot token and destination for reports.','Токен бота и адресат отчётов.'),function(){setupWizard(inventory,'telegram');}),
+            launcher(bi('1 · System','1 · Система'),bi('Primary and reserve profiles, names, channels, priorities and accepted reconnection.','Основной и резервный профили, названия, каналы, приоритеты и допустимость переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
+            launcher(bi('2 · Telegram','2 · Telegram'),bi('Bot token and destination for reports.','Токен бота и адресат отчётов.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
             launcher(bi('Test Telegram delivery','Проверить доставку Telegram'),bi('Sends one test message with the saved settings.','Отправляет одно тестовое сообщение с сохранёнными настройками.'),testDelivery)
           ])].filter(function(node){return node!=null;})));
-        if(monitorCard)settingsHost.appendChild(monitorCard);
-        if(speedCard)settingsHost.appendChild(speedCard);
+        settingsHost.appendChild(renderMonitorCard(status,inventory));
+        settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[
+          E('summary',{},bi('Advanced settings (for administrators)','Расширенные настройки (для администратора)')),
+          E('p',{},bi('Fine-tuning of the switching rules and of the checks. The defaults are safe; change them only if you know why. Open the guide under each step for examples.','Тонкая настройка правил переключения и проверок. Значения по умолчанию безопасны; меняйте их, только если понимаете зачем. Под каждым шагом есть руководство с примерами.')),
+          E('div',{'class':'hv-setup-grid'},[
+            launcher(bi('Recovery rules','Правила восстановления'),bi('Failures before switching, reserve checks, cooldown and return policy.','Сколько сбоев до переключения, проверки резерва, пауза и политика возврата.'),function(){recoveryWizard(inventory);},false,'recovery'),
+            launcher(bi('Monitoring parameters','Параметры мониторинга'),bi('Check interval, profile limit and statistics saving.','Интервал проверок, лимит профилей и сохранение статистики.'),function(){monitorPreferences(inventory);},false,'monitoring')
+          ])]));
+        if(speedCard){put('tests',E('h2',{},bi('VPN speed tests','Тесты скорости VPN')));put('tests',setupGuide('speed'));put('tests',speedCard);}
       })();
 """
 must_replace("      panel.addEventListener('pointerdown',function(){pointerHeld=true;});", reorganizer+"      panel.addEventListener('pointerdown',function(){pointerHeld=true;});")
@@ -291,6 +297,20 @@ must_replace('tr("Успех проверок"),tr("Средняя HTTPS-зад�
 must_replace("cell(item.r.good?(item.r.sum/item.r.good).toFixed(1)+tr(\" мс\"):'—')]));});","cell(item.r.good?(item.r.sum/item.r.good).toFixed(1)+tr(\" мс\"):'—'),cell(rankConfidence(item.r.n))]));});")
 must_replace(".sort(function(a,b){return (b.r.n?",".sort(function(a,b){return (rankEnough(b.r.n)-rankEnough(a.r.n))||(b.r.n?")
 must_replace("addSearch('ranking',ranking);put('ranking',ranking);","addSearch('ranking',ranking);put('ranking',ranking);put('ranking',E('p',{},bi('Servers with fewer than 20 checks are listed last: one lucky check does not make a leader.','Серверы с менее чем 20 проверками стоят в конце: одна удачная проверка не делает лидера.')));")
+# Opening another page always starts at the top (the sidebar and the page share one window scroll).
+must_replace("if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);","if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      if(oldTab!==key){try{window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}}")
+# Servers are named by protocol and country; host names and addresses are not shown.
+must_replace('return view.extend({',(Path(__file__).parent/'country_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("E('h4',{},p.name),E('p',{},(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён'))),","E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{},(customName(p)?customName(p)+' · ':'')+(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён'))),")
+must_replace("E('span',{'class':'hv-protocol'},p.protocol==='wireguard'?'WireGuard':'OpenVPN')","E('strong',{'class':'hv-protocol'},protocolLabel(p))")
+must_replace("[cell(p.name),cell(p.channel),cell(p.protocol),","[cell(serverTitle(p)),cell(p.channel),cell(protocolLabel(p)),")
+must_replace("ranked.forEach(function(item){ranking.appendChild(E('tr',{},[cell(item.p.name),","ranked.forEach(function(item){ranking.appendChild(E('tr',{},[cell(serverTitle(item.p)),")
+# Channels page: say where the list comes from and what the numbers mean.
+must_replace('return view.extend({',(Path(__file__).parent/'servers_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')));","put('channels',renderServerSummary(status,inventory,rows));put('channels',vpnSetupCard());")
+# Idle/active check control moves to the left of the page header, under the subtitle.
+must_replace("E('div',{'class':'hv-page-actions'},[versionBadge,language,renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})])","E('div',{'class':'hv-page-actions'},[versionBadge,language])")
+must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))","(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))),renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
@@ -301,9 +321,9 @@ must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard49').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard50').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
-must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
+must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
 from ui_copy import COPY
 import re as _re
@@ -315,10 +335,22 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui27.css')
-(root/'dashboard49.js').write_text(source,encoding='utf8')
-print('Generated dashboard49.js with sidebar, language persistence and sortable tables')
+source=source.replace('ui15.css','ui28.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard49',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard50',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+# Interactive training page: lesson cards, quiz, score.
+must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
+must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','learn','channels','statistics','settings','help'].map(tabLink)")
+must_replace("  help:['What to do when something is wrong.'","  learn:['A short interactive training: what the system is, how to use it and what to do when something goes wrong.','Короткое интерактивное обучение: что это за система, как ею пользоваться и что делать, если что-то пошло не так.'],\n  help:['What to do when something is wrong.'")
+must_replace("put('help',helpNode||(helpNode=renderHelp()));","put('help',helpNode||(helpNode=renderHelp()));put('learn',learnNode||(learnNode=renderLearn()));")
+must_replace("var helpNode=null;","var helpNode=null,learnNode=null;") if "var helpNode=null;" in source else None
+must_replace('return view.extend({',(Path(__file__).parent/'summary_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'theme_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("E('div',{'class':'hv-page-actions'},[versionBadge,language])","E('div',{'class':'hv-page-actions'},[versionBadge,language,renderThemeSelect()])")
+must_replace("E('i',{'class':'hv-series-'+(i%colors.length)}),p.name]","E('i',{'class':'hv-series-'+(i%colors.length)}),serverTitle(p)]")
+must_replace("E('b',{},r.p.name)","E('b',{},serverTitle(r.p))")
+(root/'dashboard50.js').write_text(source,encoding='utf8')
+print('Generated dashboard50.js with sidebar, language persistence and sortable tables')

@@ -4,7 +4,7 @@
 >
 > HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.
 
-Latest prerelease: **0.8.0-alpha8-1** ([release notes](releases/v0.8.0-alpha8.md) · [install guide](docs/INSTALL.en.md) · [router test kit](router-test-kit/README.md) · [terms of use](DISCLAIMER.md)).
+Latest prerelease: **0.8.0-alpha9-1** ([release notes](releases/v0.8.0-alpha9.md) · [install guide](docs/INSTALL.en.md) · [router test kit](router-test-kit/README.md) · [terms of use](DISCLAIMER.md)).
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
@@ -43,7 +43,7 @@ Telegram is optional: setup wizard, private token, approved chat/channel destina
 
 ## Installation and test evidence
 
-[Install (EN)](docs/INSTALL.en.md) · [Установка (RU)](docs/INSTALL.ru.md) · [AI installation prompt](docs/AI-INSTALL.en.md) · [Промпт для AI](docs/AI-INSTALL.ru.md) · [Validation](docs/VALIDATION.md) · [Changelog](CHANGELOG.md)
+[How it works (EN)](docs/HOW-IT-WORKS.en.md) · [Как это работает (RU)](docs/HOW-IT-WORKS.ru.md) · [Install (EN)](docs/INSTALL.en.md) · [Установка (RU)](docs/INSTALL.ru.md) · [AI installation prompt](docs/AI-INSTALL.en.md) · [Промпт для AI](docs/AI-INSTALL.ru.md) · [Validation](docs/VALIDATION.md) · [Changelog](CHANGELOG.md)
 
 Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Generic OpenWrt 21.02.7 x86/64 was tested separately in an isolated QEMU guest (kernel 5.4.238 / Python 3.9.16). Its proprietary GL.iNet adapter is intentionally blocked; this does not establish other-hardware failover compatibility.
 

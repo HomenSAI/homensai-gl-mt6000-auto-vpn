@@ -11,17 +11,6 @@ COPY = [
     ('Channels, servers and switching reasons in one place.',
      'Your VPNs, how healthy they are, and what the router did about it.',
      'Ваши VPN, насколько они исправны и что сделал роутер.'),
-    ('Check VPN connectivity', 'Check VPN now', 'Проверить VPN сейчас'),
-    ('DNS and HTTPS through connected VPN servers. Not a speed test.',
-     'Runs one extra internet check through every connected VPN right now. The router already repeats it automatically; use this after you change something. Nothing is switched and no speed is measured.',
-     'Запускает одну внеочередную проверку интернета через каждый подключённый VPN. Роутер и так повторяет её сам; нажмите после изменений. Ничего не переключается, скорость не измеряется.'),
-    ('Ready to check', 'Ready', 'Готово'),
-    ('No connected servers were measured', 'No VPN is connected, so there was nothing to check', 'Ни один VPN не подключён, проверять нечего'),
-    ('Check completed', 'Check finished', 'Проверка завершена'),
-    ('Check failed', 'The check could not run', 'Проверку выполнить не удалось'),
-    ('Result unavailable; no confirmed measurement', 'No result: the router did not confirm a new measurement', 'Результата нет: роутер не подтвердил новое измерение'),
-    ('Checked: ', 'VPNs checked: ', 'Проверено VPN: '),
-    ('Failed: ', 'with problems: ', 'с проблемами: '),
     ('Submitting check request…', 'Sending the request…', 'Отправляется запрос…'),
     ('Queued; waiting for a new measurement', 'Request sent; waiting for the router to measure', 'Запрос отправлен; роутер выполняет измерение'),
     ('Request not confirmed. Retry after checking the monitoring service.',
@@ -118,7 +107,6 @@ COPY = [
 ]
 
 COPY += [
-    ('Connected VPN server', 'Your VPN servers', 'Ваши VPN-серверы'),
     ('Connection: ', 'Tunnel: ', 'Туннель: '),
     ('Not confirmed as selected', 'Not confirmed as the active route', 'Не подтверждён как активный маршрут'),
 ]
