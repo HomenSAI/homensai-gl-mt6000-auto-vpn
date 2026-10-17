@@ -214,7 +214,7 @@ source=source.replace('      return appRoot;', '      initSidebarLayout(appRoot)
 source=source.replace('return view.extend({',(Path(__file__).parent/'incident_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
-source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status));")
+source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status,inventory));")
 # Settings page: one grouped Setup card instead of scattered wizard buttons; one blocker dictionary.
 def must_replace(old,new):
     global source
@@ -313,14 +313,14 @@ must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in 
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
-must_replace("put('readiness',renderReadiness(status));","put('readiness',renderReadiness(status));put('help',helpNode||(helpNode=renderHelp()));")
+must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp()));")
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
 _terms_version=_r.search(r"^TERMS_VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js').read_text(encoding='utf8').replace('__TERMS_VERSION__',_terms_version)+'\nreturn view.extend({')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard60').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard61').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),controlCard.nextSibling);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -334,11 +334,11 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui38.css')
+source=source.replace('ui15.css','ui39.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard60',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard61',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
@@ -362,5 +362,5 @@ import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-(root/'dashboard60.js').write_text(source,encoding='utf8')
-print('Generated dashboard60.js with sidebar, language persistence and sortable tables')
+(root/'dashboard61.js').write_text(source,encoding='utf8')
+print('Generated dashboard61.js with sidebar, language persistence and sortable tables')

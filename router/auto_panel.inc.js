@@ -124,7 +124,7 @@ function autoReadiness(status,inventory,now){
   var steps=[
     {key:'monitor',done:monitorFresh,
      title:bi('Monitor is running','Мониторинг работает'),
-     hint:bi('The router status is missing or stale. Monitoring starts by itself; wait a minute and reload the page.','Статус роутера отсутствует или устарел. Откройте «Настройки» и нажмите «Запустить мониторинг».')},
+     hint:bi('The router status is missing or stale. Monitoring starts by itself; wait a minute and reload the page.','Статус роутера отсутствует или устарел. Мониторинг запускается сам: подождите минуту и обновите страницу.')},
     {key:'profiles',done:bothHealthy,
      title:bi('Primary and reserve are chosen and healthy','Основной и резервный профили выбраны и работают'),
      hint:!configured?bi('Choose a primary and a different reserve in Settings (System setup).','Выберите основной и другой, резервный профиль в «Настройках» (мастер системы).'):bi('Both tunnels must be connected and pass the DNS/HTTPS check. Connect them in GL.iNet VPN Dashboard.','Оба туннеля должны быть подключены и проходить проверку DNS/HTTPS. Подключите их в VPN Dashboard GL.iNet.')},
@@ -133,7 +133,7 @@ function autoReadiness(status,inventory,now){
      hint:bi('A switch can interrupt calls and downloads for a few seconds. Confirm this in Settings (System setup).','Переключение может на несколько секунд прервать звонки и загрузки. Подтвердите это в «Настройках» (мастер системы).')},
     {key:'router',done:controllerFresh&&technical.length===0,codes:technical,
      title:bi('Router is ready for switching','Роутер готов к переключению'),
-     hint:!controllerFresh?bi('The switching controller is not reporting. Check the Service monitor.','Контроллер переключения не отвечает. Проверьте «Службу мониторинга».'):bi('The router reports conditions that block switching (listed below).','Роутер сообщает условия, блокирующие переключение (перечислены ниже).')},
+     hint:!controllerFresh?bi('The switching controller is not reporting. Check the Live log (Advanced menu).','Контроллер переключения не отвечает. Проверьте «Живой журнал» (меню «Расширенное»).'):bi('The router reports conditions that block switching (listed below).','Роутер сообщает условия, блокирующие переключение (перечислены ниже).')},
     {key:'trial',done:certified,
      title:bi('LAN trial passed for this pair','LAN-тест для этой пары пройден'),
      hint:bi('On a computer connected by cable run the LAN helper: it briefly switches to the reserve and back and proves DNS, HTTPS and the exit IP from the LAN. Only then Start is accepted.','На компьютере, подключённом кабелем, запустите LAN-помощник: он кратко переключит на резерв и обратно и докажет работу DNS, HTTPS и внешнего IP из LAN. Только после этого «Старт» будет принят.')}

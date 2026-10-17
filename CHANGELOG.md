@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha20-1 - 2026-10-18
+
+Live log with blinking lamps; redesigned System readiness; every error code is a link to the error table. dashboard61/ui39. UI only; includes alpha19.
+
 ## 0.8.0-alpha19-1 - 2026-10-18
 
 Auto and Monitoring lamps in one row in the sidebar; the Automatic VPN failover block above the Right now card. dashboard60/ui38. UI only; includes alpha18.

@@ -1,4 +1,4 @@
-/* Read-only readiness; missing evidence never grants Auto permission. */
+/* Read-only readiness; missing evidence never grants Auto permission. Missing information is shown as "waiting", never as a blank. */
 function readinessModel(status,now){
   var data=status.system_readiness||{},native=status.native_failover||{};
   var fresh=!status.rpc_error&&Number.isFinite(status.time)&&now>=status.time&&now-status.time<=90;
@@ -12,39 +12,67 @@ function readinessModel(status,now){
     auto:(status.auto_control||{}).requested==='on'&&fresh?'requested':'off_or_unknown'};
 }
 var READINESS_CHECKS={
-  'PYTHON-39-MINIMUM':['Python 3.9 or newer (runs the program)','Python 3.9 или новее (запускает программу)'],
-  'DEPENDENCY-UBUS':['ubus (talks to the router system)','ubus (связь с системой роутера)'],
-  'DEPENDENCY-UCI':['uci (reads and saves settings)','uci (чтение и сохранение настроек)'],
-  'DEPENDENCY-LUA':['Lua (settings helper)','Lua (помощник настроек)'],
-  'DEPENDENCY-IP':['ip (network tool)','ip (сетевой инструмент)'],
-  'RPC-PLUGIN':['Program plugin for the web page','Модуль программы для веб-страницы'],
-  'CA-BUNDLE':['Certificates for HTTPS checks','Сертификаты для проверок HTTPS'],
-  'CONFIG-STORAGE-FREE':['At least 1 MB free for settings','Не менее 1 МБ свободно для настроек']
+  'PYTHON-39-MINIMUM':['Python 3.9 or newer','Python 3.9 или новее','Runs the program','Запускает программу','🐍'],
+  'DEPENDENCY-UBUS':['ubus','ubus','Talks to the router system','Связь с системой роутера','⇄'],
+  'DEPENDENCY-UCI':['uci','uci','Reads and saves settings','Чтение и сохранение настроек','⚙'],
+  'DEPENDENCY-LUA':['Lua','Lua','Settings helper','Помощник настроек','λ'],
+  'DEPENDENCY-IP':['ip','ip','Network tool','Сетевой инструмент','⛓'],
+  'RPC-PLUGIN':['Program plugin','Модуль программы','Connects this page to the program','Связывает эту страницу с программой','🔌'],
+  'CA-BUNDLE':['Certificates','Сертификаты','For HTTPS checks','Для проверок HTTPS','🔒'],
+  'CONFIG-STORAGE-FREE':['Free storage','Свободное место','At least 1 MB for settings','Не менее 1 МБ для настроек','💾']
 };
-function readinessCheckRow(c){
-  var code=String(c.code),row=Object.prototype.hasOwnProperty.call(READINESS_CHECKS,code)?READINESS_CHECKS[code]:null,state=String(c.state);
-  var mark=state==='pass'?'✓':state==='fail'?'✗':'?';
-  var word=state==='pass'?bi('OK','Есть'):state==='fail'?bi('Missing','Нет'):bi('Not known','Неизвестно');
-  return E('li',{'class':'hv-ready-row hv-ready-'+(state==='pass'?'ok':state==='fail'?'bad':'unknown')},[E('span',{'class':'hv-ready-mark','aria-hidden':'true'},mark),E('span',{},row?bi(row[0],row[1]):code),E('strong',{},word)]);
+var READINESS_TESTED_FIRMWARE='4.11.0';
+function readinessCheckState(state){return state==='pass'?'ok':state==='fail'?'bad':state==='waiting'?'waiting':'unknown';}
+function readinessTile(code,state){
+  var r=Object.prototype.hasOwnProperty.call(READINESS_CHECKS,code)?READINESS_CHECKS[code]:[code,code,'',' ','•'];
+  var st=readinessCheckState(state);
+  var word=st==='ok'?bi('OK','Есть'):st==='bad'?bi('Missing','Нет'):st==='waiting'?bi('Waiting…','Ожидается…'):bi('Not known','Неизвестно');
+  var mark=st==='ok'?'✓':st==='bad'?'✗':st==='waiting'?'…':'?';
+  return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3]))]),E('b',{'class':'hv-rd-word'},word)]);
 }
-function renderReadiness(status){
-  var m=readinessModel(status,Date.now()/1000),b=m.board||{};
+function readinessInfo(icon,label,value,waiting){
+  return E('div',{'class':'hv-rd-info'+(waiting?' hv-rd-info-waiting':'')},[E('span',{'class':'hv-rd-info-icon','aria-hidden':'true'},icon),E('small',{},label),waiting?E('span',{'class':'hv-rd-skeleton'},bi('waiting for data…','ожидаются данные…')):E('strong',{},value)]);
+}
+function renderReadiness(status,inventory){
+  var now=Date.now()/1000,m=readinessModel(status,now),b=m.board||{};
   function known(v){return v&&v!=='unknown';}
-  var routerLine=m.environmentFresh&&(known(b.model)||known(b.board_name)||known(b.firmware))
-    ?[known(b.model)?b.model:bi('model not reported','модель не сообщена'),known(b.board_name)?b.board_name:null,known(b.firmware)?bi('firmware ','прошивка ')+b.firmware:bi('firmware not reported','прошивка не сообщена')].filter(Boolean).join(' · ')
-    :bi('Not reported yet. The router sends this information when the monitor is running. Start the monitor in Settings and reload the page.','Пока не получено. Роутер присылает эти сведения, когда работает мониторинг. Запустите мониторинг в «Настройках» и обновите страницу.');
-  var pass=m.checks.filter(function(c){return c.state==='pass';}).length;
-  return E('section',{'class':'hv-chart-card hv-readiness'},[
-    E('h2',{},bi('System readiness','Готовность системы')),
-    E('p',{'class':'hv-ready-intro'},bi('Here you see whether this router has everything the program needs, and what is still missing before Auto can be started. This page only reads; it changes nothing.','Здесь видно, есть ли на этом роутере всё, что нужно программе, и чего ещё не хватает, чтобы запустить Auto. Страница только читает и ничего не меняет.')),
-    E('h3',{},bi('Your router','Ваш роутер')),
-    E('p',{},routerLine),
-    E('h3',{},bi('Data from the monitor','Данные от мониторинга')),
-    E('p',{},m.fresh?bi('Fresh: the monitor is running and sends data.','Свежие: мониторинг работает и присылает данные.'):bi('No fresh data. Monitoring starts by itself; wait a minute and reload the page.','Свежих данных нет. Мониторинг запускается сам: подождите минуту и обновите страницу.')),
-    E('h3',{},bi('Required parts on the router','Нужные части на роутере')+(m.checks.length?' ('+pass+' / '+m.checks.length+')':'')),
-    m.checks.length?E('ul',{'class':'hv-readiness-list hv-ready-list'},m.checks.map(readinessCheckRow)):E('p',{},bi('The list appears when the router reports it (the monitor must be running).','Список появится, когда роутер его пришлёт (мониторинг должен работать).')),
-    E('h3',{},bi('What Auto still needs','Чего ещё не хватает для Auto')),
-    E('ul',{'class':'hv-readiness-list hv-ready-list'},m.blockers.map(function(c){return E('li',{'class':'hv-ready-row'},[E('span',{'class':'hv-ready-mark','aria-hidden':'true'},'→'),E('span',{},autoBlockerText(String(c))),E('small',{'class':'hv-auto-tech'},String(c))]);})),
-    E('p',{'class':'hv-ready-note'},bi('A tick here does not give permission to switch. At Start the router checks the current device, the time window, your computer’s confirmation, the safe return and the transaction lease again. The router never restarts by itself to enable Auto.','Галочка здесь не разрешает переключение. При запуске роутер заново проверит текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат и блокировку транзакции. Роутер сам никогда не перезагружается ради включения Auto.'))
-  ]);
+  var order=Object.keys(READINESS_CHECKS),byCode={};
+  m.checks.forEach(function(c){byCode[String(c.code)]=String(c.state);});
+  var waiting=!m.environmentFresh;
+  var passCount=order.filter(function(code){return byCode[code]==='pass';}).length;
+  var failCount=order.filter(function(code){return byCode[code]==='fail';}).length;
+  var auto=autoReadiness(status,inventory||{},now);
+  // Ring: share of verified parts. Grey and "…" while the router has not reported anything yet.
+  var share=waiting?0:Math.round(100*passCount/order.length);
+  var verdictKey=waiting?'waiting':failCount?'bad':passCount===order.length?(auto.ready?'ready':'parts'):'partial';
+  var verdict={
+    waiting:[bi('Waiting for the router','Ожидаем ответ роутера'),bi('The router has not reported its parts yet. This appears by itself within a minute after monitoring starts; reload the page if it does not.','Роутер ещё не прислал сведения о своих частях. Это появится само в течение минуты после запуска мониторинга; если нет, обновите страницу.')],
+    bad:[bi('Something is missing','Чего-то не хватает'),bi('At least one required part is missing on the router (red below). Monitoring may still work, but Auto needs all of them.','На роутере не хватает хотя бы одной нужной части (красным ниже). Мониторинг может работать, но Auto нужны все.')],
+    partial:[bi('Almost there','Почти готово'),bi('Some parts are not confirmed yet.','Часть пунктов ещё не подтверждена.')],
+    parts:[bi('The router has everything it needs','У роутера есть всё необходимое'),bi('All required parts are present. Auto still needs the steps below.','Все нужные части есть. Для Auto ещё нужны шаги ниже.')],
+    ready:[bi('Ready for Auto','Готово к запуску Auto'),bi('Everything is in place. The router will still check it again when you press Start.','Всё на месте. Роутер всё равно проверит ещё раз при нажатии «Старт».')]
+  }[verdictKey];
+  var ring=E('div',{'class':'hv-rd-ring hv-rd-ring-'+verdictKey,'style':'--share:'+share+'%','role':'img','aria-label':waiting?bi('waiting','ожидается'):passCount+' / '+order.length},[E('div',{'class':'hv-rd-ring-inner'},[E('strong',{},waiting?'…':passCount+'/'+order.length),E('small',{},waiting?bi('waiting','ожидается'):bi('parts ready','частей готово'))])]);
+  var hero=E('section',{'class':'hv-chart-card hv-rd-hero'},[ring,E('div',{'class':'hv-rd-hero-text'},[E('h2',{},verdict[0]),E('p',{},verdict[1]),E('p',{'class':'hv-ready-intro'},bi('This page only reads; it changes nothing.','Эта страница только читает и ничего не меняет.'))])]);
+  var tested=known(b.firmware)?(String(b.firmware).indexOf(READINESS_TESTED_FIRMWARE)===0||String(b.firmware)===READINESS_TESTED_FIRMWARE):null;
+  var router=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Your router','Ваш роутер')),E('div',{'class':'hv-rd-info-grid'},[
+    readinessInfo('▣',bi('Model','Модель'),b.model,waiting||!known(b.model)),
+    readinessInfo('▦',bi('Board','Плата'),b.board_name,waiting||!known(b.board_name)),
+    readinessInfo('⚑',bi('Firmware','Прошивка'),b.firmware,waiting||!known(b.firmware))]),
+    waiting?E('p',{'class':'hv-ready-intro'},bi('The router sends this with the monitoring data.','Роутер присылает это вместе с данными мониторинга.')):
+      tested===null?null:E('p',{'class':'hv-rd-note hv-rd-note-'+(tested?'ok':'warn')},tested?bi('✓ This is the tested firmware ('+READINESS_TESTED_FIRMWARE+').','✓ Это проверенная прошивка ('+READINESS_TESTED_FIRMWARE+').'):bi('⚠ Tested firmware is '+READINESS_TESTED_FIRMWARE+'. Monitoring should work, but Auto is not certified for this one.','⚠ Проверенная прошивка — '+READINESS_TESTED_FIRMWARE+'. Мониторинг должен работать, но Auto для этой не подтверждён.'))
+  ].filter(Boolean));
+  var monitor=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Data from the monitor','Данные от мониторинга')),E('div',{'class':'hv-rd-tile hv-rd-'+(m.fresh?'ok':'waiting')},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},m.fresh?'✓':'…'),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},m.fresh?bi('Fresh data','Свежие данные'):bi('Waiting for data','Ожидаем данные')),E('small',{},m.fresh?bi('The monitor is running and sends data.','Мониторинг работает и присылает данные.'):bi('Monitoring starts by itself; wait a minute and reload the page.','Мониторинг запускается сам; подождите минуту и обновите страницу.'))]),E('b',{'class':'hv-rd-word'},m.fresh?bi('OK','Есть'):bi('Waiting…','Ожидается…'))])]);
+  var parts=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Required parts on the router','Нужные части на роутере')+(waiting?'':' ('+passCount+' / '+order.length+')')),
+    E('div',{'class':'hv-rd-grid'},order.map(function(code){return readinessTile(code,waiting?'waiting':(byCode[code]||'unknown'));}))]);
+  // Auto steps as a stepper; blocker codes open their row in the error table.
+  var stepper=E('ol',{'class':'hv-rd-steps'},auto.steps.map(function(step,i){
+    var current=auto.next&&auto.next.key===step.key;
+    var state=step.done?'done':current?'next':'todo';
+    var codes=(step.codes&&step.codes.length&&!step.done)?E('div',{'class':'hv-rd-codes'},step.codes.map(function(code){return E('span',{},[errorCodeLink(code),' · '+autoBlockerText(code)]);})):null;
+    return E('li',{'class':'hv-rd-step hv-rd-step-'+state},[E('span',{'class':'hv-rd-step-mark','aria-hidden':'true'},step.done?'✓':current?'→':String(i+1)),E('div',{},[E('strong',{},step.title),step.done?null:E('p',{},step.hint),codes].filter(Boolean))]);
+  }));
+  var autoCard=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('What Auto still needs','Чего ещё не хватает для Auto')),stepper,
+    E('p',{'class':'hv-ready-note'},bi('A tick here does not give permission to switch. At Start the router checks the current device, the time window, your computer’s confirmation, the safe return and the transaction lease again. The router never restarts by itself to enable Auto.','Галочка здесь не разрешает переключение. При запуске роутер заново проверит текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат и блокировку транзакции. Роутер сам никогда не перезагружается ради включения Auto.'))]);
+  return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,autoCard]);
 }

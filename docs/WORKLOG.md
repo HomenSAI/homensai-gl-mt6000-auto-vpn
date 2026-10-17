@@ -1013,3 +1013,9 @@ Created experimental review prerelease handoff-v1.0.0. Downloaded all three asse
 
 - Requests: in the sidebar bottom-left put a second small lamp (Monitoring) in the same row as Auto ON; on the Overview move the "Automatic VPN failover" block above the "Right now" card. (The owner's second message was cut off after "Единственное, сделай так," - the rest was not received; asked for it.)
 - Verification: JS suites PASS; isolated dual-image CI PASS; container hash equals the CI hash; screenshots of the sidebar (RU) and the Overview order reviewed on the synthetic fixture. The router still runs alpha14.
+
+## 2026-10-18T05:30:00+02:00 - alpha20: live log lamps, redesigned System readiness, error codes as links
+
+- Requests: Live log page needs motion (blinking lamps: green works, yellow checking, red failure) and graphic elements; System readiness is "unfinished" (needs graphics, missing information shown as waiting); every error code in tables (controller history reasons etc.) must be a link to the error table row.
+- Implementation: renderLiveLog (LIVE dot, seconds counter, fill bar to the next check, blinking lamps, reduced-motion respected); readiness page rebuilt (progress ring, info tiles with shimmer placeholders, firmware vs tested 4.11.0, parts grid green/red/waiting, Auto stepper with code links); linkifyErrorCodes with a MutationObserver wraps any known code in a link that opens its error-table row (skips the table itself, the AI prompt and commands); the fixture got an optional ?readiness=ok state.
+- Verification: JS suites PASS; isolated dual-image CI PASS; container hash equals the CI hash; screenshots of the Live log, both readiness states (EN waiting, RU filled) and the linked DNS-001 reviewed. Not done: the blinking itself and the click-through jump were not exercised in a real browser session (headless screenshots are static); Russian view of the live log not reviewed; router still on alpha14.

@@ -14,6 +14,15 @@ def apply(source):
     for name in ('speed_table.inc.js', 'traffic_chart.inc.js'):
         extra = (Path(__file__).parent / name).read_text(encoding='utf8')
         source = source.replace('return view.extend({', extra + '\nreturn view.extend({', 1)
+    live = (Path(__file__).parent / 'live_log.inc.js').read_text(encoding='utf8')
+    source = source.replace('return view.extend({', live + '\nreturn view.extend({', 1)
+    source, n4 = re.subn(r"var terminal=E\('pre',\{\},\[.*?put\('services',terminal\);", "put('services',renderLiveLog(status,rows,ns,inventory,stateNames));", source, count=1, flags=re.S)
+    assert n4 == 1, 'live log terminal'
+    links = (Path(__file__).parent / 'error_links.inc.js').read_text(encoding='utf8')
+    source = source.replace('return view.extend({', links + '\nreturn view.extend({', 1)
+    source = source.replace("sortableTables();showPage(activeTab);", "installErrorLinks(appRoot);sortableTables();showPage(activeTab);", 1)
+    assert source.count("initSidebarLayout(appRoot);") == 1, "sidebar init"
+    source = source.replace("initSidebarLayout(appRoot);", "initSidebarLayout(appRoot);installErrorLinks(appRoot);", 1)
     # The monitor block sits to the right of "Check the VPNs now" in the header.
     check = "renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})"
     assert source.count(check) == 1, 'connectivity control'
