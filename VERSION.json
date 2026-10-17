@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "application": {
+    "version": "0.8.0-alpha2",
+    "package_revision": 1,
+    "package_version": "0.8.0-alpha2-1",
+    "release_tag": "v0.8.0-alpha2",
+    "ui_module": "dashboard43",
+    "ui_stylesheet": "ui22.css",
+    "artifact": "homensai-auto-vpn_0.8.0-alpha2-1_all.ipk",
+    "sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8"
+  },
+  "handoff": {
+    "version": "1.0.0",
+    "release_tag": "handoff-v1.0.0",
+    "kind": "documentation-review-checkpoint",
+    "application_changed": false,
+    "tests_state": "STOPPED",
+    "source_checkpoint": "22896342721ea78d7c0c3970d56b3443c8080fc0",
+    "public_checkpoint": "9557a9af54dd67c3225465c73f76ad6d505db455"
+  }
+}

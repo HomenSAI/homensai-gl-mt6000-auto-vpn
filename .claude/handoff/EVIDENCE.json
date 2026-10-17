@@ -57,5 +57,8 @@
     "pre_handoff_ci": ".claude/handoff/PRE-HANDOFF-CI.json"
   },
   "physical_acceptance": "not freshly verified or authorized by this handoff",
-  "private_checkpoint_manifest": "private/claude-handoff-20261017/manifest.json"
+  "private_checkpoint_manifest": "private/claude-handoff-20261017/manifest.json",
+  "handoff_version": "1.0.0",
+  "handoff_release_tag": "handoff-v1.0.0",
+  "version_manifest": "VERSION.json"
 }

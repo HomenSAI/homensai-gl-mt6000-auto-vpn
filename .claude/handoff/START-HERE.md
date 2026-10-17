@@ -1,4 +1,4 @@
-# Start here: independent review checkpoint
+# Start here: independent review checkpoint 1.0.0
 
 ## Read order
 
@@ -26,3 +26,5 @@ Official instruction-loading documentation: https://code.claude.com/docs/en/memo
 The owner asked to stop tests, record a checkpoint and let Claude independently assess what is done and whether physical testing may begin. Review first. Do not treat historical approvals or the backlog as current permission to restart tests or manipulate a device. A later direct user instruction can authorize a specific next step.
 
 The virtual clone is paused, test processes have exited, and no new long test is scheduled. Do not resume it merely to inspect code. The physical router was not accessed or modified during this handoff.
+
+Version identity: repository VERSION.json declares handoff 1.0.0 separately from application 0.8.0-alpha2/package 0.8.0-alpha2-1. See docs/VERSIONING.md. No stopped test is resumed by this documentation release.

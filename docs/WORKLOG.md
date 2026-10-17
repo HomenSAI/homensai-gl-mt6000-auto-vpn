@@ -905,3 +905,8 @@ Owner explicitly requested all current project tests stop and a review checkpoin
 Created root CLAUDE.md with imports and .claude/handoff/ containing start guide, full state, all 50 proposed items with acceptance/initial assessment, evidence index, independent review prompt, result template and separate physical readiness gates. This does not launch Claude, grant device access, authorize implementation of the backlog or alter tool permissions. Corrected stale current state/TODO and labelled older handoffs/native notes historical.
 
 Saved private paused-disk/kernel copy plus SHA256 manifest under private/claude-handoff-20261017; no RAM snapshot or clean cold-boot guarantee is claimed. Private disks, logs, sessions and full Git history are excluded from publication. Physical router and Windows network settings were not accessed/changed. Documentation-only checkpoint preserves the tested router tree/package; validate imports, references, 50-item completeness and privacy without restarting test suites at this pause boundary.
+
+
+## 2026-10-17T13:39:06.267371+00:00 - explicit version policy and handoff release preparation
+
+User requested a GitHub release and explicit versioning. Application code/package remain alpha2/alpha2-1; introduce independently versioned documentation handoff 1.0.0 with tag handoff-v1.0.0, VERSION.json, immutable release policy and read-only version agreement validation. Backfilled changelog links for previously published candidates without inventing new device acceptance. Release archive contains only sanitized review context, never private run/disk/session data or an installable router package. No long or product test suite restarted.

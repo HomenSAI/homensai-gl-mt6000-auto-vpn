@@ -66,3 +66,5 @@ Physical device: last recorded installed application is 0.6.0-alpha5; this windo
 [Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.7.0-alpha5 adds committed-reserve observation and verified primary return; hardware acceptance of this candidate remains pending.
 
 Independent Claude review checkpoint: [start here](.claude/handoff/START-HERE.md), [all 50 audit items](.claude/handoff/TODO-50.md), [readiness gates](.claude/handoff/ROUTER-READINESS.md). Root CLAUDE.md imports the project handoff. Tests are stopped; this is an audit-first handoff, not device deployment authorization.
+
+Version identities: application **0.8.0-alpha2**, package **0.8.0-alpha2-1**, Claude review bundle **1.0.0** ([VERSION.json](VERSION.json), [policy](docs/VERSIONING.md), [handoff release notes](releases/handoff-v1.0.0.md)). Handoff releases contain review context and do not imply a new router package.

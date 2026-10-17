@@ -1,5 +1,23 @@
 # Changelog
 
+## Handoff 1.0.0 - 2026-10-17
+
+- Complete Claude review context and all 50 audit targets; owner-requested STOPPED virtual test checkpoint with independent cleanup.
+- Separate application/package/UI and handoff version identities in VERSION.json; documented immutable release policy and read-only agreement validator.
+- Application remains 0.8.0-alpha2 / package 0.8.0-alpha2-1. No new product or physical acceptance is claimed.
+
+## 0.8.0-alpha2-1 - 2026-10-17
+
+Checkpoint schema/backup recovery hardening, persistent in-wizard preset feedback and resumable reviewed publication. Virtual/storage/UI evidence and stopped-run limits: releases/v0.8.0-alpha2.md and .claude/handoff/STATE.md.
+
+## 0.8.0-alpha1-4 - 2026-10-17
+
+Readiness/incident reports/recovery presets, actual LuCI dependency/cache fixes and cached readiness RPC. Earlier failed candidates and corrected viewport scope remain documented in releases/v0.8.0-alpha1.md and WORKLOG.
+
+## 0.7.0-alpha10-1 / 0.7.0-alpha9 - 2026-10-17
+
+Sidebar short-window accessibility and trustworthy selected-path colors; see their versioned release notes. Historical validation remains scoped to its recorded source/environment.
+
 ## 0.7.0-alpha8-1 - 2026-10-17
 
 Bright raised controls and 18px server lamps; request-correlated DNS/HTTPS checks; explicit Auto/connection/health/traffic states; configured-threshold diagnosis and model quarantine. 329 application + 30 QA tests per runtime and 12 UI suites PASS. Reviewed snapshot published to GitHub main after Gitea verification. Full native hierarchy and physical alpha8 deployment remain pending.
