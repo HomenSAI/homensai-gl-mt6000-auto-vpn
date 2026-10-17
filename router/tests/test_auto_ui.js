@@ -36,11 +36,28 @@ console.log('PASS: typed start/stop acknowledgement; unknown payload never claim
 const good={interface:'vpn0',time:999,dns_ok:true,https_success:2},bad={...good,code:'DNS-001'};
 const path=(state,source=bad,target=good,extra={})=>context.autoPathModel({time:1000,native_failover:{state,time:999,certified:true},...extra},source,target,1000);
 for(const state of ['DISABLED','STOPPED','EXPIRED','ROLLED-BACK']){assert.equal(path(state).source,'neutral');assert.equal(path(state).target,'neutral');assert.equal(path(state).moving,false);}
-assert.equal(path('APPLYING').moving,true);assert.equal(path('APPLYING').target,'healthy');assert.equal(path('APPLYING').selected,null);
+assert.equal(path('APPLYING').moving,true);assert.equal(path('APPLYING').target,'checking');assert.equal(path('APPLYING').selected,null);
 assert.equal(path('COMMITTED').source,'failed');assert.equal(path('COMMITTED').target,'healthy');assert.equal(path('COMMITTED').selected,'target');assert.equal(path('COMMITTED').moving,false);
-assert.equal(path('COMMITTED',good,good).source,'healthy'); // a healthy former primary must not be fabricated as failed
+assert.equal(path('COMMITTED',good,good).source,'ready'); // a healthy former primary must not be fabricated as failed
 assert.equal(path('COMMITTED',bad,{...good,time:800}).target,'neutral');
 assert.equal(path('RESTORING').direction,'back');
 assert.equal(path('COMMITTED',bad,good,{rpc_error:'RPC-FAILED'}).direction,'none');
 assert.equal(path('COMMITTED',bad,good,{auto_control:{requested_at:1000}}).moving,false);
 console.log('PASS: failover path health, stale/off neutrality, confirmed selection and bidirectional transition');
+
+assert.equal(path('OBSERVING',good,good).source,'healthy');
+assert.equal(path('OBSERVING',good,good).target,'ready');
+assert.equal(path('RESTORING',good,good).source,'checking');
+assert.equal(path('RESTORING',good,good).target,'ready');
+assert.equal(path('DEGRADED-ON-RESERVE',good,bad).target,'failed');
+assert.equal(path('DEGRADED-ON-RESERVE',good,bad).source,'ready');
+for(const state of ['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED']){
+ for(const a of [good,bad,{...good,time:800},{...good,code:'CHECK-001'},{...good,interface:null}]){
+  for(const b of [good,bad,{...good,time:800},{...good,code:'CHECK-001'},{...good,interface:null}]){
+   const p=path(state,a,b);assert([p.source,p.target].filter(x=>x==='healthy').length<=1);
+   if(p.source==='healthy')assert.equal(p.selected,'source');
+   if(p.target==='healthy')assert.equal(p.selected,'target');
+  }
+ }
+}
+console.log('PASS: 200 path combinations, at most one green confirmed traffic path; healthy standby is not a failure');

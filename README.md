@@ -1,14 +1,16 @@
 # HomenSAI Auto VPN · GL-MT6000
 
-Latest release candidate: **0.7.0-alpha8-1** ([release notes](releases/v0.7.0-alpha8.md), [execution and acceptance limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md)). Offline-validated; physical installation and new hardware acceptance are pending.
+Latest release candidate: **0.7.0-alpha9-1** ([release notes](releases/v0.7.0-alpha9.md), [overview path colours](docs/OVERVIEW-PATH-COLOURS.md)). Offline-validated; physical installation and new hardware acceptance are pending.
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**Alpha8:** brighter raised controls and 18px server indicators, request-correlated VPN connectivity checks, explicit controller states, failure diagnosis and model quarantine. Verified locally with 329 application tests, 30 QA tests per runtime and 12 UI suites; [item-by-item limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md). The physical router has not been upgraded to alpha8; full native multi-hop production acceptance is pending.
+**Alpha9:** only the selected healthy overview path is green; a healthy standby is grey/ready, transitions yellow and real failures red. [Colour contract](docs/OVERVIEW-PATH-COLOURS.md).
 
-![Alpha8 interface - synthetic preview](qa/ui-review-alpha8/overview-en.jpg)
+**Previous alpha8:** brighter raised controls and 18px server indicators, request-correlated VPN connectivity checks, explicit controller states, failure diagnosis and model quarantine. Verified locally with 329 application tests, 30 QA tests per runtime and 12 UI suites; [item-by-item limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md). The physical router has not been upgraded to alpha8; full native multi-hop production acceptance is pending.
+
+![Alpha9 interface - synthetic preview](qa/ui-review-alpha9/overview-en.jpg)
 
 Previous verified checkpoint:
 

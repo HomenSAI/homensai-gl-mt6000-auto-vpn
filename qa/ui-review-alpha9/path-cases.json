@@ -1,0 +1,70 @@
+[
+  {
+    "scenario": "primary",
+    "paths": [
+      {
+        "background": "rgba(214, 245, 232, 0.953)",
+        "label": "Активный путь трафика",
+        "side": "source",
+        "state": "healthy"
+      },
+      {
+        "background": "rgba(237, 242, 247, 0.953)",
+        "label": "Готов; трафик не направлен",
+        "side": "target",
+        "state": "ready"
+      }
+    ]
+  },
+  {
+    "scenario": "switching",
+    "paths": [
+      {
+        "background": "rgb(255, 240, 242)",
+        "label": "Ошибка доступности",
+        "side": "source",
+        "state": "failed"
+      },
+      {
+        "background": "rgb(255, 247, 222)",
+        "label": "Проверяется / ожидается подтверждение пути",
+        "side": "target",
+        "state": "checking"
+      }
+    ]
+  },
+  {
+    "scenario": "reserve",
+    "paths": [
+      {
+        "background": "rgb(255, 240, 242)",
+        "label": "Ошибка доступности",
+        "side": "source",
+        "state": "failed"
+      },
+      {
+        "background": "rgb(214, 245, 232)",
+        "label": "Активный путь трафика",
+        "side": "target",
+        "state": "healthy"
+      }
+    ]
+  },
+  {
+    "scenario": "ready-primary",
+    "paths": [
+      {
+        "background": "rgb(237, 242, 247)",
+        "label": "Готов; трафик не направлен",
+        "side": "source",
+        "state": "ready"
+      },
+      {
+        "background": "rgb(214, 245, 232)",
+        "label": "Активный путь трафика",
+        "side": "target",
+        "state": "healthy"
+      }
+    ]
+  }
+]

@@ -140,7 +140,7 @@ old="Object.keys(p.days||{}).forEach(function(day){"
 assert old in source
 source=source.replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).forEach(function(k){totals[k]=p.periods[period][k]||0;});}else Object.keys(p.days||{}).forEach(function(day){")
 source=source.replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
-source=source.replace('?build=060-alpha1','?build=070-alpha8')
+source=source.replace('?build=060-alpha1','?build=070-alpha9')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
 source=source.replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
@@ -203,10 +203,10 @@ source=source.replace("      if(inventory.error)put('overview'", "      if(contr
 source=source.replace("      showPage(activeTab);window.addEventListener", "      panel.addEventListener('pointerdown',function(){pointerHeld=true;});\n      ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});\n      showPage(activeTab);window.addEventListener")
 
 source=source.replace("put('overview',planning);","put('tests',planning);")
-source=source.replace('ui15.css','ui19.css')
-(root/'dashboard38.js').write_text(source,encoding='utf8')
-print('Generated dashboard38.js with sidebar, language persistence and sortable tables')
+source=source.replace('ui15.css','ui20.css')
+(root/'dashboard39.js').write_text(source,encoding='utf8')
+print('Generated dashboard39.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard38',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard39',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

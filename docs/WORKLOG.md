@@ -718,3 +718,18 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 - Downloaded both release assets from GitHub. IPK 463562 bytes, SHA256 da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453; checksum match. All 13 historical public tag refs unchanged, remote commit tree matched local publication tree, prerelease true/draft false. Added public verification receipt.
 - A prior local-codex bundle import emitted background Git auto-GC errors: node could not create a lock beside the preserved backup/recovered ref. Import, exact primary save and GitHub push still succeeded and were independently verified. Correction: disable automatic GC/maintenance only for that controlled transport-fetch command; preserve ownership/backup refs and do not change ACLs or global Git configuration. PowerShell parser and next actual primary-save verification check this change. Product/IPK unchanged.
 - No router access, installation, route/firewall/VPN change or forced Git update. Final records are saved locally/Gitea before normal GitHub main follow-up.
+
+
+## 2026-10-17T09:42:57.430883+02:00 - alpha9 overview selected-path colour correction
+
+- User reported both Primary and Reserve constantly green. Cause: autoPathModel mapped each healthy tunnel to green independently of the controller-selected route. That conflated connectivity with traffic selection.
+- Correction: green only for the fresh confirmed selected and healthy plan path; healthy unselected candidate is neutral/ready, confirmed failed probes red, destination awaiting transition confirmation yellow, stale/off/unknown neutral. Both tunnels may be connected; labels/legend describe the plan route, not every router policy or exclusive process connection. Degraded selected reserve remains visibly failed rather than pretending a healthy primary has already been selected.
+- Added 200 controller/health-state combinations proving at most one green path and selected identity; updated transition/return expectations. Node regression and generated syntax checks PASS. Browser local Russian preview confirms neutral ready Primary and green active Reserve. Physical router unchanged.
+- Prepared distinct alpha9-1, dashboard39/ui20 to preserve alpha8 release/assets and avoid cache confusion. Full immutable CI, package and publication follow after this source checkpoint.
+
+
+## 2026-10-17T09:46:15.516980+02:00 - alpha9 path UI acceptance and package
+
+- Immutable source 18be40f4d0504ffc25c815675f077859087fde47 dual-runtime CI PASS: 329 application tests, 30 QA tests per runtime, 12 UI suites including 200 path combinations. Python 3.9/Lua zero skips; Python 3.11 control seven Lua skips.
+- Browser confirmed primary active/standby ready; primary failed/destination checking; primary failed/reserve active; recovered but unselected primary ready/reserve active. EN/RU labels and selected-only green verified. Screenshots explicitly synthetic; no real path trial.
+- Built alpha9-1 and checked exact SHA256 equality to CI: af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521. New versioned UI assets preserve alpha8 and prevent stale-cache display. Local-first snapshot publication and new prerelease follow; no existing tag/asset or physical device is changed.
