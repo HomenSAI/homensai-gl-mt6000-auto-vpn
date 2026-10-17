@@ -11,3 +11,14 @@ Reviewed candidate: alpha8-1, package SHA256 da7f42716b3d35504be3f586a7ee1b18c8e
 Manual privacy pass found personal workspace context in two Markdown files. Replaced that context with a generic previous-private-workspace description; no product code or package changed. Known router-profile strings and direct private identifiers were not present in tracked text. Synthetic screenshots are labelled; runtime keys, tokens, backups and live data remain ignored/private. Automated scanning is an additional check, not proof against every possible secret.
 
 This record is preparation, not confirmation of a completed push. Final result is recorded separately after remote verification.
+
+
+## Verified first publication
+
+- GitHub main: 5e9f23486e05fe7037624a404a905c9d615436b5, directly verified through the GitHub API after normal push.
+- Canonical source: a514afa482792a6d630831dd8a822a18962fe47e; public tree exactly matches it.
+- Previous public main 51982dd249fb4ea96fbd1573f35e01bdd9c538d5 is the sole parent; no canonical historical commit is introduced as a parent.
+- Exact public snapshot passed dual-runtime CI and nested privacy checks; package SHA256 da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453. Publication branch was saved and verified in Gitea first.
+- Historical tag refs retained for before/after comparison. No force, mirror, old-tag push or router change.
+
+A documentation-only follow-up records this completed operation; its final SHA and release response remain in the local verification receipt.

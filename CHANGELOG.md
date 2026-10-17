@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0-alpha8-1 - 2026-10-17
+
+Bright raised controls and 18px server lamps; request-correlated DNS/HTTPS checks; explicit Auto/connection/health/traffic states; configured-threshold diagnosis and model quarantine. 329 application + 30 QA tests per runtime and 12 UI suites PASS. Reviewed snapshot published to GitHub main after Gitea verification. Full native hierarchy and physical alpha8 deployment remain pending.
+
+
 ## 0.7.0-alpha6 — complete offline model and UI acceptance
 
 - Pure multi-hop cascade, per-hop/root rollback, stop/restart reconciliation and bounded failure guards; no new native route authorization.

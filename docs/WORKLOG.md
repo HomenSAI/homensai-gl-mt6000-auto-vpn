@@ -697,3 +697,10 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 - Verified public repository, authenticated HomenSAI account and fresh main SHA 51982dd249fb4ea96fbd1573f35e01bdd9c538d5. New public alpha8 tag absent (expected HTTP 404). Canonical/public histories are unrelated; existing historical tag collisions remain unchanged.
 - Selected reviewed-snapshot publication with public main parent, keeping full canonical history in Gitea. No force/mirror/old-tag push. Refreshed current-state/publication README text and removed personal workspace context from two tracked Markdown files. Product/package bytes unchanged.
 - Preparation approval does not authorize physical installation or native failover. Exact public commit must pass privacy and immutable-snapshot validation and be saved to Gitea before GitHub main push.
+
+
+## 2026-10-17T09:31:46.597301+02:00 - GitHub main push independently confirmed
+
+- Created public snapshot commit 5e9f23486e05fe7037624a404a905c9d615436b5, sole parent 51982dd249fb4ea96fbd1573f35e01bdd9c538d5, tree a972b8de20e111e204a02f81249ca8bf297138c3 exactly matching canonical source a514afa482792a6d630831dd8a822a18962fe47e. Full canonical history remains in Gitea.
+- Saved exact public branch to Gitea, then immutable dual-runtime CI PASS with unchanged package hash. Ordinary Git push to GitHub main succeeded; GitHub API independently returned the expected public commit. No force or old-tag publication.
+- Added documentation-only completion records and refreshed earlier GitHub-blocked statements. Preparing new prerelease on the public history; local canonical alpha8 tag is not bulk-pushed. Physical router untouched.

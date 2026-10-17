@@ -66,4 +66,9 @@ See [alpha8 execution report](ALPHA8-UX-ALGORITHMS-RESULTS.md). Local scope comp
 | ALG-06 | OFFLINE PASS; HARDWARE BLOCKED | LAN proof/transaction/timeouts/rollback contracts retained and tested. Actual LAN witness confirmation needs physical acceptance. |
 | ALG-07 | OFFLINE PASS; HARDWARE PENDING | Existing cooldown/dwell/stable return and interruption tests pass; stronger failed-hop probation added. Real offload/vendor timing still unaccepted. |
 | QA-01 | DONE LOCAL | 329 application tests/runtime, 30 QA tests/runtime, 12 UI suites; async race/expiry/corrupt state/RPC cases and mobile browser check. |
-| DOC-01 | LOCAL CANDIDATE READY; GITHUB BLOCKED | Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub histories/tags remain unresolved; no forced migration. |
+| DOC-01 | LOCAL/GITHUB SNAPSHOT READY | Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub main snapshot published; old historical tag collisions preserved without overwrite. |
+
+
+## Publication update - 17 October 2026
+
+GitHub main publication was approved and independently verified at 5e9f23486e05fe7037624a404a905c9d615436b5. Canonical source a514afa482792a6d630831dd8a822a18962fe47e has the same tree. Existing public ancestry and historical tags are preserved; canonical history remains in Gitea. This supersedes earlier GitHub-blocked status statements. Product/hardware limitations are unchanged.

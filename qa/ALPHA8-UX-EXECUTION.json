@@ -110,8 +110,8 @@
     },
     {
       "id": "DOC-01",
-      "status": "LOCAL CANDIDATE READY; GITHUB BLOCKED",
-      "evidence": "Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub histories/tags remain unresolved; no forced migration."
+      "status": "LOCAL/GITHUB SNAPSHOT READY",
+      "evidence": "Reviewed alpha8 snapshot published to GitHub main after primary Gitea save; old tag collisions preserved without overwrite. Hardware acceptance unchanged."
     }
   ],
   "fault_model": {
@@ -131,5 +131,11 @@
     "request_failure": "UNAVAILABLE; retry enabled",
     "request_completion": "matching identity, checked/failed counts"
   },
-  "package_sha256": "da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453"
+  "package_sha256": "da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453",
+  "publication": {
+    "verified_main_commit": "5e9f23486e05fe7037624a404a905c9d615436b5",
+    "canonical_source": "a514afa482792a6d630831dd8a822a18962fe47e",
+    "method": "snapshot on existing public parent; normal fast-forward push",
+    "physical_deployment": false
+  }
 }

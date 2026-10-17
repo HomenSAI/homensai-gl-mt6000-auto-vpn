@@ -30,7 +30,7 @@ The approved local implementation is complete within the statuses below. Rows re
 | ALG-06 | OFFLINE PASS; HARDWARE BLOCKED | LAN proof/transaction/timeouts/rollback contracts retained and tested. Actual LAN witness confirmation needs physical acceptance. |
 | ALG-07 | OFFLINE PASS; HARDWARE PENDING | Existing cooldown/dwell/stable return and interruption tests pass; stronger failed-hop probation added. Real offload/vendor timing still unaccepted. |
 | QA-01 | DONE LOCAL | 329 application tests/runtime, 30 QA tests/runtime, 12 UI suites; async race/expiry/corrupt state/RPC cases and mobile browser check. |
-| DOC-01 | LOCAL CANDIDATE READY; GITHUB BLOCKED | Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub histories/tags remain unresolved; no forced migration. |
+| DOC-01 | LOCAL/GITHUB SNAPSHOT READY | Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub main snapshot published; old historical tag collisions preserved without overwrite. |
 
 ## Verification
 
@@ -55,3 +55,8 @@ The `scan` RPC has no new user-controlled parameters. It returns `queued`, opaqu
 Before any future installation/test: verify firmware/board and current routes, obtain a fresh backup, preserve a management/recovery path and independent client connection. Then test a separately certified source/reserve edge, real vendor arbitration, isolated reserve probes, transaction-bound LAN DNS/HTTPS/exit confirmation, rollback/Stop, and only then the whole hierarchy. Current mandatory guards and no-direct-WAN policy remain in place. Installation is not authorised by this offline completion report.
 
 The older overnight protocol result remains valid for its exact producer and source; it is not an overnight soak of this new alpha8 application.
+
+
+## Publication update - 17 October 2026
+
+GitHub main publication was approved and independently verified at 5e9f23486e05fe7037624a404a905c9d615436b5. Canonical source a514afa482792a6d630831dd8a822a18962fe47e has the same tree. Existing public ancestry and historical tags are preserved; canonical history remains in Gitea. This supersedes earlier GitHub-blocked status statements. Product/hardware limitations are unchanged.
