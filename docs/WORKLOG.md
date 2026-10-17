@@ -889,3 +889,10 @@ Corrected selected-tab method PASS: 60 transitions, 10 sections x EN/RU x measur
 ## 2026-10-17T12:27:44.026313+00:00 - endurance runner smoke accepted
 
 Immutable runner cb708e87da4bce942c808262a8e9ecf8c494c476 verified its frozen files against Git and all 34 installed code hashes against alpha2. Sixty-second smoke PASS: 2 samples, 0 failures, 0 gaps, maximum monitor RSS 22228992 bytes. Producer paused the clone; independent watchdog separately confirmed pause and then promoted MEASUREMENTS-PASS to PASS. This short smoke is not long-duration acceptance. The 12-hour run is prepared next with its own source, deadline and output directory.
+
+
+## 2026-10-17T12:32:09.340822+00:00 - alpha2 publication and 12-hour observer started
+
+Source 8ab8011e85647ed4179f69d02d9ffe7cb9f62af5 saved Gitea first; public snapshot 4c6bea35d87dbfda4f9bc46042555b0371d63d77 and prerelease v0.8.0-alpha2 verified. Package 470221 bytes SHA256 8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8 and checksum independently downloaded. Explicit --resume of the completed same operation preserved the public main commit and both remote asset IDs/bytes, with no duplicate publication. Alpha1 release notes corrected for the viewport sizing erratum; its tag/package remain unchanged.
+
+Twelve-hour virtual monitor observer started 2026-10-17T12:29:35Z, deadline 2026-10-18T00:29:35Z (02:29 Europe/Berlin). Frozen source 8ab8011e85647ed4179f69d02d9ffe7cb9f62af5; package/code hashes pinned. First two samples had zero failures/gaps; this is only RUNNING/start evidence, never final PASS. Separate watchdog process was verified by exact frozen path/run directory. An unprivileged WMI read returned Access Denied; approved narrow own-process inspection succeeded. Status/events remain private/virtual-hardening-20261017/endurance-alpha2-12h; no repeating chat automation created. Physical router/network untouched. Do not run concurrent serial helpers or replace the guest package while the observer owns it.

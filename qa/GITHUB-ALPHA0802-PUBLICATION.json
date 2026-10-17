@@ -1,0 +1,23 @@
+{
+  "source": "8ab8011e85647ed4179f69d02d9ffe7cb9f62af5",
+  "public": "4c6bea35d87dbfda4f9bc46042555b0371d63d77",
+  "parent": "e46474e57904844d943afd7c32dbc64dec289cb2",
+  "tree": "09da256f2b6fdc0e7ef24cd2153d7a2346012477",
+  "package_sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+  "gitea_saved": true,
+  "github_published": true,
+  "planned_release": "v0.8.0-alpha2",
+  "notes_sha256": "340666f7faf106ad558e8ffa12a9ce92b478437fef0647ccdd51db3239c53a59",
+  "tag_verified": true,
+  "release_verified": true,
+  "verified_assets": {
+    "homensai-auto-vpn_0.8.0-alpha2-1_all.ipk": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+    "homensai-auto-vpn_0.8.0-alpha2-1_all.ipk.sha256": "50b952a5cc247e21b1d62908c76289e9a27d369f4a33fc9c5c3bdc58206dcb7c"
+  },
+  "release": "v0.8.0-alpha2",
+  "release_download_verified": true,
+  "checksum_download_verified": true,
+  "real_resume_verified": true,
+  "asset_ids_preserved": true,
+  "recorded_at_utc": "2026-10-17T12:32:09.339821+00:00"
+}

@@ -1,0 +1,20 @@
+{
+  "state": "RUNNING",
+  "scope": "virtual x86 monitor endurance; no real provider/native/LAN acceptance",
+  "source": "8ab8011e85647ed4179f69d02d9ffe7cb9f62af5",
+  "package_sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+  "version": "0.8.0-alpha2",
+  "duration_seconds": 43200,
+  "interval_seconds": 60,
+  "started_at_utc": "2026-10-17T12:29:35.307269+00:00",
+  "samples": 3,
+  "failures": 0,
+  "gaps": 0,
+  "smoke": false,
+  "physical_router_access": false,
+  "runner_sha256": "8e24a70619cab94d8faaa607cdef14b028da88bc5edd56b9b83875623c6be866",
+  "recorded_at_utc": "2026-10-17T12:32:09.338822+00:00",
+  "deadline_utc": "2026-10-18T00:29:35.307269+00:00",
+  "independent_watchdog_confirmed": true,
+  "receipt_scope": "start snapshot only; not long-duration final acceptance"
+}
