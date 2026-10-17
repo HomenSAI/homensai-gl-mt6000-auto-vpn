@@ -960,3 +960,9 @@ Created experimental review prerelease handoff-v1.0.0. Downloaded all three asse
 
 - Owner asked for the program version in the lower-left corner of the page. The footer now reads "Version X · package Y · page Z" (program version first; falls back to the page's own version when the router does not answer). Since alpha9 was already published, this is a new version 0.8.0-alpha10-1 (dashboard51/ui29), not an edit of the published files.
 - Verification: JS suites PASS; isolated dual-image CI PASS on 8e000caa; container package 521771 bytes, SHA256 5e764b6d... equals the CI hash. Not done: no physical-router test, no virtual acceptance of alpha10.
+
+## 2026-10-17T22:45:00+02:00 - alpha11: clearer Overview
+
+- Owner question: what is "Main" in the primary/reserve boxes, why the boxes do not follow the traffic light colour, and what "Connected servers 4 / 4" means next to "2 of 4" at the top. Cause: "Main" is the profile's group label (channel) printed without a name; the box colour came from per-profile health, not from the Auto light; the tile had no explanation.
+- Change: the box that carries traffic takes the colour of the Auto light (green primary, orange reserve, yellow switching, red attention), the other box stays neutral; "Group: Main" with a tooltip; tiles open to explain (connected = connected of the profiles listed, works = passed the latest check). New version 0.8.0-alpha11-1 (dashboard52/ui30); alpha10 files untouched.
+- Verification: JS suites PASS; isolated dual-image CI PASS on d1042979; container package 522995 bytes, SHA256 e2d81117... equals the CI hash. Screenshot of Overview reviewed on the synthetic fixture only. Not done: no physical-router test, no virtual acceptance of alpha11.

@@ -4,8 +4,8 @@
 >
 > HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](../DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.
 
-Package: `homensai-auto-vpn_0.8.0-alpha10-1_all.ipk`, 521771 bytes,
-SHA256 `5e764b6db6de41836443f1e42c8d42dc5fee68270126b2b2589ebda999114daa` (alpha4: plain-language texts, Auto prerequisites checklist, regrouped Settings; checked by isolated CI only, never run on a router).
+Package: `homensai-auto-vpn_0.8.0-alpha11-1_all.ipk`, 522995 bytes,
+SHA256 `e2d81117d98781d77a152ddeac7c81306a9e10baff588a7662f9b786f44a170e` (alpha4: plain-language texts, Auto prerequisites checklist, regrouped Settings; checked by isolated CI only, never run on a router).
 Target: GL.iNet GL-MT6000 / Flint 2, firmware 4.11.0. Experimental alpha: not a production release.
 
 Phases 1-2 below install and verify the **monitor**; they do not enable Auto, change routes, DNS, firewall or
@@ -24,10 +24,10 @@ acceleration, and never restart network services. Phase 3 makes the Auto button 
 cd C:\homensai\homensai-gl-mt6000-auto-vpn\router-test-kit
 
 # 0. Verify the package on the PC
-(Get-FileHash .\homensai-auto-vpn_0.8.0-alpha10-1_all.ipk -Algorithm SHA256).Hash   # must equal the SHA256 above (case-insensitive)
+(Get-FileHash .\homensai-auto-vpn_0.8.0-alpha11-1_all.ipk -Algorithm SHA256).Hash   # must equal the SHA256 above (case-insensitive)
 
 # 1. Upload kit (OpenWrt dropbear needs scp -O)
-scp -O 01-preflight.sh 02-install.sh 03-verify.sh 04-uninstall.sh 05-emergency.sh homensai-auto-vpn_0.8.0-alpha10-1_all.ipk root@ROUTER:/tmp/
+scp -O 01-preflight.sh 02-install.sh 03-verify.sh 04-uninstall.sh 05-emergency.sh homensai-auto-vpn_0.8.0-alpha11-1_all.ipk root@ROUTER:/tmp/
 
 # 2. Private full configuration backup, streamed to the PC (use cmd /c: PowerShell redirection would corrupt binary data)
 cmd /c "ssh root@ROUTER ""tar czf - /etc/config /etc/homensai-vpn /etc/glversion"" > ..\private\router-backup.tgz"
@@ -37,7 +37,7 @@ cmd /c "ssh root@ROUTER ""tar czf - /etc/config /etc/homensai-vpn /etc/glversion
 ssh root@ROUTER "cd /tmp && sh 01-preflight.sh"
 
 # 4. Install (monitor only)
-ssh root@ROUTER "cd /tmp && sh 02-install.sh /tmp/homensai-auto-vpn_0.8.0-alpha10-1_all.ipk"
+ssh root@ROUTER "cd /tmp && sh 02-install.sh /tmp/homensai-auto-vpn_0.8.0-alpha11-1_all.ipk"
 
 # 5. Verify (wait up to 90 s for the first sample). Must end with RESULT: PASS
 ssh root@ROUTER "cd /tmp && sh 03-verify.sh wait"
@@ -52,7 +52,7 @@ The first time you open Services -> HomenS.AI Auto VPN a full-page screen shows 
 
 ## What to look at in LuCI
 
-Services -> HomenS.AI Auto VPN: version `0.8.0-alpha10` top right; Overview shows your existing profiles, health lamps
+Services -> HomenS.AI Auto VPN: version `0.8.0-alpha11` top right; Overview shows your existing profiles, health lamps
 and the Auto button (leave it OFF). Run the System setup wizard only if you want names/channels/priorities.
 After an upgrade sign out of LuCI and back in (new ACL), and hard-refresh the browser (Ctrl+F5).
 

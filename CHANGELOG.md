@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.0-alpha11-1 - 2026-10-17
+
+Overview clarity. dashboard52/ui30. UI only; includes alpha10.
+
+- Primary/reserve boxes coloured like the Auto traffic light; "Group:" label instead of a bare "Main"; Overview tiles open to explain their numbers.
+
 ## 0.8.0-alpha10-1 - 2026-10-17
 
 Version line in the sidebar footer. dashboard51/ui29. UI text only; includes alpha9.

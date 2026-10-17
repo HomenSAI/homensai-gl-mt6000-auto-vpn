@@ -27,3 +27,8 @@ function renderSummary(status,inventory){
   var guide=E('details',{'class':'hv-chart-card hv-start-card'+(open.length?'':' hv-start-complete'),'open':open.length?'open':null},[E('summary',{},open.length?bi('Getting started: ','Начало работы: ')+(steps.length-open.length)+' / '+steps.length:bi('Getting started: all steps done','Начало работы: все шаги выполнены')),list]);
   return E('div',{'class':'hv-summary-wrap'},[hero,guide]);
 }
+
+// A summary tile that opens to explain what the number means.
+function metricInfo(label,value,detail,explain){
+  return E('details',{'class':'hv-metric hv-metric-info'},[E('summary',{},[E('span',{},label),E('strong',{},text(value)),E('small',{},detail)]),E('p',{'class':'hv-metric-explain'},explain)]);
+}
