@@ -851,3 +851,41 @@ Source 509d015c6fe4e10ae90fe383da593c651312e5bd was saved in Gitea, then identic
 Closed only verified own lab helpers PID14732/81316, removed clone HTTP forwarding and independently confirmed port8081 closed; QMP reports marked clone paused/running false. Original VM and physical router were not modified. Named-branch Gitea helper was corrected to avoid testing an unset/stale LASTEXITCODE when no native branch-read command ran; actual named-branch save succeeded.
 
 Checklist remaining external work: exact vendor SDK provenance/build; server-triggered Gitea CI activation; physical vendor workers/cascade/LAN DNS/Kill Switch/IPv6/provider isolation and 24-48h hardware observation. Local/model checks do not certify these. No recurring automation or physical deployment was created.
+
+
+## 2026-10-17T11:57:26.304678+00:00 - approved virtual hardening follow-up
+
+User authorized the proposed eight additional tasks with physical router excluded. Prepare a paused-disk baseline before interrupted opkg trials. Existing alpha1-4 and its failed predecessors retain immutable receipts. New long run will identify the exact final candidate and report RUNNING until its deadline; short model repeats are not unique coverage.
+
+
+## 2026-10-17T12:00:52.605886+00:00 - reproduced malformed accounting checkpoint defects
+
+Scratch-only adversity tests reproduced four failing cases and two uncaught exceptions: top-level JSON array caused AttributeError at restore/raw.get; checksummed saved=1e300 caused OverflowError in datetime conversion; accounting array/wrong collection/negative gaps/non-numeric quality bucket were silently accepted. Checksum alone did not validate structure. Added bounded schema/numeric/calendar validation before restore and backup rotation. Corrupt current data must recover a known-good backup with STORAGE-RECOVERED; no good copy yields STORAGE-001. ENOSPC-before-replace and replace failure already preserved the known file and are retained as regressions. No physical state or real measurements were injected.
+
+
+## 2026-10-17T12:02:44.670305+00:00 - interrupted virtual upgrade and local publication recovery
+
+Three actual opkg --force-reinstall lifecycle interruptions completed: preinst, postinst, before RPC reload. The owned process group was killed only after the explicit private checkpoint marker; each ordinary alpha1-4 recovery install exited 0, own configuration and network/firewall/main-route fingerprint remained unchanged, monitor regained fresh measurements, Auto remained OFF. This is not a physical power-loss or mid-flash atomicity claim. Instrumented artifacts are private and never release assets.
+
+Publication now retains planned release identity before remote effects and supports explicit --resume of the same private ledger/source/CI receipt. Reconciles main/tag/release/asset evidence before retry; wrong tag/hash/moved main/draft state refuses. Local fake remote tests interrupt after each of five mutations and resume without duplicate mutations; no synthetic GitHub releases were created. Added bounded external command timeouts. Chosen recovery preset remains selected across review/back; editing a value switches to Custom. Local cancellation issued zero writes. Candidate advanced to alpha2/dashboard43; old assets remain unchanged.
+
+
+## 2026-10-17T12:19:46.425736+00:00 - virtual storage, wizard and report acceptance
+
+Actual disposable 64KiB tmpfs retry passed six checks: ENOSPC preserved known checkpoint; freeing space restored writing; semantically invalid checksummed data recovered backup; corrupt current file could be replaced; backward/forward synthetic timestamps marked gaps without invented bytes; protected network/config fingerprint unchanged. Tmpfs unmounted. First helper FAIL (OSError, before any check) is retained; buffered filler close could retry the failed flush. Changed to unbuffered writes and bounded processing before retry; do not count first attempt as PASS.
+
+Actual LuCI recovery wizard selected Stability visibly, saved failures=5, reopened with 5, returned through Back, restored original values and saved. System wizard refused identical primary/reserve, passed installed UCI self-test, reviewed metadata, saved and reopened existing virtual pair. Neither wizard enabled Auto or imported VPN credentials. Telegram field was empty; missing valid stored token correctly blocked Next, then cancellation; no token entered or message sent. Browser command failure/pending-save cases remain separately covered by local UI tests.
+
+Downloaded synthetic incident HTML has no active elements/external resources. Converted it through isolated-profile LibreOffice, extracted expected incident text, checked no PDF JavaScript actions, rendered and visually reviewed one readable page. The in-app browser rejected file: URLs by security policy; no workaround attempted. Native browser Print remains unverified. Only virtual guest clock/RTC were aligned after pause-induced lag; host/physical clocks unchanged.
+
+Browser sizing audit found prior qa/alpha0801-browser-matrix.json actual LuCI rows were all 414x896, despite requested three sizes; viewport control affects the selected tab, not a background tab. Prior WORKLOG/release text overstated distinct actual sizes. Mobile overflow correction remains demonstrated, but multi-size claim is withdrawn pending corrected selected-tab tests. New English 30 transitions completed; a Russian batched command timed out and its unfinished batch is not acceptance. Corrected method opens a dedicated visible virtual tab, verifies selected ID and actual innerWidth/innerHeight at each size, and records bounded chunks.
+
+
+## 2026-10-17T12:24:30.709218+00:00 - corrected actual LuCI matrix complete
+
+Corrected selected-tab method PASS: 60 transitions, 10 sections x EN/RU x measured 414x896, 978x808 and 1280x300. Every row asserts actual innerWidth/innerHeight; all visible pages fit root width. Saved raw measured rows, not requested sizes. Dedicated test tabs closed after viewport reset. This supersedes the previously overstated distinct-size claim; original receipt remains unchanged for audit.
+
+
+## 2026-10-17T12:27:44.026313+00:00 - endurance runner smoke accepted
+
+Immutable runner cb708e87da4bce942c808262a8e9ecf8c494c476 verified its frozen files against Git and all 34 installed code hashes against alpha2. Sixty-second smoke PASS: 2 samples, 0 failures, 0 gaps, maximum monitor RSS 22228992 bytes. Producer paused the clone; independent watchdog separately confirmed pause and then promoted MEASUREMENTS-PASS to PASS. This short smoke is not long-duration acceptance. The 12-hour run is prepared next with its own source, deadline and output directory.

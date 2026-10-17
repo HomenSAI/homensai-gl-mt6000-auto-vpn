@@ -1,0 +1,9 @@
+{
+  "state": "FAIL",
+  "scope": "disposable 64KiB tmpfs and synthetic timestamps; not physical flash wear",
+  "physical_router_access": false,
+  "checks": [],
+  "exception_type": "OSError",
+  "code": "STORAGE-LAB-ERROR",
+  "temporary_mount_cleaned": true
+}

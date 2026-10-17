@@ -1,6 +1,6 @@
 # HomenSAI Auto VPN · GL-MT6000
 
-Latest release candidate: **0.8.0-alpha1-4** ([release notes](releases/v0.8.0-alpha1.md), [approved checklist](docs/TODO-POST-ALPHA10.md)). Local and isolated x86 OpenWrt validation; no new physical installation or hardware acceptance.
+Latest release candidate: **0.8.0-alpha2-1** ([release notes](releases/v0.8.0-alpha2.md), [virtual hardening checklist](docs/TODO-VIRTUAL-HARDENING.md)). No new physical installation; twelve-hour virtual endurance acceptance is pending.
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 

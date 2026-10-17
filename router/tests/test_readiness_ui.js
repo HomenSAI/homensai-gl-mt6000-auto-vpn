@@ -8,4 +8,4 @@ assert.equal(c.readinessModel({},101).checks.length,0);
 const css=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/ui22.css','utf8');assert(css.includes('.hv-app input.hv-search{box-sizing:border-box!important'));
 console.log('PASS: readiness unknown/future/stale/RPC refusal and actual-LuCI search sizing guard');
 
-const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard42.js','utf8');assert(dashboard.indexOf("'require rpc'")<dashboard.indexOf('var RECOVERY_PRESETS='));assert(dashboard.replace(/^\/\/[^\n]*\n/,'').trimStart().startsWith("'use strict';"));
+const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard43.js','utf8');assert(dashboard.indexOf("'require rpc'")<dashboard.indexOf('var RECOVERY_PRESETS='));assert(dashboard.replace(/^\/\/[^\n]*\n/,'').trimStart().startsWith("'use strict';"));

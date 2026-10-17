@@ -1,0 +1,19 @@
+{
+  "state": "PASS",
+  "scope": "virtual x86 monitor endurance; no real provider/native/LAN acceptance",
+  "source": "cb708e87da4bce942c808262a8e9ecf8c494c476",
+  "package_sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+  "version": "0.8.0-alpha2",
+  "duration_seconds": 60,
+  "interval_seconds": 30,
+  "started_at_utc": "2026-10-17T12:25:30.941822+00:00",
+  "samples": 2,
+  "failures": 0,
+  "gaps": 0,
+  "max_rss_bytes": 22228992,
+  "smoke": true,
+  "physical_router_access": false,
+  "runner_sha256": "8e24a70619cab94d8faaa607cdef14b028da88bc5edd56b9b83875623c6be866",
+  "finished_at_utc": "2026-10-17T12:26:31.230153+00:00",
+  "independent_cleanup_confirmed": true
+}

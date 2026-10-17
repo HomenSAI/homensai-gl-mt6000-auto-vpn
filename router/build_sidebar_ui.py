@@ -215,11 +215,11 @@ source=source.replace('return view.extend({',(Path(__file__).parent/'incident_pa
 source=source.replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
 source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status));")
-source=source.replace('070-alpha10','080-alpha1-r2')
+source=source.replace('070-alpha10','080-alpha2')
 source=source.replace('ui15.css','ui22.css')
-(root/'dashboard42.js').write_text(source,encoding='utf8')
-print('Generated dashboard42.js with sidebar, language persistence and sortable tables')
+(root/'dashboard43.js').write_text(source,encoding='utf8')
+print('Generated dashboard43.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard42',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard43',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

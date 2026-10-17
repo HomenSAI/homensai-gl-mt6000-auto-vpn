@@ -1,0 +1,485 @@
+{
+  "scope": "actual isolated x86 LuCI; selected tab and measured viewport verified; no physical router",
+  "rows": [
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "overview",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "channels",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "tests",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "statistics",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "ranking",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "traffic",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "services",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "events",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "readiness",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "ru",
+      "page": "settings",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "overview",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "channels",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "tests",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "statistics",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "ranking",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "traffic",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "services",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "events",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "readiness",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "ru",
+      "page": "settings",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "overview",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "channels",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "tests",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "statistics",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "ranking",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "traffic",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "services",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "events",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "readiness",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "ru",
+      "page": "settings",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "overview",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "channels",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "tests",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "statistics",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "ranking",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "traffic",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "services",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "events",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "readiness",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 896,
+      "language": "en",
+      "page": "settings",
+      "scroll": 399,
+      "visible": true,
+      "width": 414
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "overview",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "channels",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "tests",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "statistics",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "ranking",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "traffic",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "services",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "events",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "readiness",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 808,
+      "language": "en",
+      "page": "settings",
+      "scroll": 963,
+      "visible": true,
+      "width": 978
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "overview",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "channels",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "tests",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "statistics",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "ranking",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "traffic",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "services",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "events",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "readiness",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    },
+    {
+      "height": 300,
+      "language": "en",
+      "page": "settings",
+      "scroll": 1265,
+      "visible": true,
+      "width": 1280
+    }
+  ]
+}

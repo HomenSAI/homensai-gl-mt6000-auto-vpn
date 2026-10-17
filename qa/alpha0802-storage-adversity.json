@@ -1,0 +1,15 @@
+{
+  "state": "PASS",
+  "scope": "disposable 64KiB tmpfs and synthetic timestamps; not physical flash wear",
+  "physical_router_access": false,
+  "checks": [
+    "ENOSPC-known-checkpoint-preserved",
+    "write-recovers-after-space-freed",
+    "checksummed-invalid-schema-recovers-backup",
+    "corrupt-current-replaced-safely",
+    "backward-forward-clock-gaps-no-invented-bytes",
+    "protected-config-network-unchanged"
+  ],
+  "temporary_mount_cleaned": true,
+  "source_sha256": "499ed72698729dd7ac4c7a697a4ec771976c16c37f17f0ab163a3c82dff40a0d"
+}

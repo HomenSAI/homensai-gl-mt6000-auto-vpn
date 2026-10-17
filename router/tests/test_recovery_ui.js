@@ -7,6 +7,7 @@ vm.createContext(context);vm.runInContext(fs.readFileSync('router/recovery_panel
 const field=label=>walk(modal).find(n=>n.attrs['aria-label']===label);
 async function click(label){const button=walk(modal).find(n=>n.tag==='button'&&n.children.includes(label));assert(button,label);await button.attrs.click({currentTarget:button,target:button});}
 (async()=>{
+ context.recoveryWizard({settings:{}});field('Recovery preset').value='stability';field('Recovery preset').attrs.change();assert.equal(field('Recovery preset').value,'stability');assert.equal(field('Consecutive failures before switching (3–10)').value,5);field('Consecutive failures before switching (3–10)').attrs.input();assert.equal(field('Recovery preset').value,'');assert.equal(calls.length,0);await click('Cancel');assert.equal(calls.length,0);
  context.recoveryWizard({settings:{}});field('Consecutive failures before switching (3–10)').value='2';await click('Next');assert.equal(calls.length,0);assert(field('Return policy'));
  field('Consecutive failures before switching (3–10)').value='4';await click('Next');await click('Save recovery settings');assert.equal(calls[0].spec.method,'setup_recovery');assert.equal(calls[0].args[0],4);assert.equal(calls[0].args[4],'healthy_primary');
  await context.reviewPriorities(['b','a']);assert.equal(calls[1].spec.method,'priority_preview');await click('Apply priorities');assert.equal(calls[2].spec.method,'priority_apply');assert.equal(calls[2].args[1],'a'.repeat(64));assert.equal(reloads,2);

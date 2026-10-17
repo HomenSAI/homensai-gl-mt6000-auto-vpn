@@ -1,0 +1,48 @@
+{
+  "state": "PASS",
+  "scope": "controlled opkg lifecycle interruption; not physical power loss or mid-flash atomicity",
+  "physical_router_access": false,
+  "trials": [
+    {
+      "stage": "preinst",
+      "state": "PASS",
+      "started_at": 1792231650.223708,
+      "instrumented_sha256": "ff01a3f7dd3eee1e6c2dc0ec9110fc2d7d7327332e709eaa5bd9b5ee26ff4ea2",
+      "interrupted": true,
+      "recovery_exit": 0,
+      "configuration_preserved": true,
+      "protected_unchanged": true,
+      "fresh_monitor": true,
+      "auto_off": true,
+      "completed_at": 1792231676.302899
+    },
+    {
+      "stage": "postinst",
+      "state": "PASS",
+      "started_at": 1792231676.6150787,
+      "instrumented_sha256": "07a65adb3ecff914202def1f7572c6408daf4f829c828b9b933736b2ccb1aad1",
+      "interrupted": true,
+      "recovery_exit": 0,
+      "configuration_preserved": true,
+      "protected_unchanged": true,
+      "fresh_monitor": true,
+      "auto_off": true,
+      "completed_at": 1792231706.4178493
+    },
+    {
+      "stage": "before_rpc_reload",
+      "state": "PASS",
+      "started_at": 1792231706.7288003,
+      "instrumented_sha256": "c4622e9022b130983bc4e8accc8dc0ef7dad6c7e51e12643b8dfa90531f4e6bf",
+      "interrupted": true,
+      "recovery_exit": 0,
+      "configuration_preserved": true,
+      "protected_unchanged": true,
+      "fresh_monitor": true,
+      "auto_off": true,
+      "completed_at": 1792231743.030504
+    }
+  ],
+  "updated_at": 1792231743.0436535,
+  "completed_at": 1792231743.0436194
+}

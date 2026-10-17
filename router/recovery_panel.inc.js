@@ -11,7 +11,7 @@ function reviewPriorities(ordered){
 }
 function recoveryWizard(inventory){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
-  var settings=inventory.settings||{},step=0;
+  var settings=inventory.settings||{},step=0,presetName='';
   var labels={failures:bi('Consecutive failures before switching (3–10)','Сбоев подряд до переключения (3–10)'),successes:bi('Reserve successes required (2–10)','Успешных проверок резерва (2–10)'),cooldown:bi('Cooldown between attempts, seconds (60–1800)','Пауза между попытками, секунд (60–1800)'),min_dwell:bi('Minimum dwell time, seconds (60–3600)','Минимальное время работы, секунд (60–3600)'),primary_successes:bi('Primary successes before return (2–10)','Успешных проверок основного перед возвратом (2–10)'),primary_stable:bi('Primary stable interval, seconds (30–600)','Период стабильности основного, секунд (30–600)')};
   var defaults={failures:3,successes:2,cooldown:180,min_dwell:180,return_policy:'healthy_primary',primary_successes:3,primary_stable:60},draft={};
   Object.keys(defaults).forEach(function(key){draft[key]=settings['recovery_'+key]==null?defaults[key]:settings['recovery_'+key];});
@@ -21,10 +21,11 @@ function recoveryWizard(inventory){
     if(step===0){
       var presetSelect=E('select',{'aria-label':bi('Recovery preset','Профиль восстановления')},[
         E('option',{value:''},bi('Custom settings','Свои настройки')),E('option',{value:'stability'},bi('Stability','Стабильность')),E('option',{value:'fast_recovery'},bi('Fast recovery','Быстрое восстановление')),E('option',{value:'hold_reserve'},bi('Hold healthy reserve','Сохранять работающий резерв'))]);
-      presetSelect.addEventListener('change',function(){var preset=RECOVERY_PRESETS[presetSelect.value];if(!preset)return;Object.keys(preset).forEach(function(key){draft[key]=preset[key];});show();});
+      presetSelect.value=presetName;
+      presetSelect.addEventListener('change',function(){presetName=presetSelect.value;var preset=RECOVERY_PRESETS[presetName];if(!preset)return;Object.keys(preset).forEach(function(key){draft[key]=preset[key];});show();});
       body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},bi('Preset (review before saving)','Профиль (проверьте перед сохранением)')),presetSelect]));
-      var editors={};Object.keys(labels).forEach(function(key){var node=E('input',{type:'number','aria-label':labels[key]});node.value=draft[key];editors[key]=node;body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},labels[key]),node]));});
-      var policy=E('select',{'aria-label':bi('Return policy','Политика возврата')},[E('option',{value:'healthy_primary'},bi('Return only after stable primary health','Возврат после подтверждения стабильности основного')),E('option',{value:'hold_reserve'},bi('Keep healthy reserve until operator review','Сохранять резерв до решения оператора'))]);policy.value=draft.return_policy;body.appendChild(policy);
+      var editors={};Object.keys(labels).forEach(function(key){var node=E('input',{type:'number','aria-label':labels[key]});node.value=draft[key];node.addEventListener('input',function(){presetName='';presetSelect.value='';});editors[key]=node;body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},labels[key]),node]));});
+      var policy=E('select',{'aria-label':bi('Return policy','Политика возврата')},[E('option',{value:'healthy_primary'},bi('Return only after stable primary health','Возврат после подтверждения стабильности основного')),E('option',{value:'hold_reserve'},bi('Keep healthy reserve until operator review','Сохранять резерв до решения оператора'))]);policy.value=draft.return_policy;policy.addEventListener('change',function(){presetName='';presetSelect.value='';});body.appendChild(policy);
       read=function(){var limits={failures:[3,10],successes:[2,10],cooldown:[60,1800],min_dwell:[60,3600],primary_successes:[2,10],primary_stable:[30,600]};var valid=Object.keys(editors).every(function(key){draft[key]=Number(editors[key].value);return Number.isInteger(draft[key])&&draft[key]>=limits[key][0]&&draft[key]<=limits[key][1];});draft.return_policy=policy.value;return valid;};
     }else{
       body.appendChild(E('h3',{},bi('Review recovery settings','Проверьте настройки восстановления')));

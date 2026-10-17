@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.8.0-alpha1'
+VERSION = '0.8.0-alpha2'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -448,9 +448,14 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
 def checkpoint(accounting):
     accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
-    old = read_json(PERSIST/'checkpoint.json')
-    if old and old.get('sha256') == checksum(old.get('data')):
-        atomic_json(PERSIST/'checkpoint.backup.json', old)
+    try:old = read_json(PERSIST/'checkpoint.json')
+    except (ValueError,TypeError):old=None
+    if old:
+        from checkpoint_schema import validate
+        try:
+            validate(old)
+            if old.get('sha256') == checksum(old.get('data')):atomic_json(PERSIST/'checkpoint.backup.json', old)
+        except (ValueError,TypeError,KeyError,OverflowError):pass
     atomic_json(PERSIST/'checkpoint.json', {'data': payload, 'sha256': checksum(payload)})
 
 
@@ -461,6 +466,8 @@ def restore():
             raw = read_json(PERSIST/filename)
             if raw is None:
                 continue
+            from checkpoint_schema import validate
+            validate(raw)
             if raw.get('sha256') != checksum(raw.get('data')):
                 seen_error = True
                 continue
@@ -473,7 +480,7 @@ def restore():
             if acc.wan:
                 acc.wan.gaps+=1;acc.wan.note_gap(raw['data'].get('saved',time.time()),time.time())
             return acc, 'STORAGE-RECOVERED' if seen_error else None
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, OverflowError):
             seen_error = True
     return Accounting(), 'STORAGE-001' if seen_error else None
 
