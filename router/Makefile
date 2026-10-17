@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=homensai-auto-vpn
-PKG_VERSION:=0.8.0-alpha2
+PKG_VERSION:=0.8.0-alpha6
 PKG_RELEASE:=1
 PKGARCH:=all
 PKG_LICENSE:=MIT
@@ -34,7 +34,7 @@ endef
 
 define Package/homensai-auto-vpn/install
 	$(CP) $(PKG_BUILD_DIR)/payload/* $(1)/
-	chmod 0755 $(1)/etc/init.d/homensai-vpn $(1)/usr/libexec/rpcd/homensai-vpn
+	chmod 0755 $(1)/etc/init.d/homensai-vpn $(1)/usr/libexec/rpcd/homensai-vpn $(1)/usr/sbin/homensai-vpn-emergency
 endef
 
 include ./package-hooks.mk

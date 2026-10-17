@@ -155,6 +155,25 @@ class NativeTests(unittest.TestCase):
             self.assertEqual(result['code'],'DNS-001');self.assertEqual(result['rtt_ms'],25)
             self.assertFalse(result['lan_path_verified'])
 
+    def test_exit_address_is_kept_only_for_healthy_global_ipv4(self):
+        binding={'code':None,'device':'wgclient1','mark':4096,'table':'1001'}
+        def trace(device,mark,target):
+            agent.remember_exit(device,b'fl=1\nip=93.184.216.34\nhttp=http/2\n');return 20.0
+        with patch.object(agent,'route_binding',return_value=binding),patch.object(agent,'https_probe',side_effect=trace),patch.object(agent,'dns_probe',return_value=True):
+            result=agent.probe({'id':'wireguard:peer_1','interface':'wgclient1'})
+        self.assertEqual(result['exit_ip'],'93.184.216.34');self.assertEqual(agent.EXIT_SEEN,{})
+        for body in (b'ip=10.0.0.2\n',b'ip=::1\n',b'ip=not-an-ip\n',b'x=1\n'):
+            agent.remember_exit('wgclient1',body);self.assertEqual(agent.EXIT_SEEN,{})
+        with patch.object(agent,'route_binding',return_value=binding),patch.object(agent,'https_probe',side_effect=trace),patch.object(agent,'dns_probe',return_value=False):
+            failed=agent.probe({'id':'wireguard:peer_1','interface':'wgclient1'})
+        self.assertNotIn('exit_ip',failed);agent.EXIT_SEEN.clear()
+
+    def test_rpc_list_and_acl_include_operator_return(self):
+        self.assertIn('native_return',(ROOT/'files/usr/share/rpcd/acl.d/luci-app-homensai-vpn.json').read_text())
+        out=io.StringIO()
+        with contextlib.redirect_stdout(out):agent.rpc('list')
+        self.assertIn('native_return',json.loads(out.getvalue()))
+
     def test_no_route_evidence_is_not_internet_health(self):
         outputs=[{'up':True,'l3_device':'wgclient1'},[{'dev':'wgclient1','dst':'default','table':1001}],[]]
         with patch.object(agent,'command',side_effect=[json.dumps(v).encode() for v in outputs]):

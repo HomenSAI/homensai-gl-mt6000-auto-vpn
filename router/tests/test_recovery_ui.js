@@ -17,3 +17,11 @@ async function click(label){const button=walk(modal).find(n=>n.tag==='button'&&n
  const button=walk(panel).find(n=>n.tag==='button'&&n.children.includes('Review recommended priorities'));await button.attrs.click();assert.deepEqual(Array.from(selected),['a','b']);
  console.log('PASS: recovery validation/review, exact save RPC, priority review/apply and measured rank order');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+// A25/A35: saved values equal to a reviewed preset reopen as that preset; edited values reopen as Custom.
+{
+  const saved={recovery_failures:5,recovery_successes:3,recovery_cooldown:300,recovery_min_dwell:300,recovery_return_policy:'healthy_primary',recovery_primary_successes:5,recovery_primary_stable:120};
+  context.recoveryWizard({settings:saved});assert.equal(field('Recovery preset').value,'stability');
+  context.recoveryWizard({settings:{...saved,recovery_failures:6}});assert.equal(field('Recovery preset').value,'');
+  console.log('PASS: persisted preset recognised on reopen; edited values show Custom');
+}

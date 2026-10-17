@@ -2,7 +2,7 @@
 
 [Russian](INSTALL.ru.md) · [Environment passport](TESTED-ENVIRONMENT.en.md) · [Next-stage evidence](NEXT-STAGE-RESULTS.md)
 
-The current development candidate is **0.7.0-alpha10-1**. Use a published, verified
+The current development candidate is **0.8.0-alpha2-1**. Use a published, verified
 version and its matching checksum; a development branch or a passing model test
 is not a production acceptance certificate. Local Gitea is primary. Public GitHub
 publishes reviewed snapshots on its own preserved history; use the release asset and checksum, not an arbitrary branch build.
@@ -14,7 +14,7 @@ The historical physical passport records GL.iNet **GL-MT6000 / Flint 2**, firmwa
 architecture **aarch64_cortex-a53**, LuCI openwrt-21.02 / luci-base
 **git-22.335.71649-0ecaf74**. It is a dated observation, not today's device query.
 The last separately recorded physical checkpoint is alpha7-2 with Auto OFF;
-alpha8 local evidence does not mean it was installed on that router.
+alpha2 local evidence does not mean it was installed on that router.
 
 Python **3.9.15** and Lua **5.1.5/CJSON** are checked in isolated Linux containers.
 The UCI cursor in those contract tests is mocked. Generic x86 OpenWrt, a matching
@@ -25,10 +25,10 @@ are separate acceptance steps. Never force compatibility with another image/mode
 
 1. Confirm the model/firmware and local LuCI access. Keep an independent management
    path. Obtain a separately authorised window before device installation/testing.
-2. Obtain `.ipk` and `.ipk.sha256` from the **same verified release**. For alpha10,
-   the expected filename is `homensai-auto-vpn_0.7.0-alpha10-1_all.ipk`. Compare
-   `Get-FileHash .\homensai-auto-vpn_0.7.0-alpha10-1_all.ipk -Algorithm SHA256`
-   or `sha256sum homensai-auto-vpn_0.7.0-alpha10-1_all.ipk` with that release's
+2. Obtain `.ipk` and `.ipk.sha256` from the **same verified release**. For alpha2,
+   the expected filename is `homensai-auto-vpn_0.8.0-alpha2-1_all.ipk`. Compare
+   `Get-FileHash .\homensai-auto-vpn_0.8.0-alpha2-1_all.ipk -Algorithm SHA256`
+   or `sha256sum homensai-auto-vpn_0.8.0-alpha2-1_all.ipk` with that release's
    checksum. Stop if the asset/checksum is absent or different.
 3. Keep a **private** configuration/history backup and check available storage/RAM.
    Backups can contain secrets. Never upload them, bot tokens, sessions, passwords

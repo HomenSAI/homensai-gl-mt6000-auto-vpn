@@ -55,6 +55,39 @@ def publish(value):
     atomic_json(STATE,value)
 
 
+RETURN_CHECKS=6
+RETURN_PAUSE=10
+GUARD_RELEASE_SECONDS=90
+
+
+def return_request_path():return RUNTIME/'native-return.json'
+def return_result_path():return RUNTIME/'native-return-result.json'
+
+
+def clear_native_options():
+    """Close the test window in the own config; skipped when unrelated changes are pending."""
+    try:
+        pending=subprocess.run(['uci','-q','changes','homensai_vpn'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        if pending.returncode or pending.stdout.strip():return False
+        batch=b"set homensai_vpn.main.native_enabled='0'\nset homensai_vpn.main.native_until='0'\nset homensai_vpn.main.native_trial=''\ncommit homensai_vpn\n"
+        return subprocess.run(['uci','-q','batch'],input=batch,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=10).returncode==0
+    except (OSError,subprocess.SubprocessError):return False
+
+
+def abandon(backend,journal,code):
+    """The router policy was changed by someone else: stop, release our traffic guard, never hold the LAN."""
+    try:backend.unguard()
+    except (Refused,OSError,subprocess.SubprocessError):pass
+    journal.update(phase='ROLLED-BACK',reason=code,abandoned=True,finished=time.time())
+    try:journal_write(journal)
+    except (OSError,ValueError):pass
+    try:atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':journal.get('trial_nonce')})
+    except (OSError,ValueError):pass
+    clear_native_options()
+    try:publish({'state':'STOPPED','reason':code,'original_restored':False,'source':journal.get('source'),'target':journal.get('target'),'trial':journal.get('trial',False)})
+    except Refused:pass
+
+
 def note_phase(value,phase):
     rows=value.get('phase_evidence',[])
     rows=rows if isinstance(rows,list) else []
@@ -282,7 +315,9 @@ class Linux:
             if not devices or any(not SAFE.fullmatch(d) or len(d)>15 for d in devices):raise Refused('UNSAFE-GUARD-DEVICE')
             elements=', '.join('"'+d+'"' for d in sorted(set(devices)))
             rules='iifname "br-lan" meta nfproto ipv6 drop comment "homensai-owned-guard"; iifname "br-lan" oifname != { '+elements+' } drop comment "homensai-owned-guard";'
-        else:rules='iifname "br-lan" drop comment "homensai-owned-guard";'
+        else:
+            generation=uuid.uuid4().hex[:8]
+            rules='iifname "br-lan" drop comment "homensai-owned-guard-'+generation+'";'
         # One nft transaction: never delete/recreate the table in separate invocations.
         script=('delete table inet '+TABLE+'; ' if exists else '')+'table inet '+TABLE+' { chain forward { type filter hook forward priority -310; policy accept; '+rules+' } }'
         # Vendor nft opens /dev/stdin for '-', but that node is absent here.
@@ -299,6 +334,13 @@ class Linux:
             result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
         finally:os.unlink(path)
         if result.returncode or not self.guard_exists():raise Refused('GUARD-INSTALL-FAILED')
+        if devices is None:self.schedule_release(generation)
+    def schedule_release(self,generation):
+        """Independent timer: a full LAN block never outlives its owner; only this exact guard generation is removed."""
+        script=('sleep %d; nft list table inet %s 2>/dev/null | grep -q "homensai-owned-guard-%s" && nft delete table inet %s'
+                %(GUARD_RELEASE_SECONDS,TABLE,generation,TABLE))
+        try:subprocess.Popen(['sh','-c',script],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+        except OSError:pass
     def unguard(self):
         if self.guard_exists():command(['nft','delete','table','inet',TABLE])
     def devices(self):
@@ -329,26 +371,66 @@ def rollback(backend,journal,reason):
     backend.guard()
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after']):
-        raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+        abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
+        raise Refused('EXTERNAL-POLICY-CHANGE-RELEASED')
     if order!=journal['before']:backend.reorder(journal['before'])
     backend.apply()
     order,fingerprint=backend.order()
     if order!=journal['before'] or fingerprint!=journal['hash']:
-        raise Refused('ROLLBACK-UNVERIFIED-GUARD-RETAINED')
+        # Never keep LAN traffic closed: fall back to the VPN-only guard and report the unverified state.
+        try:backend.guard(backend.devices())
+        except (Refused,OSError,subprocess.SubprocessError):pass
+        raise Refused('ROLLBACK-UNVERIFIED')
     journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time())
     journal_write(journal)
     # Retain the VPN-only guard during the experiment. INPUT/LAN management is unaffected.
     backend.guard(backend.devices())
 
 
+def source_ready(backend,journal,settings,reason):
+    """A passed trial returns on a fresh bound check (with retries); later returns need stable history."""
+    if reason!='TRIAL-PASSED':
+        return backend.recovery_ready(journal['source'],settings) is True
+    for index in range(RETURN_CHECKS):
+        if backend.health(journal['source']) is True:return True
+        if index+1<RETURN_CHECKS:time.sleep(RETURN_PAUSE)
+    return False
+
+
+def operator_return(backend,journal,reason='OPERATOR-RETURN'):
+    """Leave a held or committed reserve and restore the original order; needs the source freshly healthy."""
+    if journal.get('phase') not in ('HELD-ON-RESERVE','COMMITTED'):return 'RETURN-NOT-APPLICABLE'
+    if backend.health(journal['source']) is not True:return 'SOURCE-NOT-HEALTHY'
+    rollback(backend,journal,reason)
+    return None
+
+
+def handle_return(backend,journal,request,last_time):
+    """Answer each operator return request exactly once with a public result. Returns (handled,last_time)."""
+    stamp=request.get('time') if isinstance(request,dict) else None
+    if type(stamp) not in (int,float) or not math.isfinite(stamp) or stamp<=0 or stamp<=last_time:return False,last_time
+    try:code=operator_return(backend,journal)
+    except Refused as error:code=str(error)
+    if code is None:
+        try:backend.unguard()
+        except (Refused,OSError,subprocess.SubprocessError):pass
+        clear_native_options()
+        try:publish({'state':'STOPPED','reason':'OPERATOR-RETURN','original_restored':True,'source':journal.get('source'),'target':journal.get('target'),'trial':journal.get('trial',False)})
+        except Refused:pass
+    atomic_json(return_result_path(),{'request':stamp,'ok':code is None,'code':code or 'RETURNED','time':time.time()})
+    return True,stamp
+
+
 def finish_committed(backend,journal,reason):
     """A completed, client-confirmed switch must not expire back onto a failed source."""
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after']):
-        backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+        abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
+        raise Refused('EXTERNAL-POLICY-CHANGE-RELEASED')
     from recovery_settings import normalized
-    recovery=normalized(backend.policy().get('settings',{}))
-    if order==journal['after'] and (recovery['return_policy']=='hold_reserve' or not backend.recovery_ready(journal['source'],backend.policy().get('settings',{}))):
+    settings=backend.policy().get('settings',{})
+    recovery=normalized(settings)
+    if order==journal['after'] and (recovery['return_policy']=='hold_reserve' or not source_ready(backend,journal,settings,reason)):
         healthy=backend.health(journal['target']) is True
         backend.guard(backend.devices())
         journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-HOLD-RESERVE' if recovery['return_policy']=='hold_reserve' else 'SOURCE-NOT-VERIFIED',finished=time.time(),reserve_healthy=healthy)
@@ -590,8 +672,9 @@ def serve():
                     except ProcessLookupError:pass
             rollback(backend,journal,'SUPERVISOR-RECOVERY')
         elif journal.get('phase')=='COMMITTED':
-            if backend.order()!=(journal['after'],journal['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
-            backend.guard(backend.devices())
+            if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
+            else:backend.guard(backend.devices())
+        last_return=read_json(return_result_path(),{}).get('request',0)
         consumed=read_json(ATTEMPTS,{})
         last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
         while not STOP:
@@ -608,8 +691,18 @@ def serve():
                     if not active.get('lease_monotonic_until'):lease_error='LEGACY-LEASE-RECOVERY'
                     else:lease_end=min(lease_end,active['lease_monotonic_until'])
                 lease_expired=time.time()>=until or (lease_end>0 and time.monotonic()>=lease_end) or (active.get('phase')=='COMMITTED' and lease_error is not None)
+                request=read_json(return_request_path(),{})
+                if request:
+                    handled,last_return=handle_return(backend,active,request,last_return)
+                    if handled:time.sleep(2);continue
                 if active.get('phase')=='HELD-ON-RESERVE' and (not enabled or stop_latched or settings.get('native_trial')==active.get('trial_nonce')):
-                    if backend.order()!=(active['after'],active['hash']):backend.guard();raise Refused('EXTERNAL-POLICY-CHANGE-GUARD-RETAINED')
+                    if backend.order()!=(active['after'],active['hash']):
+                        abandon(backend,active,'EXTERNAL-POLICY-CHANGE');time.sleep(5);continue
+                    from recovery_settings import normalized as recovery_normalized
+                    if recovery_normalized(settings)['return_policy']=='healthy_primary' and backend.recovery_ready(active['source'],settings) is True:
+                        if operator_return(backend,active,'PRIMARY-RECOVERED') is None:
+                            publish({'state':'ROLLED-BACK','reason':'PRIMARY-RECOVERED','source':active['source'],'target':active['target'],'original_restored':True,'trial':active.get('trial',False)})
+                            time.sleep(2);continue
                     publish({'state':'STOPPED-ON-RESERVE','reason':active.get('reason','SOURCE-NOT-VERIFIED'),'source':active['source'],
                              'target':active['target'],'expected_exit':active.get('expected_exit'),'original_restored':False,
                              'reserve_healthy':active.get('reserve_healthy',False),'trial':active.get('trial',False)})
@@ -632,6 +725,7 @@ def serve():
                     publish({'state':'DISABLED','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
                 if until>0 and lease_expired:
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
+                    clear_native_options()
                     publish({'state':'EXPIRED','reason':'TRIAL-ENDED'});time.sleep(5);continue
                 if lease_error:blockers.append(lease_error)
                 if settings.get('native_session_loss')!='1':blockers.append('SESSION-LOSS-NOT-ACCEPTED')

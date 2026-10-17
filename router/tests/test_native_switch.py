@@ -31,6 +31,7 @@ class Backend:
     def policy(self):return self.data
     def order(self):return self.current[:],self.fingerprint
     def guard(self,devices=None):self.calls.append(('guard',devices))
+    def unguard(self):self.calls.append(('unguard',))
     def reorder(self,order):self.calls.append(('reorder',order));self.current=list(order)
     def apply(self):self.calls.append(('apply',))
     def devices(self):return ['wgclient1','tun0']
@@ -44,6 +45,8 @@ class NativeTests(unittest.TestCase):
         # Fake PIDs must never reach the actual process-group kill syscall.
         patcher=patch.object(native.os,'killpg')
         self.killpg=patcher.start();self.addCleanup(patcher.stop)
+        pause=patch.object(native,'RETURN_PAUSE',0);pause.start();self.addCleanup(pause.stop)
+        options=patch.object(native,'clear_native_options',return_value=True);self.options=options.start();self.addCleanup(options.stop)
 
     def test_exact_supported_policy_and_hash(self):
         data,profiles=fixture();s=native.choose(data,profiles)
@@ -76,11 +79,87 @@ class NativeTests(unittest.TestCase):
             native.journal_write({'before':['a','b'],'after':['a','a']})
             with self.assertRaisesRegex(native.Refused,'ORDER'):native.journal_read()
 
-    def test_external_writer_never_overwritten(self):
+    def test_external_writer_never_overwritten_and_never_holds_the_lan(self):
         b=Backend();b.fingerprint='changed'
-        with self.assertRaisesRegex(native.Refused,'EXTERNAL'):
-            native.rollback(b,{'hash':b.selection['hash'],'before':b.current,'after':list(reversed(b.current))},'test')
-        self.assertEqual(b.calls,[('guard',None)])
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'tx.json'),patch.object(native,'STATE',Path(d)/'status'):
+            journal={'hash':b.selection['hash'],'before':b.current,'after':list(reversed(b.current)),'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'trial_nonce':'n'}
+            with self.assertRaisesRegex(native.Refused,'EXTERNAL-POLICY-CHANGE-RELEASED'):native.rollback(b,journal,'test')
+            self.assertFalse(any(c[0]=='reorder' for c in b.calls));self.assertFalse(any(c[0]=='apply' for c in b.calls))
+            self.assertEqual(b.calls,[('guard',None),('unguard',)])
+            self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK');self.assertTrue(native.journal_read()['abandoned'])
+            self.assertFalse(json.loads(native.STATE.read_text())['original_restored'])
+            self.assertEqual(json.loads((Path(d)/'native-stop.json').read_text())['trial'],'n')
+            self.options.assert_called()
+
+    def test_unverified_rollback_falls_back_to_vpn_only_guard(self):
+        b=Backend();before=b.current[:]
+        def bad_apply():b.calls.append(('apply',));b.fingerprint='drifted'
+        b.apply=bad_apply
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'tx.json'):
+            with self.assertRaisesRegex(native.Refused,'ROLLBACK-UNVERIFIED'):
+                native.rollback(b,{'hash':b.selection['hash'],'before':before,'after':before},'test')
+        self.assertEqual(b.calls[-1],('guard',['wgclient1','tun0']))
+
+    def _held(self,b):
+        before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
+        return {'phase':'HELD-ON-RESERVE','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'trial':True},before
+
+    def test_operator_return_leaves_held_reserve_when_source_is_fresh(self):
+        b=Backend();journal,before=self._held(b)
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'tx.json'),patch.object(native,'STATE',Path(d)/'status'):
+            handled,stamp=native.handle_return(b,journal,{'time':50.0},0)
+            self.assertTrue(handled);self.assertEqual(stamp,50.0);self.assertEqual(b.current,before)
+            self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
+            result=json.loads(native.return_result_path().read_text());self.assertTrue(result['ok']);self.assertEqual(result['code'],'RETURNED')
+            self.assertEqual(b.calls[-1],('unguard',));self.options.assert_called()
+            self.assertTrue(json.loads(native.STATE.read_text())['original_restored'])
+            again,_=native.handle_return(b,journal,{'time':50.0},stamp);self.assertFalse(again)
+
+    def test_operator_return_refuses_unhealthy_source_and_changes_nothing(self):
+        b=Backend();journal,_=self._held(b);held=b.current[:];b.health=lambda _:False
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'RUNTIME',Path(d)):
+            handled,_=native.handle_return(b,journal,{'time':9.0},0)
+            self.assertTrue(handled);self.assertEqual(b.current,held);self.assertEqual(b.calls,[])
+            self.assertEqual(json.loads(native.return_result_path().read_text())['code'],'SOURCE-NOT-HEALTHY')
+        b.health=lambda _:None
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'RUNTIME',Path(d)):
+            native.handle_return(b,journal,{'time':9.0},0);self.assertEqual(json.loads(native.return_result_path().read_text())['code'],'SOURCE-NOT-HEALTHY')
+
+    def test_operator_return_only_from_held_or_committed(self):
+        b=Backend();journal,_=self._held(b);journal['phase']='ROLLED-BACK'
+        self.assertEqual(native.operator_return(b,journal),'RETURN-NOT-APPLICABLE')
+        self.assertEqual(b.calls,[])
+        for bad in (None,{},{'time':'x'},{'time':float('nan')},{'time':-1}):
+            self.assertEqual(native.handle_return(b,journal,bad,0),(False,0))
+
+    def test_passed_trial_returns_on_fresh_check_without_history_and_retries(self):
+        b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
+        answers=iter([None,False,True]);b.health=lambda identifier:next(answers) if identifier==b.profiles[0]['id'] else True
+        b.recovery_ready=lambda *a:False   # no monitor history after a restart
+        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'):
+            self.assertTrue(native.finish_committed(b,journal,'TRIAL-PASSED'));self.assertEqual(b.current,before)
+
+    def test_passed_trial_with_unhealthy_source_holds_after_bounded_retries(self):
+        b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
+        seen=[];b.health=lambda identifier:(seen.append(identifier),identifier==b.profiles[1]['id'])[1]
+        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
+            self.assertFalse(native.finish_committed(b,journal,'TRIAL-PASSED'))
+            self.assertEqual(seen.count(b.profiles[0]['id']),native.RETURN_CHECKS);self.assertEqual(b.current,after)
+
+    def test_full_lan_block_has_an_independent_release_timer_for_its_own_generation(self):
+        b=native.Linux();scripts=[]
+        def execute(args,**kwargs):
+            if args[0]=='nft' and args[1]=='-f':scripts.append(Path(args[-1]).read_text())
+            return MagicMock(returncode=0)
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'RUNTIME',Path(d)),patch.object(b,'guard_exists',side_effect=[False,True,False,True]),patch.object(native.subprocess,'run',side_effect=execute),patch.object(native.subprocess,'Popen') as timer:
+            b.guard()
+            generation=scripts[-1].split('homensai-owned-guard-')[1].split('"')[0]
+            command=timer.call_args.args[0];self.assertEqual(command[:2],['sh','-c'])
+            self.assertIn('sleep %d'%native.GUARD_RELEASE_SECONDS,command[2]);self.assertIn('owned-guard-'+generation,command[2])
+            self.assertTrue(timer.call_args.kwargs['start_new_session'])
+            timer.reset_mock();b.guard(['wgclient1']);timer.assert_not_called()
 
     def test_expiry_never_restores_onto_failed_source(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
@@ -171,7 +250,7 @@ class NativeTests(unittest.TestCase):
             with self.assertRaisesRegex(native.Refused,'EXTERNAL'):
                 native.attempt(b,b.selection,time.time()+120,False)
             self.assertFalse(native.CERT.exists())
-            self.assertEqual(b.calls[-1],('guard',None))
+            self.assertEqual(b.calls[-1],('unguard',))
 
     def test_guard_transaction_is_atomic_and_scoped(self):
         b=native.Linux()

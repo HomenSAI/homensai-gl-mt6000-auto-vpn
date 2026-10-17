@@ -215,11 +215,65 @@ source=source.replace('return view.extend({',(Path(__file__).parent/'incident_pa
 source=source.replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
 source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status));")
-source=source.replace('070-alpha10','080-alpha2')
-source=source.replace('ui15.css','ui22.css')
-(root/'dashboard43.js').write_text(source,encoding='utf8')
-print('Generated dashboard43.js with sidebar, language persistence and sortable tables')
+# Settings page: one grouped Setup card instead of scattered wizard buttons; one blocker dictionary.
+def must_replace(old,new):
+    global source
+    assert old in source,old[:80]
+    source=source.replace(old,new,1)
+must_replace("E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service'","E('section',{'class':'hv-chart-card hv-card-monitor'},[E('h3',{},bi('Monitor service'")
+must_replace("(descriptions[code]||bi('See diagnostic code in the work log','Смотрите код диагностики в журнале работ'))","autoBlockerText(code)")
+must_replace("E('p',{},bi('1. Save a primary and reserve profile below. 2. Accept session reconnection. 3. Run the downloaded helper on a Windows LAN client with PowerShell 7. It checks the gateway, router DNS, HTTPS and VPN exit, and asks before starting. Browser checks alone do not certify router DNS.','1. Сохраните основной и резервный профили ниже. 2. Разрешите переподключение сессий. 3. Запустите скачанный помощник на Windows-клиенте LAN с PowerShell 7. Он проверит шлюз, DNS роутера, HTTPS и VPN-выход, затем спросит перед запуском. Проверка только браузером не подтверждает DNS роутера.'))",
+ "E('p',{},bi('Auto can be started only after a passed LAN trial. The Overview page shows exactly which step is missing. The helper runs on a Windows computer with PowerShell 7 connected to the LAN; it checks the gateway, router DNS, HTTPS and the VPN exit, and asks before it starts. Browser checks alone do not certify the LAN path.','Авторежим можно запустить только после успешного LAN-теста. Страница «Обзор» показывает, какого именно шага не хватает. Помощник запускается на компьютере Windows с PowerShell 7 в локальной сети: он проверяет шлюз, DNS роутера, HTTPS и VPN-выход и спрашивает подтверждение перед началом. Проверка только браузером не подтверждает путь LAN.'))")
+must_replace("E('h3',{},'Persistent controller history'),E('p',{},'Controller events, not measurements of LAN uptime. Trial results and automatic commits are counted separately.')",
+ "E('h3',{},bi('Controller history','История контроллера')),E('p',{},bi('Controller events, not measurements of LAN uptime. Trial results and automatic commits are counted separately.','События контроллера, а не измерение доступности LAN. Результаты тестов и автоматические переключения считаются отдельно.'))")
+reorganizer = """      (function(){
+        var monitorCard=settingsHost.querySelector('.hv-card-monitor'),speedCard=settingsHost.querySelector('.hv-speed-settings');
+        while(settingsHost.firstChild)settingsHost.removeChild(settingsHost.firstChild);
+        function launcher(label,hint,action,primary){return E('div',{'class':'hv-setup-item'},[E('button',{'type':'button','class':'cbi-button'+(primary?' cbi-button-action':''),'click':action},label),E('p',{},hint)]);}
+        var testDelivery=function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});};
+        settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
+          E('h3',{},bi('Setup','Настройка')),
+          E('p',{},bi('Every wizard validates your input and shows a review before saving. Stored tokens are never shown again.','Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются.')),
+          setup?E('p',{},bi('Create a bot with BotFather, send /start, then enter its token and your Chat ID. The token stays on the router and is never returned in status.','Создайте бота через BotFather, отправьте /start, затем введите токен и свой Chat ID. Токен хранится на роутере и не возвращается в статусе.')):null,
+          E('div',{'class':'hv-setup-grid'},[
+            launcher(bi('1 · System','1 · Система'),bi('Primary and reserve profiles, names, channels, priorities and accepted reconnection.','Основной и резервный профили, названия, каналы, приоритеты и допустимость переподключения.'),function(){setupWizard(inventory,'system');},true),
+            launcher(bi('2 · Recovery rules','2 · Правила восстановления'),bi('Failures before switching, reserve checks, cooldown and return policy.','Сколько сбоев до переключения, проверки резерва, пауза и политика возврата.'),function(){recoveryWizard(inventory);}),
+            launcher(bi('3 · Monitoring','3 · Мониторинг'),bi('Check interval, profile limit and statistics saving.','Интервал проверок, лимит профилей и сохранение статистики.'),function(){monitorPreferences(inventory);}),
+            launcher(bi('4 · Telegram','4 · Telegram'),bi('Bot token and destination for reports.','Токен бота и адресат отчётов.'),function(){setupWizard(inventory,'telegram');}),
+            launcher(bi('Test Telegram delivery','Проверить доставку Telegram'),bi('Sends one test message with the saved settings.','Отправляет одно тестовое сообщение с сохранёнными настройками.'),testDelivery)
+          ])].filter(function(node){return node!=null;})));
+        if(monitorCard)settingsHost.appendChild(monitorCard);
+        if(speedCard)settingsHost.appendChild(speedCard);
+      })();
+"""
+must_replace("      panel.addEventListener('pointerdown',function(){pointerHeld=true;});", reorganizer+"      panel.addEventListener('pointerdown',function(){pointerHeld=true;});")
+source=source.replace('070-alpha10','080-alpha6')
+# Overview copy: one calm monitoring note; Telegram has its own tile, so only a real error is shown.
+note_old='tr("Мониторинг активен. Состояние нативного контроллера показано ниже. Проверки роутера не подтверждают путь LAN-клиента; испытание требует отдельного клиентского подтверждения.")'
+assert note_old in source
+source=source.replace(note_old,"bi('Monitoring is active. Router checks show tunnel health only; they do not prove the path of a computer on the LAN. Auto switching is confirmed separately by the LAN helper.','Мониторинг работает. Проверки роутера показывают только состояние туннелей и не доказывают путь компьютера в LAN. Автопереключение подтверждается отдельно LAN-помощником.')")
+telegram_old="var tg=status.telegram||{};put('overview',E('p',{},'Telegram: '+(tg.enabled?(tg.code||(tr(\"включён · интервал \")+tg.interval_minutes+tr(\" мин · последняя отправка \")+(tg.last_sent?new Date(tg.last_sent*1000).toLocaleString():tr(\"ожидается\")))):tr(\"отключён\"))));"
+assert telegram_old in source
+source=source.replace(telegram_old,"var tg=status.telegram||{};if(tg.enabled&&tg.code)put('overview',E('p',{'class':'alert-message warning'},'Telegram: '+tg.code));")
+# Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
+must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
+must_replace("put('readiness',renderReadiness(status));","put('readiness',renderReadiness(status));put('help',helpNode||(helpNode=renderHelp()));")
+# Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
+from ui_copy import COPY
+import re as _re
+for _old,_new_en,_new_ru in COPY:
+    _pattern=_re.compile(r"bi\('"+_re.escape(_old)+r"','(?:[^'\\]|\\.)*'\)")
+    assert _pattern.search(source),_old[:70]
+    source=_pattern.sub(lambda _m:"bi('"+_new_en+"','"+_new_ru+"')",source)
+from ui_copy import EN_VALUES
+for _old,_new in EN_VALUES:
+    assert ': "'+_old+'"' in source,_old[:70]
+    source=source.replace(': "'+_old+'"',': "'+_new+'"')
+source=source.replace('ui15.css','ui25.css')
+(root/'dashboard47.js').write_text(source,encoding='utf8')
+print('Generated dashboard47.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard43',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard47',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

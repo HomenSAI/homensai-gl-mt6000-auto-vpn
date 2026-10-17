@@ -15,6 +15,8 @@ function recoveryWizard(inventory){
   var labels={failures:bi('Consecutive failures before switching (3–10)','Сбоев подряд до переключения (3–10)'),successes:bi('Reserve successes required (2–10)','Успешных проверок резерва (2–10)'),cooldown:bi('Cooldown between attempts, seconds (60–1800)','Пауза между попытками, секунд (60–1800)'),min_dwell:bi('Minimum dwell time, seconds (60–3600)','Минимальное время работы, секунд (60–3600)'),primary_successes:bi('Primary successes before return (2–10)','Успешных проверок основного перед возвратом (2–10)'),primary_stable:bi('Primary stable interval, seconds (30–600)','Период стабильности основного, секунд (30–600)')};
   var defaults={failures:3,successes:2,cooldown:180,min_dwell:180,return_policy:'healthy_primary',primary_successes:3,primary_stable:60},draft={};
   Object.keys(defaults).forEach(function(key){draft[key]=settings['recovery_'+key]==null?defaults[key]:settings['recovery_'+key];});
+  // A saved set that equals a reviewed preset is shown as that preset; any other set is Custom.
+  Object.keys(RECOVERY_PRESETS).forEach(function(name){var row=RECOVERY_PRESETS[name];if(!presetName&&Object.keys(defaults).every(function(key){return String(row[key])===String(draft[key]);}))presetName=name;});
   function show(){
     var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
     body.appendChild(E('p',{},bi('Recovery settings apply only within a certified bounded trial. Wi-Fi/Ethernet are uplinks, not VPN protocols. IPv6/native activation of inactive profiles remain blocked where unsupported.','Настройки действуют только в подтверждённом ограниченном тесте. Wi-Fi/Ethernet — подключения, не протоколы VPN. IPv6 и запуск неактивных профилей блокируются, если не поддерживаются.')));

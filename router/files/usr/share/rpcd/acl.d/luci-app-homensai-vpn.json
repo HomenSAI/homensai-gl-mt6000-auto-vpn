@@ -18,6 +18,7 @@
           "native_confirm",
           "native_stop",
           "native_start",
+          "native_return",
           "setup_system",
           "setup_telegram",
           "telegram_test",

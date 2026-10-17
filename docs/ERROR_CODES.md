@@ -38,3 +38,14 @@ Wording must distinguish “symptom confirmed”, “cause confirmed” and “c
 | MONITOR-SERVICE-UNCONFIRMED | Configuration may be saved but own init action failed/timed out | Check actual process/status; do not show green |
 | MONITOR-INVALID | Invalid typed request or extra fields | Correct request; nothing was written |
 | MONITOR-RPC-UNCONFIRMED | Browser did not receive a confirmed response | Refresh status; do not infer the service stopped |
+
+## Operator return and outside-change codes — 0.8.0-alpha5
+
+| Code | Meaning | Operator action |
+|---|---|---|
+| RETURN-NOT-APPLICABLE | Return requested while Auto is not holding or running on the reserve | Nothing to do |
+| SOURCE-NOT-HEALTHY | The primary failed its fresh check; the router stays on the reserve | Wait until the primary works, then press Return to primary |
+| EXTERNAL-POLICY-CHANGE / EXTERNAL-POLICY-CHANGE-RELEASED | The router VPN rules were changed by someone else; Auto stopped and removed its own traffic block (GL.iNet Kill Switch stays) | Check the VPN rule order in GL.iNet; run a new LAN trial before starting Auto |
+| ROLLBACK-UNVERIFIED | The return to the previous order could not be verified; traffic is allowed only through VPN tunnels | Check the rule order in GL.iNet; see router-test-kit/EMERGENCY.md |
+| OPERATOR-RETURN / PRIMARY-RECOVERED | Informational: returned to the primary on request / after it recovered | None |
+| JOURNAL-UNVERIFIED | The transaction journal could not be verified | Follow router-test-kit/EMERGENCY.md; do not delete the journal |

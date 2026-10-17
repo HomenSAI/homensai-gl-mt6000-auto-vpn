@@ -1,0 +1,37 @@
+#!/bin/sh
+# HomenSAI Auto VPN test kit, step 2: install/upgrade the audited package. Monitor only; Auto stays OFF.
+# Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.8.0-alpha6-1_all.ipk
+# Requires step 1 to have passed. Does not touch network, firewall, VPN or routes.
+EXPECTED_SHA=2c7197b60ced92a5e73689507d9e73734ae677992b068b2795dd7beeb950cf9f
+EXPECTED_SIZE=489866
+EXPECTED_VERSION=0.8.0-alpha6-1
+KIT=/tmp/homensai-kit
+IPK="$1"
+die() { echo "STOP: $*" >&2; exit 1; }
+
+[ -n "$IPK" ] && [ -f "$IPK" ] || die "usage: sh 02-install.sh /tmp/homensai-auto-vpn_${EXPECTED_VERSION}_all.ipk"
+[ -f "$KIT/fingerprint.before" ] || die "run 01-preflight.sh first (no baseline fingerprint)"
+SIZE=$(wc -c < "$IPK" | tr -d ' ')
+SHA=$(sha256sum "$IPK" | cut -d' ' -f1)
+[ "$SIZE" = "$EXPECTED_SIZE" ] || die "size $SIZE != $EXPECTED_SIZE"
+[ "$SHA" = "$EXPECTED_SHA" ] || die "sha256 $SHA != $EXPECTED_SHA"
+echo "package hash and size verified"
+
+if nft list table inet homensai_vpn_guard >/dev/null 2>&1; then die "owned nft guard present; see EMERGENCY.md"; fi
+[ "$(uci -q get homensai_vpn.main.native_enabled)" = "1" ] && die "native_enabled=1; stop Auto first"
+[ -n "$(uci -q changes homensai_vpn)" ] && die "pending uci changes for homensai_vpn"
+
+# Private config backup kept in RAM-backed /tmp; ALSO copy it to your PC (it can contain a Telegram token).
+if [ -f /etc/config/homensai_vpn ]; then
+  cp -p /etc/config/homensai_vpn "$KIT/homensai_vpn.before" && chmod 600 "$KIT/homensai_vpn.before"
+fi
+opkg status homensai-auto-vpn | sed -n 's/^Version: //p' > "$KIT/version.before"
+echo "previous version: $(cat "$KIT/version.before" 2>/dev/null)"
+
+echo "installing (opkg install, no force flags)..."
+opkg install "$IPK"
+RC=$?
+echo "opkg exit code: $RC"
+# opkg can return 0 even when a prerm guard refused; always run 03-verify.sh next.
+echo "NEXT: sh 03-verify.sh"
+exit $RC

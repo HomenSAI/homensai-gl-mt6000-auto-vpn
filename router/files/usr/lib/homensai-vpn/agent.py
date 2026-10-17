@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.8.0-alpha2'
+VERSION = '0.8.0-alpha6'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -29,6 +29,20 @@ SAFE = re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 SO_MARK = getattr(socket, 'SO_MARK', 36)
 SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
 STOP = False
+EXIT_SEEN = {}
+
+
+def remember_exit(device, body):
+    """Cloudflare trace reports the address the destination sees; keep a global IPv4 only."""
+    for line in body.decode('ascii', 'replace').splitlines():
+        if line.startswith('ip='):
+            try:
+                address = ipaddress.IPv4Address(line[3:].strip())
+            except ValueError:
+                return
+            if address.is_global:
+                EXIT_SEEN[device] = str(address)
+            return
 
 
 def command(args, timeout=5):
@@ -330,6 +344,7 @@ def https_probe(device, mark, target):
                 return None
             if kind == 'trace':
                 valid = b'\nip=' in b'\n'+body and b'\nhttp=' in b'\n'+body
+                if valid:remember_exit(device, body)
             elif kind == 'dns-json':
                 payload = json.loads(body)
                 valid = payload.get('Status') == 0 and bool(payload.get('Answer'))
@@ -402,6 +417,9 @@ def probe(profile):
         result.update({'https_success': len(times), 'dns_ok': dns_ok,
                        'rtt_ms': round(sum(times)/len(times), 1) if times else None,
                        'code': 'VPN-003' if len(times) < 2 else 'DNS-001' if not dns_ok else None})
+        exit_ip = EXIT_SEEN.pop(binding['device'], None)
+        if exit_ip and not result['code']:
+            result['exit_ip'] = exit_ip  # shown only in the authenticated UI; never in reports or history
     except (OSError, ValueError, subprocess.SubprocessError):
         result['code'] = 'SYSTEM-001'
     return result
@@ -639,7 +657,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -711,9 +729,9 @@ def rpc(method):
     elif method == 'scan':
         from scan_control import enqueue
         print(json.dumps(enqueue(RUNTIME,read_json,atomic_json)))
-    elif method in ('native_start','native_stop'):
-        from auto_control import start, stop
-        result=start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)
+    elif method in ('native_start','native_stop','native_return'):
+        from auto_control import start, stop, return_request
+        result=start() if method=='native_start' else return_request() if method=='native_return' else stop(runtime=RUNTIME,persist=PERSIST)
         if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
             from fault_control import cancel,FaultError
             try:result['fault_cleanup']=cancel().get('cleaned',False)

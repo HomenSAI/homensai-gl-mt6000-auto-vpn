@@ -114,6 +114,24 @@ class AtomicRequestTests(unittest.TestCase):
         with patch.object(native,'journal_read',return_value={'phase':'WAIT-CLIENT'}):
             self.assertEqual(control.start()['blockers'],['TRANSACTION-IN-PROGRESS'])
 
+    def test_return_request_only_when_reserve_is_held_or_committed(self):
+        for phase in ('HELD-ON-RESERVE','COMMITTED'):
+            with patch.object(native,'journal_read',return_value={'phase':phase,'tx':'t'}):
+                self.assertEqual(control.return_request(self.path),{'accepted':True,'queued':True})
+                self.assertEqual(agent.read_json(self.path/'native-return.json')['tx'],'t')
+        (self.path/'native-return.json').unlink()
+        for phase in ('ROLLED-BACK','WAIT-CLIENT',None):
+            with patch.object(native,'journal_read',return_value={'phase':phase}):
+                self.assertEqual(control.return_request(self.path)['code'],'RETURN-NOT-APPLICABLE')
+        self.assertFalse((self.path/'native-return.json').exists())
+        with patch.object(native,'journal_read',side_effect=native.Refused('JOURNAL-INTEGRITY-FAILED')):
+            self.assertEqual(control.return_request(self.path)['code'],'JOURNAL-UNVERIFIED')
+
+    def test_public_status_exposes_only_the_return_answer(self):
+        agent.atomic_json(self.path/'native-return-result.json',{'request':5.0,'ok':False,'code':'SOURCE-NOT-HEALTHY','time':6.0,'secret':'x'})
+        answer=control.public_status()['return_result']
+        self.assertEqual(answer,{'request':5.0,'ok':False,'code':'SOURCE-NOT-HEALTHY','time':6.0})
+
 
 if __name__ == '__main__':
     unittest.main()

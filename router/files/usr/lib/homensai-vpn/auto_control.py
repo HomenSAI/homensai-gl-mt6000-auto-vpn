@@ -111,10 +111,25 @@ def stop(runtime=None,persist=None):
         return {'queued':True}
 
 
+def return_request(runtime=None):
+    """Operator asks to leave a held/committed reserve; the supervisor answers with the source health check."""
+    runtime=runtime or RUNTIME
+    from native_switch import journal_read, Refused
+    with control_lock(runtime):
+        try:journal=journal_read()
+        except (Refused,OSError,ValueError):return {'accepted':False,'code':'JOURNAL-UNVERIFIED'}
+        if journal.get('phase') not in ('HELD-ON-RESERVE','COMMITTED'):
+            return {'accepted':False,'code':'RETURN-NOT-APPLICABLE'}
+        atomic_json(runtime/'native-return.json',{'time':time.time(),'tx':journal.get('tx')})
+        return {'accepted':True,'queued':True}
+
+
 def public_status():
     request=read_json(RUNTIME/'auto-control.json',{})
     stopped=read_json(PERSIST/'native-stop.json',{})
     mode=request.get('mode','off')
     if stopped.get('requested',0) >= request.get('time',0):mode='off'
+    result=read_json(RUNTIME/'native-return-result.json',{})
+    return_result={k:result.get(k) for k in ('request','ok','code','time')} if isinstance(result,dict) and result else None
     return {'requested':mode,'requested_at':max(request.get('time',0),stopped.get('requested',0)),
-            'until':request.get('until',0),'reboot_autostart':False}
+            'until':request.get('until',0),'reboot_autostart':False,'return_result':return_result}

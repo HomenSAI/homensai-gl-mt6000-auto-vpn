@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.8.0-alpha6-1 - 2026-10-17
+
+Built-in Help page and the emergency helper shipped with the package. dashboard47/ui25. Includes alpha5 (never published).
+
+- New sidebar page Help / Помощь: 12 topics (no internet, SSH step by step for Windows/Linux/macOS, reserve held, Auto refuses, LAN helper errors, old page, outside change, Telegram, clock, backup, removal, what to send), 21 copyable commands, English and Russian.
+- /usr/sbin/homensai-vpn-emergency is installed with the package: show, start, stop-auto, close-journal, remove-guard (no network rule is ever reordered by it).
+- A test checks that every helper command named in Help exists in the shipped script.
+
+## 0.8.0-alpha5-1 - 2026-10-17
+
+Findings of the first hardware LAN trial (alpha4) fixed; no physical acceptance of this build is claimed yet. dashboard46/ui24.
+
+- Operator return: "Return to primary" button and native_return RPC leave a held reserve after a fresh check of the primary; a held reserve also returns by itself when the primary has been stable (healthy_primary policy).
+- A passed LAN trial now returns on a fresh bound check with bounded retries instead of requiring monitor history, so a trial right after a restart no longer ends held on the reserve.
+- An outside change of the router VPN rules no longer holds the LAN: Auto releases its own block and stops. An unverified rollback leaves traffic allowed through VPN tunnels only. A full LAN block has an independent 90-second release timer for its own rule generation.
+- Test window options (native_enabled/until/trial) are cleared after return, expiry or abandon.
+- Exit address of each connected VPN is shown in the authenticated UI (not in reports, history or exports).
+- Plainer state texts (running on the reserve, reserve failing, stopped on the reserve).
+
+## 0.8.0-alpha4-1 - 2026-10-17
+
+All user-visible texts reviewed and rewritten in plain language (router/ui_copy.py, enforced at build time). dashboard45/ui23.
+
+- The Check VPN button is now "Check VPN now" with an explanation: one extra internet check through every connected VPN; the router already repeats it automatically; nothing is switched and no speed is measured.
+- Overview, Auto card, failover forecast, setup wizards, recovery rules, monitor and readiness texts rewritten without internal jargon (probe, native, certification, adapter); thresholds are no longer hard-coded in prose.
+- English-side wording of the older Russian-source strings polished; Russian wording unchanged there.
+- No change to controller, guards, ACL or RPC.
+
+## 0.8.0-alpha3-1 - 2026-10-17
+
+Auto-start flow made explicit and the UI copy made consistent. UI dashboard44/ui23, package 0.8.0-alpha3-1.
+
+- Overview: "Before you can start Auto" checklist (monitor, primary/reserve healthy, session reconnection accepted, router ready, LAN trial passed), showing only the next missing step and the exact router blockers.
+- One plain-language, English/Russian explanation for every pre-start controller blocker code (47 codes; a test keeps them in step with native_switch.py/auto_control.py); the Start refusal notice and the Settings page use it.
+- Calmer, non-duplicated status text; Telegram shown only as a tile or as an error. Settings: one grouped Setup card (System, Recovery, Monitoring, Telegram, test delivery) above Monitor service and speed tests.
+- Recovery wizard reopens a saved preset as that preset, edited values as Custom (audit A35).
+- INSTALL/README version references corrected; router-test-kit/ with preflight, install, verify, uninstall and emergency scripts.
+- Not changed: native controller, guards, ACL, RPC. No physical-router acceptance is claimed.
+
 ## Handoff 1.0.0 - 2026-10-17
 
 - Complete Claude review context and all 50 audit targets; owner-requested STOPPED virtual test checkpoint with independent cleanup.

@@ -917,3 +917,12 @@ User requested a GitHub release and explicit versioning. Application code/packag
 Canonical source 3fd94bd2e6777ccac24617912726a3da4a18c25b and exact public snapshot 9c8826ab955a8d0cd6c054e8c789bd882cf6ec8e saved to Gitea before normal GitHub main publication. Local/primary tag handoff-v1.0.0 targets canonical source; public tag targets its identical-tree public snapshot, mapped separately. Existing application tags/assets were not replaced.
 
 Created experimental review prerelease handoff-v1.0.0. Downloaded all three assets again: context ZIP 21347 bytes SHA256 366b03e33933492a1b258b6935b5b3bdcd1e8bffe50961be52384812bb1cd4dd, VERSION.json and SHA256SUMS.txt; exact bytes/checksums match reviewed local assets. Archive has 14 allowlisted context files, no private backups/sessions/keys or ipk. Two independent local archive builds from the same committed source matched byte-for-byte. Read-only version agreement passed; three deliberate metadata mismatches refused. Application remains 0.8.0-alpha2/package alpha2-1/dashboard43/ui22. No product test suite, virtual workload or physical-router action was started. Publication receipt qa/HANDOFF-V1.0.0-PUBLICATION.json.
+
+
+## 2026-10-17T17:00:00+02:00 - alpha3: Auto-start flow, copy and Settings regrouped; router test kit
+
+- Owner request: a package in which the Auto button can be used on the GL-MT6000, tidier logic/text. The Auto button already worked as designed but refused with five explained codes out of about 47, which made it look broken. The refusal is intentional (LAN-certified trial first). Guards, ACL and native controller code are unchanged.
+- Added autoReadiness/autoBlockerText (router/auto_panel.inc.js): ordered checklist and a bilingual explanation for every pre-start blocker; a Node test extracts the codes from native_switch.py/auto_control.py so a new code without text fails CI. Overview note and Telegram line simplified; Settings regrouped (build_sidebar_ui.py); recovery preset recognised on reopen (audit A35). dashboard44/ui23, package 0.8.0-alpha3-1.
+- Viewed the generated UI in a headless Edge against the loopback synthetic fixture (screenshots outside Git); fixture data only, no router. Preview process stopped afterwards.
+- router-test-kit/: preflight, install, verify, uninstall, emergency scripts and README (shell syntax checked only; never run on a router).
+- Not done / still open from the audit: HELD-ON-RESERVE exit, client-confirmation authenticity, token deletion, endurance-harness gaps, hardware acceptance. Physical router untouched by this work.

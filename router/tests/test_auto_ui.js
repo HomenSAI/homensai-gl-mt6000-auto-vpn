@@ -61,3 +61,55 @@ for(const state of ['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ARMED','APPLY
  }
 }
 console.log('PASS: 200 path combinations, at most one green confirmed traffic path; healthy standby is not a failure');
+
+// Every pre-start blocker the router can publish must have a plain, bilingual explanation.
+{
+  const src=fs.readFileSync('router/files/usr/lib/homensai-vpn/native_switch.py','utf8');
+  const auto=fs.readFileSync('router/files/usr/lib/homensai-vpn/auto_control.py','utf8');
+  const slice=(text,a,b)=>text.slice(text.indexOf(a),text.indexOf(b));
+  const area=slice(src,'def choose(','def trace(')+slice(src,'    def diagnostic(','    def order(')+slice(auto,'def readiness(','def effective_intent(');
+  const codes=new Set([...area.matchAll(/(?:Refused\(|append\()'([A-Z0-9-]+)'/g)].map(m=>m[1]));
+  assert(codes.size>=20,'extracted '+codes.size+' codes');
+  for(const code of codes){
+    const text=context.autoBlockerText(code);
+    assert(typeof text==='string'&&text.length>20&&!/Unrecognised/.test(text),'no plain explanation for '+code);
+    assert(context.AUTO_BLOCKERS[code].length===2&&/[А-Яа-я]/.test(context.AUTO_BLOCKERS[code][1]),'no Russian text for '+code);
+  }
+  assert(/Unrecognised/.test(context.autoBlockerText('NOT-A-CODE')));
+  assert(/Unrecognised/.test(context.autoBlockerText('constructor')),'prototype keys are not codes');
+  console.log('PASS: '+codes.size+' controller blocker codes explained in EN and RU');
+}
+
+// Readiness checklist: ordered, never claims ready without a fresh certified controller.
+{
+  const now=1000,fresh={time:now-1};
+  const good={id:'a',interface:'v1',time:now-1,dns_ok:true,https_success:2},good2={...good,id:'b',interface:'v2'};
+  const settings={setup_complete:true,plan_source:'a',plan_target:'b',native_session_loss:true};
+  const make=(status,inv)=>context.autoReadiness({time:now-1,profiles:[good,good2],...status},{settings:{...settings,...(inv||{})}},now);
+  let r=make({native_failover:{...fresh,state:'OBSERVING',certified:true}});
+  assert.equal(r.ready,true);assert.equal(r.next,null);
+  r=make({native_failover:{...fresh,state:'DISABLED',blockers:[]}});
+  assert.equal(r.ready,false);assert.equal(r.next.key,'trial');
+  r=make({native_failover:{...fresh,state:'DISABLED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED','LAN-TRIAL-REQUIRED']}});
+  assert.equal(r.next.key,'router');assert.deepEqual(r.steps[3].codes,['HARDWARE-ACCELERATOR-UNVERIFIED']);
+  r=make({native_failover:{...fresh,state:'DISABLED'}},{native_session_loss:false});assert.equal(r.next.key,'session');
+  r=make({native_failover:{...fresh,state:'DISABLED'}},{plan_target:'a'});assert.equal(r.next.key,'profiles');
+  r=make({native_failover:{...fresh,state:'DISABLED'},profiles:[{...good,code:'DNS-001'},good2]});assert.equal(r.next.key,'profiles');
+  r=make({time:now-500,native_failover:{...fresh,state:'OBSERVING',certified:true}});assert.equal(r.next.key,'monitor');assert.equal(r.ready,false);
+  r=make({native_failover:{time:now-200,state:'OBSERVING',certified:true}});assert.equal(r.steps[4].done,false);
+  r=make({rpc_error:'RPC-UNAVAILABLE',native_failover:{...fresh,state:'OBSERVING',certified:true}});assert.equal(r.ready,false);
+  console.log('PASS: Auto readiness checklist order and fail-closed freshness');
+}
+
+// alpha5: operator return, release-on-external-change and exit address copy.
+{
+  for(const code of ['RETURN-NOT-APPLICABLE','SOURCE-NOT-HEALTHY','JOURNAL-UNVERIFIED','EXTERNAL-POLICY-CHANGE','EXTERNAL-POLICY-CHANGE-RELEASED','ROLLBACK-UNVERIFIED','OPERATOR-RETURN','PRIMARY-RECOVERED']){
+    assert(!/Unrecognised/.test(context.autoBlockerText(code)),code);assert(/[А-Яа-я]/.test(context.AUTO_BLOCKERS[code][1]),code);
+  }
+  // No remaining text may tell the owner that Auto keeps the LAN blocked after an outside change.
+  assert(!/LAN traffic is held|трафик LAN удерживается/.test(JSON.stringify(context.AUTO_BLOCKERS['EXTERNAL-POLICY-CHANGE-RELEASED'])));
+  const src=fs.readFileSync('router/auto_panel.inc.js','utf8');
+  assert(src.includes("method:'native_return'"));assert(src.includes('p.exit_ip'));
+  assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE'].indexOf(ns.state)>=0"));
+  console.log('PASS: operator return, outside-change copy and exit address are wired');
+}
