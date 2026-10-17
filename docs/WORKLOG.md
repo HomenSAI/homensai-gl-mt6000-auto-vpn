@@ -733,3 +733,10 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 - Immutable source 18be40f4d0504ffc25c815675f077859087fde47 dual-runtime CI PASS: 329 application tests, 30 QA tests per runtime, 12 UI suites including 200 path combinations. Python 3.9/Lua zero skips; Python 3.11 control seven Lua skips.
 - Browser confirmed primary active/standby ready; primary failed/destination checking; primary failed/reserve active; recovered but unselected primary ready/reserve active. EN/RU labels and selected-only green verified. Screenshots explicitly synthetic; no real path trial.
 - Built alpha9-1 and checked exact SHA256 equality to CI: af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521. New versioned UI assets preserve alpha8 and prevent stale-cache display. Local-first snapshot publication and new prerelease follow; no existing tag/asset or physical device is changed.
+
+
+## 2026-10-17T07:49:38.478495+00:00 UTC - alpha9 publication independently verified
+
+- Saved exact canonical and public snapshot branches in Gitea before normal GitHub main push. Public snapshot 2d3cd63d370fccf934424b9bf597ea21fa89e653 has canonical source 6bef4f5572a6ad8f97f1ce44849e23d51a9c7b08 tree; canonical history and alpha8 tag/assets retained. Exact public snapshot CI PASS with unchanged alpha9 package hash.
+- Created separate public alpha9 tag on public history and prerelease with IPK/checksum. Downloaded both assets again: 464018 bytes, SHA256 af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521; checksum matches. Alpha8 public tag independently unchanged. Verification receipt qa/GITHUB-ALPHA9-PUBLICATION.json.
+- This follow-up records publication only; overview UI was already verified in four synthetic browser scenarios and 200 state combinations. No router installation or routing/VPN/firewall change.

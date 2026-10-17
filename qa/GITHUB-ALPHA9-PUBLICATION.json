@@ -1,0 +1,12 @@
+{
+  "verified_at_utc": "2026-10-17T07:49:38.478495+00:00",
+  "public_main_at_collection": "2d3cd63d370fccf934424b9bf597ea21fa89e653",
+  "canonical_source": "6bef4f5572a6ad8f97f1ce44849e23d51a9c7b08",
+  "release_url": "https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.7.0-alpha9",
+  "prerelease": true,
+  "downloaded_sha256": "af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521",
+  "downloaded_bytes": 464018,
+  "downloaded_checksum_matches": true,
+  "alpha8_tag_unchanged": true,
+  "physical_router_access": false
+}
