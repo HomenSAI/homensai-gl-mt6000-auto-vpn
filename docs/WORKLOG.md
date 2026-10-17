@@ -842,3 +842,12 @@ After guest reboot, /tmp/HOMENSAI_VIRTUAL_LAB marker was absent and candidate la
 ## 2026-10-17T10:06:05.597789+00:00 - corrected virtual resource sample
 
 Three bounded samples 10:04:55-10:05:20 UTC: exactly one own monitor daemon, RSS 22245376 bytes in each sample; MemAvailable 143093760 bytes and config free 58970112 bytes. These are short x86 virtual observations, not a soak, CPU benchmark, hardware RAM budget or flash-wear acceptance. Preliminary self-matching observer data is excluded from this result.
+
+
+## 2026-10-17T10:09:28.710002+00:00 - reviewed GitHub publication and laboratory cleanup
+
+Source 509d015c6fe4e10ae90fe383da593c651312e5bd was saved in Gitea, then identical tree 20defafcad2d3e8efc7b3b0274f87639c745bfc3 published as public commit 0ae27e089501d979985d8f5e7337994df52fa880 on existing public parent 6ea0af45b63d29115bea562c3fa18be40bbb666b. No canonical history merge, force push or old tag replacement. Prerelease v0.8.0-alpha1 created on the public commit. Package and checksum independently downloaded: 469212 bytes, SHA256 4f4861a367940109022624d93e8dbd66d9aef2ba12ba81f71ca38735f58edfca. Publication helper completed successfully.
+
+Closed only verified own lab helpers PID14732/81316, removed clone HTTP forwarding and independently confirmed port8081 closed; QMP reports marked clone paused/running false. Original VM and physical router were not modified. Named-branch Gitea helper was corrected to avoid testing an unset/stale LASTEXITCODE when no native branch-read command ran; actual named-branch save succeeded.
+
+Checklist remaining external work: exact vendor SDK provenance/build; server-triggered Gitea CI activation; physical vendor workers/cascade/LAN DNS/Kill Switch/IPv6/provider isolation and 24-48h hardware observation. Local/model checks do not certify these. No recurring automation or physical deployment was created.

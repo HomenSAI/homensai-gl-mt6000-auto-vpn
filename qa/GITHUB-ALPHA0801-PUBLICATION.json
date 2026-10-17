@@ -1,0 +1,14 @@
+{
+  "source": "509d015c6fe4e10ae90fe383da593c651312e5bd",
+  "public": "0ae27e089501d979985d8f5e7337994df52fa880",
+  "parent": "6ea0af45b63d29115bea562c3fa18be40bbb666b",
+  "tree": "20defafcad2d3e8efc7b3b0274f87639c745bfc3",
+  "package_sha256": "4f4861a367940109022624d93e8dbd66d9aef2ba12ba81f71ca38735f58edfca",
+  "gitea_saved": true,
+  "github_published": true,
+  "release_download_verified": true,
+  "release": "v0.8.0-alpha1",
+  "checksum_download_verified": true,
+  "bytes": 469212,
+  "verified_at_utc": "2026-10-17T10:09:28.708978+00:00"
+}
