@@ -1,15 +1,15 @@
 [CmdletBinding()]
-param([string[]]$Tags = @())
+param([string[]]$Tags = @(), [string]$Branch = '')
 $ErrorActionPreference = 'Stop'
 $repoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $gitExe = 'C:\Program Files\Git\cmd\git.exe'
 function Assert-Exit([string]$Action) { if ($LASTEXITCODE -ne 0) { throw "$Action failed. Local commits are preserved; no force update was attempted." } }
-$branchName = (& $gitExe -C $repoPath branch --show-current).Trim(); Assert-Exit 'Read branch'
+if ($Branch) { $branchName = $Branch } else { $branchName = (& $gitExe -C $repoPath branch --show-current).Trim(); Assert-Exit 'Read branch' }
 if ($branchName -notmatch '^(feature|fix|hotfix|backup)/[A-Za-z0-9._/-]+$') { throw 'Save a reviewed feature/fix/hotfix/backup branch; direct main publication is refused.' }
 & $gitExe check-ref-format "refs/heads/$branchName"; Assert-Exit 'Validate branch'
 $dirty = & $gitExe -C $repoPath status --porcelain
 if ($dirty) { throw 'Commit or checkpoint the working changes first; this command saves committed, clean work only.' }
-$headSha = (& $gitExe -C $repoPath rev-parse HEAD).Trim(); Assert-Exit 'Read HEAD'
+$headSha = (& $gitExe -C $repoPath rev-parse "refs/heads/$branchName").Trim(); Assert-Exit 'Read branch SHA'
 foreach ($tagName in $Tags) { if ($tagName -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-(?:alpha|beta)[0-9]+)?$') { throw 'Unsupported release tag name' }; & $gitExe -C $repoPath show-ref --verify --quiet "refs/tags/$tagName"; Assert-Exit 'Verify local tag' }
 $commonGit = (& $gitExe -C $repoPath rev-parse --git-common-dir).Trim(); Assert-Exit 'Read common Git directory'
 if (-not [IO.Path]::IsPathRooted($commonGit)) { $commonGit = Join-Path $repoPath $commonGit }

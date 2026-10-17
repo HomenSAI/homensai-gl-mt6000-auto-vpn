@@ -1,0 +1,29 @@
+{
+  "stability": {
+    "failures": 5,
+    "successes": 3,
+    "cooldown": 300,
+    "min_dwell": 300,
+    "return_policy": "healthy_primary",
+    "primary_successes": 5,
+    "primary_stable": 120
+  },
+  "fast_recovery": {
+    "failures": 3,
+    "successes": 2,
+    "cooldown": 60,
+    "min_dwell": 60,
+    "return_policy": "healthy_primary",
+    "primary_successes": 3,
+    "primary_stable": 60
+  },
+  "hold_reserve": {
+    "failures": 3,
+    "successes": 2,
+    "cooldown": 180,
+    "min_dwell": 180,
+    "return_policy": "hold_reserve",
+    "primary_successes": 3,
+    "primary_stable": 60
+  }
+}

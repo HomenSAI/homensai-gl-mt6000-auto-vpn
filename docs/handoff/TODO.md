@@ -42,3 +42,8 @@ Proposed algorithm, button interaction and brighter raised-control work: [approv
 ## Alpha8 execution result - 17 October 2026
 
 The newly approved checklist has been executed in the documented local scope: [results and hardware gates](../ALPHA8-UX-ALGORITHMS-RESULTS.md). This supersedes its earlier awaiting-review label. Real worker/LAN acceptance and GitHub reconciliation remain pending.
+
+
+## Approved post-alpha10 work
+
+[POST-01 through POST-15](../TODO-POST-ALPHA10.md) approved for local/virtual execution. Begin with isolated OpenWrt. Physical router installation and tests remain excluded.

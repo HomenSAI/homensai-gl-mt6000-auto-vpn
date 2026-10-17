@@ -20,7 +20,7 @@ def scripts():
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
 /etc/init.d/rpcd reload
-rm -f /tmp/luci-indexcache
+/usr/bin/python3 /usr/lib/homensai-vpn/luci_cache.py
 exit 0
 '''
     prerm=header+guard_block('check')+'''/etc/init.d/homensai-vpn stop

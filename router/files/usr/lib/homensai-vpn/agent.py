@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.7.0-alpha10'
+VERSION = '0.8.0-alpha1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -563,6 +563,8 @@ def serve():
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
+            from system_readiness import snapshot as readiness_snapshot
+            status['system_readiness']=readiness_snapshot()
             try:
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()

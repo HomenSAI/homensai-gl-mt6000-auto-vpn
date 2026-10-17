@@ -142,6 +142,8 @@ source=source.replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).
 source=source.replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
 source=source.replace('?build=060-alpha1','?build=070-alpha10')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
+import json
+source=source.replace('return view.extend({','var RECOVERY_PRESETS='+json.dumps(json.loads((Path(__file__).parent/'files/usr/lib/homensai-vpn/recovery_presets.json').read_text(encoding='utf8')),sort_keys=True)+';\nreturn view.extend({')
 source=source.replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
 source=source.replace("['statistics','▥'", "['tests','⏻',bi('Operator tests','Операторские тесты')],['statistics','▥'")
@@ -209,10 +211,15 @@ source=source.replace("if(heading)heading.textContent=", "if(appRoot)updateSideb
 source=source.replace("E('nav',{'aria-label':bi('VPN sections','Разделы VPN')}", "E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')}")
 source=source.replace('      return appRoot;', '      initSidebarLayout(appRoot);\n      return appRoot;')
 
-source=source.replace('ui15.css','ui21.css')
-(root/'dashboard40.js').write_text(source,encoding='utf8')
-print('Generated dashboard40.js with sidebar, language persistence and sortable tables')
+source=source.replace('return view.extend({',(Path(__file__).parent/'incident_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
+source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status));")
+source=source.replace('070-alpha10','080-alpha1-r2')
+source=source.replace('ui15.css','ui22.css')
+(root/'dashboard42.js').write_text(source,encoding='utf8')
+print('Generated dashboard42.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard40',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard42',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

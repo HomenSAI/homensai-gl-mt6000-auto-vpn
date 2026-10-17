@@ -290,7 +290,7 @@ HOMENSAI_LIFECYCLE_GUARD
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
 /etc/init.d/rpcd reload
-rm -f /tmp/luci-indexcache
+/usr/bin/python3 /usr/lib/homensai-vpn/luci_cache.py
 exit 0
 endef
 

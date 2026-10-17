@@ -774,3 +774,71 @@ Final source 192220cf1828e6d66207d877610a1d81d0ce9914 dual-runtime CI PASS: 329 
 ## 2026-10-17T08:09:42.974788+00:00 UTC - alpha10 publication download verified
 
 Canonical source ac9be28b9e0af828e880a516fd0aacd6ee7fa850 and public snapshot 45da054fc6732fc966ca4b936b17f69e3a4fbf42 trees match. Saved locally/Gitea before normal GitHub main publication; no force or historical tag overwrite. Created public alpha10 prerelease on its own public commit; downloaded both assets again: 465422 bytes, SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16, checksum matches. Alpha9 tag independently unchanged. Verification receipt qa/GITHUB-ALPHA10-PUBLICATION.json. This documentation-only follow-up preserves the product/package bytes; physical router/network unchanged.
+
+
+## 2026-10-17T10:42:27.632332+02:00 - post-alpha10 approved execution preflight
+
+User approved all feasible local/virtual checklist work and explicitly prohibited physical installation. Verified clean canonical checkout and marked QEMU clone paused: Docker network none, privileged false, no host mounts. Preparing private baseline disk checkpoint before virtual installation. Existing historical helpers target older fixed packages; they will not be blindly reused against alpha10. New acceptance receipts must identify exact installed package and preserve earlier evidence.
+
+
+## 2026-10-17T09:22:14.034105+00:00 - isolated OpenWrt acceptance checkpoint
+
+2026-10-17T09:22:14.034105+00:00. Scope: marked isolated x86 OpenWrt copy only. Physical router and host networking untouched.
+
+| Check | Result | Evidence / limitation |
+| --- | --- | --- |
+| Installed alpha10 verification | PASS, 15 checks | Actual opkg/runtime; not a second upgrade |
+| Downgrade to alpha7-2 | PASS, 12 checks | Actual opkg, own configuration retained |
+| Re-upgrade to alpha10-1 | PASS, 17 checks | Package SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16 |
+| UCI failure injection | PASS, 11 checks | Read-only delta/config writes refused; no duplicate anonymous section |
+| Own monitor process crash | PASS | New PID and measurement timestamp after crash required; not Internet recovery |
+| Guest warm reboot | PASS | Configuration retained, monitor autostart, new measurements, Auto OFF |
+| Actual LuCI desktop/narrow desktop | PASS | Nine pages at 1280x900 and 978x808 |
+| Actual LuCI mobile | FAIL | Channels/ranking search content-box width overflows at 414px; correction pending |
+| Native start on generic x86 | REFUSED as expected | Unsupported board/vendor and missing client/deadline guards; no real switching certified |
+
+Initial synchronous acceptance harness returned FAIL after package installation; the exact failed subcommand was not retained, so its cause remains unknown. Installation was independently verified. The replacement detached job records exact failed steps and bounded progress. The earlier age-only monitor receipt was preliminary; final crash check requires a post-crash timestamp.
+
+Guest time lagged host by roughly seven hours after a long pause. Only virtual guest clock/RTC were aligned; this is fixture maintenance, not proof of a production NTP fix. Warm reboot does not prove hardware power-loss/flash behavior or repair the original guest GRUB boot path. No connected VPN profiles were measured; zero checked servers is not Internet availability proof. Private raw receipts and disk backup remain excluded from publication.
+
+
+## 2026-10-17T09:28:11.614245+00:00 - local 0.8.0-alpha1 candidate, no physical installation
+
+Actual virtual LuCI exposed content-box search overflow on Channels and Ranking at 414px. Cause: vendor input sizing overrides the application's universal box-sizing rule. New immutable ui22/dashboard41 adds a scoped input border-box/max-width rule; old alpha10 files are preserved. Actual-browser acceptance follows package installation in the isolated clone; the source regression alone is not browser proof.
+
+Added read-only system readiness: dependency checks, allowlisted actual board/firmware, measurement freshness and explicit unknown native permission. It does not authorize Auto or replace Start's certification/lease checks. Added shared recovery preset data, draft-only selection with existing review/save validation, incident detail and bounded escaped standalone HTML export for browser Print/Save as PDF. Missing retained evidence remains unknown; no fabricated root cause or LAN outage duration. No PDF runtime is added to the router.
+
+Added reviewed snapshot publication helper: exact dual-runtime source/package receipts, clean current source, Gitea save before public parent/tree snapshot, normal explicit main push, immutable release tags and independent asset re-download/hash verification. No canonical history is pushed and no old tag is overwritten. Extended Gitea save to a named reviewed branch without switching the working checkout. Extended CI to explicit full-SHA immutable exports; uncommitted work remains excluded. Restricted jobs retain network/credential isolation. Gitea server-triggered CI activation and exact vendor SDK remain external prerequisites, documented separately.
+
+Prepared bounded read-only virtual resource sampler (1-96 samples). It is not a 24-48h hardware/flash study. Existing native/cascade/lease/committed recovery/candidate suites are rerun as local contract checks, not device acceptance.
+
+
+## 2026-10-17T09:32:10.149030+00:00 - actual LuCI dependency loader defect
+
+Candidate alpha1-1 installed and passed 17 backend checks, but actual browser rendering FAILED with ReferenceError: rpc is not defined. Cause: generated RECOVERY_PRESETS variable was prepended before LuCI require directives, preventing loader dependency discovery; Node tests supplied rpc globally and missed this integration failure. Correction: preserve the directive prologue and inject preset data immediately before view.extend. Added directive-order regression. New immutable dashboard42/package alpha1-2 replaces the failed candidate in the isolated VM only. Backend installation PASS is not UI PASS.
+
+
+## 2026-10-17T09:34:34.455677+00:00 - actual LuCI stale discovery cache after upgrade
+
+After directive correction, actual LuCI still requested removed dashboard41.js and returned HTTP 404, although installed menu/controller selected dashboard42. Diagnosis found hashed luci-indexcache.<hash>.lua/json files and cached own controller under luci-modulecache. Old postinst removed only literal /tmp/luci-indexcache. Correction: bounded regular-file invalidation for LuCI discovery indices and only the exact own cached controller, refusing symlinks and preserving other module caches. Added selective/idempotent/symlink regressions; new package revision alpha1-3 retains earlier failures. This is virtual acceptance; physical browser 403 history is not attributed to this cache finding.
+
+
+## 2026-10-17T09:40:09.478230+00:00 - readiness RPC overhead and timed-out acceptance
+
+Alpha1-3 virtual acceptance FAILED at correlated scan completion after ubus returned 7. Later independent diagnostics found the exact request COMPLETED with matching measurement ID and zero connected profiles; monitor was running with a fresh snapshot. The original FAIL remains retained and is not relabelled PASS. Single status RPC took 3.458s. Inspection found readiness snapshot collection ran both in the daemon and in every status RPC, duplicating board/dependency subprocess work. Correction: RPC now returns the daemon-cached allowlisted readiness snapshot; no environment commands in the read handler. This reduces observed overhead; precise attribution of the original timeout to this duplication alone is not proven. Alpha1-4 is tested as a distinct package.
+
+
+## 2026-10-17T10:05:37.019572+00:00 - alpha1-4 acceptance and retained limitations
+
+Source 85aa212d760a80e20c570f80e477dc70ac1a56e6 dual-runtime CI PASS: 336 application + 32 QA tests each; Python 3.9/Lua zero skips, Python 3.11 seven Lua skips; 15 UI suites. Package 469212 bytes SHA256 4f4861a367940109022624d93e8dbd66d9aef2ba12ba81f71ca38735f58edfca matches both CI runtimes. Injected child exit 17 propagated as runner exit 1 with no PASS receipt.
+
+Actual virtual alpha1-4 upgrade acceptance PASS 17, own settings/network/firewall preserved, Auto OFF, correlated scan COMPLETED with zero connected servers. Actual LuCI now loads current dashboard42 and correctly displays QEMU/OpenWrt 21.02.7, fresh monitor and native blockers. RU 30 transitions across 414x896, 978x808, 1280x300 passed; subsequent English switch visibly confirmed after a browser command timeout. Synthetic 400 long profiles: EN/RU 40 transitions at mobile/narrow desktop, no root overflow. Preset stability values, review and cancellation checked; incident detail HTML downloaded. Native browser zoom and actual Print-to-PDF dialog were not exercised.
+
+Resource sampler initially hit CLONE-SERIAL-TIMEOUT at 20s. Retried with a bounded 60s transport limit and at most 256 process entries; no timeout cause beyond observed transport/load is claimed. Preliminary successful run incorrectly included observer RSS because its own command text contained the monitor path. Corrected to exact argv path + daemon argument and retained preliminary data privately; final sampling is separate. No physical resource/flash performance claim.
+
+After guest reboot, /tmp/HOMENSAI_VIRTUAL_LAB marker was absent and candidate launcher correctly refused. Verified marked host clone and x86 guest before recreating only that temporary marker. One Windows nested-quote diagnostic command failed with SyntaxError before execution; replaced by stdin script, no device change. These are lab harness failures, not physical VPN failures.
+
+
+## 2026-10-17T10:06:05.597789+00:00 - corrected virtual resource sample
+
+Three bounded samples 10:04:55-10:05:20 UTC: exactly one own monitor daemon, RSS 22245376 bytes in each sample; MemAvailable 143093760 bytes and config free 58970112 bytes. These are short x86 virtual observations, not a soak, CPU benchmark, hardware RAM budget or flash-wear acceptance. Preliminary self-matching observer data is excluded from this result.

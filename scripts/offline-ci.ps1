@@ -1,13 +1,15 @@
 [CmdletBinding()]
 param([string]$Image='local-dev-tools:installed',
-      [string]$RuntimeImage='homensai-vpn-python39:local', [switch]$InjectFailure)
+      [string]$RuntimeImage='homensai-vpn-python39:local', [switch]$InjectFailure, [string]$SourceCommit='')
 $ErrorActionPreference='Stop'
 $repoPath=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $gitExe='C:\Program Files\Git\cmd\git.exe'
 function Assert-Exit([string]$Operation){if($LASTEXITCODE -ne 0){throw "$Operation failed (exit $LASTEXITCODE). No successful CI receipt is issued."}}
 $dirty=& $gitExe -C $repoPath status --porcelain;Assert-Exit 'Status'
-if($dirty){throw 'Commit the reviewed snapshot first. CI never tests a mixed working tree.'}
-$sourceSha=(& $gitExe -C $repoPath rev-parse HEAD).Trim();Assert-Exit 'Source SHA'
+if($dirty -and -not $SourceCommit){throw 'Commit the reviewed snapshot first. CI never tests a mixed working tree.'}
+$requestedSource=if($SourceCommit){$SourceCommit}else{'HEAD'}
+if($SourceCommit -and $SourceCommit -notmatch '^[a-f0-9]{40}$'){throw 'Explicit source must be a full commit SHA'}
+$sourceSha=(& $gitExe -C $repoPath rev-parse "$requestedSource`^{commit}").Trim();Assert-Exit 'Source SHA'
 if($sourceSha -notmatch '^[a-f0-9]{40}$'){throw 'Invalid source SHA'}
 $commonGit=(& $gitExe -C $repoPath rev-parse --git-common-dir).Trim();Assert-Exit 'Private directory'
 if(-not [IO.Path]::IsPathRooted($commonGit)){$commonGit=Join-Path $repoPath $commonGit}

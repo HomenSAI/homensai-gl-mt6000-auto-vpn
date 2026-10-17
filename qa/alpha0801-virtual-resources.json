@@ -1,0 +1,51 @@
+{
+  "scope": "isolated virtual x86 guest; not physical flash wear or hardware performance",
+  "samples": [
+    {
+      "guest_time": 1792231491.059854,
+      "memory": {
+        "MemTotal": 245407744,
+        "MemFree": 155496448,
+        "MemAvailable": 143093760
+      },
+      "config_free_bytes": 58970112,
+      "monitor_instances": [
+        {
+          "rss_bytes": 22245376
+        }
+      ],
+      "host_observed_at_utc": "2026-10-17T10:04:55.505325+00:00"
+    },
+    {
+      "guest_time": 1792231503.943157,
+      "memory": {
+        "MemTotal": 245407744,
+        "MemFree": 155496448,
+        "MemAvailable": 143093760
+      },
+      "config_free_bytes": 58970112,
+      "monitor_instances": [
+        {
+          "rss_bytes": 22245376
+        }
+      ],
+      "host_observed_at_utc": "2026-10-17T10:05:08.309013+00:00"
+    },
+    {
+      "guest_time": 1792231515.6898773,
+      "memory": {
+        "MemTotal": 245407744,
+        "MemFree": 155496448,
+        "MemAvailable": 143093760
+      },
+      "config_free_bytes": 58970112,
+      "monitor_instances": [
+        {
+          "rss_bytes": 22245376
+        }
+      ],
+      "host_observed_at_utc": "2026-10-17T10:05:20.259310+00:00"
+    }
+  ],
+  "router_changes": false
+}
