@@ -769,3 +769,8 @@ Expanded matrix to 144 transitions (nine pages/eight sizes/EN-RU), all pass. Add
 ## 2026-10-17T10:07:54.555139+02:00 - alpha10 final source/package verified
 
 Final source 192220cf1828e6d66207d877610a1d81d0ce9914 dual-runtime CI PASS: 329 application + 30 QA tests per runtime, 13 UI suites. Python 3.9/Lua zero skips; Python 3.11 control seven Lua skips. Host alpha10-1 build exactly matches both CI outputs: 465422 bytes, SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16. Final direct Settings reload and 144 transitions PASS. Release notes/receipt saved; physical router remains untouched.
+
+
+## 2026-10-17T08:09:42.974788+00:00 UTC - alpha10 publication download verified
+
+Canonical source ac9be28b9e0af828e880a516fd0aacd6ee7fa850 and public snapshot 45da054fc6732fc966ca4b936b17f69e3a4fbf42 trees match. Saved locally/Gitea before normal GitHub main publication; no force or historical tag overwrite. Created public alpha10 prerelease on its own public commit; downloaded both assets again: 465422 bytes, SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16, checksum matches. Alpha9 tag independently unchanged. Verification receipt qa/GITHUB-ALPHA10-PUBLICATION.json. This documentation-only follow-up preserves the product/package bytes; physical router/network unchanged.
