@@ -1,3 +1,5 @@
+> Historical snapshot retained for audit. Current stopped checkpoint and review instructions: ../.claude/handoff/START-HERE.md. Do not treat old versions, locations, approvals or device claims below as freshly verified current state.
+
 # Experimental native controller
 
 2026-10-15. Candidate: **0.4.0-alpha8**. Installed device: **0.4.0-alpha7**, monitor mode, native controller **DISABLED**. Candidate alpha8 has not been installed while the owner works remotely. Production automatic failover is not validated.

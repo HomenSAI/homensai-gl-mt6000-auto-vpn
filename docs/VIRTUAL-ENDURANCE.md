@@ -1,3 +1,5 @@
+> Current checkpoint: the owner stopped the alpha2 run before its 12-hour deadline. See qa/alpha0802-endurance-stopped.json and .claude/handoff/STATE.md. Do not restart it automatically; the procedure below is reference for a future authorized run.
+
 # Virtual endurance procedure and evidence boundaries
 
 The runner operates only on marked Docker container homensai-vpn-qemu-alpha7, with network none, no host mounts and no privilege. It never contacts physical-router addresses. Keep the Windows host and Docker running.

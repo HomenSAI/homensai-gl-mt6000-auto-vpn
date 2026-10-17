@@ -1,25 +1,25 @@
-# Project state - 17 October 2026
+# Project state — stopped Claude review checkpoint, 17 October 2026
 
-## Current release candidate
+Current authoritative handoff: ../.claude/handoff/START-HERE.md and ../.claude/handoff/STATE.md. Root CLAUDE.md imports it for Claude Code.
 
-Alpha8-1, dashboard38 / ui19. Brighter raised actions, 18px health indicators, request-correlated manual checks with explicit empty/failure results, separate connection/health/selected states, failure diagnosis, configured-threshold explanations and adaptive failed-hop quarantine in the pure cascade model. English default, optional Russian.
+## Current product
 
-Exact tested code snapshot: aafdac37f0ed7a23364cd9f4f1e65bdefed32c91. Final candidate/package snapshot 22b75b8500acc6bb13af302b0cbea0124f440a66 also passed immutable CI. 329 application and 30 QA tests per runtime, 12 UI suites; Python 3.9/Lua zero skips, Python 3.11 control seven Lua skips. Additional 200-case fault-model suite PASS. See ALPHA8-UX-ALGORITHMS-RESULTS.md.
+HomenSAI Auto VPN 0.8.0-alpha2-1, dashboard43/ui22, English default with Russian available. Reproducible package: 470221 bytes, SHA256 8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8. Product/release source 8ab8011e85647ed4179f69d02d9ffe7cb9f62af5. Exact pre-handoff source 1b0768ffb02810679218434b849e4ebe7f4021f4 passed 341 application + 36 QA tests per runtime and 15 JS UI suites; Python 3.9/Lua zero skips, Python 3.11 control seven skips.
 
-## Physical device - historical, not rechecked
+## Tests stopped by request
 
-Last separately recorded hardware installation: alpha7-2, Auto OFF; no alpha8 installation or physical test occurred during this local/publication task. Device: GL.iNet GL-MT6000 / Flint 2, firmware 4.11.0, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, kernel 5.4.238. Complete environment evidence remains in TESTED-ENVIRONMENT.en.md and timestamped WORKLOG.
+The planned 12-hour virtual monitor run was stopped cooperatively on 2026-10-17T13:26:07Z for independent review. Final state STOPPED, elapsed 3391.75 seconds, 57 observations, zero observed failures/gaps. It is not a completed twelve-hour PASS. Independent cleanup confirmed the marked clone paused; producer/watchdog exited. No new background test or repeated status automation is scheduled. Raw evidence remains private; sanitized final receipt is qa/alpha0802-endurance-stopped.json.
 
-Earlier bounded transitions/rollback between two already-connected catchall profiles do not certify arbitrary multi-hop hierarchy, unattended production, real inactive-provider startup, IPv6 or hardware power recovery. Historical HTTP 403 and cable-path causes remain bounded by their actual evidence.
+## Evidence and limitations
 
-## Virtual evidence
+Virtual alpha2 installation acceptance passed 17 checks. Actual selected-tab LuCI matrix passed 60 transitions at three measured sizes and EN/RU. Disposable tmpfs corruption/ENOSPC tests passed after a retained failed helper attempt. Three controlled opkg lifecycle interruption trials used the previous alpha1-4 baseline, not a physical device. Native browser local-file Print remains unverified; downloaded synthetic HTML/LibreOffice PDF was checked.
 
-Isolated OpenWrt 21.02.7 x86/64 VM installation/UCI/procd/package checks and later local protocol runs have separate evidence. Overnight protocol runs used four real local synthetic tunnels and a standalone namespace selector, not the GL.iNet native adapter and not alpha8's current source. Preserve all earlier FAIL/STOPPED records and unknown causes. See OVERNIGHT-TEST-REPORT-2026-10-17.md and PROTOCOL-SOAK-FINAL-2026-10-17.md.
+Historical recorded target: GL.iNet GL-MT6000/Flint 2, GL.iNet 4.11.0/OpenWrt 21.02-SNAPSHOT. Current physical installation/configuration/acceleration/LAN path is not freshly verified. Alpha2 was not deployed physically in this task. Generic x86/model/protocol-lab success is not actual GL.iNet native cascade or client DNS/Kill Switch/IPv6 proof.
 
-## Remaining acceptance
+Exact matching vendor SDK and activated server-side Gitea CI remain external prerequisites. Code contains experimental native controls and guards; unattended production is not certified. Read .claude/handoff/ROUTER-READINESS.md before proposing a bounded device test.
 
-Actual vendor worker arbitration, per-edge native hierarchy, isolated provider probes, transaction-bound LAN DNS/HTTPS/exit witness and real rollback/offload behavior need a new physical test window. Guards remain enabled. No direct-WAN fallback is introduced. Physical deployment remains separate from the user's approved GitHub main publication.
+## Git workflow
 
-## Publication
+Canonical Windows checkout C:/homensai/homensai-gl-mt6000-auto-vpn, feature/local-completion-alpha6. Save local Git/Gitea first; GitHub gets an identical reviewed tree on the existing public parent. Canonical/public histories and same-named tag mappings differ. Never force, overwrite old tags or push full canonical history publicly.
 
-The user approved GitHub main publication on 17 October 2026. Preserve existing public history using a reviewed canonical snapshot with GitHub main as parent, save locally/Gitea first, then normal non-forced push. Historical conflicting tags remain unchanged; public release mapping is separate. See PUBLICATION.md.
+The fifty-item proposal is preserved for independent audit, not automatically approved implementation: .claude/handoff/TODO-50.md.

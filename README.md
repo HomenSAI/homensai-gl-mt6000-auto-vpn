@@ -1,6 +1,6 @@
 # HomenSAI Auto VPN · GL-MT6000
 
-Latest release candidate: **0.8.0-alpha2-1** ([release notes](releases/v0.8.0-alpha2.md), [virtual hardening checklist](docs/TODO-VIRTUAL-HARDENING.md)). No new physical installation; twelve-hour virtual endurance acceptance is pending.
+Latest release candidate: **0.8.0-alpha2-1** ([release notes](releases/v0.8.0-alpha2.md), [virtual hardening checklist](docs/TODO-VIRTUAL-HARDENING.md)). No new physical installation; twelve-hour virtual endurance was stopped by the owner before completion and is not PASS.
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
@@ -64,3 +64,5 @@ Physical device: last recorded installed application is 0.6.0-alpha5; this windo
 [Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
 
 [Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.7.0-alpha5 adds committed-reserve observation and verified primary return; hardware acceptance of this candidate remains pending.
+
+Independent Claude review checkpoint: [start here](.claude/handoff/START-HERE.md), [all 50 audit items](.claude/handoff/TODO-50.md), [readiness gates](.claude/handoff/ROUTER-READINESS.md). Root CLAUDE.md imports the project handoff. Tests are stopped; this is an audit-first handoff, not device deployment authorization.

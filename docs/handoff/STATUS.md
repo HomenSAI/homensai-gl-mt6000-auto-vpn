@@ -1,3 +1,5 @@
+> Historical snapshot retained for audit. Current stopped checkpoint and review instructions: ../../.claude/handoff/START-HERE.md. Do not treat old versions, locations, approvals or device claims below as freshly verified current state.
+
 # Current state - alpha10
 
 Alpha10-1/dashboard40/ui21 fixes clipped sidebar navigation and direct Settings reload after stylesheet sizing. Available-height desktop panel, scrollable nav and whole-panel tiny fallback; wrapped mobile links; active entry remains visible after navigation/resize. No physical router, network, VPN or firewall changes.

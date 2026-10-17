@@ -5,7 +5,7 @@ Physical router excluded. All private archives, sessions and test-instrumented p
 | ID | Work | Acceptance | Status |
 | --- | --- | --- | --- |
 | VH-01 | Interrupted actual opkg upgrade | Three controlled lifecycle stages; owned process termination, known package recovery, configuration/network hashes retained | PASS: 3 actual controlled lifecycle interruptions/recovery |
-| VH-02 | Latest-build 12h virtual endurance | Immutable source/package; bounded independent observations, failure/gap counts, deadline and cleanup; RUNNING is not PASS | RUNNING: 2026-10-17 12:29:35Z to 2026-10-18 00:29:35Z; smoke PASS; final pending |
+| VH-02 | Latest-build 12h virtual endurance | Immutable source/package; bounded independent observations, failure/gap counts, deadline and cleanup; RUNNING is not PASS | STOPPED by owner 2026-10-17 13:26:07Z: 57 samples, 0 observed failures/gaps; 3391.75s of planned 43200s; not PASS; independent cleanup confirmed |
 | VH-03 | Storage corruption/full and time discontinuities | Separate scratch data/config; fail closed, recover known data, truthful gaps/counters | PASS: local regressions + real disposable tmpfs ENOSPC/corruption/time gaps |
 | VH-04 | Publication interruption/resume | Retained operation identity, remote verification, no duplicate commits/tags/releases, mismatches refuse | PASS: local interrupted stages + real resume preserves public commit/asset IDs |
 | VH-05 | Actual virtual LuCI wizard workflows | Draft/cancel/save/reopen/failure paths, no real keys or native activation | System/recovery actual save/reopen/cancel PASS; Telegram missing-token privacy/refusal PASS; delivery excluded |

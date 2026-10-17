@@ -1,3 +1,5 @@
+> Historical snapshot retained for audit. Current stopped checkpoint and review instructions: ../../.claude/handoff/START-HERE.md. Do not treat old versions, locations, approvals or device claims below as freshly verified current state.
+
 # Handoff — 2026-10-16, Europe/Berlin
 
 This folder is the entry point for continuing in VS Code. It records what exists, what was checked, why remaining work matters, and where evidence lives. It does not declare production readiness.

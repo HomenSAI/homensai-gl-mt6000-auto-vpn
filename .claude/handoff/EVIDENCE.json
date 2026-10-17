@@ -1,0 +1,61 @@
+{
+  "checkpoint_kind": "user-requested stopped handoff for independent review",
+  "recorded_at_utc": "2026-10-17T13:30:29.306937+00:00",
+  "product": {
+    "version": "0.8.0-alpha2-1",
+    "dashboard": "dashboard43",
+    "stylesheet": "ui22",
+    "bytes": 470221,
+    "sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+    "source": "8ab8011e85647ed4179f69d02d9ffe7cb9f62af5"
+  },
+  "pre_handoff": {
+    "canonical": "1b0768ffb02810679218434b849e4ebe7f4021f4",
+    "public_main": "3d043ecfa9c7963949e09666d6f8f438edacc4e8",
+    "public_release": "4c6bea35d87dbfda4f9bc46042555b0371d63d77"
+  },
+  "endurance": {
+    "state": "STOPPED",
+    "source": "8ab8011e85647ed4179f69d02d9ffe7cb9f62af5",
+    "version": "0.8.0-alpha2",
+    "package_sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+    "duration_seconds": 43200,
+    "elapsed_seconds": 3391.75,
+    "samples": 57,
+    "failures": 0,
+    "gaps": 0,
+    "started_at_utc": "2026-10-17T12:29:35.307269+00:00",
+    "finished_at_utc": "2026-10-17T13:26:07.315079+00:00",
+    "max_rss_bytes": 22228992,
+    "smoke": false,
+    "physical_router_access": false
+  },
+  "cleanup": {
+    "independent_confirmed": true,
+    "clone_paused_verified": true,
+    "project_test_runners_found": 0,
+    "reason": "cooperative stop requested by owner, not test failure"
+  },
+  "ci": {
+    "application_tests_per_runtime": 341,
+    "qa_tests_per_runtime": 36,
+    "ui_suites": 15,
+    "python39_lua_skips": 0,
+    "python311_control_skips": 7,
+    "exact_pre_handoff_source": "1b0768ffb02810679218434b849e4ebe7f4021f4"
+  },
+  "paths": {
+    "worklog": "docs/WORKLOG.md",
+    "current_ui": "qa/alpha0802-actual-luci-matrix.json",
+    "storage_pass": "qa/alpha0802-storage-adversity.json",
+    "storage_failed_attempt": "qa/alpha0802-storage-adversity-first-fail.json",
+    "upgrade_interruption": "qa/alpha0802-upgrade-interruption.json",
+    "short_smoke": "qa/alpha0802-endurance-smoke.json",
+    "stopped_run": "qa/alpha0802-endurance-stopped.json",
+    "publication": "qa/GITHUB-ALPHA0802-PUBLICATION.json",
+    "private_raw_run": "private/virtual-hardening-20261017/endurance-alpha2-12h",
+    "pre_handoff_ci": ".claude/handoff/PRE-HANDOFF-CI.json"
+  },
+  "physical_acceptance": "not freshly verified or authorized by this handoff",
+  "private_checkpoint_manifest": "private/claude-handoff-20261017/manifest.json"
+}

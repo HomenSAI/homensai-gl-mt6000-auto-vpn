@@ -1,0 +1,21 @@
+{
+  "state": "STOPPED",
+  "source": "8ab8011e85647ed4179f69d02d9ffe7cb9f62af5",
+  "version": "0.8.0-alpha2",
+  "package_sha256": "8de85658c568d3a2610ba545d263a190e218f5d2ba128a01969678087810c2c8",
+  "duration_seconds": 43200,
+  "elapsed_seconds": 3391.75,
+  "samples": 57,
+  "failures": 0,
+  "gaps": 0,
+  "started_at_utc": "2026-10-17T12:29:35.307269+00:00",
+  "finished_at_utc": "2026-10-17T13:26:07.315079+00:00",
+  "max_rss_bytes": 22228992,
+  "smoke": false,
+  "physical_router_access": false,
+  "stop_reason": "direct user request for independent-review handoff",
+  "independent_cleanup_confirmed": true,
+  "clone_paused_verified": true,
+  "producer_and_watchdog_exited": true,
+  "final_scope": "partial monitor observation only; not a completed 12-hour pass"
+}
