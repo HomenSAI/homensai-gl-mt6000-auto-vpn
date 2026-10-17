@@ -18,7 +18,7 @@ if not input or #input>65536 then os.exit(1) end
 local ok=pcall(function()
   local data=json.decode(input)
   local allowed={checkpoint=true,probe_limit=true,plan_enabled=true,recovery_failures=true,recovery_successes=true,recovery_cooldown=true,recovery_min_dwell=true,recovery_return_policy=true,recovery_primary_successes=true,recovery_primary_stable=true,enabled=true,plan_source=true,plan_target=true,interval=true,native_duration=true,
-    native_session_loss=true,setup_complete=true,telegram_chat=true,telegram_token=true,
+    native_session_loss=true,setup_complete=true,terms_version=true,terms_time=true,telegram_chat=true,telegram_token=true,
     telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,speed_enabled=true,speed_auto_new=true,
     speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true}
   for key,value in pairs(data.main) do

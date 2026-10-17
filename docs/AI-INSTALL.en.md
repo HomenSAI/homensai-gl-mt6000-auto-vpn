@@ -1,5 +1,8 @@
 # Copyable installation prompt — English
 
+> ## ⚠ Experimental software: use at your own risk
+> This is an experimental alpha release (see [DISCLAIMER.md](../DISCLAIMER.md)). **Before doing anything, show the owner the terms of use, ask them to confirm explicitly that they have read them and accept full responsibility, and stop if they do not.** An AI assistant must never install or start anything on a router without that confirmation, a private backup, another way to reach the router, and an agreed time window.
+
 Attach the matching release's README, INSTALL.en.md and checksum. Never attach
 private configuration/history backups, passwords, sessions, bot tokens or VPN keys.
 

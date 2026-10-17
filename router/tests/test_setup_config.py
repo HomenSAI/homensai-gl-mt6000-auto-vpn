@@ -81,6 +81,20 @@ class SetupTests(unittest.TestCase):
             with self.assertRaises(ValueError):setup.save({'token':'x'},'forget')
             writer.assert_not_called()
 
+    def test_terms_acceptance_stores_only_the_current_version_with_router_time(self):
+        from contextlib import nullcontext
+        from types import SimpleNamespace
+        import agent
+        with patch.object(setup,'control_lock',return_value=nullcontext()),patch.object(setup.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'OK')) as run:
+            self.assertTrue(setup.save({'version':agent.TERMS_VERSION},'terms')['saved'])
+            sent=json.loads(run.call_args.kwargs['input'])
+        self.assertEqual(set(sent['main']),{'terms_version','terms_time'});self.assertEqual(sent['main']['terms_version'],agent.TERMS_VERSION)
+        self.assertTrue(sent['main']['terms_time'].isdigit());self.assertEqual(sent['servers'],[]);self.assertNotIn('delete',sent)
+        with patch.object(setup.subprocess,'run') as writer:
+            for bad in ({'version':'0'},{'version':1},{},{'version':agent.TERMS_VERSION,'time':'1'},{'version':None}):
+                with self.assertRaises(ValueError):setup.save(bad,'terms')
+            writer.assert_not_called()
+
     def test_invalid_input_never_calls_writer(self):
         with patch.object(setup.subprocess,'run') as writer:
             with self.assertRaises(ValueError):setup.save({'token':'bad'},'telegram')

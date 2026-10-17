@@ -1,0 +1,84 @@
+{
+  "result": "PASS",
+  "phase": "upgrade",
+  "package_version": "0.8.0-alpha8-1",
+  "package_sha256": "09c2860afd6d6259045b10d2531e971f7c13168fa93c3733fc4d5856eed28030",
+  "passed": 17,
+  "checks": [
+    {
+      "name": "preflight-no-pending-uci",
+      "result": "PASS"
+    },
+    {
+      "name": "preflight-auto-disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "candidate-sha256",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-opkg-upgrade",
+      "result": "PASS"
+    },
+    {
+      "name": "installed-version",
+      "result": "PASS"
+    },
+    {
+      "name": "own-config-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "protected-network-firewall-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "auto-stays-off",
+      "result": "PASS"
+    },
+    {
+      "name": "fresh-upgraded-agent",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-procd-monitor",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-selected-ui-file",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-candidate-ui",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-scan-id-ack",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-correlated-scan-completion",
+      "result": "PASS"
+    },
+    {
+      "name": "no-fake-active-profiles",
+      "result": "PASS"
+    },
+    {
+      "name": "generic-board-auto-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "final-protected-state-preserved",
+      "result": "PASS"
+    }
+  ],
+  "agent_version": "0.8.0-alpha8",
+  "protected_unchanged": true,
+  "private_values_exported": false,
+  "scope": "actual isolated x86 opkg/RPC/procd/UI files; no GL.iNet native or LAN acceptance",
+  "physical_router_access": false,
+  "guest_completed_at": 1792259696.9128525,
+  "host_observed_at_utc": "2026-10-17T17:55:09.264393+00:00"
+}

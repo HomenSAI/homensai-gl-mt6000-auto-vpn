@@ -91,6 +91,12 @@ def save(arguments, kind):
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
+    elif kind=='terms':
+        from agent import TERMS_VERSION
+        import time
+        # Only the exact current terms version can be accepted; the time is the router's, never the caller's.
+        if set(arguments)!={'version'} or arguments['version']!=TERMS_VERSION:raise ValueError('TERMS-VERSION')
+        payload={'main':{'terms_version':TERMS_VERSION,'terms_time':str(int(time.time()))},'servers':[]}
     elif kind=='forget':
         if arguments:raise ValueError('SETUP-FIELDS')
         # Deleting the stored token also turns reports off, so nothing keeps failing without it.

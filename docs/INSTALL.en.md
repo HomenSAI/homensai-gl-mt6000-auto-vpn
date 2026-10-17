@@ -1,8 +1,12 @@
 # Installation and upgrades — monitor-only deployment
 
+> ## ⚠ Experimental software: use at your own risk
+>
+> HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](../DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.
+
 [Russian](INSTALL.ru.md) · [Environment passport](TESTED-ENVIRONMENT.en.md) · [Next-stage evidence](NEXT-STAGE-RESULTS.md)
 
-The current development candidate is **0.8.0-alpha2-1**. Use a published, verified
+The current development candidate is **0.8.0-alpha8-1**. Use a published, verified
 version and its matching checksum; a development branch or a passing model test
 is not a production acceptance certificate. Local Gitea is primary. Public GitHub
 publishes reviewed snapshots on its own preserved history; use the release asset and checksum, not an arbitrary branch build.
@@ -14,7 +18,7 @@ The historical physical passport records GL.iNet **GL-MT6000 / Flint 2**, firmwa
 architecture **aarch64_cortex-a53**, LuCI openwrt-21.02 / luci-base
 **git-22.335.71649-0ecaf74**. It is a dated observation, not today's device query.
 The last separately recorded physical checkpoint is alpha7-2 with Auto OFF;
-alpha2 local evidence does not mean it was installed on that router.
+alpha8 local evidence does not mean it was installed on that router.
 
 Python **3.9.15** and Lua **5.1.5/CJSON** are checked in isolated Linux containers.
 The UCI cursor in those contract tests is mocked. Generic x86 OpenWrt, a matching
@@ -25,10 +29,10 @@ are separate acceptance steps. Never force compatibility with another image/mode
 
 1. Confirm the model/firmware and local LuCI access. Keep an independent management
    path. Obtain a separately authorised window before device installation/testing.
-2. Obtain `.ipk` and `.ipk.sha256` from the **same verified release**. For alpha2,
-   the expected filename is `homensai-auto-vpn_0.8.0-alpha2-1_all.ipk`. Compare
-   `Get-FileHash .\homensai-auto-vpn_0.8.0-alpha2-1_all.ipk -Algorithm SHA256`
-   or `sha256sum homensai-auto-vpn_0.8.0-alpha2-1_all.ipk` with that release's
+2. Obtain `.ipk` and `.ipk.sha256` from the **same verified release**. For alpha8,
+   the expected filename is `homensai-auto-vpn_0.8.0-alpha8-1_all.ipk`. Compare
+   `Get-FileHash .\homensai-auto-vpn_0.8.0-alpha8-1_all.ipk -Algorithm SHA256`
+   or `sha256sum homensai-auto-vpn_0.8.0-alpha8-1_all.ipk` with that release's
    checksum. Stop if the asset/checksum is absent or different.
 3. Keep a **private** configuration/history backup and check available storage/RAM.
    Backups can contain secrets. Never upload them, bot tokens, sessions, passwords
@@ -96,3 +100,11 @@ Use the independent path if Stop/restoration cannot be confirmed. Removal needs 
 separate owner decision: remove only the application, never auto-remove shared
 dependencies. Configuration/history are intentionally retained; their deletion is
 a separate decision. No unattended production claim follows from this guide.
+
+## First start: the terms of use
+
+The first time you open Services → HomenS.AI Auto VPN after installing, a full-page screen shows the [terms of use](../DISCLAIMER.md): the software is experimental, can interrupt your internet, changes router VPN settings, is provided "AS IS" and is used at your own risk. Tick both boxes and press **Accept and continue**. The acceptance (terms version and time) is stored on the router. Until it is stored the controller refuses to switch anything (`TERMS-NOT-ACCEPTED`) and Auto cannot be started. The same text stays available on the Help page. If you do not accept, remove the package (`opkg remove homensai-auto-vpn`).
+
+## Installing with the router test kit
+
+`router-test-kit/` contains a read-only preflight, an install script that checks the package hash, a verification script, an uninstall script and an emergency helper. Follow [router-test-kit/README.md](../router-test-kit/README.md): upload, private backup, preflight, install, verify. The package also installs `/usr/sbin/homensai-vpn-emergency`; the Help page explains every recovery step. Making Auto work needs a LAN trial with the helper (phase 3 of the kit) and is a separate, deliberate step with a short interruption.

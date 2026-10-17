@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0-alpha8-1 - 2026-10-17
+
+Experimental-software terms: documents, GitHub README and a first-run acceptance screen. dashboard49/ui27.
+
+- DISCLAIMER.md / DISCLAIMER.ru.md: experimental alpha, can interrupt the internet, changes router VPN settings, "AS IS" without warranty (MIT), use at your own risk and responsibility, not legal advice. Banners in README (EN/RU), INSTALL, AI-INSTALL, router-test-kit and LICENSING; install guides updated (first start, test kit).
+- First start: a full-page screen with seven points and two required boxes; nothing else renders until the terms version is stored on the router (terms_accept RPC, terms_version/terms_time in the own config). Until then the controller refuses to switch (TERMS-NOT-ACCEPTED) and Auto cannot be started. The terms stay readable on the Help page; a new terms version asks again.
+
 ## 0.8.0-alpha7-1 - 2026-10-17
 
 Traffic-light status, simpler interface, safer confirmation. dashboard48/ui26. Includes alpha6 (published) and nothing is accepted on the physical router yet.

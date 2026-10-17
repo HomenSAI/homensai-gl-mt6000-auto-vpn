@@ -23,6 +23,7 @@
           "setup_telegram",
           "telegram_test",
           "telegram_forget",
+          "terms_accept",
           "setup_check",
           "speed_start",
           "speed_cancel",

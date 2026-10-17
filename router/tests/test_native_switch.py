@@ -268,6 +268,14 @@ class NativeTests(unittest.TestCase):
             self.assertIn('meta nfproto ipv6 drop',script);self.assertIn('oifname !=',script)
             self.assertNotIn('flush ruleset',script)
 
+    def test_controller_refuses_everything_until_terms_are_accepted(self):
+        source=Path(native.__file__).read_text()
+        self.assertIn("settings',{}).get('terms_version')!=TERMS_VERSION:blockers.append('TERMS-NOT-ACCEPTED')",source)
+        lua=(Path(native.__file__).parent/'native_policy.lua').read_text()
+        self.assertIn("'terms_version'",lua)
+        inventory=(Path(native.__file__).parent/'inventory.lua').read_text()
+        self.assertIn('main.terms_version=',inventory);self.assertNotIn('terms_time',inventory.split('main.terms_version=')[0][-5:])
+
     def test_explicit_timezone_deadline(self):
         self.assertEqual(native.deadline('2026-10-15T14:00:00+02:00'),native.deadline('2026-10-15T12:00:00Z'))
         with self.assertRaises(native.Refused):native.deadline('2026-10-15T14:00:00')

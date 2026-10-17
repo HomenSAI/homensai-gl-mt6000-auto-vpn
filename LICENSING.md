@@ -10,3 +10,5 @@ IBM Plex fonts retain SIL Open Font License 1.1 and the accompanying IBM copyrig
 RU: Авторский код, документация и принадлежащие Serhii Khomenko элементы стиля, логотип и робот, включённые именно в этот проект, разрешены по MIT. При распространении сохраняются полный текст лицензии и строка авторства со ссылкой https://homensai.com. Коммерческое использование разрешено. Отдельный баннер в интерфейсе и раскрытие изменений не требуются. Лицензии сторонних шрифтов и зависимостей сохраняются. Исходный репозиторий HomenSAI Style этим разрешением не перелицензируется.
 
 Historical release archives are not rewritten. This notice and LICENSE must accompany redistribution of the project's original material, including earlier releases licensed by the copyright holder through this grant. Future package builds include these notices under /usr/share/licenses/homensai-auto-vpn/.
+
+The software is experimental and provided "AS IS" without warranty; use is at your own risk. See DISCLAIMER.md / DISCLAIMER.ru.md. / ПО экспериментальное и предоставляется «КАК ЕСТЬ» без гарантий; использование на ваш риск. См. DISCLAIMER.md / DISCLAIMER.ru.md.

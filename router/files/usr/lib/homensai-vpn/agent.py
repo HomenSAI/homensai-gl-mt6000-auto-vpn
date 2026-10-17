@@ -21,13 +21,14 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.8.0-alpha7'
+VERSION = '0.8.0-alpha8'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
 SAFE = re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 SO_MARK = getattr(socket, 'SO_MARK', 36)
 SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
+TERMS_VERSION = '1'  # bump when DISCLAIMER.md changes; the UI gate and the controller both compare it
 STOP = False
 EXIT_SEEN = {}
 
@@ -676,7 +677,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_forget': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -723,6 +724,12 @@ def rpc(method):
     if method=='monitor_control':
         from monitor_control import change
         print(json.dumps(change(arguments)));return
+    if method=='terms_accept':
+        from setup_config import save
+        try:result=save(arguments,'terms')
+        except ValueError as error:
+            result={'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
+        print(json.dumps(result));return
     if method=='telegram_forget':
         from setup_config import save
         try:result=save(arguments,'forget')

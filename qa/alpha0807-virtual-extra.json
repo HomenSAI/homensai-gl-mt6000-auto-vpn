@@ -1,0 +1,74 @@
+{
+  "result": "PASS",
+  "passed": 16,
+  "checks": [
+    {
+      "name": "status-agent-version",
+      "result": "PASS"
+    },
+    {
+      "name": "status-package-version-from-opkg",
+      "result": "PASS"
+    },
+    {
+      "name": "rpc-registered-native_return",
+      "result": "PASS"
+    },
+    {
+      "name": "rpc-registered-telegram_forget",
+      "result": "PASS"
+    },
+    {
+      "name": "rpc-registered-native_confirm",
+      "result": "PASS"
+    },
+    {
+      "name": "native-confirm-signature-has-trial",
+      "result": "PASS"
+    },
+    {
+      "name": "emergency-helper-installed-executable",
+      "result": "PASS"
+    },
+    {
+      "name": "emergency-show-readonly-runs",
+      "result": "PASS"
+    },
+    {
+      "name": "operator-return-refused-without-held-reserve",
+      "result": "PASS"
+    },
+    {
+      "name": "confirmation-without-pending-transaction-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "synthetic-token-saved",
+      "result": "PASS"
+    },
+    {
+      "name": "token-reported-only-as-configured-flag",
+      "result": "PASS"
+    },
+    {
+      "name": "token-deleted",
+      "result": "PASS"
+    },
+    {
+      "name": "token-gone-and-reports-off",
+      "result": "PASS"
+    },
+    {
+      "name": "token-absent-from-config",
+      "result": "PASS"
+    },
+    {
+      "name": "no-pending-uci-delta-left",
+      "result": "PASS"
+    }
+  ],
+  "second_forget_without_token": "refused:SETUP-SAVE-FAILED",
+  "scope": "actual isolated x86 RPC/UCI/files; synthetic token; no GL.iNet native or LAN acceptance",
+  "physical_router_access": false,
+  "host_observed_at": 1792258916.0173485
+}

@@ -247,7 +247,7 @@ reorganizer = """      (function(){
       })();
 """
 must_replace("      panel.addEventListener('pointerdown',function(){pointerHeld=true;});", reorganizer+"      panel.addEventListener('pointerdown',function(){pointerHeld=true;});")
-source=source.replace('070-alpha10','080-alpha7')
+source=source.replace('070-alpha10','080-alpha8')
 # Overview copy: one calm monitoring note; Telegram has its own tile, so only a real error is shown.
 note_old='tr("Мониторинг активен. Состояние нативного контроллера показано ниже. Проверки роутера не подтверждают путь LAN-клиента; испытание требует отдельного клиентского подтверждения.")'
 assert note_old in source
@@ -295,9 +295,13 @@ must_replace("addSearch('ranking',ranking);put('ranking',ranking);","addSearch('
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
 must_replace("put('readiness',renderReadiness(status));","put('readiness',renderReadiness(status));put('help',helpNode||(helpNode=renderHelp()));")
+# First-run terms gate: nothing else is rendered until the terms version is stored on the router.
+_terms_version=_r.search(r"^TERMS_VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
+must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js').read_text(encoding='utf8').replace('__TERMS_VERSION__',_terms_version)+'\nreturn view.extend({')
+must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard48').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard49').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -311,10 +315,10 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui26.css')
-(root/'dashboard48.js').write_text(source,encoding='utf8')
-print('Generated dashboard48.js with sidebar, language persistence and sortable tables')
+source=source.replace('ui15.css','ui27.css')
+(root/'dashboard49.js').write_text(source,encoding='utf8')
+print('Generated dashboard49.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard48',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard49',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

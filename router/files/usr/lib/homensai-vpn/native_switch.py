@@ -23,7 +23,7 @@ import time
 import uuid
 from datetime import datetime
 
-from agent import RUNTIME, PERSIST, atomic_json, read_json, command, inventory, probe, bound_socket
+from agent import RUNTIME, PERSIST, TERMS_VERSION, atomic_json, read_json, command, inventory, probe, bound_socket
 from failover_plan import streak
 from native_history import History, HistoryError
 
@@ -271,6 +271,7 @@ class Linux:
         except (OSError,ValueError):blockers.append('VENDOR-CODE-UNVERIFIED')
         try:
             data=self.policy(); lan=data.get('lan')
+            if data.get('settings',{}).get('terms_version')!=TERMS_VERSION:blockers.append('TERMS-NOT-ACCEPTED')
             if any(m in acceleration['loaded'] for m in ('mtkhnat','mtk_hnat')) and (data.get('hnat_enable')!='0' or acceleration['hnat_runtime']!='disabled'):
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')

@@ -51,6 +51,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.native_session_loss=s.native_session_loss=='1'
   main.native_duration=math.max(1,math.min(240,tonumber(s.native_duration) or 10))
   main.native_until=s.native_until or ''
+  main.terms_version=s.terms_version or ''
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
   main.telegram_enabled=s.telegram_enabled=='1'
