@@ -1,0 +1,36 @@
+[
+  {
+    "application_tests": 301,
+    "artifact": "homensai-auto-vpn_0.7.0-alpha7-2_all.ipk",
+    "bytes": 452968,
+    "lua_available": false,
+    "python": "3.11.2",
+    "qa_tests": 9,
+    "result": "PASS",
+    "runtime_only": false,
+    "scope": "isolated source archive; no physical/virtual router acceptance",
+    "sha256": "9f8e952873dd236bbb6470bfffcbcb4e0daeb7501335f6ab2472cab6e19725ac",
+    "skipped_tests": 7,
+    "source": "7c1a6f3f5a66e65e7844456b2a50fe07f02c55f4",
+    "ui_suites": 9,
+    "image": "local-dev-tools:installed",
+    "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+  },
+  {
+    "application_tests": 301,
+    "artifact": "homensai-auto-vpn_0.7.0-alpha7-2_all.ipk",
+    "bytes": 452968,
+    "lua_available": true,
+    "python": "3.9.15",
+    "qa_tests": 9,
+    "result": "PASS",
+    "runtime_only": true,
+    "scope": "isolated source archive; no physical/virtual router acceptance",
+    "sha256": "9f8e952873dd236bbb6470bfffcbcb4e0daeb7501335f6ab2472cab6e19725ac",
+    "skipped_tests": 0,
+    "source": "7c1a6f3f5a66e65e7844456b2a50fe07f02c55f4",
+    "ui_suites": 0,
+    "image": "homensai-vpn-python39:local",
+    "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+  }
+]

@@ -2,6 +2,16 @@
 local testroot=os.getenv('HOMENSAI_SETUP_TEST_ROOT')
 if testroot and not testroot:match('^/tmp/homensai%-setup%-test%-[A-Za-z0-9_-]+$') then os.exit(1) end
 local c=testroot and require('uci').cursor(testroot..'/config',testroot..'/delta') or require('uci').cursor()
+-- A previous process may have died after save and before commit. Do not merge
+-- those unacknowledged changes into a different operator request or discard them.
+local savedir=type(c.get_savedir)=='function' and c:get_savedir() or nil
+if type(savedir)~='string' or savedir:sub(1,1)~='/' then io.write('SETUP-DELTA-UNVERIFIED');os.exit(1) end
+local pending,open_error,open_errno=io.open(savedir..'/homensai_vpn','r')
+if pending then
+  local byte,read_error=pending:read(1);pending:close()
+  if byte then io.write('SETUP-PENDING-DELTA');os.exit(1) end
+  if read_error then io.write('SETUP-DELTA-UNVERIFIED');os.exit(1) end
+elseif open_errno~=2 then io.write('SETUP-DELTA-UNVERIFIED');os.exit(1) end
 local json=require('cjson')
 local input=io.read(65537)
 if not input or #input>65536 then os.exit(1) end

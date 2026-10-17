@@ -2,12 +2,16 @@
 import gzip
 import hashlib
 import io
+import json
 import re
 from pathlib import Path
 import tarfile
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '0.7.0-alpha4-1'
+VERSION = '0.7.0-alpha8-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn'}
 
@@ -41,49 +45,58 @@ def archive(items):
     return bytes(compressed)
 
 
-def build(output=None):
-    destination = Path(output) if output else ROOT/'dist'
-    destination.mkdir(parents=True, exist_ok=True)
+def selected_ui(source):
+    base=source/'www/luci-static/resources/view/homensai-vpn'
+    if not base.exists():return None,None
+    menu=source/'usr/share/luci/menu.d/luci-app-homensai-vpn.json'
+    try:target=json.loads(menu.read_text(encoding='utf8'))['admin/services/homensai-vpn']['action']['path']
+    except (OSError,ValueError,KeyError,TypeError):raise ValueError('PACKAGE-UI-MENU') from None
+    if not isinstance(target,str) or not re.fullmatch(r'homensai-vpn/dashboard[0-9]+',target):raise ValueError('PACKAGE-UI-PATH')
+    name=target.split('/')[-1]+'.js';script=base/name
+    if not script.is_file() or script.is_symlink():raise ValueError('PACKAGE-UI-MISSING')
+    css=set(re.findall(r'\bui[0-9]+\.css\b',script.read_text(encoding='utf8')))
+    if len(css)!=1:raise ValueError('PACKAGE-UI-CSS-AMBIGUOUS')
+    stylesheet=next(iter(css))
+    if not (base/stylesheet).is_file() or (base/stylesheet).is_symlink():raise ValueError('PACKAGE-UI-CSS-MISSING')
+    controller=source/'usr/lib/lua/luci/controller/homensai_vpn.lua'
+    if controller.exists() and "view('"+target+"')" not in controller.read_text(encoding='utf8'):raise ValueError('PACKAGE-LEGACY-UI-MISMATCH')
+    return name,stylesheet
+
+def selected_files(source=None):
     files = []
-    for path in (ROOT/'files').rglob('*'):
+    source=Path(source) if source is not None else ROOT/'files'
+    selected_js,selected_css=selected_ui(source)
+    for path in source.rglob('*'):
         if not path.is_file() or path.is_symlink() or '__pycache__' in path.parts:
             continue
-        name = path.relative_to(ROOT/'files').as_posix()
+        name = path.relative_to(source).as_posix()
         ui_root='www/luci-static/resources/view/homensai-vpn/'
         if name.startswith(ui_root) and '/' not in name[len(ui_root):]:
-            if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!='dashboard25.js':continue
-            if re.fullmatch(r'ui[0-9]+\.css',path.name) and path.name!='ui13.css':continue
+            if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!=selected_js:continue
+            if re.fullmatch(r'ui[0-9]+\.css',path.name) and path.name!=selected_css:continue
         if '..' in Path(name).parts:
             raise ValueError('unsafe package member')
         payload = path.read_bytes()
         if '/style/' not in name and path.suffix.lower() not in ('.woff2','.woff','.ttf','.otf','.png','.jpg','.jpeg','.ico'):
             payload = payload.replace(b'\r\n', b'\n')
         files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
+    return files
+
+
+def build(output=None):
+    destination = Path(output) if output else ROOT/'dist'
+    destination.mkdir(parents=True, exist_ok=True)
+    files = selected_files()
     data = archive(files)
     control = ('Package: %s\nVersion: %s\nArchitecture: all\n'
                'Maintainer: HomenSAI <info@homensai.com>\nLicense: MIT\n'
                'Depends: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle\n'
                'Description: HomenSAI VPN monitor; bounded controlled native trials; optional speed tests\n'
                'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, len(data))).encode()
-    postinst = b'''#!/bin/sh
-[ -n "$IPKG_INSTROOT" ] && exit 0
-mkdir -p /etc/homensai-vpn
-chmod 0700 /etc/homensai-vpn
-/usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
-/etc/init.d/homensai-vpn enable
-/etc/init.d/homensai-vpn restart
-/etc/init.d/rpcd reload
-rm -f /tmp/luci-indexcache
-exit 0
-'''
-    prerm = b'''#!/bin/sh
-[ -n "$IPKG_INSTROOT" ] && exit 0
-/etc/init.d/homensai-vpn stop
-/etc/init.d/homensai-vpn disable
-exit 0
-'''
+    hooks=lifecycle_scripts()
+    preinst=hooks['preinst'].encode();postinst=hooks['postinst'].encode();prerm=hooks['prerm'].encode()
     controls = archive([('control', control, 0o644), ('conffiles', b'/etc/config/homensai_vpn\n', 0o644),
-                        ('postinst', postinst, 0o755), ('prerm', prerm, 0o755)])
+                        ('preinst', preinst, 0o755), ('postinst', postinst, 0o755), ('prerm', prerm, 0o755)])
     package = archive([('debian-binary', b'2.0\n', 0o644), ('control.tar.gz', controls, 0o644), ('data.tar.gz', data, 0o644)])
     path = destination/('%s_%s_all.ipk' % (NAME, VERSION))
     path.write_bytes(package)

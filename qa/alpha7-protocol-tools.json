@@ -1,0 +1,15 @@
+{
+  "scope": "signed official x86 packages in isolated copy; no physical feeds",
+  "kernel_abi_matches": true,
+  "signature_checks_passed": 3,
+  "opkg_returncode": 0,
+  "tools_present": {
+    "wg": true,
+    "openvpn": true,
+    "openssl": true,
+    "conntrack": true
+  },
+  "tun_device_present": true,
+  "result": "PASS",
+  "default_feeds_restored": true
+}

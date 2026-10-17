@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "boot_changed": true,
+  "configuration_preserved": true,
+  "monitor_autostart": true,
+  "fresh_measurements": true,
+  "auto_off": true,
+  "last": {
+    "uptime": 64.37,
+    "monitor": true,
+    "fresh": true,
+    "version": "0.7.0-alpha5",
+    "auto": "off"
+  },
+  "scope": "direct-kernel cold-recovered x86 copy; not original GRUB or physical power loss",
+  "started_at_utc": "2026-10-16T13:20:07.390696+00:00",
+  "completed_at_utc": "2026-10-16T13:21:31.174808+00:00",
+  "host_wall_seconds": 83.788,
+  "attempts": 16,
+  "original_guest_untouched": true
+}

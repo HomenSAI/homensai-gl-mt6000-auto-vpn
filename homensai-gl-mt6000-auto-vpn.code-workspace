@@ -1,0 +1,9 @@
+{
+  "folders": [{ "path": "." }],
+  "settings": {
+    "files.exclude": { "**/__pycache__": true },
+    "search.exclude": { "**/__pycache__": true },
+    "files.encoding": "utf8"
+  },
+  "extensions": { "recommendations": ["ms-python.python"] }
+}

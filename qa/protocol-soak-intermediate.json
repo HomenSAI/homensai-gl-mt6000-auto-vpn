@@ -1,0 +1,571 @@
+{
+  "state": "RUNNING",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 596.46,
+  "duration_seconds": 7200,
+  "cycles": 26,
+  "counts": {
+    "PASS": 92
+  },
+  "recent": [
+    {
+      "time": 1792166882.7633388,
+      "check": "real-wga-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166886.6410022,
+      "check": "real-wgb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166892.4395108,
+      "check": "real-ova-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166896.808354,
+      "check": "real-ovb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166898.0059135,
+      "check": "root-network-unchanged-after-setup",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166901.6121364,
+      "check": "selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166909.0052383,
+      "check": "failed-primary-DNS-TLS-refused",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166914.5723937,
+      "check": "same-protocol-reserve-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166918.8281999,
+      "check": "same-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166923.6438055,
+      "check": "cross-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166932.7122478,
+      "check": "restored-primary-bound-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166938.1145315,
+      "check": "actual-return-and-rollback",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166941.4824781,
+      "check": "DNS-failure-distinct",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166947.2799916,
+      "check": "DNS-fault-reserve-unaffected",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166953.9140823,
+      "check": "kill-switch-blocks-direct-underlay",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166954.0740929,
+      "check": "real-conntrack-TCP-observed",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166954.2118375,
+      "check": "scoped-TCP-cleanup-keeps-UDP",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166959.2930374,
+      "check": "selection-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166963.2478764,
+      "check": "selection-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166967.6759565,
+      "check": "selection-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166972.364172,
+      "check": "selection-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166972.743872,
+      "check": "root-network-unchanged-after-faults",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166978.1265936,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166982.0817451,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166993.4502041,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792166997.5001311,
+      "check": "soak-parallel-reserve-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167008.5771697,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167015.2380884,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167024.7956665,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167031.0783603,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167043.1459076,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167049.2711656,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167059.7223854,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167065.966002,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167077.0981746,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167081.0059578,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167090.7653801,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167095.9879704,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167104.730145,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167110.7445421,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167120.9302797,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167124.3794188,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167133.4450536,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167139.430301,
+      "check": "soak-parallel-reserve-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167150.760672,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167155.083581,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167164.5330026,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167170.2624848,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167181.1959174,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167183.8931837,
+      "check": "soak-parallel-reserve-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167192.6025286,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167196.4492228,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167204.2766817,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167209.652999,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167217.8250318,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167224.4117415,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167232.5555716,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167237.3030314,
+      "check": "soak-parallel-reserve-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167245.3163662,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167251.3452542,
+      "check": "soak-parallel-reserve-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167261.6080432,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167266.957912,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167275.8824263,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167280.8037992,
+      "check": "soak-parallel-reserve-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167290.4158187,
+      "check": "soak-selected-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167295.0439384,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167305.3537905,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167310.4387186,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167320.9740844,
+      "check": "soak-selected-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167325.2217488,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167335.5449166,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167340.424711,
+      "check": "soak-parallel-reserve-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167350.16554,
+      "check": "selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167354.918041,
+      "check": "failed-primary-DNS-TLS-refused",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167358.614489,
+      "check": "same-protocol-reserve-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167363.1627188,
+      "check": "same-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167367.875096,
+      "check": "cross-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167379.6346478,
+      "check": "restored-primary-bound-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167383.6066465,
+      "check": "actual-return-and-rollback",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167387.4471593,
+      "check": "DNS-failure-distinct",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167392.466041,
+      "check": "DNS-fault-reserve-unaffected",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167395.1488903,
+      "check": "kill-switch-blocks-direct-underlay",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167395.3703916,
+      "check": "real-conntrack-TCP-observed",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167395.7024074,
+      "check": "scoped-TCP-cleanup-keeps-UDP",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167401.33452,
+      "check": "selection-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167404.6534622,
+      "check": "selection-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167413.3421326,
+      "check": "selection-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167417.3236203,
+      "check": "selection-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167418.6340523,
+      "check": "root-network-unchanged-after-faults",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167423.067473,
+      "check": "soak-selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167431.2684956,
+      "check": "soak-parallel-reserve-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792167441.5522156,
+      "check": "soak-selected-ova",
+      "result": "PASS",
+      "detail": null
+    }
+  ],
+  "error": null,
+  "source_sha256": "ec5721dfcb7129c859c60c039ade52ec5a056d7294862c5f155720a5472b3a0f",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "cleanup_confirmed": false,
+  "host_observed_at_utc": "2026-10-16T18:09:24.529370+00:00",
+  "evidence_kind": "intermediate"
+}

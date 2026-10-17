@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+from uci_result import failure_code
 from agent import inventory
 from auto_control import control_lock
 
@@ -38,6 +39,8 @@ def system_payload(arguments, profiles):
         rows.append({'section':'srv_'+hashlib.sha256(row['profile'].encode()).hexdigest()[:16],
                      'profile':row['profile'],'name':label(row['name']),'channel':label(row['channel']),
                      'priority':integer(row['priority'],1,1000),'enabled':'1' if row['enabled'] else '0'})
+    enabled={row['profile'] for row in rows if row['enabled']=='1'}
+    if arguments['source'] not in enabled or arguments['target'] not in enabled:raise ValueError('SETUP-PRIMARY-RESERVE-DISABLED')
     return {'main':{'plan_source':arguments['source'],'plan_target':arguments['target'],
                     'interval':integer(arguments['interval'],10,300),'native_duration':integer(arguments['duration'],1,240),
                     'native_session_loss':'1' if arguments['session_loss'] else '0','setup_complete':'1'},'servers':rows}
@@ -111,7 +114,7 @@ def save(arguments, kind):
         result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
             input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
         if result.returncode or result.stdout.strip()!=b'OK':
-            return {'saved':False,'code':'SETUP-SAVE-FAILED'}
+            return {'saved':False,'code':failure_code(result,'SETUP-SAVE-FAILED')}
     if kind=='speed' and not arguments['enabled']:
         from speed_test import cancel
         try:cancel()

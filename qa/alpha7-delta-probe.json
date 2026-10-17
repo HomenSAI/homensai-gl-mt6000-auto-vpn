@@ -1,0 +1,8 @@
+{
+  "scope": "isolated synthetic UCI root",
+  "before_interval_30": true,
+  "writer_rc": 0,
+  "writer_reported_ok": true,
+  "unrequested_interval_99_committed": true,
+  "pending_delta_existed": true
+}

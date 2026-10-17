@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "package_version": "0.7.0-alpha7-2",
+  "running_version": "0.7.0-alpha7",
+  "package_sha256": "9f8e952873dd236bbb6470bfffcbcb4e0daeb7501335f6ab2472cab6e19725ac",
+  "auto": "off",
+  "scope_changes": [
+    "native_until",
+    "native_trial"
+  ],
+  "other_own_settings_retained": true,
+  "network_policy_routes_unchanged": true,
+  "healthy_profiles": 3,
+  "opkg_exit": 0,
+  "failover_started": false
+}

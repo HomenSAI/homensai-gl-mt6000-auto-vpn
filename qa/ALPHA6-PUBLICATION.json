@@ -1,0 +1,17 @@
+{
+  "scope": "Local primary Gitea prerelease; not GitHub or router deployment",
+  "release": "v0.7.0-alpha6",
+  "release_url": "http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.7.0-alpha6",
+  "source_commit": "c0616113362e430ab8abd638b3e80bddcb717950",
+  "primary_branch_verified": true,
+  "immutable_tag_verified": true,
+  "prerelease": true,
+  "attachment_count": 2,
+  "uploaded_ipk_sha256": "0cb57faa967f3cfc42caebb48be0f2bd9f31081eeb959692be6acf941ca1d85a",
+  "official_backup_crc": "PASS",
+  "isolated_database_integrity": "ok",
+  "backup_includes_release_and_attachments": true,
+  "github_published": false,
+  "router_deployed": false,
+  "qemu_resumed": false
+}

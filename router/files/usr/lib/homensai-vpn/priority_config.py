@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import subprocess
+from uci_result import failure_code
 from agent import inventory
 from auto_control import control_lock
 from configuration_guard import blocked
@@ -56,5 +57,5 @@ def apply(arguments):
             payload['servers'].append({'section':'srv_'+hashlib.sha256(row['profile'].encode()).hexdigest()[:16],
                 **{key:row[key] for key in ('profile','name','channel')},'priority':str(row['priority']),'enabled':'1' if row['enabled'] else '0'})
         result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
-        if result.returncode or result.stdout.strip()!=b'OK':return {'saved':False,'code':'PRIORITY-SAVE-FAILED'}
+        if result.returncode or result.stdout.strip()!=b'OK':return {'saved':False,'code':failure_code(result,'PRIORITY-SAVE-FAILED')}
         return {'saved':True,'code':'PRIORITY-SAVED','route_changed':False,'count':len(rows)}

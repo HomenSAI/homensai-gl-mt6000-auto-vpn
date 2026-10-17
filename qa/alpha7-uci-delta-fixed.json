@@ -1,0 +1,70 @@
+{
+  "result": "PASS",
+  "scope": "actual x86 OpenWrt libuci and opkg; not physical GL.iNet acceptance",
+  "checks": [
+    {
+      "name": "exact-package-hash",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-two-installed",
+      "result": "PASS"
+    },
+    {
+      "name": "auto-disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "private-field-retained",
+      "result": "PASS"
+    },
+    {
+      "name": "names-priority-retained",
+      "result": "PASS"
+    },
+    {
+      "name": "interrupted-save-followup-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "committed-configuration-unchanged",
+      "result": "PASS"
+    },
+    {
+      "name": "operator-pending-delta-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "unrequested-option-not-committed",
+      "result": "PASS"
+    },
+    {
+      "name": "clean-followup-saves",
+      "result": "PASS"
+    },
+    {
+      "name": "lifecycle-pending-delta-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "lifecycle-keeps-config-and-delta",
+      "result": "PASS"
+    },
+    {
+      "name": "opkg-pending-upgrade-refused-by-postconditions",
+      "result": "PASS"
+    },
+    {
+      "name": "lifecycle-clean-ready",
+      "result": "PASS"
+    },
+    {
+      "name": "protected-network-unchanged",
+      "result": "PASS"
+    }
+  ],
+  "passed": 15,
+  "private_output_exported": false,
+  "package_sha256": "9f8e952873dd236bbb6470bfffcbcb4e0daeb7501335f6ab2472cab6e19725ac",
+  "completed_at_utc": "2026-10-16T15:40:22.236706+00:00"
+}

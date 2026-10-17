@@ -6,9 +6,9 @@ Status: APPROVED by user on 2026-10-15. Work in progress; checkboxes require evi
 ## Current baseline — updated 2026-10-16
 
 - Binding scope: LOCAL DEVELOPMENT ONLY. Do not connect to, deploy to, reconfigure or fault-test the router until the user authorizes a new device window.
-- Last installed package recorded: 0.6.0-alpha5. Current local development candidate: 0.7.0-alpha2. Local code is not installed-device evidence.
+- Last installed package recorded: 0.6.0-alpha5. Current local development candidate: 0.7.0-alpha6 (offline model/browser/container only; QEMU paused). Local code is not installed-device evidence.
 - Atomic Auto intent, typed RPC/ACL checks and system-writer fixes have regression coverage. Positive system-wizard save was observed on alpha5; Telegram test delivery remains unconfirmed.
-- Current local suite: 169 Python tests, including 256 hierarchy combinations within one parameterized test; Auto UI and setup/traffic UI regressions are separate Node checks.
+- Current local suite: 232 application Python tests plus 5 QA tests, including 256 hierarchy combinations within one parameterized test; Auto UI and setup/traffic UI regressions are separate Node checks.
 - Native switching remains bounded and requires client certification. Full hierarchy selection is read-only recommendation logic; inactive-profile activation and unattended production are not accepted.
 - Prior cable-helper failure and historical HTTP 403 root causes remain unresolved unless independently evidenced.
 
@@ -27,12 +27,12 @@ Acceptance: LAN management remains reachable; original policy restoration or a d
 ## 2. Main-page Auto mode control — priority P0
 
 - [ ] Review and harden the existing button candidate, including concurrent Start/Stop requests, idempotence and failure between configuration writes.
-- [ ] Place one large power toggle on Overview: grey Off, yellow Starting/Stopping, green verified On, red Error; stale status cannot appear green.
-- [ ] Read actual controller state rather than changing the displayed state immediately on click. Support Stop during a transition.
+- [x] Place one large power toggle on Overview: grey Off, yellow Starting/Stopping, green verified On, red Error; stale status cannot appear green.
+- [x] Read actual controller state rather than changing the displayed state immediately on click. Support Stop during a transition.
 - [ ] Implement explicit configuration intent and service state separately. Explain whether Start resumes a certified window or requires initial LAN verification.
-- [ ] Display deadline and required LAN helper while the implementation remains experimental. Do not silently remove certification or extend deadlines.
+- [x] Display deadline and required LAN helper while the implementation remains experimental. Do not silently remove certification or extend deadlines.
 - [ ] Show a protocol/channel/server diagram with configured names, current selection, next eligible reserve and permitted arrows. Inactive automation shows broken arrows.
-- [ ] Display 'Control returned to router' only after confirmed safe handover. If a healthy reserve is retained, say so explicitly rather than claiming the original route was restored.
+- [x] Display 'Control returned to router' only after confirmed safe handover. If a healthy reserve is retained, say so explicitly rather than claiming the original route was restored.
 - [ ] Decide and document production enablement, reboot behavior and auto-start defaults after P0 recovery acceptance.
 
 Acceptance: one click requests Start, another requests Stop; failed requests and rollback failures are visible; no false green state. Existing bounded-mode restrictions remain visible until production approval.
@@ -40,8 +40,8 @@ Acceptance: one click requests Start, another requests Stop; failed requests and
 ## 3. Interface and languages — priority P1
 
 - [ ] Finish dark left navigation and light workspace using the pinned HomenSAI style core; preserve current LuCI navigation conventions.
-- [ ] Complete sections: Overview, Channels and servers, Statistics, Server ranking, Monthly traffic, Service monitor, Events and errors, Settings.
-- [ ] Link the robot/logo and developer attribution to https://homensai.com; show the running package version at top right.
+- [x] Complete sections: Overview, Channels and servers, Statistics, Server ranking, Monthly traffic, Service monitor, Events and errors, Settings.
+- [x] Link the robot/logo and developer attribution to https://homensai.com; show the running package version at top right.
 - [ ] Sort cards by actual selected route and confirmed health: selected working server first, confirmed failed servers last; keep configured priority independent from visual order.
 - [ ] Use green for verified health, red for confirmed failure, pale yellow for connecting/checking, grey for inactive/unknown. Connected alone is not Internet availability.
 - [ ] Add column sorting, search and filters; retain operator choices across polling without moving focus unexpectedly.
@@ -66,9 +66,9 @@ Acceptance: fresh setup, editing existing setup, cancellation, invalid token/des
 
 - [ ] Implement eligible-server selection within a channel, then another channel, then another supported VPN protocol; treat Wi-Fi/Ethernet as uplinks, not VPN protocols.
 - [ ] Add adapters for starting inactive profiles only after routes, DNS, Kill Switch and vendor-worker coexistence are verified.
-- [ ] Probe a recovery candidate before returning: endpoint reachability is only preliminary; require actual tunneled HTTPS/DNS and stable health before promotion.
+- [x] Probe a recovery candidate before returning: endpoint reachability is only preliminary; require actual tunneled HTTPS/DNS and stable health before promotion.
 - [ ] Investigate isolated parallel candidate testing with separate routing/marks or network namespaces. Block it where firmware/profile restrictions prevent isolation.
-- [ ] Add hysteresis, consecutive-failure/success thresholds, minimum dwell time, cooldown and backoff to prevent oscillation.
+- [x] Add hysteresis, consecutive-failure/success thresholds, minimum dwell time, cooldown and backoff to prevent oscillation.
 - [ ] Add an operator Forced Stop/fault page: choose server or channel, show scope, bounded timer and independent cleanup; distinguish simulated fault from actual stop.
 - [ ] Keep switching within special destination policies isolated from general traffic; do not silently broaden routes or disable Kill Switch.
 
@@ -113,7 +113,7 @@ Recommended sequence: 1 → 2 → 3 → 4 → 5 → 6 → 7, with phase 8 checks
 
 ## Approval checkpoint
 
-The user approved local implementation of the complete plan, then explicitly deferred router uploads and live tests. Continue local implementation, verification and local Git/Gitea followed by the identical GitHub tree. Hardware acceptance items remain open; approval of coding does not make their evidence complete.
+The user approved local implementation of the complete plan, then explicitly deferred router uploads and live tests. Continue local implementation, verification and local Git/Gitea. New GitHub publication requires separate permission under the later Git-process task; histories/tags must first be reconciled without overwrite. Hardware acceptance items remain open; approval of coding does not make their evidence complete.
 
 ## Local implementation evidence — 2026-10-16
 
@@ -121,8 +121,26 @@ The user approved local implementation of the complete plan, then explicitly def
 - [x] Daily WAN/VPN table distinguishes missing data from measured zero and warns that WAN/VPN must not be added together.
 - [x] Current-month Overview cannot substitute a prior month. Histogram accepts aggregated RPC periods and excludes future-day samples.
 - [x] Read-only hierarchy prioritizes eligible same-channel servers, then another channel with the same VPN protocol, then another VPN protocol. 256 health/binding/metadata combinations pass; this is not native application proof.
-- [ ] Browser rendering and interaction acceptance for this candidate, including both languages and mobile layout.
+- [ ] Finish mobile layout acceptance; actual x86 VM LuCI desktop, EN -> RU -> EN, eight sidebar tabs and three wizard cancellations passed for alpha5.
 - [x] Guarded monitor enable/disable RPC verified with actual OpenWrt procd; does not enable Auto.
-- [ ] Complete supported recovery settings wizard.
-- [ ] Explicit recommendation application and bounded operator fault control.
+- [x] Complete supported recovery settings wizard.
+- [x] Explicit recommendation application and bounded operator fault control.
 - [ ] Native hierarchy adapters, vendor-worker coordination, IPv6 and reboot/power-loss acceptance on device.
+
+## Verified update — 2026-10-16 09:30 Europe/Berlin
+
+- Alpha5: 202 Python tests pass in Debian and actual isolated OpenWrt (68.269 guest seconds); exact build hash reproduced. Five Node suites passed. Network/firewall exports unchanged; native Auto remains disabled.
+- Actual VM UI evidence: qa/openwrt-alpha5-overview-en.png, qa/openwrt-alpha5-overview-ru.png and qa/openwrt-alpha5-navigation.json. System/Telegram/recovery wizards opened and cancelled without writes.
+- Committed-reserve observation and stable verified-primary return added locally. Full multi-hop native execution and vendor arbitration remain open.
+- Checked items above establish their local/VM implementation scope. They do not close device-specific acceptance conditions. Hardware criteria and unattended production remain unchecked.
+
+## Latest approved offline subset — alpha6 completed
+
+- [x] Full cascade on the pure model: server -> channel -> protocol, exhaustion, root return and per-hop rollback.
+- [x] Algorithm protection on the model: delay, stale/unknown/bound evidence, RPC loss, external edits, worker contention, stop and explicit stopped-only restart reconciliation.
+- [x] Mobile UI, stable sorting/filtering, verified health colors and EN/RU page coverage: 54 browser cases plus generated-text translation checks.
+- [x] System/recovery/Telegram/priority wizard validation contracts, cancellation, review, save failure/retry and single-flight behavior.
+- [x] Histogram/accounting boundaries, clock safety, duplicate idempotence, Berlin DST and 200 statistical sequences.
+- [x] Nested-package privacy, shared SDK/IPK payloads, reproducible local build, exact-SHA Gitea save tooling, backup/release procedure and continuation documentation.
+
+These checkboxes close the user's explicitly approved offline table, not the physical-device acceptance rows above. Exact results: ../qa/ALPHA6-LOCAL-REPORT.json. Full SDK compilation, hardware/vendor behavior and new GitHub migration remain separately unaccepted or approval-gated.

@@ -1,0 +1,135 @@
+{
+  "recorded_at": "2026-10-17T09:20:09.409763+02:00",
+  "source": "aafdac37f0ed7a23364cd9f4f1e65bdefed32c91",
+  "physical_router_access": false,
+  "items": [
+    {
+      "id": "UX-01",
+      "status": "DONE LOCAL",
+      "evidence": "Clear connectivity label and DNS/HTTPS scope."
+    },
+    {
+      "id": "UX-02",
+      "status": "DONE LOCAL",
+      "evidence": "Request-correlated single-flight lifecycle, deadline, failure/empty counts; old snapshot cannot complete a new request."
+    },
+    {
+      "id": "UX-03",
+      "status": "DONE LOCAL",
+      "evidence": "Bright confirmed Auto control; separate starting, switching, restoring and unknown states; unknown state cannot start Auto."
+    },
+    {
+      "id": "UX-04",
+      "status": "DONE LOCAL",
+      "evidence": "Raised left-aligned router-settings action, explicit navigation and existing safe dynamic origin resolution."
+    },
+    {
+      "id": "UX-05",
+      "status": "DONE LOCAL",
+      "evidence": "Separate large speed action; existing quota/review/cancel preserved."
+    },
+    {
+      "id": "UX-06",
+      "status": "DONE LOCAL; DEVICE PENDING",
+      "evidence": "Diagnostics-only bounded failure action with target/review/cancel; no live execution this task."
+    },
+    {
+      "id": "UX-07",
+      "status": "DONE LOCAL",
+      "evidence": "Connection, Internet health, traffic selection and configured priority are distinct labels."
+    },
+    {
+      "id": "UX-08",
+      "status": "DONE LOCAL",
+      "evidence": "Copied visual sort does not edit priority; pointer-held redraw delayed and labelled keyboard focus restored."
+    },
+    {
+      "id": "VIS-01",
+      "status": "DONE LOCAL",
+      "evidence": "Bright raised action gradients, shadows, hover/pressed/focus states using pinned Style palette."
+    },
+    {
+      "id": "VIS-02",
+      "status": "DONE LOCAL",
+      "evidence": "18 px computed lamp, radial highlight and glow; measured in browser."
+    },
+    {
+      "id": "VIS-03",
+      "status": "DONE LOCAL",
+      "evidence": "Fresh healthy green, failure/inactive red with text, checking yellow, unknown grey; reduced-motion preserved."
+    },
+    {
+      "id": "VIS-04",
+      "status": "DONE LOCAL",
+      "evidence": "Overview Auto/check, channels router setup, ranking speed, wizard primary actions; destructive action separately styled."
+    },
+    {
+      "id": "VIS-05",
+      "status": "DONE LOCAL",
+      "evidence": "English/Russian section persistence, 414 px mobile nine-page overflow checks and desktop visual review. Blue text gradient min contrast 5.35:1; green power symbol min 3.49:1."
+    },
+    {
+      "id": "ALG-01",
+      "status": "OFFLINE PASS; HARDWARE BLOCKED",
+      "evidence": "Existing cascade/executor contracts and lease/refusal tests pass. Real vendor arbitration/per-edge hardware proof not available and not bypassed."
+    },
+    {
+      "id": "ALG-02",
+      "status": "DONE LOCAL; HARDWARE PENDING",
+      "evidence": "Fresh explicit configured-uplink down evidence suppresses cycling. Separate DNS/HTTPS/route/path/stale diagnoses; link-up is not Internet proof."
+    },
+    {
+      "id": "ALG-03",
+      "status": "OFFLINE PASS; HARDWARE BLOCKED",
+      "evidence": "Existing CandidateSession/ProbeScheduler binding, budget, cancellation and route-isolation contracts verified by suite. Real vendor adapter remains gated."
+    },
+    {
+      "id": "ALG-04",
+      "status": "DONE MODEL; HARDWARE PENDING",
+      "evidence": "Pure cascade failed-hop quarantine increases exponentially to 3600s cap, stronger probation, verified commit reset and backward-compatible journals. Not falsely claimed as native multi-hop production behavior."
+    },
+    {
+      "id": "ALG-05",
+      "status": "DONE LOCAL",
+      "evidence": "Live-safe diagnosis and threshold explanation card; configured failure/success thresholds replace planner hardcoded counts."
+    },
+    {
+      "id": "ALG-06",
+      "status": "OFFLINE PASS; HARDWARE BLOCKED",
+      "evidence": "LAN proof/transaction/timeouts/rollback contracts retained and tested. Actual LAN witness confirmation needs physical acceptance."
+    },
+    {
+      "id": "ALG-07",
+      "status": "OFFLINE PASS; HARDWARE PENDING",
+      "evidence": "Existing cooldown/dwell/stable return and interruption tests pass; stronger failed-hop probation added. Real offload/vendor timing still unaccepted."
+    },
+    {
+      "id": "QA-01",
+      "status": "DONE LOCAL",
+      "evidence": "329 application tests/runtime, 30 QA tests/runtime, 12 UI suites; async race/expiry/corrupt state/RPC cases and mobile browser check."
+    },
+    {
+      "id": "DOC-01",
+      "status": "LOCAL CANDIDATE READY; GITHUB BLOCKED",
+      "evidence": "Alpha8-1 reproducible package and release notes, English work log and matrix. Local Git/Gitea first; GitHub histories/tags remain unresolved; no forced migration."
+    }
+  ],
+  "fault_model": {
+    "result": "PASS",
+    "cases": 200,
+    "assertions": 1737,
+    "simulation_only": true
+  },
+  "browser": {
+    "fixture": "synthetic-only",
+    "mobile_width": 414,
+    "mobile_height": 896,
+    "russian_sections": 9,
+    "root_horizontal_overflow": false,
+    "lamp_css_px": 18,
+    "english_russian_switch": "PASS",
+    "request_failure": "UNAVAILABLE; retry enabled",
+    "request_completion": "matching identity, checked/failed counts"
+  },
+  "package_sha256": "da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453"
+}

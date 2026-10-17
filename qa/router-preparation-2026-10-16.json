@@ -1,0 +1,26 @@
+{
+  "result": "PASS",
+  "observed_at_unix": 1792170689.0676281,
+  "ethernet_https": [
+    {
+      "endpoint": "1.1.1.1",
+      "https": true,
+      "tls_verified": true,
+      "elapsed_ms": 375.0
+    },
+    {
+      "endpoint": "1.0.0.1",
+      "https": true,
+      "tls_verified": true,
+      "elapsed_ms": 375.0
+    }
+  ],
+  "same_exit_across_both_endpoints": true,
+  "client_exit_matches_selected_source": true,
+  "native_precheck_blockers": [],
+  "accepted_selection": true,
+  "auto_enabled": false,
+  "pending_uci_empty": true,
+  "protected_configs_unchanged": 8,
+  "failover_started": false
+}

@@ -1,0 +1,40 @@
+{
+  "time": "2026-10-16T10:44:09+02:00",
+  "scope": "Offline Linux container and synthetic browser fixture; no physical router or QEMU resume",
+  "result": "PASS",
+  "application_python_tests": 232,
+  "qa_python_tests": 5,
+  "ui_node_suites": 8,
+  "generated_translated_literals": 55,
+  "cascade_series": 256,
+  "cascade_steps": 2048,
+  "statistics_series": 200,
+  "statistics_steps": 12000,
+  "responsive_language_checks": 54,
+  "responsive_widths": [
+    360,
+    768,
+    1280
+  ],
+  "languages": [
+    "en",
+    "ru"
+  ],
+  "prototype_python_tests": 30,
+  "demo_server_python_tests": 4,
+  "demo_node_tests": 33,
+  "demo_boolean_cases": 4096,
+  "demo_business_regressions": 12,
+  "demo_soak_tests": 5,
+  "demo_soak_ticks": 50000,
+  "sdk_payload_byte_mode_parity": true,
+  "launcher_failure_exit_verified": 17,
+  "package_sha256": "0cb57faa967f3cfc42caebb48be0f2bd9f31081eeb959692be6acf941ca1d85a",
+  "not_tested": [
+    "Native multi-hop on GL.iNet",
+    "Vendor-worker arbitration on device",
+    "Inactive profile activation",
+    "IPv6 and power loss",
+    "Full external SDK build"
+  ]
+}

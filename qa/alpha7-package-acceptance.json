@@ -1,0 +1,69 @@
+{
+  "scope": "real x86 OpenWrt UCI/opkg/procd; private synthetic fixture; no physical router",
+  "checks": [
+    {
+      "name": "actual-old-agent-before-upgrade",
+      "result": "PASS"
+    },
+    {
+      "name": "candidate-sha256",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-opkg-upgrade",
+      "result": "PASS"
+    },
+    {
+      "name": "private-field-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "configuration-marker-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "display-name-priority-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "auto-scope-disabled",
+      "result": "PASS"
+    },
+    {
+      "name": "installed-agent-version-and-fresh-status",
+      "result": "PASS"
+    },
+    {
+      "name": "retained-history-sequence",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-auto-off",
+      "result": "PASS"
+    },
+    {
+      "name": "unsafe-upgrade-guard-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "refused-upgrade-preserves-bytes-inode-mtime",
+      "result": "PASS"
+    },
+    {
+      "name": "network-firewall-main-route-preserved",
+      "result": "PASS"
+    }
+  ],
+  "passed": 13,
+  "version": "0.7.0-alpha7",
+  "native_multi_hop_certified": false,
+  "private_values_exported": false,
+  "blocked_opkg_returncode": 0,
+  "guard_codes": [
+    "LIFECYCLE-STOP-AUTO-FIRST"
+  ],
+  "opkg_exit_code_is_not_acceptance_proof": true,
+  "guard_reinstall_scope": "force-reinstall used only in isolated fault test; no force-depends or guard bypass",
+  "started_at_utc": "2026-10-16T14:26:06.722395+00:00",
+  "completed_at_utc": "2026-10-16T14:26:40.328712+00:00"
+}

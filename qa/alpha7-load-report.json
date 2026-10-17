@@ -1,0 +1,45 @@
+{
+  "scope": "network-disabled Linux host; not router/flash performance",
+  "python": "3.9.15",
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.31",
+  "rss_scope": "process high-water mark; includes prior workload",
+  "fsync_enabled": true,
+  "workloads": [
+    {
+      "profiles": 2,
+      "transitions": 1000,
+      "wall_seconds": 45.05462569897645,
+      "cpu_seconds": 6.8708438,
+      "peak_rss_kib": 17196,
+      "atomic_replacements": 7999,
+      "replacements_per_transition": 7.999,
+      "max_journal_bytes": 1415,
+      "retained_journal_bytes": 1415,
+      "max_pending_proofs": 1,
+      "remaining_proofs": 0,
+      "backend_writes": 1000,
+      "retained_backend_write_records": 256,
+      "result": "PASS"
+    },
+    {
+      "profiles": 16,
+      "transitions": 1000,
+      "wall_seconds": 42.610665625019465,
+      "cpu_seconds": 7.1838952,
+      "peak_rss_kib": 17196,
+      "atomic_replacements": 7999,
+      "replacements_per_transition": 7.999,
+      "max_journal_bytes": 1879,
+      "retained_journal_bytes": 1871,
+      "max_pending_proofs": 1,
+      "remaining_proofs": 0,
+      "backend_writes": 1000,
+      "retained_backend_write_records": 256,
+      "result": "PASS"
+    }
+  ],
+  "tested_module_sha256": {
+    "candidate_runtime.py": "cc5b7664d840f4054bd616ffced01a1c5f7d210017340847bf7f1649ffbb44a7",
+    "cascade_executor.py": "a18ae32f0d25ca973c715112de2950e8b68f0ad399920a1064acf7d65767cd4f"
+  }
+}

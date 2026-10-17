@@ -1,0 +1,51 @@
+{
+  "scope": "actual x86 UCI/mount/procd; synthetic private config; not flash or native-executor power-loss proof",
+  "checks": [
+    {
+      "name": "actual-libuci-lua-save-commit",
+      "result": "PASS"
+    },
+    {
+      "name": "existing-anonymous-section-not-duplicated",
+      "result": "PASS"
+    },
+    {
+      "name": "private-option-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "invalid-own-writer-field-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-save-readonly-failure-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-save-failure-keeps-original-config",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-commit-readonly-failure-refused",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-commit-failure-keeps-original-config",
+      "result": "PASS"
+    },
+    {
+      "name": "own-monitor-running-before-crash",
+      "result": "PASS"
+    },
+    {
+      "name": "kill-target-is-exact-own-monitor",
+      "result": "PASS"
+    },
+    {
+      "name": "actual-procd-monitor-respawn-auto-off",
+      "result": "PASS"
+    }
+  ],
+  "passed": 11,
+  "private_values_exported": false
+}

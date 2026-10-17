@@ -1,0 +1,18 @@
+{
+  "tools": {
+    "ip": true,
+    "wg": false,
+    "openvpn": false,
+    "openssl": false,
+    "conntrack": false,
+    "nft": true,
+    "iptables": true,
+    "ip6tables": true
+  },
+  "kernel_config": {},
+  "tun_device": false,
+  "netns_add_rc": 0,
+  "netns_error": "",
+  "netns_delete_rc": 0,
+  "scope": "OpenWrt x86 isolated copy; no physical router or host namespace changes"
+}

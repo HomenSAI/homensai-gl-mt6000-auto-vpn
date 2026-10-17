@@ -1,0 +1,36 @@
+{
+  "rows": [
+    {
+      "seconds": 1.626,
+      "returncode": 0,
+      "stderr_tail": "",
+      "scope": "root",
+      "kind": "minimal"
+    },
+    {
+      "seconds": 4.612,
+      "returncode": 0,
+      "stderr_tail": "",
+      "scope": "root",
+      "kind": "imports"
+    },
+    {
+      "seconds": 1.053,
+      "returncode": 0,
+      "stderr_tail": "",
+      "scope": "namespace",
+      "kind": "minimal"
+    },
+    {
+      "seconds": 3.463,
+      "returncode": 0,
+      "stderr_tail": "",
+      "scope": "namespace",
+      "kind": "imports"
+    }
+  ],
+  "root_routes_unchanged": true,
+  "owned_namespace_removed": true,
+  "physical_router_access": false,
+  "host_observed_at_utc": "2026-10-16T19:36:30.203665+00:00"
+}

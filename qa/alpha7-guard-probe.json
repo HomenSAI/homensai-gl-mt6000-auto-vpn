@@ -1,0 +1,16 @@
+{
+  "returncode": 0,
+  "guard_codes": [
+    "LIFECYCLE-STOP-AUTO-FIRST"
+  ],
+  "agent_bytes_inode_mtime_unchanged": true,
+  "log_tail_sanitized": [
+    "Collected errors:",
+    " * pkg_run_script: package \"homensai-auto-vpn\" prerm script returned status 1.",
+    " * opkg_remove_pkg: not removing package \"homensai-auto-vpn\", prerm script failed",
+    "You can force removal of packages with failed prerm scripts with the option: ",
+    "\t--force-remove",
+    "No packages removed."
+  ],
+  "scope": "force-reinstall diagnostic only; original and physical router untouched"
+}

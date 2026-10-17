@@ -19,7 +19,7 @@ if not image.exists():
     image.write_bytes(decoder.decompress(payload)+decoder.flush())
     if not decoder.eof:raise SystemExit('Truncated gzip stream')
     if decoder.unused_data:print('Verified upstream archive contains trailing bytes after gzip stream.',flush=True)
-args=['qemu-system-x86_64','-accel','tcg','-m','256','-smp','1','-display','none','-monitor','none','-qmp','unix:/lab/qmp.sock,server=on,wait=off',
+args=['qemu-system-x86_64','-accel','tcg,tb-size=128','-m','256','-smp','1','-display','none','-monitor','none','-qmp','unix:/lab/qmp.sock,server=on,wait=off',
       '-serial','tcp:127.0.0.1:4555,server=on,wait=off','-drive','file='+str(image)+',format=raw,if=virtio',
       '-netdev','user,id=lan,net=192.168.1.0/24,host=192.168.1.2,restrict=on,hostfwd=tcp:127.0.0.1:2222-192.168.1.1:22',
       '-device','virtio-net-pci,netdev=lan','-netdev','user,id=wan,net=10.0.3.0/24','-device','virtio-net-pci,netdev=wan']

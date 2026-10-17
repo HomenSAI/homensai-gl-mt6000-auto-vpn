@@ -1,0 +1,363 @@
+{
+  "generated_at": "2026-10-16T11:11:24.378574+00:00",
+  "scope": "local stored refs only; remote freshness and release metadata not asserted",
+  "changes_executed": false,
+  "source_commit": "c7c3b3ea4e2da5a2b5ce30aa20e571e93d2bf936",
+  "shallow": false,
+  "refs": {
+    "refs/heads/feature/local-completion-alpha6": "c7c3b3ea4e2da5a2b5ce30aa20e571e93d2bf936",
+    "refs/heads/fix/committed-recovery-observation": "a807f0870afedad1dde59c75b5e65e1b793b0956",
+    "refs/heads/main": "843743f47828d8d1b9ab0955c5193a5d81ad236f",
+    "refs/homensai-canonical/tags/v0.1.0-alpha7": "2dfefeee37b96c5aad3c7ef8f644f9990f3bc9ea",
+    "refs/homensai-canonical/tags/v0.1.0-alpha8": "a5b96cf9b55ec9c6342b7ab0a491a29bdb40522f",
+    "refs/homensai-canonical/tags/v0.1.0-alpha9": "0db07f2c48bffd80650b060da88ddd11d418a70a",
+    "refs/homensai-canonical/tags/v0.2.0-alpha1": "51c6b39ca56d4f21ab259599f2bac2950d587e88",
+    "refs/homensai-canonical/tags/v0.2.0-alpha2": "274330784b84d5fb4d426583aac3e3ede4a49810",
+    "refs/homensai-canonical/tags/v0.3.0-alpha1": "9668b2e325cddfde633aae016c63ae7827ab5597",
+    "refs/homensai-canonical/tags/v0.4.0-alpha8": "ab28c5872d9de619002146280ad2982509d52800",
+    "refs/homensai-canonical/tags/v0.5.0-alpha1": "4df4d2af322ef46e10e03c9d1b9c688e09f73efa",
+    "refs/homensai-canonical/tags/v0.5.0-alpha12": "fca42d8f35f3df8e43297a56dd8d33aa9635cbaa",
+    "refs/homensai-canonical/tags/v0.5.0-alpha13": "0ecb131d5550f167b574ba4e3218c98e4ab57f7e",
+    "refs/homensai-canonical/tags/v0.7.0-alpha2": "fbdb0b9f14884b972791dd2a2871d2474a42e1fe",
+    "refs/homensai-canonical/tags/v0.7.0-alpha4": "f320f7fd90cbb69b63fc9fd24caab6f1acc4dc17",
+    "refs/homensai-canonical/tags/v0.7.0-alpha5": "60f9ee9ea494648d9caac27bee0dd9fa34454c42",
+    "refs/remotes/gitea/backup/recovered-20261016-6617008": "66170088b20d92115a02d4475a7901059ec5776a",
+    "refs/remotes/gitea/feature/dashboard-prototype": "43c44d0f7238da80c7085047cc3c8efb4717cf0d",
+    "refs/remotes/gitea/feature/git-process-hardening": "9b86926bfda7d28429ed1b292603c38a9be47a78",
+    "refs/remotes/gitea/feature/local-completion-alpha6": "a1584c63a9b2a022db24c278845c1e835587d2f7",
+    "refs/remotes/gitea/feature/openwrt-native-alpha": "f320f7fd90cbb69b63fc9fd24caab6f1acc4dc17",
+    "refs/remotes/gitea/fix/committed-recovery-observation": "a807f0870afedad1dde59c75b5e65e1b793b0956",
+    "refs/remotes/gitea/fix/gitflow-archive-privacy": "40dabd0f851fd413dfe3301876c2a7af76591ea7",
+    "refs/remotes/gitea/main": "9b86926bfda7d28429ed1b292603c38a9be47a78",
+    "refs/remotes/origin/HEAD": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+    "refs/remotes/origin/main": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+    "refs/tags/v0.2.0-alpha1": "ee22b514a99945cc5ec0781ba1c54894b5800f75",
+    "refs/tags/v0.2.0-alpha2": "b5769efec2642bff91dbc9d3225ad3d3e5e8d630",
+    "refs/tags/v0.3.0-alpha1": "4e9b7cfac53cb3cfcde79660df99f542e89ddcfe",
+    "refs/tags/v0.4.0-alpha8": "45e0ebb1bed45b03f7a6b64a19bac9021e17c110",
+    "refs/tags/v0.5.0-alpha1": "7cadaf135b0e880273b4f7105cd877dc5ce8ce45",
+    "refs/tags/v0.5.0-alpha12": "9a9022c76ea4cfd17c33cce4010a62f0b77c1609",
+    "refs/tags/v0.5.0-alpha13": "c8dea7e3bec6db8d1295e49c72f5738df283570e",
+    "refs/tags/v0.7.0-alpha2": "d50f91fe00c2a7c5e64e337f6b85a92f6c1377b1",
+    "refs/tags/v0.7.0-alpha4": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+    "refs/tags/v0.7.0-alpha5": "60f9ee9ea494648d9caac27bee0dd9fa34454c42",
+    "refs/tags/v0.7.0-alpha6": "0beea45e8cc8463747bab4eb0c68fc86b2388b7b"
+  },
+  "relations": [
+    {
+      "left": "refs/remotes/origin/main",
+      "right": "refs/heads/feature/local-completion-alpha6",
+      "left_object": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+      "right_object": "c7c3b3ea4e2da5a2b5ce30aa20e571e93d2bf936",
+      "common_ancestors": [],
+      "unrelated": true
+    },
+    {
+      "left": "refs/remotes/gitea/main",
+      "right": "refs/heads/feature/local-completion-alpha6",
+      "left_object": "9b86926bfda7d28429ed1b292603c38a9be47a78",
+      "right_object": "c7c3b3ea4e2da5a2b5ce30aa20e571e93d2bf936",
+      "common_ancestors": [
+        "43c44d0f7238da80c7085047cc3c8efb4717cf0d"
+      ],
+      "unrelated": false
+    },
+    {
+      "left": "refs/heads/main",
+      "right": "refs/remotes/origin/main",
+      "left_object": "843743f47828d8d1b9ab0955c5193a5d81ad236f",
+      "right_object": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+      "common_ancestors": [
+        "843743f47828d8d1b9ab0955c5193a5d81ad236f"
+      ],
+      "unrelated": false
+    }
+  ],
+  "tags": [
+    {
+      "tag": "v0.1.0-alpha7",
+      "canonical_object": "2dfefeee37b96c5aad3c7ef8f644f9990f3bc9ea",
+      "existing_tag_object": null,
+      "collision": false,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.1.0-alpha7",
+      "preserve_existing_as": null,
+      "proposed_distinct_public_tag": "v0.1.0-alpha7"
+    },
+    {
+      "tag": "v0.1.0-alpha8",
+      "canonical_object": "a5b96cf9b55ec9c6342b7ab0a491a29bdb40522f",
+      "existing_tag_object": null,
+      "collision": false,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.1.0-alpha8",
+      "preserve_existing_as": null,
+      "proposed_distinct_public_tag": "v0.1.0-alpha8"
+    },
+    {
+      "tag": "v0.1.0-alpha9",
+      "canonical_object": "0db07f2c48bffd80650b060da88ddd11d418a70a",
+      "existing_tag_object": null,
+      "collision": false,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.1.0-alpha9",
+      "preserve_existing_as": null,
+      "proposed_distinct_public_tag": "v0.1.0-alpha9"
+    },
+    {
+      "tag": "v0.2.0-alpha1",
+      "canonical_object": "51c6b39ca56d4f21ab259599f2bac2950d587e88",
+      "existing_tag_object": "ee22b514a99945cc5ec0781ba1c54894b5800f75",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.2.0-alpha1",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.2.0-alpha1",
+      "proposed_distinct_public_tag": "native/v0.2.0-alpha1"
+    },
+    {
+      "tag": "v0.2.0-alpha2",
+      "canonical_object": "274330784b84d5fb4d426583aac3e3ede4a49810",
+      "existing_tag_object": "b5769efec2642bff91dbc9d3225ad3d3e5e8d630",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.2.0-alpha2",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.2.0-alpha2",
+      "proposed_distinct_public_tag": "native/v0.2.0-alpha2"
+    },
+    {
+      "tag": "v0.3.0-alpha1",
+      "canonical_object": "9668b2e325cddfde633aae016c63ae7827ab5597",
+      "existing_tag_object": "4e9b7cfac53cb3cfcde79660df99f542e89ddcfe",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.3.0-alpha1",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.3.0-alpha1",
+      "proposed_distinct_public_tag": "native/v0.3.0-alpha1"
+    },
+    {
+      "tag": "v0.4.0-alpha8",
+      "canonical_object": "ab28c5872d9de619002146280ad2982509d52800",
+      "existing_tag_object": "45e0ebb1bed45b03f7a6b64a19bac9021e17c110",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.4.0-alpha8",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.4.0-alpha8",
+      "proposed_distinct_public_tag": "native/v0.4.0-alpha8"
+    },
+    {
+      "tag": "v0.5.0-alpha1",
+      "canonical_object": "4df4d2af322ef46e10e03c9d1b9c688e09f73efa",
+      "existing_tag_object": "7cadaf135b0e880273b4f7105cd877dc5ce8ce45",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.5.0-alpha1",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.5.0-alpha1",
+      "proposed_distinct_public_tag": "native/v0.5.0-alpha1"
+    },
+    {
+      "tag": "v0.5.0-alpha12",
+      "canonical_object": "fca42d8f35f3df8e43297a56dd8d33aa9635cbaa",
+      "existing_tag_object": "9a9022c76ea4cfd17c33cce4010a62f0b77c1609",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.5.0-alpha12",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.5.0-alpha12",
+      "proposed_distinct_public_tag": "native/v0.5.0-alpha12"
+    },
+    {
+      "tag": "v0.5.0-alpha13",
+      "canonical_object": "0ecb131d5550f167b574ba4e3218c98e4ab57f7e",
+      "existing_tag_object": "c8dea7e3bec6db8d1295e49c72f5738df283570e",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.5.0-alpha13",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.5.0-alpha13",
+      "proposed_distinct_public_tag": "native/v0.5.0-alpha13"
+    },
+    {
+      "tag": "v0.7.0-alpha2",
+      "canonical_object": "fbdb0b9f14884b972791dd2a2871d2474a42e1fe",
+      "existing_tag_object": "d50f91fe00c2a7c5e64e337f6b85a92f6c1377b1",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.7.0-alpha2",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.7.0-alpha2",
+      "proposed_distinct_public_tag": "native/v0.7.0-alpha2"
+    },
+    {
+      "tag": "v0.7.0-alpha4",
+      "canonical_object": "f320f7fd90cbb69b63fc9fd24caab6f1acc4dc17",
+      "existing_tag_object": "51982dd249fb4ea96fbd1573f35e01bdd9c538d5",
+      "collision": true,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.7.0-alpha4",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.7.0-alpha4",
+      "proposed_distinct_public_tag": "native/v0.7.0-alpha4"
+    },
+    {
+      "tag": "v0.7.0-alpha5",
+      "canonical_object": "60f9ee9ea494648d9caac27bee0dd9fa34454c42",
+      "existing_tag_object": "60f9ee9ea494648d9caac27bee0dd9fa34454c42",
+      "collision": false,
+      "preserve_canonical_as": "refs/archive/gitea-native/tags/v0.7.0-alpha5",
+      "preserve_existing_as": "refs/archive/github-legacy/tags/v0.7.0-alpha5",
+      "proposed_distinct_public_tag": "v0.7.0-alpha5"
+    }
+  ],
+  "collision_count": 9,
+  "assets": [
+    {
+      "name": "homensai-auto-vpn_0.1.0-alpha1-1_all.ipk",
+      "bytes": 12136,
+      "sha256": "37f9448ad001a5b100ec956a5545a385200fcd8e2402eabb83bce26d259df7de"
+    },
+    {
+      "name": "homensai-auto-vpn_0.1.0-alpha7-1_all.ipk",
+      "bytes": 14184,
+      "sha256": "5233a9fa524123010214292c0ef302efe3b8bfb5ab60b3273f91b54be7ae9423"
+    },
+    {
+      "name": "homensai-auto-vpn_0.1.0-alpha8-1_all.ipk",
+      "bytes": 17558,
+      "sha256": "2c8e06f0005e89454a6823709a9e6258e9bef974c3a8fd1e43de02ba8948a84c"
+    },
+    {
+      "name": "homensai-auto-vpn_0.1.0-alpha9-1_all.ipk",
+      "bytes": 18505,
+      "sha256": "d9141c8c552438a57d39463b508af889c3b26e36cab3c8883deeb73ded7f815d"
+    },
+    {
+      "name": "homensai-auto-vpn_0.2.0-alpha1-1_all.ipk",
+      "bytes": 25548,
+      "sha256": "8e20fd46325ff8ea535173bdd773fa847d908b0ca50397969d05beb54c863444"
+    },
+    {
+      "name": "homensai-auto-vpn_0.2.0-alpha2-1_all.ipk",
+      "bytes": 364378,
+      "sha256": "cfa1e33bc2953a26acf1cc573b9711036236c1434bdf449bca2b87af4915772a"
+    },
+    {
+      "name": "homensai-auto-vpn_0.3.0-alpha1-1_all.ipk",
+      "bytes": 375275,
+      "sha256": "6518d952cf092303468524c5e1441f9330a6f89f4b629ae205e73a98786c0d52"
+    },
+    {
+      "name": "homensai-auto-vpn_0.4.0-alpha8-1_all.ipk",
+      "bytes": 393383,
+      "sha256": "24c3122a5e31363c81e17fa7de7c4fd960aa35047f6d05682dc4eedb51d01745"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha1-1_all.ipk",
+      "bytes": 412629,
+      "sha256": "9207448f8a6d6c5833b8315fc08ddac29bd3f75370929019c9c8071363fc6fa6"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha10-1_all.ipk",
+      "bytes": 413534,
+      "sha256": "79587bb24fa6fbf8d249778806d994c7f9b283131ea6c4b0fbae1fddc6eca362"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha11-1_all.ipk",
+      "bytes": 414150,
+      "sha256": "ca68203b158648cef06d67edde670596a2fd7b4e7ce0b604c841eb5b0d9e0062"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha12-1_all.ipk",
+      "bytes": 424895,
+      "sha256": "54df73497163ce7996ff8beab0904cf9ea53744b9839a706ed8f7ec2ee0f3372"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha13-1_all.ipk",
+      "bytes": 463399,
+      "sha256": "e5f4407a491f6417967c8800b73281198d6ac4d137548fb0807b6c6e4531ac5f"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha2-1_all.ipk",
+      "bytes": 412911,
+      "sha256": "9c0e2987fa71ff7e6b0ae2cfd695c5001c561711ee7d2913af0eb8c9aac56514"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha3-1_all.ipk",
+      "bytes": 412734,
+      "sha256": "9790fa2f6ae0d3d27f3833375b8e613a21b211efc2a64fb044b5bb37019ad55a"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha4-1_all.ipk",
+      "bytes": 412887,
+      "sha256": "02a2d7ded029dcb9148265466402de12959278547bfad250a2a336e973240e0f"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha5-1_all.ipk",
+      "bytes": 412999,
+      "sha256": "331752fe850c08c9697f26277f32298a2c5a8b14b3e9337bbc7934c00e6ffa05"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha6-1_all.ipk",
+      "bytes": 413092,
+      "sha256": "1d69e2891228cd159e58246f979441303307585ca737a66f337a31040f047634"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha7-1_all.ipk",
+      "bytes": 413117,
+      "sha256": "0fa95c1dee05acb320e429b6803aa84077c7acdc6c8eeef27e4e411989607e43"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha8-1_all.ipk",
+      "bytes": 413055,
+      "sha256": "2df7558a4af82ecc26e2ef17bb20a8444f04ae9a10cb37a86822afd5b738c554"
+    },
+    {
+      "name": "homensai-auto-vpn_0.5.0-alpha9-1_all.ipk",
+      "bytes": 413143,
+      "sha256": "6ff1e4bc49c32b67b2a44a2676100f46e021c7dc7403f84bf260b341d3e97e0e"
+    },
+    {
+      "name": "homensai-auto-vpn_0.6.0-alpha1-1_all.ipk",
+      "bytes": 491109,
+      "sha256": "4e77068512167256485fd1a9afd1fb7c6e9525ec24b36443e6dc33e55f651e32"
+    },
+    {
+      "name": "homensai-auto-vpn_0.6.0-alpha2-1_all.ipk",
+      "bytes": 491756,
+      "sha256": "0e699996b473fe352ea53e167d6f8c7f0fa6ef75ab3468cb180f13aa4d65db4f"
+    },
+    {
+      "name": "homensai-auto-vpn_0.6.0-alpha3-1_all.ipk",
+      "bytes": 509466,
+      "sha256": "2ece9c506a518613cee46ffebd49fa8c4cd8213d2ddea036c860096a395e4337"
+    },
+    {
+      "name": "homensai-auto-vpn_0.6.0-alpha4-1_all.ipk",
+      "bytes": 526494,
+      "sha256": "e5c639462ff5e6ad5c15b3a2c53ff7352ae3969cac35d694341039e526c5bb73"
+    },
+    {
+      "name": "homensai-auto-vpn_0.6.0-alpha5-1_all.ipk",
+      "bytes": 546598,
+      "sha256": "ea1ae9eca7f89eddd0d7bdc023080e5e4495912ee38b271934cf52967f273058"
+    },
+    {
+      "name": "homensai-auto-vpn_0.7.0-alpha2-1_all.ipk",
+      "bytes": 414714,
+      "sha256": "976a44f3f4dfab0cb75083b39de0257c71424b19a6a439e6230f1e5f31e6e789"
+    },
+    {
+      "name": "homensai-auto-vpn_0.7.0-alpha4-1_all.ipk",
+      "bytes": 425313,
+      "sha256": "e8a285924cccd69374422d6fdce7ea9f41bf343842ee10a4a2985c9096ee16c7"
+    },
+    {
+      "name": "homensai-auto-vpn_0.7.0-alpha5-1_all.ipk",
+      "bytes": 425976,
+      "sha256": "a14d1c6bae2be64eb398fa8873b2cabb53589d988655ce93cb93982fbb34cd6a"
+    },
+    {
+      "name": "homensai-auto-vpn_0.7.0-alpha6-1_all.ipk",
+      "bytes": 431293,
+      "sha256": "0cb57faa967f3cfc42caebb48be0f2bd9f31081eeb959692be6acf941ca1d85a"
+    }
+  ],
+  "gates": [
+    "Verify fresh remote refs and release metadata before approved migration",
+    "Audit all reachable history objects for secrets before public push",
+    "Create and verify recoverable bundles/dumps; retain original refs and immutable tags",
+    "Review tree merge and both histories; never force/mirror/delete/tag-overwrite",
+    "Public GitHub write and protected-main integration need explicit approval"
+  ],
+  "metadata_steps": [
+    "Retain existing public release/tag objects unchanged",
+    "Map native releases to distinct proposed tags where collisions exist",
+    "Copy only reviewed English notes and version-matched audited assets",
+    "Verify asset SHA256 against source and downloaded destination",
+    "Keep prerelease/experimental and physical/virtual acceptance limits explicit"
+  ],
+  "rollback": "No writes in this plan. For any later approved migration restore only newly created refs/assets under a separately reviewed rollback; never delete originals."
+}

@@ -1,0 +1,383 @@
+{
+  "scope": "Offline synthetic fixture of actual generated UI; no router",
+  "checks": [
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Overview",
+      "heading": "Your internet under control",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Channels and servers",
+      "heading": "Channels and servers",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Operator tests",
+      "heading": "Operator tests",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Statistics",
+      "heading": "Statistics",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Server ranking",
+      "heading": "Server ranking",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Monthly traffic",
+      "heading": "Monthly traffic",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Service monitor",
+      "heading": "Service monitor",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Events and errors",
+      "heading": "Events and errors",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 360,
+      "section": "Settings",
+      "heading": "Settings",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Обзор",
+      "heading": "Ваш интернет под контролем",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Каналы и серверы",
+      "heading": "Каналы и серверы",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Операторские тесты",
+      "heading": "Операторские тесты",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Статистика",
+      "heading": "Статистика",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Рейтинг серверов",
+      "heading": "Рейтинг серверов",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Трафик за месяц",
+      "heading": "Трафик за месяц",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Монитор служб",
+      "heading": "Монитор служб",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "События и ошибки",
+      "heading": "События и ошибки",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 360,
+      "section": "Настройки",
+      "heading": "Настройки",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Обзор",
+      "heading": "Ваш интернет под контролем",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Каналы и серверы",
+      "heading": "Каналы и серверы",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Операторские тесты",
+      "heading": "Операторские тесты",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Статистика",
+      "heading": "Статистика",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Рейтинг серверов",
+      "heading": "Рейтинг серверов",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Трафик за месяц",
+      "heading": "Трафик за месяц",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Монитор служб",
+      "heading": "Монитор служб",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "События и ошибки",
+      "heading": "События и ошибки",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 768,
+      "section": "Настройки",
+      "heading": "Настройки",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Overview",
+      "heading": "Your internet under control",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Channels and servers",
+      "heading": "Channels and servers",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Operator tests",
+      "heading": "Operator tests",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Statistics",
+      "heading": "Statistics",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Server ranking",
+      "heading": "Server ranking",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Monthly traffic",
+      "heading": "Monthly traffic",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Service monitor",
+      "heading": "Service monitor",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Events and errors",
+      "heading": "Events and errors",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 768,
+      "section": "Settings",
+      "heading": "Settings",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Overview",
+      "heading": "Your internet under control",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Channels and servers",
+      "heading": "Channels and servers",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Operator tests",
+      "heading": "Operator tests",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Statistics",
+      "heading": "Statistics",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Server ranking",
+      "heading": "Server ranking",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Monthly traffic",
+      "heading": "Monthly traffic",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Service monitor",
+      "heading": "Service monitor",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Events and errors",
+      "heading": "Events and errors",
+      "overflow": false
+    },
+    {
+      "lang": "en",
+      "viewport": 1280,
+      "section": "Settings",
+      "heading": "Settings",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Обзор",
+      "heading": "Ваш интернет под контролем",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Каналы и серверы",
+      "heading": "Каналы и серверы",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Операторские тесты",
+      "heading": "Операторские тесты",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Статистика",
+      "heading": "Статистика",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Рейтинг серверов",
+      "heading": "Рейтинг серверов",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Трафик за месяц",
+      "heading": "Трафик за месяц",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Монитор служб",
+      "heading": "Монитор служб",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "События и ошибки",
+      "heading": "События и ошибки",
+      "overflow": false
+    },
+    {
+      "lang": "ru",
+      "viewport": 1280,
+      "section": "Настройки",
+      "heading": "Настройки",
+      "overflow": false
+    }
+  ]
+}

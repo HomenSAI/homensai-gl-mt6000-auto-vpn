@@ -1,0 +1,142 @@
+{
+  "result": "PASS",
+  "scope": "isolated virtual local transport and offline model tests; not physical GL.iNet native acceptance",
+  "physical_router_access": false,
+  "started_at_utc": "2026-10-16T23:45:52.351194+00:00",
+  "finished_at_utc": "2026-10-17T04:58:25.019014+00:00",
+  "collected_at_utc": "2026-10-17T05:08:09.863063+00:00",
+  "runner_source": "19749ff091c5109ba3c4690110dfcc05f654a4d5",
+  "ci_source": "28a347a9945d22c2e82135829e2d3377359c5933",
+  "protocol_runs": [
+    {
+      "number": 1,
+      "start_utc": "2026-10-16T23:45:54.946596+00:00",
+      "observed_utc": "2026-10-17T01:46:31.744766+00:00",
+      "verification": {
+        "result": "PASS",
+        "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+        "host_elapsed_seconds": 7236.8,
+        "guest_elapsed_seconds": 7215.45,
+        "cycles": 501,
+        "passed_checks": 1364,
+        "coverage_complete": true,
+        "scope": "synthetic real local tunnels and selector; not physical GL.iNet native acceptance",
+        "physical_router_access": false
+      },
+      "classification": {
+        "result": "PASS",
+        "raw_probe_records": 1306,
+        "classes": {
+          "startup-wait-success": 4,
+          "fault-path-success": 210,
+          "injected-negative": 63,
+          "recovery-wait-success": 21,
+          "soak-selected": 501,
+          "soak-standby": 501,
+          "recovery-wait-retry-negative": 6
+        },
+        "fault_rounds": 21,
+        "steady_state_probes": 1002,
+        "steady_state_failures": 0,
+        "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+        "scope": "raw synthetic scenario accounting; retry negatives are bounded startup/restoration only, never retry masking in steady-state soak",
+        "guest_timestamps_are_not_host_wall_clock": true,
+        "physical_router_access": false
+      },
+      "cleanup": {
+        "result": "PASS",
+        "private_key_files_remaining": 0,
+        "root_checkpoint_unchanged": true,
+        "owned_namespaces_remaining": [],
+        "cohort_processes": []
+      },
+      "archive_sha256": "41e57e49d6c1fc2b5502effd6143f2d1a54d53f7c5e14ee1d26e1ee40869846e"
+    },
+    {
+      "number": 2,
+      "start_utc": "2026-10-17T01:46:49.188720+00:00",
+      "observed_utc": "2026-10-17T03:47:24.517085+00:00",
+      "verification": {
+        "result": "PASS",
+        "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+        "host_elapsed_seconds": 7235.33,
+        "guest_elapsed_seconds": 7207.1,
+        "cycles": 509,
+        "passed_checks": 1380,
+        "coverage_complete": true,
+        "scope": "synthetic real local tunnels and selector; not physical GL.iNet native acceptance",
+        "physical_router_access": false
+      },
+      "classification": {
+        "result": "PASS",
+        "raw_probe_records": 1318,
+        "classes": {
+          "startup-wait-success": 4,
+          "fault-path-success": 210,
+          "injected-negative": 63,
+          "recovery-wait-success": 21,
+          "soak-selected": 509,
+          "soak-standby": 509,
+          "recovery-wait-retry-negative": 2
+        },
+        "fault_rounds": 21,
+        "steady_state_probes": 1018,
+        "steady_state_failures": 0,
+        "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+        "scope": "raw synthetic scenario accounting; retry negatives are bounded startup/restoration only, never retry masking in steady-state soak",
+        "guest_timestamps_are_not_host_wall_clock": true,
+        "physical_router_access": false
+      },
+      "cleanup": {
+        "result": "PASS",
+        "private_key_files_remaining": 0,
+        "root_checkpoint_unchanged": true,
+        "owned_namespaces_remaining": [],
+        "cohort_processes": []
+      },
+      "archive_sha256": "14c24ba16a457394c10a56340285c9bc234f2ea37292f4724aeeb199f99a980e"
+    }
+  ],
+  "offline_ci": [
+    {
+      "application_tests": 309,
+      "artifact": "homensai-auto-vpn_0.7.0-alpha7-12_all.ipk",
+      "bytes": 456653,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_tests": 30,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "1b44c36f27a82501be19bdf0e722658b2b1f5ddf1cc208c3a82cbbb8eed40244",
+      "skipped_tests": 7,
+      "source": "28a347a9945d22c2e82135829e2d3377359c5933",
+      "ui_suites": 11,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 309,
+      "artifact": "homensai-auto-vpn_0.7.0-alpha7-12_all.ipk",
+      "bytes": 456653,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_tests": 30,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "1b44c36f27a82501be19bdf0e722658b2b1f5ddf1cc208c3a82cbbb8eed40244",
+      "skipped_tests": 0,
+      "source": "28a347a9945d22c2e82135829e2d3377359c5933",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "offline_model_iterations": 23,
+  "unique_model_cases_per_iteration": 200,
+  "model_assertions_per_iteration": 1737,
+  "clone_qmp_paused": true,
+  "errors": [],
+  "preparation": "STOPPED after 102.20s; cleanup PASS; excluded from completed run totals"
+}

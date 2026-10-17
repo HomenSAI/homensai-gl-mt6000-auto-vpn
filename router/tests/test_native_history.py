@@ -14,6 +14,50 @@ import native_switch as native
 
 
 class HistoryTests(unittest.TestCase):
+    def test_rich_phase_history_obeys_byte_bound_without_losing_aggregates(self):
+        with tempfile.TemporaryDirectory() as d,patch.object(History,'RETENTION_BYTES',16000):
+            h=History(d)
+            for n in range(20):
+                phases=[{'phase':'PHASE_'+str(i),'time':n*40+i} for i in range(32)]
+                h.record({'state':'APPLYING' if n%2==0 else 'COMMITTED','phase_evidence':phases},n*40+32)
+            data=h.load()
+            self.assertEqual(data['sequence'],20)
+            self.assertLess(len(data['events']),20)
+            self.assertLess(h.path.stat().st_size,17000)
+            self.assertEqual(sum(month['attempts'] for month in data['months'].values()),10)
+            self.assertTrue(h.public()['event_history_truncated'])
+
+    def test_corrupt_attempt_metadata_recovers_explicit_backup_without_private_fields(self):
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d);h.record({'state':'APPLYING'},100)
+            row=h.load();row['active_attempt']['id']='PRIVATE_SENTINEL'
+            h.path.write_text(json.dumps(h.envelope(row)))
+            result=h.public()
+            self.assertTrue(result['restored_from_backup'])
+            self.assertNotIn('PRIVATE_SENTINEL',str(result))
+
+    def test_public_attempt_retry_ids_and_probe_evidence_exclude_nonces(self):
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d)
+            base={'source':'openvpn:1_2','target':'wireguard:peer_3','trial':False}
+            h.record(dict(base,state='ARMED',reason='SOURCE-FAILED',probe_evidence={'source_streak_met':True,'reserve_streak_met':True,'required_failures':3,'required_successes':2,'token':'PRIVATE_SENTINEL'}),100)
+            h.record(dict(base,state='APPLYING',tx='PRIVATE_SENTINEL'),101)
+            h.record(dict(base,state='WAIT-CLIENT'),102)
+            h.record(dict(base,state='ROLLED-BACK',reason='TRANSACTION-FAILED'),103)
+            h.record(dict(base,state='ARMED'),104)
+            h.record(dict(base,state='APPLYING'),105)
+            h.record(dict(base,state='COMMITTED',phase_evidence=[{'phase':'APPLYING','time':105,'token':'PRIVATE_SENTINEL'},{'phase':'COMMITTED','time':106},{'phase':'FUTURE','time':107}]),106)
+            events=h.public()['events']
+            self.assertEqual(len({r['attempt_id'] for r in events[:4]}),1)
+            self.assertNotEqual(events[0]['attempt_id'],events[4]['attempt_id'])
+            self.assertEqual(events[0]['retry_episode_id'],events[4]['retry_episode_id'])
+            self.assertEqual(events[0]['probe_evidence']['required_failures'],3)
+            self.assertNotIn('PRIVATE_SENTINEL',h.path.read_text())
+            self.assertEqual(events[-1]['phase_evidence'],[{'phase':'APPLYING','time':105},{'phase':'COMMITTED','time':106}])
+            self.assertFalse(h.record(dict(base,state='COMMITTED',phase_evidence=[{'phase':'APPLYING','time':105},{'phase':'COMMITTED','time':106}]),107))
+            h.record(dict(base,state='ARMED'),108)
+            self.assertNotEqual(h.public()['events'][-1]['retry_episode_id'],events[0]['retry_episode_id'])
+
     def test_history_survives_a_separate_process_exit(self):
         root=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
         with tempfile.TemporaryDirectory() as d:

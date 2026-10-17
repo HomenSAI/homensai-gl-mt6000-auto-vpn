@@ -1,0 +1,94 @@
+[
+  {
+    "language": "en",
+    "width": 360,
+    "section": "overview",
+    "scrollWidth": 345,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Automatic VPN failover",
+      "Protocol / channel / server path"
+    ],
+    "requested_language": "en"
+  },
+  {
+    "language": "en",
+    "width": 360,
+    "section": "events",
+    "scrollWidth": 345,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Transition evidence and recovery"
+    ],
+    "requested_language": "en"
+  },
+  {
+    "language": "en",
+    "width": 1280,
+    "section": "overview",
+    "scrollWidth": 1265,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Automatic VPN failover",
+      "Protocol / channel / server path"
+    ],
+    "requested_language": "en"
+  },
+  {
+    "language": "en",
+    "width": 1280,
+    "section": "events",
+    "scrollWidth": 1265,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Transition evidence and recovery"
+    ],
+    "requested_language": "en"
+  },
+  {
+    "language": "ru",
+    "width": 360,
+    "section": "overview",
+    "scrollWidth": 345,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Автоматическое переключение VPN",
+      "Путь: протокол / канал / сервер"
+    ],
+    "requested_language": "ru"
+  },
+  {
+    "language": "ru",
+    "width": 360,
+    "section": "events",
+    "scrollWidth": 345,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Подтверждения переходов и восстановления"
+    ],
+    "requested_language": "ru"
+  },
+  {
+    "language": "ru",
+    "width": 1280,
+    "section": "overview",
+    "scrollWidth": 1265,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Автоматическое переключение VPN",
+      "Путь: протокол / канал / сервер"
+    ],
+    "requested_language": "ru"
+  },
+  {
+    "language": "ru",
+    "width": 1280,
+    "section": "events",
+    "scrollWidth": 1265,
+    "version": "v0.7.0-alpha7",
+    "visibleHeadings": [
+      "Подтверждения переходов и восстановления"
+    ],
+    "requested_language": "ru"
+  }
+]

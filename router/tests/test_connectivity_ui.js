@@ -1,0 +1,15 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const c={bi:(e)=>e};vm.createContext(c);vm.runInContext(fs.readFileSync('router/connectivity_panel.inc.js','utf8'),c);
+const id='a'.repeat(32),request={request_id:id,requested_at:100};
+const scan={...request,state:'COMPLETED',measurement_request_id:id,measured_at:101,finished_at:102,checked:2,failed:1};
+assert.equal(c.connectivityModel({scan:{...request,state:'QUEUED'}},request,102).state,'QUEUED');
+assert.equal(c.connectivityModel({scan:{...request,state:'RUNNING'}},request,102).state,'RUNNING');
+assert.equal(c.connectivityModel({scan:{...scan,measurement_request_id:'old'}},request,102).state,'UNAVAILABLE');
+assert.equal(c.connectivityModel({scan},request,102).state,'COMPLETED');
+assert.equal(c.connectivityModel({scan,measurement_request_id:null},request,600).state,'COMPLETED');
+assert.equal(c.connectivityModel({scan:{...request,state:'QUEUED'}},request,401).state,'FAILED');
+assert.equal(c.connectivityModel({scan:{...scan,checked:0,failed:0}},request,102).state,'EMPTY');
+assert.equal(c.connectivityModel({scan,rpc_error:true},request,102).state,'UNAVAILABLE');
+assert.equal(c.connectivityModel({scan:{...scan,failed:3}},request,102).state,'UNAVAILABLE');
+assert.equal(c.connectivityModel({scan:{...scan,request_id:'b'.repeat(32)}},request,102).state,'QUEUED');
+console.log('PASS: correlated check lifecycle, old snapshot rejection, empty/failed counts, RPC and timeout states');

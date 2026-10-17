@@ -1,0 +1,6 @@
+{
+  "result": "UNCONFIRMED",
+  "scope": "QEMU warm reboot",
+  "host_timeout_seconds": 180,
+  "last": {}
+}

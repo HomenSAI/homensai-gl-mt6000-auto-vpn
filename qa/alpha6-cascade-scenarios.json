@@ -1,0 +1,22 @@
+{
+  "scope": "Synthetic pure model; no router, VPN or RPC transport",
+  "result": "PASS",
+  "seed_range": [
+    0,
+    255
+  ],
+  "series": 256,
+  "steps": 2048,
+  "commits": 493,
+  "hop_rollbacks": 195,
+  "rpc_or_external_blocks": 53,
+  "invariant_failures": 0,
+  "example_targets": [
+    "b",
+    "c",
+    "d",
+    "a"
+  ],
+  "example_root_restored": true,
+  "model_sha256": "a5a22d7f801e63ec3979b28f32f495b324903950c86a51ae1de07540a55555dd"
+}

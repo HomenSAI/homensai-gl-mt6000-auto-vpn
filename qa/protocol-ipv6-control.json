@@ -1,0 +1,6 @@
+{
+  "result": "FAIL",
+  "code": "RuntimeError",
+  "scope": "synthetic IPv6 control; no physical router",
+  "host_observed_at_utc": "2026-10-16T19:00:55.568676+00:00"
+}

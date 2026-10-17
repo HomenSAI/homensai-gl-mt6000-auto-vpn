@@ -1,0 +1,41 @@
+{
+  "state": "FAIL",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 50.92,
+  "duration_seconds": 0,
+  "cycles": 0,
+  "counts": {
+    "PASS": 4
+  },
+  "recent": [
+    {
+      "time": 1792165135.042737,
+      "check": "real-wga-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792165139.290499,
+      "check": "real-wgb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792165142.7443254,
+      "check": "real-ova-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792165148.1003253,
+      "check": "real-ovb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    }
+  ],
+  "error": "RuntimeError:LAB-COMMAND-FAILED:ip:1",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "host_observed_at_utc": "2026-10-16T17:35:21.447342+00:00",
+  "evidence_kind": "terminal"
+}

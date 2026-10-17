@@ -1,0 +1,9 @@
+{
+  "started": true,
+  "pid": 25685,
+  "root": "/tmp/homensai-protocol-lab-soakready20261016",
+  "duration_seconds": 7200,
+  "source_sha256": "78ce2b2a9f8a0036c820714e827f6317ef87f7f669f518903967e3c677bde977",
+  "physical_router_access": false,
+  "host_started_at_utc": "2026-10-16T19:50:44.532421+00:00"
+}

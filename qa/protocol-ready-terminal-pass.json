@@ -1,0 +1,151 @@
+{
+  "state": "PASS",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 210.29,
+  "duration_seconds": 0,
+  "cycles": 0,
+  "counts": {
+    "PASS": 22
+  },
+  "recent": [
+    {
+      "time": 1792173298.7440543,
+      "check": "real-wga-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173312.7689867,
+      "check": "real-wgb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173322.9665744,
+      "check": "real-ova-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173332.7128277,
+      "check": "real-ovb-bound-DNS-TLS-ready",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173333.629574,
+      "check": "root-network-unchanged-after-setup",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173341.544995,
+      "check": "selected-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173347.606016,
+      "check": "failed-primary-DNS-TLS-refused",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173354.5002213,
+      "check": "same-protocol-reserve-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173364.7838476,
+      "check": "same-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173372.416926,
+      "check": "cross-protocol-route-switch",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173376.703792,
+      "check": "restored-primary-bound-healthy",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173383.9791026,
+      "check": "actual-return-and-rollback",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173387.3778803,
+      "check": "DNS-failure-distinct",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173395.4407318,
+      "check": "DNS-fault-reserve-unaffected",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173404.122389,
+      "check": "kill-switch-blocks-direct-underlay",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173404.3855064,
+      "check": "real-conntrack-TCP-observed",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173404.5888197,
+      "check": "scoped-TCP-cleanup-keeps-UDP",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173408.1106265,
+      "check": "selection-wga",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173417.586081,
+      "check": "selection-wgb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173426.2303495,
+      "check": "selection-ova",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173433.8864305,
+      "check": "selection-ovb",
+      "result": "PASS",
+      "detail": null
+    },
+    {
+      "time": 1792173434.5857673,
+      "check": "root-network-unchanged-after-faults",
+      "result": "PASS",
+      "detail": null
+    }
+  ],
+  "error": null,
+  "source_sha256": "78ce2b2a9f8a0036c820714e827f6317ef87f7f669f518903967e3c677bde977",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "cleanup_confirmed": true,
+  "host_observed_at_utc": "2026-10-16T19:49:55.450634+00:00",
+  "evidence_kind": "terminal"
+}

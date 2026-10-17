@@ -1,0 +1,16 @@
+{
+  "state": "FAIL",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 35.12,
+  "duration_seconds": 0,
+  "cycles": 0,
+  "counts": {},
+  "recent": [],
+  "error": "TimeoutExpired:Command '['ip', 'netns', 'exec', 'h77a33dc', '/usr/bin/python3', '/tmp/hs-protocol-smoke4.py', '--mode', 'probe', '--cer",
+  "source_sha256": "de28f435ac4f3a50976d921c77126f03b2ec4c911935eeadec25abc35b5549f6",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "cleanup_confirmed": true,
+  "host_observed_at_utc": "2026-10-16T17:38:47.969708+00:00",
+  "evidence_kind": "terminal"
+}

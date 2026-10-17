@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=homensai-auto-vpn
-PKG_VERSION:=0.5.0-alpha1
+PKG_VERSION:=0.7.0-alpha8
 PKG_RELEASE:=1
 PKGARCH:=all
 PKG_LICENSE:=MIT
@@ -17,7 +17,7 @@ endef
 
 define Package/homensai-auto-vpn/description
   Native OpenWrt VPN profile inventory, bound IPv4 HTTPS/DNS monitoring,
-  monthly accounting and LuCI interface. Alpha monitor-only release.
+  monthly accounting and LuCI interface. Experimental bounded failover with mandatory LAN confirmation.
 endef
 
 define Package/homensai-auto-vpn/conffiles
@@ -26,14 +26,17 @@ endef
 
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
+	python3 ./stage_files.py $(PKG_BUILD_DIR)/payload
 endef
 
 define Build/Compile
 endef
 
 define Package/homensai-auto-vpn/install
-	$(CP) ./files/* $(1)/
+	$(CP) $(PKG_BUILD_DIR)/payload/* $(1)/
 	chmod 0755 $(1)/etc/init.d/homensai-vpn $(1)/usr/libexec/rpcd/homensai-vpn
 endef
+
+include ./package-hooks.mk
 
 $(eval $(call BuildPackage,homensai-auto-vpn))

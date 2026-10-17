@@ -1,0 +1,18 @@
+"""Reproduce process exit after UCI save but before commit, isolated config."""
+import json
+from pathlib import Path
+from serial_clone import require_clone,json_command
+require_clone()
+code=r'''import json,os,subprocess,uuid
+from pathlib import Path
+root=Path('/tmp/homensai-setup-test-'+uuid.uuid4().hex[:10]);(root/'config').mkdir(parents=True);(root/'delta').mkdir()
+path=root/'config/homensai_vpn';path.write_text("config main 'main'\n option interval '30'\n")
+lua="local c=require('uci').cursor("+json.dumps(str(root/'config'))+","+json.dumps(str(root/'delta'))+");assert(c:set('homensai_vpn','main','interval','99'));assert(c:save('homensai_vpn'));os.exit(0)"
+subprocess.check_call(['lua','-e',lua])
+before=path.read_text()
+result=subprocess.run(['lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps({'main':{'setup_complete':'1'},'servers':[]}).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=dict(os.environ,HOMENSAI_SETUP_TEST_ROOT=str(root)))
+after=path.read_text()
+print('CLONE_JSON:'+json.dumps({'scope':'isolated synthetic UCI root','before_interval_30':"'30'" in before,'writer_rc':result.returncode,'writer_reported_ok':result.stdout.strip()==b'OK','unrequested_interval_99_committed':"'99'" in after,'pending_delta_existed':True}))'''
+result=json_command(code,15)
+Path('/lab/alpha7-delta-probe.json').write_text(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2))

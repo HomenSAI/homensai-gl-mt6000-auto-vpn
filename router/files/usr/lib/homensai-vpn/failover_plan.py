@@ -36,8 +36,12 @@ def plan(status, settings, now):
     result={'mode':'dry-run','applied':False,'native_apply':False,'ready_to_apply':False,
             'source':source,'target':target,'recommendation':None,'blockers':list(BLOCKERS),
             'requires_session_interruption':True,'direct_wan_fallback':False}
+    from failure_diagnosis import diagnose
+    diagnosis=diagnose(status,source,now)
+    result['diagnosis']=diagnosis
     if not settings.get('plan_enabled'):
         return dict(result,state='DISABLED')
+    if diagnosis.get('suppress_switch'):return dict(result,state='UPLINK-DOWN')
     profiles={p['id']:p for p in status.get('profiles',[])}
     if not source or not target or source==target or source not in profiles or target not in profiles:
         return dict(result,state='PLAN-CONFIG')
@@ -46,12 +50,14 @@ def plan(status, settings, now):
     if not target_row.get('interface'):
         return dict(result,state='TARGET-INACTIVE')
     samples=status.get('samples',[])
-    if not streak(samples,target,2,now,age,True):
+    from recovery_settings import normalized
+    recovery=normalized(settings)
+    if not streak(samples,target,recovery['successes'],now,age,True):
         return dict(result,state='TARGET-NOT-READY')
-    if not streak(samples,source,3,now,age,False):
+    if not streak(samples,source,recovery['failures'],now,age,False):
         return dict(result,state='OBSERVE')
     result.update(state='SWITCH-RECOMMENDED',recommendation={'target':target,
-                  'reason':'THREE-CONFIRMED-FAILURES','cross_protocol':source_row.get('protocol')!=target_row.get('protocol')},
+                  'reason':'THREE-CONFIRMED-FAILURES' if recovery['failures']==3 else 'CONFIGURED-FAILURE-STREAK', 'required_failures':recovery['failures'],'required_successes':recovery['successes'],'cross_protocol':source_row.get('protocol')!=target_row.get('protocol')},
                   steps=['capture-scoped-state','coordinate-workers','arm-independent-rollback-watchdog',
                          'persist-intent','protect-scoped-traffic-keep-management',
                          'apply-with-generation-check','invalidate-only-scoped-conntrack',

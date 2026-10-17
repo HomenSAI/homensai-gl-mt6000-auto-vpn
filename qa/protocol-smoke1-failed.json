@@ -1,0 +1,14 @@
+{
+  "state": "FAIL",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 32.48,
+  "duration_seconds": 0,
+  "cycles": 0,
+  "counts": {},
+  "recent": [],
+  "error": "RuntimeError:OPENVPN-TUN-NOT-READY",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "host_observed_at_utc": "2026-10-16T17:35:20.259238+00:00",
+  "evidence_kind": "terminal"
+}

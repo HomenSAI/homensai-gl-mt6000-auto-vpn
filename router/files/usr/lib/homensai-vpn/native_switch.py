@@ -9,6 +9,7 @@ import hashlib
 import http.client
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -54,7 +55,16 @@ def publish(value):
     atomic_json(STATE,value)
 
 
+def note_phase(value,phase):
+    rows=value.get('phase_evidence',[])
+    rows=rows if isinstance(rows,list) else []
+    rows=[r for r in rows[-31:] if isinstance(r,dict) and set(r)=={'phase','time'} and isinstance(r['phase'],str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',r['phase']) and type(r['time']) in (int,float) and math.isfinite(r['time'])]
+    if not rows or rows[-1]['phase']!=phase:rows.append({'phase':phase,'time':time.time()})
+    value['phase_evidence']=rows
+
+
 def journal_write(value):
+    if isinstance(value.get('phase'),str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',value['phase']):note_phase(value,value['phase'])
     atomic_json(JOURNAL,{'schema':1,'data':value,'sha256':digest(value)})
 
 
@@ -313,6 +323,7 @@ class Linux:
 
 
 def rollback(backend,journal,reason):
+    note_phase(journal,'RESTORING')
     if journal.get('phase')=='ARMED' and not journal.get('pid') and backend.order()==(journal['before'],journal['hash']):
         journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time());journal_write(journal);return
     backend.guard()
@@ -349,6 +360,29 @@ def finish_committed(backend,journal,reason):
     journal.update(phase='RESTORING');journal_write(journal)
     rollback(backend,journal,reason)
     return True
+
+
+def committed_recovery_decision(backend,journal,settings,samples,now):
+    """Observe a confirmed reserve without inventing permission for another hop.
+
+    Returning to the certified original route requires stable primary samples
+    plus recovery_ready's fresh bound DNS/HTTPS check. A reserve failure is
+    never hidden behind the historical COMMITTED status.
+    """
+    from recovery_settings import normalized
+    recovery=normalized(settings)
+    age=max(30,min(900,int(settings.get('interval',30))*3))
+    failed=streak(samples,journal['target'],recovery['failures'],now,age,False)
+    if recovery['return_policy']=='healthy_primary':
+        dwell=now-journal.get('confirmed',journal.get('started',now))
+        if (failed or dwell>=recovery['min_dwell']) and backend.recovery_ready(journal['source'],settings) is True:
+            return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}
+    if failed:
+        # A fresh negative check avoids acting on stale monitor failure history.
+        health=backend.health(journal['target'])
+        if health is False:return {'action':'HOLD','reason':'RESERVE-FAILED','reserve_healthy':False}
+        if health is None:return {'action':'HOLD','reason':'RESERVE-HEALTH-UNKNOWN','reserve_healthy':None}
+    return {'action':'OBSERVE','reason':'CLIENT-CONFIRMED'}
 
 
 def disable_acceleration(backend,request):
@@ -465,7 +499,9 @@ def transaction_expired(journal,wall=None,mono=None):
     return wall>=journal['deadline'] or (journal.get('monotonic_deadline') is not None and mono>=journal['monotonic_deadline'])
 
 
-def attempt(backend,selection,until,trial):
+def attempt(backend,selection,until,trial,probe_evidence=None):
+    cause='OPERATOR-TRIAL' if trial else 'SOURCE-FAILED' if probe_evidence and probe_evidence.get('source_streak_met') is True else 'SOURCE-HEALTH-UNKNOWN'
+
     before=selection['order'];after=list(before)
     i=after.index(selection['source_rule']);j=after.index(selection['target_rule'])
     if (i>j and selection['direction']=='first') or (i<j and selection['direction']=='last'):
@@ -483,13 +519,13 @@ def attempt(backend,selection,until,trial):
              'source':selection['source']['id'],'target':selection['target']['id'],
              'deadline':min(until,wall+90),'monotonic_deadline':min(lease_end,mono+90),'lease_monotonic_until':lease_end,'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
              'pid':None,'started':time.time()}
-    publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial})
+    publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
     journal_write(journal)
     process=subprocess.Popen([sys.executable,__file__,'apply',tx],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     journal.update(pid=process.pid,phase='APPLYING')
     released=False
     try:
-        publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial})
+        publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
         journal_write(journal);released=True
         process.wait(timeout=max(1,min(50,journal['monotonic_deadline']-time.monotonic())))
         if process.returncode:raise Refused('VENDOR-APPLY-FAILED')
@@ -499,7 +535,7 @@ def attempt(backend,selection,until,trial):
         if blockers:raise Refused(blockers[0])
         backend.guard(backend.devices())
         journal.update(phase='WAIT-CLIENT',expected_exit=target_exit);journal_write(journal)
-        publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],
+        publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],'source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),
                           'requires':'LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback'})
         while not transaction_expired(journal) and not STOP:
             stopped=read_json(PERSIST/'native-stop.json',{})
@@ -519,11 +555,12 @@ def attempt(backend,selection,until,trial):
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
                                  'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),'time':time.time(),'until':until})
                 publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
-                                  'until':until,'trial':trial,'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
+                                  'until':until,'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
             time.sleep(1)
         raise Refused('CLIENT-CONFIRMATION-TIMEOUT')
-    except BaseException:
+    except BaseException as error:
+        failure_code=str(error) if isinstance(error,Refused) and re.fullmatch(r'[A-Z0-9_-]{1,96}',str(error)) else 'NATIVE-SYSTEM-001'
         # A failed shell may already have exited while its children still run.
         try:os.killpg(process.pid,signal.SIGKILL)
         except ProcessLookupError:pass
@@ -531,7 +568,7 @@ def attempt(backend,selection,until,trial):
         if not released and backend.order()==(before,selection['hash']):
             journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY');journal_write(journal)
         else:rollback(backend,journal,'TRANSACTION-FAILED')
-        publish({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial})
+        publish({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'blockers':[failure_code]})
         raise
 
 
@@ -603,8 +640,16 @@ def serve():
                     if time.time()>=until and active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'BLOCKED','blockers':blockers});time.sleep(5);continue
                 if active.get('phase')=='COMMITTED':
-                    previous=read_json(STATE,{})
-                    publish(dict(previous,state='COMMITTED',source=active['source'],target=active['target']))
+                    status=read_json(RUNTIME/'status.json',{})
+                    decision=committed_recovery_decision(backend,active,settings,status.get('samples',[]),time.time())
+                    if decision['action']=='RESTORE-PRIMARY':
+                        if finish_committed(backend,active,decision['reason']):
+                            publish({'state':'ROLLED-BACK','reason':decision['reason'],'source':active['source'],'target':active['target'],'original_restored':True})
+                    else:
+                        previous=read_json(STATE,{})
+                        publish(dict(previous,state='COMMITTED' if decision['action']=='OBSERVE' else 'DEGRADED-ON-RESERVE',
+                                     source=active['source'],target=active['target'],reason=decision['reason'],
+                                     reserve_healthy=decision.get('reserve_healthy'),candidates=backend.candidates()))
                     time.sleep(5);continue
                 trial=settings.get('native_trial') or ''
                 forced=bool(trial and trial!=last_trial)
@@ -612,6 +657,10 @@ def serve():
                 if consumed.get('count',0)>=3:
                     publish({'state':'BLOCKED','blockers':['TRIAL-ATTEMPT-LIMIT']});time.sleep(5);continue
                 status=read_json(RUNTIME/'status.json',{})
+                from failure_diagnosis import diagnose
+                diagnosis=diagnose(status,selection['source']['id'],time.time())
+                if diagnosis.get('suppress_switch'):
+                    publish({'state':'BLOCKED','blockers':['UPLINK-LINK-DOWN'],'reason':'UPLINK-LINK-DOWN','source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
                 from recovery_settings import normalized
                 recovery=normalized(settings)
                 age=max(30,min(900,int(settings.get('interval',30))*3))
@@ -623,7 +672,7 @@ def serve():
                     last_attempt=time.time();last_trial=trial
                     consumed.update(trial=trial,time=last_attempt,count=consumed.get('count',0)+1)
                     atomic_json(ATTEMPTS,consumed)
-                    attempt(backend,selection,until,forced)
+                    attempt(backend,selection,until,forced,probe_evidence={'source_streak_met':failures,'reserve_streak_met':healthy,'required_failures':recovery['failures'],'required_successes':recovery['successes']})
                 else:publish({'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,'source_failures':failures,'reserve_healthy':healthy})
             except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError) as e:
                 # Never log configuration, stderr, credentials or arbitrary exception values.

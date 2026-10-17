@@ -11,13 +11,20 @@ import setup_config as setup
 class SetupTests(unittest.TestCase):
     def system(self):
         return {'source':'a','target':'b','interval':30,'duration':10,'session_loss':False,
-                'servers':[{'profile':'a','name':'Primary','channel':'Main','priority':1,'enabled':True}]}
+                'servers':[{'profile':'a','name':'Primary','channel':'Main','priority':1,'enabled':True},{'profile':'b','name':'Reserve','channel':'Backup','priority':2,'enabled':True}]}
 
     def test_system_only_writes_own_metadata_without_enabling_native(self):
         payload=setup.system_payload(self.system(),[{'id':'a'},{'id':'b'}])
         self.assertNotIn('native_enabled',payload['main'])
         self.assertEqual(payload['main']['plan_target'],'b')
         self.assertEqual(payload['servers'][0]['profile'],'a')
+
+    def test_disabled_or_omitted_selected_profile_is_rejected(self):
+        for omitted in (False,True):
+            args=self.system()
+            if omitted:args['servers'].pop()
+            else:args['servers'][1]['enabled']=False
+            with self.assertRaisesRegex(ValueError,'PRIMARY-RESERVE-DISABLED'):setup.system_payload(args,[{'id':'a'},{'id':'b'}])
 
     def test_unknown_same_and_duplicate_profiles_rejected(self):
         for mutation in ({'target':'a'},{'source':'unknown'}):
@@ -51,6 +58,16 @@ class SetupTests(unittest.TestCase):
         for chat in ('https://example.com','@bad/name',''):
             with self.assertRaises(ValueError):setup.telegram_payload({'token':'','chat':chat,'enabled':True,'interval':60})
         with self.assertRaises(ValueError):setup.telegram_payload({'token':'secret-invalid','chat':'123','enabled':True,'interval':60})
+
+    def test_pending_delta_is_explicit_and_arbitrary_output_is_redacted(self):
+        from contextlib import nullcontext
+        from types import SimpleNamespace
+        args={'enabled':False,'auto_new':False,'budget_mib':1,'duration':2,'streams':1,'daily_mib':2,'busy_mbps':10}
+        for output,expected in ((b'SETUP-PENDING-DELTA','SETUP-PENDING-DELTA'),(b'PRIVATE_SENTINEL','SETUP-SAVE-FAILED')):
+            with patch.object(setup,'control_lock',return_value=nullcontext()),patch.object(setup.subprocess,'run',return_value=SimpleNamespace(returncode=1,stdout=output)) as run:
+                answer=setup.save(args,'speed')
+                self.assertFalse(answer['saved']);self.assertEqual(answer['code'],expected)
+                self.assertEqual(run.call_count,1)
 
     def test_invalid_input_never_calls_writer(self):
         with patch.object(setup.subprocess,'run') as writer:

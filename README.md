@@ -1,16 +1,24 @@
 # HomenSAI Auto VPN · GL-MT6000
 
+Latest release candidate: **0.7.0-alpha8-1** ([release notes](releases/v0.7.0-alpha8.md), [execution and acceptance limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md)). Offline-validated; physical installation and new hardware acceptance are pending.
+
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 
 [Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
 
-**0.7.0-alpha2 development prerelease: real OpenWrt virtual acceptance, guarded monitor control, sidebar UI, calendar Telegram scheduling, daily WAN/VPN accounting and optional bounded speed tests. The physical GL-MT6000 was not upgraded in this work window. Native failover remains a bounded, client-confirmed two-profile experiment; unattended production is not certified.**
+**Alpha8:** brighter raised controls and 18px server indicators, request-correlated VPN connectivity checks, explicit controller states, failure diagnosis and model quarantine. Verified locally with 329 application tests, 30 QA tests per runtime and 12 UI suites; [item-by-item limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md). The physical router has not been upgraded to alpha8; full native multi-hop production acceptance is pending.
+
+![Alpha8 interface - synthetic preview](qa/ui-review-alpha8/overview-en.jpg)
+
+Previous verified checkpoint:
+
+**0.7.0-alpha6 local prerelease: complete offline cascade model and rollback/fault protection, 232 application + 5 QA tests, 8 Node suites and 54 responsive EN/RU checks. See [offline completion](docs/OFFLINE-COMPLETION.md). QEMU was not resumed and the physical router was not changed. Native multi-hop adaptation and unattended production remain unaccepted.**
 
 [Virtual OpenWrt results and unresolved reboot failure](qa/OPENWRT-VIRTUAL-REPORT.md) · [Reproducible Docker/QEMU lab](lab/openwrt-qemu/README.md)
 
 ## Why it exists
 
-The idea came from a real troubleshooting session: VPN profiles showed Connected while internet access stopped. The standard interface and noisy logs did not clearly show which server/path was healthy or how connections changed. We needed coordinated switching between servers and between OpenVPN and WireGuard. Trustworthy monitoring comes first; automatic switching is the next development stage. Wi-Fi is an access medium and a firewall controls traffic; they are not VPN protocols.
+The idea came from a real troubleshooting session: VPN profiles showed Connected while internet access stopped. The standard interface and noisy logs did not clearly show which server/path was healthy or how connections changed. We needed coordinated switching between servers and between OpenVPN and WireGuard. Trustworthy monitoring comes first; bounded client-confirmed switching is experimental; full unattended hierarchy remains a development stage. Wi-Fi is an access medium and a firewall controls traffic; they are not VPN protocols.
 
 | Mode | Implementation status |
 |---|---|
@@ -35,7 +43,7 @@ Earlier releases verified installation, three connected OpenVPN/WireGuard probe 
 
 ## Privacy
 
-Public files exclude the author's live router/VPN configuration, Telegram token/chat ID, private keys, passwords, browser sessions, logs, firmware dumps and screenshots. Runtime secrets belong only on the router. Router probes do not validate LAN routing; IPv6, inactive-server bandwidth tests and automatic operation are unavailable.
+Public files exclude the author's live router/VPN configuration, Telegram token/chat ID, private keys, passwords, browser sessions, logs, firmware dumps and live-device screenshots. Isolated VM screenshots contain only synthetic test profiles. Runtime secrets belong only on the router. Router probes do not validate LAN routing; IPv6, inactive-server bandwidth tests and automatic operation are unavailable.
 
 ## Author, book and related work
 
@@ -45,10 +53,10 @@ Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical e
 
 Independent project, not an official GL.iNet/OpenWrt product. Licensed under [MIT](LICENSE): use, modify and redistribute, including commercially, while retaining the author/site notice and licence. See [licensing scope and third-party notices](LICENSING.md).
 
-Current device status: 0.4.0-alpha7 is installed in monitor mode, native switching disabled. Three active probe paths were verified; HNAT disable and client-path validation remain unresolved. Alpha8 is a lab candidate. Branded UI was visually checked on an isolated synthetic fixture; full live LuCI UI verification remains pending.
+Physical device: last recorded installed application is 0.6.0-alpha5; this window did not query it. Current alpha5 here means 0.7.0-alpha5 in the isolated x86 VM, not a physical upgrade. See [current state](docs/STATE.md) and [alpha5 evidence](qa/ALPHA5-CHECKPOINT.md).
 
-[Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; native automatic application still unavailable.
+[Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; full native hierarchy application remains unfinished; bounded pair operation is documented separately.
 
 [Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
 
-[Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.5.0-alpha1 adds persistent history and a client workflow; positive device acceptance remains pending.
+[Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.7.0-alpha5 adds committed-reserve observation and verified primary return; hardware acceptance of this candidate remains pending.

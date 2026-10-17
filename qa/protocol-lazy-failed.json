@@ -1,0 +1,25 @@
+{
+  "state": "FAIL",
+  "scope": "isolated x86 real protocol transport/selector; not GL.iNet native cascade acceptance",
+  "elapsed_seconds": 62.06,
+  "duration_seconds": 0,
+  "cycles": 0,
+  "counts": {
+    "FAIL": 1
+  },
+  "recent": [
+    {
+      "time": 1792173147.0981598,
+      "check": "real-wga-bound-DNS-TLS-ready",
+      "result": "FAIL",
+      "detail": null
+    }
+  ],
+  "error": "AssertionError:real-wga-bound-DNS-TLS-ready",
+  "source_sha256": "fbf0b4285fcd9037928b93884ba363754cb9a95507d82f5a944864054537e8cd",
+  "physical_router_access": false,
+  "root_namespace_network_changed": false,
+  "cleanup_confirmed": true,
+  "host_observed_at_utc": "2026-10-16T19:46:46.127011+00:00",
+  "evidence_kind": "terminal"
+}

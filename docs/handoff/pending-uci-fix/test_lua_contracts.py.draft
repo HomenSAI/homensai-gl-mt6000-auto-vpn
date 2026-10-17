@@ -1,0 +1,94 @@
+"""Actual Lua/CJSON execution with a deliberately mocked UCI cursor."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+LUA=shutil.which('lua5.1')
+LUAC=shutil.which('luac5.1')
+ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
+
+
+@unittest.skipUnless(LUA and LUAC,'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
+class LuaContracts(unittest.TestCase):
+    def run_setup(self,payload,failure='',testroot=None):
+        with tempfile.TemporaryDirectory() as directory:
+            output=Path(directory)/'calls.json'
+            prelude='''
+local json=require('cjson')
+local calls={}
+local output=OUTPUT
+local failure=FAILURE
+local function record(name,config,section,key,value)
+  assert(config=='homensai_vpn','unexpected UCI config')
+  calls[#calls+1]={name=name,config=config,section=section,key=key,value=value}
+  local f=assert(io.open(output,'w'));f:write(json.encode(calls));f:close()
+end
+package.preload['uci']=function()
+ local c={}
+ function c:set(config,section,key,value) record('set',config,section,key,value);return failure=='set' and nil or true end
+ function c:get(config,section) assert(config=='homensai_vpn');return section=='cfg_existing' and 'server' or nil end
+ function c:foreach(config,kind,callback) assert(config=='homensai_vpn' and kind=='server');callback({profile='wireguard:peer_7',['.name']='cfg_existing'}) end
+ function c:save(config) record('save',config);if failure=='save' then return nil end;return true end
+ function c:commit(config) record('commit',config);if failure=='commit' then return nil end;return true end
+ function c:revert(config) record('revert',config);return true end
+ return {cursor=function(config,delta) return c end}
+end
+'''.replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure))
+            # Lua's `a and nil or true` cannot simulate nil; use explicit branch.
+            prelude=prelude.replace("return failure=='set' and nil or true", "if failure=='set' then return nil end;return true")
+            environment=dict(os.environ)
+            if testroot is not None:environment['HOMENSAI_SETUP_TEST_ROOT']=testroot
+            result=subprocess.run([LUA,'-e',prelude,str(ROOT/'setup_save.lua')],
+                                  input=payload,capture_output=True,env=environment,timeout=5)
+            calls=json.loads(output.read_text()) if output.exists() else []
+            return result,calls
+
+    def payload(self):
+        return json.dumps(dict(main={'interval':'30'},servers=[dict(section='srv_new',
+            profile='wireguard:peer_7',name='Имя пользователя',channel='Main',priority='2',enabled='1')])).encode()
+
+    def test_all_packaged_lua_parses(self):
+        for path in ROOT.glob('*.lua'):
+            with self.subTest(file=path.name):
+                result=subprocess.run([LUAC,'-p',str(path)],capture_output=True,timeout=5)
+                self.assertEqual(result.returncode,0,result.stderr.decode())
+
+    def test_existing_section_identity_and_unicode_are_preserved(self):
+        result,calls=self.run_setup(self.payload())
+        self.assertEqual(result.returncode,0)
+        self.assertEqual(result.stdout,b'OK')
+        server=[row for row in calls if row.get('key')=='name'][0]
+        self.assertEqual(server['section'],'cfg_existing')
+        self.assertEqual(server['value'],'Имя пользователя')
+        self.assertEqual(calls[-1]['name'],'commit')
+        self.assertFalse(any(row.get('section')=='srv_new' for row in calls))
+
+    def test_unknown_fields_and_malformed_json_revert_without_commit(self):
+        for payload in (b'{broken',b'{"main":{"network":"bad"},"servers":[]}',
+                        b'{"main":null,"servers":[]}',b'{"main":{"interval":30},"servers":[]}'):
+            with self.subTest(payload=payload):
+                result,calls=self.run_setup(payload)
+                self.assertNotEqual(result.returncode,0)
+                self.assertFalse(any(row['name']=='commit' for row in calls))
+                self.assertEqual(calls[-1]['name'],'revert')
+
+    def test_set_save_commit_failures_are_reported_and_reverted(self):
+        for failure in ('set','save','commit'):
+            result,calls=self.run_setup(self.payload(),failure)
+            self.assertNotEqual(result.returncode,0)
+            self.assertNotIn(b'OK',result.stdout)
+            self.assertEqual(calls[-1]['name'],'revert')
+            self.assertTrue(all(row['config']=='homensai_vpn' for row in calls))
+
+    def test_size_and_test_root_reject_before_uci_writes(self):
+        for payload,testroot in ((b'x'*65537,None),(self.payload(),'/tmp/unapproved-root')):
+            result,calls=self.run_setup(payload,testroot=testroot)
+            self.assertNotEqual(result.returncode,0)
+            self.assertEqual(calls,[])
+
+
+if __name__=='__main__':unittest.main()

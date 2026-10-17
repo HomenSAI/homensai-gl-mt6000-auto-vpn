@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const c={bi:(en)=>en,locale:'en'};vm.createContext(c);vm.runInContext(fs.readFileSync('router/ui_logic.inc.js','utf8'),c);
+const row=(id,code=null,time=990)=>({id,interface:'vpn'+id,time,code,dns_ok:true,https_success:2});
+assert.equal(c.profileHealth(row('a'),1000).state,'healthy');
+assert.equal(c.profileHealth({...row('a'),dns_ok:undefined},1000).state,'checking');
+assert.equal(c.profileHealth(row('a','VPN-003'),1000).state,'failed');
+assert.equal(c.profileHealth(row('a',null,800),1000).state,'unknown');
+assert.equal(c.profileHealth(row('a','CHECK-001'),1000).state,'checking');
+let rows=[row('a'),row('b','DNS-001'),row('c'),{...row('d'),interface:null}];
+assert.deepEqual(Array.from(c.sortServerCards(rows,'c',1000),r=>r.id),['c','a','d','b']);assert.equal(rows[0].id,'a');
+assert.equal(c.selectedProfile({native_failover:{state:'COMMITTED',target:'c',time:999}},1000),'c');
+assert.equal(c.selectedProfile({native_failover:{state:'COMMITTED',target:'c',time:800}},1000),null);
+assert.equal(c.selectedProfile({native_failover:{state:'APPLYING',target:'c',time:999}},1000),null);
+for(const direction of ['asc','desc'])assert(c.compareTableValues('—','10',direction)>0);
+assert(c.compareTableValues('2','10','asc')<0);assert(c.compareTableValues('2','10','desc')>0);
+assert(c.compareTableValues('5%','10%','asc')<0);assert(c.compareTableValues('Server 2','Server 10','asc')<0);
+console.log('PASS: health freshness, selected-first stable ordering, unknown-last sorting');

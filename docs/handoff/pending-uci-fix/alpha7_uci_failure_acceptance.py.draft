@@ -1,0 +1,63 @@
+"""Actual UCI/libuci-lua failures and own-monitor recovery in isolated copy."""
+import json
+from pathlib import Path
+from serial_clone import require_clone,json_command
+require_clone()
+code=r'''import hashlib,json,os,signal,subprocess,time,uuid
+from pathlib import Path
+release=Path('/etc/openwrt_release').read_text()
+assert "DISTRIB_TARGET='x86/64'" in release and Path('/tmp/HOMENSAI_VIRTUAL_LAB').is_file()
+checks=[]
+def cmd(args):return subprocess.check_output(args,stderr=subprocess.STDOUT,timeout=20)
+def check(name,condition):
+ if not condition:raise AssertionError(name)
+ checks.append({'name':name,'result':'PASS'})
+root=Path('/tmp/homensai-setup-test-'+uuid.uuid4().hex[:10]);(root/'config').mkdir(parents=True,mode=0o700);(root/'delta').mkdir(mode=0o700)
+config=root/'config/homensai_vpn'
+config.write_text("config main 'main'\n option interval '30'\n option telegram_token 'VIRTUAL_PRIVATE_SENTINEL'\nconfig server\n option profile 'openvpn:1_1'\n option name 'Before'\n option channel 'Main'\n option priority '1'\n option enabled '1'\n")
+environment=dict(os.environ,HOMENSAI_SETUP_TEST_ROOT=str(root))
+def read():
+ lua="local c=require('uci').cursor("+json.dumps(str(root/'config'))+","+json.dumps(str(root/'delta'))+");local result={interval=c:get('homensai_vpn','main','interval'),private_ok=c:get('homensai_vpn','main','telegram_token')=='VIRTUAL_PRIVATE_SENTINEL'};c:foreach('homensai_vpn','server',function(s) result.section=s['.name'];result.name=s.name end);print(require('cjson').encode(result))"
+ return json.loads(cmd(['lua','-e',lua]))
+def write(main):
+ payload={'main':main,'servers':[{'section':'srv_should_not_duplicate','profile':'openvpn:1_1','name':'After','channel':'Main','priority':'2','enabled':'1'}]}
+ return subprocess.run(['lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps(payload).encode(),stdout=subprocess.PIPE,stderr=subprocess.PIPE,env=environment,timeout=10)
+before=read();success=write({'interval':'20'});after=read()
+check('actual-libuci-lua-save-commit',success.returncode==0 and success.stdout.strip()==b'OK' and after['interval']=='20')
+check('existing-anonymous-section-not-duplicated',after['section']==before['section'])
+check('private-option-preserved',after['private_ok'])
+baseline=hashlib.sha256(config.read_bytes()).hexdigest()
+invalid=write({'network':'forbidden'})
+check('invalid-own-writer-field-refused',invalid.returncode!=0 and invalid.stdout.strip()!=b'OK' and hashlib.sha256(config.read_bytes()).hexdigest()==baseline)
+for label,directory in (('save',root/'delta'),('commit',root/'config')):
+ cmd(['mount','--bind',str(directory),str(directory)])
+ try:
+  cmd(['mount','-o','remount,bind,ro',str(directory)])
+  failed=write({'interval':'99'})
+  check('actual-'+label+'-readonly-failure-refused',failed.returncode!=0 and failed.stdout.strip()!=b'OK')
+  check('actual-'+label+'-failure-keeps-original-config',hashlib.sha256(config.read_bytes()).hexdigest()==baseline)
+ finally:cmd(['umount',str(directory)])
+def service():return json.loads(cmd(['ubus','call','service','list','{"name":"homensai-vpn"}'])).get('homensai-vpn',{}).get('instances',{})
+instances=service();pid=instances.get('monitor',{}).get('pid')
+check('own-monitor-running-before-crash',isinstance(pid,int) and instances['monitor'].get('running') is True)
+argv=Path('/proc/'+str(pid)+'/cmdline').read_bytes().split(b'\0')
+check('kill-target-is-exact-own-monitor',b'/usr/lib/homensai-vpn/agent.py' in argv and b'daemon' in argv and pid!=os.getpid())
+os.kill(pid,signal.SIGKILL)
+end=time.monotonic()+45;recovered=False
+while time.monotonic()<end:
+ current=service().get('monitor',{})
+ if current.get('running') and current.get('pid')!=pid:
+  state=Path('/var/run/homensai-vpn/status.json')
+  status=json.loads(state.read_text()) if state.exists() else {}
+  if status.get('version')=='0.7.0-alpha7' and time.time()-status.get('time',0)<90 and status.get('auto_control',{}).get('requested')=='off':recovered=True;break
+ time.sleep(1)
+check('actual-procd-monitor-respawn-auto-off',recovered)
+print('CLONE_JSON:'+json.dumps({'scope':'actual x86 UCI/mount/procd; synthetic private config; not flash or native-executor power-loss proof','checks':checks,'passed':len(checks),'private_values_exported':False}))'''
+try:result=json_command(code,110)
+except RuntimeError as error:
+    import re
+    output=getattr(error,'output','');names=re.findall(r'AssertionError: ([A-Za-z0-9_-]+)',output)
+    result={'result':'FAIL','failed_step':names[-1] if names else 'GUEST-COMMAND-FAILED','private_output_exported':False}
+Path('/lab/alpha7-uci-failures.json').write_text(json.dumps(result,indent=2))
+print(json.dumps(result,indent=2))
+raise SystemExit(1 if result.get('result')=='FAIL' else 0)

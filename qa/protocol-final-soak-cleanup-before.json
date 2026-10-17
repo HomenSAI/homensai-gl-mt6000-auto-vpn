@@ -1,0 +1,43 @@
+{
+  "producer_state": "RUNNING",
+  "children": [
+    5044,
+    5075,
+    5080,
+    5081,
+    5094,
+    5102,
+    5103,
+    5121
+  ],
+  "cohort_processes": [
+    4676,
+    5044,
+    5062,
+    5075,
+    5080,
+    5081,
+    5094,
+    5102,
+    5103,
+    5121
+  ],
+  "namespaces": [
+    "h724ae40",
+    "h724ae41",
+    "h724ae42",
+    "h724ae43",
+    "h724ae4c"
+  ],
+  "private_key_files_remaining": 7,
+  "root_fingerprint": "dc7329324774446bf88db69290cabc2bb736b51d266ac72b378e13e499d0a6b7",
+  "all_namespace_names": [
+    "h724ae43 (id: 5)",
+    "h724ae42 (id: 4)",
+    "h724ae41 (id: 3)",
+    "h724ae40 (id: 2)",
+    "h724ae4c (id: 1)",
+    "h724ae4u (id: 0)"
+  ],
+  "host_observed_at_utc": "2026-10-16T21:34:44.899544+00:00"
+}

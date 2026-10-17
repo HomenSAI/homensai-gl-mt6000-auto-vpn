@@ -1,0 +1,20 @@
+{
+  "result": "PASS",
+  "raw_probe_records": 1281,
+  "classes": {
+    "startup-wait-success": 4,
+    "fault-path-success": 200,
+    "injected-negative": 60,
+    "recovery-wait-success": 20,
+    "soak-selected": 495,
+    "soak-standby": 495,
+    "recovery-wait-retry-negative": 7
+  },
+  "fault_rounds": 20,
+  "steady_state_probes": 990,
+  "steady_state_failures": 0,
+  "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+  "scope": "raw synthetic scenario accounting; retry negatives are bounded startup/restoration only, never retry masking in steady-state soak",
+  "guest_timestamps_are_not_host_wall_clock": true,
+  "physical_router_access": false
+}

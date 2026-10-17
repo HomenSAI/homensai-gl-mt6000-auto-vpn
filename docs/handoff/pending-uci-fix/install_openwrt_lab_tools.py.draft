@@ -1,0 +1,39 @@
+"""Signed local mirror install; preserve default guest feeds byte-for-byte."""
+import json
+from pathlib import Path
+from serial_clone import require_clone,json_command
+require_clone()
+code=r'''import hashlib,json,re,shutil,subprocess,uuid
+from pathlib import Path
+release=Path('/etc/openwrt_release').read_text()
+assert "DISTRIB_TARGET='x86/64'" in release and "DISTRIB_RELEASE='21.02.7'" in release and Path('/tmp/HOMENSAI_VIRTUAL_LAB').is_file()
+kernel=subprocess.check_output(['opkg','list-installed','kernel']).decode().strip()
+assert kernel=='kernel - 5.4.238-1-5a722da41bc36de95a7195be6fce1b45'
+directory=Path('/etc/opkg');backup=Path('/tmp/hs-alpha7-feeds-'+uuid.uuid4().hex[:8]);backup.mkdir(mode=0o700)
+files=list(directory.glob('*.conf'));before={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+report={'scope':'signed official x86 packages in isolated copy; no physical feeds', 'kernel_abi_matches':True}
+try:
+ for path in files:shutil.move(str(path),str(backup/path.name))
+ update=subprocess.run(['opkg','-f','/tmp/homensai-alpha7-opkg.conf','update'],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=90)
+ text=update.stdout.decode(errors='replace');report['signature_checks_passed']=text.count('Signature check passed.')
+ if update.returncode or report['signature_checks_passed']!=3:raise RuntimeError('LAB-FEED-SIGNATURE-OR-UPDATE-FAILED')
+ names=['kmod-tun','kmod-veth','kmod-wireguard','wireguard-tools','openvpn-openssl','openssl-util','conntrack']
+ result=subprocess.run(['opkg','-f','/tmp/homensai-alpha7-opkg.conf','install']+names,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=110)
+ report['opkg_returncode']=result.returncode
+ report['tools_present']={name:bool(shutil.which(name)) for name in ('wg','openvpn','openssl','conntrack')}
+ report['tun_device_present']=Path('/dev/net/tun').exists()
+ report['result']='PASS' if result.returncode==0 and all(report['tools_present'].values()) and report['tun_device_present'] else 'FAIL'
+ if report['result']=='FAIL':report['install_error_lines']=[line for line in result.stdout.decode(errors='replace').splitlines() if any(word in line.lower() for word in ('error','fail','unknown','cannot','mismatch'))][-16:]
+except Exception as error:
+ report.update(result='FAIL',error_type=type(error).__name__,errno=getattr(error,'errno',None),
+               code=str(error) if type(error) is RuntimeError and str(error).startswith('LAB-') else 'LAB-INSTALL-ERROR')
+finally:
+ for path in backup.iterdir():shutil.move(str(path),str(directory/path.name))
+ report['default_feeds_restored']=all(hashlib.sha256((directory/name).read_bytes()).hexdigest()==value for name,value in before.items())
+print('CLONE_JSON:'+json.dumps(report))'''
+try:report=json_command(code,120)
+except RuntimeError as error:
+    report={'result':'FAIL','code':'LAB-TOOL-INSTALL-FAILED','private_output_exported':False}
+Path('/lab/alpha7-protocol-tools.json').write_text(json.dumps(report,indent=2))
+print(json.dumps(report,indent=2))
+raise SystemExit(0 if report.get('result')=='PASS' and report.get('default_feeds_restored') else 1)

@@ -1,0 +1,61 @@
+{
+  "result": "PASS",
+  "passed": 13,
+  "checks": [
+    {
+      "name": "revision-1-hash",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-1-installed",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-1-configuration-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-1-history-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-1-auto-off",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-1-expected-writer",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-hash",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-installed",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-configuration-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-history-preserved",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-auto-off",
+      "result": "PASS"
+    },
+    {
+      "name": "revision-2-expected-writer",
+      "result": "PASS"
+    },
+    {
+      "name": "network-firewall-routing-preserved",
+      "result": "PASS"
+    }
+  ],
+  "scope": "isolated x86 package rollback/reupgrade only; old revision is not recommended for deployment",
+  "private_values_exported": false,
+  "completed_at_utc": "2026-10-16T15:42:01.154207+00:00"
+}

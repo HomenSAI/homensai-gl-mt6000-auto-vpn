@@ -9,8 +9,11 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensa
 import monitor_control as monitor
 
 class MonitorTests(unittest.TestCase):
-    def run_change(self,args,settings=None,status=None,intent=None,transaction=None,result=None):
-        def read(path,default):return intent or {} if path.name=='auto-control.json' else status or {}
+    def run_change(self,args,settings=None,status=None,intent=None,transaction=None,result=None,stopped=None):
+        def read(path,default):
+            if path.name=='auto-control.json':return intent or {}
+            if path.name=='native-stop.json':return stopped or {}
+            return status or {}
         with patch.object(monitor,'control_lock',return_value=nullcontext()),patch.object(monitor,'inventory',return_value={'settings':settings or {}}),patch.object(monitor,'read_json',side_effect=read),patch.object(monitor,'journal_read',return_value=transaction or {}),patch.object(monitor.subprocess,'run',side_effect=result or [types.SimpleNamespace(returncode=0,stdout=b'OK'),types.SimpleNamespace(returncode=0)]) as run:
             answer=monitor.change(args);return answer,run.call_args_list
 
@@ -20,6 +23,20 @@ class MonitorTests(unittest.TestCase):
         payload=json.loads(calls[0].kwargs['input']);self.assertEqual(payload,{'main':{'enabled':'1'},'servers':[]})
         self.assertEqual(calls[1].args[0],['/etc/init.d/homensai-vpn','start'])
 
+    def test_acknowledged_stop_does_not_remain_blocked_by_historical_on_intent(self):
+        context=dict(settings={'native_enabled':False},status={'state':'STOPPED','time':102,'original_restored':True},
+                     intent={'mode':'on','trial':'trial-1','time':100},stopped={'trial':'trial-1','requested':101},
+                     transaction={'phase':'ROLLED-BACK'})
+        answer,calls=self.run_change({'enabled':False},**context)
+        self.assertTrue(answer['accepted']);self.assertEqual(calls[-1].args[0][-1],'stop')
+        for key,value in (('status',{'state':'STOPPED','time':100,'original_restored':True}),
+                          ('stopped',{'trial':'another','requested':101}),
+                          ('transaction',{'phase':'WAIT-CLIENT'}),
+                          ('status',{'state':'STOPPED','time':102,'original_restored':False})):
+            invalid=dict(context);invalid[key]=value
+            result,calls=self.run_change({'enabled':False},**invalid)
+            self.assertFalse(result['accepted']);self.assertEqual(calls,[])
+
     def test_stop_only_when_auto_is_safe(self):
         answer,calls=self.run_change({'enabled':False});self.assertTrue(answer['accepted']);self.assertEqual(calls[1].args[0][-1],'stop')
         for context in ({'settings':{'native_enabled':True}},{'status':{'state':'WAIT-CLIENT'}},{'intent':{'mode':'on'}},{'transaction':{'phase':'RESTORING'}},{'transaction':{'phase':'UNKNOWN'}},{'status':{'guard':'closed'}},{'status':{'state':'STOPPED-ON-RESERVE'}}):
@@ -28,6 +45,12 @@ class MonitorTests(unittest.TestCase):
     def test_invalid_fields_never_write(self):
         for args in ({},{'enabled':'true'},{'enabled':True,'native_enabled':True}):
             answer,calls=self.run_change(args);self.assertFalse(answer['accepted']);self.assertEqual(calls,[])
+
+    def test_pending_delta_refusal_never_starts_or_stops_service(self):
+        for code in ('SETUP-PENDING-DELTA','SETUP-DELTA-UNVERIFIED'):
+            answer,calls=self.run_change({'enabled':True},result=[types.SimpleNamespace(returncode=1,stdout=code.encode())])
+            self.assertFalse(answer['accepted']);self.assertEqual(answer['code'],code)
+            self.assertEqual(len(calls),1)
 
     def test_failed_writer_never_starts_service(self):
         answer,calls=self.run_change({'enabled':True},result=[types.SimpleNamespace(returncode=1,stdout=b'')]);self.assertFalse(answer['accepted']);self.assertEqual(len(calls),1)

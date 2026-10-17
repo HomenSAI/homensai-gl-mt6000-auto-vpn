@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "source_sha256": "94376a1842bab35d37f1d9c67980f0c98cc5062e4a4a4ab88b8fb55d3c3a2513",
+  "host_elapsed_seconds": 7246.56,
+  "guest_elapsed_seconds": 7200.87,
+  "cycles": 495,
+  "passed_checks": 1335,
+  "coverage_complete": true,
+  "scope": "synthetic real local tunnels and selector; not physical GL.iNet native acceptance",
+  "physical_router_access": false
+}

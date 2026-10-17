@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.7.0-alpha4'
+VERSION = '0.7.0-alpha8'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -115,6 +115,9 @@ class Accounting:
             state = ('idle' if not item.get('interface') else 'up' if not code else
                      'down' if code in ('VPN-001', 'VPN-003', 'DNS-001') else 'unknown')
             previous = self.activity_previous.get(key)
+            if previous and now<=previous[0]:
+                if now<previous[0]:self.gaps+=1
+                continue  # Never move a baseline backwards or double-count time.
             beginning = previous[0] if previous else profile.get('last_seen', now)
             interval_state = previous[1] if previous and 0 < now-beginning <= max_gap else 'unknown'
             cursor = max(beginning, now-32*86400)
@@ -151,6 +154,10 @@ class Accounting:
         if not previous:
             return
         old_index, old_rx, old_tx, old_time = previous
+        if now<=old_time:
+            if now==old_time and rx==old_rx and tx==old_tx:
+                self.previous[device]=previous;return
+            self.previous.pop(device,None);self.gaps+=1;self.note_gap(old_time,now);return
         if old_index != ifindex or rx < old_rx or tx < old_tx or now <= old_time or now-old_time > max_gap:
             self.gaps += 1
             self.note_gap(old_time,now)
@@ -418,11 +425,12 @@ def sample_counters(profiles, accounting, now, max_gap):
 
 def sample_wan_counters(data,accounting,now,max_gap=90):
     # WAN firewall-zone interfaces are explicit sources, not guessed default routes.
-    devices=[];seen=set()
+    devices=[];seen=set();links=[]
     for logical in data.get('wan_interfaces',[]):
         if not isinstance(logical,str) or not SAFE.fullmatch(logical):continue
         try:
             interface=json.loads(command(['ubus','call','network.interface.'+logical,'status']))
+            links.append(interface.get('up') if type(interface.get('up')) is bool else None)
             if not interface.get('up') or interface.get('proto') in ('ovpnclient','wgclient','openvpn','wireguard'):continue
             device=interface.get('l3_device','')
             if not SAFE.fullmatch(device) or len(device)>15 or device in seen:continue
@@ -431,7 +439,9 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
             accounting.wan.sample(device,int((root/'ifindex').read_text()),int((root/'statistics/rx_bytes').read_text()),int((root/'statistics/tx_bytes').read_text()),now,max_gap)
             devices.append({'device':device})
         except (OSError,ValueError,subprocess.SubprocessError):
+            links.append(None)
             if accounting.wan:accounting.wan.gaps+=1;accounting.wan.note_gap(now,now)
+    data['uplink_observation']={'time':now,'state':'DOWN' if links and all(v is False for v in links) else 'LINK-UP' if any(v is True for v in links) else 'UNKNOWN','scope':'configured WAN-zone interface link state; not Internet proof'}
     return devices
 
 
@@ -489,7 +499,9 @@ def serve():
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
     speed_previous=None
+    from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
+        scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         started = time.monotonic()
         try:
             data = inventory()
@@ -540,6 +552,9 @@ def serve():
                       'capabilities': {'native_apply': False, 'reason': 'GL.iNet worker/firewall transaction is not device-validated'},
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
+            status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
+            from failure_diagnosis import explain
+            status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
             from candidate_hierarchy import rank_candidates
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,settings.get('plan_source',''),time.time(),max_age=settings.get('interval',30)*3)
@@ -564,7 +579,9 @@ def serve():
                         except (OSError,ValueError):status['telegram']['storage_error']='TELEGRAM-STATE-WRITE-FAILED'
                 except Exception:
                     status['telegram']={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
+            status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
+            finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
             if time.monotonic()-last_save >= settings['checkpoint']:
                 try:
                     checkpoint(accounting);storage_error = None;last_save = time.monotonic()
@@ -573,12 +590,13 @@ def serve():
             events = events[-1000:]
         except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
             atomic_json(RUNTIME/'status.json', {'version': VERSION, 'mode': 'monitor', 'error': 'SYSTEM-001', 'time': time.time()})
+            finish_scan(RUNTIME,read_json,atomic_json,scan_id,'SCAN-MEASUREMENT-FAILED')
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
         while not STOP and time.monotonic()-started < settings['interval']:
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
-                request.unlink();break
+                break
             time.sleep(1)
     try:
         from speed_test import cancel as cancel_speed
@@ -618,12 +636,8 @@ def rpc(method):
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
                           'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False}}));return
     request = sys.stdin.buffer.read(65537)
-    if len(request) > 65536:
-        raise ValueError('oversize RPC input')
-    arguments = json.loads(request) if request.strip() else {}
-    if not isinstance(arguments, dict):
-        raise ValueError('invalid RPC arguments')
-    arguments.pop('ubus_rpc_session', None)  # rpcd injects this; never persist or echo it.
+    from rpc_input import decode_request
+    arguments=decode_request(request)
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok'}:
             raise ValueError('invalid confirmation fields')
@@ -686,8 +700,8 @@ def rpc(method):
     elif method == 'inventory':
         print(json.dumps(inventory(), ensure_ascii=True))
     elif method == 'scan':
-        atomic_json(RUNTIME/'scan.request', {'requested': time.time()})
-        print('{"queued":true}')
+        from scan_control import enqueue
+        print(json.dumps(enqueue(RUNTIME,read_json,atomic_json)))
     elif method in ('native_start','native_stop'):
         from auto_control import start, stop
         result=start() if method=='native_start' else stop(runtime=RUNTIME,persist=PERSIST)
@@ -699,6 +713,8 @@ def rpc(method):
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':
+            from scan_control import public as scan_public
+            status['scan']=scan_public(RUNTIME,read_json)
             from native_history import read_public
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             status['native_history']=read_public(PERSIST)

@@ -17,6 +17,13 @@ def inventory():
             'servers':[{'profile':x,'name':'Name '+x,'channel':'Main','priority':i+1,'enabled':x!='c'} for i,x in enumerate('abc')]}
 
 class PriorityTests(unittest.TestCase):
+    def test_pending_delta_failure_is_propagated_without_success(self):
+        data=inventory();_,revision=priorities.snapshot(data)
+        with patch.object(priorities,'control_lock',return_value=nullcontext()),patch.object(priorities,'inventory',return_value=data),patch.object(priorities,'blocked',return_value=None),patch.object(priorities.subprocess,'run',return_value=types.SimpleNamespace(returncode=1,stdout=b'SETUP-PENDING-DELTA')) as run:
+            answer=priorities.apply({'ordered':['b'],'revision':revision})
+            self.assertFalse(answer['saved']);self.assertEqual(answer['code'],'SETUP-PENDING-DELTA')
+            self.assertEqual(run.call_count,1)
+
     def test_explicit_order_preserves_names_disabled_flags_and_unselected_order(self):
         data=inventory();before=copy.deepcopy(data);rows,_=priorities.proposed(data,['b'])
         self.assertEqual([r['profile'] for r in rows],['b','a','c']);self.assertEqual([r['priority'] for r in rows],[1,2,3])

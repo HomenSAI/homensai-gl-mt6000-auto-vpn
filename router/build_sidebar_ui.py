@@ -16,6 +16,8 @@ assert anchor in source
 source=source.replace(anchor,anchor+"""
     var appRoot=null,settingsHost=null,heading=null,sideState=null,versionBadge=null,pages={},sortStates={},searchTerms={};
     var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['ranking','↕',bi('Server ranking','Рейтинг серверов')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
+    function routerVpnUrl(){return resolveRouterVpnUrl(window.location.href,window.HOMENSAI_PREVIEW_ROUTER_ORIGIN);}
+    function vpnSetupCard(){return E('section',{'class':'hv-chart-card hv-vpn-setup'},[E('div',{'class':'hv-auto-power-unit'},[E('a',{'class':'hv-auto-power hv-vpn-configure','href':routerVpnUrl()||null,'aria-disabled':routerVpnUrl()?null:'true','title':routerVpnUrl()?null:bi('Router address unavailable in this preview','Адрес роутера недоступен в этом просмотре'),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('Open router VPN settings (opens a new tab)','Открыть настройки VPN роутера (новая вкладка)')},E('span',{'aria-hidden':'true','class':'hv-configure-symbol'},'⚙')),E('strong',{'class':'hv-auto-action'},bi('Configure VPN','Настроить VPN'))]),E('p',{},bi('Add servers and connection keys in the router VPN Client Profile page. Monitoring and failover priorities are configured here.','Добавляйте серверы и ключи на странице VPN Client Profile роутера. Мониторинг и приоритеты переключения настраиваются здесь.'))]);}
     function validTab(key){return tabs.some(function(t){return t[0]===key;});}
     var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab='overview';
     function showPage(key){
@@ -138,7 +140,7 @@ old="Object.keys(p.days||{}).forEach(function(day){"
 assert old in source
 source=source.replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).forEach(function(k){totals[k]=p.periods[period][k]||0;});}else Object.keys(p.days||{}).forEach(function(day){")
 source=source.replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
-source=source.replace('?build=060-alpha1','?build=070-alpha4')
+source=source.replace('?build=060-alpha1','?build=070-alpha8')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
 source=source.replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
@@ -162,5 +164,49 @@ source=source.replace(old,'loadInventory(0)')
 source=source.replace("object:'homensai-vpn',", "object:'homensai-vpn',reject:true,")
 source=source.replace("      sortableTables();showPage(activeTab);", "      if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));\n      sortableTables();showPage(activeTab);")
 source=source.replace("settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}", "settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}")
-(root/'dashboard25.js').write_text(source,encoding='utf8')
-print('Generated dashboard25.js with sidebar, language persistence and sortable tables')
+source=source.replace('return view.extend({',(Path(__file__).parent/'ui_logic.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("active.sort(function(a,b){return Number(!!a.code)-Number(!!b.code);}).forEach", "sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach")
+source=source.replace("'class':'hv-server '+(p.code?'hv-degraded':'')", "'class':'hv-server hv-health-'+profileHealth(p,Date.now()/1000).state,'data-profile':p.id,'data-health':profileHealth(p,Date.now()/1000).state")
+source=source.replace('badge(p.code)','healthBadge(p)')
+source=source.replace("sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000)","sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000)")
+source=source.replace("E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-protocol'}", "E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-server-lamp hv-lamp-'+profileHealth(p,Date.now()/1000).state,'role':'img','aria-label':profileHealth(p,Date.now()/1000).label,'title':profileHealth(p,Date.now()/1000).label}),E('span',{'class':'hv-protocol'}")
+
+source=source.replace("var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');", "var headers=table.querySelectorAll('tr:first-child th'),tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+':'+Array.from(headers).map(function(th){return th.textContent;}).join('|');")
+source=source.replace("var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;", "return compareTableValues(a.value,b.value,direction)||a.i-b.i;")
+source=source.replace('return view.extend({',(Path(__file__).parent/'analytics_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);", "var controlCard=renderAutoControl(status,inventory);put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));")
+source=source.replace("put('events',historyPanel)", "put('events',historyPanel);put('events',renderTransitionAnalytics(status))")
+source=source.replace('ui13.css','ui15.css')
+source=source.replace('put(\'channels\',E(\'h3\',{},tr("Подключённые VPN-серверы")))',"put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')))")
+source=source.replace('return view.extend({',(Path(__file__).parent/'router_link.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+source=source.replace("p.channel+' · '+p.interface","(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён'))")
+source=source.replace("Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'")
+source=source.replace("if(!active.length)cards.appendChild", "if(!rows.length)cards.appendChild")
+source=source.replace("healthy=active.filter(function(p){return !p.code;})","healthy=active.filter(function(p){return profileHealth(p,Date.now()/1000).state==='healthy';})")
+source=source.replace("cell(p.rtt_ms)","cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)")
+# Approved interaction/visual review: request-correlated checks and explicit actions.
+source=source.replace('return view.extend({',(Path(__file__).parent/'connectivity_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+old="E('button',{'type':'button','class':'btn hv-test','click':function(){return scanCall().then(function(){return statusCall().then(draw);}).catch(function(){ui.addNotification(null,E('p',{},bi('Probe request failed. See service status.','Запрос проверки не прошёл. Смотрите состояние службы.')));});}},bi('Probe now','Проверить сейчас'))"
+assert old in source
+source=source.replace(old,"renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
+source=source.replace('function draw(status){','function draw(status){\n      updateConnectivityCheck(status);')
+source=source.replace("      if(heading)heading.textContent=", "      if(appRoot){var checks=appRoot.querySelector('.hv-connectivity-control');if(checks)checks.hidden=key!=='overview';}\n      if(heading)heading.textContent=")
+source=source.replace("bi('Configure VPN','Настроить VPN')", "bi('Open router VPN settings ↗','Открыть настройки VPN роутера ↗')")
+source=source.replace("bi('Operator tests','Операторские тесты')", "bi('Diagnostics','Диагностика')")
+source=source.replace("E('div',{'class':'hv-server-top'},", "E('div',{'class':'hv-server-top'},")
+source=source.replace("healthBadge(p)]", "healthBadge(p),E('span',{'class':'hv-profile-detail'},bi('Connection: ','Подключение: ')+(p.interface?bi('Connected','Подключён'):bi('Inactive','Неактивен'))+' · '+bi('Traffic: ','Трафик: ')+(selectedProfile(status,Date.now()/1000)===p.id?bi('Selected','Выбран'):bi('Not confirmed as selected','Выбор не подтверждён'))+' · '+bi('Priority: ','Приоритет: ')+(p.priority||100))]",1)
+
+source=source.replace("put('overview',renderCascadePath(status));","put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));")
+source=source.replace("var appRoot=null,settingsHost", "var pointerHeld=false,deferredStatus=null;\n    var appRoot=null,settingsHost")
+source=source.replace("function draw(status){", "function draw(status){\n      if(pointerHeld){deferredStatus=status;updateConnectivityCheck(status);return;}\n      var controlFocus=panel.contains(document.activeElement)&&document.activeElement.matches('button,input[type=checkbox],select')?{page:(document.activeElement.closest('[data-hv-page]')||{dataset:{hvPage:activeTab}}).dataset.hvPage,label:document.activeElement.getAttribute('aria-label'),text:document.activeElement.textContent,tag:document.activeElement.tagName}:null;")
+source=source.replace("      if(inventory.error)put('overview'", "      if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}\n      if(inventory.error)put('overview'")
+source=source.replace("      showPage(activeTab);window.addEventListener", "      panel.addEventListener('pointerdown',function(){pointerHeld=true;});\n      ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});\n      showPage(activeTab);window.addEventListener")
+
+source=source.replace("put('overview',planning);","put('tests',planning);")
+source=source.replace('ui15.css','ui19.css')
+(root/'dashboard38.js').write_text(source,encoding='utf8')
+print('Generated dashboard38.js with sidebar, language persistence and sortable tables')
+
+controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
+import re
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard38',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

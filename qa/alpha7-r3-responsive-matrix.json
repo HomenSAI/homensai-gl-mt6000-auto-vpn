@@ -1,0 +1,443 @@
+{
+  "scope": "real browser; synthetic offline fixture; not physical router data",
+  "asset": "dashboard29.js",
+  "asset_sha256": "7dc93fb4af027adae58317a29b507f8ae812dde94bf07dc3299c82fbf22e69ad",
+  "cases": [
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "overview",
+      "document_width": 345,
+      "active_page_keys": [
+        "overview"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "channels",
+      "document_width": 345,
+      "active_page_keys": [
+        "channels"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "tests",
+      "document_width": 345,
+      "active_page_keys": [
+        "tests"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "statistics",
+      "document_width": 345,
+      "active_page_keys": [
+        "statistics"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "ranking",
+      "document_width": 345,
+      "active_page_keys": [
+        "ranking"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "traffic",
+      "document_width": 345,
+      "active_page_keys": [
+        "traffic"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "services",
+      "document_width": 345,
+      "active_page_keys": [
+        "services"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "events",
+      "document_width": 345,
+      "active_page_keys": [
+        "events"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 360,
+      "height": 900,
+      "page": "settings",
+      "document_width": 345,
+      "active_page_keys": [
+        "settings"
+      ],
+      "visible_markers": 2,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "overview",
+      "document_width": 1265,
+      "active_page_keys": [
+        "overview"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "channels",
+      "document_width": 1265,
+      "active_page_keys": [
+        "channels"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "tests",
+      "document_width": 1280,
+      "active_page_keys": [
+        "tests"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "statistics",
+      "document_width": 1265,
+      "active_page_keys": [
+        "statistics"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "ranking",
+      "document_width": 1265,
+      "active_page_keys": [
+        "ranking"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "traffic",
+      "document_width": 1280,
+      "active_page_keys": [
+        "traffic"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "services",
+      "document_width": 1280,
+      "active_page_keys": [
+        "services"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "events",
+      "document_width": 1265,
+      "active_page_keys": [
+        "events"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "en",
+      "width": 1280,
+      "height": 900,
+      "page": "settings",
+      "document_width": 1265,
+      "active_page_keys": [
+        "settings"
+      ],
+      "visible_markers": 2,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "overview",
+      "document_width": 1265,
+      "active_page_keys": [
+        "overview"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "channels",
+      "document_width": 1265,
+      "active_page_keys": [
+        "channels"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "tests",
+      "document_width": 1280,
+      "active_page_keys": [
+        "tests"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "statistics",
+      "document_width": 1265,
+      "active_page_keys": [
+        "statistics"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "ranking",
+      "document_width": 1265,
+      "active_page_keys": [
+        "ranking"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "traffic",
+      "document_width": 1280,
+      "active_page_keys": [
+        "traffic"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "services",
+      "document_width": 1280,
+      "active_page_keys": [
+        "services"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "events",
+      "document_width": 1265,
+      "active_page_keys": [
+        "events"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 1280,
+      "height": 900,
+      "page": "settings",
+      "document_width": 1265,
+      "active_page_keys": [
+        "settings"
+      ],
+      "visible_markers": 2,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "overview",
+      "document_width": 345,
+      "active_page_keys": [
+        "overview"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "channels",
+      "document_width": 345,
+      "active_page_keys": [
+        "channels"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "tests",
+      "document_width": 345,
+      "active_page_keys": [
+        "tests"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "statistics",
+      "document_width": 345,
+      "active_page_keys": [
+        "statistics"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "ranking",
+      "document_width": 345,
+      "active_page_keys": [
+        "ranking"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "traffic",
+      "document_width": 345,
+      "active_page_keys": [
+        "traffic"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "services",
+      "document_width": 345,
+      "active_page_keys": [
+        "services"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "events",
+      "document_width": 345,
+      "active_page_keys": [
+        "events"
+      ],
+      "visible_markers": 1,
+      "pass": true
+    },
+    {
+      "language": "ru",
+      "width": 360,
+      "height": 900,
+      "page": "settings",
+      "document_width": 345,
+      "active_page_keys": [
+        "settings"
+      ],
+      "visible_markers": 2,
+      "pass": true
+    }
+  ],
+  "passed": 36,
+  "failed": 0,
+  "viewport_reset": true,
+  "initial_assertion_correction": "settings contains two legitimate markers for one active page; validate unique active key, not raw marker count"
+}

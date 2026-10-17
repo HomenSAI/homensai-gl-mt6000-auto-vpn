@@ -36,25 +36,111 @@ function Assert-LanPath {
     }
     if(@(Get-NetRoute -DestinationPrefix '::/0' -ErrorAction SilentlyContinue|Where-Object {$_.State -ne 'Unreachable'}).Count){throw 'CLIENT-IPV6-DEFAULT-UNVERIFIED'}
 }
-function Test-ClientInternet {
+# Source-bound IPv4 witness. These functions change no routes or adapters.
+function Get-ClientBinding {
     Assert-LanPath
-    $answers=@(Resolve-DnsName example.com -Type A -Server $Router.Host -DnsOnly|Where-Object {$_.Type -eq 'A'})
-    if($answers.Count -eq 0){throw 'CLIENT-DNS-FAILED'}
-    if($CableInterface -gt 0) {
-        $exits=@()
-        foreach($destination in @('1.1.1.1','1.0.0.1')) {
-            $text=& curl.exe --interface $script:CableAddress --connect-timeout 5 --max-time 10 --fail --silent "https://$destination/cdn-cgi/trace"
-            if($LASTEXITCODE -ne 0){throw 'CLIENT-CABLE-HTTPS-FAILED'}
-            $exits+=Get-TraceIPv4 ($text -join "`n")
-        }
-        if($exits[0] -ne $exits[1]){throw 'CLIENT-CABLE-EXIT-INCONSISTENT'}
-        return $exits[0]
+    $index=$CableInterface
+    if($index -le 0){
+        $route=@(Find-NetRoute -RemoteIPAddress '1.1.1.1'|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+        if($route.Count -ne 1 -or $route[0].NextHop -ne $Router.Host){throw 'CLIENT-GATEWAY-MISMATCH'}
+        $index=$route[0].InterfaceIndex
     }
-    $page=Invoke-WebRequest 'https://example.com/' -NoProxy -TimeoutSec 10
-    if($page.StatusCode -ne 200){throw 'CLIENT-HTTPS-FAILED'}
-    $trace=Invoke-WebRequest 'https://1.1.1.1/cdn-cgi/trace' -NoProxy -TimeoutSec 10
-    if($trace.StatusCode -ne 200){throw 'CLIENT-TRACE-FAILED'}
-    return Get-TraceIPv4 $trace.Content
+    $addresses=@(Get-NetIPAddress -InterfaceIndex $index -AddressFamily IPv4|Where-Object {$_.AddressState -eq 'Preferred' -and $_.IPAddress -notlike '169.254.*'})
+    if($addresses.Count -ne 1){throw 'CLIENT-BOUND-ADDRESS-AMBIGUOUS'}
+    if($CableInterface -gt 0 -and $addresses[0].IPAddress -ne $script:CableAddress){throw 'CLIENT-BOUND-ADDRESS-CHANGED'}
+    return @{Index=[int]$index;Address=[string]$addresses[0].IPAddress}
+}
+function Assert-ClientBinding($Expected,$Observed) {
+    if($Expected.Index -le 0 -or $Observed.Index -ne $Expected.Index -or $Observed.Address -ne $Expected.Address){throw 'CLIENT-BOUND-INTERFACE-CHANGED'}
+}
+function New-DnsQuery([int]$Id) {
+    if($Id -lt 0 -or $Id -gt 65535){throw 'CLIENT-DNS-ID'}
+    $bytes=[Collections.Generic.List[byte]]::new()
+    $bytes.AddRange([byte[]]@(($Id -shr 8),($Id -band 255),1,0,0,1,0,0,0,0,0,0))
+    foreach($label in @('example','com')){$bytes.Add([byte]$label.Length);$bytes.AddRange([Text.Encoding]::ASCII.GetBytes($label))}
+    $bytes.AddRange([byte[]]@(0,0,1,0,1))
+    return ,$bytes.ToArray()
+}
+function Read-DnsNameEnd([byte[]]$Packet,[int]$Offset) {
+    for($i=0;$i -lt 128;$i++){
+        if($Offset -ge $Packet.Length){throw 'CLIENT-DNS-NAME'}
+        $size=[int]$Packet[$Offset]
+        if($size -eq 0){return ($Offset+1)}
+        if(($size -band 192) -eq 192){
+            if($Offset+1 -ge $Packet.Length){throw 'CLIENT-DNS-POINTER'}
+            $pointer=(($size -band 63) -shl 8) -bor $Packet[$Offset+1]
+            if($pointer -ge $Packet.Length){throw 'CLIENT-DNS-POINTER'}
+            return ($Offset+2)
+        }
+        if(($size -band 192) -ne 0 -or $size -gt 63 -or $Offset+1+$size -gt $Packet.Length){throw 'CLIENT-DNS-NAME'}
+        $Offset+=1+$size
+    }
+    throw 'CLIENT-DNS-NAME-LIMIT'
+}
+function Test-DnsReply([byte[]]$Reply,[byte[]]$Query) {
+    if($Reply.Length -lt $Query.Length -or $Reply.Length -gt 4096 -or $Reply[0] -ne $Query[0] -or $Reply[1] -ne $Query[1]){throw 'CLIENT-DNS-REPLY'}
+    $flags=([int]$Reply[2] -shl 8) -bor $Reply[3]
+    if(($flags -band 32768) -eq 0 -or ($flags -band 30735) -ne 0 -or ($flags -band 512) -ne 0 -or $Reply[4] -ne 0 -or $Reply[5] -ne 1){throw 'CLIENT-DNS-FLAGS'}
+    # Require the exact echoed question; never accept a reply to another query.
+    for($i=12;$i -lt $Query.Length;$i++){if($Reply[$i] -ne $Query[$i]){throw 'CLIENT-DNS-QUESTION'}}
+    $answers=([int]$Reply[6] -shl 8) -bor $Reply[7]
+    if($answers -lt 1 -or $answers -gt 64){throw 'CLIENT-DNS-ANSWER-COUNT'}
+    $offset=$Query.Length;$found=$false
+    for($i=0;$i -lt $answers;$i++){
+        $offset=Read-DnsNameEnd $Reply $offset
+        if($offset+10 -gt $Reply.Length){throw 'CLIENT-DNS-ANSWER'}
+        $type=([int]$Reply[$offset] -shl 8) -bor $Reply[$offset+1]
+        $class=([int]$Reply[$offset+2] -shl 8) -bor $Reply[$offset+3]
+        $size=([int]$Reply[$offset+8] -shl 8) -bor $Reply[$offset+9]
+        $offset+=10
+        if($offset+$size -gt $Reply.Length){throw 'CLIENT-DNS-RDATA'}
+        if($type -eq 1 -and $class -eq 1 -and $size -eq 4){$found=$true}
+        $offset+=$size
+    }
+    if(-not $found){throw 'CLIENT-DNS-NO-A'}
+    return $true
+}
+function Test-BoundDns($Binding) {
+    $random=[Security.Cryptography.RandomNumberGenerator]::GetBytes(2)
+    $id=([int]$random[0] -shl 8) -bor $random[1]
+    $query=New-DnsQuery $id
+    $client=[Net.Sockets.UdpClient]::new([Net.Sockets.AddressFamily]::InterNetwork)
+    try {
+        $client.Client.Bind([Net.IPEndPoint]::new([Net.IPAddress]::Parse($Binding.Address),0))
+        $client.Client.ReceiveTimeout=5000
+        $server=[Net.IPEndPoint]::new([Net.IPAddress]::Parse($Router.Host),53)
+        $null=$client.Send($query,$query.Length,$server)
+        $sender=[Net.IPEndPoint]::new([Net.IPAddress]::Any,0)
+        $reply=$client.Receive([ref]$sender)
+        if($sender.Address.ToString() -ne $Router.Host -or $sender.Port -ne 53){throw 'CLIENT-DNS-SENDER'}
+        return (Test-DnsReply $reply $query)
+    } finally {$client.Dispose()}
+}
+function New-ClientConfirmation($Native,[double]$Now,[double]$ObservedAt,$Binding,$ObservedBinding,[string]$Exit,$Consumed,$DnsVerified,$HttpsVerified) {
+    Assert-ClientBinding $Binding $ObservedBinding
+    if($DnsVerified -isnot [bool] -or $HttpsVerified -isnot [bool] -or -not $DnsVerified -or -not $HttpsVerified){throw 'CLIENT-PROOF-UNVERIFIED'}
+    if(-not [double]::IsFinite($Now) -or -not [double]::IsFinite($ObservedAt) -or $ObservedAt -gt $Now -or $Now-$ObservedAt -gt 30){throw 'CLIENT-PROOF-STALE'}
+    if($Native.state -ne 'WAIT-CLIENT' -or $Native.tx -cnotmatch '^[a-f0-9]{32}$' -or $Consumed.Contains([string]$Native.tx) -or $Consumed.Count -ge 64){throw 'CLIENT-PROOF-TRANSACTION'}
+    $time=[double]$Native.time;$deadline=[double]$Native.deadline
+    if(-not [double]::IsFinite($time) -or -not [double]::IsFinite($deadline) -or $time -le 0 -or $time -gt $ObservedAt -or $Now-$time -gt 30 -or $Now -ge $deadline){throw 'CLIENT-PROOF-DEADLINE'}
+    if($Exit -ne $Native.expected_exit){throw 'CLIENT-EXIT-MISMATCH'}
+    $address=$null
+    if(-not [Net.IPAddress]::TryParse($Exit,[ref]$address) -or $address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork){throw 'CLIENT-EXIT-IPV4'}
+    return @{tx=$Native.tx;exit_ipv4=$Exit;dns_ok=$true;https_ok=$true}
+}
+
+function Test-ClientInternet {
+    $binding=Get-ClientBinding
+    $null=Test-BoundDns $binding
+    $exits=@()
+    foreach($destination in @('1.1.1.1','1.0.0.1')) {
+        $text=& curl.exe --interface $binding.Address --connect-timeout 5 --max-time 10 --fail --silent "https://$destination/cdn-cgi/trace"
+        if($LASTEXITCODE -ne 0){throw 'CLIENT-CABLE-HTTPS-FAILED'}
+        $exits+=Get-TraceIPv4 ($text -join "`n")
+    }
+    Assert-ClientBinding $binding (Get-ClientBinding)
+    if($exits[0] -ne $exits[1]){throw 'CLIENT-CABLE-EXIT-INCONSISTENT'}
+    return $exits[0]
 }
 function Invoke-Router([string]$Object,[string]$Method,[hashtable]$Arguments) {
     $body=@{jsonrpc='2.0';id=1;method='call';params=@($script:Session,$Object,$Method,$Arguments)}|ConvertTo-Json -Depth 10 -Compress
@@ -87,7 +173,33 @@ if($SelfTest) {
         $rejected=$false;try {$null=Get-TraceIPv4 $text}catch{$rejected=$true}
         if(-not $rejected){throw 'SELFTEST-TRACE-REJECT'}
     }
-    Write-Output 'PASS: input validation; no network calls or router changes.';exit 0
+    $query=New-DnsQuery 1234
+    $reply=[byte[]]($query+[byte[]]@(192,12,0,1,0,1,0,0,0,60,0,4,9,9,9,9))
+    $reply[2]=129;$reply[3]=128;$reply[7]=1
+    if(-not (Test-DnsReply $reply $query)){throw 'SELFTEST-DNS'}
+    foreach($kind in @('id','question','rcode','truncated','no-answer','bad-pointer','rdata')){
+        $bad=$reply.Clone()
+        switch($kind){'id'{$bad[0]=0};'question'{$bad[13]=0};'rcode'{$bad[3]=131};'truncated'{$bad[2]=131};'no-answer'{$bad[7]=0};'bad-pointer'{$bad[$query.Length+1]=255};'rdata'{$bad[$query.Length+11]=255}}
+        $rejected=$false;try {$null=Test-DnsReply $bad $query}catch{$rejected=$true}
+        if(-not $rejected){throw 'SELFTEST-DNS-REJECT'}
+    }
+    $binding=@{Index=3;Address='192.168.8.2'};$seen=[Collections.Generic.HashSet[string]]::new()
+    foreach($tx in @(('a'*32),('b'*32),('c'*32))){
+        $native=@{state='WAIT-CLIENT';tx=$tx;time=100;deadline=125;expected_exit='9.9.9.9'}
+        $proof=New-ClientConfirmation $native 102 101 $binding $binding '9.9.9.9' $seen $true $true
+        if($proof.tx -ne $tx -or $proof.dns_ok -ne $true -or $proof.https_ok -ne $true){throw 'SELFTEST-PROOF'}
+        $null=$seen.Add($tx)
+        $rejected=$false;try {$null=New-ClientConfirmation $native 102 101 $binding $binding '9.9.9.9' $seen $true $true}catch{$rejected=$true}
+        if(-not $rejected){throw 'SELFTEST-PROOF-REPLAY'}
+    }
+    foreach($kind in @('interface','address','exit','stale','future','deadline','state','dns','https','unknown-dns')){
+        $native=@{state='WAIT-CLIENT';tx=('d'*32);time=100;deadline=125;expected_exit='9.9.9.9'}
+        $observed=@{Index=3;Address='192.168.8.2'};$exit='9.9.9.9';$stamp=101;$now=102;$dns=$true;$https=$true
+        switch($kind){'interface'{$observed.Index=4};'address'{$observed.Address='192.168.8.3'};'exit'{$exit='8.8.8.8'};'stale'{$now=140};'future'{$stamp=103};'deadline'{$native.deadline=102};'state'{$native.state='COMMITTED'};'dns'{$dns=$false};'https'{$https=$false};'unknown-dns'{$dns=1}}
+        $rejected=$false;try {$null=New-ClientConfirmation $native $now $stamp $binding $observed $exit $seen $dns $https}catch{$rejected=$true}
+        if(-not $rejected){throw 'SELFTEST-PROOF-REJECT'}
+    }
+    Write-Output 'PASS: input/DNS parsers, three sequential witnesses, replay/interface/exit/freshness/DNS/HTTPS refusals; no network calls or router changes.';exit 0
 }
 
 $script:Session=$null;$script:ProbeRoutes=@();$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
@@ -138,13 +250,22 @@ try {
     Write-Host 'A brief outage is possible. Original policy must be restored after the first trial.'
     if((Read-Host 'Type TEST to start') -cne 'TEST'){throw 'CLIENT-CANCELLED'}
     Save-OwnSettings @{native_enabled='1';native_trial=$trial;native_until=$Until.ToString('o');native_session_loss='1'}
-    $started=$true;$lastTx=$null;$end=[DateTimeOffset]::UtcNow.AddSeconds(100)
+    $started=$true;$lastTx=$null;$confirmedTx=[Collections.Generic.HashSet[string]]::new();$end=[DateTimeOffset]::UtcNow.AddSeconds(100)
     while([DateTimeOffset]::UtcNow -lt $Until -and [DateTimeOffset]::UtcNow -lt $end) {
         $status=Invoke-Router 'homensai-vpn' 'status' @{};$native=$status.native_failover
         if($native.state -eq 'WAIT-CLIENT' -and $native.tx -ne $lastTx) {
+            $beforeBinding=Get-ClientBinding
+            $probeStarted=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()/1000.0
             $exit=Test-ClientInternet
-            if($exit -ne $native.expected_exit){throw 'CLIENT-EXIT-MISMATCH'}
-            $null=Invoke-Router 'homensai-vpn' 'native_confirm' @{tx=$native.tx;exit_ipv4=$exit;dns_ok=$true;https_ok=$true}
+            $afterBinding=Get-ClientBinding
+            $now=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()/1000.0
+            $proof=New-ClientConfirmation $native $now $probeStarted $beforeBinding $afterBinding $exit $confirmedTx $true $true
+            # Re-read pending identity after probing; the typed RPC checks it again.
+            $latest=(Invoke-Router 'homensai-vpn' 'status' @{}).native_failover
+            if($latest.state -ne 'WAIT-CLIENT' -or $latest.tx -ne $native.tx -or $latest.expected_exit -ne $native.expected_exit){throw 'CLIENT-TRANSACTION-CHANGED'}
+            $accepted=Invoke-Router 'homensai-vpn' 'native_confirm' $proof
+            if($accepted.accepted -ne $true){throw 'CLIENT-CONFIRM-NOT-ACCEPTED'}
+            $null=$confirmedTx.Add([string]$native.tx)
             $lastTx=$native.tx
         }
         if($native.state -eq 'ARMED' -and $native.reason -eq 'TRIAL-PASSED') {

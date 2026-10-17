@@ -17,6 +17,8 @@ class AgentIntegrationTests(unittest.TestCase):
             path=Path(directory);data={'profiles':[{'id':'wireguard:peer_1','name':'Example','interface':'wgclient1','protocol':'wireguard'}],
                 'servers':[],'wan_interfaces':['wan'],'settings':{'interval':30,'checkpoint':900,'probe_limit':16,'plan_enabled':False}}
             for name,value in [('RUNTIME',path),('PERSIST',path),('STOP',False)]:stack.enter_context(patch.object(agent,name,value))
+            stack.enter_context(patch('auto_control.RUNTIME',path))
+            stack.enter_context(patch('auto_control.PERSIST',path))
             stack.enter_context(patch.object(agent,'inventory',return_value=data))
             stack.enter_context(patch.object(agent,'restore',return_value=(agent.Accounting(),None)))
             stack.enter_context(patch.object(agent,'probe',return_value={'id':'wireguard:peer_1','time':1792000000,'code':None,'device':'wgclient1','dns_ok':True,'https_success':3,'rtt_ms':30}))

@@ -1,31 +1,25 @@
-# Project state
+# Project state - 17 October 2026
 
-Updated 2026-10-16, Europe/Berlin. Keep physical-device evidence, virtual OpenWrt evidence and synthetic UI fixtures distinct.
+## Current release candidate
 
-## Physical device — historical record only
+Alpha8-1, dashboard38 / ui19. Brighter raised actions, 18px health indicators, request-correlated manual checks with explicit empty/failure results, separate connection/health/selected states, failure diagnosis, configured-threshold explanations and adaptive failed-hop quarantine in the pure cascade model. English default, optional Russian.
 
-Last installed application recorded in this task: 0.6.0-alpha5 on GL.iNet GL-MT6000 / Flint 2, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, kernel 5.4.238, Python 3.9.15, LuCI git-22.335.71649-0ecaf74. This work window did not query or change the device.
+Exact tested code snapshot: aafdac37f0ed7a23364cd9f4f1e65bdefed32c91. Final candidate/package snapshot 22b75b8500acc6bb13af302b0cbea0124f440a66 also passed immutable CI. 329 application and 30 QA tests per runtime, 12 UI suites; Python 3.9/Lua zero skips, Python 3.11 control seven Lua skips. Additional 200-case fault-model suite PASS. See ALPHA8-UX-ALGORITHMS-RESULTS.md.
 
-Previous bounded IPv4 transitions and rollback were demonstrated between two already-connected catchall VPN profiles. This is not acceptance of arbitrary hierarchy, unattended production, IPv6 or power-loss recovery. The historical CLIENT-CABLE-NOT-LOCAL and browser HTTP 403 causes remain unresolved. See the timestamped WORKLOG and TESTED-ENVIRONMENT.en.md.
+## Physical device - historical, not rechecked
 
-## Current local candidate
+Last separately recorded hardware installation: alpha7-2, Auto OFF; no alpha8 installation or physical test occurred during this local/publication task. Device: GL.iNet GL-MT6000 / Flint 2, firmware 4.11.0, OpenWrt 21.02-SNAPSHOT r15812+1095-46b6ee7ffc, kernel 5.4.238. Complete environment evidence remains in TESTED-ENVIRONMENT.en.md and timestamped WORKLOG.
 
-0.7.0-alpha2: sidebar dashboard25/ui13, English default with optional Russian, Auto state/power control, system/Telegram wizards, calendar reports, bound speed tests with conservative quotas, daily WAN/VPN accounting, read-only hierarchy recommendations and guarded monitor lifecycle control. Speed testing is off by default. Monitor start is separate from native Auto start. Native switching remains bounded and client-certified.
+Earlier bounded transitions/rollback between two already-connected catchall profiles do not certify arbitrary multi-hop hierarchy, unattended production, real inactive-provider startup, IPv6 or hardware power recovery. Historical HTTP 403 and cable-path causes remain bounded by their actual evidence.
 
-No router installation is authorized now. Continue local Git/Gitea first, then the identical reviewed GitHub tree; do not deploy without a new device window.
+## Virtual evidence
 
-## Virtual acceptance
+Isolated OpenWrt 21.02.7 x86/64 VM installation/UCI/procd/package checks and later local protocol runs have separate evidence. Overnight protocol runs used four real local synthetic tunnels and a standalone namespace selector, not the GL.iNet native adapter and not alpha8's current source. Preserve all earlier FAIL/STOPPED records and unknown causes. See OVERNIGHT-TEST-REPORT-2026-10-17.md and PROTOCOL-SOAK-FINAL-2026-10-17.md.
 
-Actual OpenWrt 21.02.7 x86/64 under QEMU TCG inside isolated Docker, kernel 5.4.238 / Python 3.9.16. Installation, typed RPC, real UCI writer, profile-metadata save, monitor start/stop/fresh data, configuration preservation and own-monitor process recovery passed. The guest and Debian suites each passed 169 tests. Exact scope and unresolved warm-reboot behavior: ../qa/OPENWRT-VIRTUAL-REPORT.md.
+## Remaining acceptance
 
-The native adapter refuses this generic board and missing vendor environment. No real VPN tunnel transition was performed in this virtual acceptance. Do not equate the 256 read-only hierarchy combinations with native switching.
+Actual vendor worker arbitration, per-edge native hierarchy, isolated provider probes, transaction-bound LAN DNS/HTTPS/exit witness and real rollback/offload behavior need a new physical test window. Guards remain enabled. No direct-WAN fallback is introduced. Physical deployment remains separate from the user's approved GitHub main publication.
 
-## Remaining
+## Publication
 
-- Complete actual LuCI forms/browser acceptance and all responsive sections; current browser language/layout checks use a visibly labelled synthetic fixture.
-- Operator fault button with independent cleanup, native hierarchy adapters, safe inactive-profile activation and vendor writer coordination.
-- Explicit application of ranked priorities and full recovery-settings wizard.
-- Native executor crash, IPv6, router reboot and physical power-loss acceptance in an authorized device window.
-- Telegram delivery acknowledgement and calendar reports against an approved destination; local tests do not send messages.
-
-No full production-readiness claim is justified.
+The user approved GitHub main publication on 17 October 2026. Preserve existing public history using a reviewed canonical snapshot with GitHub main as parent, save locally/Gitea first, then normal non-forced push. Historical conflicting tags remain unchanged; public release mapping is separate. See PUBLICATION.md.

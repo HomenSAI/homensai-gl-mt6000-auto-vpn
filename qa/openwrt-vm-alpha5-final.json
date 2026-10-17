@@ -1,0 +1,10 @@
+{
+  "time_utc": "2026-10-16T07:30:00Z",
+  "scope": "Isolated QEMU x86 OpenWrt; no real VPN profiles",
+  "package_sha256": "a14d1c6bae2be64eb398fa8873b2cabb53589d988655ce93cb93982fbb34cd6a",
+  "install_pass": true,
+  "python_suite_pass": true,
+  "network_firewall_unchanged": true,
+  "native_enabled": "0",
+  "test_output": "/tmp/tmp_m766dj0/out/homensai-auto-vpn_0.7.0-alpha5-1_all.ipk 1068 bytes 455758e8d30179fee24066b0c56c7ba22f4b87fe744919eeffc45fc4d1dbfaf4\n/tmp/tmpivrr_ldm/homensai-auto-vpn_0.7.0-alpha5-1_all.ipk 425976 bytes a14d1c6bae2be64eb398fa8873b2cabb53589d988655ce93cb93982fbb34cd6a\n/tmp/tmpivrr_ldm/homensai-auto-vpn_0.7.0-alpha5-1_all.ipk 425976 bytes a14d1c6bae2be64eb398fa8873b2cabb53589d988655ce93cb93982fbb34cd6a\n/tmp/tmps5aeinbv/out/homensai-auto-vpn_0.7.0-alpha5-1_all.ipk 1156 bytes 66ded0b65de97bfb0853f10c8c0d7f501c3579371a60b8bf0a89873e03f77681\n----------------------------------------------------------------------\nRan 202 tests in 68.269s\n\nOK\n"
+}

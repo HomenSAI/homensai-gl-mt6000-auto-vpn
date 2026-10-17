@@ -1,0 +1,13 @@
+{
+  "scope": "Private isolated restore of official post-alpha6 Gitea dump",
+  "zip_crc": "PASS",
+  "database_integrity": "ok",
+  "configuration_present": true,
+  "vpn_repository_present": true,
+  "alpha6_release_present": true,
+  "release_attachment_count": 2,
+  "uploaded_ipk_sha256": "0cb57faa967f3cfc42caebb48be0f2bd9f31081eeb959692be6acf941ca1d85a",
+  "transactional_restore": true,
+  "live_service_changed": false,
+  "globally_atomic_across_other_writers": false
+}

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0-alpha6 — complete offline model and UI acceptance
+
+- Pure multi-hop cascade, per-hop/root rollback, stop/restart reconciliation and bounded failure guards; no new native route authorization.
+- Freshness-aware colors/selected-first cards, stable sorting/filtering, mobile layouts and complete generated-text English coverage.
+- Harden selected primary/reserve wizard validation and single-flight/error handling.
+- Fix clock-regression double counting; test calendar/DST boundaries and 200 statistical sequences.
+- Shared SDK/IPK payload selection, nested archive privacy guards and exact-SHA Gitea relay.
+- 232 application Python tests, 5 QA tests, 8 UI suites, 54 responsive/language checks, 256 cascade series; broader prototype/demo regressions pass. No VM or physical deployment.
+- See docs/OFFLINE-COMPLETION.md and qa/ALPHA6-LOCAL-REPORT.json. Native hierarchy/worker/device acceptance remains separate.
+
+## 0.7.0-alpha5 — local recovery/UI candidate
+
+- Observe confirmed reserve failure and require stable primary health plus fresh bound DNS/HTTPS before returning. Keep Stop available in degraded/stale state.
+- Use a fresh dashboard26 module address; align package, agent and SDK versions and test their consistency.
+- Actual VM LuCI: EN/RU/EN, eight sidebar sections, system/Telegram/recovery wizard cancellation, author website link and version badge.
+- 202 Python tests pass in Debian and actual OpenWrt 21.02.7; exact package hash reproduced, network/firewall unchanged. Five Node suites pass.
+- Git workflow is saved in primary Gitea. New GitHub publication is withheld pending approval and reconciliation; no physical deployment.
+- Full hierarchy, vendor arbitration, inactive activation, IPv6 and device acceptance remain open. See qa/ALPHA5-CHECKPOINT.md.
+
 ## 0.7.0-alpha4 — reviewed priorities and bounded operator fault candidate
 
 - Add stale-review-protected priority application, recovery/monitoring wizards, stable primary-return conditions and explicit reserve hold.
