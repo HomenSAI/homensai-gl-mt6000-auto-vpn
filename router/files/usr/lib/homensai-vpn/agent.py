@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.7.0-alpha9'
+VERSION = '0.7.0-alpha10'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'

@@ -740,3 +740,32 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 - Saved exact canonical and public snapshot branches in Gitea before normal GitHub main push. Public snapshot 2d3cd63d370fccf934424b9bf597ea21fa89e653 has canonical source 6bef4f5572a6ad8f97f1ce44849e23d51a9c7b08 tree; canonical history and alpha8 tag/assets retained. Exact public snapshot CI PASS with unchanged alpha9 package hash.
 - Created separate public alpha9 tag on public history and prerelease with IPK/checksum. Downloaded both assets again: 464018 bytes, SHA256 af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521; checksum matches. Alpha8 public tag independently unchanged. Verification receipt qa/GITHUB-ALPHA9-PUBLICATION.json.
 - This follow-up records publication only; overview UI was already verified in four synthetic browser scenarios and 200 state combinations. No router installation or routing/VPN/firewall change.
+
+
+## 2026-10-17T10:00:49.104583+02:00 - alpha10 clipped navigation repair
+
+- User screenshot showed Settings clipped below the viewport. Cause: sticky sidebar had fixed viewport-derived height plus min-height 620px, while branding, nine menu items, gaps and footer could exceed that height; the nav had no constrained vertical scroll area. A sticky fixture/header could also cover its top.
+- Correction: compute available sidebar height from actual viewport/sidebar position and fixed/sticky external header; remove minimum height, give nav flex/min-height-zero and independent vertical scroll, retain nonshrinking brand/footer, and use whole-sidebar scroll for exceptionally short panels. At mobile widths all nine links wrap into a two-column grid. No routing, VPN or hardware behavior changed.
+- Active menu entry is revealed on section change without moving the entire document; explicit focusable nav supports keyboard scrolling. Short-height spacing keeps the entire menu visible at the screenshot-sized 978x808 frame. Browser measured Settings inside the menu/viewport; sidebar bottom 795.2px at 808px height, no root horizontal overflow.
+- Browser matrix PASS: 126 page transitions across seven viewport sizes (978x808, 1280x720, 1024x600, 800x480, 640x360, 414x896, 360x640) and EN/RU. The 640x360 case approximates the CSS area available at 200% zoom on a 1280x720 screen; native browser zoom itself was not changed. Keyboard Home/PageDown moved the constrained nav with focus retained. Synthetic screenshots/matrix saved under qa/ui-review-alpha10.
+- Prepared alpha10-1/dashboard40/ui21 and geometric regression tests. Renewed only the owned loopback synthetic preview for two hours; original preview identity verified before replacement. Physical router/network unchanged. Immutable CI/package/publication follow the source checkpoint.
+
+
+## 2026-10-17T10:04:03.316325+02:00 - extra short-window active-link inspection
+
+The first alpha10 snapshot passed full CI. Inspection found the exceptionally short-panel fallback must reveal the active link in the whole-sidebar scroller, not the non-scrolling nav; resize must also reveal the current item. Corrected scroller selection and resize scheduling before final packaging. A 1280x300 browser case is added to the existing matrix; no product routing behavior changed. Final source CI is rerun after this correction.
+
+
+## 2026-10-17T10:04:03.316325+02:00 - direct-link stylesheet timing correction
+
+The added 1280x300 case exposed a real failure on direct Settings reload: active link bottom 543px while sidebar bottom 287px. Initial reveal ran before final stylesheet/menu sizing, and later observer updates did not reveal the current item. Corrected by observing nav dimensions and revealing after layout/header/resize changes. User-driven scrolling alone does not change dimensions, so it is not reset. Existing 126 transitions remain valid; direct reload is rechecked before final acceptance.
+
+
+## 2026-10-17T10:06:20.173913+02:00 - final short-window browser result
+
+Expanded matrix to 144 transitions (nine pages/eight sizes/EN-RU), all pass. Added 1280x300 whole-sidebar fallback. Direct Settings reload now places the link at 243.6-283.0px inside the sidebar 61.2-287.2px, scrollTop 260; the prior 543px bottom failure is corrected. Saved final synthetic screenshots and matrix. Final source gets its own immutable CI before packaging.
+
+
+## 2026-10-17T10:07:54.555139+02:00 - alpha10 final source/package verified
+
+Final source 192220cf1828e6d66207d877610a1d81d0ce9914 dual-runtime CI PASS: 329 application + 30 QA tests per runtime, 13 UI suites. Python 3.9/Lua zero skips; Python 3.11 control seven Lua skips. Host alpha10-1 build exactly matches both CI outputs: 465422 bytes, SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16. Final direct Settings reload and 144 transitions PASS. Release notes/receipt saved; physical router remains untouched.

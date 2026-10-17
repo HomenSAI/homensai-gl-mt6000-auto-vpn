@@ -1,9 +1,9 @@
-# Current local state - alpha9
+# Current state - alpha10
 
-Alpha9-1, dashboard39/ui20: the overview now uses green only for a selected, freshly healthy plan route. Healthy unselected standby is neutral/ready; transition destination yellow; real failure red; stale/off/inactive neutral with explicit labels. No route, VPN, firewall or physical-router change.
+Alpha10-1/dashboard40/ui21 fixes clipped sidebar navigation and direct Settings reload after stylesheet sizing. Available-height desktop panel, scrollable nav and whole-panel tiny fallback; wrapped mobile links; active entry remains visible after navigation/resize. No physical router, network, VPN or firewall changes.
 
-Validated source 18be40f4d0504ffc25c815675f077859087fde47: 329 application tests + 30 QA tests per runtime, 12 UI suites, including 200 path-state combinations. Python 3.9/Lua zero skips; Python 3.11 control seven Lua skips. Four synthetic browser cases and EN/RU verified.
+Validated source 192220cf1828e6d66207d877610a1d81d0ce9914: 329 application + 30 QA tests per runtime, 13 UI suites. Browser 144 transitions across nine pages/eight sizes/EN-RU plus keyboard scroll and direct Settings reload PASS. Native zoom itself was not changed; the matrix includes a zoom-equivalent CSS viewport.
 
-Artifact releases/homensai-auto-vpn_0.7.0-alpha9-1_all.ipk; SHA256 af820a3ea1937bbee11a2f20b7d60dcf5e24615f226d2e0e27dacd31ead78521. Matching immutable dual-runtime builds and host build verified. See docs/OVERVIEW-PATH-COLOURS.md, releases/v0.7.0-alpha9.md and qa/ALPHA9-LOCAL-CI.json.
+Artifact releases/homensai-auto-vpn_0.7.0-alpha10-1_all.ipk: 465422 bytes, SHA256 87c0cf97517b77d03caa549cc07f42824ae11c61a9b4f64140db0fe2f2171b16. Both immutable CI runtimes and local builder match. See docs/SIDEBAR-RESPONSIVE-ALPHA10.md, qa/ALPHA10-LOCAL-CI.json and qa/ui-review-alpha10. Prior alpha9 colours and native/hardware acceptance limits remain.
 
-Primary local Git/Gitea first; public snapshots retain GitHub ancestry and never merge unreviewed canonical history or overwrite old tags. Prior alpha8 release/download verification remains in qa/GITHUB-ALPHA8-PUBLICATION.json. Physical native multi-hop/vendor/LAN acceptance remains pending. No deployment instruction in this UI correction.
+Local/Gitea first, reviewed public snapshots on existing GitHub ancestry. No old tag overwrite or router installation. Exact release publication verification is stored separately.
