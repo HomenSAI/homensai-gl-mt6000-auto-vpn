@@ -710,3 +710,11 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 
 - Publication review found install examples still named alpha7-1 despite the new alpha8-1 artifact. Corrected EN/RU filenames/checksum examples and AI-install candidate label; retained monitor-first and separate hardware-window boundaries. Refreshed dated physical-checkpoint wording from the recorded alpha7-2 receipt, not a new router query.
 - Product/package bytes unchanged. Follow-up contains documentation only and is saved to Gitea before normal GitHub main push. New public release tag will be created explicitly on the public commit, avoiding the same-named canonical tag's unrelated history.
+
+
+## 2026-10-17T09:37:13.019621+02:00 - GitHub prerelease download verified and transport housekeeping corrected
+
+- Created public lightweight tag v0.7.0-alpha8 explicitly on public commit a0fbd054f30e887b9b276399027d3ba31b33e21e via GitHub refs API, then prerelease using verify-tag. Canonical local/Gitea alpha8 tag remains 22b75b8500acc6bb13af302b0cbea0124f440a66; no canonical parent history or old tags were pushed.
+- Downloaded both release assets from GitHub. IPK 463562 bytes, SHA256 da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453; checksum match. All 13 historical public tag refs unchanged, remote commit tree matched local publication tree, prerelease true/draft false. Added public verification receipt.
+- A prior local-codex bundle import emitted background Git auto-GC errors: node could not create a lock beside the preserved backup/recovered ref. Import, exact primary save and GitHub push still succeeded and were independently verified. Correction: disable automatic GC/maintenance only for that controlled transport-fetch command; preserve ownership/backup refs and do not change ACLs or global Git configuration. PowerShell parser and next actual primary-save verification check this change. Product/IPK unchanged.
+- No router access, installation, route/firewall/VPN change or forced Git update. Final records are saved locally/Gitea before normal GitHub main follow-up.

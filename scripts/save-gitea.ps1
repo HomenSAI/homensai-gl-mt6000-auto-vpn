@@ -23,7 +23,7 @@ $bundleHead = & $gitExe -C $repoPath bundle list-heads $bundlePath "refs/heads/$
 if (($bundleHead -split '\s+')[0] -ne $headSha) { throw 'Branch changed during export. Nothing was published.' }
 & docker cp $bundlePath "local-codex:/tmp/$transferName"; Assert-Exit 'Transfer committed objects'
 $refspecs = @("refs/heads/${branchName}:refs/heads/${branchName}") + @($Tags | ForEach-Object { "refs/tags/${_}:refs/tags/${_}" })
-& docker exec -u node -w /workspace/gl-mt6000-alta-vpn local-codex git fetch --no-tags "/tmp/$transferName" @refspecs; Assert-Exit 'Import without force'
+& docker exec -u node -w /workspace/gl-mt6000-alta-vpn local-codex git -c gc.auto=0 -c maintenance.auto=false fetch --no-tags "/tmp/$transferName" @refspecs; Assert-Exit 'Import without force'
 $reply = & docker exec -u node -w /workspace/gl-mt6000-gitflow local-codex python3 tools/gitflow.py save --branch $branchName; Assert-Exit 'Save primary Gitea'
 $receipt = ($reply -join "`n") | ConvertFrom-Json
 if ($receipt.result -ne 'SAVED' -or $receipt.head -ne $headSha) { throw 'Primary branch SHA not confirmed. Inspect the retained bundle and receipt.' }

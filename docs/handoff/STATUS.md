@@ -14,7 +14,7 @@ Branch: feature/local-completion-alpha6.
 
 - Physical router untouched. Last separately confirmed hardware package alpha7-2, Auto OFF; not rechecked in this task.
 - Actual GL.iNet worker arbitration, real inactive-provider/isolated probes, native cascade and transaction-bound LAN witness/rollback remain unaccepted. Mandatory guards remain. No router upload until a new instruction.
-- Local Git/Gitea first. GitHub main snapshot publication approved and verified at 5e9f23486e05fe7037624a404a905c9d615436b5; old histories/tags retained without force or overwrite. Canonical source a514afa482792a6d630831dd8a822a18962fe47e. Public prerelease preparation follows separately.
+- Local Git/Gitea first. GitHub main snapshot publication approved and verified at 5e9f23486e05fe7037624a404a905c9d615436b5; old histories/tags retained without force or overwrite. Canonical source a514afa482792a6d630831dd8a822a18962fe47e. Public prerelease v0.7.0-alpha8 verified, target a0fbd054f30e887b9b276399027d3ba31b33e21e; downloaded IPK/checksum match local candidate. See ../GITHUB-PUBLICATION-2026-10-17.md.
 - UI preview is synthetic, clearly labelled, loopback-only and bounded; screenshots are not hardware evidence.
 
 ## Historical evidence retained

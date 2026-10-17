@@ -22,3 +22,12 @@ This record is preparation, not confirmation of a completed push. Final result i
 - Historical tag refs retained for before/after comparison. No force, mirror, old-tag push or router change.
 
 A documentation-only follow-up records this completed operation; its final SHA and release response remain in the local verification receipt.
+
+
+## Release verified
+
+GitHub prerelease: https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.7.0-alpha8. Public tag target: a0fbd054f30e887b9b276399027d3ba31b33e21e. Canonical tag remains 22b75b8500acc6bb13af302b0cbea0124f440a66; public mapping is stored separately, without overwriting either history.
+
+Both release assets were downloaded again: IPK 463562 bytes, SHA256 da7f42716b3d35504be3f586a7ee1b18c8e75a8ec51c01e134dd24da3b182453; downloaded checksum matches. All 13 pre-existing tag refs, including peeled annotation refs, are unchanged. Release is prerelease=true and draft=false. Reviewed verification receipt: qa/GITHUB-ALPHA8-PUBLICATION.json.
+
+A final documentation/transport follow-up can advance main beyond the release tag; product/package bytes remain identical. It does not move the immutable release tag or install anything on a router.
