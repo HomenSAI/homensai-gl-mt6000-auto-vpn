@@ -20,5 +20,5 @@ function renderIdentityNotice(status){
 }
 function identityLine(status){
   var model=identityModel(status);
-  return bi('Package ','Пакет ')+(model.pkg||'?')+' · '+bi('page ','страница ')+model.ui;
+  return bi('Version ','Версия ')+(model.agent||model.uiAgent)+' · '+bi('package ','пакет ')+(model.pkg||'—')+' · '+bi('page ','страница ')+model.ui;
 }

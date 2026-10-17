@@ -12,8 +12,8 @@ assert(/differ/.test(context.renderIdentityNotice({version:'1.2.3-alpha4',packag
 // No data or an RPC error never claims a mismatch; hostile strings are ignored.
 for(const bad of [{},{rpc_error:'X'},{version:'<img src=x>'},{version:'1'.repeat(80)},{version:null}])assert.equal(context.renderIdentityNotice(bad),null);
 assert.equal(model({version:'1.2.3-alpha4',package:'<script>'}).pkg,null);
-assert.equal(context.identityLine({version:'1.2.3-alpha4',package:'1.2.3-alpha4-1'}),'Package 1.2.3-alpha4-1 · page dashboard99');
-assert.equal(context.identityLine({}),'Package ? · page dashboard99');
+assert.equal(context.identityLine({version:'1.2.3-alpha4',package:'1.2.3-alpha4-1'}),'Version 1.2.3-alpha4 · package 1.2.3-alpha4-1 · page dashboard99');
+assert.equal(context.identityLine({}),'Version 1.2.3-alpha4 · package — · page dashboard99');
 // Generated dashboard carries real values that agree with the agent and the menu.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();

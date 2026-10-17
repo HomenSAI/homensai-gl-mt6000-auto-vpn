@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha10-1 - 2026-10-17
+
+Version line in the sidebar footer. dashboard51/ui29. UI text only; includes alpha9.
+
 ## 0.8.0-alpha9-1 - 2026-10-17
 
 Interactive training, redesigned overview, simple/advanced settings. dashboard50/ui28. Nothing is accepted on the physical router yet.

@@ -6,7 +6,7 @@
 
 [How it works — read first](HOW-IT-WORKS.en.md) · [Russian](INSTALL.ru.md) · [Environment passport](TESTED-ENVIRONMENT.en.md) · [Next-stage evidence](NEXT-STAGE-RESULTS.md)
 
-The current development candidate is **0.8.0-alpha9-1**. Use a published, verified
+The current development candidate is **0.8.0-alpha10-1**. Use a published, verified
 version and its matching checksum; a development branch or a passing model test
 is not a production acceptance certificate. Local Gitea is primary. Public GitHub
 publishes reviewed snapshots on its own preserved history; use the release asset and checksum, not an arbitrary branch build.
@@ -30,9 +30,9 @@ are separate acceptance steps. Never force compatibility with another image/mode
 1. Confirm the model/firmware and local LuCI access. Keep an independent management
    path. Obtain a separately authorised window before device installation/testing.
 2. Obtain `.ipk` and `.ipk.sha256` from the **same verified release**. For alpha8,
-   the expected filename is `homensai-auto-vpn_0.8.0-alpha9-1_all.ipk`. Compare
-   `Get-FileHash .\homensai-auto-vpn_0.8.0-alpha9-1_all.ipk -Algorithm SHA256`
-   or `sha256sum homensai-auto-vpn_0.8.0-alpha9-1_all.ipk` with that release's
+   the expected filename is `homensai-auto-vpn_0.8.0-alpha10-1_all.ipk`. Compare
+   `Get-FileHash .\homensai-auto-vpn_0.8.0-alpha10-1_all.ipk -Algorithm SHA256`
+   or `sha256sum homensai-auto-vpn_0.8.0-alpha10-1_all.ipk` with that release's
    checksum. Stop if the asset/checksum is absent or different.
 3. Keep a **private** configuration/history backup and check available storage/RAM.
    Backups can contain secrets. Never upload them, bot tokens, sessions, passwords
