@@ -100,7 +100,7 @@ class PackageTests(unittest.TestCase):
                 self.assertFalse(any('__pycache__' in n for n in names))
                 self.assertEqual(tar.getmember('./usr/libexec/rpcd/homensai-vpn').mode,0o755)
                 self.assertEqual(tar.getmember('./etc/config/homensai_vpn').mode,0o644)
-                self.assertIn("option enabled '0'",tar.extractfile('./etc/config/homensai_vpn').read().decode())
+                self.assertIn("option enabled '1'",tar.extractfile('./etc/config/homensai_vpn').read().decode())
                 style=ROOT/'files/www/luci-static/resources/view/homensai-vpn/style'
                 for resource in style.rglob('*'):
                     if resource.is_file():

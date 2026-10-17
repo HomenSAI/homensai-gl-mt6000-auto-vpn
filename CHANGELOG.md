@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha18-1 - 2026-10-18
+
+Monitoring always on; one speed table; per-server chart colours; daily traffic chart; failure-test codes explained. dashboard59/ui37. Package default enabled=1; otherwise UI only; includes alpha17.
+
 ## 0.8.0-alpha17-1 - 2026-10-18
 
 Training below Help; compact Auto lamp. dashboard58/ui36. UI only; includes alpha16.

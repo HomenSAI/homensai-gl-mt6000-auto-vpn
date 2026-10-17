@@ -40,7 +40,7 @@ function renderReadiness(status){
     E('h3',{},bi('Your router','Ваш роутер')),
     E('p',{},routerLine),
     E('h3',{},bi('Data from the monitor','Данные от мониторинга')),
-    E('p',{},m.fresh?bi('Fresh: the monitor is running and sends data.','Свежие: мониторинг работает и присылает данные.'):bi('No fresh data. Start the monitor in Settings → Monitor service.','Свежих данных нет. Запустите мониторинг в «Настройки» → «Служба мониторинга».')),
+    E('p',{},m.fresh?bi('Fresh: the monitor is running and sends data.','Свежие: мониторинг работает и присылает данные.'):bi('No fresh data. Monitoring starts by itself; wait a minute and reload the page.','Свежих данных нет. Мониторинг запускается сам: подождите минуту и обновите страницу.')),
     E('h3',{},bi('Required parts on the router','Нужные части на роутере')+(m.checks.length?' ('+pass+' / '+m.checks.length+')':'')),
     m.checks.length?E('ul',{'class':'hv-readiness-list hv-ready-list'},m.checks.map(readinessCheckRow)):E('p',{},bi('The list appears when the router reports it (the monitor must be running).','Список появится, когда роутер его пришлёт (мониторинг должен работать).')),
     E('h3',{},bi('What Auto still needs','Чего ещё не хватает для Auto')),

@@ -1,5 +1,5 @@
 config main 'main'
-    option enabled '0'
+    option enabled '1'
     option interval '30'
     option checkpoint '900'
     option probe_limit '16'

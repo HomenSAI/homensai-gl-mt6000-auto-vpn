@@ -4,7 +4,7 @@
 >
 > HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.
 
-Latest prerelease: **0.8.0-alpha17-1** ([release notes](releases/v0.8.0-alpha17.md) · [install guide](docs/INSTALL.en.md) · [router test kit](router-test-kit/README.md) · [terms of use](DISCLAIMER.md)).
+Latest prerelease: **0.8.0-alpha18-1** ([release notes](releases/v0.8.0-alpha18.md) · [install guide](docs/INSTALL.en.md) · [router test kit](router-test-kit/README.md) · [terms of use](DISCLAIMER.md)).
 
 [English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
 

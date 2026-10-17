@@ -85,3 +85,13 @@ console.log('monitor and guide tests OK');
   assert(ctx.renderAiPrompt());assert.equal(ctx.HELP_TOPICS[0].id,'ai-prompt');
   console.log('AI prompt tests OK ('+en.length+' / '+ru.length+' characters)');
 }
+{
+  const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c}),window:{sessionStorage:{getItem:()=>null}}};vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync('router/monitor_panel.inc.js','utf8')+'\n'+fs.readFileSync('router/traffic_chart.inc.js','utf8'),ctx);
+  const now=1000,n=ctx.monitorNumbers({samples:[{time:now-10,code:null},{time:now-20,code:'DNS-001'},{time:now-4000,code:null},{time:now-30,code:null}]},now);
+  assert.equal(n.checks,3);assert.equal(n.failed,1);assert.equal(n.percent,67);
+  assert.equal(ctx.monitorNumbers({},now).percent,null);
+  assert.equal(ctx.trafficUnit(5e9).name,'GB');assert.equal(ctx.trafficUnit(5e6).name,'MB');
+  const cfg=fs.readFileSync('router/files/etc/config/homensai_vpn','utf8');assert(/option enabled '1'/.test(cfg),'monitoring must be on by default');
+  console.log('monitor block numbers and traffic helpers OK');
+}

@@ -1,12 +1,7 @@
-/* Monitor service card: a neutral start/stop button and a traffic light that says what the monitor is doing. */
-var monitorHost=null,monitorBusy=false;
+/* Monitoring is always on. The Overview shows a block next to "Check the VPNs now": lamp, title and a few numbers.
+   monitorLightModel() decides running / catching up / stopped; the block has a button only when monitoring is not running. */
+var monitorBlockHost=null,monitorBusy=false;
 var MONITOR_LAMPS=['green','yellow','red'];
-var MONITOR_CODES={
-  'MONITOR-STOP-AUTO-FIRST':['Stop Auto first and wait until the router is back on the primary, then stop the monitor.','Сначала остановите Auto и дождитесь, пока роутер вернётся на основной, затем остановите мониторинг.'],
-  'MONITOR-JOURNAL-UNVERIFIED':['The transaction journal could not be verified, so the monitor was not stopped. See Help.','Журнал транзакций не удалось проверить, поэтому мониторинг не остановлен. См. «Помощь».'],
-  'MONITOR-SAVE-FAILED':['The setting could not be saved on the router.','Не удалось сохранить настройку на роутере.'],
-  'MONITOR-SERVICE-UNCONFIRMED':['The setting was saved but the router did not confirm the service change. Check again in a minute.','Настройка сохранена, но роутер не подтвердил смену состояния службы. Проверьте через минуту.']
-};
 function monitorStartedRecently(now){
   try{var at=Number(window.sessionStorage.getItem('homensai-vpn-monitor-requested'));return Number.isFinite(at)&&at>0&&now-at>=0&&now-at<=90;}catch(e){return false;}
 }
@@ -18,56 +13,49 @@ function monitorLightModel(status,inventory,now,recent){
   if(status.rpc_error)return out('problem','red','!',bi('Cannot read the monitor','Не удаётся прочитать мониторинг'),bi('The page could not get the status from the router. Reload the page and sign in again; see Help → “The page is old, empty or says the monitor is not running”.','Страница не смогла получить статус от роутера. Обновите страницу и войдите снова; см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».'),'RPC-UNAVAILABLE');
   if(enabled&&fresh)return out('ok','green','✓',bi('Monitor is running','Мониторинг работает'),bi('Fresh data arrived '+Math.max(0,Math.round(age))+' s ago. Each connected VPN is checked about every '+(Number(settings.interval)||30)+' seconds.','Свежие данные пришли '+Math.max(0,Math.round(age))+' с назад. Каждый подключённый VPN проверяется примерно раз в '+(Number(settings.interval)||30)+' с.'));
   if(enabled&&(recent||(!status.error&&age<=300)))return out('transition','yellow','⟳',bi('Starting or catching up','Запускается или догоняет'),bi('The monitor is switched on and the first fresh data is not here yet. This takes up to a minute.','Мониторинг включён, первых свежих данных ещё нет. Это занимает до минуты.'));
-  if(enabled)return out('problem','red','!',bi('Switched on, but not running','Включён, но не работает'),bi('The router program is not producing data. Press Stop and then Start; if that does not help see Help → “The page is old, empty or says the monitor is not running”.','Программа на роутере не выдаёт данные. Нажмите «Стоп», затем «Старт»; если не помогло, см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».'),status.error||'STATUS-STALE');
+  if(enabled)return out('problem','red','!',bi('Switched on, but not running','Включён, но не работает'),bi('The router program is not producing data.','Программа на роутере не выдаёт данные.'),status.error||'STATUS-STALE');
   if(fresh)return out('transition','yellow','⟳',bi('Stopping','Останавливается'),bi('The monitor is switched off; the last data is still on screen. It stops within a minute.','Мониторинг выключен; на экране ещё последние данные. Он остановится в течение минуты.'));
   return out('off',null,'○',bi('Monitor is off','Мониторинг выключен'),bi('Nothing is being checked and no statistics are collected. Auto cannot work without the monitor.','Ничего не проверяется и статистика не собирается. Без мониторинга Auto работать не может.'));
 }
-function renderMonitorLight(light){
-  var lamps=MONITOR_LAMPS.map(function(color){return E('span',{'class':'hv-lamp hv-lamp-'+color+(light.lamp===color?' hv-lamp-lit':''),'aria-hidden':'true'});});
-  var legend=[['green','Green: running with fresh data','Зелёный: работает, данные свежие'],['yellow','Yellow: starting, stopping or catching up','Жёлтый: запускается, останавливается или догоняет'],['red','Red: switched on but not working, or unreadable','Красный: включён, но не работает, или не читается']].map(function(row){return E('li',{'class':light.lamp===row[0]?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-'+row[0],'aria-hidden':'true'}),bi(row[1],row[2])]);}).concat([E('li',{'class':light.lamp?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-grey','aria-hidden':'true'}),bi('Grey: switched off','Серый: выключен')])]);
-  return E('div',{'class':'hv-light-block'},[E('div',{'class':'hv-light hv-light-three hv-light-'+light.key,'role':'img','aria-label':light.title},lamps),E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',{'role':'status','aria-live':'polite'},light.hint),light.code?E('small',{'class':'hv-auto-tech'},bi('Technical state: ','Техническое состояние: ')+light.code):null,E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),E('ul',{'class':'hv-light-legend'},legend)])].filter(Boolean))]);
-}
-function fillMonitorCard(status,inventory){
-  while(monitorHost.firstChild)monitorHost.removeChild(monitorHost.firstChild);
-  var now=Date.now()/1000,light=monitorLightModel(status,inventory,now,monitorStartedRecently(now));
-  var on=light.enabled;
-  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(on?' hv-auto-armed':''),'aria-pressed':on?'true':'false','aria-label':on?bi('Stop the monitor','Остановить мониторинг'):bi('Start the monitor','Запустить мониторинг'),'click':function(){
-    if(monitorBusy)return;monitorBusy=true;button.disabled=true;
-    return rpc.declare({object:'homensai-vpn',reject:true,method:'monitor_control',params:['enabled'],expect:{}})(!on).then(function(result){
-      if(result&&result.accepted===true){try{window.sessionStorage.setItem('homensai-vpn-monitor-requested',String(Date.now()/1000));}catch(e){}window.location.reload();return;}
-      var code=result&&typeof result.code==='string'?result.code:'MONITOR-UNKNOWN',text=Object.prototype.hasOwnProperty.call(MONITOR_CODES,code)?bi(MONITOR_CODES[code][0],MONITOR_CODES[code][1]):'';
-      ui.addNotification(null,E('p',{},code+(text?' · '+text:'')));
-    }).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){monitorBusy=false;button.disabled=false;});
-  }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
-  monitorHost.appendChild(E('h3',{},bi('Monitor service','Служба мониторинга')));
-  monitorHost.appendChild(E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[button,E('span',{'class':'hv-auto-action'},on?bi('Stop','Стоп'):bi('Start','Старт'))]),renderMonitorLight(light)]));
-  monitorHost.appendChild(E('p',{'class':'hv-auto-limit'},bi('The monitor checks your VPNs in the background and collects the statistics. Stop Auto and wait for it to hand control back before stopping the monitor.','Мониторинг в фоне проверяет ваши VPN и собирает статистику. Перед остановкой мониторинга остановите Auto и дождитесь, пока он вернёт управление.')));
-}
-function renderMonitorCard(status,inventory){
-  monitorHost=E('section',{'class':'hv-chart-card hv-card-monitor'});fillMonitorCard(status,inventory);return monitorHost;
-}
-function updateMonitorCard(status,inventory){if(monitorHost&&!monitorBusy)fillMonitorCard(status,inventory);}
-
-// Live statistics right under the monitor switch: what is collected, where it is kept, and the charts.
-function renderMonitorStats(status,inventory,period,onPeriod){
-  var settings=(inventory||{}).settings||{},now=Date.now()/1000;
-  var rows=(status.profiles||[]).filter(function(p){return p.interface;});
+// Numbers for the block: checks and failures of the last hour from the samples the monitor keeps.
+function monitorNumbers(status,now){
   var samples=Array.isArray(status.samples)?status.samples:[];
   var recent=samples.filter(function(s){return Number.isFinite(s.time)&&now-s.time<=3600&&now-s.time>=-5;});
-  var times=samples.map(function(s){return s.time;}).filter(Number.isFinite);
-  var first=times.length?new Date(Math.min.apply(null,times)*1000).toLocaleString():null;
-  var every=Number(settings.checkpoint)>0?Math.round(Number(settings.checkpoint)/60):null;
-  var lines=[
-    E('h3',{},bi('What the monitor collects','Что собирает мониторинг')),
-    E('p',{},bi('About every '+(Number(settings.interval)||30)+' seconds the monitor checks each connected VPN (can it open a website and resolve a name through it). From these checks it builds the charts below: how fast each server answers, and how long each one worked or failed. History starts when the monitor was first started; nothing is guessed for earlier time.','Примерно каждые '+(Number(settings.interval)||30)+' с мониторинг проверяет каждый подключённый VPN (может ли он открыть сайт и найти адрес). Из этих проверок строятся графики ниже: как быстро отвечает каждый сервер и сколько времени он работал или не работал. История начинается с первого запуска мониторинга; за более раннее время ничего не придумывается.')),
-    E('p',{'class':'hv-ready-intro'},bi('Where it is stored: on the router, in /etc/homensai-vpn (saved '+(every?'about every '+every+' min':'periodically')+'; you can change this in Settings → Advanced settings → Monitoring parameters). Nothing leaves the router.','Где хранится: на самом роутере, в /etc/homensai-vpn (сохраняется '+(every?'примерно раз в '+every+' мин':'периодически')+'; это можно изменить в «Настройки» → «Расширенные настройки» → «Параметры мониторинга»). Ничего не уходит с роутера.')),
-    E('p',{},recent.length?bi(recent.length+' checks in the last hour'+(first?'; the oldest kept check is from '+first:'')+'.',recent.length+' проверок за последний час'+(first?'; самая старая из сохранённых — '+first:'')+'.'):bi('No checks yet. Start the monitor above; the charts appear after the first minutes.','Проверок пока нет. Запустите мониторинг выше; графики появятся через несколько минут.'))
-  ];
-  var box=E('div',{'class':'hv-monitor-stats'},[E('section',{'class':'hv-chart-card'},lines)]);
-  if(recent.length&&rows.length){
-    box.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Server answer time, last hour','Время ответа серверов за последний час')),chart(samples,rows)]));
+  var failed=recent.filter(function(s){return s.code;}).length;
+  return {checks:recent.length,failed:failed,percent:recent.length?Math.round(100*(recent.length-failed)/recent.length):null};
+}
+function fillMonitorBlock(host,status,inventory){
+  while(host.firstChild)host.removeChild(host.firstChild);
+  var now=Date.now()/1000,light=monitorLightModel(status,inventory,now,monitorStartedRecently(now)),n=monitorNumbers(status,now);
+  var tone=light.key==='ok'?'green':light.key==='transition'?'yellow':light.key==='problem'?'red':'grey';
+  var title=light.key==='ok'?bi('Monitoring is on','Мониторинг включён'):light.title;
+  var stats=light.key==='ok'||n.checks
+    ?bi(n.checks+' checks in the last hour · '+n.failed+' failed'+(n.percent==null?'':' · '+n.percent+'% passed'),n.checks+' проверок за час · не прошло '+n.failed+(n.percent==null?'':' · прошло '+n.percent+'%'))
+    :light.hint;
+  var button=null;
+  if(light.key==='problem'||light.key==='off'){
+    button=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){
+      if(monitorBusy)return;monitorBusy=true;button.disabled=true;
+      return rpc.declare({object:'homensai-vpn',reject:true,method:'monitor_control',params:['enabled'],expect:{}})(true).then(function(result){
+        if(result&&result.accepted===true){try{window.sessionStorage.setItem('homensai-vpn-monitor-requested',String(Date.now()/1000));}catch(e){}window.location.reload();return;}
+        ui.addNotification(null,E('p',{},(result&&result.code)||'MONITOR-UNKNOWN'));
+      }).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){monitorBusy=false;button.disabled=false;});
+    }},bi('Start monitoring','Запустить мониторинг'));
   }
-  box.appendChild(histogram(status.accounting||{},onPeriod,period));
-  box.appendChild(E('p',{},E('a',{'class':'cbi-button','href':'#statistics'},bi('Open the full Statistics page','Открыть полную страницу «Статистика»'))));
-  return box;
+  host.appendChild(E('span',{'class':'hv-monitor-lamp hv-monitor-lamp-'+tone,'role':'img','aria-label':title}));
+  host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number((inventory.settings||{}).interval)||30)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number((inventory.settings||{}).interval)||30)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,button].filter(Boolean)));
+}
+function renderMonitorBlock(status,inventory){
+  monitorBlockHost=E('section',{'class':'hv-connectivity-control hv-monitor-block'});
+  fillMonitorBlock(monitorBlockHost,status,inventory);
+  return monitorBlockHost;
+}
+// "About the statistics" card on the Statistics page: what is collected and where it is stored.
+function renderMonitorInfo(status,inventory){
+  var settings=(inventory||{}).settings||{};
+  var every=Number(settings.checkpoint)>0?Math.round(Number(settings.checkpoint)/60):null;
+  return E('section',{'class':'hv-chart-card'},[
+    E('h3',{},bi('Where this statistics comes from','Откуда эта статистика')),
+    E('p',{},bi('Monitoring is always on. About every '+(Number(settings.interval)||30)+' seconds it checks each connected VPN (can it open a website and resolve a name through it). From these checks the charts above are built: how fast each server answers, and how long each one worked or failed. History starts when monitoring first started; nothing is guessed for earlier time.','Мониторинг всегда включён. Примерно каждые '+(Number(settings.interval)||30)+' с он проверяет каждый подключённый VPN (может ли он открыть сайт и найти адрес). Из этих проверок построены графики выше: как быстро отвечает каждый сервер и сколько времени он работал или не работал. История начинается с первого запуска мониторинга; за более раннее время ничего не придумывается.')),
+    E('p',{'class':'hv-ready-intro'},bi('Where it is stored: on the router itself, in /etc/homensai-vpn (saved '+(every?'about every '+every+' min':'periodically')+'; the interval can be changed in Settings → Advanced settings → Monitoring parameters). Nothing leaves the router.','Где хранится: на самом роутере, в /etc/homensai-vpn (сохраняется '+(every?'примерно раз в '+every+' мин':'периодически')+'; интервал можно изменить в «Настройки» → «Расширенные настройки» → «Параметры мониторинга»). Ничего не уходит с роутера.'))]);
 }

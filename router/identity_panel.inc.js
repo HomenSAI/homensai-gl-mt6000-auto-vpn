@@ -14,7 +14,7 @@ function renderIdentityNotice(status){
   var model=identityModel(status);
   if(!model.pageOld&&!model.packageMismatch)return null;
   var text=model.packageMismatch
-    ?bi('The installed package ('+model.pkg+') and the running program ('+model.agent+') differ. The upgrade may be unfinished: restart the monitor (Settings → Monitor service) or see Help → “The page is old, empty or says the monitor is not running”.','Установленный пакет ('+model.pkg+') и работающая программа ('+model.agent+') различаются. Возможно, обновление не завершено: перезапустите мониторинг («Настройки» → «Служба мониторинга») или откройте «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».')
+    ?bi('The installed package ('+model.pkg+') and the running program ('+model.agent+') differ. The upgrade may be unfinished: reload the page and wait a minute, or see Help → “The page is old, empty or says the monitor is not running”.','Установленный пакет ('+model.pkg+') и работающая программа ('+model.agent+') различаются. Возможно, обновление не завершено: обновите страницу и подождите минуту или откройте «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».')
     :bi('This page belongs to version '+model.uiAgent+' but the router runs '+model.agent+'. Press Ctrl+F5 to reload the page. If it stays, sign out of LuCI and in again; then see Help.','Эта страница относится к версии '+model.uiAgent+', а на роутере работает '+model.agent+'. Нажмите Ctrl+F5, чтобы обновить страницу. Если не помогло, выйдите из LuCI и войдите снова; затем см. «Помощь».');
   return E('p',{'class':'alert-message warning','role':'status'},text);
 }

@@ -73,7 +73,7 @@ var HELP_TOPICS=[
    when:["After an update, the Overview looks old, shows errors, or the status is stale.","После обновления «Обзор» выглядит по-старому, показывает ошибки или статус устарел."],
    steps:[
     {t:["Press Ctrl+F5 to reload without cache, then sign out of LuCI and sign in again (new permissions after an update).","Нажмите Ctrl+F5 (обновление без кэша), затем выйдите из LuCI и войдите снова (после обновления права обновляются)."]},
-    {t:["Settings → Monitor service → Start monitor. Or from SSH:","«Настройки» → «Служба мониторинга» → «Запустить мониторинг». Или через SSH:"],c:"homensai-vpn-emergency start"},
+    {t:["Overview → the Monitoring block → “Start monitoring” (shown only when monitoring is not running). Or from SSH:","«Обзор» → блок «Мониторинг» → «Запустить мониторинг» (показан только когда мониторинг не работает). Или через SSH:"],c:"homensai-vpn-emergency start"},
     {t:["If the page still says the status is unavailable, reload the router’s RPC service and sign in again:","Если страница всё ещё пишет, что статус недоступен, перезапустите RPC-службу роутера и войдите снова:"],c:"/etc/init.d/rpcd reload"},
     {t:["Check that exactly one monitor is running:","Проверьте, что запущен ровно один монитор:"],c:"ps w | grep homensai-vpn"}
    ]},

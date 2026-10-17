@@ -192,7 +192,7 @@ old="E('button',{'type':'button','class':'btn hv-test','click':function(){return
 assert old in source
 source=source.replace(old,"renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
 source=source.replace('function draw(status){','function draw(status){\n      updateConnectivityCheck(status);')
-source=source.replace("      if(heading)heading.textContent=", "      if(appRoot){var checks=appRoot.querySelector('.hv-connectivity-control');if(checks)checks.hidden=key!=='overview';}\n      if(heading)heading.textContent=")
+source=source.replace("      if(heading)heading.textContent=", "      if(appRoot){appRoot.querySelectorAll('.hv-connectivity-control').forEach(function(node){node.hidden=key!=='overview';});}\n      if(heading)heading.textContent=")
 source=source.replace("bi('Configure VPN','Настроить VPN')", "bi('Open router VPN settings ↗','Открыть настройки VPN роутера ↗')")
 source=source.replace("bi('Operator tests','Операторские тесты')", "bi('Diagnostics','Диагностика')")
 source=source.replace("E('div',{'class':'hv-server-top'},", "E('div',{'class':'hv-server-top'},")
@@ -241,8 +241,6 @@ reorganizer = """      (function(){
             launcher(bi('2 · Telegram','2 · Telegram'),bi('Bot token and destination for reports.','Токен бота и адресат отчётов.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
             launcher(bi('Test Telegram delivery','Проверить доставку Telegram'),bi('Sends one test message with the saved settings.','Отправляет одно тестовое сообщение с сохранёнными настройками.'),testDelivery)
           ])].filter(function(node){return node!=null;})));
-        settingsHost.appendChild(renderMonitorCard(status,inventory));
-        settingsHost.appendChild(renderMonitorStats(status,inventory,period,function(value){period=value;draw(status);}));
         settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[
           E('summary',{},bi('Advanced settings (for administrators)','Расширенные настройки (для администратора)')),
           E('p',{},bi('Fine-tuning of the switching rules and of the checks. The defaults are safe; change them only if you know why. Open the guide under each step for examples.','Тонкая настройка правил переключения и проверок. Значения по умолчанию безопасны; меняйте их, только если понимаете зачем. Под каждым шагом есть руководство с примерами.')),
@@ -308,7 +306,7 @@ must_replace("[cell(p.name),cell(p.channel),cell(p.protocol),","[cell(serverTitl
 must_replace("ranked.forEach(function(item){ranking.appendChild(E('tr',{},[cell(item.p.name),","ranked.forEach(function(item){ranking.appendChild(E('tr',{},[cell(serverTitle(item.p)),")
 # Channels page: say where the list comes from and what the numbers mean.
 must_replace('return view.extend({',(Path(__file__).parent/'servers_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-must_replace("put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')));","put('channels',renderServerSummary(status,inventory,rows));put('channels',vpnSetupCard());")
+must_replace("put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')));","put('channels',vpnSetupCard());put('channels',renderServerSummary(status,inventory,rows));")
 # Idle/active check control moves to the left of the page header, under the subtitle.
 must_replace("E('div',{'class':'hv-page-actions'},[versionBadge,language,renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})])","E('div',{'class':'hv-page-actions'},[versionBadge,language])")
 must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))","(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))),renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
@@ -322,7 +320,7 @@ must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard58').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard59').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -336,11 +334,11 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui36.css')
+source=source.replace('ui15.css','ui37.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard58',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard59',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
@@ -359,10 +357,10 @@ must_replace("""metric(tr("Трафик месяца"),month?bytes(month.rx+mont
 must_replace("+(p.channel||'default')+' · '+(p.interface||bi('Not connected'","+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected'")
 must_replace("planning.appendChild(E('code',{},(fp.blockers||[]).join(' · ')));","planning.appendChild(renderPlanBlockers(fp.blockers||[],status));")
 must_replace('return view.extend({',(Path(__file__).parent/'error_table.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-must_replace("      sortableTables();showPage(activeTab);","      put('events',errorTable||(errorTable=renderErrorTable()));\n      sortableTables();showPage(activeTab);")
+must_replace("      sortableTables();showPage(activeTab);","      put('statistics',renderMonitorInfo(status,inventory));put('events',errorTable||(errorTable=renderErrorTable()));\n      sortableTables();showPage(activeTab);")
 import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-(root/'dashboard58.js').write_text(source,encoding='utf8')
-print('Generated dashboard58.js with sidebar, language persistence and sortable tables')
+(root/'dashboard59.js').write_text(source,encoding='utf8')
+print('Generated dashboard59.js with sidebar, language persistence and sortable tables')
