@@ -322,7 +322,7 @@ must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard57').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard58').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -336,15 +336,15 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui35.css')
+source=source.replace('ui15.css','ui36.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard57',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard58',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
-must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','learn','channels','statistics','settings','help'].map(tabLink)")
+must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','channels','statistics','settings','help','learn'].map(tabLink)")
 must_replace("  help:['What to do when something is wrong.'","  learn:['A short interactive training: what the system is, how to use it and what to do when something goes wrong.','Короткое интерактивное обучение: что это за система, как ею пользоваться и что делать, если что-то пошло не так.'],\n  help:['What to do when something is wrong.'")
 must_replace("put('help',helpNode||(helpNode=renderHelp()));","put('help',helpNode||(helpNode=renderHelp()));put('learn',learnNode||(learnNode=renderLearn()));")
 must_replace("var helpNode=null;","var helpNode=null,learnNode=null;") if "var helpNode=null;" in source else None
@@ -364,5 +364,5 @@ import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-(root/'dashboard57.js').write_text(source,encoding='utf8')
-print('Generated dashboard57.js with sidebar, language persistence and sortable tables')
+(root/'dashboard58.js').write_text(source,encoding='utf8')
+print('Generated dashboard58.js with sidebar, language persistence and sortable tables')

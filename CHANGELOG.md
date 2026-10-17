@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha17-1 - 2026-10-18
+
+Training below Help; compact Auto lamp. dashboard58/ui36. UI only; includes alpha16.
+
 ## 0.8.0-alpha16-1 - 2026-10-18
 
 AI-agent install prompt, error code table, pre-switch check boxes, always-visible Auto state. dashboard57/ui35. UI only; includes alpha15.
