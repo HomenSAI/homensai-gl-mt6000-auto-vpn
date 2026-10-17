@@ -42,7 +42,7 @@ function renderTermsGate(inventory){
       E('p',{'class':'hv-terms-note'},bi('This is not legal advice. The full text is in DISCLAIMER.md in the project repository and on the Help page.','Это не юридическая консультация. Полный текст — в DISCLAIMER.ru.md в репозитории проекта и на странице «Помощь».')),
       E('div',{'class':'hv-terms-checks'},TERMS_CHECKS.map(function(text,index){return E('label',{'class':'hv-terms-check'},[boxes[index],' ',bi(text[0],text[1])]);})),
       E('p',{},button),
-      E('p',{'class':'hv-terms-note'},bi('If you do not accept, remove the package and your router stays as it was: opkg remove homensai-auto-vpn','Если вы не принимаете условия, удалите пакет, и роутер останется как был: opkg remove homensai-auto-vpn'))
+      E('div',{'class':'hv-terms-note'},[E('p',{},bi('If you do not accept, remove the package and your router stays as it was:','Если вы не принимаете условия, удалите пакет, и роутер останется как был:')),helpCommand('opkg remove homensai-auto-vpn')])
     ])
   ]);
 }

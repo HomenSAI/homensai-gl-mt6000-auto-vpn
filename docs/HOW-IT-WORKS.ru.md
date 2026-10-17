@@ -1,6 +1,6 @@
 # Как работает HomenS.AI Auto VPN — прочитайте перед установкой
 
-[English](HOW-IT-WORKS.en.md) · [Установка](INSTALL.ru.md) · [Условия использования](../DISCLAIMER.ru.md)
+[English](HOW-IT-WORKS.en.md) · [Установка](INSTALL.ru.md) · [Условия использования](../DISCLAIMER.ru.md) · [LAN-помощник](LAN-HELPER.ru.md)
 
 > Экспериментальное ПО для GL.iNet GL-MT6000 (Flint 2). Может прервать ваш интернет и при включённом Auto меняет настройки VPN роутера. Используйте на свой риск.
 

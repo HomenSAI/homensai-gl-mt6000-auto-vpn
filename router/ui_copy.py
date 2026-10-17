@@ -96,10 +96,6 @@ COPY = [
     ('Stop trial and restore', 'Stop and return to the primary', 'Остановить и вернуться на основной'),
     ('Stop requested. Wait for verified rollback status.', 'Stop requested. Wait until the router confirms it went back to the primary.', 'Остановка запрошена. Дождитесь, пока роутер подтвердит возврат на основной.'),
     ('Stop request failed; recovery is not confirmed.', 'The stop request failed and the return to the primary is not confirmed. Check the router by another route.', 'Запрос остановки не прошёл, возврат на основной не подтверждён. Проверьте роутер другим путём.'),
-    ('Dependency checks do not authorize switching. Start validates the current device, bounded deadline, client witness, rollback certificate and transaction lease. No automatic reboot activation.',
-     'These checks only show whether the router has what the program needs. Pressing Start on the Overview repeats the real checks: device, test window, LAN confirmation and a safe way back. Auto never starts by itself after a reboot.',
-     'Эти проверки лишь показывают, есть ли на роутере всё нужное программе. Кнопка «Старт» на странице «Обзор» повторяет настоящие проверки: устройство, окно теста, подтверждение из LAN и безопасный путь назад. После перезагрузки Auto сам не запускается.'),
-    ('Auto activation checks', 'What Auto needs', 'Что нужно для Auto'),
     ('Controlled VPN failure test', 'Simulate a VPN failure (test)', 'Имитация сбоя VPN (тест)'),
     ('This temporarily blocks IPv4 traffic through the selected VPN, keeping its process connected. It reproduces “Connected, but no internet”. Router INPUT, management routes and Kill Switch are unchanged.',
      'This briefly blocks internet traffic through the chosen VPN while it stays connected, to reproduce “connected, but no internet”. Access to the router itself and the Kill Switch are not changed.',
@@ -154,8 +150,6 @@ COPY += [
     ('Source failure threshold: ', 'Primary failures needed: ', 'Нужно сбоев основного: '),
     ('Reserve success threshold: ', 'Reserve checks needed: ', 'Нужно проверок резерва: '),
     ('Controller reason: ', 'Reason: ', 'Причина: '),
-    ('Actual environment: ', 'Router: ', 'Роутер: '),
-    ('Monitor evidence: ', 'Monitor data: ', 'Данные монитора: '),
     ('Times are from the router measurements. A connected interface alone is not proof of internet access.', 'A live log of the router checks. “Connected” alone does not mean the internet works.', 'Живой журнал проверок роутера. Одного «подключено» мало, чтобы считать, что интернет работает.'),
 ]
 EN_VALUES += [

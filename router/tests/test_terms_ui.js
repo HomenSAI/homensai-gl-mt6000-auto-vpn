@@ -7,7 +7,7 @@ const agent=fs.readFileSync('router/files/usr/lib/homensai-vpn/agent.py','utf8')
 const version=/^TERMS_VERSION = '([^']+)'/m.exec(agent)[1];
 const src=fs.readFileSync('router/terms_panel.inc.js','utf8').replace('__TERMS_VERSION__',version);
 const calls=[],notes=[];let reloads=0,failure=null;
-const context={bi:(en)=>en,locale:'en',E:(tag,attrs,children)=>new Node(tag,attrs,children),L:{resource:p=>'/r/'+p},
+const context={helpCommand:(c)=>new Node('pre',{},[c]),bi:(en)=>en,locale:'en',E:(tag,attrs,children)=>new Node(tag,attrs,children),L:{resource:p=>'/r/'+p},
   ui:{addNotification:(_,n)=>notes.push(n)},window:{location:{reload:()=>reloads++,href:'http://r/x'}},URL,
   rpc:{declare:spec=>(...args)=>{calls.push({spec,args});return failure?Promise.reject(new Error('x')):Promise.resolve(context.answer);}}};
 vm.createContext(context);vm.runInContext(src,context);

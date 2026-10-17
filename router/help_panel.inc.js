@@ -45,6 +45,17 @@ var HELP_TOPICS=[
     {t:["The primary and the reserve must be two general (all-traffic) VPN rules with Kill Switch on and the direct-internet fallback off: GL.iNet panel → VPN → VPN Dashboard.","Основной и резервный должны быть двумя общими VPN-правилами (для всего трафика) с включённым Kill Switch и выключенным прямым выходом в интернет: панель GL.iNet → VPN → VPN Dashboard."]},
     {t:["The last step is always the LAN trial. Run the LAN helper (see “The LAN helper fails”).","Последний шаг всегда LAN-тест. Запустите LAN-помощник (см. «LAN-помощник не работает»)."]}
    ]},
+  {id:"helper-what",
+   title:["What is the LAN helper and how do I start it","Что такое LAN-помощник и как его запустить"],
+   when:["Auto asks for a passed LAN trial and you do not know what that is.","Auto требует пройденный LAN-тест, а вы не знаете, что это."],
+   steps:[
+    {t:["The LAN helper is a small script for Windows, written in PowerShell 7 (a plain text file, client-test.ps1, about 325 lines; you can open it in Notepad and read it). It runs on your computer, not on the router, and checks from the computer’s side that the internet really works through the router before and after a switch. It does not install anything and changes no network settings of the computer.","LAN-помощник — небольшой скрипт для Windows на PowerShell 7 (обычный текстовый файл client-test.ps1, около 325 строк; его можно открыть в Блокноте и прочитать). Он запускается на вашем компьютере, а не на роутере, и со стороны компьютера проверяет, что интернет действительно работает через роутер до и после переключения. Он ничего не устанавливает и не меняет сетевых настроек компьютера."]},
+    {t:["Install PowerShell 7 once (Windows 10/11):","Один раз установите PowerShell 7 (Windows 10/11):"],c:"winget install Microsoft.PowerShell"},
+    {t:["On the Overview press “Download LAN helper” and “Download launcher”. Put both files in one folder. The launcher only asks questions (router address, cable adapter, mode) and starts the helper.","На «Обзоре» нажмите «Скачать LAN-помощник» и «Скачать запуск». Положите оба файла в одну папку. Запуск лишь задаёт вопросы (адрес роутера, кабельный адаптер, режим) и запускает помощник."]},
+    {t:["Open PowerShell 7 in that folder (in Explorer type pwsh in the address bar) and start the launcher:","Откройте PowerShell 7 в этой папке (в Проводнике введите pwsh в адресной строке) и запустите:"],c:"pwsh -NoProfile -File .\\start-lan-helper.ps1"},
+    {t:["Choose mode 1 (check only) first: it only reads and changes nothing. If it passes, run it again with mode 3 (full trial): it asks for the router password (typed privately, never saved) and the word TEST, switches to the reserve for a few minutes, checks the internet from your computer and then confirms the result to the router. Use a LAN cable if you can.","Сначала выберите режим 1 (только проверка): он только читает и ничего не меняет. Если прошёл, запустите снова в режиме 3 (полный тест): он спросит пароль роутера (вводится скрыто, нигде не сохраняется) и слово TEST, на несколько минут переключится на резерв, проверит интернет с вашего компьютера и подтвердит результат роутеру. По возможности используйте кабель LAN."]},
+    {t:["If it stops with a code in capital letters, open Help → “The LAN helper fails”.","Если он остановился с кодом заглавными буквами, откройте «Помощь» → «LAN-помощник не работает»."]}
+   ]},
   {id:"helper",
    title:["The LAN helper fails","LAN-помощник не работает"],
    when:["client-test.ps1 stops with a code before or during the trial.","client-test.ps1 останавливается с кодом до теста или во время него."],
@@ -107,7 +118,7 @@ var HELP_TOPICS=[
    when:["You want the router without this program, or you need an older version.","Нужен роутер без этой программы или более старая версия."],
    steps:[
     {t:["Stop Auto first and make sure the router is back on the primary (Overview). Then, by SSH:","Сначала остановите Auto и убедитесь, что роутер вернулся на основной («Обзор»). Затем по SSH:"],c:"opkg remove homensai-auto-vpn"},
-    {t:["Your settings and history stay in /etc/config/homensai_vpn and /etc/homensai-vpn. Installing again keeps them.","Ваши настройки и история остаются в /etc/config/homensai_vpn и /etc/homensai-vpn. При повторной установке они сохраняются."]},
+    {t:["Your settings and history stay in `/etc/config/homensai_vpn` and `/etc/homensai-vpn`. Installing again keeps them.","Ваши настройки и история остаются в `/etc/config/homensai_vpn` и `/etc/homensai-vpn`. При повторной установке они сохраняются."]},
     {t:["If the removal is refused, the program tells why (for example a transaction is active). Do not force it: first use “I have no internet”.","Если удаление отклонено, программа объяснит причину (например, активна транзакция). Не форсируйте: сначала выполните раздел «У меня пропал интернет»."]}
    ]},
   {id:"report",
@@ -121,6 +132,8 @@ var HELP_TOPICS=[
    ]}
 ];
 
+// Text with `inline code` pieces: the same dark monospace style everywhere.
+function richText(text){return String(text).split('`').map(function(part,i){return i%2?E('code',{'class':'hv-code'},part):part;});}
 function helpCommand(command){
   var button=E('button',{'type':'button','class':'cbi-button','click':function(){
     try{navigator.clipboard.writeText(command).then(function(){button.textContent=bi('Copied','Скопировано');}).catch(function(){});}catch(error){}
@@ -130,7 +143,7 @@ function helpCommand(command){
 function renderHelp(){
   var topics=HELP_TOPICS.map(function(topic){
     var steps=E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){
-      return E('li',{},[E('p',{},bi(step.t[0],step.t[1])),step.c?helpCommand(step.c):null].filter(Boolean));
+      return E('li',{},[E('p',{},richText(bi(step.t[0],step.t[1]))),step.c?helpCommand(step.c):null].filter(Boolean));
     }));
     var attributes={'class':'hv-help-topic','id':'help-'+topic.id};
     if(topic.open)attributes.open='open';

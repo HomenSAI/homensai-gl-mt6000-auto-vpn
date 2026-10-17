@@ -36,3 +36,14 @@ console.log('monitor and guide tests OK');
   const wrong=right.map((r,i)=>i===0?[1]:r);assert.equal(ctx.learnScore(quiz,wrong).correct,quiz.length-1);
   console.log('learn tests OK');
 }
+{
+  const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c})};vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync('router/learn_panel.inc.js','utf8'),ctx);
+  const commands=ctx.LEARN_LESSONS.filter(l=>l.cmds).flatMap(l=>l.cmds);
+  assert(commands.length>=3);
+  for(const [cmd,text] of commands){assert(/^(homensai-vpn-emergency [a-z-]+|winget install Microsoft\.PowerShell|pwsh -NoProfile -File \.\\start-lan-helper\.ps1)$/.test(cmd),cmd);assert(text.length===2&&cy2(text[1]));}
+  // No lesson text may embed a bare helper command: commands live in command blocks.
+  for(const l of ctx.LEARN_LESSONS)for(const p of l.body)assert(!/homensai-vpn-emergency/.test(p[0]));
+  function cy2(t){return /[А-Яа-я]/.test(t);}
+  console.log('command block tests OK');
+}

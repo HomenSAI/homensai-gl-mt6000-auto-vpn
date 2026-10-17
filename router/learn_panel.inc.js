@@ -17,7 +17,8 @@ var LEARN_LESSONS=[
    example:['Example: primary 1 = Germany · WireGuard, reserve 2 = Netherlands · OpenVPN.','Пример: основной 1 = Германия · WireGuard, резерв 2 = Нидерланды · OpenVPN.'],
    tip:['The bot token is a secret. Never post it or send it to anyone.','Токен бота — секрет. Никому не публикуйте и не отправляйте его.']},
   {icon:'⑤',title:['Step 1: check the VPNs, Step 2: turn on Auto','Шаг 1: проверить VPN, шаг 2: включить Auto'],
-   body:[['On Overview press “Step 1 · Check the VPNs now”. It tests right away which connected VPNs give internet. Fix problems first.','На «Обзоре» нажмите «Шаг 1 · Проверить VPN сейчас». Сразу проверит, какие подключённые VPN дают интернет. Сначала устраните проблемы.'],['Step 2: Auto can be started only after a passed LAN trial. Download the LAN helper and run it on a Windows computer in your network, preferably on the cable. The page lists exactly which step is missing. Then press the Auto button.','Шаг 2: Auto можно запустить только после успешного LAN-теста. Скачайте LAN-помощник и запустите его на компьютере с Windows в вашей сети, лучше по кабелю. Страница показывает, какого шага не хватает. Затем нажмите кнопку Auto.'],['The Auto light: green — watching the primary; yellow — switching; orange — working on the reserve; red — needs your attention; grey — off.','Светофор Auto: зелёный — следит за основным; жёлтый — переключается; оранжевый — работает на резерве; красный — нужно ваше внимание; серый — выключен.']],
+   body:[['On Overview press “Step 1 · Check the VPNs now”. It tests right away which connected VPNs give internet. Fix problems first.','На «Обзоре» нажмите «Шаг 1 · Проверить VPN сейчас». Сразу проверит, какие подключённые VPN дают интернет. Сначала устраните проблемы.'],['Step 2: Auto can be started only after a passed LAN trial. Download the LAN helper and run it on a Windows computer in your network, preferably on the cable. The page lists exactly which step is missing. Then press the Auto button.','Шаг 2: Auto можно запустить только после успешного LAN-теста. Скачайте LAN-помощник и запустите его на компьютере с Windows в вашей сети, лучше по кабелю. Страница показывает, какого шага не хватает. Затем нажмите кнопку Auto.'],['What is the LAN helper? A small PowerShell 7 script (plain text, you can read it) that runs on your Windows computer, not on the router. Install PowerShell 7 once, put the two downloaded files in one folder and start the launcher, then choose mode 1 (check only) first:','Что такое LAN-помощник? Небольшой скрипт PowerShell 7 (обычный текст, его можно прочитать), который запускается на вашем компьютере с Windows, а не на роутере. Один раз установите PowerShell 7, положите два скачанных файла в одну папку и запустите, сначала выберите режим 1 (только проверка):'],['The Auto light: green — watching the primary; yellow — switching; orange — working on the reserve; red — needs your attention; grey — off.','Светофор Auto: зелёный — следит за основным; жёлтый — переключается; оранжевый — работает на резерве; красный — нужно ваше внимание; серый — выключен.']],
+   cmds:[['winget install Microsoft.PowerShell',['Once: installs PowerShell 7 (Windows 10/11).','Один раз: устанавливает PowerShell 7 (Windows 10/11).']],['pwsh -NoProfile -File .\\start-lan-helper.ps1',['In the folder with the two downloaded files: starts the launcher.','В папке с двумя скачанными файлами: запускает программу запуска.']]],
    example:['Example: green Auto light and “2 of 2 VPNs work” means everything is fine.','Пример: зелёный светофор Auto и «работают 2 из 2 VPN» — всё в порядке.'],
    tip:['Do not turn Auto on when you cannot afford a short interruption (a call, a download).','Не включайте Auto, когда нельзя терпеть короткий перерыв (звонок, загрузка).']},
   {icon:'⑥',title:['Reading the pages','Как читать страницы'],
@@ -25,7 +26,8 @@ var LEARN_LESSONS=[
    example:['Example: a server with only 3 checks is not a leader yet: the ranking needs at least 20 checks.','Пример: сервер всего с 3 проверками ещё не лидер: рейтингу нужно не меньше 20 проверок.'],
    tip:['Speed tests are optional and use traffic; they live under Advanced → Tests.','Тесты скорости необязательны и расходуют трафик; они в «Расширенное» → «Тесты».']},
   {icon:'⑦',title:['If the internet is gone','Если пропал интернет'],
-   body:[['First stay calm: use mobile data on your phone to read Help. Open the router page by the cable or Wi-Fi and look at Overview.','Сначала спокойно: откройте «Помощь» на телефоне через мобильный интернет. Откройте страницу роутера по кабелю или Wi-Fi и посмотрите «Обзор».'],['If the router is on the reserve, press “Return to primary”. Still no internet? Connect by SSH and run the helper commands: `homensai-vpn-emergency show` (only reads), `homensai-vpn-emergency stop-auto` (stops the program’s services), `homensai-vpn-emergency remove-guard` (removes only the program’s own traffic block).','Если роутер на резерве, нажмите «Вернуться на основной». Интернета всё нет? Подключитесь по SSH и выполните команды помощника: `homensai-vpn-emergency show` (только чтение), `homensai-vpn-emergency stop-auto` (останавливает службы программы), `homensai-vpn-emergency remove-guard` (снимает только собственную блокировку трафика программы).'],['Then check GL.iNet → VPN → VPN Dashboard: the primary first, tunnels connected. Help → “I have no internet” has every step.','Затем проверьте GL.iNet → VPN → VPN Dashboard: основной первым, туннели подключены. В «Помощи» → «У меня пропал интернет» — все шаги.']],
+   body:[['First stay calm: use mobile data on your phone to read Help. Open the router page by the cable or Wi-Fi and look at Overview.','Сначала спокойно: откройте «Помощь» на телефоне через мобильный интернет. Откройте страницу роутера по кабелю или Wi-Fi и посмотрите «Обзор».'],['If the router is on the reserve, press “Return to primary”. Still no internet? Connect to the router by SSH and run the helper commands below.','Если роутер на резерве, нажмите «Вернуться на основной». Интернета всё нет? Подключитесь к роутеру по SSH и выполните команды помощника ниже.'],['Then check GL.iNet → VPN → VPN Dashboard: the primary first, tunnels connected. Help → “I have no internet” has every step.','Затем проверьте GL.iNet → VPN → VPN Dashboard: основной первым, туннели подключены. В «Помощи» → «У меня пропал интернет» — все шаги.']],
+   cmds:[['homensai-vpn-emergency show',['Only reads the state. Always safe.','Только читает состояние. Всегда безопасно.']],['homensai-vpn-emergency stop-auto',['Stops the program’s own services. Network settings are not changed.','Останавливает собственные службы программы. Сетевые настройки не меняются.']],['homensai-vpn-emergency remove-guard',['Removes only the program’s own traffic block.','Снимает только собственную блокировку трафика программы.']]],
    example:['Example: the page says “on reserve” and the internet is slow: press “Return to primary”; the router checks the primary first.','Пример: страница пишет «на резерве», интернет медленный: нажмите «Вернуться на основной»; роутер сначала проверит основной.'],
    tip:['Reading with `show` is always safe; run the other commands only when you need to.','Чтение командой `show` всегда безопасно; остальные команды запускайте, только когда нужно.']},
   {icon:'⑧',title:['Safety rules','Правила безопасности'],
@@ -63,21 +65,36 @@ function learnVerdict(percent){
   if(percent>=50)return bi('Almost there. Read the cards again before you turn on Auto.','Почти. Перечитайте карточки, прежде чем включать Auto.');
   return bi('Please go through the cards again before you use the system.','Пожалуйста, пройдите карточки ещё раз, прежде чем пользоваться системой.');
 }
+function learnSeen(){try{return window.localStorage.getItem('homensai-vpn-learn-seen')==='1';}catch(e){return false;}}
+function learnMarkSeen(){try{window.localStorage.setItem('homensai-vpn-learn-seen','1');}catch(e){}}
 function renderLearn(){
   var host=E('section',{'class':'hv-chart-card hv-learn'});
-  var step=0,answers=[],checked=false,total=LEARN_LESSONS.length+LEARN_QUIZ.length+1;
+  var mode=learnSeen()?'toc':'flow',visited=[],step=0,answers=[],checked=false,total=LEARN_LESSONS.length+LEARN_QUIZ.length+1;
   function clear(){while(host.firstChild)host.removeChild(host.firstChild);}
-  function inline(text){var parts=String(text).split('`');return parts.map(function(part,i){return i%2?E('code',{},part):part;});}
+  function inline(text){return richText(text);}
   function progress(){return E('div',{'class':'hv-learn-progress','role':'progressbar','aria-valuemin':'0','aria-valuemax':String(total),'aria-valuenow':String(step+1)},[E('span',{'style':'width:'+Math.round((step+1)*100/total)+'%'}),E('small',{},bi('Step ','Шаг ')+(step+1)+' / '+total)]);}
   function nav(back,next,nextLabel,nextDisabled){
     return E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','click':back},bi('Back','Назад')):E('span'),next?E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':nextDisabled?'disabled':null,'click':next},nextLabel):E('span')]);
   }
+  function go(index){mode='flow';step=index;checked=false;draw();}
+  function chips(){
+    var items=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-chip'+(step===i?' hv-chip-current':'')+(visited[i]?' hv-chip-visited':''),'title':bi(l.title[0],l.title[1]),'aria-label':bi(l.title[0],l.title[1]),'click':function(){go(i);}},String(i+1));});
+    items.push(E('button',{'type':'button','class':'hv-chip hv-chip-quiz'+(step>=LEARN_LESSONS.length?' hv-chip-current':''),'title':bi('Questions','Вопросы'),'click':function(){go(LEARN_LESSONS.length);}},'?'));
+    return E('div',{'class':'hv-chips'},[E('button',{'type':'button','class':'cbi-button hv-chip-contents','click':function(){mode='toc';draw();}},bi('☰ Contents','☰ Оглавление'))].concat(items));
+  }
+  function toc(){
+    var rows=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-toc-item'+(visited[i]?' hv-toc-visited':''),'click':function(){go(i);}},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},String(i+1)),E('span',{'class':'hv-toc-text'},[E('strong',{},bi(l.title[0],l.title[1])),E('small',{},bi(l.body[0][0].split('. ')[0]+'.',l.body[0][1].split('. ')[0]+'.'))])]);});
+    rows.push(E('button',{'type':'button','class':'hv-toc-item hv-toc-quiz','click':function(){answers=[];go(LEARN_LESSONS.length);}},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},'?'),E('span',{'class':'hv-toc-text'},[E('strong',{},bi('Questions and your score','Вопросы и ваша оценка')),E('small',{},bi('Check what you remember.','Проверьте, что вы запомнили.'))])]));
+    host.appendChild(E('div',{'class':'hv-learn-card'},[E('h2',{},bi('Contents','Оглавление')),E('p',{'class':'hv-learn-intro'},learnSeen()?bi('You have finished the training once. Open any topic you need, in any order.','Вы уже прошли обучение один раз. Открывайте любую тему, в любом порядке.'):bi('Open any topic, or read them one after another starting with 1. The first full pass takes about 5 minutes.','Откройте любую тему или читайте по порядку, начиная с 1. Первый полный проход занимает около 5 минут.')),E('div',{'class':'hv-toc'},rows)]));
+    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){visited=[];answers=[];go(0);}},bi('Start from the beginning','Начать с самого начала')),E('span')]));
+  }
   function lesson(){
-    var l=LEARN_LESSONS[step];
-    host.appendChild(progress());
+    var l=LEARN_LESSONS[step];visited[step]=true;
+    host.appendChild(chips());host.appendChild(progress());
     if(step===0)host.appendChild(E('p',{'class':'hv-learn-intro'},bi('A short training, about 5 minutes: what the system is, how to set it up and use it, and what to do when something goes wrong. At the end there are questions.','Короткое обучение, около 5 минут: что это за система, как её настроить и использовать и что делать, если что-то пошло не так. В конце — вопросы.')));
     host.appendChild(E('div',{'class':'hv-learn-card'},[E('div',{'class':'hv-learn-icon','aria-hidden':'true'},l.icon),E('h2',{},bi(l.title[0],l.title[1])),
       E('div',{'class':'hv-learn-body'},l.body.map(function(p){return E('p',{},inline(bi(p[0],p[1])));})),
+      l.cmds?E('div',{'class':'hv-learn-cmds'},l.cmds.map(function(c){return E('div',{'class':'hv-learn-cmd'},[E('p',{},bi(c[1][0],c[1][1])),helpCommand(c[0])]);})):null,
       E('p',{'class':'hv-learn-example'},inline(bi(l.example[0],l.example[1]))),
       E('p',{'class':'hv-learn-tip'},[E('strong',{},bi('Remember: ','Запомните: ')),inline(bi(l.tip[0],l.tip[1]))])]));
     host.appendChild(nav(step>0?function(){step--;draw();}:null,function(){step++;draw();},step===LEARN_LESSONS.length-1?bi('To the questions','К вопросам'):bi('Next','Дальше')));
@@ -85,13 +102,13 @@ function renderLearn(){
   function question(){
     var index=step-LEARN_LESSONS.length,q=LEARN_QUIZ[index],chosen=answers[index]||(answers[index]=[]);
     var grade=checked?learnGrade(q,chosen):null;
-    host.appendChild(progress());
+    host.appendChild(chips());host.appendChild(progress());
     var options=q.o.map(function(option,i){
       var mark=grade?grade.marks[i]:'none';
       var box=E('input',{'type':'checkbox','disabled':checked?'disabled':null,'change':function(){var at=chosen.indexOf(i);if(box.checked&&at<0)chosen.push(i);if(!box.checked&&at>=0)chosen.splice(at,1);draw();}});
       box.checked=chosen.indexOf(i)>=0;
       var note=mark==='right'?bi('Correct','Верно'):mark==='wrong'?bi('Wrong choice','Неверный выбор'):mark==='missed'?bi('This was a correct answer','Это был правильный ответ'):'';
-      return E('label',{'class':'hv-quiz-option hv-quiz-'+mark},[box,E('span',{},bi(option[0],option[1])),note?E('small',{},note):null].filter(Boolean));
+      return E('label',{'class':'hv-quiz-option hv-quiz-'+mark},[box,(/^homensai-vpn-emergency /.test(option[0])?E('code',{'class':'hv-code'},option[0]):E('span',{},bi(option[0],option[1]))),note?E('small',{},note):null].filter(Boolean));
     });
     host.appendChild(E('div',{'class':'hv-learn-card'},[E('div',{'class':'hv-learn-icon','aria-hidden':'true'},'?'),E('h2',{},bi('Question ','Вопрос ')+(index+1)+' / '+LEARN_QUIZ.length),E('p',{'class':'hv-quiz-question'},bi(q.q[0],q.q[1])),E('div',{'class':'hv-quiz-options'},options),
       grade?E('p',{'class':'hv-quiz-result hv-quiz-result-'+(grade.ok?'ok':'bad'),'role':'status'},grade.ok?bi('Correct!','Верно!'):bi('Not quite. Red is your wrong choice, green is the right answer.','Не совсем. Красным отмечен ваш неверный выбор, зелёным — правильный ответ.')):null].filter(Boolean)));
@@ -99,16 +116,16 @@ function renderLearn(){
     host.appendChild(nav(null,function(){if(!checked){checked=true;draw();}else{checked=false;step++;draw();}},checked?(last?bi('See my result','Узнать результат'):bi('Next question','Следующий вопрос')):bi('Check the answer','Проверить ответ'),!checked&&chosen.length===0));
   }
   function result(){
-    var s=learnScore(LEARN_QUIZ,answers);
+    var s=learnScore(LEARN_QUIZ,answers);learnMarkSeen();
     if(s.percent>=80){try{window.localStorage.setItem('homensai-vpn-learn-done','1');}catch(e){}}
     host.appendChild(progress());
     host.appendChild(E('div',{'class':'hv-learn-card hv-learn-final'},[E('div',{'class':'hv-learn-score hv-learn-score-'+(s.percent>=80?'good':s.percent>=50?'mid':'low'),'aria-hidden':'true'},s.percent+'%'),
       E('h2',{},bi('Your knowledge: ','Ваши знания: ')+s.percent+bi(' out of 100',' из 100')),
       E('p',{},bi(s.correct+' of '+s.total+' answers were fully correct.',s.correct+' из '+s.total+' ответов полностью верны.')),
       E('p',{'class':'hv-learn-verdict'},learnVerdict(s.percent))]));
-    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){step=0;answers=[];checked=false;draw();}},bi('Take the training again','Пройти обучение заново')),E('a',{'class':'cbi-button','href':'#help'},bi('Open Help','Открыть помощь'))]));
+    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){visited=[];step=0;answers=[];checked=false;mode='flow';draw();}},bi('Take the training again','Пройти обучение заново')),E('button',{'type':'button','class':'cbi-button','click':function(){mode='toc';draw();}},bi('☰ Contents','☰ Оглавление')),E('a',{'class':'cbi-button','href':'#help'},bi('Open Help','Открыть помощь'))]));
   }
-  function draw(){clear();if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
+  function draw(){clear();if(mode==='toc')toc();else if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
   draw();
   return host;
 }

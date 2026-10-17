@@ -47,3 +47,27 @@ function renderMonitorCard(status,inventory){
   monitorHost=E('section',{'class':'hv-chart-card hv-card-monitor'});fillMonitorCard(status,inventory);return monitorHost;
 }
 function updateMonitorCard(status,inventory){if(monitorHost&&!monitorBusy)fillMonitorCard(status,inventory);}
+
+// Live statistics right under the monitor switch: what is collected, where it is kept, and the charts.
+function renderMonitorStats(status,inventory,period,onPeriod){
+  var settings=(inventory||{}).settings||{},now=Date.now()/1000;
+  var rows=(status.profiles||[]).filter(function(p){return p.interface;});
+  var samples=Array.isArray(status.samples)?status.samples:[];
+  var recent=samples.filter(function(s){return Number.isFinite(s.time)&&now-s.time<=3600&&now-s.time>=-5;});
+  var times=samples.map(function(s){return s.time;}).filter(Number.isFinite);
+  var first=times.length?new Date(Math.min.apply(null,times)*1000).toLocaleString():null;
+  var every=Number(settings.checkpoint)>0?Math.round(Number(settings.checkpoint)/60):null;
+  var lines=[
+    E('h3',{},bi('What the monitor collects','Что собирает мониторинг')),
+    E('p',{},bi('About every '+(Number(settings.interval)||30)+' seconds the monitor checks each connected VPN (can it open a website and resolve a name through it). From these checks it builds the charts below: how fast each server answers, and how long each one worked or failed. History starts when the monitor was first started; nothing is guessed for earlier time.','Примерно каждые '+(Number(settings.interval)||30)+' с мониторинг проверяет каждый подключённый VPN (может ли он открыть сайт и найти адрес). Из этих проверок строятся графики ниже: как быстро отвечает каждый сервер и сколько времени он работал или не работал. История начинается с первого запуска мониторинга; за более раннее время ничего не придумывается.')),
+    E('p',{'class':'hv-ready-intro'},bi('Where it is stored: on the router, in /etc/homensai-vpn (saved '+(every?'about every '+every+' min':'periodically')+'; you can change this in Settings → Advanced settings → Monitoring parameters). Nothing leaves the router.','Где хранится: на самом роутере, в /etc/homensai-vpn (сохраняется '+(every?'примерно раз в '+every+' мин':'периодически')+'; это можно изменить в «Настройки» → «Расширенные настройки» → «Параметры мониторинга»). Ничего не уходит с роутера.')),
+    E('p',{},recent.length?bi(recent.length+' checks in the last hour'+(first?'; the oldest kept check is from '+first:'')+'.',recent.length+' проверок за последний час'+(first?'; самая старая из сохранённых — '+first:'')+'.'):bi('No checks yet. Start the monitor above; the charts appear after the first minutes.','Проверок пока нет. Запустите мониторинг выше; графики появятся через несколько минут.'))
+  ];
+  var box=E('div',{'class':'hv-monitor-stats'},[E('section',{'class':'hv-chart-card'},lines)]);
+  if(recent.length&&rows.length){
+    box.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Server answer time, last hour','Время ответа серверов за последний час')),chart(samples,rows)]));
+  }
+  box.appendChild(histogram(status.accounting||{},onPeriod,period));
+  box.appendChild(E('p',{},E('a',{'class':'cbi-button','href':'#statistics'},bi('Open the full Statistics page','Открыть полную страницу «Статистика»'))));
+  return box;
+}

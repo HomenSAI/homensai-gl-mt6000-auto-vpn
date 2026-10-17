@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0-alpha14-1 - 2026-10-18
+
+Live statistics under the monitor switch. dashboard55/ui33. UI only; includes alpha13.
+
+## 0.8.0-alpha13-1 - 2026-10-17
+
+LAN helper launcher and docs, readable System readiness page, bilingual tables with one text size. dashboard54/ui32. UI and docs only.
+
+## 0.8.0-alpha12-1 - 2026-10-17
+
+Training contents and uniform command style. dashboard53/ui31. UI only; includes alpha11.
+
 ## 0.8.0-alpha11-1 - 2026-10-17
 
 Overview clarity. dashboard52/ui30. UI only; includes alpha10.
