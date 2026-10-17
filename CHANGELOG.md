@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha19-1 - 2026-10-18
+
+Auto and Monitoring lamps in one row in the sidebar; the Automatic VPN failover block above the Right now card. dashboard60/ui38. UI only; includes alpha18.
+
 ## 0.8.0-alpha18-1 - 2026-10-18
 
 Monitoring always on; one speed table; per-server chart colours; daily traffic chart; failure-test codes explained. dashboard59/ui37. Package default enabled=1; otherwise UI only; includes alpha17.
