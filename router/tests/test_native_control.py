@@ -13,7 +13,15 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensa
 import agent
 
 
+TRIAL='c'*32
+
+
 class ControlTests(unittest.TestCase):
+    def setUp(self):
+        # The configured private trial number as the root-only policy helper reports it.
+        policy=patch.object(agent,'command',return_value=json.dumps({'settings':{'native_trial':TRIAL}}).encode())
+        policy.start();self.addCleanup(policy.stop)
+
     def test_disabling_every_profile_does_not_fall_back_to_probing_all(self):
         data={'profiles':[{'id':'a'},{'id':'b'}],'servers':[{'profile':'a','enabled':False},{'profile':'b','enabled':False}]}
         self.assertEqual(agent.monitoring_profiles(data)[0],[])
@@ -67,7 +75,7 @@ class ControlTests(unittest.TestCase):
             pending={'state':'WAIT-CLIENT','tx':'a'*32,'expected_exit':'9.9.9.9','deadline':time.time()+60}
             agent.atomic_json(Path(d)/'native-status.json',pending)
             tx=dict(pending,phase='WAIT-CLIENT');agent.atomic_json(Path(d)/'native-transaction.json',{'schema':1,'data':tx,'sha256':agent.checksum(tx)})
-            args={'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'ubus_rpc_session':'SESSION_SENTINEL'}
+            args={'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'trial':TRIAL,'ubus_rpc_session':'SESSION_SENTINEL'}
             self.assertTrue(self.invoke('native_confirm',args)['accepted'])
             value=json.loads((Path(d)/'native-confirm.json').read_text())
             self.assertNotIn('ubus_rpc_session',value);self.assertEqual(value['tx'],'a'*32)
@@ -79,12 +87,34 @@ class ControlTests(unittest.TestCase):
             agent.atomic_json(Path(d)/'native-status.json',pending)
             tx=dict(pending,phase='WAIT-CLIENT');agent.atomic_json(Path(d)/'native-transaction.json',{'schema':1,'data':tx,'sha256':agent.checksum(tx)})
             for mutation in mutations:
-                args={'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True};args.update(mutation)
+                args={'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'trial':TRIAL};args.update(mutation)
                 with self.assertRaises(ValueError):self.invoke('native_confirm',args)
                 self.assertFalse((Path(d)/'native-confirm.json').exists())
             pending['deadline']=time.time()-1;agent.atomic_json(Path(d)/'native-status.json',pending)
             tx=dict(pending,phase='WAIT-CLIENT');agent.atomic_json(Path(d)/'native-transaction.json',{'schema':1,'data':tx,'sha256':agent.checksum(tx)})
-            with self.assertRaises(ValueError):self.invoke('native_confirm',{'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True})
+            with self.assertRaises(ValueError):self.invoke('native_confirm',{'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'trial':TRIAL})
+
+    def test_confirmation_must_carry_the_private_trial_number(self):
+        with tempfile.TemporaryDirectory() as d,patch.object(agent,'RUNTIME',Path(d)),patch.object(agent,'PERSIST',Path(d)):
+            pending={'state':'WAIT-CLIENT','tx':'a'*32,'expected_exit':'9.9.9.9','deadline':time.time()+60}
+            agent.atomic_json(Path(d)/'native-status.json',pending)
+            tx=dict(pending,phase='WAIT-CLIENT');agent.atomic_json(Path(d)/'native-transaction.json',{'schema':1,'data':tx,'sha256':agent.checksum(tx)})
+            good={'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'trial':TRIAL}
+            for bad in ({'trial':'d'*32},{'trial':''},{'trial':None},{'trial':TRIAL.upper()},{'trial':'x'*500}):
+                with self.assertRaises(ValueError):self.invoke('native_confirm',dict(good,**bad))
+                self.assertFalse((Path(d)/'native-confirm.json').exists())
+            missing=dict(good);del missing['trial']
+            with self.assertRaises(ValueError):self.invoke('native_confirm',missing)
+            # Without a configured private trial number nothing can be confirmed, whatever the caller sends.
+            for configured in (b'{"settings":{}}',b'{"settings":{"native_trial":""}}',b'{"settings":{"native_trial":"short"}}'):
+                with patch.object(agent,'command',return_value=configured):
+                    with self.assertRaises(ValueError):self.invoke('native_confirm',good)
+            self.assertFalse((Path(d)/'native-confirm.json').exists())
+            self.assertTrue(self.invoke('native_confirm',good)['accepted'])
+
+    def test_trial_number_is_never_returned_by_public_status_or_inventory(self):
+        root=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
+        self.assertNotIn('native_trial',(root/'inventory.lua').read_text())
 
     def test_stop_targets_configured_trial_even_before_first_attempt(self):
         with tempfile.TemporaryDirectory() as d,patch.object(agent,'RUNTIME',Path(d)/'run'),patch.object(agent,'PERSIST',Path(d)/'persist'),patch.object(agent,'command',return_value=b'{"settings":{"native_trial":"new-trial"}}'):
@@ -98,7 +128,7 @@ class ControlTests(unittest.TestCase):
             agent.atomic_json(Path(d)/'native-status.json',pending)
             tx=dict(pending,phase='ROLLED-BACK')
             agent.atomic_json(Path(d)/'native-transaction.json',{'schema':1,'data':tx,'sha256':agent.checksum(tx)})
-            with self.assertRaises(ValueError):self.invoke('native_confirm',{'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True})
+            with self.assertRaises(ValueError):self.invoke('native_confirm',{'tx':'a'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'trial':TRIAL})
             self.assertFalse((Path(d)/'native-confirm.json').exists())
 
 

@@ -1,3 +1,5 @@
+> **Dated snapshot, 15 October 2026 (morning).** It describes application 0.2.0-alpha2 and the sentence "native switching is not implemented" refers only to that snapshot. Later the same day the native controller (0.5.0-alpha1..13) was installed and one real transition and return and one automatic failover under a controlled fault were recorded (docs/WORKLOG.md). On 16-17 October the router ran 0.7.0-alpha7-2, then 0.8.0-alpha3/alpha4 through router-test-kit/ and a first LAN trial with the alpha4 controller (WORKLOG, 17 October). Board, firmware and package versions below are still the verified identity of the device; re-read them with router-test-kit/01-preflight.sh before any test.
+
 # Verified router and installation · 15 October 2026
 
 [Russian](TESTED-ENVIRONMENT.ru.md) · [Machine-readable snapshot](tested-environment-2026-10-15.json)

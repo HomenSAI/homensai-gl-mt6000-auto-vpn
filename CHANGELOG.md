@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.0-alpha7-1 - 2026-10-17
+
+Traffic-light status, simpler interface, safer confirmation. dashboard48/ui26. Includes alpha6 (published) and nothing is accepted on the physical router yet.
+
+- Auto status as a traffic light next to the round button (green watching the primary, yellow switching, orange on the reserve, red needs attention, grey off/no data); the button only starts or stops. The model is tested over 864 controller combinations: green only for a fresh certified watch.
+- Interface: five basic pages (Overview, Channels and servers, Statistics, Settings, Help) and a collapsed Advanced group for administrators (Diagnostics, Ranking, Monthly traffic, Service monitor, Events, Readiness). Overview shows the Auto card and four tiles; path and decision details moved to Diagnostics. Per-page subtitles, compact secondary actions, calmer surfaces, shorter plain texts on Statistics, Events and Readiness.
+- Confirmation of a LAN transition must now carry the private trial number (never published); the helper sends it, the router verifies it in constant time.
+- Telegram token can be deleted (telegram_forget RPC and wizard button), reports are turned off with it.
+- Installed identity: package version from opkg is shown with the page build; a page/program/package mismatch is named on the Overview with the fix.
+- Ranking shows the number of checks and lists servers with fewer than 20 checks last.
+- Endurance harness: host sleep or clock jumps count as gaps; a lost producer is detected without ever signalling the process.
+- Documentation: dated-snapshot notes on TESTED-ENVIRONMENT, current procedure on CLIENT-TRIAL, STATE update.
+
 ## 0.8.0-alpha6-1 - 2026-10-17
 
 Built-in Help page and the emergency helper shipped with the package. dashboard47/ui25. Includes alpha5 (never published).

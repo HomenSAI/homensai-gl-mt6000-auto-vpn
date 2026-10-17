@@ -22,6 +22,7 @@
           "setup_system",
           "setup_telegram",
           "telegram_test",
+          "telegram_forget",
           "setup_check",
           "speed_start",
           "speed_cancel",

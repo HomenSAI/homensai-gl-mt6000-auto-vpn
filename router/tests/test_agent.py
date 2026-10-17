@@ -168,6 +168,16 @@ class NativeTests(unittest.TestCase):
             failed=agent.probe({'id':'wireguard:peer_1','interface':'wgclient1'})
         self.assertNotIn('exit_ip',failed);agent.EXIT_SEEN.clear()
 
+    def test_package_version_comes_from_the_control_file_and_is_never_guessed(self):
+        with tempfile.TemporaryDirectory() as d:
+            control=Path(d)/'c'
+            control.write_text('Package: homensai-auto-vpn\nVersion: 0.8.0-alpha7-1\nArchitecture: all\n')
+            self.assertEqual(agent.package_version(control),'0.8.0-alpha7-1')
+            for text in ('Version: <b>x</b>\n','Version: '+'1'*60+'\n','Package: x\n'):
+                control.write_text(text);self.assertIsNone(agent.package_version(control))
+            self.assertIsNone(agent.package_version(Path(d)/'missing'))
+            control.write_bytes(b'x'*9000);self.assertIsNone(agent.package_version(control))
+
     def test_rpc_list_and_acl_include_operator_return(self):
         self.assertIn('native_return',(ROOT/'files/usr/share/rpcd/acl.d/luci-app-homensai-vpn.json').read_text())
         out=io.StringIO()

@@ -1,3 +1,5 @@
+> **Update 2026-10-17 (evening).** Current application is 0.8.0-alpha7 (see CHANGELOG.md, VERSION.json). Since the review checkpoint below: a first hardware LAN trial was run on the GL-MT6000 with alpha4 (switch to the reserve confirmed from the LAN; return failed because the monitor had too little history; an outside change of VPN rules later closed the LAN until the owner removed the guard by SSH). Fixes: operator return, fresh-check return, release on outside change, private trial number on confirmations, traffic-light status, Help page, simplified navigation. Alpha6 is published on GitHub; alpha7 is local until published. The physical router still runs alpha4 and has not been verified with alpha5-7. The sections below describe the review checkpoint and are otherwise unchanged.
+
 # Project state — stopped Claude review checkpoint, 17 October 2026
 
 Current authoritative handoff: ../.claude/handoff/START-HERE.md and ../.claude/handoff/STATE.md. Root CLAUDE.md imports it for Claude Code.

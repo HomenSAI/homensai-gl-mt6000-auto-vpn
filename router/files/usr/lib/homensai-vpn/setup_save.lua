@@ -25,6 +25,11 @@ local ok=pcall(function()
     assert(allowed[key] and type(value)=='string')
     assert(c:set('homensai_vpn','main',key,value))
   end
+  -- Only the stored Telegram token may be deleted, and only by an explicit own request.
+  for _,key in ipairs(data.delete or {}) do
+    assert(key=='telegram_token')
+    assert(c:delete('homensai_vpn','main',key))
+  end
   local existing={}
   c:foreach('homensai_vpn','server',function(s) existing[s.profile]=s['.name'] end)
   for _,row in ipairs(data.servers) do

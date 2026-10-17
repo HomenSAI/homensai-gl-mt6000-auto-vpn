@@ -263,6 +263,8 @@ try {
             # Re-read pending identity after probing; the typed RPC checks it again.
             $latest=(Invoke-Router 'homensai-vpn' 'status' @{}).native_failover
             if($latest.state -ne 'WAIT-CLIENT' -or $latest.tx -ne $native.tx -or $latest.expected_exit -ne $native.expected_exit){throw 'CLIENT-TRANSACTION-CHANGED'}
+            # The private trial number is known only to the helper that started this trial and to root on the router.
+            $proof['trial']=$trial
             $accepted=Invoke-Router 'homensai-vpn' 'native_confirm' $proof
             if($accepted.accepted -ne $true){throw 'CLIENT-CONFIRM-NOT-ACCEPTED'}
             $null=$confirmedTx.Add([string]$native.tx)

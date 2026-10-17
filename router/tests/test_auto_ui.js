@@ -113,3 +113,36 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE'].indexOf(ns.state)>=0"));
   console.log('PASS: operator return, outside-change copy and exit address are wired');
 }
+
+// Traffic light: the lamp, not the button, carries the status.
+{
+  const now=1000,light=(ns,intent={},extra={})=>context.autoLightModel({time:now-1,native_failover:{time:now-1,...ns},auto_control:intent,...extra},{settings:{}},now);
+  assert.equal(light({state:'OBSERVING',certified:true}).lamp,'green');
+  assert.equal(light({state:'OBSERVING',certified:false}).key,'off');
+  for(const state of ['ARMED','APPLYING','WAIT-CLIENT','RESTORING'])assert.equal(light({state}).lamp,'yellow',state);
+  assert.equal(light({state:'STOPPED'},{requested:'on',requested_at:now}).lamp,'yellow');
+  assert.equal(light({state:'COMMITTED'}).lamp,'orange');
+  for(const state of ['DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE','TRIAL-REQUIRED'])assert.equal(light({state}).lamp,'red',state);
+  assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'on'}).lamp,'red');
+  assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'off'}).lamp,null);
+  for(const state of ['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'])assert.equal(light({state}).lamp,null,state);
+  // Stale or missing status is never green; the light says there is no data.
+  assert.equal(context.autoLightModel({time:now-500,native_failover:{time:now-1,state:'OBSERVING',certified:true}},{},now).key,'unknown');
+  assert.equal(context.autoLightModel({time:now-1,native_failover:{time:now-200,state:'OBSERVING',certified:true}},{},now).lamp,null);
+  assert.equal(context.autoLightModel({time:now-1,rpc_error:'RPC-UNAVAILABLE',native_failover:{time:now-1,state:'OBSERVING',certified:true}},{},now).key,'unknown');
+  // Exhaustive: one lamp at most, text always present, green only for a fresh certified watch.
+  const states=['DISABLED','STOPPED','EXPIRED','ROLLED-BACK','OBSERVING','TRIAL-REQUIRED','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','RESTORING','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE','BLOCKED','UNKNOWN-STATE',undefined];
+  let combos=0;
+  for(const state of states)for(const certified of [true,false,undefined])for(const requested of ['on','off',undefined])for(const age of [1,50,200])for(const rpc of [null,'RPC-UNAVAILABLE']){
+    const l=context.autoLightModel({time:now-1,rpc_error:rpc,native_failover:{state,certified,time:now-age},auto_control:{requested,requested_at:requested==='on'?now:0}},{settings:{}},now);combos++;
+    assert(['off','unknown','ok','switching','reserve','problem'].includes(l.key));
+    assert(l.lamp===null||['green','yellow','orange','red'].includes(l.lamp));
+    assert(typeof l.title==='string'&&l.title.length>3&&typeof l.hint==='string'&&l.hint.length>10);
+    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30&&!rpc);
+  }
+  assert(combos>=800);
+  // The button carries no status colour class any more.
+  const src=fs.readFileSync('router/auto_panel.inc.js','utf8');
+  assert(src.includes("'hv-auto-power hv-auto-neutral'")&&!src.includes("'hv-auto-power hv-auto-'+model.color"));
+  console.log('PASS: traffic light maps '+combos+' controller combinations to one lamp; button is neutral');
+}

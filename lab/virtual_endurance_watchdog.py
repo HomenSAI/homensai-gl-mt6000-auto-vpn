@@ -1,15 +1,18 @@
 """Independent bounded cleanup witness for a single virtual endurance run."""
 import argparse,json,subprocess,time
+from endurance_state import pid_alive,producer_lost
 from pathlib import Path
 CONTAINER='homensai-vpn-qemu-alpha7'
 p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--duration',type=int,required=True);p.add_argument('--leave-running',action='store_true');p.add_argument('--pause',action='store_true');a=p.parse_args()
 if not 120<=a.duration<=86520 or not a.out.is_dir():raise ValueError('WATCHDOG-BOUNDS')
-initial=json.loads((a.out/'status.json').read_text());deadline=time.monotonic()+a.duration
+initial=json.loads((a.out/'status.json').read_text());deadline=time.monotonic()+a.duration;alive=[];lost=False
 while time.monotonic()<deadline:
     try:
         current=json.loads((a.out/'status.json').read_text())
         if current.get('pid')!=initial['pid'] or current.get('source')!=initial['source']:raise ValueError('RUN-IDENTITY-CHANGED')
         if current['state'] in ('MEASUREMENTS-PASS','PASS','FAIL','STOPPED'):break
+        alive.append(pid_alive(current.get('pid')))
+        if current['state']=='RUNNING' and producer_lost(alive):lost=True;break
     except (OSError,ValueError):pass
     time.sleep(5)
 result={'independent':True,'source':initial['source'],'confirmed':False,'leave_running':a.leave_running}
@@ -28,5 +31,5 @@ if current.get('pid')==initial['pid'] and current.get('source')==initial['source
         current['state']='PASS' if result['confirmed'] else 'FAIL'
         current['independent_cleanup_confirmed']=result['confirmed']
     elif current['state']=='RUNNING':
-        current.update(state='STOPPED',watchdog_reason='DEADLINE-WITHOUT-PRODUCER-COMPLETION')
+        current.update(state='STOPPED',watchdog_reason='PRODUCER-LOST' if lost else 'DEADLINE-WITHOUT-PRODUCER-COMPLETION')
     pending=a.out/'watchdog-status.pending';pending.write_text(json.dumps(current,indent=2));pending.replace(a.out/'status.json')

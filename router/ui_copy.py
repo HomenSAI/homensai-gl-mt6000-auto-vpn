@@ -31,9 +31,6 @@ COPY = [
      'Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.',
      'Мониторинг включён. Проверки выполняет сам роутер и показывают, работает ли каждый VPN; они не доказывают, что видит компьютер в вашей сети. Это отдельно подтверждает LAN-помощник перед включением Auto.'),
     # Auto card
-    ('Waiting for controller', 'Waiting for the router', 'Ожидание роутера'),
-    ('Controller status unknown', 'No fresh status from the router', 'Нет свежего статуса от роутера'),
-    ('Controller state: ', 'Technical state: ', 'Техническое состояние: '),
     ('Request queued. The indicator changes only after controller confirmation.',
      'Request sent. The button changes only when the router confirms it.',
      'Запрос отправлен. Кнопка изменится, только когда роутер подтвердит.'),
@@ -44,9 +41,6 @@ COPY = [
     ('Connectivity failed', 'Not working', 'Не работает'),
     ('Checking / awaiting path confirmation', 'Being checked', 'Проверяется'),
     ('Selected route', 'Chosen route', 'Выбранный маршрут'),
-    ('Green: selected and healthy. Grey: ready but not selected, or unconfirmed. Yellow: transition or check. Red: confirmed failure. Both tunnels may be connected; the diagram shows the route selected for this plan.',
-     'Green: carries your traffic and works. Grey: on standby, or no fresh check. Yellow: being switched or checked. Red: not working. Both VPNs can stay connected; the diagram shows which one carries your traffic.',
-     'Зелёный: пропускает ваш трафик и работает. Серый: в резерве или нет свежей проверки. Жёлтый: переключается или проверяется. Красный: не работает. Оба VPN могут быть подключены; схема показывает, какой из них несёт ваш трафик.'),
     ('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.',
      'Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.',
      'Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'),
@@ -150,4 +144,34 @@ EN_VALUES = [
     ('Router profile', 'VPN profile on the router'),
     ('Profile currently inactive', 'This VPN is not connected'),
     ("Profile outside this round's limit", 'Skipped this round (check limit reached)'),
+]
+
+# Statistics, Events and Readiness: shorter, plainer, no internal vocabulary.
+COPY += [
+    ('History starts with this release. No earlier observations are invented.', 'History starts when monitoring started; nothing is guessed for earlier time.', 'История начинается с запуска мониторинга; за более раннее время ничего не придумывается.'),
+    ('Green: confirmed healthy time · red: confirmed failure time · grey: unobserved time. Inactive reserves are excluded. Connections count observed inactive → active transitions; startup is not a new connection. Duration is estimated between probes; checkpoint gaps remain unknown.',
+     'Green: time it worked. Red: time it failed. Grey: not observed. Connections: how many times the VPN came up.',
+     'Зелёный: время работы. Красный: время сбоя. Серый: не наблюдалось. Подключения: сколько раз VPN поднимался.'),
+    ('Mean of successful tests; failed/cancelled tests are not zero-speed samples. History is sampled, bounded and may be partial.', 'Average of successful tests. Failed or cancelled tests are not counted as zero speed.', 'Среднее по успешным тестам. Неудачные и отменённые тесты не считаются нулевой скоростью.'),
+    ('WAN and VPN counters overlap: never add them together. VPN excludes unmonitored profiles. A dash means no valid counter interval; gaps can coexist with measured traffic. Daily boundary allocation is estimated between samples. Showing up to 90 retained days.',
+     'WAN and VPN counters overlap, so do not add them together. A dash means there was no valid data that day. Up to 90 days are kept.',
+     'Счётчики WAN и VPN пересекаются, их нельзя складывать. Прочерк означает, что за этот день нет достоверных данных. Хранится до 90 дней.'),
+    ('Only application priorities are saved. This does not switch a live route. Unselected profiles follow the selected servers in their existing order.', 'Only this program’s priorities are saved. No route is changed.', 'Сохраняются только приоритеты этой программы. Маршрут не меняется.'),
+    ('Selected route requires fresh controller evidence. Candidate suggestions do not authorize switching.', 'The chosen route is shown only while the router reports it. Suggestions never switch anything.', 'Выбранный маршрут показывается, только пока его подтверждает роутер. Подсказки ничего не переключают.'),
+    ('Hierarchy: another server → another channel → another VPN protocol. No implicit direct-WAN fallback.', 'Order of preference: another server, then another channel, then another VPN protocol. Traffic never bypasses the VPN.', 'Порядок предпочтения: другой сервер, затем другой канал, затем другой протокол VPN. Трафик никогда не идёт мимо VPN.'),
+    ('Retained controller events only. Missing sequences produce unknown outcomes. Probe/client details absent from this history remain unknown.', 'Based only on the events the router kept. Gaps are shown as unknown, never guessed.', 'Основано только на событиях, которые сохранил роутер. Пропуски показываются как неизвестные, а не угадываются.'),
+    ('Coverage: incomplete retained window; not measured LAN availability.', 'Covers only the events kept on the router. This is not a measure of home-network uptime.', 'Охватывает только события, сохранённые на роутере. Это не показатель доступности домашней сети.'),
+    ('Order: server → channel → VPN protocol; operator priority within each level.', 'Order of preference: server, channel, VPN protocol; your priorities decide within each level.', 'Порядок предпочтения: сервер, канал, протокол VPN; внутри каждого уровня решают ваши приоритеты.'),
+    ('Router-only probes do not confirm the LAN client path. Native transitions require separate certification.', 'These checks run on the router. A switch is also confirmed by the LAN helper.', 'Эти проверки выполняет сам роутер. Переключение дополнительно подтверждает LAN-помощник.'),
+    ('Source failure threshold: ', 'Primary failures needed: ', 'Нужно сбоев основного: '),
+    ('Reserve success threshold: ', 'Reserve checks needed: ', 'Нужно проверок резерва: '),
+    ('Controller reason: ', 'Reason: ', 'Причина: '),
+    ('Actual environment: ', 'Router: ', 'Роутер: '),
+    ('Monitor evidence: ', 'Monitor data: ', 'Данные монитора: '),
+    ('Times are from the router measurements. A connected interface alone is not proof of internet access.', 'A live log of the router checks. “Connected” alone does not mean the internet works.', 'Живой журнал проверок роутера. Одного «подключено» мало, чтобы считать, что интернет работает.'),
+]
+EN_VALUES += [
+    ('HTTPS, ms · available samples from the last hour. Gaps longer than 90 seconds are not connected.', 'Response time of each connected VPN over the last hour, in milliseconds. The line breaks where there was no data for 90 seconds.'),
+    ('The chart appears after two successful measurements. No synthetic data is used.', 'The chart appears after two successful checks. Nothing is made up.'),
+    ('HTTPS latency history of connected servers in milliseconds', 'Response time of connected servers, milliseconds'),
 ]

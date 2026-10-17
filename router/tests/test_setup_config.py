@@ -1,4 +1,5 @@
 import copy
+import json
 from pathlib import Path
 import sys
 import unittest
@@ -68,6 +69,17 @@ class SetupTests(unittest.TestCase):
                 answer=setup.save(args,'speed')
                 self.assertFalse(answer['saved']);self.assertEqual(answer['code'],expected)
                 self.assertEqual(run.call_count,1)
+
+    def test_forgetting_the_token_deletes_only_it_and_turns_reports_off(self):
+        from contextlib import nullcontext
+        from types import SimpleNamespace
+        with patch.object(setup,'control_lock',return_value=nullcontext()),patch.object(setup.subprocess,'run',return_value=SimpleNamespace(returncode=0,stdout=b'OK')) as run:
+            self.assertTrue(setup.save({},'forget')['saved'])
+            sent=json.loads(run.call_args.kwargs['input'])
+        self.assertEqual(sent,{'main':{'telegram_enabled':'0'},'servers':[],'delete':['telegram_token']})
+        with patch.object(setup.subprocess,'run') as writer:
+            with self.assertRaises(ValueError):setup.save({'token':'x'},'forget')
+            writer.assert_not_called()
 
     def test_invalid_input_never_calls_writer(self):
         with patch.object(setup.subprocess,'run') as writer:

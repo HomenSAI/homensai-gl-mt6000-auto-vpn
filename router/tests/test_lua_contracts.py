@@ -38,6 +38,7 @@ package.preload['uci']=function()
  function c:save(config) record('save',config);if failure=='save' then return nil end;return true end
  function c:commit(config) record('commit',config);if failure=='commit' then return nil end;return true end
  function c:revert(config) record('revert',config);return true end
+ function c:delete(config,section,key) record('delete',config,section,key);if failure=='delete' then return nil end;return true end
  return {cursor=function(config,delta) return c end}
 end
 '''.replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure)).replace('DELTA',json.dumps(str(delta)))
@@ -69,6 +70,19 @@ end
         result,calls=self.run_setup(self.payload(),pending=b'')
         self.assertEqual(result.returncode,0)
         self.assertEqual(result.stdout,b'OK')
+
+    def test_only_the_telegram_token_can_be_deleted_and_failure_reverts(self):
+        ok=json.dumps({'main':{'telegram_enabled':'0'},'servers':[],'delete':['telegram_token']}).encode()
+        result,calls=self.run_setup(ok,pending=b'')
+        self.assertEqual(result.stdout,b'OK')
+        self.assertIn(('delete','main','telegram_token'),[(c['name'],c.get('section'),c.get('key')) for c in calls])
+        for key in ('telegram_chat','enabled','interval','../x'):
+            bad=json.dumps({'main':{},'servers':[],'delete':[key]}).encode()
+            result,calls=self.run_setup(bad,pending=b'')
+            self.assertNotEqual(result.returncode,0)
+            self.assertNotIn('delete',[c['name'] for c in calls]);self.assertIn('revert',[c['name'] for c in calls])
+        result,calls=self.run_setup(ok,failure='delete',pending=b'')
+        self.assertNotEqual(result.returncode,0);self.assertIn('revert',[c['name'] for c in calls]);self.assertNotIn('commit',[c['name'] for c in calls])
 
     def test_all_packaged_lua_parses(self):
         for path in ROOT.glob('*.lua'):

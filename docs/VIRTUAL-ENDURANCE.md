@@ -15,3 +15,7 @@ RUNNING is unfinished. A producer-only success remains MEASUREMENTS-PASS until t
 To stop cooperatively, create an empty STOP file inside the exact current run output directory. Do not kill arbitrary Python/Docker processes. Avoid concurrent serial helpers while the observer owns the guest. QMP status is read-only; do not install a different guest package during a run.
 
 The independent watchdog pauses the same clone at terminal completion or after the bounded deadline plus cleanup reserve. If the Windows host itself stops, neither process can continue; inspect the last timestamps and report incomplete coverage rather than inventing a successful run.
+
+## Update 2026-10-17: host sleep and lost producer
+
+The runner now compares wall-clock and monotonic time between samples (`endurance_state.slept`): a sleeping host or a clock jump counts as a gap in both directions, so a run that slept can no longer pass. The watchdog checks that the producer process is alive without signalling it (`pid_alive`; os.kill(pid, 0) would terminate a process on Windows) and marks a run whose producer was seen dead on three consecutive polls as STOPPED with reason PRODUCER-LOST at once, instead of waiting for the deadline. Neither change makes a short or interrupted run a PASS.

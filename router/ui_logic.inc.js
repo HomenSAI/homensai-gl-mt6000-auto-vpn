@@ -28,3 +28,6 @@ function compareTableValues(a,b,direction){
   var result=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});
   return direction==='desc'?-result:result;
 }
+// Ranking trust: a handful of checks is not enough to name a leader.
+function rankEnough(count){return count>=20?1:0;}
+function rankConfidence(count){return count+' · '+(count>=100?bi('good','высокая'):count>=20?bi('fair','средняя'):bi('too few to rank','мало для рейтинга'));}

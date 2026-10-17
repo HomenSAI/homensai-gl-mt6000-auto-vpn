@@ -247,7 +247,7 @@ reorganizer = """      (function(){
       })();
 """
 must_replace("      panel.addEventListener('pointerdown',function(){pointerHeld=true;});", reorganizer+"      panel.addEventListener('pointerdown',function(){pointerHeld=true;});")
-source=source.replace('070-alpha10','080-alpha6')
+source=source.replace('070-alpha10','080-alpha7')
 # Overview copy: one calm monitoring note; Telegram has its own tile, so only a real error is shown.
 note_old='tr("Мониторинг активен. Состояние нативного контроллера показано ниже. Проверки роутера не подтверждают путь LAN-клиента; испытание требует отдельного клиентского подтверждения.")'
 assert note_old in source
@@ -255,10 +255,51 @@ source=source.replace(note_old,"bi('Monitoring is active. Router checks show tun
 telegram_old="var tg=status.telegram||{};put('overview',E('p',{},'Telegram: '+(tg.enabled?(tg.code||(tr(\"включён · интервал \")+tg.interval_minutes+tr(\" мин · последняя отправка \")+(tg.last_sent?new Date(tg.last_sent*1000).toLocaleString():tr(\"ожидается\")))):tr(\"отключён\"))));"
 assert telegram_old in source
 source=source.replace(telegram_old,"var tg=status.telegram||{};if(tg.enabled&&tg.code)put('overview',E('p',{'class':'alert-message warning'},'Telegram: '+tg.code));")
+# Simpler Overview and navigation: details move to Diagnostics / Service monitor; admin pages sit behind "Advanced".
+import re as _r
+must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
+source,_n=_r.subn(r"put\('overview',(E\('p',\{'class':'alert-message warning'\},\s*bi\('Monitoring is )",r"put('services',\1",source,count=1)
+assert _n==1,'monitor note'
+must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','ranking','traffic','services','events','readiness'];
+var PAGE_SUBTITLES={
+  overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
+  channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
+  statistics:['How your VPNs behaved over time.','Как вели себя ваши VPN со временем.'],
+  settings:['Set up the monitor, your two VPNs, reports and recovery rules.','Настройка мониторинга, двух VPN, отчётов и правил восстановления.'],
+  help:['What to do when something is wrong.','Что делать, если что-то не так.'],
+  tests:['How the failover decides, and a test that simulates a failure.','Как принимается решение о переключении, и тест с имитацией сбоя.'],
+  ranking:['Which servers worked best over the last days.','Какие серверы работали лучше всего за последние дни.'],
+  traffic:['How much data went through each VPN.','Сколько данных прошло через каждый VPN.'],
+  services:['A live log of what the router sees.','Живой журнал того, что видит роутер.'],
+  events:['Everything that happened: switches, failures, recoveries.','Всё, что происходило: переключения, сбои, восстановления.'],
+  readiness:['Whether this router has everything Auto needs.','Есть ли на этом роутере всё, что нужно для Auto.']
+};
+return view.extend({""")
+must_replace("var appRoot=null,settingsHost=null,heading=null,","var subtitle=null,advancedBox=null,advancedToggle=null,appRoot=null,settingsHost=null,heading=null,")
+must_replace("heading,E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одком месте.'))".replace('одком','одном'),"heading,(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))")
+must_replace("if(heading)heading.textContent=key==='overview'?bi('Your internet under control','Ваш интернет под контролем'):tabs.filter(function(t){return t[0]===key;})[0][2];","""if(heading)heading.textContent=key==='overview'?bi('Your internet under control','Ваш интернет под контролем'):tabs.filter(function(t){return t[0]===key;})[0][2];
+      if(subtitle&&PAGE_SUBTITLES[key])subtitle.textContent=bi(PAGE_SUBTITLES[key][0],PAGE_SUBTITLES[key][1]);
+      if(advancedBox&&ADVANCED_KEYS.indexOf(key)>=0&&advancedBox.hidden){advancedBox.hidden=false;if(advancedToggle)advancedToggle.setAttribute('aria-expanded','true');}""")
+must_replace("var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);});","""function tabLink(key){var tab=tabs.filter(function(t){return t[0]===key;})[0];return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);}
+      var advancedOpen=false;try{advancedOpen=localStorage.getItem('homensai-vpn-advanced')==='1';}catch(e){}
+      if(ADVANCED_KEYS.indexOf(activeTab)>=0)advancedOpen=true;
+      advancedBox=E('div',{'class':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
+      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced','Расширенное')),E('small',{},bi('for administrators','для администраторов'))]);
+      var links=['overview','channels','statistics','settings','help'].map(tabLink).concat([advancedToggle,advancedBox]);""")
+# Ranking: number of checks and a confidence label; sparse servers never lead.
+must_replace('tr("Успех проверок"),tr("Средняя HTTPS-задержка")].map(','tr("Успех проверок"),tr("Средняя HTTPS-задержка"),bi("Checks","Проверок")].map(')
+must_replace("cell(item.r.good?(item.r.sum/item.r.good).toFixed(1)+tr(\" мс\"):'—')]));});","cell(item.r.good?(item.r.sum/item.r.good).toFixed(1)+tr(\" мс\"):'—'),cell(rankConfidence(item.r.n))]));});")
+must_replace(".sort(function(a,b){return (b.r.n?",".sort(function(a,b){return (rankEnough(b.r.n)-rankEnough(a.r.n))||(b.r.n?")
+must_replace("addSearch('ranking',ranking);put('ranking',ranking);","addSearch('ranking',ranking);put('ranking',ranking);put('ranking',E('p',{},bi('Servers with fewer than 20 checks are listed last: one lucky check does not make a leader.','Серверы с менее чем 20 проверками стоят в конце: одна удачная проверка не делает лидера.')));")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
 must_replace("put('readiness',renderReadiness(status));","put('readiness',renderReadiness(status));put('help',helpNode||(helpNode=renderHelp()));")
+# Installed identity (package/program/page) and part-mismatch notice.
+_agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard48').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
+must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
 from ui_copy import COPY
 import re as _re
@@ -270,10 +311,10 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui25.css')
-(root/'dashboard47.js').write_text(source,encoding='utf8')
-print('Generated dashboard47.js with sidebar, language persistence and sortable tables')
+source=source.replace('ui15.css','ui26.css')
+(root/'dashboard48.js').write_text(source,encoding='utf8')
+print('Generated dashboard48.js with sidebar, language persistence and sortable tables')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard47',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard48',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')

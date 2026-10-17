@@ -14,3 +14,26 @@ class EnduranceVerdicts(unittest.TestCase):
         self.assertEqual(m.sample_errors(sample,expected,sample),[])
         for key,value in [('age',91),('age',-1),('auto_off',False),('version','old'),('code_hashes',{}),('monitor_instances',2),('protected','changed')]:
             row=dict(sample);row[key]=value;self.assertTrue(m.sample_errors(row,expected,sample))
+
+class HostSleepAndLostProducer(unittest.TestCase):
+    def test_host_sleep_or_clock_jump_is_a_gap_even_when_monotonic_did_not_advance(self):
+        self.assertFalse(m.slept((1000,50),(1060,110),60))        # normal sample
+        self.assertFalse(m.slept((1000,50),(1085,134),60))        # slow but consistent
+        self.assertTrue(m.slept((1000,50),(1000+3600,50+60),60))  # slept an hour, monotonic ignored it
+        self.assertTrue(m.slept((1000,50),(900,110),60))          # wall clock stepped back
+        self.assertTrue(m.slept((1000,50),(1000+300,50+300),60))  # consistent but far beyond the interval
+
+    def test_lost_producer_needs_consecutive_dead_polls_and_never_passes(self):
+        self.assertFalse(m.producer_lost([False,False]))
+        self.assertFalse(m.producer_lost([False,False,True]))
+        self.assertTrue(m.producer_lost([True,False,False,False]))
+        self.assertEqual(m.verdict(100,43200,1,0,0,60),'RUNNING')
+
+    def test_liveness_never_signals_and_rejects_bad_pids(self):
+        import os
+        self.assertTrue(m.pid_alive(os.getpid()))
+        for bad in (0,-1,None,'1',2**31,True.__class__):self.assertFalse(m.pid_alive(bad))
+        self.assertTrue(m.pid_alive(os.getpid()))  # still running: the check did not terminate it
+
+
+if __name__=='__main__':unittest.main()

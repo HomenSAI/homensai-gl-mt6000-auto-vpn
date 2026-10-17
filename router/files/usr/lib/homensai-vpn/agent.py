@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.8.0-alpha6'
+VERSION = '0.8.0-alpha7'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -30,6 +30,24 @@ SO_MARK = getattr(socket, 'SO_MARK', 36)
 SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
 STOP = False
 EXIT_SEEN = {}
+
+
+PACKAGE_CONTROL = Path('/usr/lib/opkg/info/homensai-auto-vpn.control')
+
+
+def package_version(control=None):
+    """Installed package version from opkg's control file; None when unknown (never guessed)."""
+    try:
+        control = control or PACKAGE_CONTROL
+        if control.is_symlink() or control.stat().st_size > 8192:
+            return None
+        for line in control.read_text(encoding='utf-8', errors='replace').splitlines():
+            if line.startswith('Version: '):
+                value = line[9:].strip()
+                return value if re.fullmatch(r'[0-9A-Za-z.+~_-]{1,48}', value) else None
+    except OSError:
+        return None
+    return None
 
 
 def remember_exit(device, body):
@@ -578,6 +596,7 @@ def serve():
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
             status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
+            status['package']=package_version()
             from failure_diagnosis import explain
             status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
@@ -653,11 +672,11 @@ def trim_status_reply(status,limit=900000):
 def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
-                          'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False},
+                          'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_forget': {}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -666,8 +685,14 @@ def rpc(method):
     from rpc_input import decode_request
     arguments=decode_request(request)
     if method=='native_confirm':
-        if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok'}:
+        if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
             raise ValueError('invalid confirmation fields')
+        # The trial number is private (never in status, inventory or history): only the helper that started the trial knows it.
+        import hmac
+        configured=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua'])).get('settings',{}).get('native_trial')
+        if (not isinstance(arguments['trial'],str) or not isinstance(configured,str) or not re.fullmatch(r'[a-f0-9]{32}',configured)
+                or not hmac.compare_digest(arguments['trial'].encode('ascii','replace'),configured.encode('ascii','replace'))):
+            raise ValueError('confirmation not bound to the running trial')
         if not isinstance(arguments['tx'],str) or not re.fullmatch(r'[a-f0-9]{32}',arguments['tx']):
             raise ValueError('invalid confirmation transaction')
         address=ipaddress.IPv4Address(arguments['exit_ipv4'])
@@ -698,6 +723,12 @@ def rpc(method):
     if method=='monitor_control':
         from monitor_control import change
         print(json.dumps(change(arguments)));return
+    if method=='telegram_forget':
+        from setup_config import save
+        try:result=save(arguments,'forget')
+        except ValueError as error:
+            result={'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
+        print(json.dumps(result));return
     if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor'):
         from setup_config import save
         try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor'}[method])

@@ -2,7 +2,7 @@
 import argparse,hashlib,json,os,re,subprocess,sys,time
 from datetime import datetime,timezone
 from pathlib import Path
-from endurance_state import sample_errors,verdict
+from endurance_state import sample_errors,verdict,slept
 CONTAINER='homensai-vpn-qemu-alpha7'
 
 def utc():return datetime.now(timezone.utc).isoformat()
@@ -65,8 +65,9 @@ print('CLONE_JSON:'+json.dumps(row))""".replace('__FILES__',repr(list(expected['
         while time.monotonic()-started<a.duration:
             if (out/'STOP').exists():stopped=True;break
             at=time.monotonic();errors=[]
-            if last is not None and at-last>a.interval+60:state['gaps']+=1
-            last=at
+            now=(time.time(),at)
+            if last is not None and (at-last[1]>a.interval+60 or slept(last,now,a.interval)):state['gaps']+=1
+            last=now
             try:
                 if inspect()!=identity:raise ValueError('CLONE-IDENTITY-CHANGED')
                 reply=subprocess.run(['docker','exec','-i',CONTAINER,'python3','-'],input=code,capture_output=True,text=True,timeout=60,check=True)

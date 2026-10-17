@@ -15,3 +15,17 @@ for(const direction of ['asc','desc'])assert(c.compareTableValues('—','10',dir
 assert(c.compareTableValues('2','10','asc')<0);assert(c.compareTableValues('2','10','desc')>0);
 assert(c.compareTableValues('5%','10%','asc')<0);assert(c.compareTableValues('Server 2','Server 10','asc')<0);
 console.log('PASS: health freshness, selected-first stable ordering, unknown-last sorting');
+
+// Ranking trust: sparse servers are labelled and never lead.
+{
+  const fs2=require('fs'),vm2=require('vm');
+  const ctx={bi:(en)=>en};vm2.createContext(ctx);vm2.runInContext(fs2.readFileSync('router/ui_logic.inc.js','utf8'),ctx);
+  const a=require('assert');
+  a.equal(ctx.rankEnough(19),0);a.equal(ctx.rankEnough(20),1);a.equal(ctx.rankEnough(0),0);
+  a.equal(ctx.rankConfidence(3),'3 · too few to rank');a.equal(ctx.rankConfidence(50),'50 · fair');a.equal(ctx.rankConfidence(500),'500 · good');
+  const rows=[{n:2,good:2},{n:200,good:190},{n:25,good:20}].sort((x,y)=>(ctx.rankEnough(y.n)-ctx.rankEnough(x.n))||(y.good/y.n-x.good/x.n));
+  a.deepEqual(rows.map(r=>r.n),[200,25,2]);   // the 100%-of-2 server is last
+  const generated=fs2.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+JSON.parse(fs2.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'))['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
+  a(generated.includes('rankConfidence(item.r.n)')&&generated.includes('rankEnough(b.r.n)-rankEnough(a.r.n)'));
+  console.log('PASS: ranking shows the number of checks and puts sparse servers last');
+}

@@ -91,6 +91,10 @@ def save(arguments, kind):
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
+    elif kind=='forget':
+        if arguments:raise ValueError('SETUP-FIELDS')
+        # Deleting the stored token also turns reports off, so nothing keeps failing without it.
+        payload={'main':{'telegram_enabled':'0'},'servers':[],'delete':['telegram_token']}
     elif kind=='recovery':
         from recovery_settings import payload as recovery_payload
         payload=recovery_payload(arguments)
