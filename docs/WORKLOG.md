@@ -910,3 +910,10 @@ Saved private paused-disk/kernel copy plus SHA256 manifest under private/claude-
 ## 2026-10-17T13:39:06.267371+00:00 - explicit version policy and handoff release preparation
 
 User requested a GitHub release and explicit versioning. Application code/package remain alpha2/alpha2-1; introduce independently versioned documentation handoff 1.0.0 with tag handoff-v1.0.0, VERSION.json, immutable release policy and read-only version agreement validation. Backfilled changelog links for previously published candidates without inventing new device acceptance. Release archive contains only sanitized review context, never private run/disk/session data or an installable router package. No long or product test suite restarted.
+
+
+## 2026-10-17T13:43:26.311491+00:00 - handoff-v1.0.0 release independently verified
+
+Canonical source 3fd94bd2e6777ccac24617912726a3da4a18c25b and exact public snapshot 9c8826ab955a8d0cd6c054e8c789bd882cf6ec8e saved to Gitea before normal GitHub main publication. Local/primary tag handoff-v1.0.0 targets canonical source; public tag targets its identical-tree public snapshot, mapped separately. Existing application tags/assets were not replaced.
+
+Created experimental review prerelease handoff-v1.0.0. Downloaded all three assets again: context ZIP 21347 bytes SHA256 366b03e33933492a1b258b6935b5b3bdcd1e8bffe50961be52384812bb1cd4dd, VERSION.json and SHA256SUMS.txt; exact bytes/checksums match reviewed local assets. Archive has 14 allowlisted context files, no private backups/sessions/keys or ipk. Two independent local archive builds from the same committed source matched byte-for-byte. Read-only version agreement passed; three deliberate metadata mismatches refused. Application remains 0.8.0-alpha2/package alpha2-1/dashboard43/ui22. No product test suite, virtual workload or physical-router action was started. Publication receipt qa/HANDOFF-V1.0.0-PUBLICATION.json.

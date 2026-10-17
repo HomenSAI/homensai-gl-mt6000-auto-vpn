@@ -1,0 +1,33 @@
+{
+  "source": "3fd94bd2e6777ccac24617912726a3da4a18c25b",
+  "public": "9c8826ab955a8d0cd6c054e8c789bd882cf6ec8e",
+  "parent": "9557a9af54dd67c3225465c73f76ad6d505db455",
+  "tree": "99d81e9fce24f118dddd5de67eeeb443d8efd8c3",
+  "tag": "handoff-v1.0.0",
+  "application_version": "0.8.0-alpha2",
+  "package_version": "0.8.0-alpha2-1",
+  "handoff_version": "1.0.0",
+  "gitea_saved": true,
+  "github_published": true,
+  "release_created": true,
+  "download_verified": true,
+  "recorded_at_utc": "2026-10-17T13:43:26.307491+00:00",
+  "release_url": "https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/handoff-v1.0.0",
+  "prerelease": true,
+  "assets": {
+    "homensai-gl-mt6000-auto-vpn-claude-handoff-1.0.0.zip": {
+      "bytes": 21347,
+      "sha256": "366b03e33933492a1b258b6935b5b3bdcd1e8bffe50961be52384812bb1cd4dd"
+    },
+    "SHA256SUMS.txt": {
+      "bytes": 198,
+      "sha256": "f896940e05fc36c61b0eb71d1f83723acc6d31cb802fab081b2eb7af637094c1"
+    },
+    "VERSION.json": {
+      "bytes": 712,
+      "sha256": "441432a535e042194f0a6b312a6c1fd9cb71a3900f5aafce61db8403f05aa600"
+    }
+  },
+  "application_runtime_changed": false,
+  "tests_restarted": false
+}
