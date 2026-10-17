@@ -6,7 +6,7 @@ private configuration/history backups, passwords, sessions, bot tokens or VPN ke
 ```text
 Guide me through HomenS.AI Auto VPN installation in MONITOR mode, one short
 question/step at a time. First identify the exact release and its verified source;
-alpha7 is a development/prerelease candidate, not proof of physical acceptance.
+alpha8 is a development/prerelease candidate, not proof of physical acceptance.
 Local Gitea is primary; do not assume public GitHub main has the same history.
 
 Ask for model, firmware/OpenWrt/LuCI versions and whether local login works.

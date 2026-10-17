@@ -704,3 +704,9 @@ Kernel capability probe: namespace create/delete succeeded; TUN/WireGuard/OpenVP
 - Created public snapshot commit 5e9f23486e05fe7037624a404a905c9d615436b5, sole parent 51982dd249fb4ea96fbd1573f35e01bdd9c538d5, tree a972b8de20e111e204a02f81249ca8bf297138c3 exactly matching canonical source a514afa482792a6d630831dd8a822a18962fe47e. Full canonical history remains in Gitea.
 - Saved exact public branch to Gitea, then immutable dual-runtime CI PASS with unchanged package hash. Ordinary Git push to GitHub main succeeded; GitHub API independently returned the expected public commit. No force or old-tag publication.
 - Added documentation-only completion records and refreshed earlier GitHub-blocked statements. Preparing new prerelease on the public history; local canonical alpha8 tag is not bulk-pushed. Physical router untouched.
+
+
+## 2026-10-17T09:33:33.360440+02:00 - release installation-document consistency
+
+- Publication review found install examples still named alpha7-1 despite the new alpha8-1 artifact. Corrected EN/RU filenames/checksum examples and AI-install candidate label; retained monitor-first and separate hardware-window boundaries. Refreshed dated physical-checkpoint wording from the recorded alpha7-2 receipt, not a new router query.
+- Product/package bytes unchanged. Follow-up contains documentation only and is saved to Gitea before normal GitHub main push. New public release tag will be created explicitly on the public commit, avoiding the same-named canonical tag's unrelated history.
