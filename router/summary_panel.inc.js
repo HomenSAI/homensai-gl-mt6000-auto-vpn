@@ -32,3 +32,59 @@ function renderSummary(status,inventory){
 function metricInfo(label,value,detail,explain){
   return E('details',{'class':'hv-metric hv-metric-info'},[E('summary',{},[E('span',{},label),E('strong',{},text(value)),E('small',{},detail)]),E('p',{'class':'hv-metric-explain'},explain)]);
 }
+
+// The forecast panel lists checks that this router has not been certified for yet. Each code gets a plain explanation.
+var PLAN_BLOCKERS={
+  'GL-ADAPTER-UNVERIFIED':['GL.iNet VPN manager','Менеджер VPN GL.iNet','Not proven that this program’s way of switching works together with the VPN manager built into this exact GL.iNet firmware.','Не доказано, что способ переключения этой программы работает вместе со встроенным менеджером VPN именно этой прошивки GL.iNet.'],
+  'WORKER-COORDINATION-UNVERIFIED':['GL.iNet background programs','Фоновые программы GL.iNet','GL.iNet runs its own background programs that also connect and reconnect VPNs. Not tested that they do not fight with this program.','GL.iNet запускает свои фоновые программы, которые тоже подключают и переподключают VPN. Не проверено, что они не мешают этой программе.'],
+  'LAN-PATH-UNVERIFIED':['Path of a home computer','Путь домашнего компьютера','Not confirmed from a computer in your network that its traffic really goes through the chosen VPN. This is what the LAN helper checks.','Не подтверждено с компьютера в вашей сети, что его трафик действительно идёт через выбранный VPN. Это проверяет LAN-помощник.'],
+  'DNS-POLICY-UNVERIFIED':['Name lookups (DNS)','Поиск адресов (DNS)','Not confirmed that DNS requests of your devices follow the VPN and do not leak outside it during and after a switch.','Не подтверждено, что DNS-запросы ваших устройств идут через VPN и не утекают мимо него во время и после переключения.'],
+  'KILLSWITCH-UNVERIFIED':['Kill Switch','Kill Switch','Not confirmed that the GL.iNet Kill Switch blocks the internet, instead of leaking, when a VPN drops during a switch.','Не подтверждено, что Kill Switch GL.iNet блокирует интернет, а не пропускает трафик мимо VPN, когда VPN обрывается во время переключения.'],
+  'IPV6-POLICY-UNVERIFIED':['IPv6 traffic','Трафик IPv6','Not confirmed that IPv6 traffic cannot bypass the VPN.','Не подтверждено, что трафик IPv6 не может обойти VPN.'],
+  'WATCHDOG-UNVERIFIED':['Safety timer','Страхующий таймер','Not confirmed on this router that the independent timer, which releases the program’s traffic block and returns to a safe state if something hangs, always fires.','Не подтверждено на этом роутере, что независимый таймер, который снимает собственную блокировку трафика и возвращает безопасное состояние при зависании, всегда срабатывает.'],
+  'SCOPED-CONNTRACK-UNVERIFIED':['Open connections','Открытые соединения','Not confirmed that a switch resets only the connections it must (the router’s connection table), not all of them.','Не подтверждено, что при переключении сбрасываются только нужные соединения (таблица соединений роутера), а не все.']
+};
+// Failure codes of the controller that prove a planning check has FAILED (not only that it is still unproven).
+var PLAN_FAILURE_CODES={
+  'GL-ADAPTER-UNVERIFIED':['UNSUPPORTED-BOARD','UNSUPPORTED-FIRMWARE','FIRMWARE-UNKNOWN','VENDOR-CODE-CHANGED','VENDOR-CODE-UNVERIFIED','VENDOR-APPLY-FAILED','POLICY-READ-FAILED'],
+  'WORKER-COORDINATION-UNVERIFIED':['VENDOR-WORKER-BUSY'],
+  'LAN-PATH-UNVERIFIED':['LAN-LAYOUT-UNSUPPORTED','CLIENT-CONFIRMATION-TIMEOUT','LAN-BASELINE-NOT-SOURCE'],
+  'DNS-POLICY-UNVERIFIED':['TARGET-HTTPS-DNS-FAILED'],
+  'KILLSWITCH-UNVERIFIED':['KILLSWITCH-NOT-ENABLED','DIRECT-WAN-FALLBACK'],
+  'IPV6-POLICY-UNVERIFIED':['IPV6-NOT-EXPLICITLY-DISABLED'],
+  'WATCHDOG-UNVERIFIED':['NFT-GUARD-UNAVAILABLE','LEASE-INTEGRITY-FAILED','LEASE-STORAGE-FAILED'],
+  'SCOPED-CONNTRACK-UNVERIFIED':[]
+};
+// verified = the code is no longer listed as unproven; failed = a related failure code is reported; otherwise still empty.
+function planCheckState(code,unproven,reported){
+  var failure=(PLAN_FAILURE_CODES[code]||[]).filter(function(c){return reported.indexOf(c)>=0;})[0];
+  if(failure)return {state:'failed',failure:failure};
+  return {state:unproven.indexOf(code)>=0?'pending':'verified',failure:null};
+}
+// Jump to the row of a code in the error table on the Events page, open its "how to fix" and highlight it.
+function showErrorCode(code){
+  var link=document.querySelector('[data-hv-tab="events"]');if(link)link.click();
+  setTimeout(function(){
+    var row=document.querySelector('[data-error-code="'+code+'"]');if(!row)return;
+    var fix=row.nextElementSibling;if(fix&&fix.classList&&fix.classList.contains('hv-errfix')&&fix.hidden){var b=row.querySelector('button');if(b)b.click();}
+    row.scrollIntoView({block:'center'});row.classList.add('hv-errflash');setTimeout(function(){row.classList.remove('hv-errflash');},3000);
+  },150);
+}
+function renderPlanBlockers(codes,status){
+  var reported=Array.isArray(((status||{}).native_failover||{}).blockers)?status.native_failover.blockers:[];
+  var rows=Object.keys(PLAN_BLOCKERS).map(function(code){
+    var r=PLAN_BLOCKERS[code],st=planCheckState(code,codes,reported);
+    var mark=st.state==='verified'?'✓':st.state==='failed'?'✗':'';
+    var label=st.state==='verified'?bi('Verified','Подтверждено'):st.state==='failed'?bi('Failed','Не прошло'):bi('Not checked yet','Ещё не проверено');
+    var codeCell=st.state==='failed'
+      ?E('a',{'href':'#events','class':'hv-errlink','click':function(ev){ev.preventDefault();showErrorCode(st.failure);}},st.failure)
+      :E('a',{'href':'#events','class':'hv-errlink hv-errlink-quiet','click':function(ev){ev.preventDefault();showErrorCode(code);}},code);
+    return E('tr',{'class':'hv-plan-'+st.state},[
+      E('td',{},E('span',{'class':'hv-checkbox hv-checkbox-'+st.state,'role':'img','aria-label':label},mark)),
+      E('td',{},E('strong',{},bi(r[0],r[1]))),E('td',{},bi(r[2],r[3])),E('td',{},[E('div',{},label),codeCell])]);
+  });
+  return E('div',{'class':'hv-plan-blockers'},[
+    E('h4',{},bi('Checks before a real switch','Проверки перед реальным переключением')),
+    E('p',{},bi('Empty box: not checked yet. Green: verified. Red: failed, with the error code; press the code to open its description and how to fix it. Until all are green the forecast above never becomes a permission to switch: a real switch also needs the passed LAN trial and the checks on the Overview. This is normal for an experimental version.','Пустая клетка: ещё не проверено. Зелёная: подтверждено. Красная: не прошло, рядом код ошибки; нажмите на код, чтобы открыть описание и способ исправления. Пока не все клетки зелёные, прогноз выше никогда не становится разрешением на переключение: для реального переключения всегда нужны пройденный LAN-тест и проверки на «Обзоре». Для экспериментальной версии это нормально.')),
+    E('table',{'class':'table hv-plan-table'},[E('tr',{},[E('th',{},''),E('th',{},bi('Check','Проверка')),E('th',{},bi('What it means','Что это значит')),E('th',{},bi('State and code','Состояние и код'))])].concat(rows))]);
+}

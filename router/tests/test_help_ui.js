@@ -12,7 +12,7 @@ for(const need of ['no-internet','ssh','reserve','auto-refuses','helper','stale'
 const cyrillic=/[А-Яа-я]/;
 for(const topic of topics){
   for(const pair of [topic.title,topic.when]){assert.equal(pair.length,2);assert(pair[0].length>5&&!cyrillic.test(pair[0]));assert(cyrillic.test(pair[1]),topic.id);}
-  assert(topic.steps.length>=2,topic.id);
+  if(!topic.custom)assert(topic.steps.length>=2,topic.id);
   for(const step of topic.steps){assert.equal(step.t.length,2);assert(step.t[0].length>10&&!cyrillic.test(step.t[0]),topic.id);assert(cyrillic.test(step.t[1]),topic.id+': '+step.t[0]);
     if(step.c)assert(typeof step.c==='string'&&step.c.length>1&&!cyrillic.test(step.c));}
 }

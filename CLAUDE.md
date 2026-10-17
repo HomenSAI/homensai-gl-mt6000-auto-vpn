@@ -8,6 +8,8 @@ Use the current checkout as the source of truth. Keep evidence, assumptions and 
 
 Never publish credentials, private run directories, disk images, raw sessions or full local history. Git/Gitea is primary; GitHub receives a reviewed snapshot on its existing public history. No force pushes or historical tag replacement.
 
+Standing publication rule (owner, 18 October 2026): after a finished batch of changes Claude publishes it itself to local Git, Gitea and the public GitHub repository through scripts/offline-ci.ps1, scripts/save-gitea.ps1 and scripts/publish-reviewed.py (CI PASS on the exact commit, package hash equal to the CI hash, one release per batch, verify with git ls-remote). The limits above still apply, and the physical router, Auto and the LAN-trial confirmation still need the owner's direct instruction.
+
 @.claude/handoff/START-HERE.md
 @.claude/handoff/STATE.md
 @.claude/handoff/TODO-50.md

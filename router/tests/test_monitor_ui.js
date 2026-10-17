@@ -47,3 +47,41 @@ console.log('monitor and guide tests OK');
   function cy2(t){return /[А-Яа-я]/.test(t);}
   console.log('command block tests OK');
 }
+{
+  const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c})};vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync('router/summary_panel.inc.js','utf8'),ctx);
+  const plan=fs.readFileSync('router/files/usr/lib/homensai-vpn/failover_plan.py','utf8');
+  const codes=[...plan.slice(plan.indexOf('BLOCKERS'),plan.indexOf(']',plan.indexOf('BLOCKERS'))).matchAll(/'([A-Z0-9-]+)'/g)].map(m=>m[1]);
+  assert(codes.length>=8);
+  for(const code of codes){const r=ctx.PLAN_BLOCKERS[code];assert(r&&r.length===4&&/[А-Яа-я]/.test(r[3]),'unexplained planning code '+code);}
+  console.log('planning blocker table OK');
+}
+{
+  const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c}),window:{}};vm.createContext(ctx);
+  for(const f of ['auto_panel.inc.js','summary_panel.inc.js','error_table.inc.js'])vm.runInContext(fs.readFileSync('router/'+f,'utf8'),ctx);
+  const rows=ctx.ERROR_ROWS,byCode={};for(const r of rows){assert.equal(r.length,8,r[0]);assert(!byCode[r[0]],'duplicate code '+r[0]);byCode[r[0]]=r;}
+  for(const r of rows){assert(r[2]&&r[4]&&r[5]&&/[А-Яа-я]/.test(r[5]),'row text '+r[0]);if(r[6])assert(/[А-Яа-я]/.test(r[7]),'fix ru '+r[0]);}
+  for(const code of Object.keys(ctx.AUTO_BLOCKERS))assert(byCode[code]&&ctx.AUTO_NAMES[code]||byCode[code][1]!=='switch'||code==='HISTORY-001'||code==='JOURNAL-INTEGRITY-FAILED','no readable name for '+code);
+  for(const [plan,failures] of Object.entries(ctx.PLAN_FAILURE_CODES)){assert(byCode[plan],'plan code missing in error table '+plan);for(const f of failures)assert(byCode[f],'failure code missing in error table '+f);}
+  // Check states: pending while listed, verified when not listed, failed with the reported failure code.
+  assert.equal(ctx.planCheckState('KILLSWITCH-UNVERIFIED',['KILLSWITCH-UNVERIFIED'],[]).state,'pending');
+  assert.equal(ctx.planCheckState('KILLSWITCH-UNVERIFIED',[],[]).state,'verified');
+  const failed=ctx.planCheckState('KILLSWITCH-UNVERIFIED',['KILLSWITCH-UNVERIFIED'],['KILLSWITCH-NOT-ENABLED']);
+  assert.equal(failed.state,'failed');assert.equal(failed.failure,'KILLSWITCH-NOT-ENABLED');
+  console.log('error table and planning check tests OK ('+rows.length+' codes)');
+}
+{
+  const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c}),navigator:{},window:{},document:{}};vm.createContext(ctx);
+  vm.runInContext('var HELP_TOPICS=[];'+fs.readFileSync('router/ai_prompt.inc.js','utf8'),ctx);
+  const en=ctx.AI_PROMPT_EN,ru=ctx.AI_PROMPT_RU;
+  for(const section of ['=== 0.','=== 1.','=== 2.','=== 3.','=== 4.','=== 5.','=== 6.','=== 7.','=== 8.','=== 9.','=== 10.']){assert(en.includes(section),'EN section '+section);assert(ru.includes(section),'RU section '+section);}
+  for(const text of [en,ru]){
+    assert(/Auto/.test(text)&&/05-emergency\.sh/.test(text)&&/BotFather/.test(text)&&/sha256/i.test(text)&&/gl-mt6000/i.test(text));
+    assert(!/\d{8,12}:[A-Za-z0-9_-]{30,}/.test(text),'token-like text in the prompt');
+    assert(!/(password|token)\s*[:=]\s*[^\s=]/i.test(text.replace(/telegram_token=<hidden>|telegram_token=\.\*/g,'')),'secret assignment in the prompt');
+    assert(!text.includes('${')&&!text.includes('`'));
+  }
+  assert(/never enable Auto|NEVER enable Auto/i.test(en)&&/НИКОГДА не включайте Auto/.test(ru));
+  assert(ctx.renderAiPrompt());assert.equal(ctx.HELP_TOPICS[0].id,'ai-prompt');
+  console.log('AI prompt tests OK ('+en.length+' / '+ru.length+' characters)');
+}

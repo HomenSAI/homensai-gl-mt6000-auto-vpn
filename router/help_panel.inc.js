@@ -142,7 +142,7 @@ function helpCommand(command){
 }
 function renderHelp(){
   var topics=HELP_TOPICS.map(function(topic){
-    var steps=E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){
+    var steps=topic.custom?topic.custom():E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){
       return E('li',{},[E('p',{},richText(bi(step.t[0],step.t[1]))),step.c?helpCommand(step.c):null].filter(Boolean));
     }));
     var attributes={'class':'hv-help-topic','id':'help-'+topic.id};

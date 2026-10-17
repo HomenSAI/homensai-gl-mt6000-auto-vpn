@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0-alpha16-1 - 2026-10-18
+
+AI-agent install prompt, error code table, pre-switch check boxes, always-visible Auto state. dashboard57/ui35. UI only; includes alpha15.
+
+## 0.8.0-alpha15-1 - 2026-10-18
+
+Planning codes explained in a table. dashboard56/ui34. UI only; includes alpha14.
+
 ## 0.8.0-alpha14-1 - 2026-10-18
 
 Live statistics under the monitor switch. dashboard55/ui33. UI only; includes alpha13.
