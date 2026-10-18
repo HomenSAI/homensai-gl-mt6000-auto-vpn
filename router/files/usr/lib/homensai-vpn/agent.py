@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.9.0-alpha3'
+VERSION = '0.9.0-alpha6'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -682,7 +682,7 @@ def rpc(method):
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
-                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False}}));return
+                          'setup_telegram':{'token':'','chat':'','enabled':False,'interval':0,'schedule':'','hour':0,'weekly':False,'monthly':False,'items':''}}));return
     request = sys.stdin.buffer.read(65537)
     from rpc_input import decode_request
     arguments=decode_request(request)

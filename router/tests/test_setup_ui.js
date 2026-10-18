@@ -21,8 +21,8 @@ async function click(label){const b=button(label);assert(b,label);await b.attrs.
  field('Daily hour, Europe/Berlin (0–23)').value='8';field('Monthly summary on day 1').checked=true;
  await click('Next');await click('Save configuration');
  assert.equal(calls.length,1);assert.equal(calls[0].spec.method,'setup_telegram');
- assert.deepEqual(Array.from(calls[0].spec.params),['token','chat','enabled','interval','schedule','hour','weekly','monthly']);
- assert.deepEqual(Array.from(calls[0].args),['','@example_channel',true,120,'daily',8,true,true]);assert.equal(reloads,1);
+ assert.deepEqual(Array.from(calls[0].spec.params),['token','chat','enabled','interval','schedule','hour','weekly','monthly','items']);
+ assert.deepEqual(Array.from(calls[0].args),['','@example_channel',true,120,'daily',8,true,true,'servers,events,traffic,delta,controller,controller_events,controller_totals,gaps']);assert.equal(reloads,1);
  context.setupWizard(inventory,'telegram');await click('Cancel');assert.equal(calls.length,1);assert.equal(modal,null);
  // The stored token can be deleted only after an explicit confirmation, with a typed own RPC and no arguments.
  context.window.confirm=()=>false;context.setupWizard(inventory,'telegram');await click('Delete the stored token');assert.equal(calls.length,1);

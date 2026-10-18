@@ -189,13 +189,35 @@ function renderTransitionAnalytics(status){
     var s=recoverySummary(rows,window.start,window.end);
     selectedRows=rows.filter(function(r){return r.start>=window.start&&r.start<window.end;});
     if(table)table.querySelectorAll('tr[data-recovery-start]').forEach(function(row){var at=Number(row.getAttribute('data-recovery-start'));row.hidden=!(at>=window.start&&at<window.end);});
-    summaryHost.textContent=bi('Attempts / known outcomes / pending or unknown: ','Попытки / известный результат / ожидание или неизвестно: ')+s.attempts+' / '+s.known_outcomes+' / '+s.unknown_or_pending+
-      ' · '+bi('Trial / automatic attempts: ','Тестовые / автоматические попытки: ')+s.trial_attempts+' / '+s.automatic_attempts+
-      ' · '+bi('Verified outcome ratio (including trials): ','Доля подтверждённых результатов (включая тесты): ')+(s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%')+
-      ' · '+bi('Recovery median / P95 / worst (s): ','Восстановление: медиана / P95 / максимум (с): ')+[s.median,s.p95,s.worst].map(function(v){return v==null?'—':v.toFixed(1);}).join(' / ');
+    var fmt=function(v){return v==null?'—':v.toFixed(1);};
+    while(summaryHost.firstChild)summaryHost.removeChild(summaryHost.firstChild);
+    summaryHost.appendChild(E('table',{'class':'table hv-recovery-table'},[
+      E('tr',{'class':'tr table-titles'},[E('th',{'scope':'col'},bi('Measure','Показатель')),E('th',{'scope':'col'},bi('Value','Значение'))]),
+      [[bi('Attempts','Попытки'),s.attempts],
+       [bi('Known outcome','Известный результат'),s.known_outcomes],
+       [bi('Pending or unknown','Ожидание или неизвестно'),s.unknown_or_pending],
+       [bi('Trial attempts','Тестовые попытки'),s.trial_attempts],
+       [bi('Automatic attempts','Автоматические попытки'),s.automatic_attempts],
+       [bi('Verified outcome ratio (including trials)','Доля подтверждённых результатов (включая тесты)'),s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%'],
+       [bi('Recovery time, median (s)','Время восстановления, медиана (с)'),fmt(s.median)],
+       [bi('Recovery time, P95 (s)','Время восстановления, P95 (с)'),fmt(s.p95)],
+       [bi('Recovery time, worst (s)','Время восстановления, максимум (с)'),fmt(s.worst)]].map(function(r){return E('tr',{'class':'tr'},[E('td',{'class':'td'},r[0]),E('td',{'class':'td'},String(r[1]))]);})].reduce(function(a,b){return a.concat(b);},[])));
     while(groupHost.firstChild)groupHost.removeChild(groupHost.firstChild);
     var groups=recoveryGroups(rows,status.profiles||[],window.start,window.end);
-    Object.keys(groups).forEach(function(kind){groupHost.appendChild(E('p',{},kind+': '+groups[kind].map(function(g){var m=g.metrics;return g.name+' · '+(m.committed+m.trials_passed)+'/'+m.known_outcomes+' · P95 '+(m.p95==null?'—':m.p95.toFixed(1))+' s · consecutive failures '+m.max_consecutive_failures;}).join(' | ')));});
+    var kindTitle={server:bi('By server','По серверам'),channel:bi('By group (channel)','По группам (каналам)'),protocol:bi('By protocol','По протоколам')};
+    Object.keys(groups).forEach(function(kind){
+      if(!groups[kind].length)return;
+      groupHost.appendChild(E('h4',{},ownGet(kindTitle,kind)||kind));
+      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[bi('Name','Имя'),bi('Successful / known','Удачных / известных'),bi('P95, s','P95, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
+        return E('tr',{'class':'tr'},[E('td',{'class':'td'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},m.p95==null?'—':m.p95.toFixed(1)),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
+    });
+    groupHost.appendChild(E('div',{'class':'hv-recovery-legend'},[E('strong',{},bi('How to read these tables','Как читать эти таблицы')),E('p',{},bi('There is one table per kind of grouping (server, group of servers, protocol). Example row: b · 1 / 1 · 5.0 · 0.','Для каждого вида группировки своя таблица (сервер, группа серверов, протокол). Пример строки: b · 1 / 1 · 5.0 · 0.')),
+      E('ul',{},[
+        E('li',{},bi('Name (b, Main, openvpn): the server, the group (channel) or the protocol these numbers belong to.','Имя (b, Main, openvpn): сервер, группа (канал) или протокол, к которым относятся цифры.')),
+        E('li',{},bi('1/1: successful switches / switches whose result is known. 1/1 = every known switch to it succeeded; 0/1 = the only known switch failed; 1/2 = one of two worked. Pending or unknown results are not counted.','1/1: удачные переключения / переключения с известным результатом. 1/1 — все известные переключения на него удались; 0/1 — единственное известное не удалось; 1/2 — одно из двух удалось. Ожидающие и неизвестные результаты не считаются.')),
+        E('li',{},bi('P95 5.0 s: 95 % of recoveries on this server took no longer than 5 seconds (the slowest 5 % are excluded). “—” means no timing yet. Smaller is better.','P95 5.0 с: 95 % восстановлений на этом сервере заняли не больше 5 секунд (самые медленные 5 % не учитываются). «—» — времени ещё нет. Чем меньше, тем лучше.')),
+        E('li',{},bi('Consecutive failures: the longest run of failed attempts one after another in the chosen period. 0 = none; 1 = one failure, 2 or more = the server repeatedly failed to take over and deserves attention.','Сбоев подряд: самая длинная серия неудачных попыток подряд за выбранный период. 0 — не было; 1 — одна неудача; 2 и больше — сервер несколько раз подряд не смог принять трафик, на него стоит обратить внимание.'))]),
+      E('p',{},bi('Example: “d · 0/1 · P95 8.0 s · consecutive failures: 1” = the only known switch to d failed (took 8 s), so d is a weak reserve for now; “b · 1/1” is a reliable one.','Пример: «d · 0/1 · P95 8.0 с · сбоев подряд: 1» — единственное известное переключение на d не удалось (8 с), значит d пока слабый резерв; «b · 1/1» — надёжный.'))]));
   }
   period.addEventListener('change',function(){recoveryAnalyticsPeriod=period.value;try{localStorage.setItem('homensai-vpn-recovery-period',recoveryAnalyticsPeriod);}catch(error){}update();});update();
   var exports=E('div',{'class':'hv-wizard-launch'},Object.keys(exportSchemas).map(function(kind){return E('button',{'type':'button','class':'cbi-button','click':function(){
@@ -203,9 +225,13 @@ function renderTransitionAnalytics(status){
     var link=document.createElement('a');link.href=url;link.download='homensai-vpn-'+kind+'.csv';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }},'CSV · '+kind);}));
   exports.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){downloadIncidentReport(selectedRows);}},bi('Printable incident report','Отчёт об инцидентах для печати')));
-  table=E('table',{'class':'table'},[E('tr',{},['UTC','Source','Target','Outcome','Seconds','Codes','Details'].map(function(h){return E('th',{},h);}))]);
-  rows.forEach(function(r){var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r);}},bi('Details','Подробности'));table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[new Date(r.start*1000).toISOString(),r.source,r.target,r.outcome,
-    r.duration==null?'—':String(r.duration),'Attempt #'+r.id+' / retry episode #'+(r.retry_episode_id||'unknown')+' · '+r.codes.join(' · ')+' · '+JSON.stringify(r.probe_evidence)+' · '+r.phases.map(function(p){return p.state+' @ '+new Date(p.time*1000).toISOString();}).join(' → ')].map(function(v){return E('td',{},v);}).concat([E('td',{},detail)])));
+  function stamp(t){return new Date(t*1000).toISOString().replace('T',' ').replace(/\.[0-9]+Z$/,'');}
+  table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},[bi('Time (UTC)','Время (UTC)'),'№',bi('From','Откуда'),bi('To','Куда'),bi('Outcome','Итог'),bi('Seconds','Секунд'),bi('Stages','Этапы'),bi('Codes','Коды'),''].map(function(h){return E('th',{'scope':'col'},h);}))]);
+  rows.forEach(function(r){
+    var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r);}},bi('Details','Подробности'));
+    var evidence=r.probe_evidence&&typeof r.probe_evidence==='object'&&Object.keys(r.probe_evidence).length?' · '+Object.keys(r.probe_evidence).map(function(k){return k+'='+String(r.probe_evidence[k]);}).join(', '):'';
+    table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[stamp(r.start),String(r.id),r.source,r.target,r.outcome,r.duration==null?'—':String(r.duration),
+      r.phases.map(function(p){return p.state;}).join(' → ')||'—',(r.codes.join(' · ')||'—')+evidence].map(function(v){return E('td',{},v);}).concat([E('td',{},detail)])));
   });
   update();
   var stamps=(history.events||[]).map(function(e){return e.time;}).filter(function(at){return Number.isFinite(at)&&at>=0&&at<=253402300799;});

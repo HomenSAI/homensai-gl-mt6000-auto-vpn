@@ -56,6 +56,7 @@ class Handler(BaseHTTPRequestHandler):
                 target=resolve_public(self.path)
                 if target is None:self.send_error(404);return
                 body=target.read_bytes();kind=mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
+                if target.name=='stub.js':body=body.replace(b"version:'0.8.0-alpha2'",('version:'+json.dumps(json.loads((ROOT/'VERSION.json').read_text(encoding='utf-8-sig'))['application']['version'])).encode())  # the fixture reports the real current version
             self.send_response(200);self.send_header('Content-Type',kind+'; charset=utf-8' if kind.startswith(('text/','application/javascript')) else kind)
             self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store')
             self.send_header('X-HomenSAI-Preview','synthetic-only');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Cross-Origin-Resource-Policy','same-origin')

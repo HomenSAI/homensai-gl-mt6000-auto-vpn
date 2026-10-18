@@ -19,12 +19,12 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
   tick();if(liveLogTimer)clearInterval(liveLogTimer);liveLogTimer=setInterval(function(){if(!document.body.contains(head)){clearInterval(liveLogTimer);liveLogTimer=null;return;}tick();},1000);
   var monitorKind=fresh?'green':status.rpc_error?'red':'yellow';
   var lines=[
-    E('div',{},[time(status.time,'—'),E('strong',{},'  HomenS.AI monitor: '),badge(status.error),lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных'))]),
-    E('div',{},[time(ns.time,'—'),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN',lamp(light.lamp==='orange'?'yellow':(light.lamp||'grey'),light.title)])
+    E('div',{},[time(status.time,'—'),lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных')),E('strong',{},'  HomenS.AI monitor: '),badge(status.error)]),
+    E('div',{},[time(ns.time,'—'),lamp(light.lamp==='orange'?'yellow':(light.lamp||'grey'),light.title),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN'])
   ];
   var terminal=E('pre',{'class':'hv-live-terminal'},lines);
   rows.slice(0,20).forEach(function(p){
-    terminal.appendChild(E('div',{'class':p.code?'error':'notice'},[time(p.time,'—:—:—'),E('strong',{},'  '+p.protocol+' / '+serverTitle(p)+': '),healthBadge(p),lamp(liveLampKind(p,now),profileHealth(p,now).label)]));
+    terminal.appendChild(E('div',{'class':p.code?'error':'notice'},[time(p.time,'—:—:—'),lamp(liveLampKind(p,now),profileHealth(p,now).label),E('strong',{},'  '+p.protocol+' / '+serverTitle(p)+': '),healthBadge(p)]));
   });
   return E('div',{'class':'hv-live'},[head,terminal]);
 }

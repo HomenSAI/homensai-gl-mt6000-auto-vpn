@@ -1053,3 +1053,9 @@ Created experimental review prerelease handoff-v1.0.0. Downloaded all three asse
 - Review: five backend and four page findings verified and fixed (see docs/FAILURE-ANALYSIS-0.9.0-alpha3.md). Findings of an agent were treated as data and checked against the code first.
 - Verification: container suite 393 router tests OK (9 Lua skips there), 39 qa OK, all 24 JS UI suites OK, privacy scan OK; page probe gate PASS (24 cases) and click scenarios 44/44 per design (C once failed under parallel load, passed alone). isolated dual-image CI PASS on bebf01c; container build hash 0cfbcc6b equals the CI hash (634161 bytes). Router not accessed; Auto not enabled; no endurance test.
 - Limits: fixture data only; no real screen reader, zoom or phone; the forecast list of eight checks stays grey in this version.
+
+## 2026-10-18T19:00:00+02:00 - 0.9.0-alpha6: owner remarks after alpha3 and automatic versioning
+
+- Requests: choose the Telegram report contents with check boxes; the version on the pages must follow the code automatically; service monitor lamps left and brighter, lines aligned left; explain and tabulate the recovery statistics; System readiness second in the menu; Top button on every page; every code must be a link (a linker pre-filter had skipped codes such as DNS-001).
+- Done: telegram_items.py and wizard blocks, scripts/bump-version.py with source fingerprint, pre-commit hook and qa/test_version_current.py, error-code linker fix with a test over every code, tables, Top button. Versions alpha4 and alpha5 were automatic intermediate bumps; alpha6 is the release.
+- Limits: fixture data only; router not accessed; Auto not enabled; no endurance test.

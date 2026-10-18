@@ -52,3 +52,19 @@ function installModalStyle(){
     return node;
   };
 }
+
+/* "Top" button in the bottom-right corner of every page and design: appears after the page is scrolled, jumps back up. */
+function installTopButton(root){
+  var button=E('button',{'type':'button','class':'hv-top-button','hidden':'','aria-label':bi('Back to top','Наверх'),'click':function(){
+    try{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}catch(e){window.scrollTo(0,0);}
+    try{if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}
+  }},[E('span',{'aria-hidden':'true'},'↑'),E('span',{'class':'hv-top-label'},bi('Top','Вверх'))]);
+  root.appendChild(button);
+  function update(){
+    if(!document.body.contains(root)){window.removeEventListener('scroll',update);return;}
+    var y=window.pageYOffset||(document.scrollingElement&&document.scrollingElement.scrollTop)||0;
+    if(y>240)button.removeAttribute('hidden');else button.setAttribute('hidden','');
+  }
+  window.addEventListener('scroll',update,{passive:true});update();
+  return button;
+}

@@ -898,3 +898,27 @@
 .hv-app .hv-skip{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:8px;background:var(--accent);color:var(--accent-text);font-weight:700;text-decoration:none;transition:top .12s}
 .hv-app .hv-skip:focus{top:8px}
 @media(prefers-reduced-motion:reduce){.hv-app .hv-skip{transition:none}}
+
+/* ---- Brighter lamps: pure vivid green and red with a strong glow; live-log lamps sit between the time and the name ---- */
+.hv-app{--hvl-green:radial-gradient(circle at 34% 28%,#eafff1 0,#3dff7e 20%,#00e04f 55%,#009636 100%);--hvl-red:radial-gradient(circle at 34% 28%,#fff0f1 0,#ff5468 20%,#ff0a2a 55%,#c40018 100%)}
+.hv-app .hv-server-lamp.hv-lamp-healthy,.hv-app .hv-check-green,.hv-app .hv-live-lamp-green,.hv-app .hv-lamp-green.hv-lamp-lit,.hv-app .hv-dot-green,.hv-app .hv-node-green .hv-node-dot{box-shadow:var(--hvl-inset),0 0 0 1px #00a83f,0 0 18px 6px rgba(0,255,100,.9)!important;filter:saturate(1.35) brightness(1.12)}
+.hv-app .hv-server-lamp.hv-lamp-failed,.hv-app .hv-server-lamp.hv-lamp-inactive,.hv-app .hv-check-red,.hv-app .hv-live-lamp-red,.hv-app .hv-lamp-red.hv-lamp-lit,.hv-app .hv-dot-red,.hv-app .hv-node-red .hv-node-dot{box-shadow:var(--hvl-inset),0 0 0 1px #d4001e,0 0 18px 6px rgba(255,10,42,.95)!important;filter:saturate(1.35) brightness(1.12)}
+.hv-app .hv-live-lamp{width:16px;height:16px;flex:0 0 16px}
+.hv-app .hv-live-terminal .hv-log-time{min-width:78px}
+
+.hv-app .hv-recovery-legend{margin-top:10px;padding:10px 14px;border-left:4px solid var(--accent);background:rgba(127,127,127,.08);border-radius:6px;font-size:13px}
+.hv-app .hv-recovery-legend ul{margin:6px 0 6px 18px}
+.hv-app .hv-tg-items{margin:10px 0;padding:10px 14px;border:1px solid rgba(127,127,127,.35);border-radius:8px}
+.hv-app .hv-tg-items label{display:block;margin:6px 0}
+.hv-app .hv-tg-items small{display:block;opacity:.8;margin-left:24px}
+.hv-app .hv-tg-presets{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+
+/* ---- Top button ---- */
+.hv-app .hv-top-button{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-text);font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.hv-app .hv-top-button[hidden]{display:none}
+.hv-app .hv-top-button:hover{filter:brightness(1.1)}
+@media(max-width:640px){.hv-app .hv-top-label{display:none}.hv-app .hv-top-button{padding:8px 14px}}
+/* Service monitor: everything is aligned to the left (the lamp no longer pushes the line to the right) */
+.hv-app .hv-live-terminal div{justify-content:flex-start;text-align:left}
+.hv-app .hv-live-terminal .hv-live-lamp{margin-left:0}
+.hv-app .hv-live-terminal .hv-log-time{flex:0 0 auto}

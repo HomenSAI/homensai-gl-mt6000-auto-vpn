@@ -74,48 +74,53 @@ def traffic_lines(accounting,start,end,monthly=False):
     return ['%.3f GB; observed days %d/%d; sampling discontinuities %d. Missing data is not reconstructed.' % (amount/1e9,len(rows),expected,gaps)]
 
 
-def format_period(status,job,now):
+def format_period(status,job,now,items=None):
+    from telegram_items import ITEMS
+    items=ITEMS if items is None else items
     start,end=job['start'],job['end'];first=datetime.fromtimestamp(start).strftime('%Y-%m-%d');last=datetime.fromtimestamp(end-1).strftime('%Y-%m-%d')
     accounting=status.get('accounting',{});history=status.get('native_history',{})
     lines=['HomenSAI Auto VPN · '+job['kind'].title()+' summary','Report id: '+job['key'],
            'Period: %s to %s · Europe/Berlin' % (first,last),
            'Generated: '+datetime.fromtimestamp(now).strftime('%Y-%m-%d %H:%M'),
-           'Scope: router-originated measurements; LAN uptime is not verified.',
-           'WAN traffic through this router:']
-    lines+=traffic_lines(accounting.get('wan') or {},start,end,job['kind']=='monthly')
-    lines.append('VPN interface traffic:');lines+=traffic_lines(accounting,start,end,job['kind']=='monthly')
-    profiles=[]
-    for identifier,profile in accounting.get('activity',{}).items():
-        total={key:0 for key in ('up','down','unknown','connections','failures')}
-        dates=[]
-        for day,bucket in profile.get('days',{}).items():
+           'Scope: router-originated measurements; LAN uptime is not verified.']
+    if 'traffic' in items:
+        lines.append('WAN traffic through this router:');lines+=traffic_lines(accounting.get('wan') or {},start,end,job['kind']=='monthly')
+        lines.append('VPN interface traffic:');lines+=traffic_lines(accounting,start,end,job['kind']=='monthly')
+    if 'servers' in items:
+        profiles=[]
+        for identifier,profile in accounting.get('activity',{}).items():
+            total={key:0 for key in ('up','down','unknown','connections','failures')}
+            dates=[]
+            for day,bucket in profile.get('days',{}).items():
+                if first<=day<=last:
+                    dates.append(day)
+                    for key in total:total[key]+=bucket.get(key,0)
+            if dates:profiles.append((identifier,profile,total))
+        if profiles:
+            lines.append('Monitored server-hours (sum across servers): healthy %.2f; failed %.2f; unknown %.2f.' %
+                         tuple(sum(row[2][key] for row in profiles)/3600 for key in ('up','down','unknown')))
+            lines.append('Server observations · up/down/unknown hours · connections · failure episodes:')
+            for _,profile,total in sorted(profiles,key=lambda row:row[2]['down'],reverse=True)[:10]:
+                lines.append('%s · %.2f/%.2f/%.2f h · %d · %d' % (profile.get('name','server'),total['up']/3600,total['down']/3600,total['unknown']/3600,total['connections'],total['failures']))
+            if len(profiles)>10:lines.append('Showing 10 of %d observed servers; detailed history is available in the dashboard.' % len(profiles))
+        else:lines.append('No server activity observations for this period.')
+    if 'controller_events' in items:
+        totals={key:0 for key in ('attempts','committed','trials_passed','rollbacks','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches')}
+        for day,value in history.get('days',{}).items():
             if first<=day<=last:
-                dates.append(day)
-                for key in total:total[key]+=bucket.get(key,0)
-        if dates:profiles.append((identifier,profile,total))
-    if profiles:
-        lines.append('Monitored server-hours (sum across servers): healthy %.2f; failed %.2f; unknown %.2f.' %
-                     tuple(sum(row[2][key] for row in profiles)/3600 for key in ('up','down','unknown')))
-        lines.append('Server observations · up/down/unknown hours · connections · failure episodes:')
-        for _,profile,total in sorted(profiles,key=lambda row:row[2]['down'],reverse=True)[:10]:
-            lines.append('%s · %.2f/%.2f/%.2f h · %d · %d' % (profile.get('name','server'),total['up']/3600,total['down']/3600,total['unknown']/3600,total['connections'],total['failures']))
-        if len(profiles)>10:lines.append('Showing 10 of %d observed servers; detailed history is available in the dashboard.' % len(profiles))
-    else:lines.append('No server activity observations for this period.')
-    totals={key:0 for key in ('attempts','committed','trials_passed','rollbacks','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches')}
-    for day,value in history.get('days',{}).items():
-        if first<=day<=last:
-            for key in totals:totals[key]+=value.get(key,0)
-    since=history.get('daily_since')
-    if since is None:lines.append('Daily controller counters: unavailable before the accounting upgrade.')
-    else:
-        lines.append('Recorded controller activity: attempts %d; commits %d; passed trials %d; restorations/rollbacks %d; blocked episodes %d.' % tuple(totals[key] for key in ('attempts','committed','trials_passed','rollbacks','blocked_episodes')))
-        lines.append('Automatic transitions: successful %d/%d; server/channel/protocol kinds %d/%d/%d. Kind categories are not summed with the total.' % tuple(totals[key] for key in ('automatic_committed','automatic_attempts','server_switches','channel_switches','protocol_switches')))
-        if since>start:lines.append('Controller daily/kind counters are partial: collected since '+datetime.fromtimestamp(since).strftime('%Y-%m-%d %H:%M')+'.')
-    if job['kind']=='monthly' and first[:7] in history.get('months',{}):
+                for key in totals:totals[key]+=value.get(key,0)
+        since=history.get('daily_since')
+        if since is None:lines.append('Daily controller counters: unavailable before the accounting upgrade.')
+        else:
+            lines.append('Recorded controller activity: attempts %d; commits %d; passed trials %d; restorations/rollbacks %d; blocked episodes %d.' % tuple(totals[key] for key in ('attempts','committed','trials_passed','rollbacks','blocked_episodes')))
+            lines.append('Automatic transitions: successful %d/%d; server/channel/protocol kinds %d/%d/%d. Kind categories are not summed with the total.' % tuple(totals[key] for key in ('automatic_committed','automatic_attempts','server_switches','channel_switches','protocol_switches')))
+            if since>start:lines.append('Controller daily/kind counters are partial: collected since '+datetime.fromtimestamp(since).strftime('%Y-%m-%d %H:%M')+'.')
+    if 'controller_totals' in items and job['kind']=='monthly' and first[:7] in history.get('months',{}):
         value=history['months'][first[:7]]
         lines.append('Retained monthly controller totals: attempts %s; commits %s; trials %s; rollbacks %s.' % tuple(value.get(key,0) for key in ('attempts','committed','trials_passed','rollbacks')))
     events=[event for event in status.get('events',[]) if isinstance(event.get('time'),(int,float)) and start<=event['time']<end]
-    if events:lines.append('Retained measurement state changes in period: %d (bounded event history).' % len(events))
-    lines.append('Sampling discontinuities, cumulative: %s. Unknown causes and unobserved intervals remain unknown.' % accounting.get('gaps',0))
-    if accounting.get('retention'):lines.append('History retention limits were applied; some historical observations are unavailable.')
+    if 'events' in items and events:lines.append('Retained measurement state changes in period: %d (bounded event history).' % len(events))
+    if 'gaps' in items:
+        lines.append('Sampling discontinuities, cumulative: %s. Unknown causes and unobserved intervals remain unknown.' % accounting.get('gaps',0))
+        if accounting.get('retention'):lines.append('History retention limits were applied; some historical observations are unavailable.')
     return limited_text('\n'.join(lines))

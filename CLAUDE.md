@@ -14,6 +14,8 @@ Standing UI rule (owner, 18 October 2026): every page in every design (A/B/C and
 
 Standing UI rule (owner, 18 October 2026): every status lamp blinks gently in every page and design (green slow, yellow fast, red medium; grey does not blink; prefers-reduced-motion keeps lamps still). New status elements get the same small animation by default. See docs/PRODUCT_REQUIREMENTS.md.
 
+Standing versioning rule (owner, 18 October 2026): the version shown on every page must always follow the code. VERSION.json records a fingerprint of the product source; when the source changes the version is advanced automatically (python scripts/bump-version.py; the pre-commit hook in .githooks does it and `git config core.hooksPath .githooks` enables it; qa/test_version_current.py fails CI if a change has no new version). Never publish a changed source under an old version.
+
 @.claude/handoff/START-HERE.md
 @.claude/handoff/STATE.md
 @.claude/handoff/TODO-50.md

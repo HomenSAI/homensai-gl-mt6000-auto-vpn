@@ -47,7 +47,7 @@ def system_payload(arguments, profiles):
 
 
 def telegram_payload(arguments):
-    if not {'token','chat','enabled','interval'}<=set(arguments) or set(arguments)-{'token','chat','enabled','interval','schedule','hour','weekly','monthly'} or type(arguments['enabled']) is not bool:
+    if not {'token','chat','enabled','interval'}<=set(arguments) or set(arguments)-{'token','chat','enabled','interval','schedule','hour','weekly','monthly','items'} or type(arguments['enabled']) is not bool:
         raise ValueError('TELEGRAM-SETUP-FIELDS')
     token=arguments['token'];chat=arguments['chat']
     if not isinstance(token,str) or (token and not re.fullmatch(r'[0-9]{6,15}:[A-Za-z0-9_-]{30,100}',token)):
@@ -65,6 +65,9 @@ def telegram_payload(arguments):
         if flag in arguments:
             if type(arguments[flag]) is not bool:raise ValueError('TELEGRAM-SCHEDULE')
             main['telegram_'+flag]='1' if arguments[flag] else '0'
+    if 'items' in arguments:
+        from telegram_items import encode
+        main['telegram_items']=encode(arguments['items'])
     if token:main['telegram_token']=token
     return {'main':main,'servers':[]}
 

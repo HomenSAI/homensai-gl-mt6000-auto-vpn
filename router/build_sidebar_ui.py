@@ -266,7 +266,7 @@ import re as _r
 must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
 source,_n=_r.subn(r"put\('overview',(E\('p',\{'class':'alert-message warning'\},\s*bi\('Monitoring is )",r"put('services',\1",source,count=1)
 assert _n==1,'monitor note'
-must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','traffic','services','events','readiness'];
+must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','traffic','services','events'];
 var PAGE_SUBTITLES={
   overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
   channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
@@ -385,7 +385,7 @@ must_replace('return view.extend({',"""function checkLampCell(p){
 return view.extend({""")
 # Getting started is its own first section; new users land there until every step is done, then on the Overview.
 must_replace("var tabs=[['overview','◉',bi('Overview','Обзор')],","var tabs=[['start','▶',bi('Getting started','Начало работы')],['overview','◉',bi('Overview','Обзор')],")
-must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','overview','channels','statistics','settings','help','learn'].map(tabLink)")
+must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','readiness','overview','channels','statistics','settings','help','learn'].map(tabLink)")
 must_replace("if(!validTab(activeTab))activeTab='overview';","if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);")
 must_replace("put('learn',learnNode||(learnNode=renderLearn()));","put('learn',learnNode||(learnNode=renderLearn()));put('start',renderStartPage(status,inventory));")
 must_replace("  learn:['A short interactive training","  start:['First steps: terms, training, monitoring, your two VPNs and Auto. This page opens first until they are done.','Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto. Эта страница открывается первой, пока они не выполнены.'],\n  learn:['A short interactive training")
@@ -410,7 +410,7 @@ import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
+must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
 (root/'ui44.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/'dashboard66.js').write_text(source,encoding='utf8')
 print('Generated dashboard66.js with sidebar, language persistence and sortable tables')

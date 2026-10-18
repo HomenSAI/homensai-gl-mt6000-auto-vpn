@@ -27,3 +27,14 @@ for(const r of ctx.ERROR_ROWS){
 for(const word of ['COMMITTED','APPLYING','ARMED','ROLLED-BACK','WAIT-CLIENT','OFFLINE-FIXTURE','OBSERVING','BLOCKED'])assert(ctx.ERROR_GROUP_OF[word],'state/code not linked: '+word);
 assert(ctx.errorFamilyOf('CASCADE-PROOF-EXPIRED')&&ctx.errorFamilyOf('MIGRATION-ANYTHING')&&!ctx.errorFamilyOf('DNS-001'));
 console.log('PASS: '+total+' emitted code references covered by '+Object.keys(ctx.ERROR_GROUP_OF).length+' rows and '+ctx.ERROR_FAMILIES.length+' families; states and notices link');
+// Rule: every code of the error table is found by the page linker, alone and inside a sentence (regression: DNS-001 was skipped by a pre-filter).
+const notLinked=[];
+for(const code of Object.keys(ctx.ERROR_GROUP_OF).filter(c=>!c.includes('*'))){
+  for(const text of [code,'Сбой · '+code,'See '+code+'.']){
+    const hits=ctx.findErrorCodes(text).map(h=>h.code);
+    if(!hits.includes(code))notLinked.push(code+' in "'+text+'"');
+  }
+}
+assert.deepEqual(notLinked.slice(0,10),[],'codes the linker cannot link: '+notLinked.slice(0,10).join('; '));
+assert(ctx.findErrorCodes('DNS-001').length===1,'DNS-001 is linked');
+console.log('PASS: every error-table code is found by the linker');

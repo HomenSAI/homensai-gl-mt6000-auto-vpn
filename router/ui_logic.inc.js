@@ -19,7 +19,9 @@ function sortServerCards(rows,selected,now){
 }
 function healthBadge(profile){
   var health=profileHealth(profile,Date.now()/1000);
-  return E('strong',{'class':'hv-badge hv-health-'+health.state,'title':profile.code||health.label},health.label+(profile.code?' · '+profile.code:''));
+  // The code is a link to its row in the error table (when that helper exists on the page).
+  var linked=profile.code&&typeof errorCodeLink==='function'&&typeof safeCode==='function'&&safeCode(profile.code);
+  return E('strong',{'class':'hv-badge hv-health-'+health.state,'title':profile.code||health.label},linked?[health.label+' · ',errorCodeLink(profile.code)]:health.label+(profile.code?' · '+profile.code:''));
 }
 function compareTableValues(a,b,direction){
   var unknown=function(value){return value==null||/^(?:\s*|—|No data|Нет данных)$/.test(String(value).trim());};

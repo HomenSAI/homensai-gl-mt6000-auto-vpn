@@ -22,50 +22,60 @@ def option(name):
     return result.stdout.decode().strip() if result.returncode == 0 else ''
 
 
-def format_report(status, minutes, now=None):
+def format_report(status, minutes, now=None, items=None):
+    from telegram_items import ITEMS
+    items=ITEMS if items is None else items
     now=time.time() if now is None else now
     lines = ['HomenSAI Auto VPN · monitoring', datetime.fromtimestamp(now).strftime('%d.%m.%Y %H:%M Europe/Berlin'),
-             'Report interval: %s min' % minutes, 'Currently connected servers:']
-    active = [p for p in status.get('profiles', []) if p.get('interface')]
-    for p in active:
-        lines.append('%s · %s · %s · HTTPS %s ms' %
-                     (p['name'], p['protocol'], p.get('code') or 'OK', p.get('rtt_ms', '—')))
-    if not active:
-        lines.append('No connected profiles found.')
+             'Report interval: %s min' % minutes]
+    if 'servers' in items:
+        lines.append('Currently connected servers:')
+        active = [p for p in status.get('profiles', []) if p.get('interface')]
+        for p in active:
+            lines.append('%s · %s · %s · HTTPS %s ms' %
+                         (p['name'], p['protocol'], p.get('code') or 'OK', p.get('rtt_ms', '—')))
+        if not active:
+            lines.append('No connected profiles found.')
     cutoff = now-minutes*60
-    events = [e for e in status.get('events', []) if e.get('time', 0) >= cutoff]
-    lines.append('State changes during the interval: %s' % len(events))
-    for event in events[-20:]:
-        lines.append('%s · %s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),
-                                      event.get('profile', 'service'), event.get('code', 'OK')))
+    if 'events' in items:
+        events = [e for e in status.get('events', []) if e.get('time', 0) >= cutoff]
+        lines.append('State changes during the interval: %s' % len(events))
+        for event in events[-20:]:
+            lines.append('%s · %s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),
+                                          event.get('profile', 'service'), event.get('code', 'OK')))
     accounting = status.get('accounting', {})
     month = datetime.fromtimestamp(now).strftime('%Y-%m')
-    traffic = accounting.get('months', {}).get(month)
-    if traffic:
-        lines.append('VPN traffic %s: %.3f GB (since monitoring started)' %
-                     (month, (traffic.get('rx', 0)+traffic.get('tx', 0))/1e9))
-    else:
-        lines.append('Traffic: no accumulated measurements yet.')
+    if 'traffic' in items:
+        traffic = accounting.get('months', {}).get(month)
+        if traffic:
+            lines.append('VPN traffic %s: %.3f GB (since monitoring started)' %
+                         (month, (traffic.get('rx', 0)+traffic.get('tx', 0))/1e9))
+        else:
+            lines.append('Traffic: no accumulated measurements yet.')
     native=status.get('native_failover',{})
-    state=native.get('state','UNKNOWN')
-    if not isinstance(state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',state):state='UNKNOWN'
-    lines.append('Native controller: %s (not proof of LAN availability).' % state)
+    if 'controller' in items:
+        state=native.get('state','UNKNOWN')
+        if not isinstance(state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',state):state='UNKNOWN'
+        lines.append('Native controller: %s (not proof of LAN availability).' % state)
+    # An alarm is never optional: it says that automatic switching has stopped.
     alarm=native.get('alarm')
     if isinstance(alarm,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',alarm):lines.append('ALARM: %s. Automatic switching is stopped; see the Events page and Help.' % alarm)
     history=status.get('native_history',{})
-    if history.get('error'):lines.append('Controller history unavailable: HISTORY-001.')
-    native_events=[e for e in history.get('events',[]) if isinstance(e.get('time'),(int,float)) and e['time']>=cutoff]
-    lines.append('Controller events during the interval: %s' % len(native_events))
-    for event in native_events[-10:]:
-        event_state=event.get('state','UNKNOWN')
-        if not isinstance(event_state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',event_state):event_state='UNKNOWN'
-        codes=[c for c in event.get('codes',[]) if isinstance(c,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',c)]
-        lines.append('%s · %s%s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),event_state,' · trial' if event.get('trial') else '',', '.join(codes)))
+    if 'controller_events' in items:
+        if history.get('error'):lines.append('Controller history unavailable: HISTORY-001.')
+        native_events=[e for e in history.get('events',[]) if isinstance(e.get('time'),(int,float)) and e['time']>=cutoff]
+        lines.append('Controller events during the interval: %s' % len(native_events))
+        for event in native_events[-10:]:
+            event_state=event.get('state','UNKNOWN')
+            if not isinstance(event_state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',event_state):event_state='UNKNOWN'
+            codes=[c for c in event.get('codes',[]) if isinstance(c,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',c)]
+            lines.append('%s · %s%s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),event_state,' · trial' if event.get('trial') else '',', '.join(codes)))
     totals=history.get('months',{}).get(month)
-    if totals:
+    if totals and 'controller_totals' in items:
         lines.append('Controller %s, accumulated: attempts %s; trials passed %s; automatic commits %s; rollbacks %s. This is a partial month.' % (month,totals.get('attempts',0),totals.get('trials_passed',0),totals.get('committed',0),totals.get('rollbacks',0)))
-    lines.extend(['Observation gaps: %s' % accounting.get('gaps', 0),
-                  'Router-originated IPv4 checks. A failure cause is stated only when supported by evidence.'])
+    if 'gaps' in items:
+        lines.extend(['Observation gaps: %s' % accounting.get('gaps', 0),
+                      'Router-originated IPv4 checks. A failure cause is stated only when supported by evidence.'])
     return '\n'.join(lines)[:4000]
 
 
@@ -163,12 +173,14 @@ def deliver(status,saved,now):
         if state.get('uncertain'):public['code']='TELEGRAM-DELIVERY-UNKNOWN'
         return public,state,False
     sent=False
+    from telegram_items import parse
+    items=parse(config.get('telegram_items'))
     with control_lock(RUNTIME/'telegram-control'):
         for index,job in enumerate(jobs):
             if index:time.sleep(1.05)
             state=dict(state,attempt=now)
             try:
-                text=(format_report(status,job['minutes'],now)+'\n'+'\n'.join(delta_lines(status,state,now))) if job['kind']=='interval' else format_period(status,job,now)
+                text=(format_report(status,job['minutes'],now,items)+('\n'+'\n'.join(delta_lines(status,state,now)) if 'delta' in items else '')) if job['kind']=='interval' else format_period(status,job,now,items)
                 if job['kind']=='interval':text='Report id: '+job['key']+'\n'+text
             except Exception:
                 state['last_code']='TELEGRAM-FORMAT-FAILED'

@@ -312,7 +312,7 @@ function renderAutoControl(status,inventory){
   if(!model.on&&!model.transitioning&&!model.stop){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Step 2 · Turn on Auto. Do it after step 1 (“Check the VPNs now”, at the top of this page) shows that your VPNs work and the list below is complete.','Шаг 2 · Включите Auto. Делайте это после шага 1 («Проверить VPN сейчас», вверху страницы), когда проверка показала, что ваши VPN работают, и список ниже выполнен.')),E('h3',{},readiness.ready?bi('Ready to start','Готово к запуску'):bi('Before you can start Auto','Что нужно перед запуском Auto')),E('ol',{'class':'hv-req-list'},readiness.steps.map(function(step){
       var isNext=readiness.next&&readiness.next.key===step.key;
-      var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[E('code',{},code),' · '+autoBlockerText(code)]);})):null;
+      var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[safeCode(code)?errorCodeLink(code):E('code',{},code),' · '+autoBlockerText(code)]);})):null;
       return E('li',{'class':'hv-req hv-req-'+(step.done?'done':isNext?'next':'todo')},[E('span',{'class':'hv-req-mark','aria-hidden':'true'},step.done?'✓':isNext?'→':'·'),E('div',{},[E('strong',{},step.title),step.done?null:E('p',{},step.hint),extra].filter(Boolean)),E('span',{'class':'hv-visually-hidden'},step.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
     })),E('p',{'class':'hv-req-actions'},[E('a',{'class':'cbi-button','href':'#settings'},bi('Open Settings','Открыть настройки')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск'))])]);
   }
@@ -342,12 +342,36 @@ function telegramTokenHelp(){
     E('ol',{},steps.map(function(s){return E('li',{},richText(bi(s.t[0],s.t[1])));})),
     E('p',{'class':'hv-wizard-example'},bi('Example token: 123456789:AAH… (digits, a colon, then 30–100 letters, digits, _ or -). Example chat ID: 123456789 for yourself, -1001234567890 for a group or channel, or @my_channel for a public channel.','Пример токена: 123456789:AAH… (цифры, двоеточие, затем 30–100 букв, цифр, _ или -). Пример Chat ID: 123456789 для себя, -1001234567890 для группы или канала, или @my_channel для публичного канала.'))]);
 }
+/* What a Telegram report contains: the owner ticks it. Header, report id and an ALARM line are always sent. */
+var TG_ITEMS=[
+  ['servers','Connected servers and their state','Подключённые серверы и их состояние','One line per server: name, protocol, OK or error code, response time. (Period reports: hours up/down per server.)','По строке на сервер: имя, протокол, OK или код ошибки, время ответа. (В сводках: часы работы и простоя сервера.)'],
+  ['events','State changes','Изменения состояния','How many times a server changed state in the period, with the last ones listed.','Сколько раз сервер менял состояние за период, последние перечислены.'],
+  ['traffic','VPN traffic','Трафик VPN','Gigabytes through the VPN this month (period reports: WAN and VPN traffic).','Гигабайты через VPN в этом месяце (в сводках: трафик WAN и VPN).'],
+  ['delta','Traffic since the last report','Трафик с прошлого отчёта','How much traffic passed since the last confirmed report.','Сколько трафика прошло с прошлого подтверждённого отчёта.'],
+  ['controller','Auto controller state','Состояние контроллера Auto','One line: what the automatic switching is doing now.','Одна строка: что сейчас делает автопереключение.'],
+  ['controller_events','Controller events','События контроллера','Attempts, trials and switches during the period, with codes.','Попытки, тесты и переключения за период, с кодами.'],
+  ['controller_totals','Controller monthly totals','Итоги контроллера за месяц','Attempts, passed trials, commits and rollbacks this month.','Попытки, пройденные тесты, переключения и откаты за месяц.'],
+  ['gaps','Monitoring gaps and notes','Пропуски наблюдений и пометки','How often monitoring missed a check, plus the standard reading notes.','Сколько раз мониторинг пропустил проверку и стандартные пометки.']];
+var TG_PRESETS={minimum:['servers'],standard:['servers','events','traffic','controller'],maximum:TG_ITEMS.map(function(i){return i[0];})};
+function tgItemsFromSetting(value){
+  if(typeof value!=='string'||value==='')return TG_PRESETS.maximum.slice();
+  if(value==='none')return [];
+  return value.split(',').filter(function(v){return TG_PRESETS.maximum.indexOf(v)>=0;});
+}
+function tgItemsToSetting(list){return list.length?TG_PRESETS.maximum.filter(function(i){return list.indexOf(i)>=0;}).join(','):'none';}
+function tgItemsBlock(tg){
+  var boxes={};
+  function sync(){TG_ITEMS.forEach(function(i){boxes[i[0]].checked=tg.items.indexOf(i[0])>=0;});}
+  var presets=E('div',{'class':'hv-tg-presets'},[['minimum','Minimum','Минимум'],['standard','Standard','Стандарт'],['maximum','Maximum','Максимум']].map(function(p){return E('button',{'type':'button','class':'cbi-button','click':function(){tg.items=TG_PRESETS[p[0]].slice();sync();}},bi(p[1],p[2]));}));
+  var list=TG_ITEMS.map(function(i){var box=E('input',{'type':'checkbox','change':function(){tg.items=TG_PRESETS.maximum.filter(function(id){return id===i[0]?box.checked:tg.items.indexOf(id)>=0;});}});boxes[i[0]]=box;box.checked=tg.items.indexOf(i[0])>=0;return E('label',{},[box,' ',bi(i[1],i[2]),E('small',{},bi(i[3],i[4]))]);});
+  return E('div',{'class':'hv-tg-items'},[E('strong',{},bi('What to send in Telegram','Что присылать в Telegram')),E('p',{},bi('Tick only what you need. Always sent: the report header and, if the controller stops automatic switching, an ALARM line. Presets: Minimum = servers only; Standard = servers, changes, traffic, controller; Maximum = everything.','Отметьте только нужное. Всегда приходит заголовок отчёта и, если контроллер остановил автопереключение, строка ALARM. Наборы: Минимум — только серверы; Стандарт — серверы, изменения, трафик, контроллер; Максимум — всё.')),presets].concat(list));
+}
 function setupWizard(inventory,kind){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
   var setupCheck=kind==='system'?'pending':'passed';
   var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
   var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval||30,duration:settings.native_duration||10,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority||100,enabled:saved.enabled!==false};})};
-  var tg={token:'',chat:settings.telegram_destination||'',enabled:!!settings.telegram_enabled,interval:settings.telegram_interval||60,schedule:settings.telegram_schedule||'interval',hour:settings.telegram_hour==null?7:settings.telegram_hour,weekly:settings.telegram_weekly!==false,monthly:settings.telegram_monthly!==false};
+  var tg={token:'',chat:settings.telegram_destination||'',enabled:!!settings.telegram_enabled,interval:settings.telegram_interval||60,schedule:settings.telegram_schedule||'interval',hour:settings.telegram_hour==null?7:settings.telegram_hour,weekly:settings.telegram_weekly!==false,monthly:settings.telegram_monthly!==false,items:tgItemsFromSetting(settings.telegram_items)};
   function field(title,node){node.setAttribute('aria-label',title);return E('label',{'class':'hv-wizard-field'},[E('span',{},title),node]);}
   function input(value,type){var node=E('input',{'type':type||'text'});node.value=value;return node;}
   function choice(value){var node=E('select',{},[E('option',{value:''},bi('Choose existing profile','Выберите существующий профиль'))].concat(profiles.map(function(p){return E('option',{value:p.id},p.name+' · '+p.protocol);})));node.value=value;return node;}
@@ -390,13 +414,13 @@ function setupWizard(inventory,kind){
         var schedule=E('select',{},[E('option',{value:'interval'},bi('Every interval','Через интервал')),E('option',{value:'daily'},bi('Daily at selected hour','Ежедневно в выбранный час'))]);
         schedule.value=tg.schedule;enabled.checked=tg.enabled;weekly.checked=tg.weekly;monthly.checked=tg.monthly;
         chat.placeholder='@channel_name or -100…';
-        [field(bi('Channel / destination ID','Канал / ID получателя'),chat),field(bi('Schedule','Расписание'),schedule),field(bi('Report interval, minutes (5–10080)','Интервал отчётов, минут (5–10080)'),interval),field(bi('Daily hour, Europe/Berlin (0–23)','Час отчёта, Europe/Berlin (0–23)'),hour),field(bi('Weekly summary on Monday','Недельная сводка в понедельник'),weekly),field(bi('Monthly summary on day 1','Месячная сводка первого числа'),monthly),field(bi('Enable scheduled reports','Включить отчёты по расписанию'),enabled)].forEach(function(n){body.appendChild(n);});
+        [field(bi('Channel / destination ID','Канал / ID получателя'),chat),field(bi('Schedule','Расписание'),schedule),field(bi('Report interval, minutes (5–10080)','Интервал отчётов, минут (5–10080)'),interval),field(bi('Daily hour, Europe/Berlin (0–23)','Час отчёта, Europe/Berlin (0–23)'),hour),field(bi('Weekly summary on Monday','Недельная сводка в понедельник'),weekly),field(bi('Monthly summary on day 1','Месячная сводка первого числа'),monthly),field(bi('Enable scheduled reports','Включить отчёты по расписанию'),enabled)].forEach(function(n){body.appendChild(n);});body.appendChild(tgItemsBlock(tg));
         read=function(){tg.chat=chat.value.trim();tg.interval=Number(interval.value);tg.enabled=enabled.checked;tg.schedule=schedule.value;tg.hour=Number(hour.value);tg.weekly=weekly.checked;tg.monthly=monthly.checked;return /^(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$/.test(tg.chat)&&Number.isInteger(tg.interval)&&tg.interval>=5&&tg.interval<=10080&&Number.isInteger(tg.hour)&&tg.hour>=0&&tg.hour<=23;};
       }else{
         body.appendChild(E('h3',{},bi('Review Telegram destination','Проверьте получателя Telegram')));
         body.appendChild(E('p',{},bi('Destination: ','Получатель: ')+tg.chat));
         body.appendChild(E('p',{},tg.schedule==='daily'?bi('Daily at ','Ежедневно в ')+String(tg.hour).padStart(2,'0')+':00 Europe/Berlin':bi('Reports every ','Отчёты каждые ')+tg.interval+' min'));
-        body.appendChild(E('p',{},bi('Weekly / monthly summaries: ','Недельная / месячная сводка: ')+(tg.weekly?'✓':'—')+' / '+(tg.monthly?'✓':'—')));
+        body.appendChild(E('p',{},bi('Weekly / monthly summaries: ','Недельная / месячная сводка: ')+(tg.weekly?'✓':'—')+' / '+(tg.monthly?'✓':'—')));body.appendChild(E('p',{},bi('Contents: ','Содержимое: ')+(tg.items.length?TG_ITEMS.filter(function(i){return tg.items.indexOf(i[0])>=0;}).map(function(i){return bi(i[1],i[2]);}).join(', '):bi('header and alarms only','только заголовок и тревоги'))));
         body.appendChild(E('p',{},bi('After saving, use the separate Test delivery button. The stored token is never shown.','После сохранения используйте отдельную кнопку проверки доставки. Сохранённый токен не показывается.')));
       }
     }
@@ -408,7 +432,7 @@ function setupWizard(inventory,kind){
       if(busy)return;if(!read()){notify('SETUP-VALIDATION: check profiles, names and numeric ranges.');return;}
       if(step<2){step++;show();return;}
       busy=true;body.setAttribute('aria-busy','true');progress.textContent=bi('Saving settings…','Сохранение настроек…');Array.from(actions.children).forEach(function(node){node.disabled=true;});
-      var save=kind==='system'?rpc.declare({object:'homensai-vpn',reject:true,method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',reject:true,method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly);
+      var save=kind==='system'?rpc.declare({object:'homensai-vpn',reject:true,method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',reject:true,method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly','items'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly,tgItemsToSetting(tg.items));
       return save.then(function(result){if(!result||result.saved!==true){notify(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(result.code)?result.code:'SETUP-SAVE-FAILED');return;}tg.token='';closed=true;ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;body.setAttribute('aria-busy','false');progress.textContent='';Array.from(actions.children).forEach(function(node){node.disabled=false;});});
     }},step<2?bi('Next','Далее'):bi('Save configuration','Сохранить настройки')));
     if(kind==='system'&&setupCheck!=='passed')body.querySelectorAll('input,select').forEach(function(node){node.disabled=true;});
@@ -545,7 +569,7 @@ function faultPanel(status,inventory,refresh){
     section.appendChild(why);
   }
   section.appendChild(E('small',{},bi('Inactive profiles are not started. This is a traffic fault, not a VPN service stop. Auto mode Stop also requests fault cleanup.','Неактивные профили не запускаются. Это сбой трафика, а не остановка VPN-службы. Остановка авторежима также запрашивает очистку сбоя.')));
-  if(state.history&&state.history.length){var table=E('table',{'class':'table'},[E('tr',{},[bi('Time · Berlin','Время · Берлин'),bi('Code','Код'),bi('Profiles','Профили'),bi('Scope','Область')].map(function(text){return E('th',{},text);} ))]);state.history.slice().reverse().forEach(function(row){table.appendChild(E('tr',{},[new Date(row.time*1000).toLocaleString('en-GB',{timeZone:'Europe/Berlin'}),row.code,(row.profiles||[]).join(', '),row.scope].map(function(value){return E('td',{},value);})));});section.appendChild(table);}
+  if(state.history&&state.history.length){var table=E('table',{'class':'table'},[E('tr',{},[bi('Time · Berlin','Время · Берлин'),bi('Code','Код'),bi('Profiles','Профили'),bi('Scope','Область')].map(function(text){return E('th',{},text);} ))]);state.history.slice().reverse().forEach(function(row){table.appendChild(E('tr',{},[new Date(row.time*1000).toLocaleString('en-GB',{timeZone:'Europe/Berlin'}),(safeCode(row.code)?errorCodeLink(row.code):row.code),(row.profiles||[]).join(', '),row.scope].map(function(value){return E('td',{},value);})));});section.appendChild(table);}
   return section;
 }
 
@@ -597,7 +621,9 @@ function sortServerCards(rows,selected,now){
 }
 function healthBadge(profile){
   var health=profileHealth(profile,Date.now()/1000);
-  return E('strong',{'class':'hv-badge hv-health-'+health.state,'title':profile.code||health.label},health.label+(profile.code?' · '+profile.code:''));
+  // The code is a link to its row in the error table (when that helper exists on the page).
+  var linked=profile.code&&typeof errorCodeLink==='function'&&typeof safeCode==='function'&&safeCode(profile.code);
+  return E('strong',{'class':'hv-badge hv-health-'+health.state,'title':profile.code||health.label},linked?[health.label+' · ',errorCodeLink(profile.code)]:health.label+(profile.code?' · '+profile.code:''));
 }
 function compareTableValues(a,b,direction){
   var unknown=function(value){return value==null||/^(?:\s*|—|No data|Нет данных)$/.test(String(value).trim());};
@@ -801,13 +827,35 @@ function renderTransitionAnalytics(status){
     var s=recoverySummary(rows,window.start,window.end);
     selectedRows=rows.filter(function(r){return r.start>=window.start&&r.start<window.end;});
     if(table)table.querySelectorAll('tr[data-recovery-start]').forEach(function(row){var at=Number(row.getAttribute('data-recovery-start'));row.hidden=!(at>=window.start&&at<window.end);});
-    summaryHost.textContent=bi('Attempts / known outcomes / pending or unknown: ','Попытки / известный результат / ожидание или неизвестно: ')+s.attempts+' / '+s.known_outcomes+' / '+s.unknown_or_pending+
-      ' · '+bi('Trial / automatic attempts: ','Тестовые / автоматические попытки: ')+s.trial_attempts+' / '+s.automatic_attempts+
-      ' · '+bi('Verified outcome ratio (including trials): ','Доля подтверждённых результатов (включая тесты): ')+(s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%')+
-      ' · '+bi('Recovery median / P95 / worst (s): ','Восстановление: медиана / P95 / максимум (с): ')+[s.median,s.p95,s.worst].map(function(v){return v==null?'—':v.toFixed(1);}).join(' / ');
+    var fmt=function(v){return v==null?'—':v.toFixed(1);};
+    while(summaryHost.firstChild)summaryHost.removeChild(summaryHost.firstChild);
+    summaryHost.appendChild(E('table',{'class':'table hv-recovery-table'},[
+      E('tr',{'class':'tr table-titles'},[E('th',{'scope':'col'},bi('Measure','Показатель')),E('th',{'scope':'col'},bi('Value','Значение'))]),
+      [[bi('Attempts','Попытки'),s.attempts],
+       [bi('Known outcome','Известный результат'),s.known_outcomes],
+       [bi('Pending or unknown','Ожидание или неизвестно'),s.unknown_or_pending],
+       [bi('Trial attempts','Тестовые попытки'),s.trial_attempts],
+       [bi('Automatic attempts','Автоматические попытки'),s.automatic_attempts],
+       [bi('Verified outcome ratio (including trials)','Доля подтверждённых результатов (включая тесты)'),s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%'],
+       [bi('Recovery time, median (s)','Время восстановления, медиана (с)'),fmt(s.median)],
+       [bi('Recovery time, P95 (s)','Время восстановления, P95 (с)'),fmt(s.p95)],
+       [bi('Recovery time, worst (s)','Время восстановления, максимум (с)'),fmt(s.worst)]].map(function(r){return E('tr',{'class':'tr'},[E('td',{'class':'td'},r[0]),E('td',{'class':'td'},String(r[1]))]);})].reduce(function(a,b){return a.concat(b);},[])));
     while(groupHost.firstChild)groupHost.removeChild(groupHost.firstChild);
     var groups=recoveryGroups(rows,status.profiles||[],window.start,window.end);
-    Object.keys(groups).forEach(function(kind){groupHost.appendChild(E('p',{},({server:bi('Server','Сервер'),channel:bi('Group','Группа'),protocol:bi('Protocol','Протокол')}[kind]||kind)+': '+groups[kind].map(function(g){var m=g.metrics;return g.name+' · '+(m.committed+m.trials_passed)+'/'+m.known_outcomes+' · P95 '+(m.p95==null?'—':m.p95.toFixed(1))+' '+bi('s','с')+' · '+bi('failures in a row: ','сбоев подряд: ')+m.max_consecutive_failures;}).join(' | ')));});
+    var kindTitle={server:bi('By server','По серверам'),channel:bi('By group (channel)','По группам (каналам)'),protocol:bi('By protocol','По протоколам')};
+    Object.keys(groups).forEach(function(kind){
+      if(!groups[kind].length)return;
+      groupHost.appendChild(E('h4',{},ownGet(kindTitle,kind)||kind));
+      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[bi('Name','Имя'),bi('Successful / known','Удачных / известных'),bi('P95, s','P95, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
+        return E('tr',{'class':'tr'},[E('td',{'class':'td'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},m.p95==null?'—':m.p95.toFixed(1)),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
+    });
+    groupHost.appendChild(E('div',{'class':'hv-recovery-legend'},[E('strong',{},bi('How to read these tables','Как читать эти таблицы')),E('p',{},bi('There is one table per kind of grouping (server, group of servers, protocol). Example row: b · 1 / 1 · 5.0 · 0.','Для каждого вида группировки своя таблица (сервер, группа серверов, протокол). Пример строки: b · 1 / 1 · 5.0 · 0.')),
+      E('ul',{},[
+        E('li',{},bi('Name (b, Main, openvpn): the server, the group (channel) or the protocol these numbers belong to.','Имя (b, Main, openvpn): сервер, группа (канал) или протокол, к которым относятся цифры.')),
+        E('li',{},bi('1/1: successful switches / switches whose result is known. 1/1 = every known switch to it succeeded; 0/1 = the only known switch failed; 1/2 = one of two worked. Pending or unknown results are not counted.','1/1: удачные переключения / переключения с известным результатом. 1/1 — все известные переключения на него удались; 0/1 — единственное известное не удалось; 1/2 — одно из двух удалось. Ожидающие и неизвестные результаты не считаются.')),
+        E('li',{},bi('P95 5.0 s: 95 % of recoveries on this server took no longer than 5 seconds (the slowest 5 % are excluded). “—” means no timing yet. Smaller is better.','P95 5.0 с: 95 % восстановлений на этом сервере заняли не больше 5 секунд (самые медленные 5 % не учитываются). «—» — времени ещё нет. Чем меньше, тем лучше.')),
+        E('li',{},bi('Consecutive failures: the longest run of failed attempts one after another in the chosen period. 0 = none; 1 = one failure, 2 or more = the server repeatedly failed to take over and deserves attention.','Сбоев подряд: самая длинная серия неудачных попыток подряд за выбранный период. 0 — не было; 1 — одна неудача; 2 и больше — сервер несколько раз подряд не смог принять трафик, на него стоит обратить внимание.'))]),
+      E('p',{},bi('Example: “d · 0/1 · P95 8.0 s · consecutive failures: 1” = the only known switch to d failed (took 8 s), so d is a weak reserve for now; “b · 1/1” is a reliable one.','Пример: «d · 0/1 · P95 8.0 с · сбоев подряд: 1» — единственное известное переключение на d не удалось (8 с), значит d пока слабый резерв; «b · 1/1» — надёжный.'))]));
   }
   period.addEventListener('change',function(){recoveryAnalyticsPeriod=period.value;try{localStorage.setItem('homensai-vpn-recovery-period',recoveryAnalyticsPeriod);}catch(error){}update();});update();
   var exports=E('div',{'class':'hv-wizard-launch'},Object.keys(exportSchemas).map(function(kind){return E('button',{'type':'button','class':'cbi-button','click':function(){
@@ -815,9 +863,13 @@ function renderTransitionAnalytics(status){
     var link=document.createElement('a');link.href=url;link.download='homensai-vpn-'+kind+'.csv';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }},'CSV · '+kind);}));
   exports.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){downloadIncidentReport(selectedRows);}},bi('Printable incident report','Отчёт об инцидентах для печати')));
-  table=E('table',{'class':'table'},[E('tr',{},[bi('Time (UTC)','Время (UTC)'),bi('From','Откуда'),bi('To','Куда'),bi('Result','Итог'),bi('Seconds','Секунд'),bi('Codes','Коды'),bi('Details','Подробности')].map(function(h){return E('th',{},h);}))]);
-  rows.forEach(function(r){var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r);}},bi('Details','Подробности'));table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[new Date(r.start*1000).toISOString(),r.source,r.target,r.outcome,
-    r.duration==null?'—':String(r.duration),bi('Attempt #','Попытка №')+r.id+' / '+bi('retry episode: ','повторный эпизод: ')+(r.retry_episode_id||bi('unknown','не указан'))+' · '+r.codes.join(' · ')+' · '+JSON.stringify(r.probe_evidence)+' · '+r.phases.map(function(p){return p.state+' @ '+new Date(p.time*1000).toISOString();}).join(' → ')].map(function(v){return E('td',{},v);}).concat([E('td',{},detail)])));
+  function stamp(t){return new Date(t*1000).toISOString().replace('T',' ').replace(/\.[0-9]+Z$/,'');}
+  table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},[bi('Time (UTC)','Время (UTC)'),'№',bi('From','Откуда'),bi('To','Куда'),bi('Outcome','Итог'),bi('Seconds','Секунд'),bi('Stages','Этапы'),bi('Codes','Коды'),''].map(function(h){return E('th',{'scope':'col'},h);}))]);
+  rows.forEach(function(r){
+    var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r);}},bi('Details','Подробности'));
+    var evidence=r.probe_evidence&&typeof r.probe_evidence==='object'&&Object.keys(r.probe_evidence).length?' · '+Object.keys(r.probe_evidence).map(function(k){return k+'='+String(r.probe_evidence[k]);}).join(', '):'';
+    table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[stamp(r.start),String(r.id),r.source,r.target,r.outcome,r.duration==null?'—':String(r.duration),
+      r.phases.map(function(p){return p.state;}).join(' → ')||'—',(r.codes.join(' · ')||'—')+evidence].map(function(v){return E('td',{},v);}).concat([E('td',{},detail)])));
   });
   update();
   var stamps=(history.events||[]).map(function(e){return e.time;}).filter(function(at){return Number.isFinite(at)&&at>=0&&at<=253402300799;});
@@ -1231,7 +1283,7 @@ function renderMonitorInfo(status,inventory){
     E('p',{'class':'hv-ready-intro'},bi('Where it is stored: on the router itself, in /etc/homensai-vpn (saved '+(every?'about every '+every+' min':'periodically')+'; the interval can be changed in Settings → Advanced settings → Monitoring parameters). Nothing leaves the router.','Где хранится: на самом роутере, в /etc/homensai-vpn (сохраняется '+(every?'примерно раз в '+every+' мин':'периодически')+'; интервал можно изменить в «Настройки» → «Расширенные настройки» → «Параметры мониторинга»). Ничего не уходит с роутера.'))]);
 }
 
-var ADVANCED_KEYS=['tests','traffic','services','events','readiness'];
+var ADVANCED_KEYS=['tests','traffic','services','events'];
 var PAGE_SUBTITLES={
   overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
   channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
@@ -1528,7 +1580,7 @@ function renderTermsGate(inventory){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard66',UI_AGENT='0.9.0-alpha3';
+var UI_BUILD='dashboard66',UI_AGENT='0.9.0-alpha6';
 function identityModel(status){
   var agent=typeof status.version==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.version)?status.version:null;
   var pkg=typeof status.package==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.package)?status.package:null;
@@ -2313,6 +2365,22 @@ function installModalStyle(){
   };
 }
 
+/* "Top" button in the bottom-right corner of every page and design: appears after the page is scrolled, jumps back up. */
+function installTopButton(root){
+  var button=E('button',{'type':'button','class':'hv-top-button','hidden':'','aria-label':bi('Back to top','Наверх'),'click':function(){
+    try{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}catch(e){window.scrollTo(0,0);}
+    try{if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}
+  }},[E('span',{'aria-hidden':'true'},'↑'),E('span',{'class':'hv-top-label'},bi('Top','Вверх'))]);
+  root.appendChild(button);
+  function update(){
+    if(!document.body.contains(root)){window.removeEventListener('scroll',update);return;}
+    var y=window.pageYOffset||(document.scrollingElement&&document.scrollingElement.scrollTop)||0;
+    if(y>240)button.removeAttribute('hidden');else button.setAttribute('hidden','');
+  }
+  window.addEventListener('scroll',update,{passive:true});update();
+  return button;
+}
+
 /* Owner attributes: product name, device, developer, version/package/page and style. Shown at the bottom of every page in every design; no design may hide it. */
 var HV_STYLE_VERSION='HomenS.AI Style 1.14.3';
 function renderAttribution(status){
@@ -2940,12 +3008,12 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
   tick();if(liveLogTimer)clearInterval(liveLogTimer);liveLogTimer=setInterval(function(){if(!document.body.contains(head)){clearInterval(liveLogTimer);liveLogTimer=null;return;}tick();},1000);
   var monitorKind=fresh?'green':status.rpc_error?'red':'yellow';
   var lines=[
-    E('div',{},[time(status.time,'—'),E('strong',{},'  HomenS.AI monitor: '),badge(status.error),lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных'))]),
-    E('div',{},[time(ns.time,'—'),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN',lamp(light.lamp==='orange'?'yellow':(light.lamp||'grey'),light.title)])
+    E('div',{},[time(status.time,'—'),lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных')),E('strong',{},'  HomenS.AI monitor: '),badge(status.error)]),
+    E('div',{},[time(ns.time,'—'),lamp(light.lamp==='orange'?'yellow':(light.lamp||'grey'),light.title),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN'])
   ];
   var terminal=E('pre',{'class':'hv-live-terminal'},lines);
   rows.slice(0,20).forEach(function(p){
-    terminal.appendChild(E('div',{'class':p.code?'error':'notice'},[time(p.time,'—:—:—'),E('strong',{},'  '+p.protocol+' / '+serverTitle(p)+': '),healthBadge(p),lamp(liveLampKind(p,now),profileHealth(p,now).label)]));
+    terminal.appendChild(E('div',{'class':p.code?'error':'notice'},[time(p.time,'—:—:—'),lamp(liveLampKind(p,now),profileHealth(p,now).label),E('strong',{},'  '+p.protocol+' / '+serverTitle(p)+': '),healthBadge(p)]));
   });
   return E('div',{'class':'hv-live'},[head,terminal]);
 }
@@ -2953,26 +3021,35 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
 /* Every known diagnostic code anywhere on the page becomes a link to its row in the error table (name, meaning, how to fix). */
 var errorLinkObserver=null,errorLinkTimer=null;
 var ERROR_LINK_SKIP='a,button,script,style,textarea,input,select,option,.hv-errtable,.hv-ai-prompt,.hv-cmd,.hv-errlink';
+/* Known codes inside a text, as [{code,index}]. A code is capital letters, digits and hyphens (DNS-001, OFFLINE-FIXTURE, COMMITTED). */
+function findErrorCodes(text){
+  var pattern=/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*\b/g,match,found=[];
+  while((match=pattern.exec(text))){
+    var code=match[0];
+    if(code.length<5||!(Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)||(typeof errorFamilyOf==='function'&&errorFamilyOf(code))))continue;
+    found.push({code:code,index:match.index});
+  }
+  return found;
+}
 function linkifyErrorCodes(root){
   if(!root||typeof ERROR_GROUP_OF==='undefined')return;
   var walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null),nodes=[],node;
   while((node=walker.nextNode())){
     if(!node.nodeValue||node.nodeValue.length<5)continue;
     var parent=node.parentElement;if(!parent||parent.closest(ERROR_LINK_SKIP))continue;
-    if(/[A-Z][A-Z0-9]{3,}/.test(node.nodeValue))nodes.push(node);
+    if(findErrorCodes(node.nodeValue).length)nodes.push(node);
   }
   if(!nodes.length)return;
   if(errorLinkObserver)errorLinkObserver.disconnect();
   nodes.forEach(function(textNode){
-    var text=textNode.nodeValue,pattern=/\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*\b/g,match,last=0,frag=document.createDocumentFragment(),changed=false;
-    while((match=pattern.exec(text))){
-      var code=match[0];
-      if(code.length<5||!(Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)||(typeof errorFamilyOf==='function'&&errorFamilyOf(code))))continue;
-      if(match.index>last)frag.appendChild(document.createTextNode(text.slice(last,match.index)));
+    var text=textNode.nodeValue,last=0,frag=document.createDocumentFragment(),changed=false;
+    findErrorCodes(text).forEach(function(hit){
+      var code=hit.code;
+      if(hit.index>last)frag.appendChild(document.createTextNode(text.slice(last,hit.index)));
       var link=document.createElement('a');link.href='#events';link.className='hv-errlink hv-errlink-inline';link.textContent=code;link.title=bi('Open the description of this code','Открыть описание этого кода');
       (function(c){link.addEventListener('click',function(ev){ev.preventDefault();showErrorCode(c);});})(code);
-      frag.appendChild(link);last=match.index+code.length;changed=true;
-    }
+      frag.appendChild(link);last=hit.index+code.length;changed=true;
+    });
     if(!changed)return;
     if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
     textNode.parentNode.replaceChild(frag,textNode);
@@ -3159,7 +3236,7 @@ return view.extend({
       if(ADVANCED_KEYS.indexOf(activeTab)>=0)advancedOpen=true;
       advancedBox=E('div',{'class':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
       advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced','Расширенное')),E('small',{},bi('for administrators','для администраторов'))]);
-      var links=['start','overview','channels','statistics','settings','help','learn'].map(tabLink).concat([advancedToggle,advancedBox]);
+      var links=['start','readiness','overview','channels','statistics','settings','help','learn'].map(tabLink).concat([advancedToggle,advancedBox]);
       appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':currentDesign()},[E('a',{'class':'hv-skip','href':'#','click':function(ev){ev.preventDefault();var m=appRoot.querySelector('main');if(m){m.setAttribute('tabindex','-1');m.focus();}}},bi('Skip to content','К содержимому')),
         E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui44.css')+'?build=080-alpha8'}),
         E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},'GL.iNet GL-MT6000 · Flint 2'),E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('small',{},bi('Real IPv4 router measurements','Реальные IPv4-измерения роутера')),E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))])]),
@@ -3197,7 +3274,7 @@ return view.extend({
       panel.addEventListener('pointerdown',function(){pointerHeld=true;});
       ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});
       showPage(activeTab);window.addEventListener('hashchange',function(){showPage(window.location.hash.slice(1));});
-      initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});
+      initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});
       return appRoot;
     });
   }

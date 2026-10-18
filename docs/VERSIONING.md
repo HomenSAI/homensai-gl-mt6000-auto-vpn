@@ -30,3 +30,7 @@ Every reviewed change gets a local commit and CHANGELOG entry where relevant; sa
 Application tag guards in existing scripts support their documented v... forms. Handoff tags use a separately reviewed explicit-ref publication path; do not weaken product-tag guards merely to make a handoff tag pass. Map public tags separately under refs/homensai-public/tags/.
 
 Validate metadata, document/archive references, secret exclusion and exact downloaded asset hashes for handoff-only releases. Do not restart stopped long-running or physical-router tests for a documentation release. Record the actual validation scope, not a fabricated fresh full-suite PASS.
+
+## Automatic tracking
+
+VERSION.json holds `source_fingerprint`, a SHA-256 over router/files, the page sources and the build scripts with the version strings neutralised. `python scripts/bump-version.py --check` fails when the source changed without a new version; running it without arguments advances the prerelease number, resets the package revision to 1, rewrites every version literal, rebuilds the page (so the pages show the new version) and records the fingerprint. The package hash is recorded after the package build (zeros until then). The pre-commit hook in .githooks runs it on every commit, and qa/test_version_current.py keeps CI honest.

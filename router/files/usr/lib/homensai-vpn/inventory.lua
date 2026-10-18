@@ -61,6 +61,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.telegram_hour=math.max(0,math.min(23,tonumber(s.telegram_hour) or 7))
   main.telegram_weekly=s.telegram_weekly~='0'
   main.telegram_monthly=s.telegram_monthly~='0'
+  main.telegram_items=s.telegram_items or ''
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0
   main.interval=math.max(10,math.min(300,tonumber(s.interval) or 30))
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))

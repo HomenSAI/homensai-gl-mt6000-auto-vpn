@@ -1,0 +1,4 @@
+#!/bin/sh
+# Keeps the version honest: if the product source changed without a version change, bump it and stage the result.
+python scripts/bump-version.py || exit 1
+git add VERSION.json router/Makefile router/build_ipk.py router/files lab/storage_adversity_guest.py router-test-kit/02-install.sh router-test-kit/03-verify.sh
