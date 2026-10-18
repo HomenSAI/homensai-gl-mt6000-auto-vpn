@@ -13,7 +13,7 @@ function cascadePathModel(status,now){
     var state=fresh?profileHealth(p,now).state:'unknown';
     var enabled=p.enabled!==false&&p.enabled!=='0';
     var reason=p.id===selected?'SELECTED-BY-CONTROLLER':!enabled?'DISABLED':state==='healthy'?'EDGE-NOT-CERTIFIED':state.toUpperCase();
-    group.servers.push({id:p.id,name:p.name||p.id,state:state,selected:p.id===selected,reason:reason});
+    group.servers.push({id:p.id,name:p.name||p.id,state:state,selected:p.id===selected,reason:reason,profile:p});
     if(current&&p.id!==selected&&enabled&&state==='healthy')candidates.push({id:p.id,
       tier:p.protocol!==current.protocol?2:p.channel!==current.channel?1:0,
       priority:Number.isFinite(Number(p.priority))?Number(p.priority):Infinity});
@@ -23,20 +23,41 @@ function cascadePathModel(status,now){
   groups.sort(function(a,b){return Number(b.servers.some(function(s){return s.selected;}))-Number(a.servers.some(function(s){return s.selected;}));});
   return {selected:selected,groups:groups,next:candidates.length?candidates[0].id:null,fresh:fresh};
 }
+// What each note on a server means, in plain words. These are descriptions, not errors; real error codes are shown as links.
+var CASCADE_NOTES={
+  'SELECTED-BY-CONTROLLER':['Carries your traffic now.','Сейчас пропускает ваш трафик.'],
+  'EDGE-NOT-CERTIFIED':['Works and could take over, but switching to it is not certified on this router yet (the LAN trial has not passed).','Работает и мог бы подхватить трафик, но переключение на него на этом роутере ещё не подтверждено (LAN-тест не пройден).'],
+  'DISABLED':['Switched off in Settings, so it is not monitored and will not be used.','Выключен в «Настройках», поэтому не проверяется и использоваться не будет.'],
+  'FAILED':['Failed its last check.','Не прошёл последнюю проверку.'],
+  'CHECKING':['Being checked right now.','Проверяется прямо сейчас.'],
+  'INACTIVE':['The VPN tunnel is not connected in GL.iNet.','VPN-туннель не подключён в GL.iNet.'],
+  'UNKNOWN':['No fresh result yet.','Свежего результата пока нет.']
+};
 function renderCascadePath(status){
   var model=cascadePathModel(status,Date.now()/1000);
-  return E('section',{'class':'hv-chart-card'},[
-    E('h2',{},bi('Protocol / channel / server path','Путь: протокол / канал / сервер')),
-    E('p',{},bi('Selected route requires fresh controller evidence. Candidate suggestions do not authorize switching.','Выбранный маршрут требует свежего подтверждения контроллера. Рекомендация кандидата не разрешает переключение.')),
-    E('p',{},bi('Next healthy suggestion: ','Следующий работающий кандидат: ')+(model.next||'—')+' · EDGE-NOT-CERTIFIED'),
-    E('div',{'class':'hv-cascade-grid'},model.groups.map(function(g){return E('section',{'class':'hv-auto-node'},[
-      E('strong',{},g.protocol),E('b',{},g.channel),E('ul',{},g.servers.map(function(s){return E('li',{},[
-        E('strong',{'class':'hv-badge hv-health-'+s.state},s.selected?bi('Selected','Выбран'):({healthy:bi('Healthy','Работает'),failed:bi('Failed','Сбой'),checking:bi('Checking','Проверяется'),inactive:bi('Inactive','Неактивен'),unknown:bi('Unknown','Неизвестно')}[s.state]||s.state)),
-        E('span',{},' '+s.name+(s.id===model.next?' → '+bi('Candidate','Кандидат'):'')),
-        E('small',{},s.reason)
-      ]);} ))
-    ]);})),
-    E('small',{},bi('Hierarchy: another server → another channel → another VPN protocol. No implicit direct-WAN fallback.','Каскад: другой сервер → другой канал → другой протокол VPN. Автоматического выхода напрямую в WAN нет.'))
+  var rows=status.profiles||[],nextRow=rows.filter(function(p){return p.id===model.next;})[0];
+  var legendKeys=[];
+  var groups=model.groups.map(function(g){
+    return E('section',{'class':'hv-auto-node hv-cascade-group'},[
+      E('div',{'class':'hv-cascade-head'},[E('strong',{},g.protocol),E('span',{},bi('Group: ','Группа: ')+g.channel)]),
+      E('ul',{'class':'hv-cascade-list'},g.servers.map(function(s){
+        var p=s.profile,h=profileHealth(p,Date.now()/1000);
+        var kind=s.state==='healthy'?'green':s.state==='checking'?'yellow':s.state==='failed'?'red':'grey';
+        if(legendKeys.indexOf(s.reason)<0)legendKeys.push(s.reason);
+        var note=ownGet(CASCADE_NOTES,s.reason)||CASCADE_NOTES.UNKNOWN;
+        return E('li',{'class':'hv-cascade-item'+(s.selected?' hv-cascade-selected':'')},[
+          E('span',{'class':'hv-check-lamp hv-check-'+kind,'role':'img','aria-label':h.label}),
+          E('div',{},[
+            E('div',{'class':'hv-cascade-line'},[E('b',{},serverTitle(p)),s.selected?E('span',{'class':'hv-chip-note hv-chip-now'},bi('Carries traffic','Пропускает трафик')):null,s.id===model.next?E('span',{'class':'hv-chip-note hv-chip-next'},bi('Next in line','Следующий в очереди')):null].filter(Boolean)),
+            E('div',{'class':'hv-cascade-note'},[bi(note[0],note[1]),(p&&safeCode(p.code))?' ':null,(p&&safeCode(p.code))?errorCodeLink(p.code):null].filter(Boolean))])]);
+      }))]);
+  });
+  return E('section',{'class':'hv-chart-card hv-cascade'},[
+    E('h2',{},bi('Which VPN carries your traffic and which one is next','Какой VPN пропускает ваш трафик и какой следующий')),
+    E('p',{},bi('If the VPN in use fails, Auto looks for a replacement in this order: first another server of the same group and protocol, then another group, and only then another VPN protocol. There is never an automatic exit straight to the provider (no VPN).','Если используемый VPN откажет, Auto ищет замену в таком порядке: сначала другой сервер той же группы и протокола, потом другая группа и только затем другой протокол VPN. Автоматического выхода напрямую к провайдеру (без VPN) никогда не бывает.')),
+    E('p',{'class':'hv-cascade-next'},[E('strong',{},bi('Next in line: ','Следующий в очереди: ')),nextRow?serverTitle(nextRow):bi('nobody yet (no other working VPN)','пока никого (нет другого работающего VPN)'),bi('. This only shows who would be chosen; it does not switch anything.','. Это лишь показывает, кого выберут; ничего не переключается.')]),
+    E('div',{'class':'hv-cascade-grid'},groups),
+    E('details',{'class':'hv-cascade-legend'},[E('summary',{},bi('What the notes mean','Что означают пометки')),E('ul',{},legendKeys.map(function(k){var n=ownGet(CASCADE_NOTES,k)||CASCADE_NOTES.UNKNOWN;return E('li',{},[E('b',{},bi(n[0],n[1]))]);}).concat([E('li',{},bi('A code such as DNS-001 next to a server is a real error: press it to read what it means and how to fix it.','Код вроде DNS-001 рядом с сервером — настоящая ошибка: нажмите на него, чтобы прочитать, что он значит и как исправить.'))]))])
   ]);
 }
 function retainedTransitions(history){
@@ -200,7 +221,41 @@ function renderTransitionAnalytics(status){
 
 function renderDecisionExplanation(status){
   var explanation=status.decision_explanation||{},diagnosis=explanation.diagnosis||{},native=status.native_failover||{};
-  var codeNames={'OBSERVATION-UNKNOWN':bi('Insufficient observations','Недостаточно измерений'),'OBSERVATION-STALE':bi('Observations are stale','Измерения устарели'),'UPLINK-LINK-DOWN':bi('Configured uplink is down; VPN cycling is paused','Настроенный uplink отключён; перебор VPN приостановлен'),'TUNNEL-DISCONNECTED':bi('Tunnel disconnected','Туннель отключён'),'ROUTE-MISMATCH':bi('Route mismatch','Маршрут не соответствует VPN'),'PATH-UNVERIFIED':bi('Probe path unverified','Путь проверки не подтверждён'),'DNS-FAILED':bi('DNS failed','Отказ DNS'),'HTTPS-FAILED':bi('HTTPS failed','Отказ HTTPS'),'VPN-PROBE-HEALTHY':bi('VPN DNS/HTTPS checks passed','Проверки DNS/HTTPS через VPN успешны')};
-  var fresh=!status.rpc_error&&Number.isFinite(status.time)&&Date.now()/1000-status.time>=0&&Date.now()/1000-status.time<=90;
-  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Why the controller acts','Почему контроллер принимает решение')),E('p',{},fresh?(codeNames[diagnosis.code]||bi('No current diagnosis','Нет текущего диагноза')):bi('Current evidence unavailable','Текущие измерения недоступны')),E('p',{},bi('Source failure threshold: ','Порог ошибок основного: ')+(explanation.required_failures||'—')+' · '+bi('Confirmed: ','Подтверждено: ')+(fresh&&explanation.source_failure_streak_met===true?bi('Yes','Да'):bi('No','Нет'))),E('p',{},bi('Reserve success threshold: ','Порог успешных проверок резерва: ')+(explanation.required_successes||'—')+' · '+bi('Confirmed: ','Подтверждено: ')+(fresh&&explanation.reserve_success_streak_met===true?bi('Yes','Да'):bi('No','Нет'))),E('p',{},bi('Order: server → channel → VPN protocol; operator priority within each level.','Порядок: сервер → канал → протокол VPN; внутри уровня — приоритет оператора.')),E('p',{},bi('Controller reason: ','Причина контроллера: ')+(native.reason||native.state||'UNKNOWN')),E('small',{},bi('Router-only probes do not confirm the LAN client path. Native transitions require separate certification.','Проверки с роутера не подтверждают путь LAN-клиента. Нативным переходам требуется отдельное подтверждение.'))]);
+  var now=Date.now()/1000;
+  var fresh=!status.rpc_error&&Number.isFinite(status.time)&&now-status.time>=0&&now-status.time<=90;
+  // What the router sees on the VPN in use, in plain words, with a lamp colour.
+  var seen={
+    'VPN-PROBE-HEALTHY':['green','The VPN in use works: the router opened a website and looked up a name through it.','VPN в использовании работает: роутер открыл сайт и нашёл адрес через него.'],
+    'DNS-FAILED':['red','The VPN is connected, but name lookup (DNS) through it fails.','VPN подключён, но поиск адресов (DNS) через него не работает.'],
+    'HTTPS-FAILED':['red','The VPN is connected, but websites do not open through it.','VPN подключён, но сайты через него не открываются.'],
+    'TUNNEL-DISCONNECTED':['red','The VPN tunnel is not connected.','VPN-туннель не подключён.'],
+    'ROUTE-MISMATCH':['red','The check did not go through this VPN (the route does not match), so it proves nothing.','Проверка шла не через этот VPN (маршрут не совпал), поэтому она ничего не доказывает.'],
+    'PATH-UNVERIFIED':['yellow','The router has not yet confirmed which way its check went.','Роутер ещё не подтвердил, каким путём прошла его проверка.'],
+    'UPLINK-LINK-DOWN':['red','The cable or line from your internet provider is down. Switching VPNs cannot help, so Auto waits.','Кабель или линия от провайдера отключены. Переключение VPN не поможет, поэтому Auto ждёт.'],
+    'OBSERVATION-STALE':['grey','The measurements are too old to decide anything.','Измерения слишком старые, чтобы что-то решать.'],
+    'OBSERVATION-UNKNOWN':['grey','There are not enough measurements yet.','Измерений пока недостаточно.']
+  };
+  var row=ownGet(seen,diagnosis.code)||seen['OBSERVATION-UNKNOWN'];if(!fresh)row=['grey','The router sends no fresh data right now.','Роутер сейчас не присылает свежих данных.'];
+  var needFail=explanation.required_failures,needGood=explanation.required_successes;
+  var failMet=fresh&&explanation.source_failure_streak_met===true,goodMet=fresh&&explanation.reserve_success_streak_met===true;
+  function line(kind,title,text){return E('li',{'class':'hv-why-line'},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('div',{},[E('b',{},title),E('p',{},text)])]);}
+  var state=native.state;
+  var next;
+  if(!fresh)next=bi('Auto cannot decide without fresh data.','Без свежих данных Auto ничего не решает.');
+  else if(state==='COMMITTED'||state==='DEGRADED-ON-RESERVE'||state==='STOPPED-ON-RESERVE')next=bi('Traffic is on the reserve now. Auto returns to the primary when it has recovered and passes its checks; you can also press “Return to primary” in the Auto card.','Трафик сейчас идёт через резерв. Auto вернётся на основной, когда он восстановится и пройдёт проверки; можно также нажать «Вернуться на основной» в блоке Auto.');
+  else if(failMet&&goodMet)next=bi('The primary has failed enough times and the reserve is ready: Auto will switch to the reserve as soon as a computer in your network confirms the new route (the LAN helper).','Основной отказал достаточно раз, а резерв готов: Auto переключится на резерв, как только компьютер в вашей сети подтвердит новый маршрут (LAN-помощник).');
+  else if(failMet)next=bi('The primary has failed, but the reserve is not ready yet. Auto waits for the reserve to pass its checks.','Основной отказал, но резерв ещё не готов. Auto ждёт, пока резерв пройдёт проверки.');
+  else next=bi('Nothing to do: the primary has not failed enough times, so traffic stays where it is.','Делать нечего: основной не отказал достаточное число раз, поэтому трафик остаётся там, где есть.');
+  var code=native.reason||native.state,techCode=typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)?code:null;
+  return E('section',{'class':'hv-chart-card hv-why'},[
+    E('h3',{},bi('Why Auto acts or waits','Почему Auto действует или ждёт')),
+    E('p',{},bi('Auto switches only when two things are true at once: the VPN in use has failed several checks in a row, and the reserve has passed several checks in a row. This card shows the situation right now.','Auto переключается, только когда одновременно верно два условия: используемый VPN несколько проверок подряд не прошёл, а резерв несколько проверок подряд прошёл. Эта карточка показывает, как обстоят дела сейчас.')),
+    E('ul',{'class':'hv-why-list'},[
+      line(row[0],bi('What the router sees on the VPN in use','Что роутер видит на используемом VPN'),bi(row[1],row[2])),
+      line(!fresh?'grey':failMet?'red':'green',bi('Has the VPN in use failed enough times?','Отказал ли используемый VPN достаточное число раз?'),(failMet?bi('Yes.','Да.'):bi('No.','Нет.'))+' '+bi('Auto needs '+(needFail||'—')+' failed checks in a row.','Auto нужно '+(needFail||'—')+' неудачных проверок подряд.')),
+      line(!fresh?'grey':goodMet?'green':'yellow',bi('Is the reserve ready?','Готов ли резерв?'),(goodMet?bi('Yes.','Да.'):bi('Not yet.','Пока нет.'))+' '+bi('Auto needs '+(needGood||'—')+' good checks in a row.','Auto нужно '+(needGood||'—')+' успешных проверок подряд.'))]),
+    E('p',{'class':'hv-why-next'},[E('strong',{},bi('What Auto does next: ','Что Auto сделает дальше: ')),next]),
+    E('p',{'class':'hv-why-note'},bi('These checks are made by the router itself, so they show whether the VPN tunnels work, not what your computer sees. That is why every switch also needs the LAN helper to confirm it.','Эти проверки делает сам роутер, поэтому они показывают, работают ли VPN-туннели, а не то, что видит ваш компьютер. Поэтому каждое переключение дополнительно подтверждает LAN-помощник.')),
+    techCode?E('small',{'class':'hv-why-tech'},[bi('Technical state: ','Техническое состояние: '),errorCodeLink(techCode)]):null
+  ].filter(Boolean));
 }

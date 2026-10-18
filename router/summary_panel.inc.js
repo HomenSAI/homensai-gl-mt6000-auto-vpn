@@ -25,7 +25,8 @@ function renderSummary(status,inventory){
     return E('li',{'class':'hv-start-step hv-start-'+(s.done?'done':current?'next':'todo')},[E('span',{'class':'hv-start-mark','aria-hidden':'true'},s.done?'✓':String(i+1)),E('div',{},[E('strong',{},s.title),s.done?null:E('p',{},s.hint)].filter(Boolean)),(!s.done&&current&&s.href)?E('a',{'class':'cbi-button cbi-button-action','href':s.href},s.action):null].filter(Boolean));
   }));
   var guide=E('details',{'class':'hv-chart-card hv-start-card'+(open.length?'':' hv-start-complete'),'open':open.length?'open':null},[E('summary',{},open.length?bi('Getting started: ','Начало работы: ')+(steps.length-open.length)+' / '+steps.length:bi('Getting started: all steps done','Начало работы: все шаги выполнены')),list]);
-  return E('div',{'class':'hv-summary-wrap'},[hero,guide]);
+  // The checklist has its own first section now (Getting started); the Overview keeps only the state.
+  return E('div',{'class':'hv-summary-wrap'},[hero]);
 }
 
 // A summary tile that opens to explain what the number means.
@@ -65,7 +66,9 @@ function planCheckState(code,unproven,reported){
 function showErrorCode(code){
   var link=document.querySelector('[data-hv-tab="events"]');if(link)link.click();
   setTimeout(function(){
-    var row=document.querySelector('[data-error-code="'+code+'"]');if(!row)return;
+    var key=Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)?code:((typeof errorFamilyOf==='function'&&errorFamilyOf(code))?errorFamilyOf(code)[0]+'*':code);
+    if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;
+    var row=document.querySelector('[data-error-code="'+key+'"]');if(!row)return;
     var fix=row.nextElementSibling;if(fix&&fix.classList&&fix.classList.contains('hv-errfix')&&fix.hidden){var b=row.querySelector('button');if(b)b.click();}
     row.scrollIntoView({block:'center'});row.classList.add('hv-errflash');setTimeout(function(){row.classList.remove('hv-errflash');},3000);
   },150);
@@ -80,14 +83,49 @@ function renderPlanBlockers(codes,status){
       ?E('a',{'href':'#events','class':'hv-errlink','click':function(ev){ev.preventDefault();showErrorCode(st.failure);}},st.failure)
       :E('a',{'href':'#events','class':'hv-errlink hv-errlink-quiet','click':function(ev){ev.preventDefault();showErrorCode(code);}},code);
     return E('tr',{'class':'hv-plan-'+st.state},[
-      E('td',{},E('span',{'class':'hv-checkbox hv-checkbox-'+st.state,'role':'img','aria-label':label},mark)),
+      E('td',{'class':'hv-plan-lamp'},[E('span',{'class':'hv-check-lamp hv-check-'+(st.state==='verified'?'green':st.state==='failed'?'red':'grey'),'role':'img','aria-label':label})]),
       E('td',{},E('strong',{},bi(r[0],r[1]))),E('td',{},bi(r[2],r[3])),E('td',{},[E('div',{},label),codeCell])]);
   });
   return E('div',{'class':'hv-plan-blockers'},[
     E('h4',{},bi('Checks before a real switch','Проверки перед реальным переключением')),
-    E('p',{},bi('Empty box: not checked yet. Green: verified. Red: failed, with the error code; press the code to open its description and how to fix it. Until all are green the forecast above never becomes a permission to switch: a real switch also needs the passed LAN trial and the checks on the Overview. This is normal for an experimental version.','Пустая клетка: ещё не проверено. Зелёная: подтверждено. Красная: не прошло, рядом код ошибки; нажмите на код, чтобы открыть описание и способ исправления. Пока не все клетки зелёные, прогноз выше никогда не становится разрешением на переключение: для реального переключения всегда нужны пройденный LAN-тест и проверки на «Обзоре». Для экспериментальной версии это нормально.')),
+    E('p',{'class':'hv-plan-note'},[E('strong',{},bi('Display only: nothing here can be pressed.','Только показ: здесь ничего нельзя нажать.')),' ',bi('These are the eight things that must be certified on this router before the program may really switch traffic. The list is built by the program itself and updated with every status refresh.','Это восемь вещей, которые должны быть подтверждены на этом роутере, прежде чем программа сможет по-настоящему переключать трафик. Список строит сама программа и обновляет при каждом обновлении статуса.')]),
+    E('ul',{'class':'hv-plan-legend'},[
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-green','aria-hidden':'true'}),bi(' Green: verified.',' Зелёный: подтверждено.')]),
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-red','aria-hidden':'true'}),bi(' Red: the switch controller reported a related failure; its code is shown, press the code to read how to fix it.',' Красный: контроллер переключения сообщил о связанной ошибке; её код показан, нажмите на код, чтобы прочитать, как исправить.')]),
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-grey','aria-hidden':'true'}),bi(' Grey: not certified yet. No button runs these checks; they are confirmed by the controller\'s own audit together with a passed LAN trial.',' Серый: ещё не подтверждено. Эти проверки не запускаются кнопкой; их подтверждает собственный аудит контроллера вместе с пройденным LAN-тестом.')])]),
+    E('p',{'class':'hv-plan-source'},[E('strong',{},bi('Where the data comes from: ','Откуда данные: ')),bi('the list of eight checks is the forecast (failover_plan) computed by the monitor on the router; a red line appears when the controller (native_switch) puts a matching error code into its status. In this version the forecast is a dry run, so the eight lines stay grey until the controller reports a failure. The real permission to switch is decided by the controller after the LAN trial and the router checks listed on the Overview (Before you can start Auto).','список из восьми проверок — это прогноз (failover_plan), который считает монитор на роутере; красная строка появляется, когда контроллер (native_switch) кладёт в свой статус подходящий код ошибки. В этой версии прогноз — «сухой прогон», поэтому восемь строк остаются серыми, пока контроллер не сообщит об ошибке. Реальное разрешение на переключение решает контроллер после LAN-теста и проверок роутера, перечисленных на «Обзоре» («Что нужно перед запуском Auto»).')]),
     E('table',{'class':'table hv-plan-table'},[E('tr',{},[E('th',{},''),E('th',{},bi('Check','Проверка')),E('th',{},bi('What it means','Что это значит')),E('th',{},bi('State and code','Состояние и код'))])].concat(rows))]);
 }
 
 // A code shown as a link: opens its row in the error table (name, meaning, how to fix).
+function ownGet(map,key){return typeof key==='string'&&Object.prototype.hasOwnProperty.call(map,key)?map[key]:undefined;}
+function safeCode(code){return typeof code==='string'&&/^[A-Z][A-Z0-9-]{1,95}$/.test(code);}
 function errorCodeLink(code){return E('a',{'href':'#events','class':'hv-errlink','click':function(ev){ev.preventDefault();showErrorCode(code);}},code);}
+
+/* Getting started: its own first section. Until every step is done the page opens here; once all steps were done in this
+   browser it always opens on the Overview (a later problem is shown on the Overview, not by sending the user back here). */
+var START_DONE_KEY='homensai-vpn-start-done';
+function startAllDone(steps){return steps.every(function(s){return s.done;});}
+function startLanding(status,inventory){
+  try{if(window.localStorage.getItem(START_DONE_KEY)==='1')return 'overview';}catch(e){}
+  var steps=startSteps(status||{},inventory||{},Date.now()/1000);
+  if(startAllDone(steps)){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}return 'overview';}
+  return 'start';
+}
+function renderStartPage(status,inventory){
+  var steps=startSteps(status,inventory,Date.now()/1000),open=steps.filter(function(s){return !s.done;}),next=open[0];
+  if(!open.length){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}}
+  var targets={learn:['#learn',bi('Open training','Открыть обучение')],monitor:['#overview',bi('Open the Overview','Открыть «Обзор»')],profiles:['#settings',bi('Open Settings','Открыть настройки')],auto:['#overview',bi('Open the Overview','Открыть «Обзор»')]};
+  var list=E('ol',{'class':'hv-start-list hv-start-page-list'},steps.map(function(s,i){
+    var current=next&&next.key===s.key,target=targets[s.key];
+    return E('li',{'class':'hv-start-step hv-start-'+(s.done?'done':current?'next':'todo')},[
+      E('span',{'class':'hv-start-mark','aria-hidden':'true'},s.done?'✓':String(i+1)),
+      E('div',{},[E('strong',{},s.title),E('p',{},s.done?bi('Done.','Готово.'):s.hint)]),
+      (!s.done&&target)?E('a',{'class':'cbi-button'+(current?' cbi-button-action':''),'href':target[0]},target[1]):E('span',{'class':'hv-visually-hidden'},s.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
+  }));
+  return E('section',{'class':'hv-chart-card hv-start-page'},[
+    E('h3',{},open.length?bi('Step ','Шаг ')+(steps.indexOf(next)+1)+bi(' of ',' из ')+steps.length:bi('All steps are done','Все шаги выполнены')),
+    E('p',{},open.length?bi('Go through the steps in order. This page opens first until every step is done; after that the program opens on the Overview.','Пройдите шаги по порядку. Эта страница открывается первой, пока все шаги не выполнены; после этого программа открывается на «Обзоре».'):bi('From now on the program opens on the Overview. You can come back here at any time.','Теперь программа открывается на «Обзоре». Сюда можно вернуться в любое время.')),
+    list,
+    E('p',{},E('a',{'class':'cbi-button'+(open.length?'':' cbi-button-action'),'href':'#overview'},bi('Go to the Overview','Перейти на «Обзор»')))]);
+}

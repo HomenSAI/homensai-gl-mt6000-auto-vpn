@@ -23,7 +23,7 @@ function updateConnectivityCheck(status){
   // The idle line shows the latest automatic check, so it always says something true.
   var rows=(status.profiles||[]).filter(function(p){return p.interface;}),working=rows.filter(function(p){return profileHealth(p,Date.now()/1000).state==='healthy';}).length;
   var latest=rows.reduce(function(newest,p){return Number.isFinite(p.time)&&p.time>newest?p.time:newest;},0);
-  var summary=function(time,total,ok){return bi('Last check ','Последняя проверка ')+clock(time)+' · '+ok+' '+bi('of','из')+' '+total+' '+bi('VPNs work','VPN работают');};
+  var summary=function(time,total,ok){return bi('Last check ','Последняя проверка ')+clock(time)+'\n'+ok+' '+bi('of','из')+' '+total+' '+bi('VPNs work','VPN работают');};
   var text;
   if(model.state==='EMPTY')text=bi('No VPN is connected right now, so there was nothing to check.','Сейчас ни один VPN не подключён, проверять нечего.');
   else if(model.state==='COMPLETED'&&model.checked!=null&&model.time)text=summary(model.time,model.checked,model.checked-model.failed);
@@ -32,6 +32,17 @@ function updateConnectivityCheck(status){
   connectivityControl.button.disabled=connectivityBusy||model.busy||status.error==='SERVICE-STOPPED';
   connectivityControl.message.textContent=text+(model.code?' · '+model.code:'');
   connectivityControl.message.setAttribute('data-check-state',model.state);
+  // One cell per connected VPN: green works, grey does not (or is not checked yet). Then the next step in plain words.
+  if(connectivityControl.bar){
+    var bar=connectivityControl.bar;while(bar.firstChild)bar.removeChild(bar.firstChild);
+    var cells=Math.min(rows.length,16);
+    for(var i=0;i<cells;i++)bar.appendChild(E('span',{'class':'hv-check-cell'+(i<working?' hv-check-cell-ok':'')}));
+    bar.hidden=!cells;bar.setAttribute('aria-label',working+' '+bi('of','из')+' '+rows.length+' '+bi('VPNs work','VPN работают'));
+  }
+  if(connectivityControl.next){
+    connectivityControl.next.hidden=!rows.length;
+    connectivityControl.next.textContent=working?bi('Step 2: turn on Auto with the button in “Automatic VPN failover” below.','Шаг 2: включите Auto кнопкой в блоке «Автоматическое переключение VPN» ниже.'):bi('No VPN works right now. Check the VPN profiles in GL.iNet, then press the button again.','Сейчас ни один VPN не работает. Проверьте VPN-профили в GL.iNet и нажмите кнопку ещё раз.');
+  }
   connectivityControl.button.setAttribute('aria-busy',model.busy?'true':'false');
 }
 function renderConnectivityCheck(status,refresh){
@@ -47,7 +58,8 @@ function renderConnectivityCheck(status,refresh){
     }).catch(function(){connectivityFailure=true;message.textContent=bi('Request not confirmed. Retry after checking the monitoring service.','Запрос не подтверждён. Проверьте службу мониторинга перед повтором.');}).finally(function(){connectivityBusy=false;updateConnectivityCheck(connectivityLatest);});
   }},E('span',{'class':'hv-check-icon','aria-hidden':'true'},'↻'));
   button.setAttribute('aria-label',bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас'));button.setAttribute('title',bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас'));
-  connectivityControl={button:button,message:message};
-  var node=E('section',{'class':'hv-connectivity-control'},[button,E('div',{'class':'hv-check-text'},[E('strong',{},bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас')),E('small',{},bi('Do this first: it shows which VPNs give internet right now. When they work, go to step 2 and turn on Auto. The router repeats this check by itself all the time.','Сделайте это первым: покажет, какие VPN сейчас дают интернет. Когда они работают, переходите к шагу 2 и включайте Auto. Роутер и сам повторяет эту проверку постоянно.')),message])]);
+  var bar=E('div',{'class':'hv-check-bar','role':'img'}),next=E('p',{'class':'hv-check-next'});
+  connectivityControl={button:button,message:message,bar:bar,next:next};
+  var node=E('section',{'class':'hv-connectivity-control'},[button,E('div',{'class':'hv-check-text'},[E('strong',{},bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас')),E('small',{},bi('First you need to check your VPNs. Press this button: it shows which VPNs give internet right now. The router also repeats this check by itself all the time.','Сначала нужно проверить VPN. Нажмите эту кнопку: она покажет, какие VPN сейчас дают интернет. Роутер и сам постоянно повторяет эту проверку.')),message,bar,next])]);
   updateConnectivityCheck(status);return node;
 }

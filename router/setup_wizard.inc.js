@@ -1,3 +1,11 @@
+/* Help inside the Telegram wizard: the same steps as Help -> "Telegram reports do not arrive", plus examples of both values. */
+function telegramTokenHelp(){
+  var topic=(typeof HELP_TOPICS!=='undefined'?HELP_TOPICS:[]).filter(function(t){return t.id==='telegram';})[0];
+  var steps=topic?topic.steps.slice(0,5):[];
+  return E('details',{'class':'hv-wizard-help','open':''},[E('summary',{},bi('How to get the bot token and the chat ID','Как получить токен бота и Chat ID')),
+    E('ol',{},steps.map(function(s){return E('li',{},richText(bi(s.t[0],s.t[1])));})),
+    E('p',{'class':'hv-wizard-example'},bi('Example token: 123456789:AAH… (digits, a colon, then 30–100 letters, digits, _ or -). Example chat ID: 123456789 for yourself, -1001234567890 for a group or channel, or @my_channel for a public channel.','Пример токена: 123456789:AAH… (цифры, двоеточие, затем 30–100 букв, цифр, _ или -). Пример Chat ID: 123456789 для себя, -1001234567890 для группы или канала, или @my_channel для публичного канала.'))]);
+}
 function setupWizard(inventory,kind){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
   var setupCheck=kind==='system'?'pending':'passed';
@@ -33,7 +41,7 @@ function setupWizard(inventory,kind){
         body.appendChild(E('p',{},bi('Saving does not start automatic switching. Use the Auto mode control after LAN certification.','Сохранение не запускает автопереключение. После LAN-проверки используйте кнопку авторежима.')));
       }
     }else{
-      if(step===0){var token=input(tg.token,'password');token.autocomplete='off';body.appendChild(E('p',{},bi('Create a bot with BotFather. For a channel, add it as an administrator with permission to post. A token is secret and is never returned by the router.','Создайте бота через BotFather. В канале добавьте его администратором с правом публикации. Токен секретный и не возвращается роутером.')));body.appendChild(field(bi('Bot token (leave blank to keep the stored token)','Токен бота (пусто — сохранить имеющийся)'),token));if(settings.telegram_configured)body.appendChild(E('p',{},E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){
+      if(step===0){var token=input(tg.token,'password');token.autocomplete='off';body.appendChild(E('p',{},bi('Create a bot with BotFather. For a channel, add it as an administrator with permission to post. A token is secret and is never returned by the router.','Создайте бота через BotFather. В канале добавьте его администратором с правом публикации. Токен секретный и не возвращается роутером.')));body.appendChild(telegramTokenHelp());body.appendChild(field(bi('Bot token (leave blank to keep the stored token)','Токен бота (пусто — сохранить имеющийся)'),token));if(settings.telegram_configured)body.appendChild(E('p',{},E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){
           if(!window.confirm(bi('Delete the stored bot token? Telegram reports will be turned off.','Удалить сохранённый токен бота? Отчёты в Telegram будут выключены.')))return;
           ev.target.disabled=true;
           return rpc.declare({object:'homensai-vpn',method:'telegram_forget',expect:{}})().then(function(result){

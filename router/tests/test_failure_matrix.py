@@ -66,7 +66,7 @@ class Matrix(unittest.TestCase):
         self.stack=ExitStack();self.addCleanup(self.stack.close)
         self.dir=Path(self.stack.enter_context(tempfile.TemporaryDirectory()))
         for name,value in (('PERSIST',self.dir),('RUNTIME',self.dir),('JOURNAL',self.dir/'journal'),('STATE',self.dir/'status'),
-                           ('CERT',self.dir/'cert'),('ATTEMPTS',self.dir/'attempts'),('PREPARE',self.dir/'prepare')):
+                           ('CERT',self.dir/'cert'),('ATTEMPTS',self.dir/'attempts'),('PREPARE',self.dir/'prepare'),('JOURNAL_ALARM',self.dir/'journal-alarm')):
             self.stack.enter_context(patch.object(native,name,value))
         self.killpg=self.stack.enter_context(patch.object(native.os,'killpg'))
         self.stack.enter_context(patch.object(native,'RETURN_PAUSE',0))
@@ -207,12 +207,76 @@ class Matrix(unittest.TestCase):
         self.assertIsNone(self.b.guarded);self.assertEqual(self.state()['state'],'STOPPED')
         self.assertIs(self.state()['original_restored'],False)
 
-    def test_corrupt_journal_blocks_switching_and_says_why(self):
+    def test_corrupt_journal_blocks_the_lan_once_then_only_vpn_only(self):
         native.JOURNAL.write_text('{"schema":1,"data":{"phase":"APPLYING"},"sha256":"bad"}')
+        for start in (1,2,3):
+            self.b.calls.clear()
+            with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+            self.assertEqual(self.state()['blockers'],['JOURNAL-INTEGRITY-FAILED']);self.assertEqual(self.state()['alarm'],'JOURNAL-INTEGRITY-FAILED')
+            full=[c for c in self.b.calls if c==('guard',None)]
+            self.assertEqual(len(full),1 if start==1 else 0,'start %d: full block count'%start)
+            self.assertEqual(self.b.guarded,'vpn-only')
+        self.assertTrue(native.JOURNAL_ALARM.exists())
+
+    def test_give_up_latch_really_holds_even_with_an_empty_journal(self):
+        """After give_up() with an unreadable journal, Auto must stay off for the configured trial, also if uci options could not be cleared."""
+        native.JOURNAL.write_text('garbage')
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True),patch.object(native,'clear_native_options',return_value=False):
+            native.serve()
+        self.assertIn('AUTO-OPTIONS-NOT-CLEARED',self.state()['blockers'])
+        stopped=json.loads((native.PERSIST/'native-stop.json').read_text())
+        settings={'native_trial':'a'*32,'native_until':str(time.time()+600),'native_enabled':'1'}
+        request={'mode':'on','time':time.time()-30,'trial':'a'*32,'until':float(settings['native_until'])}
+        self.assertEqual(auto_control.effective_intent(settings,stopped,request,time.time()),(False,True))
+
+    def test_unreadable_alarm_marker_counts_as_already_blocked(self):
+        native.JOURNAL.write_text('garbage');native.JOURNAL_ALARM.write_text('not json')
         with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
-        self.assertEqual(self.state()['blockers'],['JOURNAL-INTEGRITY-FAILED'])
-        # Documented risk F3: the response is a timed full LAN block (released by its 90 s timer), not a silent switch.
-        self.assertEqual(self.b.guarded,'full')
+        self.assertNotIn(('guard',None),self.b.calls,'no new full block when the marker cannot be read')
+        self.assertEqual(self.state()['alarm'],'JOURNAL-INTEGRITY-FAILED')
+
+    def test_journal_os_error_is_an_integrity_failure(self):
+        with patch.object(native,'read_json',side_effect=OSError('EIO')):
+            with self.assertRaises(native.Refused) as caught:native.journal_read()
+        self.assertEqual(str(caught.exception),'JOURNAL-INTEGRITY-FAILED')
+
+    def test_status_does_not_claim_a_guard_that_failed(self):
+        native.JOURNAL.write_text('garbage')
+        def broken(devices=None):
+            if devices is not None:raise native.Refused('GUARD-INSTALL-FAILED')
+            self.b.calls.append(('guard',None))
+        self.b.guard=broken
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertNotIn('VPN-only; IPv6',self.state()['guard'])
+
+    def test_alarm_ends_when_the_journal_is_closed_and_the_supervisor_restarts_normally(self):
+        native.JOURNAL.write_text('garbage')
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        native.JOURNAL.unlink()
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertFalse(native.JOURNAL_ALARM.exists())
+
+    def test_rollback_that_fails_twice_is_given_up_without_new_full_blocks(self):
+        process=MagicMock(pid=1,returncode=1);self.spawn(process);self.b.fail_reorder=99
+        with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
+        self.assertEqual(native.journal_read()['rollback_failures'],1)
+        # second failure: the supervisor's recovery; it gives up at the limit
+        self.b.calls.clear()
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertEqual(native.journal_read()['rollback_failures'],2)
+        self.assertEqual(self.state()['alarm'],'ROLLBACK-GIVEN-UP');self.assertEqual(self.b.guarded,'vpn-only')
+        # third start: no rollback attempt, no full block, Auto stopped
+        self.b.calls.clear()
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertNotIn(('reorder',self.before),self.b.calls);self.assertNotIn(('guard',None),self.b.calls)
+        self.assertEqual(self.state()['blockers'],['ROLLBACK-GIVEN-UP'])
+        self.assertTrue((native.PERSIST/'native-stop.json').exists())
+
+    def test_one_failed_rollback_still_recovers_on_the_next_start(self):
+        process=MagicMock(pid=1,returncode=1);self.spawn(process);self.b.fail_reorder=1
+        with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertEqual(self.b.current,self.before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
 
     def test_truncated_or_unreadable_journal_is_never_treated_as_empty_success(self):
         for raw in ('{"schema":1','\x00\x00','[]'):

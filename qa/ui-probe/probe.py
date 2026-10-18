@@ -1,5 +1,5 @@
 """Loopback synthetic fixture + headless Edge page probe. No router access, no network beyond 127.0.0.1.
-Usage: python qa/ui-probe/probe.py matrix main | matrix more-a|more-b|more-c | scen
+Usage: python qa/ui-probe/probe.py gate | matrix main | matrix more-a|more-b|more-c | scen
 Results go to private/ui-probe/ (git-ignored). Keep each run under ~5 minutes."""
 import importlib.util, json, re, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
@@ -49,9 +49,37 @@ def run(kind,d,tab,theme,lang,w,h=900,budget=0,timeout=240):
     if not got:return {'error':'TIMEOUT','cfg':[d,tab,theme,lang,w]}
     try:out=json.loads(RESULTS.pop(qid));out['cfg']=[d,tab,theme,lang,w];return out
     except Exception as e:return {'error':'BAD-RESULT '+str(e)[:80],'cfg':[d,tab,theme,lang,w]}
-TABS=['overview','channels','statistics','settings','help','learn','tests','ranking','traffic','services','events','readiness']
+TABS=['start','overview','channels','statistics','settings','help','learn','tests','traffic','services','events','readiness']
+def gate_problems(x):
+    """Hard failures of one matrix result: the owner attributes missing, a failed design view, script errors, overflow."""
+    c='/'.join(map(str,x.get('cfg',[])))
+    if x.get('error') or x.get('fatal') or not x.get('hasApp'):return [c+': no app ('+str(x.get('error') or x.get('fatal') or 'NO-APP')[:60]+')']
+    bad=[]
+    if not(x.get('attribution') and x.get('footer') and x.get('badge')):bad.append(c+': owner attributes missing')
+    if x.get('designError'):bad.append(c+': DESIGN-VIEW-ERROR')
+    if x.get('errors'):bad.append(c+': script errors '+str(x['errors'][:2]))
+    if x.get('docOverflow',0)>0:bad.append(c+': horizontal overflow %s px'%x['docOverflow'])
+    return bad
+
+
+def gate():
+    """Bounded gate for publication: 3 designs x 4 pages x 2 widths (about 3 minutes). A failing case is rerun once alone,
+    because a slow stylesheet load under 4 parallel browsers gives false 'no app' and overflow results."""
+    jobs=[('matrix',d,tab,'light','en',w) for d in 'abc' for tab in ('overview','channels','settings','events') for w in (1440,390)]
+    with ThreadPoolExecutor(4) as ex:first=list(ex.map(lambda j:run(*j),jobs))
+    problems=[]
+    for job,x in zip(jobs,first):
+        if gate_problems(x):
+            again=run(*job);problems+=gate_problems(again)
+    (OUTDIR/'result-gate.json').write_text(json.dumps(first,indent=1),encoding='utf-8')
+    for line in problems:print('FAIL',line)
+    print('GATE','FAIL' if problems else 'PASS',len(jobs),'cases')
+    srv.shutdown();sys.exit(1 if problems else 0)
+
+
 if __name__=='__main__':
     mode=sys.argv[1]
+    if mode=='gate':gate()
     jobs=[]
     part=sys.argv[2] if len(sys.argv)>2 else 'main'
     if mode=='matrix':

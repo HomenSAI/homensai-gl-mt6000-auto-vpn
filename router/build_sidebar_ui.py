@@ -15,9 +15,9 @@ anchor="    var panel=E('div',{'class':'hv-panel'}),self=this,period='day';"
 assert anchor in source
 source=source.replace(anchor,anchor+"""
     var appRoot=null,settingsHost=null,heading=null,sideState=null,versionBadge=null,pages={},sortStates={},searchTerms={};
-    var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['ranking','↕',bi('Server ranking','Рейтинг серверов')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
+    var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
     function routerVpnUrl(){return resolveRouterVpnUrl(window.location.href,window.HOMENSAI_PREVIEW_ROUTER_ORIGIN);}
-    function vpnSetupCard(){return E('section',{'class':'hv-chart-card hv-vpn-setup'},[E('div',{'class':'hv-auto-power-unit'},[E('a',{'class':'hv-auto-power hv-vpn-configure','href':routerVpnUrl()||null,'aria-disabled':routerVpnUrl()?null:'true','title':routerVpnUrl()?null:bi('Router address unavailable in this preview','Адрес роутера недоступен в этом просмотре'),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('Open router VPN settings (opens a new tab)','Открыть настройки VPN роутера (новая вкладка)')},E('span',{'aria-hidden':'true','class':'hv-configure-symbol'},'⚙')),E('strong',{'class':'hv-auto-action'},bi('Configure VPN','Настроить VPN'))]),E('p',{},bi('Add servers and connection keys in the router VPN Client Profile page. Monitoring and failover priorities are configured here.','Добавляйте серверы и ключи на странице VPN Client Profile роутера. Мониторинг и приоритеты переключения настраиваются здесь.'))]);}
+    function vpnSetupCard(){return E('section',{'class':'hv-chart-card hv-vpn-setup'},[E('div',{'class':'hv-auto-power-unit'},[E('a',{'class':'hv-auto-power hv-vpn-configure','href':routerVpnUrl()||null,'aria-disabled':routerVpnUrl()?null:'true','title':routerVpnUrl()?null:bi('Router address unavailable in this preview','Адрес роутера недоступен в этом просмотре'),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('Open router VPN settings (opens a new tab)','Открыть настройки VPN роутера (новая вкладка)')},E('span',{'aria-hidden':'true','class':'hv-configure-symbol'},'⚙')),E('strong',{'class':'hv-auto-action'},bi('Configure VPN','Настроить VPN'))]),E('p',{},[bi('Add servers and connection keys on the router page ','Добавляйте серверы и ключи на странице роутера '),routerVpnUrl()?E('a',{'class':'hv-vpn-profile-link','href':routerVpnUrl(),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('VPN Client Profile (opens the router VPN settings in a new tab)','VPN Client Profile (открывает настройки VPN роутера в новой вкладке)')},'VPN Client Profile ↗'):E('span',{},'VPN Client Profile'),'.',E('br'),bi('Monitoring and failover priorities are set in this program (not on the router page): ','Мониторинг и приоритеты переключения настраиваются в этой программе (не на странице роутера): '),E('a',{'href':'#settings'},bi('Settings → Setup → 1 · System setup','Настройки → Настройка → 1 · Настройка системы')),'.'])]);}
     function validTab(key){return tabs.some(function(t){return t[0]===key;});}
     var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab='overview';
     function showPage(key){
@@ -236,10 +236,11 @@ reorganizer = """      (function(){
         settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
           E('h3',{},bi('Setup','Настройка')),
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
-          E('div',{'class':'hv-setup-grid'},[
-            launcher(bi('1 · System','1 · Система'),bi('Primary and reserve profiles, names, channels, priorities and accepted reconnection.','Основной и резервный профили, названия, каналы, приоритеты и допустимость переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
-            launcher(bi('2 · Telegram','2 · Telegram'),bi('Bot token and destination for reports.','Токен бота и адресат отчётов.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
-            launcher(bi('Test Telegram delivery','Проверить доставку Telegram'),bi('Sends one test message with the saved settings.','Отправляет одно тестовое сообщение с сохранёнными настройками.'),testDelivery)
+          E('p',{'class':'hv-setup-path','aria-label':bi('Order of the steps','Порядок шагов')},[E('b',{},bi('1 · System setup','1 · Настройка системы')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('2 · Telegram','2 · Telegram')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('3 · Test delivery','3 · Проверка доставки')),E('small',{},bi('Press a button below to open its wizard.','Нажмите кнопку ниже, чтобы открыть мастер.'))]),
+          E('div',{'class':'hv-setup-grid hv-setup-steps'},[
+            launcher(bi('1 · System setup','1 · Настройка системы'),bi('Press to open the wizard: primary and reserve VPN, names, groups, priorities and whether a short reconnection is acceptable.','Нажмите, чтобы открыть мастер: основной и резервный VPN, названия, группы, приоритеты и допустимость короткого переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
+            launcher(bi('2 · Telegram channel','2 · Канал Telegram'),bi('Press to open the wizard: bot token and chat for reports. The wizard explains how to get both.','Нажмите, чтобы открыть мастер: токен бота и чат для отчётов. Мастер объясняет, как получить и то и другое.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
+            launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery)
           ])].filter(function(node){return node!=null;})));
         settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[
           E('summary',{},bi('Advanced settings (for administrators)','Расширенные настройки (для администратора)')),
@@ -265,7 +266,7 @@ import re as _r
 must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
 source,_n=_r.subn(r"put\('overview',(E\('p',\{'class':'alert-message warning'\},\s*bi\('Monitoring is )",r"put('services',\1",source,count=1)
 assert _n==1,'monitor note'
-must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','ranking','traffic','services','events','readiness'];
+must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','traffic','services','events','readiness'];
 var PAGE_SUBTITLES={
   overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
   channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
@@ -277,7 +278,7 @@ var PAGE_SUBTITLES={
   traffic:['How much data went through each VPN.','Сколько данных прошло через каждый VPN.'],
   services:['A live log of what the router sees.','Живой журнал того, что видит роутер.'],
   events:['Everything that happened: switches, failures, recoveries.','Всё, что происходило: переключения, сбои, восстановления.'],
-  readiness:['Whether this router has everything Auto needs.','Есть ли на этом роутере всё, что нужно для Auto.']
+  readiness:['Look at the items below: when all of them are green, your system is ready for Auto.','Посмотрите на пункты ниже: когда все они зелёные, ваша система готова к Auto.']
 };
 return view.extend({""")
 must_replace("var appRoot=null,settingsHost=null,heading=null,","var subtitle=null,advancedBox=null,advancedToggle=null,appRoot=null,settingsHost=null,heading=null,")
@@ -320,7 +321,7 @@ must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard65').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard66').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),controlCard.nextSibling);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -334,11 +335,11 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui43.css')
+source=source.replace('ui15.css','ui44.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard65',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard66',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
@@ -356,6 +357,7 @@ must_replace("""metric(tr("Проверки сейчас"),healthy.length+tr(" �
 must_replace("""metric(tr("Трафик месяца"),month?bytes(month.rx+month.tx):tr("Нет данных"),tr("Неполный период · с начала наблюдения")),""","""metricInfo(bi('Traffic this month','Трафик за месяц'),month?bytes(month.rx+month.tx):bi('No data','Нет данных'),bi('Tap for details','Нажмите, чтобы узнать больше'),bi('Data that went through your VPNs since the monitor was started. It is counted from the first measurement, so the month may be incomplete.','Данные, прошедшие через ваши VPN с запуска мониторинга. Считаются с первого измерения, поэтому месяц может быть неполным.')),""")
 must_replace("+(p.channel||'default')+' · '+(p.interface||bi('Not connected'","+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected'")
 must_replace("planning.appendChild(E('code',{},(fp.blockers||[]).join(' · ')));","planning.appendChild(renderPlanBlockers(fp.blockers||[],status));")
+must_replace('return view.extend({',(Path(__file__).parent/'error_rows_extra.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace('return view.extend({',(Path(__file__).parent/'error_table.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("      sortableTables();showPage(activeTab);","      put('statistics',renderMonitorInfo(status,inventory));put('events',errorTable||(errorTable=renderErrorTable()));\n      sortableTables();showPage(activeTab);")
 # Page design A/B/C: chosen in Settings, stored in this browser, applied before the page is shown.
@@ -371,11 +373,44 @@ must_replace("panel,settingsHost,footer])","panel,settingsHost,renderAttribution
 must_replace('return view.extend({',(Path(__file__).parent/'design_views.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);","if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);try{pages.overview.insertBefore(renderDesignOverview(currentDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard}),identityNotice?identityNotice.nextSibling:pages.overview.firstChild);pages.overview.setAttribute('data-hv-dv','1');}catch(designError){pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(E('p',{'class':'alert-message warning'},'DESIGN-VIEW-ERROR: '+String(designError&&designError.message||designError).slice(0,120)),pages.overview.firstChild);}")
 must_replace("var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;","var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;if(appRoot)appRoot.setAttribute('data-hv-active',key);")
+# Current server checks: a separate Status column with a live lamp (green works, yellow checking, red failure, grey
+# off/unknown), and the rows that work come first. The lamp's rank is also its sort value.
+must_replace("""var table=E('table',{'class':'table'},[E('tr',{'class':'tr table-titles'},[tr("Сервер"),""","""var table=E('table',{'class':'table hv-check-table'},[E('tr',{'class':'tr table-titles'},[bi('Status','Статус'),tr("Сервер"),""")
+must_replace("rows.forEach(function(p){table.appendChild(E('tr',{'class':'tr'},[cell(serverTitle(p)),","sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach(function(p){table.appendChild(E('tr',{'class':'tr'},[checkLampCell(p),cell(serverTitle(p)),")
+must_replace('return view.extend({',"""function checkLampCell(p){
+  var h=profileHealth(p,Date.now()/1000),rank={healthy:1,checking:2,unknown:3,inactive:4,failed:5}[h.state]||9;
+  var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';
+  return E('td',{'class':'hv-check-status','data-sort-value':String(rank)},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{'class':'hv-check-word'},h.label)]);
+}
+return view.extend({""")
+# Getting started is its own first section; new users land there until every step is done, then on the Overview.
+must_replace("var tabs=[['overview','◉',bi('Overview','Обзор')],","var tabs=[['start','▶',bi('Getting started','Начало работы')],['overview','◉',bi('Overview','Обзор')],")
+must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','overview','channels','statistics','settings','help','learn'].map(tabLink)")
+must_replace("if(!validTab(activeTab))activeTab='overview';","if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);")
+must_replace("put('learn',learnNode||(learnNode=renderLearn()));","put('learn',learnNode||(learnNode=renderLearn()));put('start',renderStartPage(status,inventory));")
+must_replace("  learn:['A short interactive training","  start:['First steps: terms, training, monitoring, your two VPNs and Auto. This page opens first until they are done.','Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto. Эта страница открывается первой, пока они не выполнены.'],\n  learn:['A short interactive training")
+# Settings LAN trial card: why the helper exists, how to get it, links to the full guide and the AI prompt; launcher download too.
+must_replace("nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')));","nativePanel.appendChild(lanHelperExplain());nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')));nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск')));")
+# One place for speed: the Tests page shows the server ranking, the speed test button/results and, right under them, the speed settings.
+must_replace("      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));","      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));\n      put('tests',E('h2',{'class':'hv-speed-heading'},bi('Speed tests and server ranking','Тесты скорости и рейтинг серверов')));put('tests',E('p',{},bi('Which servers are fastest and most reliable, and the button to measure speed. If a server needs settings (budget, duration, streams), they are right below the table: change them and press the test button here.','Какие серверы быстрее и надёжнее, и кнопка замера скорости. Если нужны настройки (бюджет, длительность, потоки), они сразу под таблицей: измените их и нажмите кнопку теста здесь.')));if(pages.ranking){while(pages.ranking.firstChild)pages.tests.appendChild(pages.ranking.firstChild);}if(speedCardNode){put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCardNode);}")
+must_replace("if(speedCard){put('tests',E('h2',{},bi('VPN speed tests','Тесты скорости VPN')));put('tests',setupGuide('speed'));put('tests',speedCard);}","if(speedCard){speedCardNode=speedCard;put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCard);}")
+must_replace('return view.extend({',"var speedCardNode=null;\nreturn view.extend({")
+# Accessibility: skip link, focus moves to the page heading when the user opens another section, heading is focusable.
+must_replace("appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':currentDesign()},[","appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':currentDesign()},[E('a',{'class':'hv-skip','href':'#','click':function(ev){ev.preventDefault();var m=appRoot.querySelector('main');if(m){m.setAttribute('tabindex','-1');m.focus();}}},bi('Skip to content','К содержимому')),")
+must_replace("heading=E('h1',{},bi('Your internet under control','Ваш интернет под контролем'));","heading=E('h1',{'tabindex':'-1'},bi('Your internet under control','Ваш интернет под контролем'));")
+must_replace("      if(subtitle&&PAGE_SUBTITLES[key])","      if(oldTab!==key&&heading&&document.body.contains(heading)){try{heading.focus({preventScroll:true});}catch(focusError){}}\n      if(subtitle&&PAGE_SUBTITLES[key])")
+# Stop and Return belong to the Auto card on the Overview; the Settings LAN-trial card keeps the helper download and points there.
+source,_stops=_r.subn(r"      nativePanel\.appendChild\(E\('button',\{'class':'cbi-button cbi-button-negative'[^\n]*\n","      nativePanel.appendChild(E('p',{},[bi('Stop Auto or return to the primary on the Overview, in the Automatic VPN failover card. ','Остановить Auto или вернуться на основной можно на «Обзоре», в блоке «Автоматическое переключение VPN». '),E('a',{'href':'#overview'},bi('Open the Overview','Открыть «Обзор»'))]));\n",source,count=1)
+assert _stops==1,'settings stop button'
+# The page/program version notice is not shown on any page any more (owner): only a quiet link in the attribution line opens its Help topic.
+must_replace("if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);try{","try{")
+must_replace("controlCard:controlCard}),identityNotice?identityNotice.nextSibling:pages.overview.firstChild);","controlCard:controlCard}),pages.overview.firstChild);")
+must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',readinessIntro());put('readiness',renderReadiness(status,inventory));")
 import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
-(root/'ui43.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8'),encoding='utf8',newline='')
-(root/'dashboard65.js').write_text(source,encoding='utf8')
-print('Generated dashboard65.js with sidebar, language persistence and sortable tables')
+must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
+(root/'ui44.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'dashboard66.js').write_text(source,encoding='utf8')
+print('Generated dashboard66.js with sidebar, language persistence and sortable tables')

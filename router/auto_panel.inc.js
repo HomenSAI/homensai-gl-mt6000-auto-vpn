@@ -168,34 +168,56 @@ function autoLightModel(status,inventory,now){
   if(state==='STOPPED'&&ns.original_restored===true)return out('off',bi('Auto is off','Auto выключен'),bi('Control is back with the router; the original route is verified.','Управление вернулось роутеру; исходный маршрут проверен.'));
   return out('off',bi('Auto is off','Auto выключен'),bi('Monitoring continues; nothing is switched while Auto is off.','Мониторинг продолжается; пока Auto выключен, ничего не переключается.'));
 }
+// The card's lamp has two states only: green = automatic switching is working (watching, switching or holding the
+// reserve), red = it is not (off, blocked, needs attention or no fresh data). The detailed state stays in the text.
+function autoWorking(light){return ['ok','switching','reserve'].indexOf(light&&light.key)>=0;}
 function renderAutoLight(light,technicalCode){
-  var lamps=AUTO_LIGHTS.map(function(l){return E('span',{'class':'hv-lamp hv-lamp-'+l.lamp+(light.lamp===l.lamp?' hv-lamp-lit':''),'aria-hidden':'true'});});
-  var housing=E('div',{'class':'hv-light hv-light-'+light.key,'role':'img','aria-label':light.title},lamps);
-  var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},AUTO_LIGHTS.map(function(l){return E('li',{'class':light.lamp===l.lamp?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-'+l.lamp,'aria-hidden':'true'}),bi(l.legend[0],l.legend[1])]);}).concat([E('li',{'class':light.lamp?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-grey','aria-hidden':'true'}),bi('Grey: Auto is off or there is no data','Серый: Auto выключен или нет данных')])]));
+  var working=autoWorking(light);
+  var lamps=[E('span',{'class':'hv-lamp hv-lamp-red'+(working?'':' hv-lamp-lit'),'aria-hidden':'true'}),E('span',{'class':'hv-lamp hv-lamp-green'+(working?' hv-lamp-lit':''),'aria-hidden':'true'})];
+  var housing=E('div',{'class':'hv-light hv-light-two hv-light-'+(working?'on':'off'),'role':'img','aria-label':working?bi('Automatic switching works','Автопереключение работает'):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
+  var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
+    E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
+    E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
+    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve below: green carries your traffic and works, red does not carry traffic or does not work.',' Основной и Резерв ниже: зелёный пропускает ваш трафик и работает, красный трафик не пропускает или не работает.')])]);
   return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',{'role':'status','aria-live':'polite'},light.hint),E('small',{'class':'hv-auto-tech'},bi('Technical state: ','Техническое состояние: ')+technicalCode),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
+// Reply of the Auto button: the code of the answer is shown as a link to its row in the error table, with its short meaning.
+function autoCodeNotice(code,extra){
+  var row=(typeof ERROR_ROWS!=='undefined'?ERROR_ROWS:[]).filter(function(r){return r[0]===code;})[0];
+  return E('p',{},[errorCodeLink(code),row?' · '+bi(row[2],row[3]):'',extra?' · '+extra:'']);
+}
 var autoRequestBusy=false;
 function renderAutoControl(status,inventory){
   var ns=status.native_failover||{},intent=status.auto_control||{},model=autoControlModel(status,Date.now()/1000);
   var light=autoLightModel(status,inventory,Date.now()/1000);
-  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy||(inventory.error||!model.fresh)&&!model.stop?'':null,'click':function(){
+  var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':autoRequestBusy||(inventory.error||!model.fresh)&&!model.stop?'':null,'click':function(){
     if(autoRequestBusy)return;autoRequestBusy=true;button.disabled=true;
     return rpc.declare({object:'homensai-vpn',method:model.stop?'native_stop':'native_start',expect:{}})().then(function(result){
-      if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[E('strong',{},'AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+autoBlockerText(code));}))]));}
-      else if(!autoRequestAcknowledged(result,model.stop))ui.addNotification(null,E('p',{},'AUTO-CONTROL-UNVERIFIED: no confirmed acceptance; check controller state.'));
+      if(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9-]{2,95}$/.test(result.code)&&(result.accepted===false||result.queued===false))ui.addNotification(null,autoCodeNotice(result.code,result.settings_unverified?bi('router settings could not be read','настройки роутера не прочитаны'):''));
+      else if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+autoBlockerText(code));}))]));}
+      else if(!autoRequestAcknowledged(result,model.stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
-    }).catch(function(){ui.addNotification(null,E('p',{},'AUTO-CONTROL-FAILED: no confirmed response; check controller state.'));}).finally(function(){autoRequestBusy=false;button.disabled=false;});
+    }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoRequestBusy=false;button.disabled=false;});
   }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
   var source=profile(ns.source||settings.plan_source),target=profile(ns.target||settings.plan_target);
   var path=autoPathModel(status,source,target,Date.now()/1000);
   var pathLabels={neutral:bi('No current path confirmation','Нет свежего подтверждения пути'),healthy:bi('Active traffic path','Активный путь трафика'),ready:bi('Ready; not selected for traffic','Готов; трафик не направлен'),inactive:bi('Tunnel not connected','Туннель не подключён'),failed:bi('Connectivity failed','Ошибка доступности'),checking:bi('Checking / awaiting path confirmation','Проверяется / ожидается подтверждение пути')};
-  function box(p,label,key){var state=path[key];var attributes={'class':'hv-auto-node hv-path-'+state+(path.selected===key?' hv-path-selected hv-tone-'+(light.lamp||'off'):''),'data-path-node':key,'data-path-state':state};
+  // Two colours only. Which side carries traffic: the controller's selection; with Auto off and the original route
+  // verified, the primary; with no fresh data, nobody is shown as carrying traffic.
+  var carrier=path.selected||(model.fresh&&model.off&&ns.original_restored===true?'source':null);
+  function nodeTone(p,key){
+    var health=p?profileHealth(p,Date.now()/1000).state:'unknown';
+    var carries=carrier===key,works=health==='healthy';
+    var text=!p?bi('Not chosen','Не выбран'):carries&&works?bi('Carries your traffic · works','Пропускает ваш трафик · работает'):carries?bi('Carries traffic but does not work','Пропускает трафик, но не работает'):health==='failed'?bi('Does not work','Не работает'):health==='inactive'?bi('Not connected','Не подключён'):works?bi('Available, but not used now','Доступен, но сейчас не используется'):bi('No fresh data','Нет свежих данных');
+    return {green:carries&&works,text:text};
+  }
+  function box(p,label,key){var state=path[key],tone=nodeTone(p,key);var attributes={'class':'hv-auto-node hv-node-two hv-node-'+(tone.green?'green':'red')+(carrier===key?' hv-node-carrier':''),'data-path-node':key,'data-path-state':state,'data-node-tone':tone.green?'green':'red'};
     // The address the internet sees is not printed on screen; it is available as a tooltip only.
     if(p&&p.exit_ip&&profileHealth(p,Date.now()/1000).state==='healthy')attributes.title=bi('Exit IP: ','Внешний IP: ')+p.exit_ip;
-    return E('div',attributes,[E('small',{},label),E('strong',{'class':'hv-node-protocol'},p?protocolLabel(p):'—'),E('b',{},p?countryLabel(p):bi('Choose in Settings','Выберите в настройках')),p?E('span',{'title':bi('Group: a label you can set in Settings → System. It does not change how the VPN works.','Группа: метка, которую можно задать в «Настройки» → «Система». Она не влияет на работу VPN.')},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')):null,E('span',{'class':'hv-path-label'},pathLabels[state]+(path.selected===key&&state!=='healthy'?' · '+bi('Selected route','Выбранный маршрут'):''))].filter(Boolean));}
+    return E('div',attributes,[E('small',{},label),E('strong',{'class':'hv-node-protocol'},p?protocolLabel(p):'—'),E('b',{},p?countryLabel(p):bi('Choose in Settings','Выберите в настройках')),p?E('span',{'title':bi('Group: a label you can set in Settings → System. It does not change how the VPN works.','Группа: метка, которую можно задать в «Настройки» → «Система». Она не влияет на работу VPN.')},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')):null,E('span',{'class':'hv-path-label','title':pathLabels[state]},[E('span',{'class':'hv-node-dot','aria-hidden':'true'}),tone.text])].filter(Boolean));}
   var diagram=E('div',{'class':'hv-auto-diagram hv-path-diagram'+(path.moving?' hv-path-moving':'')+(path.direction==='back'?' hv-path-back':''),'aria-label':bi('Configured failover path','Настроенная схема переключения')},[box(source,bi('Primary','Основной'),'source'),E('span',{'class':'hv-auto-arrow '+(path.direction!=='none'?'hv-arrow-on':''),'aria-label':path.moving?bi('Switching in progress','Выполняется переключение'):path.direction!=='none'?bi('Reserve selected','Выбран резерв'):bi('Automatic transition inactive','Автопереход неактивен')},path.direction==='back'?'←':path.direction==='forward'?'→':'⋯'),box(target,bi('Reserve','Резерв'),'target')]);
   var until=autoWindowDeadline(intent,settings);
   var readiness=autoReadiness(status,inventory,Date.now()/1000);
@@ -208,7 +230,8 @@ function renderAutoControl(status,inventory){
     })),E('p',{'class':'hv-req-actions'},[E('a',{'class':'cbi-button','href':'#settings'},bi('Open Settings','Открыть настройки')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск'))])]);
   }
   var holdReturn=null;
-  if(model.fresh&&['STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE'].indexOf(ns.state)>=0){
+  // Return to the primary belongs to this card: it is offered whenever traffic is on the reserve (also while Auto is on).
+  if(model.fresh&&['STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0){
     var answer=intent.return_result,answerText=answer&&Number.isFinite(answer.time)&&Date.now()/1000-answer.time<600?(answer.ok?autoBlockerText('OPERATOR-RETURN'):autoBlockerText(answer.code)):'';
     var returnButton=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){
       if(autoRequestBusy)return;autoRequestBusy=true;returnButton.disabled=true;
@@ -221,5 +244,5 @@ function renderAutoControl(status,inventory){
     holdReturn=E('div',{'class':'hv-auto-hold'},[E('p',{},bi('The router is using the reserve. When the primary works again, send traffic back to it.','Роутер использует резерв. Когда основной снова заработает, верните трафик на него.')),returnButton,E('a',{'href':'#help'},bi('Help: no internet?','Справка: нет интернета?')),answerText?E('p',{'role':'status'},answerText):null].filter(Boolean));
   }
   var technicalCode=ns.state?ns.state+(ns.reason?' · '+ns.reason:'')+(model.fresh?'':' · STATUS-STALE'):'UNKNOWN';
-  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[button,E('span',{'class':'hv-auto-action'},model.stop?bi('Stop','Стоп'):bi('Start','Старт'))]),renderAutoLight(light,technicalCode)]),holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.')+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
+  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,E('span',{'class':'hv-auto-action'},model.stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto'))]),renderAutoLight(light,technicalCode)]),holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.')+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
 }

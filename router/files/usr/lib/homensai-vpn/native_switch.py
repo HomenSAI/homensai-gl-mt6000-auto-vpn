@@ -56,6 +56,9 @@ def publish(value):
 
 
 RETURN_CHECKS=6
+# Owner decision (18 Oct 2026): a full LAN block for an unreadable journal happens once; a rollback that failed twice is not retried.
+ROLLBACK_FAILURE_LIMIT=2
+JOURNAL_ALARM=PERSIST/'native-journal-alarm.json'
 RETURN_PAUSE=10
 GUARD_RELEASE_SECONDS=90
 
@@ -102,8 +105,11 @@ def journal_write(value):
 
 
 def journal_read():
-    envelope=read_json(JOURNAL,{})
+    # A truncated or non-JSON journal is an integrity failure with a code, never an uncaught error.
+    try:envelope=read_json(JOURNAL,{})
+    except (ValueError,UnicodeDecodeError,OSError):raise Refused('JOURNAL-INTEGRITY-FAILED') from None
     if not envelope:return {}
+    if not isinstance(envelope,dict):raise Refused('JOURNAL-INTEGRITY-FAILED')
     value=envelope.get('data')
     if envelope.get('schema')!=1 or not isinstance(value,dict) or envelope.get('sha256')!=digest(value):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
@@ -391,6 +397,41 @@ def rollback(backend,journal,reason):
     backend.guard(backend.devices())
 
 
+def rollback_counted(backend,journal,reason):
+    """rollback() that remembers each failure in the journal, so repeated failures end in give_up() instead of a loop."""
+    try:return rollback(backend,journal,reason)
+    except Exception:
+        journal['rollback_failures']=int(journal.get('rollback_failures',0) or 0)+1
+        try:journal_write(journal)
+        except (OSError,ValueError):pass
+        raise
+
+
+def give_up(backend,journal,code):
+    """No more automatic recovery: VPN-only guard (no full block), Auto stopped and not restartable by itself, alarm published."""
+    guard='VPN-only; IPv6 forwarded traffic blocked'
+    try:backend.guard(backend.devices())
+    except (Refused,OSError,ValueError,subprocess.SubprocessError):guard='VPN-only guard could not be confirmed'
+    # The stop latch must name the trial that is configured now (the journal may be empty or unreadable), otherwise it would not hold.
+    try:trial=backend.policy().get('settings',{}).get('native_trial')
+    except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError):trial=None
+    trial=trial or journal.get('trial_nonce')
+    try:atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':trial})
+    except (OSError,ValueError):pass
+    blockers=[code]
+    if not clear_native_options():blockers.append('AUTO-OPTIONS-NOT-CLEARED')
+    state={'state':'BLOCKED','blockers':blockers,'alarm':code,'original_restored':False,'source':journal.get('source'),'target':journal.get('target'),'guard':guard}
+    while True:
+        try:publish(state)
+        except Refused:atomic_json(STATE,dict(state,history_error='HISTORY-001',time=time.time()))
+        if STOP:return
+        # An operator who restored the rules and closed the journal ends the alarm; the supervisor then restarts normally.
+        try:
+            if not journal_read():return
+        except Refused:pass
+        time.sleep(10)
+
+
 def source_ready(backend,journal,settings,reason):
     """A passed trial returns on a fresh bound check (with retries); later returns need stable history."""
     if reason!='TRIAL-PASSED':
@@ -653,7 +694,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None):
         process.wait()
         if not released and backend.order()==(before,selection['hash']):
             journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY');journal_write(journal)
-        else:rollback(backend,journal,'TRANSACTION-FAILED')
+        else:rollback_counted(backend,journal,'TRANSACTION-FAILED')
         publish({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'blockers':[failure_code]})
         raise
 
@@ -665,7 +706,17 @@ def serve():
         backend=Linux()
         try:journal=journal_read()
         except Refused:
-            backend.guard();publish({'state':'BLOCKED','blockers':['JOURNAL-INTEGRITY-FAILED'],'guard':'closed'});return
+            # Block the LAN once (timed release); on every later start only the VPN-only guard is used, never another full block.
+            try:first=not read_json(JOURNAL_ALARM,{}).get('first_block')
+            except (OSError,ValueError):first=False  # an unreadable marker means we already blocked once
+            if first:
+                try:backend.guard()
+                except (Refused,OSError,ValueError,subprocess.SubprocessError):pass
+                try:atomic_json(JOURNAL_ALARM,{'first_block':time.time(),'code':'JOURNAL-INTEGRITY-FAILED'})
+                except (OSError,ValueError):pass
+            give_up(backend,{},'JOURNAL-INTEGRITY-FAILED');return
+        try:JOURNAL_ALARM.unlink()
+        except OSError:pass
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
         if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
             if journal.get('phase')=='APPLYING' and journal.get('pid'):
@@ -674,7 +725,13 @@ def serve():
                 if cmd.exists() and ('native_switch.py\x00apply\x00'+journal['tx']) in cmd.read_bytes().decode(errors='replace'):
                     try:os.killpg(journal['pid'],signal.SIGKILL)
                     except ProcessLookupError:pass
-            rollback(backend,journal,'SUPERVISOR-RECOVERY')
+            if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
+                give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
+            try:rollback_counted(backend,journal,'SUPERVISOR-RECOVERY')
+            except (Refused,OSError,ValueError,subprocess.SubprocessError):
+                if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
+                    give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
+                raise
         elif journal.get('phase')=='COMMITTED':
             if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
             else:backend.guard(backend.devices())

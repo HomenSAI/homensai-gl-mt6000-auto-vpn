@@ -76,3 +76,14 @@ function renderReadiness(status,inventory){
     E('p',{'class':'hv-ready-note'},bi('A tick here does not give permission to switch. At Start the router checks the current device, the time window, your computer’s confirmation, the safe return and the transaction lease again. The router never restarts by itself to enable Auto.','Галочка здесь не разрешает переключение. При запуске роутер заново проверит текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат и блокировку транзакции. Роутер сам никогда не перезагружается ради включения Auto.'))]);
   return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,autoCard]);
 }
+
+// Top of the System readiness page: what it is, that nothing needs to be pressed, how to read the colours.
+function readinessIntro(){
+  return E('section',{'class':'hv-chart-card hv-rd-intro'},[
+    E('h3',{},bi('Is the system ready? Look for green.','Готова ли система? Ищите зелёный.')),
+    E('p',{},bi('This page checks that your router has everything the program needs. It only shows the result: you do not need to press or start anything. When every item below is green, your system is ready to work; Auto itself is turned on later with the button on the Overview.','Эта страница проверяет, что на роутере есть всё, что нужно программе. Она только показывает результат: нажимать и запускать ничего не нужно. Когда все пункты ниже зелёные, ваша система готова к работе; сам Auto включается позже кнопкой на «Обзоре».')),
+    E('ul',{'class':'hv-plan-legend'},[
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-green','aria-hidden':'true'}),bi(' Green ✓: this part is there and works.',' Зелёный ✓: эта часть есть и работает.')]),
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-grey','aria-hidden':'true'}),bi(' Grey …: the router has not reported yet. Wait a minute; it appears by itself after monitoring starts.',' Серый …: роутер ещё не сообщил. Подождите минуту; после запуска мониторинга это появится само.')]),
+      E('li',{},[E('span',{'class':'hv-check-lamp hv-check-red','aria-hidden':'true'}),bi(' Red ✗: something is missing. Press its code to read what to do.',' Красный ✗: чего-то не хватает. Нажмите на его код, чтобы прочитать, что делать.')])])]);
+}

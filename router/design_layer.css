@@ -228,3 +228,203 @@
 .hv-workspace[data-hv-design] .hv-profile-detail{color:var(--muted)}
 .hv-workspace[data-hv-design] .hv-start-done .hv-start-mark{background:var(--ok);color:var(--surface)}
 .hv-workspace[data-hv-design] .hv-start-next .hv-start-mark,.hv-workspace[data-hv-design] .hv-chip-current{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+
+/* Check result: the time on one line, the number of working VPNs on the next. */
+.hv-app .hv-connectivity-control p[data-check-state]{white-space:pre-line}
+
+.hv-attribution .hv-attribution-warn{color:var(--warn)}
+
+/* ---- Auto card: two-state lamp, clear state chip, two-colour Primary/Reserve (owner request) ---- */
+.hv-app .hv-auto-state{display:inline-block;align-self:center;margin-bottom:10px;padding:4px 12px;border-radius:999px;font-size:13px;font-weight:700;text-align:center;white-space:nowrap}
+.hv-app .hv-auto-state-on{background:#e3f6ea;color:#156b3b;border:1px solid #1b8a4c}
+.hv-app .hv-auto-state-off{background:#fde8eb;color:#a12a3b;border:1px solid #c2364a}
+.hv-app .hv-auto-action{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;max-width:150px;text-align:center}
+.hv-app .hv-light-two{height:auto;padding:10px 0;gap:12px}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-green{border-color:#1b8a4c;background:#e3f6ea}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-red{border-color:#c2364a;background:#fde8eb}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-carrier{box-shadow:0 0 0 4px rgba(27,138,76,.18)}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-red.hv-node-carrier{box-shadow:0 0 0 4px rgba(194,54,74,.18)}
+.hv-app .hv-auto-node,.hv-app .hv-auto-node *{color:#10202c}
+.hv-node-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:0}
+.hv-node-green .hv-node-dot{background:#1b8a4c}
+.hv-node-red .hv-node-dot{background:#c2364a}
+@media(prefers-reduced-motion:no-preference){.hv-node-green.hv-node-carrier .hv-node-dot{animation:hv-node-pulse 2.2s ease-in-out infinite}}
+@keyframes hv-node-pulse{50%{opacity:.35}}
+
+/* ---- Current server checks: live status lamps in their own column ---- */
+.hv-app .hv-check-status{white-space:nowrap}
+.hv-check-lamp{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px;background:#8996a5;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.hv-check-green{background:#10b981;box-shadow:0 0 0 1px #138566,0 0 8px rgba(16,185,129,.55)}
+.hv-check-yellow{background:#e2b23d;box-shadow:0 0 0 1px #b28622,0 0 8px rgba(226,178,61,.55)}
+.hv-check-red{background:#e34b61;box-shadow:0 0 0 1px #b9364b,0 0 8px rgba(227,75,97,.5)}
+.hv-check-word{font-size:12.5px}
+@media(prefers-reduced-motion:no-preference){
+.hv-check-green{animation:hv-check-pulse 2.4s ease-in-out infinite}
+.hv-check-yellow{animation:hv-check-pulse 1s ease-in-out infinite}
+.hv-check-red{animation:hv-check-pulse 1.6s ease-in-out infinite}
+}
+@keyframes hv-check-pulse{50%{opacity:.3}}
+
+/* ---- Setup steps in Settings ---- */
+.hv-app .hv-setup-path{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;margin:4px 0 14px;font-size:14px}
+.hv-app .hv-setup-path b{color:var(--teal)}
+.hv-app .hv-setup-path span{color:var(--muted);font-weight:700}
+.hv-app .hv-setup-path small{flex-basis:100%;color:var(--muted);font-size:12.5px}
+.hv-app .hv-setup-steps .hv-setup-item>.cbi-button{font-weight:700}
+
+/* ---- Wizards: LuCI's modal takes the page design, palette and fonts ---- */
+.hv-app.hv-modal{max-width:min(780px,calc(100vw - 32px));margin:6vh auto;padding:24px 26px;border-radius:var(--r-card,18px);border:1px solid var(--line);box-shadow:0 18px 50px rgba(0,0,0,.25);background:var(--surface);color:var(--text)}
+.hv-app.hv-modal h4,.hv-app.hv-modal h3{color:var(--text);border:0;margin:0 0 12px}
+.hv-app.hv-modal p{color:var(--text);line-height:1.6}
+.hv-app.hv-modal .hv-eyebrow{color:var(--teal)}
+.hv-app.hv-modal input[type=text],.hv-app.hv-modal input[type=number],.hv-app.hv-modal input[type=password],.hv-app.hv-modal select{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:var(--r-ctl,10px);padding:8px 10px;font:inherit;max-width:100%}
+.hv-app.hv-modal .cbi-button{border-radius:var(--r-ctl,10px)}
+.hv-app.hv-modal .cbi-button-action,.hv-app.hv-modal .cbi-button-positive{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.hv-app.hv-modal fieldset{border:1px solid var(--line);border-radius:var(--r-ctl,10px);padding:10px 14px;margin:0 0 10px}
+.hv-app.hv-modal table{background:var(--bg)}
+.hv-wizard-help{margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-ctl,10px);background:var(--bg)}
+.hv-wizard-help summary{cursor:pointer;font-weight:700;color:var(--teal)}
+.hv-wizard-help ol{margin:10px 0 6px;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.hv-wizard-example{font-size:13px;color:var(--muted)}
+
+/* The offline preview draws its own dialog (#qa-modal); give it the same look so the preview shows what LuCI will show. */
+#qa-modal.hv-app.hv-modal{background:var(--surface);color:var(--text);border:1px solid var(--line);border-radius:var(--r-card,18px);font-family:"IBM Plex Sans",system-ui,sans-serif;max-width:none}
+#qa-modal.hv-app.hv-modal h2{color:var(--text);border:0}
+
+/* One scroll area in a wizard: the dialog scrolls, the inner content does not. */
+.hv-app.hv-modal .hv-wizard{max-height:none;overflow:visible}
+
+/* ---- Standing rule (owner): every status lamp blinks gently — green slow, yellow fast, red medium. Grey (off / no data)
+   stays still. Users who ask the system for reduced motion get still lamps. ---- */
+@keyframes hv-lamp-blink{0%,100%{opacity:1}50%{opacity:.38}}
+@media(prefers-reduced-motion:no-preference){
+.hv-app .hv-server-lamp.hv-lamp-healthy,.hv-app .hv-lamp-green.hv-lamp-lit,.hv-app .hv-auto-pill-knob.hv-lamp-on,.hv-app .hv-monitor-lamp-green,.hv-app .hv-live-lamp-green,.hv-app .hv-check-green,.hv-app .hv-node-green .hv-node-dot{animation:hv-lamp-blink 2.4s ease-in-out infinite}
+.hv-app .hv-server-lamp.hv-lamp-checking,.hv-app .hv-lamp-yellow.hv-lamp-lit,.hv-app .hv-auto-pill-knob.hv-lamp-switching,.hv-app .hv-monitor-lamp-yellow,.hv-app .hv-live-lamp-yellow,.hv-app .hv-check-yellow{animation:hv-lamp-blink 1s ease-in-out infinite}
+.hv-app .hv-server-lamp.hv-lamp-failed,.hv-app .hv-server-lamp.hv-lamp-inactive,.hv-app .hv-lamp-red.hv-lamp-lit,.hv-app .hv-monitor-lamp-red,.hv-app .hv-live-lamp-red,.hv-app .hv-check-red,.hv-app .hv-node-red .hv-node-dot{animation:hv-lamp-blink 1.4s ease-in-out infinite}
+}
+
+/* ---- Step 1 card: a bar with one cell per connected VPN (green works, grey not) and the next step ---- */
+.hv-app .hv-check-bar{display:flex;gap:4px;margin:8px 0 4px;max-width:320px}
+.hv-app .hv-check-cell{flex:1 1 0;height:12px;border-radius:3px;background:color-mix(in srgb,var(--muted) 30%,transparent)}
+.hv-app .hv-check-cell-ok{background:#10b981}
+@media(prefers-reduced-motion:no-preference){.hv-app .hv-check-cell-ok{animation:hv-lamp-blink 2.4s ease-in-out infinite}}
+.hv-app .hv-check-next{margin:4px 0 0;font-size:12.5px;font-weight:600;color:var(--teal)}
+
+.hv-dv-b .hv-dv-hero.hv-dv-hero-inline{margin:18px 0 14px;padding:18px 20px;border-radius:18px;background:var(--bg)}
+.hv-dv-b .hv-dv-hero-inline .hv-dv-ring{width:64px;height:64px}
+.hv-dv-b .hv-dv-hero-inline .hv-dv-ring span{width:30px;height:30px}
+.hv-dv-b .hv-dv-hero-inline h2{font-size:21px}
+.hv-app .hv-check-next{font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.45}
+
+/* ---- The round Auto button shows the state: green = Auto works, red = Auto does not work ---- */
+.hv-app .hv-auto-power.hv-auto-lit-on{color:#1b8a4c!important;background:radial-gradient(circle at 35% 30%,#f2fff7,#d3f3e0)!important;border-color:#1b8a4c!important;box-shadow:0 0 0 5px rgba(27,138,76,.18),0 6px 14px rgba(27,138,76,.25)!important}
+.hv-app .hv-auto-power.hv-auto-lit-off{color:#c2364a!important;background:radial-gradient(circle at 35% 30%,#fff3f4,#fbd9de)!important;border-color:#c2364a!important;box-shadow:0 0 0 5px rgba(194,54,74,.16),0 6px 14px rgba(194,54,74,.22)!important}
+.hv-app .hv-auto-power.hv-auto-lit-on .hv-power-symbol,.hv-app .hv-auto-power.hv-auto-lit-off .hv-power-symbol{color:inherit}
+.hv-app .hv-auto-power:focus-visible{outline:3px solid var(--focus);outline-offset:4px}
+@media(prefers-reduced-motion:no-preference){.hv-app .hv-auto-power.hv-auto-lit-on{animation:hv-auto-glow-on 2.4s ease-in-out infinite}.hv-app .hv-auto-power.hv-auto-lit-off{animation:hv-auto-glow-off 1.4s ease-in-out infinite}}
+@keyframes hv-auto-glow-on{50%{box-shadow:0 0 0 9px rgba(27,138,76,.08),0 6px 14px rgba(27,138,76,.25)}}
+@keyframes hv-auto-glow-off{50%{box-shadow:0 0 0 9px rgba(194,54,74,.07),0 6px 14px rgba(194,54,74,.22)}}
+
+/* ---- Primary / Reserve boxes: strong, saturated colours (owner request) ---- */
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-green{border:3px solid #0e9f4a;background:#bff0cf}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-red{border:3px solid #d61f3a;background:#ffb8c1}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-green.hv-node-carrier{box-shadow:0 0 0 5px rgba(14,159,74,.30)}
+.hv-app .hv-path-diagram .hv-auto-node.hv-node-red.hv-node-carrier{box-shadow:0 0 0 5px rgba(214,31,58,.28)}
+.hv-node-green .hv-node-dot{background:#0b8a3e}
+.hv-node-red .hv-node-dot{background:#d61f3a}
+
+/* ---- Status lamps: a clearly bright red for failures; B's VPN list has a separate status column ---- */
+.hv-check-red{background:#ff1f3d!important;box-shadow:0 0 0 1px #c20f2a,0 0 10px rgba(255,31,61,.75)!important}
+.hv-app .hv-server-lamp.hv-lamp-failed{background:#ff1f3d;box-shadow:0 0 0 1px #c20f2a,0 0 10px rgba(255,31,61,.75)}
+.hv-dv-statuscol{display:inline-flex;align-items:center;gap:8px;min-width:104px;justify-content:flex-start;font-size:13px;font-weight:600;white-space:nowrap}
+.hv-dv-statuscol[data-health="healthy"]{color:var(--ok)}
+.hv-dv-statuscol[data-health="failed"]{color:#d61f3a}
+.hv-dv-statuscol[data-health="checking"],.hv-dv-statuscol[data-health="unknown"]{color:var(--warn)}
+
+/* ---- Brighter status lamps everywhere (owner request): saturated colours, bigger, strong glow, blink never fades to dull ---- */
+@keyframes hv-lamp-blink{0%,100%{opacity:1}50%{opacity:.5}}
+.hv-app .hv-server-lamp{width:17px;height:17px;flex:0 0 17px;border:2px solid #fff}
+.hv-app .hv-server-lamp.hv-lamp-healthy{background:#00e060;box-shadow:0 0 0 1px #00a846,0 0 12px 3px rgba(0,224,96,.85)}
+.hv-app .hv-server-lamp.hv-lamp-checking{background:#ffd400;box-shadow:0 0 0 1px #c9a400,0 0 12px 3px rgba(255,212,0,.85)}
+.hv-app .hv-server-lamp.hv-lamp-failed,.hv-app .hv-server-lamp.hv-lamp-inactive{background:#ff1f3d;box-shadow:0 0 0 1px #c20f2a,0 0 12px 3px rgba(255,31,61,.85)}
+.hv-app .hv-server-lamp.hv-lamp-unknown{background:#9aa6b4}
+.hv-check-lamp{width:16px;height:16px;vertical-align:-3px}
+.hv-check-green{background:#00e060!important;box-shadow:0 0 0 1px #00a846,0 0 12px 3px rgba(0,224,96,.85)!important}
+.hv-check-yellow{background:#ffd400!important;box-shadow:0 0 0 1px #c9a400,0 0 12px 3px rgba(255,212,0,.85)!important}
+.hv-check-red{background:#ff1f3d!important;box-shadow:0 0 0 1px #c20f2a,0 0 12px 3px rgba(255,31,61,.85)!important}
+@keyframes hv-server-heartbeat{0%,65%,100%{opacity:1}80%{opacity:.5}}
+
+/* ---- Real traffic-light lamps (owner request): bright, glossy, a little 3-D, everywhere a lamp blinks ----
+   One shared look: radial gloss highlight, dark rim, inner shadow, coloured glow. The blink (opacity) stays on top. */
+:root{
+  --hvl-green:radial-gradient(circle at 34% 28%,#f2fff6 0,#6bff9e 22%,#00d655 58%,#007a30 100%);
+  --hvl-yellow:radial-gradient(circle at 34% 28%,#fffde8 0,#ffe95c 22%,#ffc400 58%,#a77600 100%);
+  --hvl-red:radial-gradient(circle at 34% 28%,#fff3f4 0,#ff7385 22%,#ff1f3d 58%,#9e0a1f 100%);
+  --hvl-grey:radial-gradient(circle at 34% 28%,#ffffff 0,#d5dde5 28%,#8d99a6 66%,#56616d 100%);
+  --hvl-inset:inset -2px -3px 5px rgba(0,0,0,.38),inset 2px 2px 4px rgba(255,255,255,.6);
+}
+.hv-app .hv-server-lamp.hv-lamp-healthy,.hv-app .hv-check-green,.hv-app .hv-auto-pill-knob.hv-lamp-on,.hv-app .hv-live-lamp-green,.hv-app .hv-lamp-green.hv-lamp-lit,.hv-app .hv-dot-green,.hv-app .hv-node-green .hv-node-dot{background:var(--hvl-green)!important;box-shadow:var(--hvl-inset),0 0 0 1px #00692a,0 0 14px 4px rgba(0,224,96,.8)!important}
+.hv-app .hv-server-lamp.hv-lamp-checking,.hv-app .hv-check-yellow,.hv-app .hv-auto-pill-knob.hv-lamp-switching,.hv-app .hv-live-lamp-yellow,.hv-app .hv-lamp-yellow.hv-lamp-lit,.hv-app .hv-dot-yellow{background:var(--hvl-yellow)!important;box-shadow:var(--hvl-inset),0 0 0 1px #8a6500,0 0 14px 4px rgba(255,212,0,.8)!important}
+.hv-app .hv-server-lamp.hv-lamp-failed,.hv-app .hv-server-lamp.hv-lamp-inactive,.hv-app .hv-check-red,.hv-app .hv-auto-pill-knob.hv-lamp-off,.hv-app .hv-live-lamp-red,.hv-app .hv-lamp-red.hv-lamp-lit,.hv-app .hv-dot-red,.hv-app .hv-node-red .hv-node-dot{background:var(--hvl-red)!important;box-shadow:var(--hvl-inset),0 0 0 1px #7d0618,0 0 14px 4px rgba(255,31,61,.8)!important}
+.hv-app .hv-server-lamp.hv-lamp-unknown,.hv-app .hv-check-grey,.hv-app .hv-auto-pill-knob.hv-lamp-unknown,.hv-app .hv-live-lamp-grey,.hv-app .hv-dot-grey{background:var(--hvl-grey)!important;box-shadow:var(--hvl-inset),0 0 0 1px #3d4650!important}
+/* Unlit lamps of the two-lamp light: dark glass, so the lit one stands out. */
+.hv-app .hv-lamp-green:not(.hv-lamp-lit){background:radial-gradient(circle at 34% 28%,#2f5a43,#16301f 70%);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.hv-app .hv-lamp-red:not(.hv-lamp-lit){background:radial-gradient(circle at 34% 28%,#5a2f36,#301620 70%);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.hv-app .hv-lamp.hv-lamp-lit{width:30px;height:30px}
+.hv-app .hv-dot,.hv-app .hv-live-lamp{width:14px;height:14px;flex-basis:14px}
+.hv-app .hv-auto-pill-knob{width:20px;height:20px;flex-basis:20px;border:0}
+.hv-app .hv-node-dot{width:14px;height:14px;vertical-align:-2px}
+/* Dark glass housing behind the lamps of the Auto light. */
+.hv-app .hv-light-two{background:linear-gradient(180deg,#2a3340,#10161d);border-radius:22px;padding:12px 10px;box-shadow:inset 0 2px 6px rgba(255,255,255,.12),0 4px 10px rgba(0,0,0,.35)}
+
+/* ---- Forecast checks and LAN helper explanation ---- */
+.hv-plan-lamp{width:34px;text-align:center}
+.hv-plan-note,.hv-plan-source{font-size:13.5px;line-height:1.6}
+.hv-plan-legend{list-style:none;margin:8px 0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.hv-plan-legend .hv-check-lamp{margin-right:6px}
+.hv-lan-explain{margin:12px 0;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.hv-lan-explain h4{margin:0 0 8px;font-size:15px}
+.hv-lan-explain p,.hv-lan-explain li{font-size:13.5px;line-height:1.6}
+.hv-lan-explain ol{margin:8px 0;padding-left:20px}
+.hv-help-link{color:var(--teal);font-weight:600}
+
+/* ---- Tests page: path card and "why Auto acts" in plain language ---- */
+.hv-cascade-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin:12px 0}
+.hv-cascade-head{display:flex;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:13px}
+.hv-cascade-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.hv-cascade-item{display:flex;gap:10px;align-items:flex-start}
+.hv-cascade-item .hv-check-lamp{margin-top:3px;flex:0 0 16px}
+.hv-cascade-line{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:baseline}
+.hv-cascade-note{margin-top:3px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.hv-cascade-selected{padding:8px 10px;margin:-4px -6px;border-radius:10px;background:color-mix(in srgb,var(--ok) 10%,transparent)}
+.hv-chip-note{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid currentColor}
+.hv-chip-now{color:var(--ok)}.hv-chip-next{color:var(--teal)}
+.hv-cascade-legend{margin-top:8px;font-size:13px}
+.hv-cascade-legend ul{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.hv-why-list{list-style:none;margin:10px 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.hv-why-line{display:flex;gap:12px;align-items:flex-start}
+.hv-why-line .hv-check-lamp{margin-top:3px;flex:0 0 16px}
+.hv-why-line p{margin:2px 0 0;font-size:13.5px;line-height:1.55}
+.hv-why-next{margin:12px 0 6px;font-size:14px}
+.hv-why-note{font-size:12.5px;color:var(--muted);line-height:1.55}
+.hv-why-tech{color:var(--muted)}
+
+/* ---- Failure test: why the button is unavailable, with links to fix it ---- */
+.hv-fault-why{margin-top:12px}
+.hv-fault-why ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.hv-fault-why li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+
+/* ---- Error table: worked examples and the example line of a row ---- */
+.hv-errexamples{margin:12px 0;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.hv-errexamples summary{cursor:pointer;font-weight:700;color:var(--teal)}
+.hv-errexamples ul{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.hv-errexamples li p{margin:3px 0;line-height:1.55;font-size:13.5px}
+.hv-errexample{color:var(--muted)}
+
+/* ---- Accessibility: visible keyboard focus everywhere in the app, skip link ---- */
+.hv-app a:focus-visible,.hv-app button:focus-visible,.hv-app input:focus-visible,.hv-app select:focus-visible,.hv-app summary:focus-visible,.hv-app [tabindex]:focus-visible,.hv-app textarea:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
+.hv-app .hv-sidebar a:focus-visible,.hv-app .hv-sidebar button:focus-visible{outline-color:#ffd24a}
+.hv-app h1:focus,.hv-app main:focus{outline:none}
+.hv-app .hv-skip{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:8px;background:var(--accent);color:var(--accent-text);font-weight:700;text-decoration:none;transition:top .12s}
+.hv-app .hv-skip:focus{top:8px}
+@media(prefers-reduced-motion:reduce){.hv-app .hv-skip{transition:none}}

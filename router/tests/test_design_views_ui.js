@@ -56,10 +56,12 @@ const none=fixture({profiles:[],samples:[],native_history:{events:[]}});
 a=render(ctx,'a',none,[]).node;assert(/No VPN is connected/.test(a.text()));assert(/No VPN profiles found/.test(a.text()));assert(/No switches or failures are recorded/.test(a.text()));
 // B: plain words, tags, questions, links to the sections that are not in its menu.
 let b=render(ctx,'b',fixture()).node;t=b.text();
-assert(/Your VPN works/.test(t));assert(/What happens if Germany stops working\?/.test(t));assert(/Last thing that happened/.test(t));
+assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');assert(/What happens if Germany stops working\?/.test(t));assert(/Last thing that happened/.test(t));
 ['#statistics','#help','#learn','#events'].forEach(h=>assert(b.all().some(n=>n.tag==='a'&&n.attrs.href===h),'B link '+h));
 assert(b.all().some(n=>/hv-dv-flag/.test(n.attrs.class||'')&&n.text().trim()==='DE'));
-b=render(ctx,'b',fixture({native_failover:{state:'COMMITTED',source:'a',target:'b',time:now-1}})).node;assert(/on the reserve/.test(b.text()));
+// The VPN list has a separate status column with a lamp per profile.
+const lampCol=b.all().filter(n=>/hv-dv-statuscol/.test(n.attrs.class||''));assert.equal(lampCol.length,3);
+assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[2].all().some(n=>/hv-check-grey/.test(n.attrs.class||'')),'not connected: grey lamp');
 // C: status line with real identifiers, latency chart, log with codes, server table, keys.
 const c=render(ctx,'c',fixture()).node;t=c.text();
 const tc=t.replace(/\s+/g,' ');assert(/ctrl OBSERVING/.test(tc)&&/auto (OFF|ON)/.test(tc)&&/ui dashboard/.test(tc));assert(/Event log/.test(t)&&/DNS-001/.test(t));
@@ -69,10 +71,15 @@ assert(/1.*9.*sections/.test(t.replace(/\s+/g,' '))&&/search/.test(t));
 // Hostile names stay inert text; nothing builds markup from them.
 const hostile=fixture();hostile.profiles[0].name='<img src=x onerror=alert(1)>';hostile.profiles[0].router_name='<b>de</b>';
 for(const d of ['a','b','c']){const n=render(ctx,d,hostile).node;n.all().forEach(x=>{assert(!x.tag.includes('<'));});assert(!n.all().some(x=>x.tag==='img'),d+': no element from a name');}
+// Router-supplied values that look like object keys or selector tricks stay harmless.
+{const evil=fixture();evil.profiles[0].code='"]x[data-y="';evil.native_history.events.push({sequence:9,time:now-5,state:'constructor',codes:['__proto__','a"b'],source:'a',target:'b'});
+ for(const d of ['a','b','c']){const n=render(ctx,d,evil).node;n.all().forEach(y=>{assert(typeof y.tag==='string');});}
+ const hostileStatus=fixture({native_failover:{state:'__proto__',source:'a',target:'b',time:now-1},decision_explanation:{diagnosis:{code:'constructor'}}});
+ assert.doesNotThrow(()=>{ctx.renderDecisionExplanation(hostileStatus);ctx.renderCascadePath(Object.assign(fixture(),{profiles:[Object.assign({},fixture().profiles[0],{code:'a"]'})]}));});}
 // Russian: same structure, translated text.
 const ru=sandbox('ru');vm.runInContext("locale='ru'",ru);
 const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./.test(ra)&&/Последние события/.test(ra)&&/Германия/.test(ra));
-assert(/Ваш VPN работает/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
+assert(/Что будет, если/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
 // A broken design view must leave the original overview in place (generated wiring).
 assert(source.includes("renderDesignOverview(currentDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard})"));
 assert(source.includes("pages.overview.setAttribute('data-hv-dv','1')")&&source.includes('DESIGN-VIEW-ERROR'));

@@ -29,7 +29,6 @@ COPY = [
     ('Tunnel not connected', 'Not connected', 'Не подключён'),
     ('Connectivity failed', 'Not working', 'Не работает'),
     ('Checking / awaiting path confirmation', 'Being checked', 'Проверяется'),
-    ('Selected route', 'Chosen route', 'Выбранный маршрут'),
     ('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.',
      'Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.',
      'Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'),
@@ -141,15 +140,8 @@ COPY += [
      'WAN and VPN counters overlap, so do not add them together. A dash means there was no valid data that day. Up to 90 days are kept.',
      'Счётчики WAN и VPN пересекаются, их нельзя складывать. Прочерк означает, что за этот день нет достоверных данных. Хранится до 90 дней.'),
     ('Only application priorities are saved. This does not switch a live route. Unselected profiles follow the selected servers in their existing order.', 'Only this program’s priorities are saved. No route is changed.', 'Сохраняются только приоритеты этой программы. Маршрут не меняется.'),
-    ('Selected route requires fresh controller evidence. Candidate suggestions do not authorize switching.', 'The chosen route is shown only while the router reports it. Suggestions never switch anything.', 'Выбранный маршрут показывается, только пока его подтверждает роутер. Подсказки ничего не переключают.'),
-    ('Hierarchy: another server → another channel → another VPN protocol. No implicit direct-WAN fallback.', 'Order of preference: another server, then another channel, then another VPN protocol. Traffic never bypasses the VPN.', 'Порядок предпочтения: другой сервер, затем другой канал, затем другой протокол VPN. Трафик никогда не идёт мимо VPN.'),
     ('Retained controller events only. Missing sequences produce unknown outcomes. Probe/client details absent from this history remain unknown.', 'Based only on the events the router kept. Gaps are shown as unknown, never guessed.', 'Основано только на событиях, которые сохранил роутер. Пропуски показываются как неизвестные, а не угадываются.'),
     ('Coverage: incomplete retained window; not measured LAN availability.', 'Covers only the events kept on the router. This is not a measure of home-network uptime.', 'Охватывает только события, сохранённые на роутере. Это не показатель доступности домашней сети.'),
-    ('Order: server → channel → VPN protocol; operator priority within each level.', 'Order of preference: server, channel, VPN protocol; your priorities decide within each level.', 'Порядок предпочтения: сервер, канал, протокол VPN; внутри каждого уровня решают ваши приоритеты.'),
-    ('Router-only probes do not confirm the LAN client path. Native transitions require separate certification.', 'These checks run on the router. A switch is also confirmed by the LAN helper.', 'Эти проверки выполняет сам роутер. Переключение дополнительно подтверждает LAN-помощник.'),
-    ('Source failure threshold: ', 'Primary failures needed: ', 'Нужно сбоев основного: '),
-    ('Reserve success threshold: ', 'Reserve checks needed: ', 'Нужно проверок резерва: '),
-    ('Controller reason: ', 'Reason: ', 'Причина: '),
     ('Times are from the router measurements. A connected interface alone is not proof of internet access.', 'A live log of the router checks. “Connected” alone does not mean the internet works.', 'Живой журнал проверок роутера. Одного «подключено» мало, чтобы считать, что интернет работает.'),
 ]
 EN_VALUES += [

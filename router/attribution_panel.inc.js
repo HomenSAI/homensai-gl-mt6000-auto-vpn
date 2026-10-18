@@ -6,6 +6,13 @@ function renderAttribution(status){
     E('span',{},'GL.iNet GL-MT6000 · Flint 2'),
     E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),
     E('span',{'class':'hv-attribution-version'},identityLine(status||{})),
-    E('span',{},HV_STYLE_VERSION)
-  ]);
+    E('span',{},HV_STYLE_VERSION),
+    attributionVersionWarning(status)
+  ].filter(Boolean));
+}
+// Page and router program differ (old cached page or unfinished upgrade): a quiet link to the Help topic that explains it.
+function attributionVersionWarning(status){
+  var model=identityModel(status||{});
+  if(!model.pageOld&&!model.packageMismatch)return null;
+  return E('span',{'class':'hv-attribution-warn'},[helpLink('stale',bi('Page and router versions differ: press Ctrl+F5 (details)','Версии страницы и роутера различаются: нажмите Ctrl+F5 (подробнее)'))]);
 }

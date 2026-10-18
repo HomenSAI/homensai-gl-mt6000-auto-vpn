@@ -19,6 +19,7 @@
     var adv=D().querySelector('.hv-advanced-toggle');if(adv&&D().querySelector('.hv-advanced-links[hidden]'))adv.click();
     var links=Array.prototype.slice.call(D().querySelectorAll('[data-hv-tab]'));
     ok('section links found',links.length>=11,String(links.length));
+    var tabKeys=links.map(function(l){return l.getAttribute('data-hv-tab');});ok('Getting started is the first section',tabKeys[0]==='start',tabKeys.join(','));ok('no separate Server ranking section',tabKeys.indexOf('ranking')<0);
     for(var i=0;i<links.length;i++){
       var key=links[i].getAttribute('data-hv-tab'),cs=W().getComputedStyle(links[i]);
       if(cs.display==='none'){res.steps.push('SKIP link '+key+' (hidden in this design)');continue;}
@@ -27,9 +28,9 @@
     }
     // S3 keys (design C only)
     await load('overview');await sleep(3000);
-    var ev=new (W().KeyboardEvent)('keydown',{key:'2',bubbles:true});D().dispatchEvent(ev);await sleep(400);
-    if(CFG.design==='c')ok('key 2 opens the 2nd section',visiblePage()==='channels',visiblePage());
-    else ok('key 2 does nothing outside design C',visiblePage()==='overview',visiblePage());
+    var ev=new (W().KeyboardEvent)('keydown',{key:'3',bubbles:true});D().dispatchEvent(ev);await sleep(400);
+    if(CFG.design==='c')ok('key 3 opens the 3rd section (Channels)',visiblePage()==='channels',visiblePage());
+    else ok('key 3 does nothing outside design C',visiblePage()==='overview',visiblePage());
     // S1 picker: choose every design in Settings, check apply + storage + overview view + survives reload
     await load('settings');await sleep(3500);
     var radios=D().querySelectorAll('input[name="hv-design"]');ok('picker has 3 radios',radios.length===3);
@@ -44,10 +45,24 @@
     }
     await load('settings');await sleep(3500);
     ok('after reload the last pick (a) is still active',root().getAttribute('data-hv-design')==='a');
-    // fixture buttons: failure and recovery are reflected by the overview
-    var buttons=Array.prototype.slice.call(D().querySelectorAll('button')).filter(function(b){return /Mark selected failed/.test(b.textContent);});
-    if(buttons.length){W().location.hash='#overview';await sleep(500);var before=(D().querySelector('.hv-dv-strip strong,.hv-dv-hero h2,.hv-dv-status')||{}).textContent||'';buttons[0].click();await sleep(12000);
-      var after=(D().querySelector('.hv-dv-strip strong,.hv-dv-hero h2,.hv-dv-status')||{}).textContent||'';res.steps.push('INFO fixture failure: "'+before.trim().slice(0,40)+'" -> "'+after.trim().slice(0,40)+'"');}
+    // Failure scenario on the fixture: normal -> primary fails (reserve carries traffic) -> primary recovered (back on the primary).
+    function press(text){var b=Array.prototype.slice.call(D().querySelectorAll('#fixture-banner button')).filter(function(x){return x.textContent.indexOf(text)>=0;})[0];if(b)b.click();return !!b;}
+    function node(key){var n=D().querySelector('[data-path-node="'+key+'"]');return n?n.getAttribute('data-node-tone'):null;}
+    W().location.hash='#overview';await sleep(600);
+    if(press('Scenario: normal')){await sleep(1500);
+      ok('normal: primary green, reserve red',node('source')==='green'&&node('target')==='red',node('source')+'/'+node('target'));
+      ok('normal: round Auto button is green',!!D().querySelector('.hv-auto-power.hv-auto-lit-on'));
+      ok('normal: no Return button',!Array.prototype.slice.call(D().querySelectorAll('button')).some(function(x){return /Вернуться на основной|Return to primary/.test(x.textContent);}));
+    }else ok('fixture scenario buttons exist',false);
+    if(press('Scenario: primary fails')){await sleep(1500);
+      ok('failure: primary red, reserve green',node('source')==='red'&&node('target')==='green',node('source')+'/'+node('target'));
+      ok('failure: Return to primary is offered',Array.prototype.slice.call(D().querySelectorAll('button')).some(function(x){return /Вернуться на основной|Return to primary/.test(x.textContent);}));
+      ok('failure: the overview names the reserve',/reserve|резерв/i.test((D().querySelector('.hv-dv-strip,.hv-dv-stack,.hv-dv-a,.hv-dv-b,.hv-dv-c')||{}).textContent||''));
+    }
+    if(press('Scenario: primary recovered')){await sleep(1500);
+      ok('recovered: primary green again',node('source')==='green',node('source'));
+      ok('recovered: Return button is gone',!Array.prototype.slice.call(D().querySelectorAll('button')).some(function(x){return /Вернуться на основной|Return to primary/.test(x.textContent);}));
+    }
   }catch(e){ok('scenario ran to the end',false,String(e&&e.message||e));}
   fetch('/__result/'+CFG.id,{method:'POST',body:JSON.stringify(res)});
 })();

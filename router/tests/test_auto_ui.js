@@ -110,7 +110,13 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   assert(!/LAN traffic is held|трафик LAN удерживается/.test(JSON.stringify(context.AUTO_BLOCKERS['EXTERNAL-POLICY-CHANGE-RELEASED'])));
   const src=fs.readFileSync('router/auto_panel.inc.js','utf8');
   assert(src.includes("method:'native_return'"));assert(src.includes('p.exit_ip'));
-  assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE'].indexOf(ns.state)>=0"));
+  // Return to the primary is offered on the Auto card whenever traffic is on the reserve, including a committed reserve.
+  assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0"));
+  // Two-state lamp and two-colour nodes: green = automatic switching works / carries traffic and works.
+  assert(context.autoWorking({key:'ok'})&&context.autoWorking({key:'reserve'})&&context.autoWorking({key:'switching'}));
+  for(const key of ['off','problem','unknown',undefined])assert(!context.autoWorking({key}),String(key));
+  assert(src.includes("hv-auto-lit-on")&&src.includes("hv-auto-lit-off"),'the round button is green when Auto works, red when it does not');
+  assert(src.includes("hv-node-'+(tone.green?'green':'red')")&&src.includes("'Press to turn Auto off'"));
   console.log('PASS: operator return, outside-change copy and exit address are wired');
 }
 

@@ -41,3 +41,14 @@ function renderDesignPicker(getRoot,onApplied){
     note
   ]);
 }
+
+/* Wizards open in LuCI's modal outside the page root; give the modal the page's design, palette and fonts. */
+function installModalStyle(){
+  if(typeof ui==='undefined'||!ui||ui.__hvModalStyle||typeof ui.showModal!=='function')return;
+  var original=ui.showModal;ui.__hvModalStyle=true;
+  ui.showModal=function(){
+    var node=original.apply(ui,arguments);
+    try{var dialog=node&&node.classList?node:document.querySelector('#modal_overlay .modal')||document.getElementById('qa-modal');if(dialog){dialog.classList.add('hv-app','hv-modal');dialog.setAttribute('data-hv-design',currentDesign());}}catch(e){}
+    return node;
+  };
+}

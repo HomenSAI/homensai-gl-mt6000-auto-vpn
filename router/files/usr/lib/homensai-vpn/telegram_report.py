@@ -50,6 +50,8 @@ def format_report(status, minutes, now=None):
     state=native.get('state','UNKNOWN')
     if not isinstance(state,str) or not re.fullmatch(r'[A-Z0-9_-]{1,96}',state):state='UNKNOWN'
     lines.append('Native controller: %s (not proof of LAN availability).' % state)
+    alarm=native.get('alarm')
+    if isinstance(alarm,str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',alarm):lines.append('ALARM: %s. Automatic switching is stopped; see the Events page and Help.' % alarm)
     history=status.get('native_history',{})
     if history.get('error'):lines.append('Controller history unavailable: HISTORY-001.')
     native_events=[e for e in history.get('events',[]) if isinstance(e.get('time'),(int,float)) and e['time']>=cutoff]

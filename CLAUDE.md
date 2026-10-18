@@ -12,6 +12,8 @@ Standing publication rule (owner, 18 October 2026): after a finished batch of ch
 
 Standing UI rule (owner, 18 October 2026): every page in every design (A/B/C and any future one) always shows the owner attributes: HomenS.AI Auto VPN name, GL.iNet GL-MT6000 · Flint 2, Developer · Serhii Khomenko (homensai.com), program version + package + page build, HomenS.AI Style version, the header version badge and the author footer. A design may move them, never hide them; router/tests/test_attribution_ui.js enforces it. See docs/PRODUCT_REQUIREMENTS.md.
 
+Standing UI rule (owner, 18 October 2026): every status lamp blinks gently in every page and design (green slow, yellow fast, red medium; grey does not blink; prefers-reduced-motion keeps lamps still). New status elements get the same small animation by default. See docs/PRODUCT_REQUIREMENTS.md.
+
 @.claude/handoff/START-HERE.md
 @.claude/handoff/STATE.md
 @.claude/handoff/TODO-50.md

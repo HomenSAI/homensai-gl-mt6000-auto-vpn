@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0-alpha3-1 - 2026-10-18
+
+Owner decisions and the first full reading pass of the pages. Controller: a damaged switch journal blocks the LAN once and then only the VPN-only guard is used, a rollback that failed twice is given up (Auto stays off, alarm), and both raise a visible alarm (page and Telegram). Auto card: green/red round button and two-state lamp, two-colour Primary/Reserve, Return to primary on a committed reserve, codes of replies as links. New first section Getting started (landing page until all steps are done); speed tests and ranking on one page; plain-language Tests page; failure-test reasons with links; LAN helper explanation, AI prompt and Telegram token help; every emitted code has a row in the error table (states, reasons, families, examples); lamps are glossy and blink; accessibility (skip link, heading focus, visible focus). dashboard66/ui44. Report: docs/FAILURE-ANALYSIS-0.9.0-alpha3.md.
+
 ## 0.9.0-alpha2-1 - 2026-10-18
 
 Failure analysis release: a 26-test failure matrix (hangs, timeouts, Stop during a switch, wrong confirmations, broken rollback, supervisor restarts, corrupt journal, malformed exit replies, broken settings writer) and an offline page probe for all designs. Fixes: malformed exit traces become EXIT-TRACE-FAILED instead of ending the supervisor; Stop latches even when router settings cannot be read and always cleans a running fault test (STOP-UNCONFIRMED); hung settings writers answer SETUP-SAVE-UNCONFIRMED; the chosen design survives blocked browser storage; readable marks and details in dark themes and design C. Report: docs/FAILURE-ANALYSIS-0.9.0-alpha2.md. dashboard65/ui43.
