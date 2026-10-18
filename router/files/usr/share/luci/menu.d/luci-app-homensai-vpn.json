@@ -7,7 +7,7 @@
   "admin/services/homensai-vpn": {
     "title": "HomenS.AI Auto VPN",
     "order": 70,
-    "action": {"type": "view", "path": "homensai-vpn/dashboard61"},
+    "action": {"type": "view", "path": "homensai-vpn/dashboard62"},
     "depends": {"acl": ["luci-app-homensai-vpn"]}
   }
 }

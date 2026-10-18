@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha21-1 - 2026-10-18
+
+Page design A/B/C chosen in Settings > Page design, each with a "Suits" hint; the choice is kept in this browser and opens on every visit. dashboard62/ui40. UI only; includes alpha20.
+
 ## 0.8.0-alpha20-1 - 2026-10-18
 
 Live log with blinking lamps; redesigned System readiness; every error code is a link to the error table. dashboard61/ui39. UI only; includes alpha19.
