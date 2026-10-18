@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0-alpha22-1 - 2026-10-18
+
+Owner attributes (name, device, developer, version/package/page, style) at the bottom of every page in every design; a test fails the build if a design hides them. dashboard63/ui41. UI only; includes alpha21.
+
 ## 0.8.0-alpha21-1 - 2026-10-18
 
 Page design A/B/C chosen in Settings > Page design, each with a "Suits" hint; the choice is kept in this browser and opens on every visit. dashboard62/ui40. UI only; includes alpha20.

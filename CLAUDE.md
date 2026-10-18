@@ -10,6 +10,8 @@ Never publish credentials, private run directories, disk images, raw sessions or
 
 Standing publication rule (owner, 18 October 2026): after a finished batch of changes Claude publishes it itself to local Git, Gitea and the public GitHub repository through scripts/offline-ci.ps1, scripts/save-gitea.ps1 and scripts/publish-reviewed.py (CI PASS on the exact commit, package hash equal to the CI hash, one release per batch, verify with git ls-remote). The limits above still apply, and the physical router, Auto and the LAN-trial confirmation still need the owner's direct instruction.
 
+Standing UI rule (owner, 18 October 2026): every page in every design (A/B/C and any future one) always shows the owner attributes: HomenS.AI Auto VPN name, GL.iNet GL-MT6000 · Flint 2, Developer · Serhii Khomenko (homensai.com), program version + package + page build, HomenS.AI Style version, the header version badge and the author footer. A design may move them, never hide them; router/tests/test_attribution_ui.js enforces it. See docs/PRODUCT_REQUIREMENTS.md.
+
 @.claude/handoff/START-HERE.md
 @.claude/handoff/STATE.md
 @.claude/handoff/TODO-50.md
