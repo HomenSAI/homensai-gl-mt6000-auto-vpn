@@ -99,16 +99,24 @@ def stop(runtime=None,persist=None):
     persist=persist or PERSIST
     from agent import command
     import json
+    import subprocess
     with control_lock(runtime):
-        internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
-        settings=internal.get('settings',{})
+        request=read_json(runtime/'auto-control.json',{})
+        # Stop must never depend on reading the router settings: if they cannot be read, the trial named by
+        # the current start request is latched (an in-flight switch stops on any newer stop latch anyway).
+        unverified=False
+        try:
+            internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
+            trial=internal.get('settings',{}).get('native_trial')
+        except (OSError,ValueError,AttributeError,subprocess.SubprocessError):
+            trial=request.get('trial');unverified=True
         # One durable write targets the current trial, including an in-flight worker.
         old=read_json(persist/'native-stop.json',{})
-        request=read_json(runtime/'auto-control.json',{})
-        if old.get('trial') == settings.get('native_trial') and old.get('requested',0) >= request.get('time',0):
-            return {'queued':True,'already_requested':True}
-        atomic_json(persist/'native-stop.json',{'requested':time.time(),'trial':settings.get('native_trial')})
-        return {'queued':True}
+        extra={'settings_unverified':True} if unverified else {}
+        if old.get('trial') == trial and old.get('requested',0) >= request.get('time',0):
+            return dict({'queued':True,'already_requested':True},**extra)
+        atomic_json(persist/'native-stop.json',{'requested':time.time(),'trial':trial})
+        return dict({'queued':True},**extra)
 
 
 def return_request(runtime=None):

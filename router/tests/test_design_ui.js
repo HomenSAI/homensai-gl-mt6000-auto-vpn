@@ -31,13 +31,15 @@ assert.equal(context.storedDesign(),'b');
 // Storage blocked: the design still applies now and the note says it will not be kept; reading falls back to A.
 blocked=true;radios[2].attrs.change();
 assert.equal(root.attrs['data-hv-design'],'c');assert(/resets after a reload/.test(note.textContent));
-assert.equal(context.storedDesign(),'a');blocked=false;
+assert.equal(context.storedDesign(),'a');
+// ...but the page keeps the choice for this session, so the next redraw uses C, not A.
+assert.equal(context.currentDesign(),'c');blocked=false;
 // Generated page: root carries the stored design, Settings shows the picker, links carry tooltips, CSS covers all three.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const base='router/files/www/luci-static/resources/view/homensai-vpn/';
 const dashboard=fs.readFileSync(base+page+'.js','utf8');
-assert(dashboard.includes("'data-hv-design':storedDesign()"));
+assert(dashboard.includes("'data-hv-design':currentDesign()"));
 assert(dashboard.includes('renderDesignPicker(function(){return appRoot;}'));
 assert(dashboard.includes("'data-hv-tab':tab[0],'title':tab[2]"));
 const css=/ui[0-9]+\.css/.exec(dashboard)[0];

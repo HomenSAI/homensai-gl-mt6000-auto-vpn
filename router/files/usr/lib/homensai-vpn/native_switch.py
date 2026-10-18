@@ -211,10 +211,13 @@ def trace(profile):
         raw.connect(('1.1.1.1',443))
         with ssl.create_default_context().wrap_socket(raw,server_hostname='one.one.one.one') as sock:
             sock.sendall(b'GET /cdn-cgi/trace HTTP/1.1\r\nHost: one.one.one.one\r\nConnection: close\r\n\r\n')
-            response=http.client.HTTPResponse(sock);response.begin();body=response.read(32769)
-            if response.status!=200 or len(body)>32768:raise Refused('EXIT-TRACE-FAILED')
-            rows=dict(line.split('=',1) for line in body.decode('ascii').splitlines() if '=' in line)
-            value=str(ipaddress.IPv4Address(rows['ip']))
+            # A cut, garbled or non-IPv4 reply is a coded refusal, never an uncaught error that ends the supervisor.
+            try:
+                response=http.client.HTTPResponse(sock);response.begin();body=response.read(32769)
+                if response.status!=200 or len(body)>32768:raise Refused('EXIT-TRACE-FAILED')
+                rows=dict(line.split('=',1) for line in body.decode('ascii').splitlines() if '=' in line)
+                value=str(ipaddress.IPv4Address(rows['ip'].strip()))
+            except (http.client.HTTPException,KeyError,ValueError):raise Refused('EXIT-TRACE-FAILED') from None
             if not ipaddress.ip_address(value).is_global:raise Refused('EXIT-IP-NOT-GLOBAL')
             return value
     finally:raw.close()
@@ -769,7 +772,7 @@ def serve():
                     atomic_json(ATTEMPTS,consumed)
                     attempt(backend,selection,until,forced,probe_evidence={'source_streak_met':failures,'reserve_streak_met':healthy,'required_failures':recovery['failures'],'required_successes':recovery['successes']})
                 else:publish({'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,'source_failures':failures,'reserve_healthy':healthy})
-            except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError) as e:
+            except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError,http.client.HTTPException) as e:
                 # Never log configuration, stderr, credentials or arbitrary exception values.
                 reason=str(e) if isinstance(e,Refused) else 'NATIVE-SYSTEM-001'
                 preparation=read_json(PREPARE,{})

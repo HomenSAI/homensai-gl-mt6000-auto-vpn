@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-VERSION = '0.9.0-alpha1'
+VERSION = '0.9.0-alpha2'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -770,7 +770,11 @@ def rpc(method):
         print(json.dumps(enqueue(RUNTIME,read_json,atomic_json)))
     elif method in ('native_start','native_stop','native_return'):
         from auto_control import start, stop, return_request
-        result=start() if method=='native_start' else return_request() if method=='native_return' else stop(runtime=RUNTIME,persist=PERSIST)
+        if method=='native_stop':
+            # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
+            try:result=stop(runtime=RUNTIME,persist=PERSIST)
+            except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
+        else:result=start() if method=='native_start' else return_request()
         if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
             from fault_control import cancel,FaultError
             try:result['fault_cleanup']=cancel().get('cleaned',False)

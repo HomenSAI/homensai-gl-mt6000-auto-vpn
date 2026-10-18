@@ -56,6 +56,8 @@ def apply(arguments):
         for row in rows:
             payload['servers'].append({'section':'srv_'+hashlib.sha256(row['profile'].encode()).hexdigest()[:16],
                 **{key:row[key] for key in ('profile','name','channel')},'priority':str(row['priority']),'enabled':'1' if row['enabled'] else '0'})
-        result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        # A hung or killed writer may or may not have committed: say so instead of failing without an answer.
+        try:result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        except (OSError,subprocess.SubprocessError):return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
         if result.returncode or result.stdout.strip()!=b'OK':return {'saved':False,'code':failure_code(result,'PRIORITY-SAVE-FAILED')}
         return {'saved':True,'code':'PRIORITY-SAVED','route_changed':False,'count':len(rows)}

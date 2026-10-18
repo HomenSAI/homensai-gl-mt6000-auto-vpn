@@ -121,8 +121,12 @@ def save(arguments, kind):
             from native_switch import journal_read
             if journal_read().get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
                 return {'saved':False,'code':'SETUP-STOP-FIRST'}
-        result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
-            input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        # A hung or killed writer may or may not have committed: say so instead of failing without an answer.
+        try:
+            result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
+                input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        except (OSError,subprocess.SubprocessError):
+            return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'saved':False,'code':failure_code(result,'SETUP-SAVE-FAILED')}
     if kind=='speed' and not arguments['enabled']:

@@ -13,10 +13,13 @@ var HV_DESIGNS=[
 var HV_DESIGN_KEY='homensai-vpn-design';
 function validDesign(key){return HV_DESIGNS.some(function(d){return d.key===key;});}
 function storedDesign(){try{var v=window.localStorage.getItem(HV_DESIGN_KEY);return validDesign(v)?v:'a';}catch(e){return 'a';}}
-function saveDesign(key){if(!validDesign(key))return false;try{window.localStorage.setItem(HV_DESIGN_KEY,key);return true;}catch(e){return false;}}
+/* The design chosen in this page session; it wins over storage, so a browser that refuses storage still keeps the choice until reload. */
+var HV_DESIGN_NOW=null;
+function currentDesign(){return validDesign(HV_DESIGN_NOW)?HV_DESIGN_NOW:storedDesign();}
+function saveDesign(key){if(!validDesign(key))return false;HV_DESIGN_NOW=key;try{window.localStorage.setItem(HV_DESIGN_KEY,key);return true;}catch(e){return false;}}
 function applyDesign(root,key){if(!root)return;root.setAttribute('data-hv-design',validDesign(key)?key:'a');}
 function renderDesignPicker(getRoot,onApplied){
-  var current=storedDesign(),note=E('p',{'class':'hv-design-note','role':'status','aria-live':'polite'},'');
+  var current=currentDesign(),note=E('p',{'class':'hv-design-note','role':'status','aria-live':'polite'},'');
   var options=HV_DESIGNS.map(function(d){
     var input=E('input',{'type':'radio','name':'hv-design','value':d.key,'id':'hv-design-'+d.key,'checked':d.key===current?'':null,'change':function(){
       var stored=saveDesign(d.key);applyDesign(getRoot(),d.key);if(onApplied)onApplied(d.key);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0-alpha2-1 - 2026-10-18
+
+Failure analysis release: a 26-test failure matrix (hangs, timeouts, Stop during a switch, wrong confirmations, broken rollback, supervisor restarts, corrupt journal, malformed exit replies, broken settings writer) and an offline page probe for all designs. Fixes: malformed exit traces become EXIT-TRACE-FAILED instead of ending the supervisor; Stop latches even when router settings cannot be read and always cleans a running fault test (STOP-UNCONFIRMED); hung settings writers answer SETUP-SAVE-UNCONFIRMED; the chosen design survives blocked browser storage; readable marks and details in dark themes and design C. Report: docs/FAILURE-ANALYSIS-0.9.0-alpha2.md. dashboard65/ui43.
+
 ## 0.9.0-alpha1-1 - 2026-10-18
 
 New 0.9 line: the three page designs now have their own Overview layouts as in the approved mock-ups (A Control room, B Calm, C Instrument panel) with their own palettes (C is always dark), built from the real router status. Settings > Page design keeps the choice and the "Suits" hints. dashboard64/ui42. UI only; includes alpha22.

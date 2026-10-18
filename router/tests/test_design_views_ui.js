@@ -74,7 +74,7 @@ const ru=sandbox('ru');vm.runInContext("locale='ru'",ru);
 const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./.test(ra)&&/Последние события/.test(ra)&&/Германия/.test(ra));
 assert(/Ваш VPN работает/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
 // A broken design view must leave the original overview in place (generated wiring).
-assert(source.includes("renderDesignOverview(storedDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard})"));
+assert(source.includes("renderDesignOverview(currentDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard})"));
 assert(source.includes("pages.overview.setAttribute('data-hv-dv','1')")&&source.includes('DESIGN-VIEW-ERROR'));
 assert(source.includes('draw(lastGoodStatus||data[1])'),'changing the design redraws at once');
 assert(source.includes("installDesignKeys(appRoot,"));

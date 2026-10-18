@@ -23,9 +23,12 @@ def change(arguments):
         if assess(settings,status,transaction,intent,stopped):
             return {'accepted':False,'code':'MONITOR-STOP-AUTO-FIRST'}
         enabled=arguments['enabled']
-        result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
-            input=json.dumps({'main':{'enabled':'1' if enabled else '0'},'servers':[]}).encode(),
-            stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        try:
+            result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
+                input=json.dumps({'main':{'enabled':'1' if enabled else '0'},'servers':[]}).encode(),
+                stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        except (OSError,subprocess.SubprocessError):
+            return {'accepted':False,'code':'SETUP-SAVE-UNCONFIRMED'}
         if result.returncode or result.stdout.strip()!=b'OK':
             return {'accepted':False,'code':failure_code(result,'MONITOR-SAVE-FAILED')}
         # Only this application's init script; no network/firewall/VPN services.

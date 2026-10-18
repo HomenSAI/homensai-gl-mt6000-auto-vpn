@@ -223,3 +223,8 @@
 .hv-dv-row .hv-dv-spark,.hv-dv-rowhead>:nth-child(3){display:none}
 .hv-dv-kpis{margin-left:0}
 }
+
+/* ---- Readability fixes found by the page probe (all designs, both themes) ---- */
+.hv-workspace[data-hv-design] .hv-profile-detail{color:var(--muted)}
+.hv-workspace[data-hv-design] .hv-start-done .hv-start-mark{background:var(--ok);color:var(--surface)}
+.hv-workspace[data-hv-design] .hv-start-next .hv-start-mark,.hv-workspace[data-hv-design] .hv-chip-current{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
