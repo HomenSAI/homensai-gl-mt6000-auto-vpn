@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0-alpha1-1 - 2026-10-18
+
+New 0.9 line: the three page designs now have their own Overview layouts as in the approved mock-ups (A Control room, B Calm, C Instrument panel) with their own palettes (C is always dark), built from the real router status. Settings > Page design keeps the choice and the "Suits" hints. dashboard64/ui42. UI only; includes alpha22.
+
 ## 0.8.0-alpha22-1 - 2026-10-18
 
 Owner attributes (name, device, developer, version/package/page, style) at the bottom of every page in every design; a test fails the build if a design hides them. dashboard63/ui41. UI only; includes alpha21.

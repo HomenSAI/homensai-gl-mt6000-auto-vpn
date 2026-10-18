@@ -320,7 +320,7 @@ must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard63').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard64').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),controlCard.nextSibling);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -334,11 +334,11 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui41.css')
+source=source.replace('ui15.css','ui42.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard63',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard64',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
@@ -361,15 +361,21 @@ must_replace("      sortableTables();showPage(activeTab);","      put('statistic
 # Page design A/B/C: chosen in Settings, stored in this browser, applied before the page is shown.
 must_replace('return view.extend({',(Path(__file__).parent/'design_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("appRoot=E('div',{'class':'hv-app hv-workspace'},[","appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':storedDesign()},[")
-must_replace("        settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[","        settingsHost.appendChild(renderDesignPicker(function(){return appRoot;},function(){updateSidebarLayout(appRoot,true);}));\n        settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[")
+must_replace("        settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[","        settingsHost.appendChild(renderDesignPicker(function(){return appRoot;},function(){updateSidebarLayout(appRoot,true);draw(lastGoodStatus||data[1]);}));\n        settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[")
 # The icon column of design C hides the labels, so every section link carries its name as a tooltip.
 must_replace("return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],","return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'title':tab[2],")
 # Owner attributes (name, device, developer, version/package/page, style) at the bottom of every page in every design.
 must_replace('return view.extend({',(Path(__file__).parent/'attribution_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("panel,settingsHost,footer])","panel,settingsHost,renderAttribution(data[1]),footer])")
+# Design overviews (A/B/C) built from the real status. A failure in them leaves the original overview in place (data-hv-dv marks success).
+must_replace('return view.extend({',(Path(__file__).parent/'design_views.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);","if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);try{pages.overview.insertBefore(renderDesignOverview(storedDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard}),identityNotice?identityNotice.nextSibling:pages.overview.firstChild);pages.overview.setAttribute('data-hv-dv','1');}catch(designError){pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(E('p',{'class':'alert-message warning'},'DESIGN-VIEW-ERROR: '+String(designError&&designError.message||designError).slice(0,120)),pages.overview.firstChild);}")
+must_replace("var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;","var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;if(appRoot)appRoot.setAttribute('data-hv-active',key);")
 import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
-(root/'dashboard63.js').write_text(source,encoding='utf8')
-print('Generated dashboard63.js with sidebar, language persistence and sortable tables')
+must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
+(root/'ui42.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'dashboard64.js').write_text(source,encoding='utf8')
+print('Generated dashboard64.js with sidebar, language persistence and sortable tables')
