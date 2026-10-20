@@ -20,7 +20,8 @@ STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
 
 
 def finite(value):
-    return type(value) in (int,float) and math.isfinite(value) and value>=0
+    try:return type(value) in (int,float) and math.isfinite(value) and value>=0
+    except OverflowError:return False
 
 
 def stop_acknowledged(status,transaction,intent,stopped):
@@ -36,8 +37,8 @@ def assess(settings,status,transaction,intent,stopped):
         return 'LIFECYCLE-STATE-UNVERIFIED'
     flag=settings.get('native_enabled',False)
     if not (type(flag) is bool or flag is None or isinstance(flag,str) and flag in ('0','1','')):return 'LIFECYCLE-CONFIG-UNVERIFIED'
-    acknowledged=stop_acknowledged(status,transaction,intent,stopped)
     if status and not isinstance(status.get('state'),str):return 'LIFECYCLE-STATE-UNVERIFIED'
+    acknowledged=stop_acknowledged(status,transaction,intent,stopped)
     legacy_ack=False
     if isinstance(settings.get('native_trial'),str) and settings['native_trial']:
         stop=stopped.get('requested');stamp=status.get('time');request_time=intent.get('time',0)
@@ -61,7 +62,31 @@ def read_dict(path):
     if path.is_symlink():raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
     if not path.exists():return {}
     if not path.is_file() or path.stat().st_size>1024*1024:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
-    row=json.loads(path.read_text(encoding='utf8'))
+    def number(raw):
+        value=float(raw) if any(c in raw for c in '.eE') else int(raw)
+        if not finite(value) and not (value<0 and finite(-value)):
+            raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+        return value
+    def pairs(items):
+        row={}
+        for key,value in items:
+            if key in row:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+            row[key]=value
+        return row
+    def constant(raw):raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+    try:
+        row=json.loads(path.read_text(encoding='utf8'),parse_int=number,parse_float=number,
+                       parse_constant=constant,object_pairs_hook=pairs)
+        pending=[(iter((row,)),0)]
+        while pending:
+            items,depth=pending[-1]
+            try:value=next(items)
+            except StopIteration:
+                pending.pop();continue
+            if depth>64:raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
+            if isinstance(value,(dict,list)):
+                pending.append((iter(value.values() if isinstance(value,dict) else value),depth+1))
+    except (RecursionError,OverflowError):raise ValueError('LIFECYCLE-STATE-UNVERIFIED') from None
     if not isinstance(row,dict):raise ValueError('LIFECYCLE-STATE-UNVERIFIED')
     return row
 

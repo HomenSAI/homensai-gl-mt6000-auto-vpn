@@ -26,8 +26,8 @@ async function click(label){const b=button(label);assert(b,label);await b.attrs.
  assert.deepEqual(Array.from(calls[0].args),['','@example_channel',true,120,'daily',8,true,true,'servers,events,traffic,delta,controller,controller_events,controller_totals,gaps']);assert.equal(reloads,1);
  context.setupWizard(inventory,'telegram');await click('Cancel');assert.equal(calls.length,1);assert.equal(modal,null);
  // The stored token can be deleted only after an explicit confirmation, with a typed own RPC and no arguments.
- context.window.confirm=()=>false;context.setupWizard(inventory,'telegram');await click('Delete the stored token');assert.equal(calls.length,1);
- context.window.confirm=()=>true;await click('Delete the stored token');
+ context.setupWizard(inventory,'telegram');field('Bot token (leave blank to keep the stored token)').value='UNSAVED PRIVATE DRAFT';await click('Delete the stored token');assert.equal(calls.length,1);await click('Cancel');assert.equal(calls.length,1);assert.equal(field('Bot token (leave blank to keep the stored token)').value,'UNSAVED PRIVATE DRAFT','cancelling deletion preserves the draft and wizard');
+ context.setupWizard(inventory,'telegram');await click('Delete the stored token');await click('Delete token');
  assert.equal(calls.length,2);assert.equal(calls[1].spec.method,'telegram_forget');assert.deepEqual(Array.from(calls[1].args),[]);
  context.setupWizard({settings:{telegram_configured:false}},'telegram');assert(!button('Delete the stored token'),'no delete button without a stored token');
  console.log('PASS: Telegram wizard stored defaults, private blank token, validation, calendar RPC and cancellation');

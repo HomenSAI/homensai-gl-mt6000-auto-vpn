@@ -1,0 +1,47 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+class Node{
+  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[];this.value=attrs.value||'';this.disabled=attrs.disabled!=null;this.checked=false;this.events={};(Array.isArray(children)?children:[children]).forEach(n=>this.appendChild(n));}
+  appendChild(n){this.children.push(n);return n;}setAttribute(k,v){this.attrs[k]=v;}getAttribute(k){return this.attrs[k]??null;}removeAttribute(k){delete this.attrs[k];}
+  querySelectorAll(selector){return walk(this).filter(n=>selector.split(',').includes(n.tag));}
+  addEventListener(k,fn){(this.events[k]||(this.events[k]=[])).push(fn);}
+  get childNodes(){return this.children;}get textContent(){return this.children.map(n=>n instanceof Node?n.textContent:String(n)).join('');}set textContent(v){this.children=[String(v)];}
+}
+const walk=n=>n instanceof Node?[n,...n.children.flatMap(walk)]:[];
+const button=(root,label)=>walk(root).find(n=>n.tag==='button'&&n.textContent===label);
+const click=n=>n.attrs.click({target:n,currentTarget:n});
+function make(){
+  let modal,calls=[],pending={},timers=[],reloads=0;
+  const c={E:(...a)=>new Node(...a),bi:en=>en,locale:'en',safeCode:s=>typeof s==='string'&&/^[A-Z][A-Z0-9-]+$/.test(s),errorCodeLink:s=>s,serverTitle:p=>p.name,setTimeout:fn=>timers.push(fn),window:{location:{reload(){reloads++;}}},
+    ui:{showModal:(_,nodes)=>modal=new Node('modal',{},nodes),hideModal:()=>modal=null,addNotification(){}},rpc:{declare:spec=>(...args)=>{calls.push({method:spec.method,args});return new Promise(resolve=>(pending[spec.method]||(pending[spec.method]=[])).push(resolve));}}};
+  vm.createContext(c);for(const f of ['fool_guard','auto_panel','setup_wizard','fault_panel','speed_table'])vm.runInContext(fs.readFileSync('router/'+f+'.inc.js','utf8'),c);
+  return {c,calls,get reloads(){return reloads;},get modal(){return modal;},finish:(method,value)=>pending[method].shift()(value),tick:()=>{const old=timers;timers=[];old.forEach(fn=>fn());}};
+}
+(async()=>{
+  let m=make(),c=m.c,now=Date.now()/1000;
+  const profiles=[{id:'a',name:'Alpha',channel:'main',interface:'wg0'},{id:'b',name:'Beta',channel:'main',interface:'wg1'}];
+  c.speedSelected.a=true;let panel=c.speedPanel({profiles},{settings:{speed_enabled:true}},'latest',()=>{});
+  click(button(panel,'Test speed'));let run=button(m.modal,'Run test'),work=click(run);click(run);assert.equal(m.calls.filter(x=>x.method==='speed_start').length,1);
+  const cancel=click(button(panel,'Cancel current test'));assert.equal(m.calls.at(-1).method,'speed_cancel','cancel dispatches while start pending');m.finish('speed_cancel',{queued:true});await cancel;m.finish('speed_start',{accepted:false});await work;
+  // Invalid stored values are rejected, rather than silently replaced with defaults.
+  panel=c.speedPanel({profiles},{settings:{speed_enabled:true,speed_budget_mib:0}},'latest',()=>{});click(button(panel,'Test speed'));assert(!m.modal);assert.equal(m.calls.filter(x=>x.method==='speed_start').length,1);
+  m=make();c=m.c;let refreshed=0;
+  panel=c.faultPanel({time:now,profiles,native_failover:{state:'OBSERVING',certified:true,time:now,source:'a'}},{settings:{plan_source:'a'}},()=>{refreshed++;return Promise.resolve();});
+  const selects=walk(panel).filter(n=>n.tag==='select');selects[0].value='profile';click(button(panel,'Simulate server failure'));run=button(m.modal,'Start bounded fault');
+  selects[0].value='channel';selects[1].value='30';work=click(run);click(run);assert.equal(m.calls.filter(x=>x.method==='fault_start').length,1);assert.deepEqual(Array.from(m.calls[0].args),['a','profile',150],'send precisely the reviewed values');
+  const faultCancel=click(button(panel,'Cancel fault now'));assert.equal(m.calls.at(-1).method,'fault_cancel');m.finish('fault_cancel',{code:'FAULT-CANCELLED'});await faultCancel;m.finish('fault_start',{code:'FAULT-QUEUED'});await work;assert.equal(refreshed,2);
+  m=make();c=m.c;const delivery=new Node('button',{},'Test Telegram');work=c.telegramTestDelivery(delivery);for(let i=0;i<20;i++)c.telegramTestDelivery(delivery);assert.equal(m.calls.length,1);m.finish('telegram_test',{code:'TELEGRAM-TEST-QUEUED'});await work;for(let i=0;i<20;i++)c.telegramTestDelivery(delivery);assert.equal(m.calls.length,1,'cooldown prevents repeated messages');for(let i=0;i<11;i++)m.tick();assert(!delivery.disabled);
+  // Reopening System setup must not create expensive diagnostic storms or revive older dialogs.
+  m=make();c=m.c;let checkClock=0;c.Date={now:()=>checkClock};for(let i=0;i<30;i++)c.setupWizard({settings:{},profiles:[]},'system');assert.equal(m.calls.length,1,'one shared pending readiness request');click(button(m.modal,'Cancel'));m.finish('setup_check',{passed:true});await Promise.resolve();await Promise.resolve();assert.equal(m.modal,null,'old readiness callbacks cannot reopen replaced/cancelled dialogs');
+  c.setupWizard({settings:{},profiles:[]},'system');await Promise.resolve();await Promise.resolve();assert.equal(m.calls.length,1,'short cache bounds repeated settled checks');checkClock=10001;c.setupWizard({settings:{},profiles:[]},'system');assert.equal(m.calls.length,2,'expired cache permits a fresh check');m.finish('setup_check',{passed:false});await Promise.resolve();await Promise.resolve();
+  // Independent Stop single-flight must never wait behind pending Return or Start.
+  m=make();c=m.c;
+  c.autoControlModel=s=>({stop:(s.native_failover||{}).state==='COMMITTED',fresh:true,on:true});c.autoLightModel=()=>({key:'ok'});c.autoWorking=()=>true;c.renderAutoLight=()=>new Node('span');c.autoPathModel=()=>({source:'neutral',target:'neutral',direction:'none'});c.autoWindowDeadline=()=>0;c.autoReadiness=()=>({});
+  const status=state=>({auto_control:{control_revision:'a'.repeat(32)},native_failover:{state,time:Date.now()/1000},time:Date.now()/1000}),render=state=>c.renderAutoControl(status(state),{settings:{}}),power=p=>walk(p).find(n=>n.attrs['aria-label']==='Stop auto mode'||n.attrs['aria-label']==='Start auto mode');
+  panel=render('COMMITTED');work=click(button(panel,'Return to primary'));const stop=click(power(panel));assert.deepEqual(m.calls.map(x=>x.method),['native_return','native_stop']);
+  assert(power(render('COMMITTED')).disabled);m.finish('native_return',{queued:true,accepted:true});await work;assert(power(render('COMMITTED')).disabled,'late Return must not unlock pending Stop');m.finish('native_stop',{queued:true});await stop;assert(!power(render('COMMITTED')).disabled,'no Stop cooldown');
+  panel=render('STOPPED');work=click(power(panel));assert.deepEqual(Array.from(m.calls.at(-1).args),['a'.repeat(32)]);assert.equal(power(panel).attrs['aria-label'],'Stop auto mode','pending Start immediately offers Stop without a status refresh');assert(!power(panel).disabled);panel=render('COMMITTED');assert(!power(panel).disabled,'pending Start cannot disable Stop');const secondStop=click(power(panel));assert.equal(m.calls.at(-1).method,'native_stop');m.finish('native_start',{accepted:false,blockers:['STOP-SUPERSEDED-START']});await work;m.finish('native_stop',{queued:true});await secondStop;
+  const before=m.calls.length;panel=c.renderAutoControl({...status('STOPPED'),auto_control:{}},{settings:{}});click(power(panel));assert.equal(m.calls.length,before,'unknown revision cannot send Start');assert.equal(m.reloads,1);
+  panel=render('STOPPED');work=click(power(panel));m.finish('native_start',{accepted:false,blockers:['CONTROL-REVISION-STALE']});await work;assert.equal(m.reloads,2,'stale revision must refresh current controls');
+  panel=c.renderAutoControl({}, {error:'RPC-UNAVAILABLE',settings:{}});const emergency=button(panel,'Emergency Stop');assert(emergency&&!emergency.disabled,'unknown/off/unavailable state still offers Emergency Stop');const emergencyWork=click(emergency);click(emergency);assert.equal(m.calls.at(-1).method,'native_stop');assert.deepEqual(Array.from(m.calls.at(-1).args),[]);assert(button(render('STOPPED'),'Emergency Stop').disabled,'redraw joins only the pending Stop lock');m.finish('native_stop',{queued:true});await emergencyWork;assert(!button(render('STOPPED'),'Emergency Stop').disabled,'no emergency cooldown');
+  console.log('PASS: active speed-table and fault single-flight, immediate cancels, immutable reviewed fault parameters, no silent zero defaults, Telegram burst cooldown and independent emergency Stop during pending Start/Return');
+})().catch(error=>{console.error(error);process.exitCode=1;});

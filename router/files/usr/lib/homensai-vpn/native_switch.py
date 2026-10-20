@@ -78,6 +78,28 @@ def clear_native_options():
     except (OSError,subprocess.SubprocessError):return False
 
 
+def stop_latch(trial):
+    """Terminal recovery stops every trial until a later explicit Start.
+
+    Use the UI lock too: otherwise its atomic writer and the supervisor can
+    truncate/rename the same .pending file concurrently.
+    """
+    from auto_control import control_lock, revision_locked
+    with control_lock(RUNTIME):
+        revision_error=None
+        try:revision_locked(RUNTIME,rotate=True)
+        except (OSError,ValueError) as error:revision_error=error
+        try:old=read_json(PERSIST/'native-stop.json',{})
+        except (OSError,ValueError):old={}
+        previous=old.get('requested',0) if isinstance(old,dict) else 0
+        now=time.time()
+        if type(previous) in (int,float) and math.isfinite(previous):now=max(now,previous)
+        record={'requested':now,'trial':trial,'all_trials':True}
+        if revision_error is not None:record['control_revision_failed']=True
+        atomic_json(PERSIST/'native-stop.json',record)
+        if revision_error is not None:raise revision_error
+
+
 def abandon(backend,journal,code):
     """The router policy was changed by someone else: stop, release our traffic guard, never hold the LAN."""
     try:backend.unguard()
@@ -86,7 +108,7 @@ def abandon(backend,journal,code):
         # when removal of our guard has not been confirmed.
         journal.update(phase='RELEASE-PENDING',reason=code,abandoned=True)
         journal_write(journal)
-        atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':journal.get('trial_nonce'),'all_trials':True})
+        stop_latch(journal.get('trial_nonce'))
         clear_native_options()
         publish({'state':'BLOCKED','reason':'GUARD-RELEASE-UNCONFIRMED',
                  'blockers':['GUARD-RELEASE-UNCONFIRMED'],'guard':'unverified',
@@ -95,7 +117,7 @@ def abandon(backend,journal,code):
     journal.update(phase='ROLLED-BACK',reason=code,abandoned=True,finished=time.time())
     try:journal_write(journal)
     except (OSError,ValueError):pass
-    try:atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':journal.get('trial_nonce')})
+    try:stop_latch(journal.get('trial_nonce'))
     except (OSError,ValueError):pass
     clear_native_options()
     try:publish({'state':'STOPPED','reason':code,'original_restored':False,'source':journal.get('source'),'target':journal.get('target'),'trial':journal.get('trial',False)})
@@ -159,12 +181,19 @@ def journal_read():
 
 
 def deadline(value):
-    try:return float(value or 0)
-    except ValueError:
-        normal=re.sub(r'(\.\d{6})\d+(?=[+-]\d{2}:\d{2}$)',r'\1',value.replace('Z','+00:00'))
-        parsed=datetime.fromisoformat(normal)
-        if parsed.tzinfo is None:raise Refused('DEADLINE-TIMEZONE-REQUIRED')
-        return parsed.timestamp()
+    if value is None or value=='':return 0
+    if type(value) not in (int,float,str):raise Refused('BOUNDED-DEADLINE-REQUIRED')
+    try:result=float(value)
+    except (ValueError,OverflowError):
+        if not isinstance(value,str):raise Refused('BOUNDED-DEADLINE-REQUIRED') from None
+        try:
+            normal=re.sub(r'(\.\d{6})\d+(?=[+-]\d{2}:\d{2}$)',r'\1',value.replace('Z','+00:00'))
+            parsed=datetime.fromisoformat(normal)
+            if parsed.tzinfo is None:raise Refused('DEADLINE-TIMEZONE-REQUIRED')
+            result=parsed.timestamp()
+        except (ValueError,OverflowError,OSError):raise Refused('BOUNDED-DEADLINE-REQUIRED') from None
+    if not math.isfinite(result) or result<0:raise Refused('BOUNDED-DEADLINE-REQUIRED')
+    return result
 
 
 def fresh_hook_state(lines,after):
@@ -465,9 +494,9 @@ def give_up(backend,journal,code):
     except (Refused,OSError,ValueError,subprocess.SubprocessError):guard='VPN-only guard could not be confirmed'
     # The stop latch must name the trial that is configured now (the journal may be empty or unreadable), otherwise it would not hold.
     try:trial=backend.policy().get('settings',{}).get('native_trial')
-    except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError):trial=None
+    except (Refused,OSError,ValueError,KeyError,AttributeError,TypeError,subprocess.SubprocessError):trial=None
     trial=trial or journal.get('trial_nonce')
-    try:atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':trial})
+    try:stop_latch(trial)
     except (OSError,ValueError):pass
     blockers=[code]
     if not clear_native_options():blockers.append('AUTO-OPTIONS-NOT-CLEARED')
@@ -504,8 +533,13 @@ def operator_return(backend,journal,reason='OPERATOR-RETURN'):
 def handle_return(backend,journal,request,last_time):
     """Answer each operator return request exactly once with a public result. Returns (handled,last_time)."""
     stamp=request.get('time') if isinstance(request,dict) else None
-    if type(stamp) not in (int,float) or not math.isfinite(stamp) or stamp<=0 or stamp<=last_time:return False,last_time
+    if type(stamp) not in (int,float) or not math.isfinite(stamp) or stamp<=0:return False,last_time
+    if stamp==last_time:return False,last_time
     now=time.time()
+    # A rejected future request must not suppress a later real request. Keep
+    # equality deduplication, but distrust a watermark ahead of the clock.
+    if type(last_time) not in (int,float) or not math.isfinite(last_time) or not 0<=last_time<=now:last_time=0
+    if stamp<=last_time:return False,last_time
     if (not isinstance(request.get('tx'),str) or not request['tx']
             or request['tx']!=journal.get('tx')):code='RETURN-TRANSACTION-MISMATCH'
     elif not journal.get('started',0)<=stamp<=now or now-stamp>60:code='RETURN-REQUEST-EXPIRED'
@@ -661,15 +695,20 @@ def monotonic_lease(settings,until,wall=None,mono=None):
         return 0,'BOUNDED-DEADLINE-REQUIRED'
     identity=digest({'trial':trial,'until':until})
     path=RUNTIME/'native-lease.json'
-    try:record=read_json(path)
+    missing=object()
+    try:record=read_json(path,missing)
     except (OSError,ValueError):return 0,'LEASE-INTEGRITY-FAILED'
-    if record:
+    if record is not missing:
+        if not isinstance(record,dict):return 0,'LEASE-INTEGRITY-FAILED'
         data=record.get('data')
         if not isinstance(data,dict) or record.get('sha256')!=digest(data):return 0,'LEASE-INTEGRITY-FAILED'
+        end=data.get('monotonic_until');start=data.get('monotonic_start')
+        if (not isinstance(data.get('identity'),str) or not re.fullmatch(r'[a-f0-9]{64}',data['identity'])
+                or type(end) not in (int,float) or type(start) not in (int,float)
+                or not math.isfinite(end) or not math.isfinite(start)
+                or not 0<=start<=mono or not start<=end<=start+14400):
+            return 0,'LEASE-INTEGRITY-FAILED'
         if data.get('identity')==identity:
-            end=data.get('monotonic_until');start=data.get('monotonic_start')
-            if not isinstance(end,(int,float)) or not isinstance(start,(int,float)) or not 0<=start<=mono or not start<=end<=start+14400:
-                return 0,'LEASE-INTEGRITY-FAILED'
             return end,None
     data={'identity':identity,'monotonic_start':mono,'monotonic_until':mono+until-wall}
     try:atomic_json(path,{'data':data,'sha256':digest(data)})
@@ -760,6 +799,10 @@ def serve():
     RUNTIME.mkdir(parents=True,exist_ok=True);PERSIST.mkdir(mode=0o700,parents=True,exist_ok=True)
     with open(RUNTIME/'native.lock','a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        from auto_control import current_revision
+        revision_error=False
+        try:current_revision(runtime=RUNTIME,rotate=True)
+        except (OSError,ValueError):revision_error=True
         backend=Linux()
         try:journal=journal_read()
         except Refused:
@@ -795,6 +838,15 @@ def serve():
         elif journal.get('phase')=='COMMITTED':
             if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
             else:backend.guard(backend.devices())
+        if revision_error:
+            # A UI freshness marker failure alone does not authorize a traffic
+            # guard on a monitor-only installation. Preserve the durable stop
+            # while leaving network state to the journal recovery above.
+            try:stop_latch(journal.get('trial_nonce'))
+            except (OSError,ValueError):pass
+            publish({'state':'BLOCKED','blockers':['CONTROL-REVISION-STALE'],
+                     'alarm':'CONTROL-REVISION-STALE','original_restored':False})
+            return
         last_return=read_json(return_result_path(),{}).get('request',0)
         consumed=read_json(ATTEMPTS,{})
         last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)

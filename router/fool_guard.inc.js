@@ -41,7 +41,7 @@ function foolCheckNumber(key,raw){
   if(text==='')return {ok:false,message:bi('This field is empty. Type a whole number '+range+'.','Поле пустое. Введите целое число '+range+'.')};
   if(!/^-?[0-9]+$/.test(text))return {ok:false,message:bi('“'+text.slice(0,20)+'” is not a whole number. Use digits only, no letters, spaces, commas or decimals. Allowed: '+range+'.','«'+text.slice(0,20)+'» — не целое число. Только цифры, без букв, пробелов, запятых и дробей. Допустимо: '+range+'.')};
   var n=Number(text);
-  if(!isFinite(n)||n<r[0])return {ok:false,message:bi('This number is too small. Allowed: '+range+'.','Число слишком маленькое. Допустимо: '+range+'.')};
+  if(n<r[0])return {ok:false,message:bi('This number is too small. Allowed: '+range+'.','Число слишком маленькое. Допустимо: '+range+'.')};
   if(n>r[1])return {ok:false,message:bi('This number is too big. Allowed: '+range+'.','Число слишком большое. Допустимо: '+range+'.')};
   return {ok:true,value:n,message:''};
 }
@@ -176,12 +176,12 @@ function foolWatch(button,lock,opts){
   foolShow(button,opts,lock.phase==='pause'?bi('Wait '+lock.display+' s','Подождите '+lock.display+' с'):bi('Working…','Выполняется…'));
 }
 /* Confirm dialog. Cancel closes it and nothing is sent; Confirm closes it and then calls onConfirm(). */
-function confirmAction(title,paragraphs,confirmLabel,onConfirm,danger){
+function confirmAction(title,paragraphs,confirmLabel,onConfirm,danger,onCancel){
   var confirmed=false;
   var body=(paragraphs||[]).map(function(text){return E('p',{},text);});
   body.unshift(E('p',{'class':'hv-fool-ask'},bi('Are you sure?','Вы уверены?')));
   var buttons=E('div',{'class':'hv-wizard-actions'},[
-    E('button',{'type':'button','class':'cbi-button hv-confirm-cancel','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),
+    E('button',{'type':'button','class':'cbi-button hv-confirm-cancel','click':function(){if(confirmed)return;confirmed=true;ui.hideModal();if(onCancel)return onCancel();}},bi('Cancel','Отмена')),
     E('button',{'type':'button','class':'cbi-button '+(danger?'cbi-button-negative hv-danger-action':'cbi-button-action hv-primary-action')+' hv-confirm-ok','click':function(){if(confirmed)return;confirmed=true;ui.hideModal();return onConfirm();}},confirmLabel)]);
   ui.showModal(title,body.concat([buttons]));
 }

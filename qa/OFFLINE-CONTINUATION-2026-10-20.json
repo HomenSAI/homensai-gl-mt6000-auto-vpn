@@ -1,0 +1,842 @@
+{
+  "date": "2026-10-20",
+  "scope": "offline hardening; vendor/native/device/LAN acceptance remains separate",
+  "validated_product_source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+  "validated_router_tree": "85cf4fcd5d22ed7d72cb6a90aeb085e751bcbf5d",
+  "package": {
+    "version": "0.9.0-alpha12",
+    "package_version": "0.9.0-alpha12-1",
+    "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+    "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+    "source_fingerprint": "2fc6f9bb3034a6ad78ceec33066198780cdab5f827cfcb5a74339666160b939e"
+  },
+  "package_bytes": 654970,
+  "immutable_runtime_matrix": [
+    {
+      "application_tests": 449,
+      "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+      "bytes": 654970,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 85,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+      "skipped_tests": 9,
+      "source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+      "ui_suites": 30,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 449,
+      "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+      "bytes": 654970,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 14,
+      "qa_tests": 85,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+      "skipped_tests": 0,
+      "source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "synthetic_UI": {
+    "result": "PASS",
+    "executed_version": "0.9.0-alpha11",
+    "executed_source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+    "personas": 50,
+    "steps": 5495,
+    "click_attempts": 14560,
+    "field_edits": 3381,
+    "RPC_calls": 1487,
+    "max_event_loop_lag_ms": 557,
+    "raw_report_sha256": "47a4b7dba0be2fee67754ed273165339f19dcd2f6e03881493229944ce099b10",
+    "source_identity": {
+      "git_head": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+      "git_tracked_dirty": true,
+      "version": "0.9.0-alpha11",
+      "recorded_source_fingerprint": "589d65aa06703c9e987e9d7a263da7a4789811b0eaa16cd6d38e1dfd65723efd",
+      "recorded_package_sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+      "preview_snapshot_sha256": "e34fafc08a415dbd7e07a0dfce6f57b63735626c72cebc79037f0b58c269fbae",
+      "ui_module_sha256": "495130bdaa2f26dcb55bbb848bdc82d2d4c0f7b30a8627e798bfbd40c30fb4c2",
+      "ui_stylesheet_sha256": "852ec7f146c1592fd8558ff82d60959e8cebd7cc863cdbe3a1c8a62b3616cf85",
+      "harness_sha256": "f2988b3975d4b786a8075dc9d398d52f6b6fbb6d39e6228c682f32bb042b18cf"
+    },
+    "harness_scope": "one visible iframe, start/end viewport geometry checked; one frozen source, no retry",
+    "alpha12_boundary": "Normal-flow results carried by exact parser/payload proof; the changed first-run gate is validated separately, not covered by the old50.",
+    "carryforward": {
+      "result": "PASS",
+      "scope": "static package and AST carryforward; alpha11 normal flows outside the narrowly changed first-run renderer/callsite",
+      "old": {
+        "source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+        "artifact": "homensai-auto-vpn_0.9.0-alpha11-1_all.ipk",
+        "sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+        "bytes": 654655
+      },
+      "new": {
+        "source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+        "source_kind": "committed",
+        "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+        "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+        "bytes": 654970
+      },
+      "payload_paths_compared": 69,
+      "other_payload_bytes_and_modes_unchanged_except": [
+        "agent.VERSION assignment",
+        "legacy controller first-line version comment",
+        "compiled main JS approved AST spans and version literal"
+      ],
+      "control_hooks_identical": true,
+      "main_js_before_sha256": "fe28ce3f12a3e7e3720aa9f51124e4e415781623c513a749a8cf7b79f3d11edc",
+      "main_js_after_sha256": "ece47d84344c218faacca468ad983a9e973f9722a66942f479dc678a67bd25d6",
+      "main_js_outside_approved_spans_sha256": "6475b4276e74c9a6141ccfc7ef6e766503af9487d301f7198bc68d80a38786e2",
+      "parser": {
+        "node": "v22.23.3",
+        "acorn": "8.16.0"
+      },
+      "approved_function": "renderTermsGate(inventory) -> renderTermsGate(inventory,status)",
+      "approved_callsite": [
+        "renderTermsGate(inventory)",
+        "renderTermsGate(inventory,data[1])"
+      ],
+      "callsite_condition_unchanged": "!inventory.error&&!termsAccepted(inventory)",
+      "terms_version_unchanged": "1",
+      "legal_declarations_unchanged": [
+        "TERMS_VERSION",
+        "TERMS_POINTS",
+        "TERMS_CHECKS"
+      ],
+      "legal_gate_strings_unchanged": 9,
+      "acceptance_handler_sha256": "d26e2338d8c12de079c2125324e7a3dd32855739dc688ec929f12f7fa13d6de5",
+      "checkbox_setup_sha256": "219a01f07817dc25627f7236d020278d0b5d684ae1a975271db5300190f536cd",
+      "checkbox_sync_sha256": "ea3936b5a9e490edcfa296bd936dcf3ead2021c0ec2b0aab094fc77883bbd950",
+      "checkbox_listener_sha256": "dc852ed47464a3ba7de791cfa28ac03004e7e93cec777f65903d5700639212f3",
+      "negative_selftests": {
+        "allowed": 1,
+        "rejected": 8
+      },
+      "frontend_executed": false,
+      "terms_accepted": false,
+      "new_first_run_gate_visual_acceptance": false,
+      "limits": [
+        "Does not rerun actual alpha12 normal-flow UI50",
+        "Does not accept router terms or bypass consent",
+        "New first-run renderer visual acceptance is separate",
+        "Does not certify native switching or hardware"
+      ]
+    },
+    "carryforward_summary_sha256": "2f589184a6d57b125846c68f60c939fdbd7167fdc4b18a4dcb421c0082603622"
+  },
+  "first_run_Node_cases": 36,
+  "actual_read_only_terms": {
+    "result": "PASS",
+    "cases": 12,
+    "scope": "ABC xEN/RUx1440/390;2unchecked boxes,Acceptdisabled; owner/model/version/badge/footer; no acceptance action",
+    "test_RPC_allowance_seconds": 60,
+    "raw_report_sha256": "6fb965605298f95cec3ad9eab100164030ebaebfea89445f20e4ffdcfacccc07"
+  },
+  "actual_normal_LuCI": {
+    "result": "BLOCKED",
+    "reason": "Explicit user authorization for accepting experimental termsv1 on the disposable VM is pending. Automatic approval review rejected acceptance; no alternative path was used.",
+    "planned_cases": 144,
+    "scope": "post-consent actual installed LuCI; not replaced by synthetic or read-only terms views"
+  },
+  "default_RPC_performance": {
+    "result": "OPEN/FAIL in software-emulated x86 VM",
+    "measured_version": "0.9.0-alpha11",
+    "normal_deadline_seconds": 20,
+    "status_seconds": [
+      21.318,
+      25.495
+    ],
+    "inventory_seconds": [
+      18.943,
+      21.151
+    ],
+    "authentication": "Direct RAM-only disposable sessions returned ubuscode0/exact identity and were destroyed; no session/body persisted",
+    "boundary": "60s test allowance is not default-performance acceptance; backend equivalence is explicit, no claim of a newalpha12 benchmark"
+  },
+  "optional_profile": {
+    "code": "RPC-DENIED-OR-UNAVAILABLE",
+    "session_cleanup": "UNCONFIRMED-OR-NO-SESSION-CREATED",
+    "session_destroyed": false,
+    "state": "REFUSED",
+    "terms_accepted": false,
+    "guest_payload_sha256": "6e532aca0b2f2c9afc8166bbff745760d373eee53f112e98a73da173f327556c",
+    "transport": "direct loopback HTTP file.exec in pinned isolated disposable container"
+  },
+  "optional_profile_boundary": "No verified profile/timing sample obtained; no measured cause or optimization claim. Session cleanup from the refused attempt is unconfirmed, not claimed successful.",
+  "SDK": {
+    "schema": 1,
+    "date": "2026-10-20",
+    "result": "EXACT-COMMIT-UPSTREAM-PAYLOAD-REPRODUCIBLE",
+    "scope": "exact committed alpha12 router export; standard SDK direct child package target only; full recursive runtime dependency build excluded",
+    "source_kind": "committed-tree",
+    "source_commit": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+    "source_archive_sha256": "4b50f923b4bfb13ab74d23ce0959585d67e744790b21adb7101cc5ee89edf061",
+    "source_files_verified": 293,
+    "sdk_archive_sha256": "21c75e4c5a429da487f8a885555cb49eee80cfc355d5dbe35d2b3ae05324a09d",
+    "sdk_package": {
+      "name": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+      "sha256": "1fbefecb251b1ff171cf316d035528bf9baebdb26089a6327480008b92043ea3",
+      "bytes": 657566
+    },
+    "custom_reference_sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+    "custom_reference_bytes": 654970,
+    "canonical_release_reference_matches": true,
+    "payload_files_compared": 69,
+    "source_makefile_sha256": "28b3f4842abb0d08378ea5b94645971382657a329f9a1172b80e1fe94f6b4da8",
+    "architecture": "all",
+    "repeated_sdk_packages_equal": true,
+    "first_steps": [
+      {
+        "step": "defconfig",
+        "command": [
+          "make",
+          "defconfig"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 8.992,
+        "log_sha256": "35a080840a7a86d9a24cbc3f90ce34791194ab21ddccf798767a12f4af8a2eec"
+      },
+      {
+        "step": "clean",
+        "command": [
+          "make",
+          "-j1",
+          "-C",
+          "package/homensai-auto-vpn",
+          "TOPDIR=/work/first",
+          "V=s",
+          "clean"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 3.06,
+        "log_sha256": "0d5740d9b2ba193151ff6f3cb25b6565232ba785a9cdb936e9ea8499bde2236f"
+      },
+      {
+        "step": "compile",
+        "command": [
+          "make",
+          "-j1",
+          "-C",
+          "package/homensai-auto-vpn",
+          "TOPDIR=/work/first",
+          "V=s",
+          "compile"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 6.974,
+        "log_sha256": "2a6d180f196588e52fa21767fedc956aaea0df9c8d050f02cc231558baa154f9"
+      }
+    ],
+    "second_steps": [
+      {
+        "step": "defconfig",
+        "command": [
+          "make",
+          "defconfig"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 2.999,
+        "log_sha256": "782ff4c85f7537ca137e528b80d39f35b762ca265b4129b399b1b732c072ce37"
+      },
+      {
+        "step": "clean",
+        "command": [
+          "make",
+          "-j1",
+          "-C",
+          "package/homensai-auto-vpn",
+          "TOPDIR=/work/first",
+          "V=s",
+          "clean"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 0.955,
+        "log_sha256": "3f5b5e2c2afcb9966f3a241e798e284ef39194e66f8888a10096eee286377442"
+      },
+      {
+        "step": "compile",
+        "command": [
+          "make",
+          "-j1",
+          "-C",
+          "package/homensai-auto-vpn",
+          "TOPDIR=/work/first",
+          "V=s",
+          "compile"
+        ],
+        "exit_code": 0,
+        "elapsed_s": 5.489,
+        "log_sha256": "3b7990dfd02690b772e87e69a79ce243be0fbb557bfd30d0699b53839a287572"
+      }
+    ],
+    "permitted_sdk_differences": [
+      "implicit libc dependency",
+      "exact pinned default_postinst/default_prerm wrappers with identical package hooks"
+    ],
+    "verifier_result": "EVIDENCE-CONSISTENT",
+    "vendor_firmware_match": false,
+    "device_acceptance": false,
+    "installation_authorized": false,
+    "native_adapter_certified": false,
+    "source_export_fix": "scripts/export-sdk-source.py: preserve root attributes; strip TAR prefix in memory",
+    "rejected_exact_commit_attempt": {
+      "result": "REJECTED-SOURCE-EXPORT-CONTEXT",
+      "source_commit": "984781141d5eddce4442941ee28ff851da7cbf28",
+      "cause": "git archive COMMIT:router loses root .gitattributes; core.autocrlf changes pinned style bytes",
+      "product_defect": false,
+      "subtree_archive_sha256": "704fdc1b3c110f8b57ce3251542151abb7c87e28c7fcc32d71f4eeabe6a736db",
+      "sdk_sha256": "49982dbb2bf585b3097efa1a6c15be04fe1e42ac40edcacd1902aa2edd407c32",
+      "subtree_custom_sha256": "cfddd22f1dda72a555e85eec894d79c4b09266a9a0506b1b53c632e8960b0e9c",
+      "canonical_custom_sha256": "9c077f5cc235f95c028f9ec35fa573e0880e7276fc566480199f326f73a3ac98",
+      "payload_differences_eol_only": 11,
+      "canonical_exact_source_sdk_acceptance": false
+    },
+    "previous_working_snapshot": {
+      "baseline_source_commit": "8c5433990f825890dcdf60e5b81f5c9a74466530",
+      "source_archive_sha256": "eb179e4c6bb615ba9f13f3af7b96ef3aba41a34fe9689815dbb23729cc22e6c8",
+      "sdk_package": {
+        "name": "homensai-auto-vpn_0.9.0-alpha10-1_all.ipk",
+        "sha256": "5c0fa20bfa238c323625a0b95de04dca90697a559e66828187278330796d5630",
+        "bytes": 656757
+      },
+      "custom_reference_sha256": "9c077f5cc235f95c028f9ec35fa573e0880e7276fc566480199f326f73a3ac98"
+    },
+    "open": [
+      "full recursive runtime dependency build",
+      "matching GL.iNet SDK provenance",
+      "actual MT3000 identity and hardware acceptance"
+    ],
+    "previous_committed_proofs": [
+      {
+        "source_commit": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+        "source_archive_sha256": "612ef3da83013ae18ffca43657d1dd63824c7ba34da17aec42de13547dcbff4a",
+        "source_files_verified": 292,
+        "sdk_package": {
+          "name": "homensai-auto-vpn_0.9.0-alpha11-1_all.ipk",
+          "sha256": "24559785d6cdcd4e42f7809eee456c96e425b27524aeaf7394f2d553015adfa7",
+          "bytes": 657285
+        },
+        "custom_reference_sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+        "custom_reference_bytes": 654655,
+        "payload_files_compared": 69,
+        "source_makefile_sha256": "269a27099faf252780434a6c92d0dd9f478d154be0f0ebf15d47366061151bd5"
+      }
+    ]
+  },
+  "alpha12_VM_upgrade": {
+    "result": "PASS",
+    "phase": "upgrade",
+    "package_version": "0.9.0-alpha12-1",
+    "package_sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+    "passed": 18,
+    "checks": [
+      {
+        "name": "preflight-no-pending-uci",
+        "result": "PASS"
+      },
+      {
+        "name": "preflight-auto-disabled",
+        "result": "PASS"
+      },
+      {
+        "name": "candidate-sha256",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-opkg-upgrade",
+        "result": "PASS"
+      },
+      {
+        "name": "installed-version",
+        "result": "PASS"
+      },
+      {
+        "name": "own-config-preserved",
+        "result": "PASS"
+      },
+      {
+        "name": "protected-network-firewall-preserved",
+        "result": "PASS"
+      },
+      {
+        "name": "auto-stays-off",
+        "result": "PASS"
+      },
+      {
+        "name": "fresh-upgraded-agent",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-procd-monitor",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-selected-ui-file",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-candidate-ui",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-scan-id-ack",
+        "result": "PASS"
+      },
+      {
+        "name": "actual-correlated-scan-completion",
+        "result": "PASS"
+      },
+      {
+        "name": "no-fake-active-profiles",
+        "result": "PASS"
+      },
+      {
+        "name": "live-control-revision",
+        "result": "PASS"
+      },
+      {
+        "name": "generic-board-auto-refused",
+        "result": "PASS"
+      },
+      {
+        "name": "final-protected-state-preserved",
+        "result": "PASS"
+      }
+    ],
+    "agent_version": "0.9.0-alpha12",
+    "protected_unchanged": true,
+    "private_values_exported": false,
+    "scope": "actual isolated x86 opkg/RPC/procd/UI files; no GL.iNet native or LAN acceptance",
+    "physical_router_access": false,
+    "guest_completed_at": 1792494826.536091,
+    "host_observed_at_utc": "2026-10-20T11:44:44.885588+00:00"
+  },
+  "backend_fool": {
+    "source": "984781141d5eddce4442941ee28ff851da7cbf28",
+    "personas": 50,
+    "requests": 18015,
+    "accepted": 2349,
+    "refused": 15666,
+    "violations": 0
+  },
+  "alpha10_VM_negative_integration": {
+    "state": "PASS",
+    "active": null,
+    "checks": [
+      {
+        "test": "hardening",
+        "result": "PASS",
+        "detail": {
+          "state": "PASS",
+          "scope": "actual disposable x86 RPC/lifecycle/nft/procd; no vendor or hardware acceptance",
+          "checks": [
+            "exact-agent-version",
+            "native-auto-off",
+            "native-supervisor-stopped-and-lock-owned",
+            "malformed-monitor-control-3",
+            "malformed-monitor-control-4",
+            "corrupt-journal-refuses-monitor-stop",
+            "corrupt-journal-refuses-auto",
+            "actual-package-lifecycle-refuses-empty-journal",
+            "release-pending-refuses-monitor-stop",
+            "release-pending-refuses-auto",
+            "expired-session-cannot-start-auto",
+            "isolated-guard-table-initially-absent",
+            "actual-nft-timeout-set-installed",
+            "kernel-releases-element-after-cleanup-process-loss",
+            "verified-guard-removal",
+            "old-timer-preserves-replacement-guard",
+            "native-auto-still-off",
+            "network-firewall-main-route-preserved"
+          ],
+          "passed": 18,
+          "journal_restored": true,
+          "guard_cleanup_confirmed": true,
+          "own_service_restart_requested": true,
+          "completed_at": 1792491685.9393113
+        }
+      },
+      {
+        "test": "storage",
+        "result": "PASS",
+        "detail": {
+          "state": "PASS",
+          "scope": "disposable 64KiB tmpfs and synthetic timestamps; not physical flash wear",
+          "physical_router_access": false,
+          "checks": [
+            "ENOSPC-known-checkpoint-preserved",
+            "write-recovers-after-space-freed",
+            "checksummed-invalid-schema-recovers-backup",
+            "corrupt-current-replaced-safely",
+            "backward-forward-clock-gaps-no-invented-bytes",
+            "protected-config-network-unchanged"
+          ],
+          "temporary_mount_cleaned": true,
+          "source_sha256": "711bbb34520d7e9e9ddb4bd4f5119589968c27d61c95fd7eb1fe0fe0669eb19c"
+        }
+      },
+      {
+        "test": "monitor-crash",
+        "result": "PASS",
+        "detail": {
+          "scope": "Own monitor process crash in marked x86 OpenWrt VM",
+          "result": "PASS",
+          "process_replaced": true,
+          "fresh_measurements": true,
+          "native_auto_enabled": false,
+          "network_firewall_main_route_preserved": true,
+          "recovery_seconds": 77.9,
+          "not_tested": [
+            "VPN executor crash",
+            "GL.iNet workers",
+            "Physical power loss"
+          ]
+        }
+      }
+    ],
+    "updated_at": 1792491832.077031,
+    "physical_router_access": false
+  },
+  "backend_carryforward": {
+    "alpha10_to11": {
+      "scope": "backend source bytes between tested alpha10 and UI-only alpha11; only agent.VERSION assignment neutralized",
+      "packages": {
+        "alpha10": {
+          "source": "984781141d5eddce4442941ee28ff851da7cbf28",
+          "artifact": "homensai-auto-vpn_0.9.0-alpha10-1_all.ipk",
+          "sha256": "9c077f5cc235f95c028f9ec35fa573e0880e7276fc566480199f326f73a3ac98",
+          "bytes": 654099
+        },
+        "alpha11": {
+          "source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+          "artifact": "homensai-auto-vpn_0.9.0-alpha11-1_all.ipk",
+          "sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+          "bytes": 654655
+        }
+      },
+      "files": [
+        {
+          "path": "usr/lib/homensai-vpn/agent.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "fab37154be6c20d446ff6b9b4de888f89faea4c6e84a56e7eba2c0ee0efde123"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/auto_control.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "3eb676555b7acf4471f58207617566508069a83e1ca99e2a3d38b6ada06c1477"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/candidate_hierarchy.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "d8066331a54f1b5c2fc636b365ab04724426bf48ad0853fafea77df1c7a3d7b7"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/candidate_runtime.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "cc5b7664d840f4054bd616ffced01a1c5f7d210017340847bf7f1649ffbb44a7"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/cascade_executor.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "dea8d5f4417749203b0a7a5e8dd85a3ab49134463ca5c7ffbf56011436a056b9"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/cascade_model.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "d74d9b8f8d2f058a3dfbc492c431d61d1980ad0ec1d6add5f15ada1c699405a1"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/checkpoint_schema.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "6d9ec3196f051403adae955bd4ddfab04b238042fa0a46b2e6d255b1f44874cc"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/configuration_guard.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "004c9474e8cce5088b64eb7d3e7b094d4db9aaa598f98d3c3c6025f20c8cdb31"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/configuration_migrations.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "479f13f5267eb5406cdf554fb89fc0a5c56428118b270868dd026a499ee81632"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/failover_plan.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "f1666180ee1d461cebc0ec57af4e70a9b506e78882c772a9d26b1c5c255a2f02"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/failure_diagnosis.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "44a76536bd306ad8e4e9a6604e5e5c728c1de893b6032b99a1d69cfb9ee22d9a"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/fault_control.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "f50f23ced416bacf489d2243770402174b683bd27bb33c71c829298589c2cc26"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/inventory.lua",
+          "equal_after_version_neutralization": true,
+          "sha256": "83498bd6a586d249126050452ea5365c97055ab922a5593fb98a0fd9aad89145"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/lifecycle_guard.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "3941d15a6bc95256b9d82c2d64f6086e874da5e7154e9ec7810e20bd4327ac56"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/luci_cache.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "01c0cac916fe1d3a004decc52103195602571a7dca007e998af1c4889befcf32"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/monitor_control.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "4fc990950f522c427936b783eab27d7acbc366ce0a2174cafd206c5ee31d32b4"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/native-audit-hashes.json",
+          "equal_after_version_neutralization": true,
+          "sha256": "44a2855b7c7dd78c2ca270746c58b022397b8b6c39ccf0166236456356c7a663"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/native_history.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "8b6017e9bb8e46e96f0d829ac25b541c9982d170b635aff7f03faa7db859e3c0"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/native_policy.lua",
+          "equal_after_version_neutralization": true,
+          "sha256": "d0e4e82c5fd17818bd6f026a0137db8ee0a549fcf85a42b6a145079969df81e1"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/native_switch.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "0ca87ecc3b0150341cc5015abe5baf5bd3df2ee466ed151690d772628166ca40"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/priority_config.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "5774b6f460a3723d0a72a9defa0a929214b11eb3662add68535b59189909933e"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/probe_deadline.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "0c84ba3ec290ac3ef50c81bdd55dcb90b324536c435b2384845496864263f0be"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/recovery_presets.json",
+          "equal_after_version_neutralization": true,
+          "sha256": "178a2a5a447d87c3fbbd7722290662409d01549aca2a86e53fc1988f57b965d4"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/recovery_settings.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "30e4511e71f44cf2a2d9c8d71c03d8ec33934362c5475291905458e94c8f145c"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/report_calendar.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "40c9c9d7a8f60219714d0075dcd3eb6054e08329950d460b4e4b5a1563fd04b1"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/rpc_input.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "31aaf6c56a0ea4d2d102b75a4bd107442f916407d5dd5aa12f8ec31bca8c25d7"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/rpc_throttle.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "c1926e6bdf6012591866ec18b42ac4ff7da58ce86d4f7004dadc6920bc045a18"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/scan_control.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "88e430c2eefaf71d31e34eadb57982db84881b0b070988750735a991d44f3582"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/setup_config.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "d2d91261b63aeb1076d901695d9ca38d9171938c1915678e61fc8dc52e9ce695"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/setup_save.lua",
+          "equal_after_version_neutralization": true,
+          "sha256": "0cb72f90e9d9a785979568284d35357c85aeb4a7e24676159a6496ad91d32048"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/speed_test.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "bdb5806b485237f5dc64d718c548a620386a771a57b4ec21e1b8e060d4d28baa"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/system_readiness.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "38cbb9f2d9e5dc3712301ec8630c294cdea6fdb18ae7fa6afb993664bda5f065"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/telegram_items.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "34a14a5dd7f8b51797b1f724e16073bf11b0da7575f8392512aa45b719d40d2e"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/telegram_private.lua",
+          "equal_after_version_neutralization": true,
+          "sha256": "18630e03c8cf38b0d53ed62a47ceedb21e807e78382121cf0ac9c85fc97c3f05"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/telegram_report.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "88f7051c32aa3d86cadb4723457be00dda70b452793e916cacf107986af748b7"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/telegram_state.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "13e10b370f4ea23abe12954a180ce2971ec3793a5ec0d3750048414e03c9dc30"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/timezone_compat.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "a5597bcfe30bf65eb38cc06b201fbb47dae8997c2b960a57defd5b3cc8d473ad"
+        },
+        {
+          "path": "usr/lib/homensai-vpn/uci_result.py",
+          "equal_after_version_neutralization": true,
+          "sha256": "b904279b25ce9f40c2dd6a7d4e40af9b5e2306aa472d5b249ca3a5faadb39bb2"
+        }
+      ],
+      "equal": true
+    },
+    "alpha11_to12": {
+      "result": "PASS",
+      "scope": "static package and AST carryforward; alpha11 normal flows outside the narrowly changed first-run renderer/callsite",
+      "old": {
+        "source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+        "artifact": "homensai-auto-vpn_0.9.0-alpha11-1_all.ipk",
+        "sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+        "bytes": 654655
+      },
+      "new": {
+        "source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+        "source_kind": "committed",
+        "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+        "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+        "bytes": 654970
+      },
+      "payload_paths_compared": 69,
+      "other_payload_bytes_and_modes_unchanged_except": [
+        "agent.VERSION assignment",
+        "legacy controller first-line version comment",
+        "compiled main JS approved AST spans and version literal"
+      ],
+      "control_hooks_identical": true,
+      "main_js_before_sha256": "fe28ce3f12a3e7e3720aa9f51124e4e415781623c513a749a8cf7b79f3d11edc",
+      "main_js_after_sha256": "ece47d84344c218faacca468ad983a9e973f9722a66942f479dc678a67bd25d6",
+      "main_js_outside_approved_spans_sha256": "6475b4276e74c9a6141ccfc7ef6e766503af9487d301f7198bc68d80a38786e2",
+      "parser": {
+        "node": "v22.23.3",
+        "acorn": "8.16.0"
+      },
+      "approved_function": "renderTermsGate(inventory) -> renderTermsGate(inventory,status)",
+      "approved_callsite": [
+        "renderTermsGate(inventory)",
+        "renderTermsGate(inventory,data[1])"
+      ],
+      "callsite_condition_unchanged": "!inventory.error&&!termsAccepted(inventory)",
+      "terms_version_unchanged": "1",
+      "legal_declarations_unchanged": [
+        "TERMS_VERSION",
+        "TERMS_POINTS",
+        "TERMS_CHECKS"
+      ],
+      "legal_gate_strings_unchanged": 9,
+      "acceptance_handler_sha256": "d26e2338d8c12de079c2125324e7a3dd32855739dc688ec929f12f7fa13d6de5",
+      "checkbox_setup_sha256": "219a01f07817dc25627f7236d020278d0b5d684ae1a975271db5300190f536cd",
+      "checkbox_sync_sha256": "ea3936b5a9e490edcfa296bd936dcf3ead2021c0ec2b0aab094fc77883bbd950",
+      "checkbox_listener_sha256": "dc852ed47464a3ba7de791cfa28ac03004e7e93cec777f65903d5700639212f3",
+      "negative_selftests": {
+        "allowed": 1,
+        "rejected": 8
+      },
+      "frontend_executed": false,
+      "terms_accepted": false,
+      "new_first_run_gate_visual_acceptance": false,
+      "limits": [
+        "Does not rerun actual alpha12 normal-flow UI50",
+        "Does not accept router terms or bypass consent",
+        "New first-run renderer visual acceptance is separate",
+        "Does not certify native switching or hardware"
+      ]
+    },
+    "boundary": "18hardening+6storage+77.9s monitor-recovery checks were executedalpha10;38 backend files match through exact singleVERSION-assignment normalization, not rerun asalpha12 fault tests"
+  },
+  "stopped_observation": {
+    "state": "STOPPED",
+    "source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+    "package_sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+    "samples": 14,
+    "failures": 0,
+    "gaps": 0,
+    "elapsed_seconds": 1582.656,
+    "started_at_utc": "2026-10-20T11:02:30.748814+00:00",
+    "finished_at_utc": "2026-10-20T11:28:59.395058+00:00"
+  },
+  "stopped_observation_reason": "Deliberately stopped before test-only consent/configuration change; both producer and independent pause cleanup confirmed. Acceptance was subsequently rejected before execution, so no consent change occurred. This is not12hPASS.",
+  "long_observation_rule": "A fresh run must use a new namespace and final-source manifest/d7 package. Read its private status and independent cleanup; starting is not12hPASS. Do not retarget stopped82591bd run.",
+  "retained_failures": [
+    "Alpha10 full50:31PASS19FAIL incl17readiness failures; lesson and diagnostic-storm defects independently reproduced",
+    "Alpha11 offscreen attempt:15completed14PASS1FAIL,1STOPPED,34notstarted; visibility/timing acceptance invalidated",
+    "Alpha12 first full terms attempt:3PASS then stale-document refusal; navigation nonce added, original failed result retained",
+    "Earlier installed-LuCI/default20s failures remain private, not relabelled"
+  ],
+  "agents": [
+    {
+      "task": "backend/actual LuCI",
+      "new_backend_regressions": 24,
+      "focused_tests_per_runtime": 145,
+      "runtimes": [
+        "3.9",
+        "3.11"
+      ],
+      "browser_harness_proxy_tests": 10
+    },
+    {
+      "task": "UI",
+      "normal_flow_personas": 50,
+      "first_run_Node_cases": 36,
+      "Node_UI_suites": 30
+    },
+    {
+      "task": "backup/platform/SDK",
+      "SDK_checker_tests": 11,
+      "source_export_tests": 2,
+      "SDK_repeated_builds": 2,
+      "source_files": 293,
+      "payload_files": 69
+    }
+  ],
+  "save_rule": "Match current HEAD to private exact-source CI/publication receipts and Gitea/GitHub SHA. Restore-verified local archive and actual D copy are separate results; publication/save ledgers remain private.",
+  "still_open": [
+    "Completed current-source12h observation",
+    "Default20s HTTP RPC performance in software VM",
+    "D copy until intended disk returns",
+    "Actual post-consent144case LuCI matrix unless explicitly authorized and passed",
+    "Matching GL.iNet SDK/full recursive runtime-dependency build",
+    "GL-MT3000 actual identity/firmware/bootloader and recoverable backup",
+    "Verified vendor adapter/cooperative workers/inactive profiles/multi-hop",
+    "Independent LAN/IPv6/KillSwitch and actual reboot/power-loss/unattended acceptance"
+  ]
+}

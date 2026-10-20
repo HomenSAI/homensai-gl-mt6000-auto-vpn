@@ -17,7 +17,7 @@ var TERMS_CHECKS=[
 function termsAccepted(inventory){
   return !!inventory&&!inventory.error&&!!inventory.settings&&inventory.settings.terms_version===TERMS_VERSION;
 }
-function renderTermsGate(inventory){
+function renderTermsGate(inventory,status){
   var boxes=TERMS_CHECKS.map(function(){return E('input',{'type':'checkbox'});});
   var busy=false,button=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-terms-accept','click':function(){
     if(busy||!boxes.every(function(box){return box.checked===true;}))return;
@@ -32,10 +32,15 @@ function renderTermsGate(inventory){
   button.disabled=true;
   var other=locale==='ru'?'en':'ru';
   var language=E('a',{'href':'#','click':function(ev){ev.preventDefault();var next=new URL(window.location.href);next.searchParams.set('lang',other);window.location.assign(next.toString());}},other==='ru'?'Русский':'English');
-  return E('div',{'class':'hv-app hv-terms','data-terms-gate':TERMS_VERSION},[
+  var model=identityModel(status||{});
+  var versionBadge=E('span',{'class':'hv-version','aria-label':bi('Program version','Версия программы')},'v'+(model.agent||model.uiAgent));
+  var attribution=E('div',{'class':'hv-terms-attribution'},[renderAttribution(status||{})]);
+  var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');
+  applyTheme(storedTheme());
+  var gate=E('div',{'class':'hv-app hv-terms','data-terms-gate':TERMS_VERSION,'data-hv-design':currentDesign(),'style':'width:100%;box-sizing:border-box;overflow-wrap:anywhere'},[
     E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui15.css')}),
     E('section',{'class':'hv-chart-card hv-terms-card'},[
-      E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),
+      E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),versionBadge]),
       E('h1',{},bi('Experimental software: please read','Экспериментальное ПО: прочитайте, пожалуйста')),
       E('p',{},[bi('Language: ','Язык: '),language]),
       E('ol',{'class':'hv-terms-list'},TERMS_POINTS.map(function(point){return E('li',{},[E('strong',{},bi(point.h[0],point.h[1])),E('p',{},bi(point.t[0],point.t[1]))]);})),
@@ -43,6 +48,7 @@ function renderTermsGate(inventory){
       E('div',{'class':'hv-terms-checks'},TERMS_CHECKS.map(function(text,index){return E('label',{'class':'hv-terms-check'},[boxes[index],' ',bi(text[0],text[1])]);})),
       E('p',{},button),
       E('div',{'class':'hv-terms-note'},[E('p',{},bi('If you do not accept, remove the package and your router stays as it was:','Если вы не принимаете условия, удалите пакет, и роутер останется как был:')),helpCommand('opkg remove homensai-auto-vpn')])
-    ])
+    ]),attribution,footer
   ]);
+  return gate;
 }

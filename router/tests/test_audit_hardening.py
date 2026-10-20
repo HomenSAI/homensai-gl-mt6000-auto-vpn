@@ -68,7 +68,8 @@ class Hardening(unittest.TestCase):
         self.assertTrue(stopped['all_trials'])
         self.assertEqual(auto_control.effective_intent({'native_enabled':'1','native_trial':'legacy'},stopped,{},time.time()),(False,True))
         with patch.object(agent,'command',side_effect=OSError('unreadable')),patch.object(auto_control,'atomic_json') as write:
-            self.assertTrue(auto_control.stop(runtime=self.directory,persist=self.directory)['already_requested']);write.assert_not_called()
+            self.assertTrue(auto_control.stop(runtime=self.directory,persist=self.directory)['already_requested'])
+            self.assertEqual([call.args[0].name for call in write.call_args_list],['auto-control-revision.json'])
 
     def test_explicit_later_start_can_supersede_emergency_stop(self):
         settings={'native_enabled':'0','native_trial':'new','native_until':'1000'}

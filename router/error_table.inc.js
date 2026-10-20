@@ -98,6 +98,10 @@ var ERROR_ROWS=[
  ['JOURNAL-INTEGRITY-FAILED','switch','Journal failed its check','Журнал не прошёл проверку','The transaction journal has a wrong checksum.','У журнала транзакций неверная контрольная сумма.','Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.','Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.']
 ];
 var AUTO_NAMES={
+  'CONTROL-REVISION-STALE':['Auto controls changed','Управление Auto изменилось'],
+  'START-STATE-UNVERIFIED':['Saved Auto state unverified','Состояние Auto не проверено'],
+  'STOP-SUPERSEDED-START':['Pending Start cancelled','Ожидающий запуск отменён'],
+  'START-CONFIG-CHANGED':['Settings changed during Start','Настройки изменились при запуске'],
 'LAN-TRIAL-REQUIRED':['LAN trial required','Нужен LAN-тест'],'BOUNDED-DEADLINE-REQUIRED':['Test window missing','Нет окна теста'],'SESSION-LOSS-NOT-ACCEPTED':['Reconnection not accepted','Не разрешён разрыв сессий'],
 'TRANSACTION-IN-PROGRESS':['Switch in progress','Переключение идёт'],'TRIAL-ATTEMPT-LIMIT':['Trial attempt limit','Лимит попыток теста'],'UNSUPPORTED-BOARD':['Unsupported router model','Неподдерживаемая модель роутера'],
 'UNSUPPORTED-FIRMWARE':['Unsupported firmware','Неподдерживаемая прошивка'],'FIRMWARE-UNKNOWN':['Firmware unknown','Прошивка неизвестна'],'VENDOR-CODE-CHANGED':['GL.iNet code changed','Код GL.iNet изменился'],

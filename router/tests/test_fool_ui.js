@@ -30,6 +30,8 @@ const click=node=>node.attrs.click({currentTarget:node,target:node});
     for(const value of ['', ' ', '1e2','0x10','1.0','10,0','+10',' 10','10 ',String(range[0]-1),String(range[1]+1)])assert(!c.foolCheckNumber(key,value).ok,key+': '+value);
   }
   assert(!c.foolCheckText('name','valid\n').ok,'trailing newline must be rejected before trim');
+  assert(c.foolCheckNumber('system.interval','9'.repeat(400)).message.includes('too big'));
+  assert(c.foolCheckNumber('system.interval','-'+'9'.repeat(400)).message.includes('too small'));
   assert(!c.foolCheckText('channel','valid\x7f').ok);
   assert(c.foolCheckText('chat','@example_channel').ok);assert(!c.foolCheckText('chat','@x').ok);
   assert(!c.foolCheckText('token','PRIVATE INVALID TOKEN').ok);

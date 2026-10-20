@@ -61,6 +61,8 @@ def summarise(results):
             dead.append((r.get('persona'), 'APP-DEAD-OR-OWNER-ATTRIBUTES-MISSING'))
         if r.get('steps', 0) <= 0 or r.get('interactionStarted') is False or r.get('readinessFailed'):
             dead.append((r.get('persona'), 'INTERACTION-NOT-PROVEN'))
+        if r.get('layoutReady') is False:
+            dead.append((r.get('persona'), 'HARNESS-FRAME-NOT-VISIBLE'))
         if r.get('modalOpen'):
             per_kind[kind]['modal_left_open'] += 1
         if r.get('docOverflow', 0) > 0:

@@ -7,10 +7,11 @@ const agent=fs.readFileSync('router/files/usr/lib/homensai-vpn/agent.py','utf8')
 const version=/^TERMS_VERSION = '([^']+)'/m.exec(agent)[1];
 const src=fs.readFileSync('router/terms_panel.inc.js','utf8').replace('__TERMS_VERSION__',version);
 const calls=[],notes=[];let reloads=0,failure=null;
-const context={helpCommand:(c)=>new Node('pre',{},[c]),bi:(en)=>en,locale:'en',E:(tag,attrs,children)=>new Node(tag,attrs,children),L:{resource:p=>'/r/'+p},
-  ui:{addNotification:(_,n)=>notes.push(n)},window:{location:{reload:()=>reloads++,href:'http://r/x'}},URL,
+const app=JSON.parse(fs.readFileSync('VERSION.json','utf8')).application;
+const context={applyTheme(){},storedTheme:()=> 'system',currentDesign:()=> 'a',helpCommand:(c)=>new Node('pre',{},[c]),bi:(en)=>en,locale:'en',E:(tag,attrs,children)=>new Node(tag,attrs,children),L:{resource:p=>'/r/'+p},
+  ui:{addNotification:(_,n)=>notes.push(n)},window:{HomenS:{brandUi:{renderFooter:(host)=>host.children.push(new Node('p',{},'Developer · Serhii Khomenko'))}},location:{reload:()=>reloads++,href:'http://r/x'}},URL,
   rpc:{declare:spec=>(...args)=>{calls.push({spec,args});return failure?Promise.reject(new Error('x')):Promise.resolve(context.answer);}}};
-vm.createContext(context);vm.runInContext(src,context);
+vm.createContext(context);vm.runInContext(fs.readFileSync('router/identity_panel.inc.js','utf8').replace('__UI_BUILD__',app.ui_module).replace('__UI_AGENT__',app.version),context);vm.runInContext(fs.readFileSync('router/attribution_panel.inc.js','utf8'),context);vm.runInContext(src,context);
 const accepted={settings:{terms_version:version}};
 assert.equal(context.termsAccepted(accepted),true);
 for(const bad of [{settings:{terms_version:''}},{settings:{terms_version:'0'}},{settings:{}},{},null,undefined,{error:'X',settings:{terms_version:version}}])assert.equal(context.termsAccepted(bad),false);
@@ -43,7 +44,8 @@ for(const bad of [{settings:{terms_version:''}},{settings:{terms_version:'0'}},{
   // Wired into the generated page: the gate replaces everything until accepted; Help repeats the terms.
   const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
   const page=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
-  assert(page.includes("if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);")&&page.includes("TERMS_VERSION='"+version+"'")&&!page.includes('__TERMS_'));
+  assert(page.includes("if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(")&&page.includes("TERMS_VERSION='"+version+"'")&&!page.includes('__TERMS_'));
   assert(page.includes("HELP_TOPICS.push({id:'terms'"));
+  assert(fs.readFileSync('router/build_sidebar_ui.py','utf8').includes('return renderTermsGate(inventory,data[1]);'),'gate receives the already-loaded identity without another RPC');
   console.log('PASS: first-run terms gate (two boxes, typed acceptance, documents and Help in step)');
 })().catch(e=>{console.error(e);process.exitCode=1;});

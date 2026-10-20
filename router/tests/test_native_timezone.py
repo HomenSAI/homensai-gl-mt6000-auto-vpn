@@ -35,7 +35,7 @@ class WindowsDeadlineCompatibility(unittest.TestCase):
     def test_missing_timezone_still_refused(self):
         with self.assertRaises(native.Refused):native.deadline('2026-10-15T17:20:32.040403')
     def test_invalid_offset_still_refused(self):
-        with self.assertRaises(ValueError):native.deadline('2026-10-15T17:20:32.0404034+99:00')
+        with self.assertRaisesRegex(native.Refused,'BOUNDED-DEADLINE-REQUIRED'):native.deadline('2026-10-15T17:20:32.0404034+99:00')
 
 class GuardFileCompatibility(unittest.TestCase):
     def test_private_file_checked_then_applied_and_removed(self):

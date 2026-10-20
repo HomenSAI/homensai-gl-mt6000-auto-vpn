@@ -1,5 +1,6 @@
 """Fail-closed acceptance and readiness regressions for the local browser persona harness."""
 import importlib.util
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -19,7 +20,7 @@ class PersonaAcceptance(unittest.TestCase):
     def test_every_reported_failure_affects_exit_verdict(self):
         self.assertTrue(checker.failed(checker.summarise([])))
         self.assertFalse(checker.failed(checker.summarise([self.clean()])))
-        changes=[dict(error='TIMEOUT'),dict(fatal='TOP failure'),dict(errors=['TYPE defect']),dict(appAlive=False),dict(attribution=False),dict(footer=False),dict(steps=0),dict(interactionStarted=False),dict(readinessFailed='final'),dict(callCount=151),dict(maxLag=1501),dict(nodesEnd=301),dict(docOverflow=1),dict(calls=[dict(m='setup_monitor',p=['interval'],a=[0])])]
+        changes=[dict(error='TIMEOUT'),dict(fatal='TOP failure'),dict(errors=['TYPE defect']),dict(appAlive=False),dict(attribution=False),dict(footer=False),dict(steps=0),dict(interactionStarted=False),dict(readinessFailed='final'),dict(layoutReady=False),dict(callCount=151),dict(maxLag=1501),dict(nodesEnd=301),dict(docOverflow=1),dict(calls=[dict(m='setup_monitor',p=['interval'],a=[0])])]
         for change in changes:
             with self.subTest(change=change):
                 row=self.clean();row.update(change)
@@ -35,6 +36,16 @@ class PersonaAcceptance(unittest.TestCase):
     def test_browser_readiness_contract(self):
         result=subprocess.run(['node',str(HERE/'test_fool_readiness.js')],capture_output=True,text=True,timeout=10)
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+
+    def test_preview_snapshot_identity_and_allowlist(self):
+        spec=importlib.util.spec_from_file_location('source_identity',HERE/'source_identity.py')
+        identity=importlib.util.module_from_spec(spec);spec.loader.exec_module(identity)
+        files,source,manifest=identity.freeze_preview(HERE.parents[1])
+        self.assertEqual(source['ui_module_sha256'],hashlib.sha256(files['/preview-module.js']).hexdigest())
+        self.assertEqual(files['/preview-router.js'],b'window.HOMENSAI_PREVIEW_ROUTER_ORIGIN=null;')
+        self.assertFalse(any('private/' in name or '.git/' in name or name.endswith('.py') for name in files))
+        self.assertEqual(set(files),set(manifest['served_assets']))
+        for name,data in files.items():self.assertEqual(manifest['served_assets'][name],hashlib.sha256(data).hexdigest())
 
 
 if __name__=='__main__':unittest.main()

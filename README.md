@@ -1,6 +1,6 @@
 # HomenSAI Auto VPN · GL-MT6000
 
-Current development candidate (20 October 2026): **0.9.0-alpha9-1**. Continue from the [active recovery backlog](docs/handoff/RECOVERY-TODO-2026-10-20.md) and [current checkpoint](docs/handoff/ACTIVE-STATE-2026-10-20.json). The mobile GL-MT3000 is the selected future test target and is not yet connected; its platform/native adapter is not certified. Older dated review/STOPPED/version descriptions below remain historical evidence.
+Current development candidate (20 October 2026): **0.9.0-alpha12-1**. Continue from the [active recovery backlog](docs/handoff/RECOVERY-TODO-2026-10-20.md), [current checkpoint](docs/handoff/ACTIVE-STATE-2026-10-20.json) and [offline hardening record](docs/OFFLINE-HARDENING-2026-10-20.md). The mobile GL-MT3000 is the selected future test target and is not yet connected; its platform/native adapter is not certified. Older dated review/STOPPED/version descriptions below remain historical evidence.
 
 > ## ⚠ Experimental software: use at your own risk
 >

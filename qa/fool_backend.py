@@ -197,6 +197,11 @@ def v_monitor_control(a):
     return isinstance(a, dict) and set(a) == {'enabled'} and is_bool(a['enabled'])
 
 
+def v_native_start(a):
+    return (isinstance(a,dict) and set(a)=={'control_revision'}
+            and isinstance(a['control_revision'],str) and re.fullmatch('[a-f0-9]{32}',a['control_revision']) is not None)
+
+
 STATE = {'revision': ''}
 
 
@@ -227,7 +232,7 @@ SPECS = {
     'speed_start': (lambda: {'profiles': ['wg_a'], 'budget_mib': 4, 'duration': 3, 'streams': 1}, v_speed_start),
     'speed_cancel': (dict, v_empty),
     'monitor_control': (lambda: {'enabled': True}, v_monitor_control),
-    'native_start': (dict, v_empty), 'native_stop': (dict, v_empty), 'native_return': (dict, v_empty),
+    'native_start': (lambda: {'control_revision':'a'*32}, v_native_start), 'native_stop': (dict, v_empty), 'native_return': (dict, v_empty),
     'native_confirm': (lambda: {'tx': TX, 'exit_ipv4': '8.8.8.8', 'dns_ok': True, 'https_ok': True, 'trial': TRIAL}, v_confirm),
     'telegram_test': (dict, v_empty), 'telegram_retry': (dict, v_empty), 'setup_check': (dict, v_empty),
     'scan': (dict, v_empty), 'status': (dict, v_empty), 'events': (dict, v_empty), 'inventory': (dict, v_empty),

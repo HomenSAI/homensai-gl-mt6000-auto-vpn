@@ -1,5 +1,6 @@
 """One monotonic deadline across connect, TLS and every HTTP stream read."""
 import io
+import math
 import socket
 import time
 
@@ -7,6 +8,9 @@ HTTP_SECONDS = 6
 
 
 def remaining(deadline):
+    try:valid=type(deadline) in (int,float) and math.isfinite(deadline)
+    except OverflowError:valid=False
+    if not valid:raise socket.timeout('invalid probe deadline')
     seconds = deadline-time.monotonic()
     if seconds <= 0:
         raise socket.timeout('probe deadline exceeded')

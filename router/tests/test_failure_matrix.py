@@ -352,13 +352,13 @@ class Buttons(unittest.TestCase):
         for phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
             with self.subTest(phase=phase),patch('native_switch.Linux',return_value=backend),patch('native_switch.journal_read',return_value={'phase':phase}),\
                  patch.object(auto_control,'RUNTIME',self.dir):
-                self.assertEqual(auto_control.start(),{'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']})
+                self.assertEqual(auto_control.start(auto_control.current_revision()),{'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']})
 
     def test_start_with_unreadable_journal_does_not_start(self):
         backend=MagicMock();backend.policy.return_value={'settings':{}};backend.diagnostic.return_value=([],None)
         with patch('native_switch.Linux',return_value=backend),patch('native_switch.journal_read',side_effect=native.Refused('JOURNAL-INTEGRITY-FAILED')),\
              patch.object(auto_control,'RUNTIME',self.dir):
-            self.assertEqual(auto_control.start(),{'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']})
+            self.assertEqual(auto_control.start(auto_control.current_revision()),{'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']})
         self.assertFalse((self.dir/'auto-control.json').exists())
 
     def test_return_button_only_acts_on_a_held_or_committed_reserve(self):

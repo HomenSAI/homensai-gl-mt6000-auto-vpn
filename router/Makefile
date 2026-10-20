@@ -1,14 +1,14 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=homensai-auto-vpn
-PKG_VERSION:=0.9.0-alpha9
+PKG_VERSION:=0.9.0-alpha12
 PKG_RELEASE:=1
-PKGARCH:=all
 PKG_LICENSE:=MIT
 
 include $(INCLUDE_DIR)/package.mk
 
 define Package/homensai-auto-vpn
+  PKGARCH:=all
   SECTION:=net
   CATEGORY:=Network
   TITLE:=HomenSAI Auto VPN monitor for GL.iNet

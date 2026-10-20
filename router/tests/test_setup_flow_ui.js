@@ -21,7 +21,8 @@ function make(options={}){
  return {context,button,click,get modal(){return modal;},get reloads(){return reloads;},get calls(){return calls;},get notes(){return notes;},get resolveSave(){return resolveSave;},get rejectSave(){return rejectSave;},get resolveCheck(){return resolveCheck;}};
 }
 const inventory={settings:{plan_source:'a',plan_target:'b',interval:30,native_duration:10,native_session_loss:true},profiles:[{id:'a',name:'Primary',protocol:'openvpn'},{id:'b',name:'Reserve',protocol:'wireguard'}]};
-async function ready(value){value.context.setupWizard(inventory,'system');await Promise.resolve();await Promise.resolve();await value.click('Next');await value.click('Next');assert(value.button('Save configuration'));}
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+async function ready(value){value.context.setupWizard(inventory,'system');await flush();await value.click('Next');await value.click('Next');assert(value.button('Save configuration'));}
 (async()=>{
  let value=make({pending:true});await ready(value);const review=value.modal;
  assert(walk(review).some(n=>n.tag==='td'&&n.children.includes('Primary')),'review must show actual edited metadata');
@@ -39,9 +40,9 @@ async function ready(value){value.context.setupWizard(inventory,'system');await 
   value=make({save:reply});await ready(value);await value.click('Save configuration');assert(value.modal,'unverified reply must retain draft');assert.equal(value.reloads,0);assert(!JSON.stringify(value.notes).includes('private token'));
  }
  for(const reply of [null,{}, {passed:'true'},{passed:false}]){
-  value=make({check:reply});value.context.setupWizard(inventory,'system');await Promise.resolve();await Promise.resolve();assert.equal(value.button('Next').disabled,true,'unknown check result must not unlock save');
+  value=make({check:reply});value.context.setupWizard(inventory,'system');await flush();assert.equal(value.button('Next').disabled,true,'unknown check result must not unlock save');
  }
- value=make({checkPending:true});value.context.setupWizard(inventory,'system');await value.click('Cancel');value.resolveCheck({passed:true});await Promise.resolve();await Promise.resolve();assert.equal(value.modal,null,'late check must not reopen cancelled wizard');
+ value=make({checkPending:true});value.context.setupWizard(inventory,'system');await value.click('Cancel');value.resolveCheck({passed:true});await flush();assert.equal(value.modal,null,'late check must not reopen cancelled wizard');
  value=make();await ready(value);await value.click('Save configuration');assert.equal(value.reloads,1);assert.equal(value.modal,null);
  const save=value.calls.find(c=>c.spec.method==='setup_system');assert(!save.spec.params.includes('native_enabled'));assert(!value.calls.some(c=>c.spec.method.startsWith('native_')),'wizard save cannot start Auto');
  console.log('PASS: system wizard pending navigation, duplicate save, private error redaction, typed replies, late cancellation and metadata-only success');

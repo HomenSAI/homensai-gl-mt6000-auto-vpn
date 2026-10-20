@@ -1,5 +1,5 @@
 const assert=require('assert');
-const {frameState,waitForReady}=require('./fool.js');
+const {frameState,waitForReady,readinessDetails,createFrame,frameLayout}=require('./fool.js');
 const app={},attribute={},doc={readyState:'complete',querySelector:s=>s==='.hv-app'?app:attribute};
 const win={getComputedStyle:()=>({getPropertyValue:()=> '1px'})};
 const frame={contentDocument:doc,contentWindow:win};
@@ -22,5 +22,14 @@ const frame={contentDocument:doc,contentWindow:win};
   }
   const bug={get contentWindow(){throw new Error('real harness defect');}};
   assert.throws(()=>frameState(bug),/real harness defect/,'only navigation SecurityError is pending');
+  const root={getAttribute:()=> 'c'},sheet={href:'http://fixture/ui.css',sheet:{cssRules:[]},disabled:false,media:''};
+  const detail=readinessDetails({contentDocument:{readyState:'complete',querySelector:s=>s==='.hv-app'?root:{textContent:'fixture'},querySelectorAll:s=>s==='.hv-app'?[root]:[sheet],getElementsByTagName:()=>[root]},contentWindow:{location:{href:'http://fixture/'},performance:{getEntriesByType:()=>[]},getComputedStyle:()=>({getPropertyValue:()=>''})}});
+  assert(detail.accessible&&detail.app);assert.equal(detail.design,'c');assert.equal(detail.links[0].rules,0,'an empty sheet is recorded, never inferred ready');
+  // The probe HTML already owns iframe#f: appending another would put the app below the viewport.
+  const existing={style:{},getBoundingClientRect(){const width=Number(/width:(\d+)px/.exec(this.style.cssText)[1]),height=Number(/height:(\d+)px/.exec(this.style.cssText)[1]);return {left:0,top:0,right:width,bottom:height,width,height};}},output={hidden:false};let creations=0;
+  const doc2={documentElement:{style:{}},body:{style:{},appendChild(){throw new Error('must reuse existing iframe');}},getElementById:id=>id==='f'?existing:output,createElement(){creations++;throw new Error('duplicate iframe');},querySelectorAll:()=>[existing]};
+  const host={innerWidth:1280,innerHeight:760};assert.strictEqual(createFrame(doc2,{w:1280,h:900},host),existing);assert.equal(creations,0);assert(output.hidden);
+  const layout=frameLayout(doc2,existing,host);assert.equal(layout.count,1);assert(layout.visible&&layout.inside);assert.equal(layout.height,760);
+  const offscreen={getBoundingClientRect:()=>({left:0,top:900,right:1280,bottom:1660,width:1280,height:760})};assert(!frameLayout(doc2,offscreen,host).visible,'the previous second-iframe layout must be rejected');
   console.log('PASS: stable document+CSS readiness, delayed CSS, transient navigation recovery, bounded missing-app/CSS/origin refusal and unexpected-error propagation');
 })().catch(error=>{console.error(error);process.exitCode=1;});

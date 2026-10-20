@@ -10,7 +10,37 @@ import os
 import math
 import re
 import time
+import uuid
 from agent import RUNTIME, PERSIST, atomic_json, read_json
+
+
+def valid_stop(record):
+    if not isinstance(record,dict):return False
+    if not record:return True
+    epoch=record.get('requested')
+    try:
+        if type(epoch) not in (int,float) or not math.isfinite(epoch) or epoch<=0:return False
+    except OverflowError:return False
+    if 'all_trials' in record and type(record['all_trials']) is not bool:return False
+    if 'control_revision_failed' in record and type(record['control_revision_failed']) is not bool:return False
+    return record.get('all_trials') is True or isinstance(record.get('trial'),str) and bool(record['trial'])
+
+
+def revision_locked(directory, rotate=False):
+    """Public freshness marker in RAM. Caller owns this directory's control lock."""
+    path=directory/'auto-control-revision.json'
+    try:record=read_json(path,{})
+    except (OSError,ValueError):record={}
+    revision=record.get('revision') if isinstance(record,dict) and set(record)=={'revision'} else None
+    if rotate or not isinstance(revision,str) or not re.fullmatch(r'[a-f0-9]{32}',revision):
+        revision=uuid.uuid4().hex
+        atomic_json(path,{'revision':revision})
+    return revision
+
+
+def current_revision(runtime=None, rotate=False):
+    runtime=runtime or RUNTIME
+    with control_lock(runtime):return revision_locked(runtime,rotate)
 
 
 @contextmanager
@@ -30,23 +60,29 @@ def control_lock(directory=None):
 
 
 def readiness(settings, certificate, consumed, selection, blockers, now):
-    from native_switch import deadline
+    from native_switch import deadline, Refused
     reasons = list(blockers)
-    until = deadline(settings.get('native_until'))
+    if any(not isinstance(row,dict) for row in (settings,certificate,consumed)):
+        return sorted(set(reasons+['START-STATE-UNVERIFIED']))
+    try:until = deadline(settings.get('native_until'))
+    except Refused as error:
+        until=0;reasons.append(str(error))
     if not now < until <= now + 14400:
         reasons.append('BOUNDED-DEADLINE-REQUIRED')
     if settings.get('native_session_loss') != '1':
         reasons.append('SESSION-LOSS-NOT-ACCEPTED')
     if not settings.get('native_trial') or consumed.get('trial') != settings['native_trial']:
         reasons.append('LAN-TRIAL-REQUIRED')
-    if consumed.get('count', 0) >= 3:
+    count=consumed.get('count',0)
+    if type(count) is not int or not 0<=count<3:
         reasons.append('TRIAL-ATTEMPT-LIMIT')
-    if not selection or not all((
+    certified_until=certificate.get('until',0)
+    if not isinstance(selection,dict) or not all(isinstance(selection.get(k),dict) for k in ('source','target')) or not all((
         certificate.get('hash') == selection.get('hash'),
         certificate.get('source') == selection.get('source', {}).get('id'),
         certificate.get('target') == selection.get('target', {}).get('id'),
         certificate.get('direction') == selection.get('direction'),
-        certificate.get('until', 0) >= until,
+        type(certified_until) in (int,float) and math.isfinite(certified_until) and certified_until >= until,
         certificate.get('settings_hash') == selection.get('settings_hash'),
     )):
         reasons.append('LAN-TRIAL-REQUIRED')
@@ -55,9 +91,11 @@ def readiness(settings, certificate, consumed, selection, blockers, now):
 
 def effective_intent(settings, stopped, request, now):
     """Malformed, stale/future or different-trial intents cannot enable anything."""
-    from native_switch import deadline
+    from native_switch import deadline, Refused
     if any(not isinstance(row, dict) for row in (settings, stopped, request)):
         return False, True
+    if not valid_stop(stopped):return False, True
+    if stopped.get('control_revision_failed') is True:return False, True
     enabled = settings.get('native_enabled') == '1'
     # An emergency Stop with unknown settings stops the current config-enabled
     # trial too. Only a later explicit UI Start can supersede its durable epoch.
@@ -77,8 +115,11 @@ def effective_intent(settings, stopped, request, now):
         return False, True
     if not request or request.get('trial') != settings.get('native_trial'):
         return enabled, stop_latched
+    try:until=deadline(settings.get('native_until'))
+    except Refused:return False, True
     valid = (request.get('trial') == settings.get('native_trial')
-             and request.get('until') == deadline(settings.get('native_until'))
+             and type(request.get('until')) in (int,float) and math.isfinite(request['until'])
+             and request['until'] == until
              and type(request.get('time')) in (int, float)
              and math.isfinite(request['time'])
              and 0 < request['time'] <= now
@@ -92,26 +133,64 @@ def effective_intent(settings, stopped, request, now):
     return True, False
 
 
-def start():
+def start(control_revision=None):
     from native_switch import Linux, journal_read, deadline, Refused
+    arrived=time.time()
+    if not isinstance(control_revision,str) or not re.fullmatch(r'[a-f0-9]{32}',control_revision):
+        return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
     with control_lock():
-        backend = Linux()
-        settings = backend.policy()['settings']
-        blockers, selection = backend.diagnostic()
+        if control_revision!=revision_locked(RUNTIME):
+            return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+    # Read-only diagnostics may be slow. They must not hold the lock needed by
+    # Stop; a Stop received during preflight invalidates this pending Start.
+    backend = Linux()
+    try:
+        policy = backend.policy()
+        settings = policy['settings']
+        if not isinstance(settings,dict):raise ValueError('invalid settings')
+        phase=journal_read().get('phase')
+    except Refused:return {'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}
+    except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
+    if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
+        return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+    blockers, selection = backend.diagnostic()
+    try:
+        reasons = readiness(settings, read_json(PERSIST/'native-certificate.json',{}),
+                            read_json(PERSIST/'native-attempts.json',{}), selection, blockers, time.time())
+    except (OSError,ValueError,TypeError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
+    if reasons:return {'accepted':False,'blockers':reasons}
+    with control_lock():
+        if control_revision!=revision_locked(RUNTIME):
+            return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
         # A damaged journal is a refusal with a code, never a traceback.
         try:phase=journal_read().get('phase')
         except Refused:return {'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}
         if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
             return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+        try:
+            old = read_json(RUNTIME/'auto-control.json',{})
+            stopped = read_json(PERSIST/'native-stop.json',{})
+            if not isinstance(old,dict) or not isinstance(stopped,dict):raise ValueError('invalid intent')
+            current_policy=backend.policy()
+            current=current_policy['settings']
+            if not isinstance(current,dict):raise ValueError('invalid settings')
+        except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
+        epoch=stopped.get('requested',0)
+        if not valid_stop(stopped):
+            return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
+        if stopped.get('control_revision_failed') is True:
+            return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        if epoch>=arrived:
+            return {'accepted':False,'blockers':['STOP-SUPERSEDED-START']}
+        if current_policy!=policy:
+            return {'accepted':False,'blockers':['START-CONFIG-CHANGED']}
         now = time.time()
-        reasons = readiness(settings, read_json(PERSIST/'native-certificate.json',{}),
-                            read_json(PERSIST/'native-attempts.json',{}), selection, blockers, now)
-        if reasons:
-            return {'accepted':False,'blockers':reasons}
-        old = read_json(RUNTIME/'auto-control.json',{})
-        stopped = read_json(PERSIST/'native-stop.json',{})
+        if not arrived<=now<deadline(settings.get('native_until')):
+            return {'accepted':False,'blockers':['BOUNDED-DEADLINE-REQUIRED']}
         if old.get('mode') == 'on' and effective_intent(settings,stopped,old,now) == (True,False):
             return {'accepted':True,'queued':True,'already_requested':True}
+        if type(old.get('time')) in (int,float) and old['time']>arrived:
+            return {'accepted':False,'blockers':['STOP-SUPERSEDED-START']}
         atomic_json(RUNTIME/'auto-control.json',{'mode':'on','time':now,
                     'trial':settings['native_trial'],'until':deadline(settings.get('native_until'))})
         return {'accepted':True,'queued':True}
@@ -124,6 +203,9 @@ def stop(runtime=None,persist=None):
     import json
     import subprocess
     with control_lock(runtime):
+        revision_error=None
+        try:revision_locked(runtime,rotate=True)
+        except (OSError,ValueError) as error:revision_error=error
         try:request=read_json(runtime/'auto-control.json',{})
         except (OSError,ValueError):request={}
         if not isinstance(request,dict):request={}
@@ -133,7 +215,8 @@ def stop(runtime=None,persist=None):
         try:
             internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
             trial=internal.get('settings',{}).get('native_trial')
-        except (OSError,ValueError,AttributeError,subprocess.SubprocessError):
+            if trial is not None and not isinstance(trial,str):raise ValueError('invalid trial')
+        except (OSError,ValueError,AttributeError,RecursionError,subprocess.SubprocessError):
             trial=request.get('trial');unverified=True
         # One durable write targets the current trial, including an in-flight worker.
         try:old=read_json(persist/'native-stop.json',{})
@@ -144,14 +227,18 @@ def stop(runtime=None,persist=None):
         requested = request.get('time',0)
         if type(requested) not in (int,float) or not math.isfinite(requested):requested=float('inf')
         needs_global = unverified or not trial
-        if (old and type(previous) in (int, float) and math.isfinite(previous) and previous > 0
+        if (revision_error is None and not old.get('control_revision_failed')
+                and old and type(previous) in (int, float) and math.isfinite(previous) and previous > 0
                 and (old.get('all_trials') is True or not needs_global and old.get('trial') == trial)
                 and previous >= requested):
             return dict({'queued':True,'already_requested':True},**extra)
-        record = {'requested':time.time(),'trial':trial}
-        if needs_global:
+        floor=previous if type(previous) in (int,float) and math.isfinite(previous) else 0
+        record = {'requested':max(time.time(),floor),'trial':trial}
+        if revision_error is not None:record['control_revision_failed']=True
+        if needs_global or revision_error is not None:
             record['all_trials'] = True
         atomic_json(persist/'native-stop.json',record)
+        if revision_error is not None:raise revision_error
         return dict({'queued':True},**extra)
 
 
@@ -195,5 +282,9 @@ def public_status():
         if type(result.get('ok')) is not bool or code is not None and (not isinstance(code,str) or not re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',code)):
             valid=False
         else:return_result={'request':request_stamp,'ok':result['ok'],'code':code,'time':result_stamp}
+    try:revision=current_revision()
+    except (OSError,ValueError):revision=None
+    if stopped.get('control_revision_failed') is True:revision=None
     return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
+            'control_revision':revision,
             'until':until,'reboot_autostart':False,'return_result':return_result}

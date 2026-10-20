@@ -10,6 +10,7 @@ import hashlib
 import http.client
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -22,7 +23,7 @@ import sys
 import time
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha9'
+VERSION = '0.9.0-alpha12'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -118,9 +119,39 @@ def read_json(path, default=None):
     try:
         if path.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('oversize state')
-        return json.loads(path.read_text(encoding='utf-8'))
+        def number(raw):
+            value = float(raw) if any(c in raw for c in '.eE') else int(raw)
+            if not math.isfinite(value):
+                raise ValueError('nonfinite state number')
+            return value
+        def pairs(items):
+            row = {}
+            for key, value in items:
+                if key in row:
+                    raise ValueError('duplicate state field')
+                row[key] = value
+            return row
+        def constant(raw):
+            raise ValueError('nonfinite state number')
+        value = json.loads(path.read_text(encoding='utf-8'), parse_int=number,
+                           parse_float=number, parse_constant=constant, object_pairs_hook=pairs)
+        # Existing schemas use only a few levels. Bound recursive consumers too,
+        # including checksums, after decoding without recursively walking here.
+        pending = [(iter((value,)), 0)]
+        while pending:
+            items, depth = pending[-1]
+            try:row = next(items)
+            except StopIteration:
+                pending.pop();continue
+            if depth > 64:
+                raise ValueError('state nesting limit')
+            if isinstance(row, (dict, list)):
+                pending.append((iter(row.values() if isinstance(row, dict) else row), depth + 1))
+        return value
     except FileNotFoundError:
         return default
+    except (RecursionError, OverflowError):
+        raise ValueError('invalid state JSON') from None
 
 
 def checksum(value):
@@ -684,7 +715,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -758,7 +789,7 @@ def rpc(method):
         try:result=start(arguments)
         except SpeedError as error:result={'accepted':False,'code':error.code}
         print(json.dumps(result));return
-    if arguments:
+    if arguments and method!='native_start':
         raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
         from telegram_report import retry_unknown
@@ -783,7 +814,9 @@ def rpc(method):
             # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
             try:result=stop(runtime=RUNTIME,persist=PERSIST)
             except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
-        else:result=start() if method=='native_start' else return_request()
+        elif method=='native_start':
+            result=start(arguments['control_revision']) if set(arguments)=={'control_revision'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        else:result=return_request()
         if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
             from fault_control import cancel,FaultError
             try:result['fault_cleanup']=cancel().get('cleaned',False)

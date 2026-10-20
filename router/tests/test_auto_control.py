@@ -84,35 +84,37 @@ class AtomicRequestTests(unittest.TestCase):
             target.start();self.addCleanup(target.stop)
         agent.atomic_json(self.path/'native-certificate.json',{'hash':'h','source':'a','target':'b','direction':'first','until':self.until})
         agent.atomic_json(self.path/'native-attempts.json',{'trial':'nonce','count':1})
+        self.revision=control.current_revision()
 
     def test_start_is_one_atomic_intent_without_uci_or_network_write(self):
         with patch.object(agent,'command') as command:
-            self.assertTrue(control.start()['accepted'])
+            self.assertTrue(control.start(self.revision)['accepted'])
             command.assert_not_called()
         value=agent.read_json(self.path/'auto-control.json')
         self.assertEqual(value['trial'],'nonce');self.assertEqual(value['until'],self.until)
         self.assertEqual(self.settings['native_enabled'],'0')
-        self.assertTrue(control.start()['already_requested'])
+        self.assertTrue(control.start(self.revision)['already_requested'])
 
     def test_failed_write_leaves_no_enabled_intent(self):
         with patch.object(control,'atomic_json',side_effect=OSError('simulated storage failure')):
-            with self.assertRaises(OSError):control.start()
+            with self.assertRaises(OSError):control.start(self.revision)
         self.assertFalse((self.path/'auto-control.json').exists())
         self.assertEqual(self.settings['native_enabled'],'0')
 
     def test_stop_overrides_start_and_repeated_stop_does_not_write_again(self):
-        control.start()
+        control.start(self.revision)
         with patch.object(agent,'command',return_value=b'{"settings":{"native_trial":"nonce"}}'):
             self.assertTrue(control.stop()['queued'])
             with patch.object(control,'atomic_json') as write:
-                self.assertTrue(control.stop()['already_requested']);write.assert_not_called()
+                self.assertTrue(control.stop()['already_requested'])
+                self.assertEqual([call.args[0].name for call in write.call_args_list],['auto-control-revision.json'])
         self.assertEqual(control.public_status()['requested'],'off')
 
     def test_expired_certificate_and_active_transaction_refuse_start(self):
         agent.atomic_json(self.path/'native-certificate.json',{})
-        self.assertFalse(control.start()['accepted'])
+        self.assertFalse(control.start(self.revision)['accepted'])
         with patch.object(native,'journal_read',return_value={'phase':'WAIT-CLIENT'}):
-            self.assertEqual(control.start()['blockers'],['TRANSACTION-IN-PROGRESS'])
+            self.assertEqual(control.start(self.revision)['blockers'],['TRANSACTION-IN-PROGRESS'])
 
     def test_return_request_only_when_reserve_is_held_or_committed(self):
         for phase in ('HELD-ON-RESERVE','COMMITTED'):

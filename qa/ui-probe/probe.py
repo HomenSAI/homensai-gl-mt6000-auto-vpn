@@ -1,6 +1,6 @@
 """Loopback synthetic fixture + headless Edge page probe. No router access, no network beyond 127.0.0.1.
 Usage: python qa/ui-probe/probe.py gate | matrix main | matrix more-a|more-b|more-c | scen
-Results go to private/ui-probe/ (git-ignored). Keep each run under ~5 minutes."""
+Results go to private/ui-probe/ (git-ignored). Each persona has a bounded timeout; a full 50-case run takes several minutes."""
 import importlib.util, json, re, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer
@@ -16,6 +16,7 @@ ANALYSE=(HERE/'analyse.js').read_text(encoding='utf8')
 SCEN=(HERE/'scenarios.js').read_text(encoding='utf8')
 FOOL=(HERE/'fool.js').read_text(encoding='utf8')
 RESULTS={};EVENTS={}
+FROZEN_PREVIEW=None
 class H(prev.Handler):
     def do_POST(self):
         p=urlsplit(self.path).path
@@ -28,6 +29,16 @@ class H(prev.Handler):
         super().send_header(k,v)
     def do_GET(self):
         p=urlsplit(self.path).path
+        if FROZEN_PREVIEW is not None and not p.startswith('/__probe/'):
+            expected={'127.0.0.1:'+str(PORT),'localhost:'+str(PORT),'[::1]:'+str(PORT)}
+            if self.headers.get('Host','').lower() not in expected or self.headers.get('Origin') and self.headers['Origin'] not in {'http://'+host for host in expected}:self.send_error(403);return
+            from source_identity import content_type
+            body=FROZEN_PREVIEW.get(p)
+            if body is None:self.send_error(404);return
+            self.send_response(200);self.send_header('Content-Type',content_type(p));self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store')
+            self.send_header('X-HomenSAI-Preview','synthetic-only');self.send_header('X-Content-Type-Options','nosniff');self.send_header('Cross-Origin-Resource-Policy','same-origin')
+            self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'self'")
+            self.end_headers();self.wfile.write(body);return
         if p.startswith('/__probe/'):
             kind,d,tab,theme,lang,w,h,qid=p.split('/')[2:10]
             js={'matrix':ANALYSE,'fool':FOOL}.get(kind,SCEN)
@@ -78,15 +89,32 @@ def gate():
     srv.shutdown();sys.exit(1 if problems else 0)
 
 
-def fool(part):
+def fool(part,workers=2):
     """Persona numbers a-b. Each result retains its own failure; rerun selected cases as separate commands."""
     a,b=map(int,part.split('-'))
-    jobs=[('fool','abc'[(p//10+p)%3],str(p),'light','en',1280) for p in range(a,b+1)]
-    with ThreadPoolExecutor(3) as ex:res=list(ex.map(lambda j:run(*j,timeout=120),jobs))
+    if not 0<=a<=b<=49 or workers not in (1,2):raise ValueError('FOOL-RUN-BOUNDS')
     from datetime import datetime,timezone
-    result_path=OUTDIR/('result-fool-%s-%s.json'%(part,datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')))
-    result_path.write_text(json.dumps(res,indent=1),encoding='utf-8')
+    from source_identity import freeze_preview
+    global FROZEN_PREVIEW
+    FROZEN_PREVIEW,identity,manifest=freeze_preview(REPO)
+    manifest['plan']={'personas':list(range(a,b+1)),'workers':workers,'per_case_timeout_seconds':120}
+    stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
+    (OUTDIR/('source-fool-%s-%s.json'%(part,stamp))).write_text(json.dumps(manifest,indent=1),encoding='utf-8')
+    jobs=[('fool','abc'[(p//10+p)%3],str(p),'light','en',1280) for p in range(a,b+1)]
     sys.path.insert(0,str(HERE));import fool_check
+    def one(job):
+        case_path=OUTDIR/('case-fool-%s-%s.json'%(job[2],stamp))
+        case_path.write_text(json.dumps([{'persona':int(job[2]),'error':'INCOMPLETE-ATTEMPT','verdict':'RUNNING','source_identity':identity}],indent=1),encoding='utf-8')
+        try:row=run(*job,timeout=120)
+        except Exception as error:row={'error':'HARNESS-'+type(error).__name__,'cfg':list(job[1:])}
+        row['source_identity']=identity
+        row['verdict']='FAIL' if fool_check.failed(fool_check.summarise([row])) else 'PASS'
+        temporary=case_path.with_suffix('.json.tmp');temporary.write_text(json.dumps([row],indent=1),encoding='utf-8');temporary.replace(case_path)
+        print('CASE',job[2],row['verdict'],'steps',row.get('steps',0),'calls',row.get('callCount',0),flush=True)
+        return row
+    with ThreadPoolExecutor(workers) as ex:res=list(ex.map(one,jobs))
+    result_path=OUTDIR/('result-fool-%s-%s.json'%(part,stamp))
+    result_path.write_text(json.dumps(res,indent=1),encoding='utf-8')
     summary=fool_check.summarise(res);fool_check.show(summary);print('RESULT',result_path)
     srv.shutdown();sys.exit(1 if fool_check.failed(summary) else 0)
 
@@ -94,7 +122,10 @@ def fool(part):
 if __name__=='__main__':
     mode=sys.argv[1]
     if mode=='gate':gate()
-    if mode=='fool':fool(sys.argv[2] if len(sys.argv)>2 else '0-49')
+    if mode=='fool':
+        import argparse
+        parser=argparse.ArgumentParser();parser.add_argument('part',nargs='?',default='0-49');parser.add_argument('--workers',type=int,choices=(1,2),default=2)
+        args=parser.parse_args(sys.argv[2:]);fool(args.part,args.workers)
     jobs=[]
     part=sys.argv[2] if len(sys.argv)>2 else 'main'
     if mode=='matrix':

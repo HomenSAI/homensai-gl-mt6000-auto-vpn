@@ -30,9 +30,23 @@ function tgItemsBlock(tg){
   var list=TG_ITEMS.map(function(i){var box=E('input',{'type':'checkbox','change':function(){tg.items=TG_PRESETS.maximum.filter(function(id){return id===i[0]?box.checked:tg.items.indexOf(id)>=0;});}});boxes[i[0]]=box;box.checked=tg.items.indexOf(i[0])>=0;return E('label',{},[box,' ',bi(i[1],i[2]),E('small',{},bi(i[3],i[4]))]);});
   return E('div',{'class':'hv-tg-items'},[E('strong',{},bi('What to send in Telegram','Что присылать в Telegram')),E('p',{},bi('Tick only what you need. Always sent: the report header and, if the controller stops automatic switching, an ALARM line. Presets: Minimum = servers only; Standard = servers, changes, traffic, controller; Maximum = everything.','Отметьте только нужное. Всегда приходит заголовок отчёта и, если контроллер остановил автопереключение, строка ALARM. Наборы: Минимум — только серверы; Стандарт — серверы, изменения, трафик, контроллер; Максимум — всё.')),presets].concat(list));
 }
+function telegramTestDelivery(button){
+  return guardedAction(button,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result&&safeCode(result.code)?result.code:'TELEGRAM-TEST-UNKNOWN'));});},{key:'telegram-test'});
+}
+// A readiness check is expensive on a router. Share one pending request and reuse its result for ten seconds.
+var setupCheckCache=null,setupWizardGeneration=0;
+function setupCheckNow(){return typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();}
+function setupCheckRequest(){
+  var now=setupCheckNow();
+  if(setupCheckCache&&(setupCheckCache.pending||now>=setupCheckCache.finished&&now-setupCheckCache.finished<10000))return setupCheckCache.promise;
+  var entry={pending:true,finished:0,promise:null};setupCheckCache=entry;
+  try{entry.promise=Promise.resolve(rpc.declare({object:'homensai-vpn',method:'setup_check',expect:{}})());}catch(error){entry.promise=Promise.reject(error);}
+  entry.promise=entry.promise.then(function(result){entry.pending=false;entry.finished=setupCheckNow();return result;},function(error){entry.pending=false;entry.finished=setupCheckNow();throw error;});
+  return entry.promise;
+}
 function setupWizard(inventory,kind){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
-  var setupCheck=kind==='system'?'pending':'passed';
+  var setupCheck=kind==='system'?'pending':'passed',wizardGeneration=++setupWizardGeneration;
   var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
   var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval==null?30:settings.interval,duration:settings.native_duration==null?10:settings.native_duration,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority==null?100:saved.priority,enabled:saved.enabled!==false};})};
   var tg={token:'',chat:settings.telegram_destination||'',enabled:!!settings.telegram_enabled,interval:settings.telegram_interval==null?60:settings.telegram_interval,schedule:settings.telegram_schedule||'interval',hour:settings.telegram_hour==null?7:settings.telegram_hour,weekly:settings.telegram_weekly!==false,monthly:settings.telegram_monthly!==false,items:tgItemsFromSetting(settings.telegram_items)};
@@ -40,7 +54,9 @@ function setupWizard(inventory,kind){
   function input(value,type){var node=E('input',{'type':type||'text'});node.value=value;return node;}
   function choice(value){var node=E('select',{},[E('option',{value:''},bi('Choose existing profile','Выберите существующий профиль'))].concat(profiles.map(function(p){return E('option',{value:p.id},p.name+' · '+p.protocol);})));node.value=value;return node;}
   function notify(code){ui.addNotification(null,E('p',{},code));}
+  function live(){return !closed&&wizardGeneration===setupWizardGeneration;}
   function show(){
+    if(!live())return;
     var body=E('div',{'class':'hv-wizard'}),read=function(){return true;},checks=[],nextButton;
     function updateGate(){if(nextButton)foolGate(nextButton,checks.concat([function(){return !busy&&(kind!=='system'||setupCheck==='passed');}]));}
     function numberField(title,node,key){var item=foolNumberRow(title,node,key,updateGate);checks.push(item.check);return item.row;}
@@ -69,12 +85,14 @@ function setupWizard(inventory,kind){
       }
     }else{
       if(step===0){var token=input(tg.token,'password');token.autocomplete='off';body.appendChild(E('p',{},bi('Create a bot with BotFather. For a channel, add it as an administrator with permission to post. A token is secret and is never returned by the router.','Создайте бота через BotFather. В канале добавьте его администратором с правом публикации. Токен секретный и не возвращается роутером.')));body.appendChild(telegramTokenHelp());body.appendChild(textField(bi('Bot token (leave blank to keep the stored token)','Токен бота (пусто — сохранить имеющийся)'),token,'token'));if(settings.telegram_configured)body.appendChild(E('p',{},E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){
-          if(!window.confirm(bi('Delete the stored bot token? Telegram reports will be turned off.','Удалить сохранённый токен бота? Отчёты в Telegram будут выключены.')))return;
-          ev.target.disabled=true;
-          return rpc.declare({object:'homensai-vpn',method:'telegram_forget',expect:{}})().then(function(result){
-            if(result&&result.saved===true){closed=true;ui.hideModal();ui.addNotification(null,E('p',{},bi('The bot token was deleted and Telegram reports are off.','Токен бота удалён, отчёты в Telegram выключены.')));window.location.reload();}
-            else{ev.target.disabled=false;ui.addNotification(null,E('p',{},(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(result.code))?result.code:'SETUP-SAVE-FAILED'));}
-          }).catch(function(){ev.target.disabled=false;ui.addNotification(null,E('p',{},'TELEGRAM-FORGET-UNCONFIRMED'));});
+          var button=ev.currentTarget||ev.target;tg.token=token.value;
+          if(FOOL_LOCKS['telegram-forget']){guardResume(button,'telegram-forget');return;}
+          confirmAction(bi('Delete the stored token','Удалить сохранённый токен'),[bi('Telegram reports will be turned off.','Отчёты в Telegram будут выключены.')],bi('Delete token','Удалить токен'),function(){
+            return guardedAction(button,function(){return rpc.declare({object:'homensai-vpn',method:'telegram_forget',expect:{}})().then(function(result){
+              if(result&&result.saved===true){closed=true;ui.hideModal();ui.addNotification(null,E('p',{},bi('The bot token was deleted and Telegram reports are off.','Токен бота удалён, отчёты в Telegram выключены.')));window.location.reload();}
+              else ui.addNotification(null,E('p',{},result&&safeCode(result.code)?result.code:'SETUP-SAVE-FAILED'));
+            });},{key:'telegram-forget'});
+          },true,show);
         }},bi('Delete the stored token','Удалить сохранённый токен'))));read=function(){tg.token=token.value.trim();return (!tg.token&&settings.telegram_configured)||/^[0-9]{6,15}:[A-Za-z0-9_-]{30,100}$/.test(tg.token);};
       }else if(step===1){
         var chat=input(tg.chat),interval=input(tg.interval,'number'),enabled=input('','checkbox'),hour=input(tg.hour,'number'),weekly=input('','checkbox'),monthly=input('','checkbox');
@@ -93,10 +111,10 @@ function setupWizard(inventory,kind){
     }
     var progress=E('p',{'class':'hv-wizard-progress','role':'status','aria-live':'polite'},'');body.appendChild(progress);
     var actions=E('div',{'class':'hv-wizard-actions'});
-    actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy)return;closed=true;ui.hideModal();}},bi('Cancel','Отмена')));
-    if(step>0)actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy||!foolGate(null,checks))return;read();step--;show();}},bi('Back','Назад')));
+    actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy||!live())return;closed=true;ui.hideModal();}},bi('Cancel','Отмена')));
+    if(step>0)actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy||!live()||!foolGate(null,checks))return;read();step--;show();}},bi('Back','Назад')));
     actions.appendChild(nextButton=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','disabled':kind==='system'&&setupCheck!=='passed'?'':null,'click':function(ev){
-      if(busy||kind==='system'&&setupCheck!=='passed')return;if(!foolGate(null,checks)||!read()){notify(bi('Check the highlighted fields, choose different primary and reserve profiles, and keep both monitored.','Проверьте выделенные поля, выберите разные основной и резервный профили и включите наблюдение за обоими.'));updateGate();return;}
+      if(busy||!live()||kind==='system'&&setupCheck!=='passed')return;if(!foolGate(null,checks)||!read()){notify(bi('Check the highlighted fields, choose different primary and reserve profiles, and keep both monitored.','Проверьте выделенные поля, выберите разные основной и резервный профили и включите наблюдение за обоими.'));updateGate();return;}
       if(step<2){step++;show();return;}
       busy=true;body.setAttribute('aria-busy','true');progress.textContent=bi('Saving settings…','Сохранение настроек…');Array.from(actions.children).forEach(function(node){node.disabled=true;});
       var save=kind==='system'?rpc.declare({object:'homensai-vpn',method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly','items'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly,tgItemsToSetting(tg.items));
@@ -106,5 +124,5 @@ function setupWizard(inventory,kind){
     body.appendChild(actions);updateGate();ui.showModal(kind==='system'?bi('System setup wizard','Мастер настройки системы'):bi('Telegram channel wizard','Мастер Telegram-канала'),[body]);
   }
   show();
-  if(kind==='system')rpc.declare({object:'homensai-vpn',method:'setup_check',expect:{}})().then(function(result){if(closed)return;setupCheck=result&&result.passed===true?'passed':'failed';show();}).catch(function(){if(closed)return;setupCheck='failed';show();});
+  if(kind==='system')setupCheckRequest().then(function(result){if(!live())return;setupCheck=result&&result.passed===true?'passed':'failed';show();}).catch(function(){if(!live())return;setupCheck='failed';show();});
 }

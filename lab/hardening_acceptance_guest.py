@@ -25,6 +25,9 @@ checks=[]
 def command(argv,timeout=30):
     return subprocess.check_output(argv,stderr=subprocess.DEVNULL,timeout=timeout)
 def rpc(method,arguments=None):
+    if method=='native_start' and arguments is None:
+        import auto_control
+        arguments={'control_revision':auto_control.public_status()['control_revision']}
     return json.loads(command(['ubus','-t','25','call','homensai-vpn',method,json.dumps(arguments or {})]))
 def check(name,ok):
     if not ok:raise AssertionError(name)

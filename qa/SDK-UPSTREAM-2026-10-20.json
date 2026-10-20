@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "date": "2026-10-20",
+  "result": "EXACT-COMMIT-UPSTREAM-PAYLOAD-REPRODUCIBLE",
+  "scope": "exact committed alpha12 router export; standard SDK direct child package target only; full recursive runtime dependency build excluded",
+  "source_kind": "committed-tree",
+  "source_commit": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+  "source_archive_sha256": "4b50f923b4bfb13ab74d23ce0959585d67e744790b21adb7101cc5ee89edf061",
+  "source_files_verified": 293,
+  "sdk_archive_sha256": "21c75e4c5a429da487f8a885555cb49eee80cfc355d5dbe35d2b3ae05324a09d",
+  "sdk_package": {
+    "name": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
+    "sha256": "1fbefecb251b1ff171cf316d035528bf9baebdb26089a6327480008b92043ea3",
+    "bytes": 657566
+  },
+  "custom_reference_sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
+  "custom_reference_bytes": 654970,
+  "canonical_release_reference_matches": true,
+  "payload_files_compared": 69,
+  "source_makefile_sha256": "28b3f4842abb0d08378ea5b94645971382657a329f9a1172b80e1fe94f6b4da8",
+  "architecture": "all",
+  "repeated_sdk_packages_equal": true,
+  "first_steps": [
+    {
+      "step": "defconfig",
+      "command": [
+        "make",
+        "defconfig"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 8.992,
+      "log_sha256": "35a080840a7a86d9a24cbc3f90ce34791194ab21ddccf798767a12f4af8a2eec"
+    },
+    {
+      "step": "clean",
+      "command": [
+        "make",
+        "-j1",
+        "-C",
+        "package/homensai-auto-vpn",
+        "TOPDIR=/work/first",
+        "V=s",
+        "clean"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 3.06,
+      "log_sha256": "0d5740d9b2ba193151ff6f3cb25b6565232ba785a9cdb936e9ea8499bde2236f"
+    },
+    {
+      "step": "compile",
+      "command": [
+        "make",
+        "-j1",
+        "-C",
+        "package/homensai-auto-vpn",
+        "TOPDIR=/work/first",
+        "V=s",
+        "compile"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 6.974,
+      "log_sha256": "2a6d180f196588e52fa21767fedc956aaea0df9c8d050f02cc231558baa154f9"
+    }
+  ],
+  "second_steps": [
+    {
+      "step": "defconfig",
+      "command": [
+        "make",
+        "defconfig"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 2.999,
+      "log_sha256": "782ff4c85f7537ca137e528b80d39f35b762ca265b4129b399b1b732c072ce37"
+    },
+    {
+      "step": "clean",
+      "command": [
+        "make",
+        "-j1",
+        "-C",
+        "package/homensai-auto-vpn",
+        "TOPDIR=/work/first",
+        "V=s",
+        "clean"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 0.955,
+      "log_sha256": "3f5b5e2c2afcb9966f3a241e798e284ef39194e66f8888a10096eee286377442"
+    },
+    {
+      "step": "compile",
+      "command": [
+        "make",
+        "-j1",
+        "-C",
+        "package/homensai-auto-vpn",
+        "TOPDIR=/work/first",
+        "V=s",
+        "compile"
+      ],
+      "exit_code": 0,
+      "elapsed_s": 5.489,
+      "log_sha256": "3b7990dfd02690b772e87e69a79ce243be0fbb557bfd30d0699b53839a287572"
+    }
+  ],
+  "permitted_sdk_differences": [
+    "implicit libc dependency",
+    "exact pinned default_postinst/default_prerm wrappers with identical package hooks"
+  ],
+  "verifier_result": "EVIDENCE-CONSISTENT",
+  "vendor_firmware_match": false,
+  "device_acceptance": false,
+  "installation_authorized": false,
+  "native_adapter_certified": false,
+  "source_export_fix": "scripts/export-sdk-source.py: preserve root attributes; strip TAR prefix in memory",
+  "rejected_exact_commit_attempt": {
+    "result": "REJECTED-SOURCE-EXPORT-CONTEXT",
+    "source_commit": "984781141d5eddce4442941ee28ff851da7cbf28",
+    "cause": "git archive COMMIT:router loses root .gitattributes; core.autocrlf changes pinned style bytes",
+    "product_defect": false,
+    "subtree_archive_sha256": "704fdc1b3c110f8b57ce3251542151abb7c87e28c7fcc32d71f4eeabe6a736db",
+    "sdk_sha256": "49982dbb2bf585b3097efa1a6c15be04fe1e42ac40edcacd1902aa2edd407c32",
+    "subtree_custom_sha256": "cfddd22f1dda72a555e85eec894d79c4b09266a9a0506b1b53c632e8960b0e9c",
+    "canonical_custom_sha256": "9c077f5cc235f95c028f9ec35fa573e0880e7276fc566480199f326f73a3ac98",
+    "payload_differences_eol_only": 11,
+    "canonical_exact_source_sdk_acceptance": false
+  },
+  "previous_working_snapshot": {
+    "baseline_source_commit": "8c5433990f825890dcdf60e5b81f5c9a74466530",
+    "source_archive_sha256": "eb179e4c6bb615ba9f13f3af7b96ef3aba41a34fe9689815dbb23729cc22e6c8",
+    "sdk_package": {
+      "name": "homensai-auto-vpn_0.9.0-alpha10-1_all.ipk",
+      "sha256": "5c0fa20bfa238c323625a0b95de04dca90697a559e66828187278330796d5630",
+      "bytes": 656757
+    },
+    "custom_reference_sha256": "9c077f5cc235f95c028f9ec35fa573e0880e7276fc566480199f326f73a3ac98"
+  },
+  "open": [
+    "full recursive runtime dependency build",
+    "matching GL.iNet SDK provenance",
+    "actual MT3000 identity and hardware acceptance"
+  ],
+  "previous_committed_proofs": [
+    {
+      "source_commit": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+      "source_archive_sha256": "612ef3da83013ae18ffca43657d1dd63824c7ba34da17aec42de13547dcbff4a",
+      "source_files_verified": 292,
+      "sdk_package": {
+        "name": "homensai-auto-vpn_0.9.0-alpha11-1_all.ipk",
+        "sha256": "24559785d6cdcd4e42f7809eee456c96e425b27524aeaf7394f2d553015adfa7",
+        "bytes": 657285
+      },
+      "custom_reference_sha256": "f196ef07d85b4cb7edaeed8092dc5978bb3ad86845ce0c6b4ce86674e2126f4c",
+      "custom_reference_bytes": 654655,
+      "payload_files_compared": 69,
+      "source_makefile_sha256": "269a27099faf252780434a6c92d0dd9f478d154be0f0ebf15d47366061151bd5"
+    }
+  ]
+}

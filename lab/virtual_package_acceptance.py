@@ -39,7 +39,7 @@ if __PHASE__!='verify':
  cmd(['wget','-q','-O',str(package),'http://10.0.3.2:8088/homensai-auto-vpn_'+__VERSION__+'_all.ipk'])
  check('candidate-sha256',hashlib.sha256(package.read_bytes()).hexdigest()==__SHA__)
  step='opkg-install'
- args=['opkg']+(['--force-downgrade'] if __PHASE__=='rollback' else [])+['install',str(package)]
+ args=['opkg']+(['--force-downgrade'] if __PHASE__=='rollback' else ['--force-reinstall'] if __PHASE__=='reupgrade' else [])+['install',str(package)]
  with (work/(__PHASE__+'-install.log')).open('wb') as log:
   result=subprocess.run(args,stdout=log,stderr=log,timeout=90)
  check('actual-opkg-'+__PHASE__,result.returncode==0)
@@ -67,7 +67,8 @@ if True:
   time.sleep(1)
  check('actual-correlated-scan-completion',scan.get('request_id')==queued['request_id'] and scan.get('state')=='COMPLETED' and scan.get('measurement_request_id')==queued['request_id'])
  check('no-fake-active-profiles',type(scan.get('checked')) is int and scan['checked']>=0)
- step='native-start-refusal';refused=rpc('native_start');check('generic-board-auto-refused',refused.get('accepted') is False)
+ step='native-start-refusal';revision=live().get('auto_control',{}).get('control_revision');check('live-control-revision',isinstance(revision,str) and re.fullmatch('[a-f0-9]{32}',revision) is not None)
+ refused=rpc('native_start',{'control_revision':revision});check('generic-board-auto-refused',refused.get('accepted') is False and bool(refused.get('blockers')) and 'CONTROL-REVISION-STALE' not in refused['blockers'])
 check('final-protected-state-preserved',protected()==base)
 result={'result':'PASS','phase':__PHASE__,'package_version':__VERSION__,'package_sha256':__SHA__,'passed':len(checks),'checks':checks,'agent_version':status.get('version'),'protected_unchanged':True,'private_values_exported':False,'scope':'actual isolated x86 opkg/RPC/procd/UI files; no GL.iNet native or LAN acceptance','physical_router_access':False}
 """.replace('__VERSION__',repr(version)).replace('__SHA__',repr(sha)).replace('__PHASE__',repr(a.phase)).replace('__AGENT__',repr(agent)).replace('__DASHBOARD__',repr(a.dashboard))

@@ -232,8 +232,8 @@ must_replace("E('h3',{},'Persistent controller history'),E('p',{},'Controller ev
 reorganizer = """      (function(){
         var monitorCard=settingsHost.querySelector('.hv-card-monitor'),speedCard=settingsHost.querySelector('.hv-speed-settings');
         while(settingsHost.firstChild)settingsHost.removeChild(settingsHost.firstChild);
-        function launcher(label,hint,action,primary,guide){return E('div',{'class':'hv-setup-item'},[E('button',{'type':'button','class':'cbi-button'+(primary?' cbi-button-action':''),'click':action},label),E('p',{},hint),guide?setupGuide(guide):null].filter(Boolean));}
-        var testDelivery=function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});};
+        function launcher(label,hint,action,primary,guide,lockKey){return E('div',{'class':'hv-setup-item'},[guardResume(E('button',{'type':'button','class':'cbi-button'+(primary?' cbi-button-action':''),'click':action},label),lockKey),E('p',{},hint),guide?setupGuide(guide):null].filter(Boolean));}
+        var testDelivery=function(ev){return telegramTestDelivery(ev.currentTarget||ev.target);};
         settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
           E('h3',{},bi('Setup','Настройка')),
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
@@ -241,7 +241,7 @@ reorganizer = """      (function(){
           E('div',{'class':'hv-setup-grid hv-setup-steps'},[
             launcher(bi('1 · System setup','1 · Настройка системы'),bi('Press to open the wizard: primary and reserve VPN, names, groups, priorities and whether a short reconnection is acceptable.','Нажмите, чтобы открыть мастер: основной и резервный VPN, названия, группы, приоритеты и допустимость короткого переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
             launcher(bi('2 · Telegram channel','2 · Канал Telegram'),bi('Press to open the wizard: bot token and chat for reports. The wizard explains how to get both.','Нажмите, чтобы открыть мастер: токен бота и чат для отчётов. Мастер объясняет, как получить и то и другое.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
-            launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery)
+            launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery,false,null,'telegram-test')
           ])].filter(function(node){return node!=null;})));
         settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[
           E('summary',{},bi('Advanced settings (for administrators)','Расширенные настройки (для администратора)')),
@@ -319,7 +319,7 @@ must_replace("put('readiness',renderReadiness(status,inventory));","put('readine
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
 _terms_version=_r.search(r"^TERMS_VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js').read_text(encoding='utf8').replace('__TERMS_VERSION__',_terms_version)+'\nreturn view.extend({')
-must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory);\n")
+must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard66').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')

@@ -8,3 +8,7 @@ Offline check of every LuCI page in every design (A/B/C), theme and width. Synth
 - `summ.py result.json ...` prints the findings.
 
 Known limits: the contrast rule reports false positives on gradient buttons (`cbi-button-action`) and on the gear symbol; a run whose stylesheet did not finish loading within 30 s reports unstyled overflow (rerun it alone). Results and Edge profiles are written to `private/ui-probe/`, which is git-ignored.
+
+Run the bounded persona matrix with `python qa/ui-probe/probe.py fool 0-49 --workers 2` (use `--workers 1` to isolate a case). The persona clock starts only after a stable app, attribution and stylesheet are ready. Missing readiness remains a failure. Reloads have bounded waits; RPC calls and script errors are retained across documents.
+
+Each batch serves an immutable in-memory copy of the allowlisted public preview assets. A `source-fool-*.json` manifest records their SHA256 values, the harness hash, Git HEAD, tracked-dirty state and recorded product identity. Each `case-fool-*.json` begins as an explicit incomplete attempt and is atomically completed; the aggregate `result-fool-*.json` is written after the batch. New attempts get new filenames. Failed and incomplete attempts remain available for review. The CLI exits nonzero for errors, missing interaction/app/owner attributes, out-of-range RPC values, call storms, large lags, DOM growth or horizontal overflow.
