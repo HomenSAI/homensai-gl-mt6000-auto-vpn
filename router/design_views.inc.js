@@ -149,7 +149,7 @@ function renderDesignC(ctx,m){
 }
 function renderDesignOverview(design,ctx){
   var m=dvModel(ctx.status,ctx.inventory,ctx.rows,ctx.month);
-  return design==='b'?renderDesignB(ctx,m):design==='c'?renderDesignC(ctx,m):renderDesignA(ctx,m);
+  return design==='a'?renderDesignA(ctx,m):design==='c'?renderDesignC(ctx,m):renderDesignB(ctx,m);
 }
 // Keys of design C: 1..9 open the sections, "/" focuses the search box. Ignored while typing and with modifier keys.
 function installDesignKeys(root,keys,go){

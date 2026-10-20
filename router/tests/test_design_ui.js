@@ -8,10 +8,17 @@ const storage={getItem:k=>{if(blocked)throw new Error('blocked');return k in sto
 const src=fs.readFileSync('router/design_panel.inc.js','utf8');
 const context={bi:(en)=>en,E:(tag,attrs,children)=>new Node(tag,attrs,children),window:{localStorage:storage}};
 vm.createContext(context);vm.runInContext(src,context);
-// Three designs, A is the default; unknown or hostile stored values fall back to A.
+// Three designs, B Calm is the default; unknown or hostile values cannot choose a different default.
 assert.deepEqual(Array.from(context.HV_DESIGNS.map(d=>d.key)),['a','b','c']);
-assert.equal(context.storedDesign(),'a');
-for(const bad of ['', 'd', 'A', '<img src=x>', 'a ', 'constructor']){store['homensai-vpn-design']=bad;assert.equal(context.storedDesign(),'a');}
+assert.equal(context.storedDesign(),'b');assert.equal(context.currentDesign(),'b');
+for(const bad of ['', 'd', 'A', '<img src=x>', 'a ', 'constructor']){store['homensai-vpn-design']=bad;assert.equal(context.storedDesign(),'b');}
+// Explicit browser A/C still win over a router default; without an override the router's A/C stay intact.
+for(const saved of ['a','c']){
+  delete store['homensai-vpn-design'];context.HV_ROUTER_DISPLAY={design:saved};assert.equal(context.storedDesign(),saved);
+  store['homensai-vpn-design']=saved==='a'?'c':'a';assert.equal(context.currentDesign(),store['homensai-vpn-design']);
+}
+context.HV_ROUTER_DISPLAY={design:'invalid'};delete store['homensai-vpn-design'];assert.equal(context.currentDesign(),'b');
+context.HV_ROUTER_DISPLAY={design:'b'};
 store['homensai-vpn-design']='c';assert.equal(context.storedDesign(),'c');
 assert.equal(context.saveDesign('x'),false);assert.equal(store['homensai-vpn-design'],'c');
 // Every design names who it suits, in both languages.
@@ -28,12 +35,13 @@ assert.equal(store['homensai-vpn-design'],'b');assert.equal(root.attrs['data-hv-
 assert(/next time/.test(note.textContent));
 // Next visit opens in the stored design.
 assert.equal(context.storedDesign(),'b');
-// Storage blocked: the design still applies now and the note says it will not be kept; reading falls back to A.
+// Storage blocked: the design still applies now; a missing browser/router preference falls back to B.
 blocked=true;radios[2].attrs.change();
 assert.equal(root.attrs['data-hv-design'],'c');assert(/resets after a reload/.test(note.textContent));
-assert.equal(context.storedDesign(),'a');
+assert.equal(context.storedDesign(),'b');
 // ...but the page keeps the choice for this session, so the next redraw uses C, not A.
 assert.equal(context.currentDesign(),'c');blocked=false;
+context.applyDesign(root,'invalid');assert.equal(root.attrs['data-hv-design'],'b','invalid direct application uses the same Calm default');
 // Generated page: root carries the stored design, Settings shows the picker, links carry tooltips, CSS covers all three.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();

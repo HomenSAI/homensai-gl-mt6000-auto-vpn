@@ -1,5 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
+UI_MODULE='dashboard67'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -336,7 +337,7 @@ must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    onb
 must_replace("    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n","    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n    if(!inventory.error&&!onboardingComplete(inventory)&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
-must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard66').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__',UI_MODULE).replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')
 must_replace("E('small',{},'HomenS.AI Style 1.14.3')","E('small',{},'HomenS.AI Style 1.14.3'),E('small',{'class':'hv-identity'},identityLine(data[1]))")
 must_replace("pages.overview.insertBefore(controlCard,pages.overview.firstChild);","pages.overview.insertBefore(controlCard,pages.overview.firstChild);pages.overview.insertBefore(renderSummary(status,inventory),controlCard.nextSibling);var identityNotice=renderIdentityNotice(status);if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);")
 # Plain-language copy (router/ui_copy.py): every row must match, so stale rows fail the build.
@@ -354,7 +355,11 @@ source=source.replace('ui15.css','ui44.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
-controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/dashboard66',controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+controller.write_text(re.sub(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/'+UI_MODULE,controller.read_text(encoding='utf8')).replace('0.7.0-alpha4','0.7.0-alpha7'),encoding='utf8')
+menu=Path(__file__).parent/'files/usr/share/luci/menu.d/luci-app-homensai-vpn.json'
+menu_source,menu_count=re.subn(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/'+UI_MODULE,menu.read_text(encoding='utf8'))
+assert menu_count==1,'current dashboard menu path'
+menu.write_text(menu_source,encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
 must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
@@ -428,5 +433,5 @@ source=sidebar_patch.apply(source)
 must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
 fool_css='\n.hv-fool-field .hv-fool-hint,.hv-fool-field .hv-fool-error{display:block;margin-top:.3rem}.hv-fool-error{color:#c32938}.hv-fool-error:empty{display:none}.hv-fool-invalid{border-color:#c32938!important;outline:1px solid #c32938}\n'
 (root/'ui44.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
-(root/'dashboard66.js').write_text(source,encoding='utf8')
-print('Generated dashboard66.js with sidebar, language persistence and sortable tables')
+(root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
+print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

@@ -39,7 +39,7 @@ uci:foreach('homensai_vpn','server',function(s)
 end)
 local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
   onboarding_version=0,onboarding_complete=false,onboarding_pair_deferred=false,
-  appearance_language='',appearance_design='',appearance_theme='',monitor_only=false,deployment_mode='standard'}
+  appearance_language='',appearance_design='b',appearance_theme='',monitor_only=false,deployment_mode='standard'}
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
   main.monitor_only=s.monitor_only=='1'
@@ -51,7 +51,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.onboarding_complete=s.onboarding_complete=='1' and s.onboarding_version=='1'
   main.onboarding_pair_deferred=s.onboarding_pair_deferred=='1'
   main.appearance_language=(s.appearance_language=='en' or s.appearance_language=='ru') and s.appearance_language or ''
-  main.appearance_design=(s.appearance_design=='a' or s.appearance_design=='b' or s.appearance_design=='c') and s.appearance_design or ''
+  main.appearance_design=(s.appearance_design=='a' or s.appearance_design=='b' or s.appearance_design=='c') and s.appearance_design or 'b'
   main.appearance_theme=(s.appearance_theme=='system' or s.appearance_theme=='light' or s.appearance_theme=='dark') and s.appearance_theme or ''
   main.recovery_return_policy=s.recovery_return_policy=='hold_reserve' and 'hold_reserve' or 'healthy_primary'
   main.recovery_failures=math.max(3,math.min(10,tonumber(s.recovery_failures) or 3))

@@ -1,221 +1,281 @@
 {
-  "status": "BOUNDED_PHYSICAL_RECOVERY_OBSERVED_COMPLETE_MONITOR_ONLY",
+  "status": "ALPHA16_INSTALLED_MONITOR_ONLY_ROUTER_ONLY_WG_CYCLE_PASS",
   "date": "2026-10-20",
-  "purpose": "Resumed after crash by direct owner instruction on 20 October; not a pause or completion claim",
   "branch": "feature/design-0.9",
-  "base_commit": "00391bc7d058e588a9983ffb9c68dad3434ad50c",
-  "owner_steering": [
-    "Continue the entire hardening plan autonomously, including long tests where useful",
-    "Save current state and all TODOs to local Git and archive on D drive",
-    "Do not disrupt the primary GL-MT6000; physical fault tests move to newly purchased GL-MT3000 Beryl AX",
-    "GL-MT3000 is not yet powered/connected: prepare support and identify exact device/firmware/bootloader before installation",
-    "Add a complete first-entry wizard; persist initial preferences on the router and edit later through Settings"
-  ],
-  "baseline_audit": "private/audit-2026-10-20/summary.json",
-  "baseline_verdict": "406 application tests pass on Python 3.9/Lua; 26 UI suites pass; QA 41/42, VERSION-STALE; six additional defects reproduced",
-  "current_validation": "Alpha15 source58eb390 dual-runtime CI544app/106QA/32Node and96browserPASS. Initial plus post-recovery hardware checks scoped;8deployment and4concurrent-read checks PASS; normalLuCI200 andscopedreconnect PASS. Stock FW3 backlog recovered without vendor patch; onlymonitorrunning,bothVPNdisabled1,nativeoff. Native/LAN readiness NOTaccepted.",
-  "todo_in_order": [
-    "Keep portable VPNs disabled/native off pending profile independence, owner terms and separately certified MT3000 vendor/native/LAN adapter; permanent stock FW3 recursive-reload repair remains open.",
-    "Owner terms acceptance then physical first-run wizard save/Settings test",
-    "Diagnose disconnected VPN profiles; preserve firmware ownership of server selection",
-    "Review/certify separate native MT3000 adapter before bounded LAN-witness switch tests",
-    "Verify low-memory UI/RPC concurrency and NTP/reboot behavior without disturbing PC Wi-Fi",
-    "Keep stopped observer STOPPED; do not auto-accept VM terms",
-    "Save final evidence in Git/Gitea/recovery archive; D copy awaits intended disk"
-  ],
-  "official_mt3000_references": [
-    "https://docs.gl-inet.com/router/en/4/user_guide/gl-mt3000/",
-    "https://dl.gl-inet.com/router/mt3000/stable",
-    "https://dl.gl-inet.com/router/mt3000/open",
-    "https://www.gl-inet.com/en-us/pages/firmware-versions"
-  ],
-  "resume": "The owner explicitly resumed after urgent pause. Follow CONTINUATION and actual Git/CI/device receipts. Preserve PC Wi-Fi; no native adapter/terms acceptance is implied.",
-  "recovery_base_commit": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
-  "active_backlog": "docs/handoff/CONTINUATION-2026-10-20.md",
+  "current_validation": "Alpha16-1 is installed monitor-only with B · Calm as the default. All69 program files and served dashboard67/CSS match the canonical IPK; nine post-install checks passed and protected/app configuration stayed byte-identical across upgrade. Owner terms version1 and independent portable profiles are confirmed. Router-only existing WG/OpenVPN DNS/HTTPS checks and one bounded stock WG start/data/stop cycle passed; WG was up with a fresh handshake at4.826s. Earlier refused/aborted attempts remain distinct. Both VPNs are saved disabled=1, exact stock startup link restored, native/Auto/optional functions off. No Windows Wi-Fi/address/route change. Physical wizard Save, native/channel-switch certification, LAN/IPv6/Kill Switch and unattended/power recovery remain open. Read ../PHYSICAL-ROUTER-ONLY-2026-10-20.md for the current acceptance boundaries.",
+  "application": {
+    "version": "0.9.0-alpha16",
+    "package_revision": 1,
+    "package_version": "0.9.0-alpha16-1",
+    "release_tag": "v0.9.0-alpha16",
+    "ui_module": "dashboard67",
+    "ui_stylesheet": "ui44.css",
+    "artifact": "homensai-auto-vpn_0.9.0-alpha16-1_all.ipk",
+    "sha256": "3678843ab1873bb2537832cad3f34b4ed14990a89853346a0628662d96536b8a",
+    "source_fingerprint": "97007c8d12e50ed4bbe4f11f0f24bdb418eeb88db4d28f243a5c9113bea408b0"
+  },
+  "physical_report": "docs/PHYSICAL-ROUTER-ONLY-2026-10-20.md",
   "test_target": {
     "model": "portable GL-MT3000",
-    "connected": true,
-    "authenticated_identity": true,
     "board_name": "glinet,mt3000-snand",
     "firmware": "4.11.0",
     "openwrt_target": "mediatek/mt7981",
     "kernel": "5.4.211",
-    "bootloader": "UNKNOWN",
-    "configuration_backup": "ENCRYPTED_INDEPENDENT_DECRYPT_VERIFIED",
-    "official_recovery_image": "DOWNLOADED_VENDOR_SHA256_MATCH",
-    "actual_recovery": "NOT_TESTED",
     "native_certified": false,
-    "deployment": "alpha15 installed; own monitor service stopped after OOM/recursive vendor FW3 queue; native off; portable WireGuard runtime down",
-    "observed_vendor_profile_changes": 6,
-    "clock_correction_seconds": 21187
+    "deployment": "alpha16 monitor-only",
+    "owner_terms_version": "1",
+    "onboarding_complete": false,
+    "both_vpn_saved_disabled": true,
+    "stock_startup_link_restored": true
   },
-  "agent_statistics": [
+  "todo_in_order": [
+    "Owner-selected wizard Save and subsequent Settings round trip",
+    "Review separate native MT3000 worker arbitration before any application-managed channel switching",
+    "Independent LAN/IPv6/Kill Switch/special-rule witness (deferred by owner router-only scope)",
+    "Permanent stock FW3 restart recursion and latent DNAT/MAC-block ordering review",
+    "Unattended/reboot/power/NTP retention acceptance",
+    "Verify exact final-commit CI/Gitea/GitHub/local archive receipts; D-copy when intended disk returns"
+  ],
+  "save_current_rule": "Read actual HEAD-matched .git/handoff CI/publication receipts and private/portable-router-access-2026-10-20/CURRENT.local.json. Do not infer current publication from a previous checkpoint.",
+  "wifi_changed": false,
+  "old_observer": "STOPPED_NOT_PASS",
+  "current_agent_statistics": [
     {
-      "task": "backend and actual LuCI harness",
-      "new_regression_tests": 24,
-      "focused_tests_per_runtime": 145,
-      "runtimes": [
-        "3.9",
-        "3.11"
-      ],
-      "proxy_QA_tests": 10,
-      "actual_browser": "Read-only terms12/12PASS;60s diagnostic allowance; normal144BLOCKED by pending consent"
+      "task": "cleanup controller",
+      "isolated_checks_passed": 19,
+      "physical_process_crash_tested": false
     },
     {
-      "task": "UI guards and browser matrix",
-      "node_UI_suites": 30,
-      "confirmed_product_defects_fixed": [
-        "Stop blocked by pending action",
-        "stale lesson nodes",
-        "parallel setup diagnostics",
-        "numeric overflow hint"
-      ],
-      "full_current_50persona": "Alpha11 50/50PASS; alpha12 normal-flow static carryforward, newgate separate"
+      "task": "Calm UI",
+      "focused_node_suites_passed": 6,
+      "scope": "includes terms matrix; separate from physical browser acceptance"
     },
     {
-      "task": "backup/platform/SDK",
-      "SDK_checker_tests": 11,
-      "source_exporter_tests": 2,
-      "repeated_SDK_builds": 2,
-      "exact_source_files": 293,
-      "payload_files": 69,
-      "SDK_result": "PASS bounded upstream payload only"
+      "task": "independent final onboarding audit",
+      "files_reviewed": 9,
+      "tests_run": 0,
+      "router_calls": 0
     }
   ],
-  "completed_local_changes": [
-    "Full LAN guard uses kernel timeout element; cleanup timer must arm before applying guard",
-    "Emergency Stop persists an all-trials latch when current policy is unavailable",
-    "Existing falsy/corrupt journal contents refuse instead of being treated as missing; additional schema checks",
-    "Failed guard cleanup keeps RELEASE-PENDING recovery rather than claiming STOPPED",
-    "Return checks transaction ID and one-minute request age",
-    "New probe_deadline.py bounds connect/TLS/HTTP buffered reads by one monotonic deadline",
-    "Permanent regression tests in test_audit_hardening.py; related old fixtures being reconciled",
-    "Inherited two test edits and untracked fool_guard.inc.js preserved",
-    "Validate active journal identity/counters; refuse existing empty lifecycle journals",
-    "Malformed UI intent cannot bypass emergency Stop or prevent durable Stop",
-    "Explicit red release-pending UI even when intent is off",
-    "Read-only GL-MT3000 platform probe and local non-authorizing classifier prepared",
-    "Independent review fixes: upgrade stale Stop to global, scalar alarm recovery, malformed per-trial epoch and public status",
-    "Generation-specific nft element cleanup removes table-deletion race",
-    "Inherited UI helpers integrated; 27 suites and actual page generation pass",
-    "Backup ZIP bundle restoration/tree/fsck and strict 41-field platform classification tested",
-    "Strict bounded JSON and falsey lease refusal",
-    "Return replay high-water cannot be poisoned by rejected future request",
-    "RAM control_revision invalidates delayed Start after every Stop/restart",
-    "Short Start lock and serialized global terminal Stop",
-    "Emergency Stop remains available while other UI actions await responses",
-    "Stale lesson-navigation and shared setup diagnostic request guards",
-    "Exact upstream SDK payload proof and root-attribute-preserving source exporter",
-    "First-run page reuses full owner/model/program-package-page/style identity and footer without altering legal text or acceptance handler",
-    "Normal visible-frame50/50PASS with all original failed/stopped attempts retained",
-    "Actual alpha12 unaccepted terms12/12PASS; checkboxesunchecked/Acceptdisabled; no consent write",
-    "Exact source293file/69payload SDK repeatability and legal/normal-flow AST proof PASS",
-    "Eight-stage persistent first-run setup with shared Settings editing, one verified app-owned UCI transaction, optional profile/Telegram defer and router appearance defaults"
-  ],
-  "disposable_vm": {
-    "scope": "independent disk copy only",
-    "container": "homensai-vpn-recovery-20261020",
-    "vcpus": 2,
-    "ram_mib": 512,
-    "state": "RUNNING; Autooff and termsunaccepted; browser/profile jobs finished",
-    "original_stopped_containers_resumed": false,
-    "current_package": "0.9.0-alpha12-1",
-    "long_run": "private/offline-next-2026-10-20/endurance-alpha12-12h/status.json",
-    "long_run_source": "87e799aab71b0f558b8eb57536674110db784cb1 (installed alpha12); manifest is immutable and separate from new alpha13 source",
-    "long_run_result": "RUNNING at wizard release preparation; observe external status to terminal verdict, no12hPASS claim"
-  },
-  "application": {
-    "version": "0.9.0-alpha14",
-    "package_revision": 1,
-    "package_version": "0.9.0-alpha14-1",
-    "release_tag": "v0.9.0-alpha14",
-    "ui_module": "dashboard66",
-    "ui_stylesheet": "ui44.css",
-    "artifact": "homensai-auto-vpn_0.9.0-alpha14-1_all.ipk",
-    "sha256": "8f312a60ab8ef10a866a29d2765982d83a4a0f4c75eac7f7591477ffd174f2d9",
-    "source_fingerprint": "6f0509cb210968a2e9eee7b35f2967e7c880f33498270b45209dc27cf6b945e0"
-  },
-  "offline_record": "docs/OFFLINE-HARDENING-2026-10-20.md",
-  "historical_checkpoint_save": {
-    "head": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
-    "gitea": "SAVED exact SHA",
-    "d_archive": "VERIFIED_WIP_BACKUP with entry checksums; refreshed final archive pending"
-  },
-  "save_current_rule": "Compare actual HEAD with .git/handoff exact-source CI/publication receipts, primary Gitea and reviewed GitHub SHA. Read private/hardening-2026-10-20/final-save-state.json for current restore-verified local ZIP and pending/verified D copy. Older D backups are not a current save.",
-  "last_full_validation_source": "87e799aab71b0f558b8eb57536674110db784cb1",
-  "actual_normal_LuCI_gate": "BLOCKED pending explicit owner authorization to accept termsv1 only on disposable VM; automatic review rejected acceptance, no bypass",
-  "candidate_product_source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
-  "historical_evidence": "qa/RECOVERY-2026-10-20.json",
-  "evidence": "qa/OFFLINE-CONTINUATION-2026-10-20.json",
-  "initial_preflight_observations": [
-    "Physical primary LuCI responds 403 Login Required; no authenticated browser available in this session",
-    "Browser inventory empty; opening in-app LuCI timed out",
-    "Shell ssh command resolves to sandbox deny stub, not an authenticated management channel",
-    "Saved QEMU containers are exited, original disks not changed in this run",
-    "No physical router configuration was changed"
-  ],
-  "final_save_state": "private/hardening-2026-10-20/final-save-state.json",
-  "first_run_report": "qa/ONBOARDING-2026-10-20.json",
-  "first_run_agent_statistics": [
-    {
-      "task": "backend transaction and UI cross-review",
-      "files": 8,
-      "new_tests": 10,
-      "focused_shared_tests": 45,
-      "result": "PASS"
+  "historical_checkpoint_superseded_by_fields_above": {
+    "status": "BOUNDED_PHYSICAL_RECOVERY_OBSERVED_COMPLETE_MONITOR_ONLY",
+    "date": "2026-10-20",
+    "purpose": "Resumed after crash by direct owner instruction on 20 October; not a pause or completion claim",
+    "branch": "feature/design-0.9",
+    "base_commit": "00391bc7d058e588a9983ffb9c68dad3434ad50c",
+    "owner_steering": [
+      "Continue the entire hardening plan autonomously, including long tests where useful",
+      "Save current state and all TODOs to local Git and archive on D drive",
+      "Do not disrupt the primary GL-MT6000; physical fault tests move to newly purchased GL-MT3000 Beryl AX",
+      "GL-MT3000 is not yet powered/connected: prepare support and identify exact device/firmware/bootloader before installation",
+      "Add a complete first-entry wizard; persist initial preferences on the router and edit later through Settings"
+    ],
+    "baseline_audit": "private/audit-2026-10-20/summary.json",
+    "baseline_verdict": "406 application tests pass on Python 3.9/Lua; 26 UI suites pass; QA 41/42, VERSION-STALE; six additional defects reproduced",
+    "current_validation": "Alpha15 source58eb390 dual-runtime CI544app/106QA/32Node and96browserPASS. Initial plus post-recovery hardware checks scoped;8deployment and4concurrent-read checks PASS; normalLuCI200 andscopedreconnect PASS. Stock FW3 backlog recovered without vendor patch; onlymonitorrunning,bothVPNdisabled1,nativeoff. Native/LAN readiness NOTaccepted.",
+    "todo_in_order": [
+      "Keep portable VPNs disabled/native off pending profile independence, owner terms and separately certified MT3000 vendor/native/LAN adapter; permanent stock FW3 recursive-reload repair remains open.",
+      "Owner terms acceptance then physical first-run wizard save/Settings test",
+      "Diagnose disconnected VPN profiles; preserve firmware ownership of server selection",
+      "Review/certify separate native MT3000 adapter before bounded LAN-witness switch tests",
+      "Verify low-memory UI/RPC concurrency and NTP/reboot behavior without disturbing PC Wi-Fi",
+      "Keep stopped observer STOPPED; do not auto-accept VM terms",
+      "Save final evidence in Git/Gitea/recovery archive; D copy awaits intended disk"
+    ],
+    "official_mt3000_references": [
+      "https://docs.gl-inet.com/router/en/4/user_guide/gl-mt3000/",
+      "https://dl.gl-inet.com/router/mt3000/stable",
+      "https://dl.gl-inet.com/router/mt3000/open",
+      "https://www.gl-inet.com/en-us/pages/firmware-versions"
+    ],
+    "resume": "The owner explicitly resumed after urgent pause. Follow CONTINUATION and actual Git/CI/device receipts. Preserve PC Wi-Fi; no native adapter/terms acceptance is implied.",
+    "recovery_base_commit": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
+    "active_backlog": "docs/handoff/CONTINUATION-2026-10-20.md",
+    "test_target": {
+      "model": "portable GL-MT3000",
+      "connected": true,
+      "authenticated_identity": true,
+      "board_name": "glinet,mt3000-snand",
+      "firmware": "4.11.0",
+      "openwrt_target": "mediatek/mt7981",
+      "kernel": "5.4.211",
+      "bootloader": "UNKNOWN",
+      "configuration_backup": "ENCRYPTED_INDEPENDENT_DECRYPT_VERIFIED",
+      "official_recovery_image": "DOWNLOADED_VENDOR_SHA256_MATCH",
+      "actual_recovery": "NOT_TESTED",
+      "native_certified": false,
+      "deployment": "alpha15 installed; own monitor service stopped after OOM/recursive vendor FW3 queue; native off; portable WireGuard runtime down",
+      "observed_vendor_profile_changes": 6,
+      "clock_correction_seconds": 21187
     },
-    {
-      "task": "independent backend and Lua audit",
-      "files": 2,
-      "new_python_tests": 12,
-      "new_lua_tests": 2,
-      "focused_shared_tests": 45,
-      "result": "PASS"
+    "agent_statistics": [
+      {
+        "task": "backend and actual LuCI harness",
+        "new_regression_tests": 24,
+        "focused_tests_per_runtime": 145,
+        "runtimes": [
+          "3.9",
+          "3.11"
+        ],
+        "proxy_QA_tests": 10,
+        "actual_browser": "Read-only terms12/12PASS;60s diagnostic allowance; normal144BLOCKED by pending consent"
+      },
+      {
+        "task": "UI guards and browser matrix",
+        "node_UI_suites": 30,
+        "confirmed_product_defects_fixed": [
+          "Stop blocked by pending action",
+          "stale lesson nodes",
+          "parallel setup diagnostics",
+          "numeric overflow hint"
+        ],
+        "full_current_50persona": "Alpha11 50/50PASS; alpha12 normal-flow static carryforward, newgate separate"
+      },
+      {
+        "task": "backup/platform/SDK",
+        "SDK_checker_tests": 11,
+        "source_exporter_tests": 2,
+        "repeated_SDK_builds": 2,
+        "exact_source_files": 293,
+        "payload_files": 69,
+        "SDK_result": "PASS bounded upstream payload only"
+      }
+    ],
+    "completed_local_changes": [
+      "Full LAN guard uses kernel timeout element; cleanup timer must arm before applying guard",
+      "Emergency Stop persists an all-trials latch when current policy is unavailable",
+      "Existing falsy/corrupt journal contents refuse instead of being treated as missing; additional schema checks",
+      "Failed guard cleanup keeps RELEASE-PENDING recovery rather than claiming STOPPED",
+      "Return checks transaction ID and one-minute request age",
+      "New probe_deadline.py bounds connect/TLS/HTTP buffered reads by one monotonic deadline",
+      "Permanent regression tests in test_audit_hardening.py; related old fixtures being reconciled",
+      "Inherited two test edits and untracked fool_guard.inc.js preserved",
+      "Validate active journal identity/counters; refuse existing empty lifecycle journals",
+      "Malformed UI intent cannot bypass emergency Stop or prevent durable Stop",
+      "Explicit red release-pending UI even when intent is off",
+      "Read-only GL-MT3000 platform probe and local non-authorizing classifier prepared",
+      "Independent review fixes: upgrade stale Stop to global, scalar alarm recovery, malformed per-trial epoch and public status",
+      "Generation-specific nft element cleanup removes table-deletion race",
+      "Inherited UI helpers integrated; 27 suites and actual page generation pass",
+      "Backup ZIP bundle restoration/tree/fsck and strict 41-field platform classification tested",
+      "Strict bounded JSON and falsey lease refusal",
+      "Return replay high-water cannot be poisoned by rejected future request",
+      "RAM control_revision invalidates delayed Start after every Stop/restart",
+      "Short Start lock and serialized global terminal Stop",
+      "Emergency Stop remains available while other UI actions await responses",
+      "Stale lesson-navigation and shared setup diagnostic request guards",
+      "Exact upstream SDK payload proof and root-attribute-preserving source exporter",
+      "First-run page reuses full owner/model/program-package-page/style identity and footer without altering legal text or acceptance handler",
+      "Normal visible-frame50/50PASS with all original failed/stopped attempts retained",
+      "Actual alpha12 unaccepted terms12/12PASS; checkboxesunchecked/Acceptdisabled; no consent write",
+      "Exact source293file/69payload SDK repeatability and legal/normal-flow AST proof PASS",
+      "Eight-stage persistent first-run setup with shared Settings editing, one verified app-owned UCI transaction, optional profile/Telegram defer and router appearance defaults"
+    ],
+    "disposable_vm": {
+      "scope": "independent disk copy only",
+      "container": "homensai-vpn-recovery-20261020",
+      "vcpus": 2,
+      "ram_mib": 512,
+      "state": "RUNNING; Autooff and termsunaccepted; browser/profile jobs finished",
+      "original_stopped_containers_resumed": false,
+      "current_package": "0.9.0-alpha12-1",
+      "long_run": "private/offline-next-2026-10-20/endurance-alpha12-12h/status.json",
+      "long_run_source": "87e799aab71b0f558b8eb57536674110db784cb1 (installed alpha12); manifest is immutable and separate from new alpha13 source",
+      "long_run_result": "RUNNING at wizard release preparation; observe external status to terminal verdict, no12hPASS claim"
     },
-    {
-      "task": "wizard UI and Settings editor",
-      "files": 5,
-      "focused_node_suites": 5,
-      "result": "PASS"
+    "application": {
+      "version": "0.9.0-alpha14",
+      "package_revision": 1,
+      "package_version": "0.9.0-alpha14-1",
+      "release_tag": "v0.9.0-alpha14",
+      "ui_module": "dashboard66",
+      "ui_stylesheet": "ui44.css",
+      "artifact": "homensai-auto-vpn_0.9.0-alpha14-1_all.ipk",
+      "sha256": "8f312a60ab8ef10a866a29d2765982d83a4a0f4c75eac7f7591477ffd174f2d9",
+      "source_fingerprint": "6f0509cb210968a2e9eee7b35f2967e7c880f33498270b45209dc27cf6b945e0"
     },
-    {
-      "task": "root integration/browser/release/backup",
-      "node_ui_suites": 31,
-      "browser_cases": 12,
-      "scope": "all three child agents reused; maximum four concurrent including root"
+    "offline_record": "docs/OFFLINE-HARDENING-2026-10-20.md",
+    "historical_checkpoint_save": {
+      "head": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
+      "gitea": "SAVED exact SHA",
+      "d_archive": "VERIFIED_WIP_BACKUP with entry checksums; refreshed final archive pending"
     },
-    {
-      "task": "independent final source audit",
-      "result": "Node onboarding PASS; no remaining blocker; native Windows Python import unavailable"
+    "save_current_rule": "Compare actual HEAD with .git/handoff exact-source CI/publication receipts, primary Gitea and reviewed GitHub SHA. Read private/hardening-2026-10-20/final-save-state.json for current restore-verified local ZIP and pending/verified D copy. Older D backups are not a current save.",
+    "last_full_validation_source": "87e799aab71b0f558b8eb57536674110db784cb1",
+    "actual_normal_LuCI_gate": "BLOCKED pending explicit owner authorization to accept termsv1 only on disposable VM; automatic review rejected acceptance, no bypass",
+    "candidate_product_source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
+    "historical_evidence": "qa/RECOVERY-2026-10-20.json",
+    "evidence": "qa/OFFLINE-CONTINUATION-2026-10-20.json",
+    "initial_preflight_observations": [
+      "Physical primary LuCI responds 403 Login Required; no authenticated browser available in this session",
+      "Browser inventory empty; opening in-app LuCI timed out",
+      "Shell ssh command resolves to sandbox deny stub, not an authenticated management channel",
+      "Saved QEMU containers are exited, original disks not changed in this run",
+      "No physical router configuration was changed"
+    ],
+    "final_save_state": "private/hardening-2026-10-20/final-save-state.json",
+    "first_run_report": "qa/ONBOARDING-2026-10-20.json",
+    "first_run_agent_statistics": [
+      {
+        "task": "backend transaction and UI cross-review",
+        "files": 8,
+        "new_tests": 10,
+        "focused_shared_tests": 45,
+        "result": "PASS"
+      },
+      {
+        "task": "independent backend and Lua audit",
+        "files": 2,
+        "new_python_tests": 12,
+        "new_lua_tests": 2,
+        "focused_shared_tests": 45,
+        "result": "PASS"
+      },
+      {
+        "task": "wizard UI and Settings editor",
+        "files": 5,
+        "focused_node_suites": 5,
+        "result": "PASS"
+      },
+      {
+        "task": "root integration/browser/release/backup",
+        "node_ui_suites": 31,
+        "browser_cases": 12,
+        "scope": "all three child agents reused; maximum four concurrent including root"
+      },
+      {
+        "task": "independent final source audit",
+        "result": "Node onboarding PASS; no remaining blocker; native Windows Python import unavailable"
+      },
+      {
+        "task": "independent release/recovery audit",
+        "files_reviewed_initial": 18,
+        "files_reviewed_fix": 5,
+        "finding": "held-reserve dashboard access fixed",
+        "result": "final source approved for freeze"
+      }
+    ],
+    "first_run_release_state": "Alpha14 supersedes unpublished alpha13 candidate. Read actual HEAD-matched CI/publication receipts and private final-save-state; this document cannot name its own commit.",
+    "last_full_validation_scope": "Previous alpha12 final source. Alpha13 requires its own matching-HEAD receipt; see first_run_report.",
+    "physical_report": "docs/PHYSICAL-MT3000-2026-10-20.md",
+    "stock_fw3_repair": {
+      "vendor_patch_applied": false,
+      "helper_candidate": "NOT_APPROVED_CONDITIONAL_COUNTEREXAMPLE",
+      "actual_include_reload": "0; normal reload skips rtp2; missing state can fall back to start",
+      "recovery": "OBSERVED_COMPLETE_AFTER_CANCEL532_STALE_PROCESSES_AND_TERM10_INNER_WAITERS; PARSED_FW3_STATE_AND_QUIET_READS",
+      "permanent_vendor_fix": "OPEN",
+      "hardware_stability": "BOUNDED_MONITOR_ONLY_CHECKS; NO_UNATTENDED_OR_NATIVE_ACCEPTANCE"
     },
-    {
-      "task": "independent release/recovery audit",
-      "files_reviewed_initial": 18,
-      "files_reviewed_fix": 5,
-      "finding": "held-reserve dashboard access fixed",
-      "result": "final source approved for freeze"
+    "post_recovery": {
+      "monitor": "RUNNING_ONLY_MONITOR",
+      "portable_vpn_saved_disabled": true,
+      "native_enabled": false,
+      "vendor_patch_applied": false,
+      "concurrent_read_wall_seconds": 1.061,
+      "normal_luci_page": 200,
+      "configuration_export_entries": 175,
+      "independent_export_decrypt_read_verified": true,
+      "wifi_changed": false
     }
-  ],
-  "first_run_release_state": "Alpha14 supersedes unpublished alpha13 candidate. Read actual HEAD-matched CI/publication receipts and private final-save-state; this document cannot name its own commit.",
-  "last_full_validation_scope": "Previous alpha12 final source. Alpha13 requires its own matching-HEAD receipt; see first_run_report.",
-  "physical_report": "docs/PHYSICAL-MT3000-2026-10-20.md",
-  "stock_fw3_repair": {
-    "vendor_patch_applied": false,
-    "helper_candidate": "NOT_APPROVED_CONDITIONAL_COUNTEREXAMPLE",
-    "actual_include_reload": "0; normal reload skips rtp2; missing state can fall back to start",
-    "recovery": "OBSERVED_COMPLETE_AFTER_CANCEL532_STALE_PROCESSES_AND_TERM10_INNER_WAITERS; PARSED_FW3_STATE_AND_QUIET_READS",
-    "permanent_vendor_fix": "OPEN",
-    "hardware_stability": "BOUNDED_MONITOR_ONLY_CHECKS; NO_UNATTENDED_OR_NATIVE_ACCEPTANCE"
-  },
-  "post_recovery": {
-    "monitor": "RUNNING_ONLY_MONITOR",
-    "portable_vpn_saved_disabled": true,
-    "native_enabled": false,
-    "vendor_patch_applied": false,
-    "concurrent_read_wall_seconds": 1.061,
-    "normal_luci_page": 200,
-    "configuration_export_entries": 175,
-    "independent_export_decrypt_read_verified": true,
-    "wifi_changed": false
   }
 }

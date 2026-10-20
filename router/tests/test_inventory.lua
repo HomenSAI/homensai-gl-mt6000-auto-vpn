@@ -12,6 +12,7 @@ package.preload['uci']=function()
     homensai_vpn={{['.name']='main',['.type']='main',enabled='1'},
                   {['.name']='custom',['.type']='server',profile='openvpn:12_34',name='My office',channel='Work'}}
   }
+  if arg[2]~=nil then data.homensai_vpn[1].appearance_design=arg[2] end
   return {cursor=function()return {foreach=function(_,package,kind,fn)
     for _,s in ipairs(data[package] or {}) do if not kind or kind==s['.type'] then fn(s) end end
   end}end}

@@ -13,7 +13,7 @@ const walk=n=>n instanceof Node?[n,...n.children.flatMap(walk)]:[];
 const text=n=>n instanceof Node?[n.textContent,...n.children.map(text)].join(' '):String(n);
 const clean=v=>JSON.parse(JSON.stringify(v));
 const app=JSON.parse(fs.readFileSync('VERSION.json','utf8')).application;
-function fixture({language='en',design='a',inventory,store={},status}={}){
+function fixture({language='en',design,inventory,store={},status}={}){
   let modal=null,reloads=0,response={saved:true,onboarding_complete:true,onboarding_version:1},pending=null,fail=false,stopPending=null,stopFail=false,stopResponse={queued:true,accepted:true};
   const calls=[],notes=[],writes=[];
   const storage={getItem:k=>Object.hasOwn(store,k)?store[k]:null,setItem:(k,v)=>{store[k]=String(v);writes.push([k,v]);}};
@@ -27,7 +27,7 @@ function fixture({language='en',design='a',inventory,store={},status}={}){
   for(const file of ['fool_guard','auto_panel','setup_wizard','theme_panel','design_panel','router_link','identity_panel','attribution_panel','onboarding_panel']){
     vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8').replace('__UI_BUILD__',app.ui_module).replace('__UI_AGENT__',app.version),c,{filename:file});
   }
-  if(design!=='a')store['homensai-vpn-design']=design;
+  if(design!==undefined)store['homensai-vpn-design']=design;
   inventory=inventory||baseInventory();c.onboardingDisplayDefaults(inventory);
   let root=c.renderOnboardingGate(inventory,status||{version:app.version,package_version:app.version+'-1'});
   const active=()=>modal||root;
@@ -50,6 +50,7 @@ function advance(f,target='review'){
   assert.equal(f.c.onboardingComplete({error:'RPC',settings:{onboarding_complete:true,onboarding_version:1}}),false);
   assert.equal(f.calls.length,0,'render must not add a status/readiness RPC');
   assert.equal(f.step(),'appearance');assert.equal(f.field('appearance.language').value,'en');
+  assert.equal(f.c.currentDesign(),'b');assert.equal(f.field('appearance.design').value,'b','fresh wizard starts Calm without persisting a browser override');assert.equal(f.writes.length,0);
   f.set('appearance.theme','dark');f.click('next');assert.equal(f.step(),'monitor');assert.equal(f.writes.length,0,'draft does not change browser preferences');
   f.set('monitor.interval','9');assert(f.button('next').disabled);f.click('next');assert.equal(f.step(),'monitor');
   assert.equal(f.field('monitor.interval').value,'9','never silently coerce input');

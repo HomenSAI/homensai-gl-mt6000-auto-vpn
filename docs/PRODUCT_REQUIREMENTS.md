@@ -70,6 +70,10 @@
 
 After the explicit terms screen, offer one complete initial configuration wizard. Save the supported application preferences and a separate completion marker on the router. Later entries use the saved state; edits belong in Settings. Include monitoring, existing profile metadata and selection, recovery, optional speed tests and Telegram, and interface defaults. Permit deferred profile selection when profiles are not yet installed. See [First-run setup](FIRST-RUN-SETUP.md) for the persistence and failure contract.
 
+## Default page design (owner decision, 20 October 2026)
+
+B · Calm («Спокойный») is the default for new installations, first-entry/terms screens and missing or invalid design preferences. Preserve explicit A/C choices. The existing precedence stays: current page choice, then a valid browser choice, then the router's saved default, then B. Users can still change the design in Settings. Every design retains the required product, version and author attribution.
+
 ## Firmware-owned server failover (owner decision, 20 October 2026)
 
 The firmware owns server selection inside an existing VPN tunnel. The application observes configured member changes, diagnoses fresh path evidence and coordinates distinct channels/tunnels, including OpenVPN and WireGuard. Provider profile groups and editable channel names are not routing identities. No competing independent server loop is introduced. See [Tunnel coordination](TUNNEL-COORDINATION.md) for stable identities, evidence invalidation and live-application prerequisites. This decision supersedes the earlier intra-channel controller proposal above.

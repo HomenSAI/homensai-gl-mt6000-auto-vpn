@@ -56,6 +56,7 @@ const none=fixture({profiles:[],samples:[],native_history:{events:[]}});
 a=render(ctx,'a',none,[]).node;assert(/No VPN is connected/.test(a.text()));assert(/No VPN profiles found/.test(a.text()));assert(/No switches or failures are recorded/.test(a.text()));
 // B: plain words, tags, questions, links to the sections that are not in its menu.
 let b=render(ctx,'b',fixture()).node;t=b.text();
+for(const missing of [undefined,null,'invalid'])assert(render(ctx,missing,fixture()).node.attrs.class.includes('hv-dv-b'),'missing/invalid design renders Calm');
 assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');assert(/What happens if Germany stops working\?/.test(t));assert(/Last thing that happened/.test(t));
 ['#statistics','#help','#learn','#events'].forEach(h=>assert(b.all().some(n=>n.tag==='a'&&n.attrs.href===h),'B link '+h));
 assert(b.all().some(n=>/hv-dv-flag/.test(n.attrs.class||'')&&n.text().trim()==='DE'));

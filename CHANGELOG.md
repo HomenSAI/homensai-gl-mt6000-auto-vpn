@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.0-alpha16-1 - 2026-10-20
+
+B · Calm is the default page design for first entry, terms, onboarding and missing or invalid preferences. Explicit A/C preferences remain available and retain the existing browser/router precedence. The current page is dashboard67, so an older cached dashboard does not hide the new default. Native platform guards and VPN activation behavior are unchanged.
+
 ## 0.9.0-alpha9-1 - 2026-10-20 (local candidate)
 
 Crash-recovery continuation: durable emergency Stop with corrupt/unreadable intent, strict recovery journals and lifecycle refusal, restart-safe RELEASE-PENDING, request replay checks and total HTTPS deadlines. Full traffic guards use kernel timeouts and generation-specific element cleanup, so old timers cannot remove replacement guards. Bilingual inline form errors and duplicate-action protection are wired into setup/preferences without delaying emergency Stop. Verified D-drive recovery tooling restores the archived Git bundle and checks its tree/fsck. GL-MT3000 platform inventory and staged test plan prepared; device not yet connected, native switching remains uncertified. Current-source virtual acceptance and hardware certification are recorded separately in the active recovery backlog.

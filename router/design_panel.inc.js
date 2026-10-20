@@ -1,23 +1,24 @@
-/* Page design: A Control room (default), B Calm, C Instrument panel. Chosen in Settings, stored only in this browser. */
+/* Page design: A Control room, B Calm (default), C Instrument panel. Router defaults come from setup;
+   an explicit choice in Settings overrides them in this browser without changing other saved choices. */
 var HV_DESIGNS=[
   {key:'a',name:['A · Control room','A · Пульт'],
    about:['Sections as tabs across the top, full width for the content. Status, failover path and servers stay where they are now.','Разделы вкладками сверху, вся ширина отдана содержимому. Статус, путь переключения и серверы на привычных местах.'],
-   suits:['Everyone. The default.','Всем. Вариант по умолчанию.']},
+   suits:['Everyone who prefers the full control-room layout.','Всем, кто предпочитает полный вид пульта.']},
   {key:'b',name:['B · Calm','B · Спокойный'],
    about:['Larger text and more space. Administrator sections are hidden behind “Advanced”; on a phone the sections sit at the bottom of the screen.','Крупнее текст и больше воздуха. Разделы для администратора спрятаны за «Расширенное»; на телефоне разделы внизу экрана.'],
-   suits:['People who only want to know that the internet works, and phone users.','Тем, кому важно только знать, что интернет работает, и для телефона.']},
+   suits:['The default. People who only want to know that the internet works, and phone users.','Вариант по умолчанию. Тем, кому важно только знать, что интернет работает, и для телефона.']},
   {key:'c',name:['C · Instrument panel','C · Приборная панель'],
    about:['A narrow icon column, compact cards, numbers and tables in a monospaced font. All sections, including administrator ones, are always visible.','Узкая колонка иконок, компактные карточки, цифры и таблицы моноширинным шрифтом. Все разделы, включая администраторские, видны всегда.'],
    suits:['The owner and testers: diagnostics, error codes, router tests.','Владельцу и тестировщикам: диагностика, коды ошибок, тесты на роутере.']}
 ];
 var HV_DESIGN_KEY='homensai-vpn-design';
 function validDesign(key){return HV_DESIGNS.some(function(d){return d.key===key;});}
-function storedDesign(){var fallback=typeof HV_ROUTER_DISPLAY!=='undefined'&&HV_ROUTER_DISPLAY&&HV_ROUTER_DISPLAY.design;fallback=validDesign(fallback)?fallback:'a';try{var v=window.localStorage.getItem(HV_DESIGN_KEY);return validDesign(v)?v:fallback;}catch(e){return fallback;}}
+function storedDesign(){var fallback=typeof HV_ROUTER_DISPLAY!=='undefined'&&HV_ROUTER_DISPLAY&&HV_ROUTER_DISPLAY.design;fallback=validDesign(fallback)?fallback:'b';try{var v=window.localStorage.getItem(HV_DESIGN_KEY);return validDesign(v)?v:fallback;}catch(e){return fallback;}}
 /* The design chosen in this page session; it wins over storage, so a browser that refuses storage still keeps the choice until reload. */
 var HV_DESIGN_NOW=null;
 function currentDesign(){return validDesign(HV_DESIGN_NOW)?HV_DESIGN_NOW:storedDesign();}
 function saveDesign(key){if(!validDesign(key))return false;HV_DESIGN_NOW=key;try{window.localStorage.setItem(HV_DESIGN_KEY,key);return true;}catch(e){return false;}}
-function applyDesign(root,key){if(!root)return;root.setAttribute('data-hv-design',validDesign(key)?key:'a');}
+function applyDesign(root,key){if(!root)return;root.setAttribute('data-hv-design',validDesign(key)?key:'b');}
 function renderDesignPicker(getRoot,onApplied){
   var current=currentDesign(),note=E('p',{'class':'hv-design-note','role':'status','aria-live':'polite'},'');
   var options=HV_DESIGNS.map(function(d){

@@ -15,4 +15,9 @@ assert data['profiles'][1]['id']=='wireguard:peer_56'
 assert [v['id'] for v in data['native_candidates']]==['openvpn:12_34','wireguard:peer_56']
 assert [v['order'] for v in data['native_candidates']]==[2,3]
 assert not any(token in result for token in ('PASSWORD_SENTINEL','PRIVATE_KEY_SENTINEL','TOKEN_SENTINEL','PRIVATE_PATH_SENTINEL','SENSITIVE_DOMAIN_SENTINEL'))
+assert data['settings']['appearance_design']=='b'
+for choice in ('a','b','c','','invalid','A'):
+    configured=json.loads(subprocess.check_output(['lua5.1',str(root/'tests/test_inventory.lua'),str(inventory),choice],text=True))
+    assert configured['settings']['appearance_design']==(choice if choice in ('a','b','c') else 'b'),choice
+assert "option appearance_design 'b'" in (root/'files/etc/config/homensai_vpn').read_text()
 print('Lua 5.1 syntax and credential-exclusion inventory test passed')
