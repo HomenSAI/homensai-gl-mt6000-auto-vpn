@@ -277,5 +277,17 @@
       "independent_export_decrypt_read_verified": true,
       "wifi_changed": false
     }
+  },
+  "development_checkpoint": {
+    "status": "ALPHA17_WIP_FROZEN_OWNER_REQUESTED_GIT_BACKUP",
+    "report": "docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md",
+    "version": "0.9.0-alpha17-1",
+    "installed": false,
+    "release_approved": false,
+    "exact_ci": "NOT_DONE",
+    "broad_exploratory_tests": "FAILED_4_FAILURES_11_ERRORS_599_TOTAL",
+    "actual_browser": "FAILED_INCOMPLETE_0_OF_6",
+    "installed_baseline": "alpha16",
+    "next": "Read checkpoint TODO before any activation or release"
   }
 }

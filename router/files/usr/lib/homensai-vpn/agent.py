@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha16'
+VERSION = '0.9.0-alpha17'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -751,7 +751,7 @@ def rpc(method):
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':''}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -825,6 +825,10 @@ def rpc(method):
         try:result=start(arguments)
         except SpeedError as error:result={'accepted':False,'code':error.code}
         print(json.dumps(result));return
+    if method=='manual_switch':
+        from manual_control import request,refusal
+        result=request(arguments['direction'],arguments['control_revision']) if set(arguments)=={'direction','control_revision'} else refusal('MANUAL-FIELDS')
+        print(json.dumps(result));return
     if arguments and method!='native_start':
         raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
@@ -868,6 +872,11 @@ def rpc(method):
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
+            from manual_control import public_status as manual_status, control_status
+            from channel_path import public_status as path_status
+            status['manual_switch']=manual_status()
+            status['manual_switch_control']=control_status()
+            status['channel_path']=path_status(status)
             try:
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()

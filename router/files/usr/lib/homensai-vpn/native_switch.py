@@ -212,6 +212,7 @@ def journal_read():
     if 'rollback_failures' in value and (type(value['rollback_failures']) is not int or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'trial' in value and type(value['trial']) is not bool:raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'manual_request_id' in value and (not isinstance(value['manual_request_id'],str) or not re.fullmatch(r'[a-f0-9]{32}',value['manual_request_id'])):raise Refused('JOURNAL-INTEGRITY-FAILED')
     if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
         for name in ('tx','source','target','trial_nonce'):
             if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):
@@ -617,15 +618,16 @@ def source_ready(backend,journal,settings,reason):
     return False
 
 
-def operator_return(backend,journal,reason='OPERATOR-RETURN'):
+def operator_return(backend,journal,reason='OPERATOR-RETURN',control_revision=None):
     """Leave a held or committed reserve and restore the original order; needs the source freshly healthy."""
     if journal.get('phase') not in ('HELD-ON-RESERVE','COMMITTED'):return 'RETURN-NOT-APPLICABLE'
     if backend.health(journal['source']) is not True:return 'SOURCE-NOT-HEALTHY'
+    if control_revision is not None:require_control_revision(control_revision)
     rollback(backend,journal,reason)
     return None
 
 
-def handle_return(backend,journal,request,last_time):
+def handle_return(backend,journal,request,last_time,control_revision=None):
     """Answer each operator return request exactly once with a public result. Returns (handled,last_time)."""
     stamp=request.get('time') if isinstance(request,dict) else None
     if type(stamp) not in (int,float) or not math.isfinite(stamp) or stamp<=0:return False,last_time
@@ -639,7 +641,7 @@ def handle_return(backend,journal,request,last_time):
             or request['tx']!=journal.get('tx')):code='RETURN-TRANSACTION-MISMATCH'
     elif not journal.get('started',0)<=stamp<=now or now-stamp>60:code='RETURN-REQUEST-EXPIRED'
     else:
-        try:code=operator_return(backend,journal)
+        try:code=operator_return(backend,journal,control_revision=control_revision)
         except Refused as error:code=str(error)
     if code is None:
         try:backend.unguard()
@@ -892,13 +894,16 @@ def transaction_expired(journal,wall=None,mono=None):
     return wall>=journal['deadline'] or (journal.get('monotonic_deadline') is not None and mono>=journal['monotonic_deadline'])
 
 
-def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=None):
+def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=None,manual_request_id=None):
+    if manual_request_id is not None and (trial or not isinstance(manual_request_id,str) or not re.fullmatch(r'[a-f0-9]{32}',manual_request_id)):
+        raise Refused('MANUAL-REQUEST-INVALID')
     if control_revision is None:
         from auto_control import current_revision
         control_revision=current_revision(RUNTIME)
     require_control_revision(control_revision)
     assert_selection(backend,selection)
     cause='OPERATOR-TRIAL' if trial else 'SOURCE-FAILED' if probe_evidence and probe_evidence.get('source_streak_met') is True else 'SOURCE-HEALTH-UNKNOWN'
+    if manual_request_id is not None:cause='OPERATOR-MANUAL'
 
     before=selection['order'];after=list(before)
     i=after.index(selection['source_rule']);j=after.index(selection['target_rule'])
@@ -924,6 +929,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
              'pid':None,'started':time.time(),'vendor_identity':selection['vendor_identity'],
              'control_revision':control_revision,
              'vendor_profiles':{role:{key:selection[role].get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')} for role in ('source','target')}}
+    if manual_request_id is not None:journal['manual_request_id']=manual_request_id
     publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
     require_control_revision(control_revision)
     journal_write(journal)
@@ -963,6 +969,13 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
                 require_control_revision(control_revision)
                 journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
+                if manual_request_id is not None:
+                    with control_lock(RUNTIME):
+                        require_control_revision(control_revision)
+                        journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL',reserve_healthy=True);journal_write(journal)
+                    publish({'state':'STOPPED-ON-RESERVE','reason':'OPERATOR-MANUAL','source':journal['source'],'target':journal['target'],
+                             'original_restored':False,'reserve_healthy':True,'trial':False,'tx':tx})
+                    return
                 if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
                 require_control_revision(control_revision)
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
@@ -1028,7 +1041,12 @@ def serve():
                 raise
         elif journal.get('phase')=='COMMITTED':
             if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
-            else:backend.guard(backend.devices())
+            else:
+                backend.guard(backend.devices())
+                if journal.get('manual_request_id') and journal.get('confirmed'):
+                    journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL');journal_write(journal)
+        from manual_dispatch import recover_pending
+        recover_pending(backend)
         if revision_error:
             # A UI freshness marker failure alone does not authorize a traffic
             # guard on a monitor-only installation. Preserve the durable stop
@@ -1060,6 +1078,9 @@ def serve():
                 stopped=read_json(PERSIST/'native-stop.json',{})
                 from auto_control import effective_intent
                 enabled,stop_latched=effective_intent(settings,stopped,read_json(RUNTIME/'auto-control.json',{}),time.time())
+                from manual_dispatch import consume as consume_manual
+                if consume_manual(backend,settings,decision_revision,stopped):
+                    time.sleep(1);continue
                 lease_error=None;lease_end=0
                 if enabled or active.get('phase')=='COMMITTED':lease_end,lease_error=monotonic_lease(settings,until)
                 if active.get('phase')=='COMMITTED':
@@ -1074,7 +1095,7 @@ def serve():
                     if backend.order()!=(active['after'],active['hash']):
                         abandon(backend,active,'EXTERNAL-POLICY-CHANGE');time.sleep(5);continue
                     from recovery_settings import normalized as recovery_normalized
-                    if recovery_normalized(settings)['return_policy']=='healthy_primary' and backend.recovery_ready(active['source'],settings) is True:
+                    if not active.get('manual_request_id') and recovery_normalized(settings)['return_policy']=='healthy_primary' and backend.recovery_ready(active['source'],settings) is True:
                         if operator_return(backend,active,'PRIMARY-RECOVERED') is None:
                             publish({'state':'ROLLED-BACK','reason':'PRIMARY-RECOVERED','source':active['source'],'target':active['target'],'original_restored':True,'trial':active.get('trial',False)})
                             time.sleep(2);continue

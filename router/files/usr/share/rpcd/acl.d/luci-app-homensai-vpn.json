@@ -19,6 +19,7 @@
           "native_stop",
           "native_start",
           "native_return",
+          "manual_switch",
           "setup_system",
           "setup_telegram",
           "telegram_test",
