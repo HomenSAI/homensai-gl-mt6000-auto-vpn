@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-20",
+  "scope": "Complete first-run setup and later Settings editing; no device changes",
+  "application": {
+    "version": "0.9.0-alpha14",
+    "package_revision": 1,
+    "package_version": "0.9.0-alpha14-1",
+    "release_tag": "v0.9.0-alpha14",
+    "ui_module": "dashboard66",
+    "ui_stylesheet": "ui44.css",
+    "artifact": "homensai-auto-vpn_0.9.0-alpha14-1_all.ipk",
+    "sha256": "8f312a60ab8ef10a866a29d2765982d83a4a0f4c75eac7f7591477ffd174f2d9",
+    "source_fingerprint": "6f0509cb210968a2e9eee7b35f2967e7c880f33498270b45209dc27cf6b945e0"
+  },
+  "package_bytes": 670588,
+  "focused_python39_lua": {
+    "result": "PASS",
+    "tests": 45,
+    "skipped": 0,
+    "scope": "mock-UCI actual Lua; Python API I/O mocked; not live libuci"
+  },
+  "node_ui": {
+    "result": "PASS",
+    "suites": 31
+  },
+  "browser": {
+    "result": "PASS",
+    "cases": 12,
+    "combinations": "A/B/C x en/ru x 1440/390",
+    "checks": 360,
+    "result_sha256": "b100917061d90a628b6c9b1218b42da03b298069329f0a3c65cbd3ca13c767e8",
+    "evidence": "private/onboarding-2026-10-20/browser-alpha14-full-01/result.json",
+    "scope": "frozen synthetic fixture; server RAM config independent of browser storage; no real router",
+    "flow": [
+      "automatic first entry",
+      "all eight stages",
+      "invalid number and corrected value",
+      "Back draft",
+      "Cancel/pause/resume",
+      "all-step horizontal geometry",
+      "pending duplicate save refusal",
+      "failed save retains review",
+      "retry after failure",
+      "completion persists across cleared browser storage",
+      "Settings reopens stored values",
+      "explicit independent Stop during pending Save",
+      "one-entry dashboard recovery escape does not complete setup",
+      "URL flag consumed, fresh reload opens unfinished setup"
+    ],
+    "retained_runs": [
+      {
+        "path": "private/onboarding-2026-10-20/browser-quick-01/result.json",
+        "result": "FAIL",
+        "cause": "browser did not start in restricted process context; no application cases executed"
+      },
+      {
+        "path": "private/onboarding-2026-10-20/browser-quick-02/result.json",
+        "result": "PASS",
+        "cases": 2,
+        "scope": "earlier candidate before final Unicode and harness navigation corrections"
+      },
+      {
+        "path": "private/onboarding-2026-10-20/browser-alpha13-full-01/result.json",
+        "result": "PASS",
+        "cases": 12,
+        "scope": "before every-step geometry assertion; final02 includes it"
+      },
+      {
+        "path": "private/onboarding-2026-10-20/browser-alpha13-full-02/result.json",
+        "result": "PASS",
+        "cases": 12,
+        "scope": "alpha13 candidate before root and final-agent audits found missing emergency/recovery access; superseded by alpha14"
+      }
+    ]
+  },
+  "final_ci_gate": "Require scripts/offline-ci.ps1 receipt for exact final HEAD before publication; receipt is private .git/handoff/ci-<HEAD>-*.receipt.json",
+  "limitations": [
+    "Physical GL-MT3000 not connected",
+    "New alpha14 is not installed in the running alpha12 endurance VM",
+    "Actual post-consent LuCI matrix remains pending explicit test-VM consent; never accept terms indirectly",
+    "D drive unavailable; restore-verified fresh local archive required after final Git save",
+    "Existing alpha12 12h observer continues under its original source/manifest and is not alpha14 evidence"
+  ],
+  "previous_immutable_ci": {
+    "source": "117d267a3b78dcfa2a72a53bca62d612874f16bc",
+    "version": "0.9.0-alpha13",
+    "application_tests": 473,
+    "qa_tests": 86,
+    "ui_suites": 31,
+    "result": "PASS",
+    "scope": "unpublished candidate; recovery access fixes require current alpha14 exact-source CI"
+  },
+  "final_audits": {
+    "helpers_total": 5,
+    "max_helpers_concurrent": 3,
+    "root_finding": "First-run gate hid emergency Stop on an active configured upgrade; fixed independent pending-only control",
+    "release_auditor_finding": "Held reserve keeps configuration guard blocked after Stop; fixed explicit recovery dashboard escape without completion",
+    "final_source_review": "No remaining blockers after Stop and recovery escape fixes"
+  }
+}

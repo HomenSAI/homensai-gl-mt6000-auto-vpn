@@ -12,7 +12,7 @@ var HV_DESIGNS=[
 ];
 var HV_DESIGN_KEY='homensai-vpn-design';
 function validDesign(key){return HV_DESIGNS.some(function(d){return d.key===key;});}
-function storedDesign(){try{var v=window.localStorage.getItem(HV_DESIGN_KEY);return validDesign(v)?v:'a';}catch(e){return 'a';}}
+function storedDesign(){var fallback=typeof HV_ROUTER_DISPLAY!=='undefined'&&HV_ROUTER_DISPLAY&&HV_ROUTER_DISPLAY.design;fallback=validDesign(fallback)?fallback:'a';try{var v=window.localStorage.getItem(HV_DESIGN_KEY);return validDesign(v)?v:fallback;}catch(e){return fallback;}}
 /* The design chosen in this page session; it wins over storage, so a browser that refuses storage still keeps the choice until reload. */
 var HV_DESIGN_NOW=null;
 function currentDesign(){return validDesign(HV_DESIGN_NOW)?HV_DESIGN_NOW:storedDesign();}

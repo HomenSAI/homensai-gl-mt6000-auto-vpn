@@ -34,7 +34,8 @@
           "setup_recovery",
           "fault_start",
           "fault_cancel",
-          "setup_monitor"
+          "setup_monitor",
+          "setup_onboarding"
         ]
       }
     }

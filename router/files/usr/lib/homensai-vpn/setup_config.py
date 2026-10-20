@@ -30,10 +30,22 @@ def system_payload(arguments, profiles):
     ids={p['id'] for p in profiles}
     if not isinstance(arguments['source'],str) or not isinstance(arguments['target'],str) or arguments['source'] not in ids or arguments['target'] not in ids or arguments['source']==arguments['target']:
         raise ValueError('SETUP-PROFILES')
-    if type(arguments['session_loss']) is not bool or not isinstance(arguments['servers'],list) or len(arguments['servers'])>400:
+    if type(arguments['session_loss']) is not bool:
         raise ValueError('SETUP-FIELDS')
+    rows=server_rows(arguments['servers'],profiles)
+    enabled={row['profile'] for row in rows if row['enabled']=='1'}
+    if arguments['source'] not in enabled or arguments['target'] not in enabled:raise ValueError('SETUP-PRIMARY-RESERVE-DISABLED')
+    return {'main':{'plan_source':arguments['source'],'plan_target':arguments['target'],
+                    'interval':integer(arguments['interval'],10,300),'native_duration':integer(arguments['duration'],1,240),
+                    'native_session_loss':'1' if arguments['session_loss'] else '0','setup_complete':'1'},'servers':rows}
+
+
+def server_rows(servers, profiles):
+    """Validate own metadata independently of whether a usable pair exists yet."""
+    if not isinstance(servers,list) or len(servers)>400:raise ValueError('SETUP-FIELDS')
+    ids={p['id'] for p in profiles}
     rows=[];seen=set()
-    for row in arguments['servers']:
+    for row in servers:
         if not isinstance(row,dict) or set(row) != {'profile','name','channel','priority','enabled'}:
             raise ValueError('SETUP-SERVER')
         if not isinstance(row['profile'],str) or row['profile'] not in ids or row['profile'] in seen or type(row['enabled']) is not bool:
@@ -42,11 +54,7 @@ def system_payload(arguments, profiles):
         rows.append({'section':'srv_'+hashlib.sha256(row['profile'].encode()).hexdigest()[:16],
                      'profile':row['profile'],'name':label(row['name']),'channel':label(row['channel']),
                      'priority':integer(row['priority'],1,1000),'enabled':'1' if row['enabled'] else '0'})
-    enabled={row['profile'] for row in rows if row['enabled']=='1'}
-    if arguments['source'] not in enabled or arguments['target'] not in enabled:raise ValueError('SETUP-PRIMARY-RESERVE-DISABLED')
-    return {'main':{'plan_source':arguments['source'],'plan_target':arguments['target'],
-                    'interval':integer(arguments['interval'],10,300),'native_duration':integer(arguments['duration'],1,240),
-                    'native_session_loss':'1' if arguments['session_loss'] else '0','setup_complete':'1'},'servers':rows}
+    return rows
 
 
 def telegram_payload(arguments):
@@ -86,13 +94,93 @@ def speed_payload(arguments):
     return {'main':main,'servers':[]}
 
 
-def monitor_payload(arguments):
+def monitor_payload(arguments, probe_max=16):
     if set(arguments)!={'interval','checkpoint','probe_limit','planning_enabled'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
     return {'main':{'interval':integer(arguments['interval'],10,300),'checkpoint':integer(arguments['checkpoint'],300,3600),
-                    'probe_limit':integer(arguments['probe_limit'],1,16),'plan_enabled':'1' if arguments['planning_enabled'] else '0'},'servers':[]}
+                    'probe_limit':integer(arguments['probe_limit'],1,probe_max),'plan_enabled':'1' if arguments['planning_enabled'] else '0'},'servers':[]}
+
+
+def onboarding_payload(arguments, profiles):
+    """One explicit, complete app-owned preference transaction; no runtime actions."""
+    if (not isinstance(arguments,dict) or set(arguments)!={'system','monitor','recovery','speed','telegram','appearance'}
+            or any(not isinstance(value,dict) for value in arguments.values())):
+        raise ValueError('ONBOARDING-FIELDS')
+    system=arguments['system']
+    if (set(system)!={'defer_pair','source','target','duration','session_loss','servers'}
+            or type(system['defer_pair']) is not bool or type(system['session_loss']) is not bool):
+        raise ValueError('ONBOARDING-SYSTEM-FIELDS')
+    # Inventory and the running monitor already support legacy values up to 32.
+    main=monitor_payload(arguments['monitor'],probe_max=32)['main']
+    if system['defer_pair']:
+        if system['source']!='' or system['target']!='' or arguments['monitor']['planning_enabled']:
+            raise ValueError('ONBOARDING-PAIR-DEFERRED')
+        rows=server_rows(system['servers'],profiles)
+        main.update(native_duration=integer(system['duration'],1,240),
+                    native_session_loss='1' if system['session_loss'] else '0')
+    else:
+        paired=system_payload({key:value for key,value in system.items() if key!='defer_pair'} |
+                              {'interval':arguments['monitor']['interval']},profiles)
+        main.update(paired['main']);rows=paired['servers']
+    from recovery_settings import payload as recovery_payload
+    for payload in (recovery_payload(arguments['recovery']),speed_payload(arguments['speed'])):
+        main.update(payload['main'])
+    appearance=arguments['appearance']
+    if (set(appearance)!={'language','design','theme'} or appearance['language'] not in ('en','ru')
+            or appearance['design'] not in ('a','b','c') or appearance['theme'] not in ('system','light','dark')):
+        raise ValueError('ONBOARDING-APPEARANCE')
+    main.update({'appearance_'+key:value for key,value in appearance.items()})
+    telegram=arguments['telegram']
+    if type(telegram.get('configure')) is not bool:raise ValueError('ONBOARDING-TELEGRAM-FIELDS')
+    if telegram['configure']:
+        if set(telegram)!={'configure','token','chat','enabled','interval','schedule','hour','weekly','monthly','items'}:
+            raise ValueError('ONBOARDING-TELEGRAM-FIELDS')
+        fields={key:value for key,value in telegram.items() if key!='configure'}
+        # An optional, disabled destination may be left empty. Never invent one,
+        # clear a stored secret, or allow a new token with no destination.
+        empty_destination=fields['enabled'] is False and fields['chat']=='' and fields['token']==''
+        if empty_destination:fields['chat']='0'
+        main.update(telegram_payload(fields)['main'])
+        if empty_destination:main['telegram_chat']=''
+    elif set(telegram)!={'configure'}:raise ValueError('ONBOARDING-TELEGRAM-FIELDS')
+    main.update(onboarding_version='1',onboarding_complete='1',
+                onboarding_pair_deferred='1' if system['defer_pair'] else '0')
+    payload={'main':main,'servers':rows}
+    if len(json.dumps(payload,ensure_ascii=True).encode())>65536:raise ValueError('ONBOARDING-TOO-LARGE')
+    return payload
+
+
+def save_onboarding(arguments):
+    # Profile identity and controller/recovery guards are checked in the same
+    # lock as the single writer. Nothing here accepts terms or starts Auto.
+    with control_lock():
+        current=inventory()
+        from configuration_guard import blocked
+        try:reason=blocked(current.get('settings',{}))
+        except (OSError,ValueError,TypeError,AttributeError):reason='CONFIG-RECOVERY-UNVERIFIED'
+        if reason:return {'saved':False,'code':reason}
+        payload=onboarding_payload(arguments,current['profiles'])
+        telegram=arguments['telegram']
+        if telegram['configure'] and telegram['enabled'] and not telegram['token']:
+            from telegram_report import option
+            try:existing=option('telegram_token')
+            except (OSError,ValueError,subprocess.SubprocessError):existing=''
+            if not isinstance(existing,str) or not re.fullmatch(r'[0-9]{6,15}:[A-Za-z0-9_-]{30,100}',existing):
+                return {'saved':False,'code':'TELEGRAM-TOKEN-REQUIRED'}
+        from rpc_throttle import allow
+        if not allow('setup:onboarding',2):return {'saved':False,'code':'RPC-RATE-LIMIT'}
+        try:
+            result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
+                input=json.dumps(payload,ensure_ascii=True).encode(),stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+        except (OSError,subprocess.SubprocessError):
+            return {'saved':False,'code':'SETUP-SAVE-UNCONFIRMED'}
+        if result.returncode or result.stdout.strip()!=b'OK':
+            return {'saved':False,'code':failure_code(result,'SETUP-SAVE-UNCONFIRMED')}
+    return {'saved':True,'onboarding_complete':True,'onboarding_version':1,
+            'mode':'monitor','requires_lan_certification':True}
 
 
 def save(arguments, kind):
+    if kind=='onboarding':return save_onboarding(arguments)
     if kind=='system':payload=system_payload(arguments,inventory()['profiles'])
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)

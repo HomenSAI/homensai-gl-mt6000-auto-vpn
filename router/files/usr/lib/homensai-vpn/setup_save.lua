@@ -1,7 +1,10 @@
 -- Root-only stdin; only the application's UCI config is writable here.
 local testroot=os.getenv('HOMENSAI_SETUP_TEST_ROOT')
 if testroot and not testroot:match('^/tmp/homensai%-setup%-test%-[A-Za-z0-9_-]+$') then os.exit(1) end
-local c=testroot and require('uci').cursor(testroot..'/config',testroot..'/delta') or require('uci').cursor()
+local function cursor()
+  return testroot and require('uci').cursor(testroot..'/config',testroot..'/delta') or require('uci').cursor()
+end
+local c=cursor()
 -- A previous process may have died after save and before commit. Do not merge
 -- those unacknowledged changes into a different operator request or discard them.
 local savedir=type(c.get_savedir)=='function' and c:get_savedir() or nil
@@ -15,12 +18,16 @@ elseif open_errno~=2 then io.write('SETUP-DELTA-UNVERIFIED');os.exit(1) end
 local json=require('cjson')
 local input=io.read(65537)
 if not input or #input>65536 then os.exit(1) end
+local data,sections
+local committed=false
 local ok=pcall(function()
-  local data=json.decode(input)
+  data=json.decode(input)
   local allowed={checkpoint=true,probe_limit=true,plan_enabled=true,recovery_failures=true,recovery_successes=true,recovery_cooldown=true,recovery_min_dwell=true,recovery_return_policy=true,recovery_primary_successes=true,recovery_primary_stable=true,enabled=true,plan_source=true,plan_target=true,interval=true,native_duration=true,
     native_session_loss=true,setup_complete=true,terms_version=true,terms_time=true,telegram_chat=true,telegram_token=true,
     telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,telegram_items=true,speed_enabled=true,speed_auto_new=true,
-    speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true}
+    speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true,
+    onboarding_version=true,onboarding_complete=true,onboarding_pair_deferred=true,
+    appearance_language=true,appearance_design=true,appearance_theme=true}
   for key,value in pairs(data.main) do
     assert(allowed[key] and type(value)=='string')
     assert(c:set('homensai_vpn','main',key,value))
@@ -32,13 +39,30 @@ local ok=pcall(function()
   end
   local existing={}
   c:foreach('homensai_vpn','server',function(s) existing[s.profile]=s['.name'] end)
-  for _,row in ipairs(data.servers) do
+  sections={}
+  for index,row in ipairs(data.servers) do
     local section=existing[row.profile] or row.section
+    sections[index]=section
     assert(section:match('^[A-Za-z0-9_]+$'))
     if not c:get('homensai_vpn',section) then assert(c:set('homensai_vpn',section,'server')) end
     for _,key in ipairs({'profile','name','channel','priority','enabled'}) do assert(c:set('homensai_vpn',section,key,row[key])) end
   end
   assert(c:save('homensai_vpn'));assert(c:commit('homensai_vpn'))
+  committed=true
 end)
 if not ok then c:revert('homensai_vpn');os.exit(1) end
+-- An acknowledgement must prove all requested values, not only the completion
+-- flag. A new cursor reads the committed file, not the writer's staged cache.
+local verified=pcall(function()
+  local fresh=cursor()
+  for key,value in pairs(data.main) do assert(fresh:get('homensai_vpn','main',key)==value) end
+  for _,key in ipairs(data.delete or {}) do assert(fresh:get('homensai_vpn','main',key)==nil) end
+  for index,row in ipairs(data.servers) do
+    for _,key in ipairs({'profile','name','channel','priority','enabled'}) do
+      assert(fresh:get('homensai_vpn',sections[index],key)==row[key])
+    end
+  end
+end)
+-- Once committed, a failed readback is uncertain, not a claim of rollback.
+if committed and not verified then io.write('SETUP-SAVE-UNCONFIRMED');os.exit(1) end
 io.write('OK')

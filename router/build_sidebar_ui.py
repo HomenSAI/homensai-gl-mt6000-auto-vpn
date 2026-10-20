@@ -236,6 +236,8 @@ reorganizer = """      (function(){
         var testDelivery=function(ev){return telegramTestDelivery(ev.currentTarget||ev.target);};
         settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
           E('h3',{},bi('Setup','Настройка')),
+          E('button',{'type':'button','class':'cbi-button cbi-button-action','data-onboarding-action':'open','click':function(){openOnboardingSettings(inventory,lastGoodStatus||data[1]);}},bi('All application settings','Все настройки приложения')),
+          !onboardingComplete(inventory)?E('p',{'class':'alert-message warning','data-onboarding-incomplete':'1'},bi('Initial setup is incomplete. Open All application settings to review and save it. Stop and recovery controls remain available.','Первоначальная настройка не завершена. Откройте «Все настройки приложения», проверьте и сохраните её. Остановка и средства восстановления остаются доступны.')):null,
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
           E('p',{'class':'hv-setup-path','aria-label':bi('Order of the steps','Порядок шагов')},[E('b',{},bi('1 · System setup','1 · Настройка системы')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('2 · Telegram','2 · Telegram')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('3 · Test delivery','3 · Проверка доставки')),E('small',{},bi('Press a button below to open its wizard.','Нажмите кнопку ниже, чтобы открыть мастер.'))]),
           E('div',{'class':'hv-setup-grid hv-setup-steps'},[
@@ -320,6 +322,10 @@ must_replace("put('readiness',renderReadiness(status,inventory));","put('readine
 _terms_version=_r.search(r"^TERMS_VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js').read_text(encoding='utf8').replace('__TERMS_VERSION__',_terms_version)+'\nreturn view.extend({')
 must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n")
+# The complete first-entry editor follows explicit terms; the same renderer remains in Settings.
+must_replace('return view.extend({',(Path(__file__).parent/'onboarding_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("    var inventory=data[0];\n","    var inventory=data[0];\n    onboardingDisplayDefaults(inventory);\n")
+must_replace("    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n","    if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate(inventory,data[1]);\n    if(!inventory.error&&!onboardingComplete(inventory)&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);\n")
 # Installed identity (package/program/page) and part-mismatch notice.
 _agent_version=_r.search(r"^VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'identity_panel.inc.js').read_text(encoding='utf8').replace('__UI_BUILD__','dashboard66').replace('__UI_AGENT__',_agent_version)+'\nreturn view.extend({')

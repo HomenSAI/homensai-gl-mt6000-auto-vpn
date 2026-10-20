@@ -30,20 +30,53 @@ local function record(name,config,section,key,value)
   local f=assert(io.open(output,'w'));f:write(json.encode(calls));f:close()
 end
 package.preload['uci']=function()
+ local function copy(value)
+  if type(value)~='table' then return value end
+  local out={};for key,item in pairs(value) do out[key]=copy(item) end;return out
+ end
+ local committed={main={['.type']='main'},cfg_existing={['.type']='server',profile='wireguard:peer_7'}}
+ local cursor_count=0
+ local function cursor()
+ cursor_count=cursor_count+1
+ local current_cursor=cursor_count
+ local staged=copy(committed)
  local c={}
  function c:get_savedir() if failure=='savedir' then return nil end;return DELTA end
- function c:set(config,section,key,value) record('set',config,section,key,value);return failure=='set' and nil or true end
- function c:get(config,section) assert(config=='homensai_vpn');return section=='cfg_existing' and 'server' or nil end
- function c:foreach(config,kind,callback) assert(config=='homensai_vpn' and kind=='server');callback({profile='wireguard:peer_7',['.name']='cfg_existing'}) end
+ function c:set(config,section,key,value)
+  record('set',config,section,key,value);if failure=='set' then return nil end
+  if value==nil then staged[section]={['.type']=key}
+  else staged[section]=staged[section] or {};staged[section][key]=value end
+  return true
+ end
+ function c:get(config,section,key)
+  assert(config=='homensai_vpn')
+  if current_cursor>1 and failure=='readback_error' then error('PRIVATE_SENTINEL') end
+  local row=staged[section];if not row then return nil end
+  if key then return row[key] end;return row['.type']
+ end
+ function c:foreach(config,kind,callback)
+  assert(config=='homensai_vpn' and kind=='server')
+  for name,row in pairs(staged) do if row['.type']=='server' then local value=copy(row);value['.name']=name;callback(value) end end
+ end
  function c:save(config) record('save',config);if failure=='save' then return nil end;return true end
- function c:commit(config) record('commit',config);if failure=='commit' then return nil end;return true end
- function c:revert(config) record('revert',config);return true end
- function c:delete(config,section,key) record('delete',config,section,key);if failure=='delete' then return nil end;return true end
- return {cursor=function(config,delta) return c end}
+ function c:commit(config)
+  record('commit',config);if failure=='commit' then return nil end
+  committed=copy(staged)
+  if failure=='readback_main' then committed.main.interval='PRIVATE_SENTINEL' end
+  if failure=='readback_server' then committed.cfg_existing.name='PRIVATE_SENTINEL' end
+  if failure=='readback_marker' then committed.main.onboarding_complete=nil end
+  return true
+ end
+ function c:revert(config) record('revert',config);staged=copy(committed);return true end
+ function c:delete(config,section,key)
+  record('delete',config,section,key);if failure=='delete' then return nil end
+  if staged[section] then staged[section][key]=nil end;return true
+ end
+ return c
+ end
+ return {cursor=cursor}
 end
 '''.replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure)).replace('DELTA',json.dumps(str(delta)))
-            # Lua's `a and nil or true` cannot simulate nil; use explicit branch.
-            prelude=prelude.replace("return failure=='set' and nil or true", "if failure=='set' then return nil end;return true")
             environment=dict(os.environ)
             if testroot is not None:environment['HOMENSAI_SETUP_TEST_ROOT']=testroot
             result=subprocess.run([LUA,'-e',prelude,str(ROOT/'setup_save.lua')],
@@ -89,6 +122,28 @@ end
         self.assertEqual(result.stdout,b'OK');self.assertEqual({c['key'] for c in calls if c['name']=='set'},{'terms_version','terms_time'})
         result,calls=self.run_setup(json.dumps({'main':{'terms_accepted_by':'x'},'servers':[]}).encode(),pending=b'')
         self.assertNotEqual(result.returncode,0)
+
+    def test_onboarding_marker_and_all_preferences_use_exactly_one_commit(self):
+        payload=json.loads(self.payload())
+        payload['main'].update(onboarding_version='1',onboarding_complete='1',onboarding_pair_deferred='1')
+        result,calls=self.run_setup(json.dumps(payload).encode(),pending=b'')
+        self.assertEqual(result.returncode,0);self.assertEqual(result.stdout,b'OK')
+        self.assertEqual([row['name'] for row in calls].count('commit'),1)
+        marker_positions=[index for index,row in enumerate(calls) if row.get('key') in
+                          ('onboarding_version','onboarding_complete','onboarding_pair_deferred')]
+        self.assertEqual(len(marker_positions),3)
+        self.assertLess(max(marker_positions),next(index for index,row in enumerate(calls) if row['name']=='commit'))
+
+    def test_fresh_committed_cursor_must_confirm_main_server_and_marker(self):
+        payload=json.loads(self.payload())
+        payload['main'].update(onboarding_version='1',onboarding_complete='1',onboarding_pair_deferred='1')
+        for failure in ('readback_main','readback_server','readback_marker','readback_error'):
+            with self.subTest(failure=failure):
+                result,calls=self.run_setup(json.dumps(payload).encode(),failure=failure,pending=b'')
+                self.assertNotEqual(result.returncode,0)
+                self.assertEqual(result.stdout,b'SETUP-SAVE-UNCONFIRMED')
+                self.assertNotIn(b'PRIVATE_SENTINEL',result.stdout)
+                self.assertEqual([row['name'] for row in calls].count('commit'),1)
 
     def test_all_packaged_lua_parses(self):
         for path in ROOT.glob('*.lua'):

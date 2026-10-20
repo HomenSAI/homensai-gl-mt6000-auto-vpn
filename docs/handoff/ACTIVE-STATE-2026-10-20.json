@@ -8,11 +8,12 @@
     "Continue the entire hardening plan autonomously, including long tests where useful",
     "Save current state and all TODOs to local Git and archive on D drive",
     "Do not disrupt the primary GL-MT6000; physical fault tests move to newly purchased GL-MT3000 Beryl AX",
-    "GL-MT3000 is not yet powered/connected: prepare support and identify exact device/firmware/bootloader before installation"
+    "GL-MT3000 is not yet powered/connected: prepare support and identify exact device/firmware/bootloader before installation",
+    "Add a complete first-entry wizard; persist initial preferences on the router and edit later through Settings"
   ],
   "baseline_audit": "private/audit-2026-10-20/summary.json",
   "baseline_verdict": "406 application tests pass on Python 3.9/Lua; 26 UI suites pass; QA 41/42, VERSION-STALE; six additional defects reproduced",
-  "current_validation": "Exact alpha12 product586a2a5 CI PASS:449application/85QA/30UI across Python3.9/Lua and3.11/Git/Node, canonical654970bytes/d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29. Current read-only terms12/12PASS and Node36PASS. Alpha11 normal UI50/50PASS carried to12 by explicit AST/payload proof outside first-run gate. Final metadata/tooling HEAD must match its own private CI/publication receipts.",
+  "current_validation": "Alpha14 complete first-run/Settings editor:45 focused Python3.9+actualLua checks PASS,31 Node UI suites PASS,12 frozen browser combinations PASS including independent Stop during Save and one-entry recovery escape without completion, plus pause/failure/retry/storage reset/Settings/all-step geometry. Exact final-HEAD dual-runtime CI receipt is required for publication; see qa/ONBOARDING-2026-10-20.json. Older alpha12 VM/SDK evidence is historical and does not certify this new flow on a device.",
   "todo_in_order": [
     "Pending explicit owner approval ONLY for termsv1 on disposable VM before actual post-consent144case browser matrix; no alternate acceptance route",
     "Observe the fresh final-source alpha12 monitor-only12h run to terminal verdict and independent cleanup; do not confuse stoppedalpha11 run with PASS",
@@ -99,7 +100,8 @@
     "First-run page reuses full owner/model/program-package-page/style identity and footer without altering legal text or acceptance handler",
     "Normal visible-frame50/50PASS with all original failed/stopped attempts retained",
     "Actual alpha12 unaccepted terms12/12PASS; checkboxesunchecked/Acceptdisabled; no consent write",
-    "Exact source293file/69payload SDK repeatability and legal/normal-flow AST proof PASS"
+    "Exact source293file/69payload SDK repeatability and legal/normal-flow AST proof PASS",
+    "Eight-stage persistent first-run setup with shared Settings editing, one verified app-owned UCI transaction, optional profile/Telegram defer and router appearance defaults"
   ],
   "disposable_vm": {
     "scope": "independent disk copy only",
@@ -110,19 +112,19 @@
     "original_stopped_containers_resumed": false,
     "current_package": "0.9.0-alpha12-1",
     "long_run": "private/offline-next-2026-10-20/endurance-alpha12-12h/status.json",
-    "long_run_source": "Final HEAD at new launch; package/product source586a2a5; read external manifest/status for exact SHA",
-    "long_run_result": "Fresh run starts separately after final source is frozen; no12hPASS claim"
+    "long_run_source": "87e799aab71b0f558b8eb57536674110db784cb1 (installed alpha12); manifest is immutable and separate from new alpha13 source",
+    "long_run_result": "RUNNING at wizard release preparation; observe external status to terminal verdict, no12hPASS claim"
   },
   "application": {
-    "version": "0.9.0-alpha12",
+    "version": "0.9.0-alpha14",
     "package_revision": 1,
-    "package_version": "0.9.0-alpha12-1",
-    "release_tag": "v0.9.0-alpha12",
+    "package_version": "0.9.0-alpha14-1",
+    "release_tag": "v0.9.0-alpha14",
     "ui_module": "dashboard66",
     "ui_stylesheet": "ui44.css",
-    "artifact": "homensai-auto-vpn_0.9.0-alpha12-1_all.ipk",
-    "sha256": "d7a2b47e1c3afc4b6c042e7f1ea1b23941d438630915fd9b83597ae381203b29",
-    "source_fingerprint": "2fc6f9bb3034a6ad78ceec33066198780cdab5f827cfcb5a74339666160b939e"
+    "artifact": "homensai-auto-vpn_0.9.0-alpha14-1_all.ipk",
+    "sha256": "8f312a60ab8ef10a866a29d2765982d83a4a0f4c75eac7f7591477ffd174f2d9",
+    "source_fingerprint": "6f0509cb210968a2e9eee7b35f2967e7c880f33498270b45209dc27cf6b945e0"
   },
   "offline_record": "docs/OFFLINE-HARDENING-2026-10-20.md",
   "historical_checkpoint_save": {
@@ -131,7 +133,7 @@
     "d_archive": "VERIFIED_WIP_BACKUP with entry checksums; refreshed final archive pending"
   },
   "save_current_rule": "Compare actual HEAD with .git/handoff exact-source CI/publication receipts, primary Gitea and reviewed GitHub SHA. Read private/hardening-2026-10-20/final-save-state.json for current restore-verified local ZIP and pending/verified D copy. Older D backups are not a current save.",
-  "last_full_validation_source": "82591bd30e1aba7353169a1488f4b19b60bd6dfd",
+  "last_full_validation_source": "87e799aab71b0f558b8eb57536674110db784cb1",
   "actual_normal_LuCI_gate": "BLOCKED pending explicit owner authorization to accept termsv1 only on disposable VM; automatic review rejected acceptance, no bypass",
   "candidate_product_source": "586a2a5305dbb638dfeac05755c8f9e1de736408",
   "historical_evidence": "qa/RECOVERY-2026-10-20.json",
@@ -143,5 +145,48 @@
     "Saved QEMU containers are exited, original disks not changed in this run",
     "No physical router configuration was changed"
   ],
-  "final_save_state": "private/hardening-2026-10-20/final-save-state.json"
+  "final_save_state": "private/hardening-2026-10-20/final-save-state.json",
+  "first_run_report": "qa/ONBOARDING-2026-10-20.json",
+  "first_run_agent_statistics": [
+    {
+      "task": "backend transaction and UI cross-review",
+      "files": 8,
+      "new_tests": 10,
+      "focused_shared_tests": 45,
+      "result": "PASS"
+    },
+    {
+      "task": "independent backend and Lua audit",
+      "files": 2,
+      "new_python_tests": 12,
+      "new_lua_tests": 2,
+      "focused_shared_tests": 45,
+      "result": "PASS"
+    },
+    {
+      "task": "wizard UI and Settings editor",
+      "files": 5,
+      "focused_node_suites": 5,
+      "result": "PASS"
+    },
+    {
+      "task": "root integration/browser/release/backup",
+      "node_ui_suites": 31,
+      "browser_cases": 12,
+      "scope": "all three child agents reused; maximum four concurrent including root"
+    },
+    {
+      "task": "independent final source audit",
+      "result": "Node onboarding PASS; no remaining blocker; native Windows Python import unavailable"
+    },
+    {
+      "task": "independent release/recovery audit",
+      "files_reviewed_initial": 18,
+      "files_reviewed_fix": 5,
+      "finding": "held-reserve dashboard access fixed",
+      "result": "final source approved for freeze"
+    }
+  ],
+  "first_run_release_state": "Alpha14 supersedes unpublished alpha13 candidate. Read actual HEAD-matched CI/publication receipts and private final-save-state; this document cannot name its own commit.",
+  "last_full_validation_scope": "Previous alpha12 final source. Alpha13 requires its own matching-HEAD receipt; see first_run_report."
 }

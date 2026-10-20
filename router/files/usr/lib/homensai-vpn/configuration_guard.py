@@ -9,6 +9,8 @@ def blocked(settings):
         state=read_json(RUNTIME/'native-status.json',{})
         intent=read_json(RUNTIME/'auto-control.json',{})
     except (Refused,OSError,ValueError,TypeError):return 'CONFIG-RECOVERY-UNVERIFIED'
+    if any(not isinstance(value,dict) for value in (settings,journal,state,intent)):
+        return 'CONFIG-RECOVERY-UNVERIFIED'
     if (settings.get('native_enabled') in (True,'1') or intent.get('mode')=='on'
             or (journal and journal.get('phase')!='ROLLED-BACK')
             or state.get('guard')=='closed' or state.get('state') in

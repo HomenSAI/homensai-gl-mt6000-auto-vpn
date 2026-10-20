@@ -65,3 +65,7 @@
 ## Лампы состояния мигают (постоянное правило, 18.10.2026)
 
 Все лампы состояния на всех страницах и во всех вариантах оформления слегка мигают, чтобы состояние сразу бросалось в глаза: зелёная медленно, жёлтая быстро, красная средне. Серая лампа (выключено или нет данных) не мигает. Если пользователь включил в системе «уменьшить движение», лампы не мигают. Новые элементы состояния делаются с такой же небольшой анимацией по умолчанию.
+
+## First-run wizard (owner request, 20 October 2026)
+
+After the explicit terms screen, offer one complete initial configuration wizard. Save the supported application preferences and a separate completion marker on the router. Later entries use the saved state; edits belong in Settings. Include monitoring, existing profile metadata and selection, recovery, optional speed tests and Telegram, and interface defaults. Permit deferred profile selection when profiles are not yet installed. See [First-run setup](FIRST-RUN-SETUP.md) for the persistence and failure contract.
