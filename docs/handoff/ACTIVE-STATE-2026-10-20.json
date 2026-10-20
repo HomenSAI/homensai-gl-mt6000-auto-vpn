@@ -1,5 +1,5 @@
 {
-  "status": "OFFLINE_BATCH_VALIDATED_CONSENT_HARDWARE_PENDING",
+  "status": "BOUNDED_PHYSICAL_RECOVERY_OBSERVED_COMPLETE_MONITOR_ONLY",
   "date": "2026-10-20",
   "purpose": "Resumed after crash by direct owner instruction on 20 October; not a pause or completion claim",
   "branch": "feature/design-0.9",
@@ -13,14 +13,15 @@
   ],
   "baseline_audit": "private/audit-2026-10-20/summary.json",
   "baseline_verdict": "406 application tests pass on Python 3.9/Lua; 26 UI suites pass; QA 41/42, VERSION-STALE; six additional defects reproduced",
-  "current_validation": "Alpha14 complete first-run/Settings editor:45 focused Python3.9+actualLua checks PASS,31 Node UI suites PASS,12 frozen browser combinations PASS including independent Stop during Save and one-entry recovery escape without completion, plus pause/failure/retry/storage reset/Settings/all-step geometry. Exact final-HEAD dual-runtime CI receipt is required for publication; see qa/ONBOARDING-2026-10-20.json. Older alpha12 VM/SDK evidence is historical and does not certify this new flow on a device.",
+  "current_validation": "Alpha15 source58eb390 dual-runtime CI544app/106QA/32Node and96browserPASS. Initial plus post-recovery hardware checks scoped;8deployment and4concurrent-read checks PASS; normalLuCI200 andscopedreconnect PASS. Stock FW3 backlog recovered without vendor patch; onlymonitorrunning,bothVPNdisabled1,nativeoff. Native/LAN readiness NOTaccepted.",
   "todo_in_order": [
-    "Pending explicit owner approval ONLY for termsv1 on disposable VM before actual post-consent144case browser matrix; no alternate acceptance route",
-    "Observe the fresh final-source alpha12 monitor-only12h run to terminal verdict and independent cleanup; do not confuse stoppedalpha11 run with PASS",
-    "D copy awaits intended disk reconnection; current verified local archive and restore receipt are separate from destination copy",
-    "Investigate normal20s HTTP RPC performance in software VM; diagnostic60s DOM proof is not normal performance acceptance; optional profile was refused, causeUNKNOWN",
-    "When GL-MT3000 connects, verify identity/firmware/bootloader/recovery backup before compatible installation",
-    "Certify vendor adapter/cooperative workers/inactive profiles/multi-hop and independent LAN/IPv6/KillSwitch/reboot/power/unattended acceptance"
+    "Keep portable VPNs disabled/native off pending profile independence, owner terms and separately certified MT3000 vendor/native/LAN adapter; permanent stock FW3 recursive-reload repair remains open.",
+    "Owner terms acceptance then physical first-run wizard save/Settings test",
+    "Diagnose disconnected VPN profiles; preserve firmware ownership of server selection",
+    "Review/certify separate native MT3000 adapter before bounded LAN-witness switch tests",
+    "Verify low-memory UI/RPC concurrency and NTP/reboot behavior without disturbing PC Wi-Fi",
+    "Keep stopped observer STOPPED; do not auto-accept VM terms",
+    "Save final evidence in Git/Gitea/recovery archive; D copy awaits intended disk"
   ],
   "official_mt3000_references": [
     "https://docs.gl-inet.com/router/en/4/user_guide/gl-mt3000/",
@@ -28,17 +29,25 @@
     "https://dl.gl-inet.com/router/mt3000/open",
     "https://www.gl-inet.com/en-us/pages/firmware-versions"
   ],
-  "resume": "Read this state, qa/RECOVERY-2026-10-20.json and current git status/log; match current HEAD to .git/handoff CI/publication receipts, Gitea ls-remote and D CURRENT.local.json. This file cannot name its own commit. Do not restart old tests blindly. Mobile GL-MT3000 is not connected; actual platform/native acceptance remains pending.",
+  "resume": "The owner explicitly resumed after urgent pause. Follow CONTINUATION and actual Git/CI/device receipts. Preserve PC Wi-Fi; no native adapter/terms acceptance is implied.",
   "recovery_base_commit": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
-  "active_backlog": "docs/handoff/RECOVERY-TODO-2026-10-20.md",
+  "active_backlog": "docs/handoff/CONTINUATION-2026-10-20.md",
   "test_target": {
-    "model": "mobile GL-MT3000",
-    "owner_selected": true,
-    "connected": false,
-    "firmware": "UNKNOWN",
+    "model": "portable GL-MT3000",
+    "connected": true,
+    "authenticated_identity": true,
+    "board_name": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "openwrt_target": "mediatek/mt7981",
+    "kernel": "5.4.211",
     "bootloader": "UNKNOWN",
+    "configuration_backup": "ENCRYPTED_INDEPENDENT_DECRYPT_VERIFIED",
+    "official_recovery_image": "DOWNLOADED_VENDOR_SHA256_MATCH",
+    "actual_recovery": "NOT_TESTED",
     "native_certified": false,
-    "plan": "docs/GL-MT3000-TEST-PLAN.md"
+    "deployment": "alpha15 installed; own monitor service stopped after OOM/recursive vendor FW3 queue; native off; portable WireGuard runtime down",
+    "observed_vendor_profile_changes": 6,
+    "clock_correction_seconds": 21187
   },
   "agent_statistics": [
     {
@@ -188,5 +197,25 @@
     }
   ],
   "first_run_release_state": "Alpha14 supersedes unpublished alpha13 candidate. Read actual HEAD-matched CI/publication receipts and private final-save-state; this document cannot name its own commit.",
-  "last_full_validation_scope": "Previous alpha12 final source. Alpha13 requires its own matching-HEAD receipt; see first_run_report."
+  "last_full_validation_scope": "Previous alpha12 final source. Alpha13 requires its own matching-HEAD receipt; see first_run_report.",
+  "physical_report": "docs/PHYSICAL-MT3000-2026-10-20.md",
+  "stock_fw3_repair": {
+    "vendor_patch_applied": false,
+    "helper_candidate": "NOT_APPROVED_CONDITIONAL_COUNTEREXAMPLE",
+    "actual_include_reload": "0; normal reload skips rtp2; missing state can fall back to start",
+    "recovery": "OBSERVED_COMPLETE_AFTER_CANCEL532_STALE_PROCESSES_AND_TERM10_INNER_WAITERS; PARSED_FW3_STATE_AND_QUIET_READS",
+    "permanent_vendor_fix": "OPEN",
+    "hardware_stability": "BOUNDED_MONITOR_ONLY_CHECKS; NO_UNATTENDED_OR_NATIVE_ACCEPTANCE"
+  },
+  "post_recovery": {
+    "monitor": "RUNNING_ONLY_MONITOR",
+    "portable_vpn_saved_disabled": true,
+    "native_enabled": false,
+    "vendor_patch_applied": false,
+    "concurrent_read_wall_seconds": 1.061,
+    "normal_luci_page": 200,
+    "configuration_export_entries": 175,
+    "independent_export_decrypt_read_verified": true,
+    "wifi_changed": false
+  }
 }

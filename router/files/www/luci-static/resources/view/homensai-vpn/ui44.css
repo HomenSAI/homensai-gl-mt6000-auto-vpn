@@ -722,7 +722,7 @@
 @keyframes hv-node-pulse{50%{opacity:.35}}
 
 /* ---- Current server checks: live status lamps in their own column ---- */
-.hv-app .hv-check-status{white-space:nowrap}
+.hv-app .hv-check-status{white-space:normal}
 .hv-check-lamp{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:-1px;background:#8996a5;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
 .hv-check-green{background:#10b981;box-shadow:0 0 0 1px #138566,0 0 8px rgba(16,185,129,.55)}
 .hv-check-yellow{background:#e2b23d;box-shadow:0 0 0 1px #b28622,0 0 8px rgba(226,178,61,.55)}

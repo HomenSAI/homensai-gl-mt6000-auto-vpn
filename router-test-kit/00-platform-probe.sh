@@ -5,6 +5,10 @@
 LC_ALL=C
 export LC_ALL
 field() { printf '%s\t%s\n' "$1" "$(printf '%s' "$2" | tr '\t\r\n' '   ' | cut -c1-180)"; }
+installed() {
+    awk '$1=="Status:" { seen++; if (NF==4 && $2=="install" && ($3=="ok" || $3=="user") && $4=="installed") valid++ }
+         END { exit !(seen==1 && valid==1) }'
+}
 board=''
 if command -v ubus >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; then
     board=$(ubus call system board 2>/dev/null)
@@ -32,7 +36,7 @@ field nft_version "$(nft --version 2>/dev/null)"
 if command -v opkg >/dev/null 2>&1; then
     field package_architectures "$(opkg print-architecture 2>/dev/null | tr '\n' ';')"
     for pkg in python3 lua lua-cjson libuci-lua ip-full ubus rpcd luci-base ca-bundle; do
-        if opkg status "$pkg" 2>/dev/null | grep -q '^Status: [^ ]* ok installed$'; then field "package_$pkg" INSTALLED; else field "package_$pkg" MISSING; fi
+        if opkg status "$pkg" 2>/dev/null | installed; then field "package_$pkg" INSTALLED; else field "package_$pkg" MISSING; fi
     done
 fi
 field overlay_free_kib "$(df -k /overlay 2>/dev/null | awk 'NR==2 {print $4}')"

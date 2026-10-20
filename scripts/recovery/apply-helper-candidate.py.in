@@ -1,0 +1,116 @@
+#!/usr/bin/python3
+"""Reviewed root-only local transaction. No network/service/process recovery."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+import platform
+
+ORIGINAL='@@ORIGINAL_SHA256@@'
+PATCHED='@@PATCHED_SHA256@@'
+TARGET=Path('/usr/bin/gl_block_wan_access_exit')
+ROM=Path('/rom/usr/bin/gl_block_wan_access_exit')
+
+
+def read_regular(path):
+    descriptor=os.open(str(path),os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
+    with os.fdopen(descriptor,'rb') as stream:
+        metadata=os.fstat(stream.fileno())
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink!=1 or metadata.st_size>1048576:
+            raise ValueError('HELPER-FILE-UNVERIFIED')
+        data=stream.read(1048577)
+    return data,metadata
+
+
+def sha(data):return hashlib.sha256(data).hexdigest()
+
+
+def atomic_replace(target,payload,expected,compile_check):
+    current,metadata=read_regular(target)
+    if sha(current)!=expected:raise ValueError('HELPER-CURRENT-HASH')
+    descriptor,name=tempfile.mkstemp(prefix='.gl-bwa-recovery-',dir=str(target.parent))
+    pending=Path(name);committed=False
+    try:
+        with os.fdopen(descriptor,'wb') as stream:
+            os.fchmod(stream.fileno(),stat.S_IMODE(metadata.st_mode))
+            os.fchown(stream.fileno(),metadata.st_uid,metadata.st_gid)
+            stream.write(payload);stream.flush();os.fsync(stream.fileno())
+        compile_check(pending)
+        if sha(read_regular(target)[0])!=expected:raise ValueError('HELPER-CURRENT-CHANGED')
+        os.replace(str(pending),str(target));committed=True
+        directory=os.open(str(target.parent),os.O_RDONLY|getattr(os,'O_DIRECTORY',0))
+        try:os.fsync(directory)
+        finally:os.close(directory)
+        actual,after=read_regular(target)
+        if sha(actual)!=sha(payload) or stat.S_IMODE(after.st_mode)!=stat.S_IMODE(metadata.st_mode):
+            raise ValueError('HELPER-WRITE-UNCONFIRMED')
+        return dict(before=sha(current),after=sha(actual),bytes=len(actual),
+                    mode=oct(stat.S_IMODE(after.st_mode)),uid=after.st_uid,gid=after.st_gid)
+    except BaseException:
+        if committed:print('HELPER-WRITE-UNCONFIRMED',file=sys.stderr)
+        raise
+    finally:
+        if pending.exists():pending.unlink()
+
+
+def syntax_check(path):
+    environment=dict(os.environ,HOMENSAI_HELPER_CANDIDATE=str(path))
+    subprocess.run(['/usr/bin/lua','-e','assert(_VERSION=="Lua 5.1"); assert(loadfile(os.getenv("HOMENSAI_HELPER_CANDIDATE")))'],
+                   env=environment,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+                   timeout=5,check=True)
+
+
+def main():
+    raise ValueError('HELPER-EXPERIMENT-NOT-APPROVED')
+    # Retained unreachable historical transaction below for isolated review.
+    if os.geteuid()!=0:raise ValueError('ROOT-REQUIRED')
+    if len(sys.argv)!=4 or sys.argv[1] not in ('apply','rollback'):
+        raise ValueError('USAGE: apply|rollback CANDIDATE_PATH NEW_PRIVATE_RECEIPT_DIR')
+    action=sys.argv[1];candidate=Path(sys.argv[2]);receipt=Path(sys.argv[3])
+    if action=='apply':
+        if platform.release()!='5.4.211' or platform.machine()!='aarch64':
+            raise ValueError('HELPER-PLATFORM-UNVERIFIED')
+        board=json.loads(subprocess.check_output(['ubus','call','system','board'],timeout=5))
+        if (board.get('board_name')!='glinet,mt3000-snand' or board.get('model')!='GL.iNet GL-MT3000'
+                or board.get('release',{}).get('target')!='mediatek/mt7981'
+                or Path('/etc/glversion').read_text().strip()!='4.11.0'):
+            raise ValueError('HELPER-PLATFORM-UNVERIFIED')
+        if any(Path(path).exists() for path in ('/sbin/fw4','/usr/sbin/fw4')):
+            raise ValueError('HELPER-FIREWALL-UNVERIFIED')
+        result=subprocess.run(['uci','-q','get','route_policy.global.use_fw4'],capture_output=True,timeout=5)
+        if result.returncode not in (0,1) or result.stdout.strip() not in (b'',b'0'):
+            raise ValueError('HELPER-FIREWALL-UNVERIFIED')
+    if not str(receipt).startswith('/tmp/homensai-fw3-repair-') or '/' in str(receipt)[5:] or receipt.exists():
+        raise ValueError('RECEIPT-DIRECTORY-UNVERIFIED')
+    rom,_=read_regular(ROM)
+    if sha(rom)!=ORIGINAL:raise ValueError('HELPER-ROM-HASH')
+    payload=rom if action=='rollback' else read_regular(candidate)[0]
+    expected=PATCHED if action=='rollback' else ORIGINAL
+    required=ORIGINAL if action=='rollback' else PATCHED
+    if sha(payload)!=required:raise ValueError('HELPER-CANDIDATE-HASH')
+    current,metadata=read_regular(TARGET)
+    if sha(current)!=expected or metadata.st_uid!=0 or metadata.st_gid!=0:
+        raise ValueError('HELPER-TARGET-UNVERIFIED')
+    receipt.mkdir(mode=0o700)
+    backup=receipt/'before.lua'
+    with backup.open('xb') as stream:
+        os.fchmod(stream.fileno(),0o600);stream.write(current);stream.flush();os.fsync(stream.fileno())
+    result=atomic_replace(TARGET,payload,expected,syntax_check)
+    result.update(schema=1,action=action,time=time.time(),status='FILE-REPLACED-ONLY',
+                  rollback_source='exact-hash ROM',network_validation='NOT-PERFORMED',
+                  process_recovery='NOT-PERFORMED')
+    with (receipt/'receipt.json').open('x',encoding='utf8') as stream:
+        json.dump(result,stream,sort_keys=True);stream.flush();os.fsync(stream.fileno())
+    print(json.dumps(result,sort_keys=True))
+
+
+if __name__=='__main__':
+    try:main()
+    except Exception as error:
+        code=str(error) if isinstance(error,ValueError) and str(error).startswith(('HELPER-','ROOT-','RECEIPT-','USAGE:')) else 'HELPER-TRANSACTION-UNCONFIRMED'
+        print(code,file=sys.stderr);raise SystemExit(1)

@@ -45,6 +45,15 @@ function autoPathModel(status,source,target,now){
 }
 
 var AUTO_BLOCKERS={
+  'MONITOR-ONLY-DEPLOYMENT':['This installation is limited to monitoring. Native switching is disabled; monitoring does not certify router firmware coordination or the LAN path.','Эта установка ограничена мониторингом. Нативное переключение выключено; мониторинг не подтверждает координацию с прошивкой роутера и путь LAN.'],
+  'MONITOR-ONLY-INVALID':['The deployment mode could not be verified. Native actions remain blocked until the deployment settings are checked.','Не удалось проверить режим установки. Нативные действия остаются заблокированы до проверки параметров установки.'],
+  'NATIVE-PROGRESS-UNVERIFIED':['Controller progress records cannot be trusted. New actions are blocked; Stop and recovery from a trusted journal remain available. Review the diagnostics before retrying.','Записям состояния контроллера нельзя доверять. Новые действия заблокированы; остановка и восстановление по доверенному журналу остаются доступны. Перед повтором проверьте диагностику.'],
+  'RESERVE-IDENTITY-UNKNOWN':['Current reserve identity could not be matched to comparable observations. Its health and any automatic return remain unconfirmed.','Не удалось сопоставить текущий резерв с подходящими наблюдениями. Его здоровье и автоматический возврат остаются неподтверждёнными.'],
+  'OBSERVATION-STALE':['Current tunnel or probe observations are missing or stale. Wait for fresh matching observations; old measurements cannot authorize a change.','Текущие наблюдения туннеля или проверок отсутствуют либо устарели. Дождитесь свежих согласованных данных; старые измерения не разрешают изменение.'],
+  'VENDOR-IDENTITY-UNKNOWN':['The router tunnel binding is unknown or ambiguous. Save an active source and reserve in Settings after their exact bindings are observed.','Привязка туннеля роутера неизвестна или неоднозначна. Сохраните активный основной и резервный профили в настройках после наблюдения точных привязок.'],
+  'VENDOR-SAME-TUNNEL':['Both profiles belong to one router tunnel. Server selection inside it belongs to the router firmware; this app does not switch that pair.','Оба профиля относятся к одному туннелю роутера. Выбор серверов внутри него относится к штатной прошивке; приложение не переключает такую пару.'],
+  'PROFILE-IDENTITY-CHANGED':['The configured profile or tunnel binding changed. Old checks no longer describe the current member; wait for fresh observations and repeat validation.','Профиль или привязка туннеля изменились. Старые проверки больше не описывают текущий сервер; дождитесь свежих наблюдений и повторите проверку.'],
+  'VENDOR-SETTLING':['The configured tunnel identity observation window is still pending. This does not establish whether firmware retries have finished.','Окно наблюдения за конфигурацией туннеля ещё не завершено. Это не устанавливает, закончились ли повторные попытки прошивки.'],
   'CONTROL-REVISION-STALE':['Auto controls changed. Refresh the current state before starting again.','Состояние управления Auto изменилось. Обновите данные перед новым запуском.'],
   'START-STATE-UNVERIFIED':['Saved Auto state could not be verified. Stop Auto, review the settings, then try again.','Не удалось проверить сохранённое состояние Auto. Остановите Auto, проверьте настройки и повторите попытку.'],
   'STOP-SUPERSEDED-START':['Stop cancelled this pending Start. Press Start again when ready.','Остановка отменила ожидающий запуск. При необходимости нажмите «Запустить» снова.'],
@@ -120,8 +129,8 @@ function autoReadiness(status,inventory,now){
   var monitorFresh=!status.rpc_error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var controllerFresh=monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   function find(id){return rows.filter(function(p){return p.id===id;})[0];}
-  var source=find(settings.plan_source),target=find(settings.plan_target);
-  var configured=!!(settings.setup_complete&&settings.plan_source&&settings.plan_target&&settings.plan_source!==settings.plan_target&&source&&target);
+  var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',now):find(settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',now):find(settings.plan_target);
+  var configured=!!(settings.setup_complete&&source&&target&&source.id!==target.id);
   var bothHealthy=configured&&profileHealth(source,now).state==='healthy'&&profileHealth(target,now).state==='healthy';
   var technical=(Array.isArray(ns.blockers)?ns.blockers:[]).filter(function(code){return AUTO_LAN_ONLY.indexOf(code)<0;});
   var certified=controllerFresh&&(ns.certified===true||ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE');
@@ -226,7 +235,7 @@ function renderAutoControl(status,inventory){
   syncButton();
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
-  var source=profile(ns.source||settings.plan_source),target=profile(ns.target||settings.plan_target);
+  var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',Date.now()/1000,ns.source):profile(ns.source||settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',Date.now()/1000,ns.target):profile(ns.target||settings.plan_target);
   var path=autoPathModel(status,source,target,Date.now()/1000);
   var pathLabels={neutral:bi('No current path confirmation','Нет свежего подтверждения пути'),healthy:bi('Active traffic path','Активный путь трафика'),ready:bi('Ready; not selected for traffic','Готов; трафик не направлен'),inactive:bi('Tunnel not connected','Туннель не подключён'),failed:bi('Connectivity failed','Ошибка доступности'),checking:bi('Checking / awaiting path confirmation','Проверяется / ожидается подтверждение пути')};
   // Two colours only. Which side carries traffic: the controller's selection; with Auto off and the original route

@@ -4,7 +4,10 @@ local json=require('cjson')
 local interfaces={}
 uci:foreach('network','interface',function(s)
   if (s.proto=='ovpnclient' or s.proto=='wgclient') and s.config then
-    interfaces[s.config]={logical=s['.name'],protocol=s.proto=='wgclient' and 'wireguard' or 'openvpn'}
+    local protocol=s.proto=='wgclient' and 'wireguard' or 'openvpn'
+    local key=protocol..':'..s.config
+    if interfaces[key] then interfaces[key].ambiguous=true
+    else interfaces[key]={logical=s['.name'],protocol=protocol} end
   end
 end)
 local profiles={}
@@ -14,11 +17,18 @@ for _,entry in ipairs({{'ovpnclient','openvpn'},{'wireguard','wireguard'}}) do
     local a,b=section:match('^(%d+)_(%d+)$')
     local peer=section:match('^peer_(%d+)$')
     if (entry[2]=='openvpn' and a and b) or (entry[2]=='wireguard' and peer) then
-      local bound=interfaces[section]
+      local bound=interfaces[entry[2]..':'..section]
+      if bound and bound.ambiguous then bound=nil end
+      local group=tostring(s.group_id or a or '')
+      local valid_group=#group<=20 and group:match('^%d+$')
+      local logical=bound and bound.logical
+      if logical and (not logical:match('^[A-Za-z0-9_.-]+$') or #logical>64) then logical=nil end
       profiles[#profiles+1]={id=entry[2]..':'..section,section=section,protocol=entry[2],
         name=s.name or s.description or s.remark or section,
-        group_id=tostring(s.group_id or a or ''),profile_id=tostring(b or peer or ''),
-        interface=bound and bound.logical or json.null}
+        group_id=group,profile_id=tostring(b or peer or ''),
+        vendor_profile_group_id=valid_group and entry[2]..':'..group or json.null,
+        vendor_tunnel_id=logical and entry[2]..':'..logical or json.null,
+        interface=logical or json.null}
     end
   end)
 end
@@ -29,9 +39,12 @@ uci:foreach('homensai_vpn','server',function(s)
 end)
 local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
   onboarding_version=0,onboarding_complete=false,onboarding_pair_deferred=false,
-  appearance_language='',appearance_design='',appearance_theme=''}
+  appearance_language='',appearance_design='',appearance_theme='',monitor_only=false,deployment_mode='standard'}
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
+  main.monitor_only=s.monitor_only=='1'
+  main.deployment_mode=s.monitor_only=='1' and 'monitor-only' or
+    (s.monitor_only==nil or s.monitor_only=='0') and 'standard' or 'invalid'
   main.setup_complete=s.setup_complete=='1'
   -- Full first-run completion is independent of the older pair-only wizard.
   main.onboarding_version=tonumber(s.onboarding_version) or 0
@@ -63,6 +76,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.terms_version=s.terms_version or ''
   main.plan_source=s.plan_source or ''
   main.plan_target=s.plan_target or ''
+  main.plan_source_tunnel=s.plan_source_tunnel or ''
+  main.plan_target_tunnel=s.plan_target_tunnel or ''
   main.telegram_enabled=s.telegram_enabled=='1'
   main.telegram_destination=s.telegram_chat or ''
   main.telegram_interval=math.max(5,math.min(10080,tonumber(s.telegram_interval) or 60))

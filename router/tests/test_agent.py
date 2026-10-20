@@ -208,7 +208,7 @@ class NativeTests(unittest.TestCase):
     def test_one_daemon_iteration_publishes_real_mode(self):
         with tempfile.TemporaryDirectory() as d:
             runtime,persist=Path(d)/'run',Path(d)/'persist'
-            inv={'profiles':[{'id':'wireguard:peer_1','name':'Test','interface':'wgclient1'}],'servers':[], 'settings':{'interval':30,'checkpoint':900,'probe_limit':16}}
+            inv={'profiles':[{'id':'wireguard:peer_1','name':'Test','protocol':'wireguard','interface':'wgclient1','vendor_tunnel_id':'wireguard:wgclient1'}],'servers':[], 'settings':{'interval':30,'checkpoint':900,'probe_limit':16}}
             result={'id':'wireguard:peer_1','time':time.time(),'code':None,'device':'wgclient1','rtt_ms':32}
             real_write=agent.atomic_json
             def write(path,value):

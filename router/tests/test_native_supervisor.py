@@ -9,6 +9,7 @@ from unittest.mock import MagicMock,patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
 import native_switch as native
+from vendor_fixture import attach
 
 
 class SupervisorTests(unittest.TestCase):
@@ -25,12 +26,14 @@ class SupervisorTests(unittest.TestCase):
             native.journal_write({'phase':'ROLLED-BACK','before':['a','b'],'after':['b','a'],'hash':'a'*64})
             if not expired and not mode:native.atomic_json(directory/'native-stop.json',{'requested':time.time(),'trial':'test'})
             if mode:
-                selection={'source':{'id':'openvpn:1_1'},'target':{'id':'wireguard:peer_2'},'hash':'a'*64,'direction':'first'}
+                source={'id':'openvpn:1_1','protocol':'openvpn','interface':'vpn1','code':'VPN-003'}
+                target={'id':'wireguard:peer_2','protocol':'wireguard','interface':'vpn2'}
+                selection={'source':source,'target':target,'hash':'a'*64,'direction':'first','vendor_identity':'c'*64}
                 backend.diagnostic.return_value=([],selection)
                 native.atomic_json(native.ATTEMPTS,{'until':until,'count':3 if mode=='limit' else 0,'trial':'test','time':time.time()-10})
-                native.atomic_json(native.CERT,{'hash':'a'*64,'source':'openvpn:1_1','target':'wireguard:peer_2','direction':'first','until':until})
+                native.atomic_json(native.CERT,{'hash':'a'*64,'source':'openvpn:1_1','target':'wireguard:peer_2','direction':'first','until':until,'vendor_identity':'c'*64})
                 now=time.time();samples=[{'id':'openvpn:1_1','time':now-i*30,'code':'VPN-003'} for i in range(3)]+[{'id':'wireguard:peer_2','time':now-i*30,'code':None,'dns_ok':True,'https_success':3} for i in range(2)]
-                native.atomic_json(directory/'status.json',{'samples':samples})
+                native.atomic_json(directory/'status.json',attach({'profiles':[source,target],'samples':samples},now))
             published=[]
             def publish(value):published.append(value);native.STOP=True
             stack.enter_context(patch.object(native,'Linux',return_value=backend))

@@ -4,11 +4,28 @@ START=99
 STOP=10
 
 start_service() {
-    local enabled
+    local enabled monitor_only
     config_load homensai_vpn
     chmod 0600 /etc/config/homensai_vpn
     config_get_bool enabled main enabled 0
+    # config_get's :-default collapses an explicitly empty value into "0".
+    # Keep missing/default separate from malformed scalar/list values.
+    if [ "${CONFIG_main_monitor_only+x}" = x ]; then monitor_only=$CONFIG_main_monitor_only
+    else monitor_only=0; fi
+    [ "${CONFIG_main_monitor_only_LENGTH+x}" != x ] || monitor_only=INVALID
     [ "$enabled" -eq 1 ] || return 0
+    case "$monitor_only" in
+        0)
+            local board
+            board=$(ubus call system board 2>/dev/null | jsonfilter -e '@.board_name' 2>/dev/null || true)
+            if [ "$board" != "glinet,gl-mt6000" ]; then
+                echo 'MONITOR-ONLY-DEPLOYMENT: explicit monitor-only mode required on this board' >&2
+                return 0
+            fi
+            ;;
+        1) ;;
+        *) echo 'MONITOR-ONLY-INVALID: native supervisor disabled' >&2 ;;
+    esac
     procd_open_instance monitor
     procd_set_param command /usr/bin/python3 /usr/lib/homensai-vpn/agent.py daemon
     procd_set_param respawn 3600 5 5
@@ -17,6 +34,7 @@ start_service() {
     procd_set_param stdout 1
     procd_set_param stderr 1
     procd_close_instance
+    [ "$monitor_only" = 0 ] || return 0
     procd_open_instance native
     procd_set_param command /usr/bin/python3 /usr/lib/homensai-vpn/native_switch.py daemon
     procd_set_param respawn 3600 5 5

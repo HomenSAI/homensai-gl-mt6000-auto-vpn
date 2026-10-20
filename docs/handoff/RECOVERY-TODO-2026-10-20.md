@@ -1,6 +1,12 @@
 # Current continuation after the 20 October crash
 
-This is the active backlog. Older dated release and stopped-review documents remain historical evidence. Continue with the [offline hardening record](../OFFLINE-HARDENING-2026-10-20.md) and machine-readable ACTIVE-STATE beside this file. The owner explicitly selected the mobile GL-MT3000 for physical tests and confirmed it is not yet connected. No physical GL-MT6000 writes or tests are authorized. Follow [the staged GL-MT3000 plan](../GL-MT3000-TEST-PLAN.md); actual identity, firmware and bootloader remain unknown.
+Latest owner-resumed physical state: [CONTINUATION-2026-10-20.md](CONTINUATION-2026-10-20.md) and [physical monitor acceptance](../PHYSICAL-MT3000-2026-10-20.md). The portable GL-MT3000 is connected and alpha15 is installed. LATEST: bounded stock FW3 backlog recovery is observed complete without a vendor patch. Only monitor RUNNING; both portable VPNs saved disabled=1 and native OFF. Runtime state/quiet queues, eight deployment checks, two concurrent read RPCs, fresh LuCI200 and cable reconnect verified. Permanent vendor repair/native/LAN acceptance remain open. PC Wi-Fi remains protected.
+
+Active priorities: physical first-run save after owner terms acceptance; active VPN trials only after profile independence is clarified and separate native/vendor/LAN certification exists. Retain the permanent stock FW3 restart-recursion issue and latent DNAT/MAC-block ordering case as open work. Exact alpha15 source58eb390 CI and initial hardware checks are saved in Git/Gitea and a restore-verified local archive. D copy awaits the intended disk. GitHub alpha15 is not published. Firmware identity is verified; bootloader/recovery behavior remains UNKNOWN. No physical GL-MT6000 writes or tests are authorized.
+
+## Historical backlog and evidence boundaries
+
+The table records earlier checkpoints. Its not-connected, unknown-identity, pending-installation and running-monitor descriptions are superseded by the current records above. Older dated release and stopped-review documents remain historical evidence. Continue with the [offline hardening record](../OFFLINE-HARDENING-2026-10-20.md) and machine-readable ACTIVE-STATE beside this file. Follow [the staged GL-MT3000 plan](../GL-MT3000-TEST-PLAN.md).
 
 | Task | Current evidence / acceptance still needed |
 | --- | --- |

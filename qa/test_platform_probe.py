@@ -58,3 +58,19 @@ class PlatformProbeTests(unittest.TestCase):
     def test_control_characters_and_unexpected_fields_refuse(self):
         for text in (self.report(model='GL.iNet GL-MT3000\x00'),self.report()+'\npassword\tsecret'):
             with self.subTest(text=text[:40]),self.assertRaises(ValueError):module.classify(text)
+
+    def test_python_before_dictionary_union_support_blocks_monitor_candidate(self):
+        for version in ('Python 2.7.18','Python 3.0.1','Python 3.8.20','Python 4.0.0'):
+            with self.subTest(version=version):
+                result=module.classify(self.report(python_version=version))
+                self.assertEqual(result['result'],'BLOCKED')
+                self.assertIn('VERSION-NOT-VERIFIED:python_version',result['blockers'])
+        for version in ('Python 3.9.0','Python 3.11.6'):
+            self.assertEqual(module.classify(self.report(python_version=version))['result'],'MONITOR-CANDIDATE-REVIEW')
+
+    def test_unverified_lua_abi_never_passes_by_generic_major_version(self):
+        for version in ('Lua 5.0.3','Lua 5.2.4','Lua 5.3.6','Lua 5.4.8','LuaJIT 2.1.0-beta3'):
+            with self.subTest(version=version):
+                result=module.classify(self.report(lua_version=version))
+                self.assertEqual(result['result'],'BLOCKED')
+                self.assertIn('VERSION-NOT-VERIFIED:lua_version',result['blockers'])

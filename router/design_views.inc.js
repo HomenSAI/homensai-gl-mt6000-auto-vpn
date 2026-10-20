@@ -51,7 +51,7 @@ function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code
 // One model for all designs: what the page says about the system right now.
 function dvModel(status,inventory,rows,month){
   var now=Date.now()/1000,settings=(inventory||{}).settings||{},light=autoLightModel(status,inventory,now),counts=serverCounts(status,inventory,rows,now);
-  var selected=selectedProfile(status,now),selectedRow=dvProfile(rows,selected),primary=dvProfile(rows,settings.plan_source),reserve=dvProfile(rows,settings.plan_target);
+  var selected=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):selectedProfile(status,now),selectedRow=dvProfile(rows,selected),primary=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',now):dvProfile(rows,settings.plan_source),reserve=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',now):dvProfile(rows,settings.plan_target);
   var active=rows.filter(function(p){return p.interface;}),good=0,total=0;
   var rank=dvRank(status);active.forEach(function(p){var r=rank[p.id];if(r){good+=r.good;total+=r.n;}});
   var tone,headline;
@@ -105,7 +105,7 @@ function renderDesignB(ctx,m){
   var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('Working VPNs','Работающие VPN'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
     dvKpi(bi('Problems today','Проблемы сегодня'),m.passPercent==null?bi('No data','Нет данных'):m.passPercent>=99.5?bi('None','Нет'):bi('Some','Есть')),dvKpi(bi('Used this month','Использовано за месяц'),m.traffic)]);
   var list=E('div',{'class':'hv-dv-list'},sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
-    var h=profileHealth(p,m.now),country=countryOf(p),role=m.selected===p.id?bi('In use','Используется'):p.id===(m.settings||{}).plan_target?bi('Backup','Резерв'):p.interface?bi('Connected','Подключён'):bi('Not connected','Не подключён');
+    var h=profileHealth(p,m.now),country=countryOf(p),role=m.selected===p.id?bi('In use','Используется'):m.reserve&&p.id===m.reserve.id?bi('Backup','Резерв'):p.interface?bi('Connected','Подключён'):bi('Not connected','Не подключён');
     var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';
     return E('div',{'class':'hv-dv-item','data-profile':p.id},[E('span',{'class':'hv-dv-flag','aria-hidden':'true'},country?country.code.toUpperCase():'··'),
       E('div',{},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},role+' · '+protocolLabel(p))]),
@@ -113,7 +113,7 @@ function renderDesignB(ctx,m){
   }));
   var autoOn=m.light.key==='ok';
   var q1=m.primary?E('div',{'class':'hv-dv-q'},[E('b',{},bi('What happens if '+(countryName(m.primary)||'the primary')+' stops working?','Что будет, если '+(countryName(m.primary)||'основной')+' перестанет работать?')),
-    E('p',{},autoOn?bi('The router switches to the reserve by itself after a LAN computer confirms the new route.','Роутер сам переключится на резерв, когда компьютер в сети подтвердит новый маршрут.'):bi('Right now nothing happens by itself, because automatic switching is off. You can turn it on above once the setup check is done.','Сейчас само ничего не произойдёт, потому что автоматическое переключение выключено. Его можно включить выше, когда пройдёт проверка настройки.'))]):null;
+    E('p',{},autoOn?bi('The app can consider a reserve only within a validated bounded trial, with router firmware coordination and independent LAN confirmation. Router probes alone do not authorize a switch.','Приложение может рассматривать резерв только в подтверждённом ограниченном тесте, с координацией со штатной прошивкой и независимым подтверждением LAN. Одних проверок с роутера недостаточно для разрешения переключения.'):bi('Automatic inter-tunnel switching by this app is off. The router firmware may still select servers within its own tunnel.','Автоматическое переключение между туннелями этим приложением выключено. Штатная прошивка по-прежнему может выбирать серверы внутри своего туннеля.'))]):null;
   var last=dvEvents(ctx.status,ctx.rows,1)[0];
   var q2=E('div',{'class':'hv-dv-q'},[E('b',{},bi('Last thing that happened','Последнее событие')),E('p',{},last?dvDay(last.time)+' '+dvClock(last.time)+' · '+last.text:bi('No switches or failures are recorded on the router.','На роутере не записано ни переключений, ни сбоев.'))]);
   var links=E('p',{'class':'hv-dv-links'},[E('a',{'href':'#statistics'},bi('Statistics','Статистика')),E('a',{'href':'#help'},bi('Help','Помощь')),E('a',{'href':'#learn'},bi('Training','Обучение')),E('a',{'href':'#events'},bi('Details for technicians →','Подробности для техников →'))]);

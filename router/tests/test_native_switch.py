@@ -11,10 +11,12 @@ from unittest.mock import patch,MagicMock
 ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 sys.path.insert(0,str(ROOT))
 import native_switch as native
+from vendor_fixture import stamp
 
 
 def fixture():
     profiles=[{'id':'openvpn:1_1','interface':'ovpnclient1'}, {'id':'wireguard:peer_2','interface':'wgclient1'}]
+    for profile in profiles:stamp(profile)
     sections=[{'.name':'global','.type':'policy','enabled':'1'},
               {'.name':'default','.type':'default','enabled':'0','via':'novpn'},
               {'.name':'special','.type':'rule','enabled':'1','killswitch':'1','via':'ovpnclient2','to_type':'domain'},
@@ -30,7 +32,7 @@ class Backend:
         self.current=self.selection['order'][:];self.fingerprint=self.selection['hash'];self.calls=[]
     def policy(self):return self.data
     def order(self):return self.current[:],self.fingerprint
-    def guard(self,devices=None):self.calls.append(('guard',devices))
+    def guard(self,devices=None,control_revision=None):self.calls.append(('guard',devices))
     def unguard(self):self.calls.append(('unguard',))
     def reorder(self,order):self.calls.append(('reorder',order));self.current=list(order)
     def apply(self):self.calls.append(('apply',))
@@ -205,9 +207,9 @@ class NativeTests(unittest.TestCase):
         b=Backend();before=b.current[:];process=MagicMock(pid=123,returncode=0)
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
-            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'t'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
+            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'e'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
             return process
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=lambda p:'8.8.8.8' if p['id']==b.profiles[0]['id'] else '9.9.9.9'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='e'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=lambda p:'8.8.8.8' if p['id']==b.profiles[0]['id'] else '9.9.9.9'):
             native.attempt(b,b.selection,time.time()+120,True)
             self.assertEqual(b.current,before)
             self.assertEqual(json.loads(native.STATE.read_text())['state'],'ARMED')
@@ -242,13 +244,13 @@ class NativeTests(unittest.TestCase):
         b=Backend();process=MagicMock(pid=123,returncode=0);calls=[]
         def spawn(*a,**k):
             b.current[-2],b.current[-1]=b.current[-1],b.current[-2]
-            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'t'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
+            native.atomic_json(native.RUNTIME/'native-confirm.json',{'tx':'e'*32,'exit_ipv4':'9.9.9.9','dns_ok':True,'https_ok':True,'time':time.time()})
             return process
         def exit_probe(profile):
             calls.append(profile)
             if len(calls)==2:b.fingerprint='external'
             return '9.9.9.9'
-        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='t'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=exit_probe),patch.object(native.os,'killpg'):
+        with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'RUNTIME',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'CERT',Path(d)/'cert'),patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='e'*32)),patch.object(native.subprocess,'Popen',side_effect=spawn),patch.object(native,'trace',side_effect=exit_probe),patch.object(native.os,'killpg'):
             with self.assertRaisesRegex(native.Refused,'EXTERNAL'):
                 native.attempt(b,b.selection,time.time()+120,False)
             self.assertFalse(native.CERT.exists())

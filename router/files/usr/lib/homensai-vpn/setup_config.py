@@ -24,7 +24,7 @@ def label(value):
     return value
 
 
-def system_payload(arguments, profiles):
+def system_payload(arguments, profiles, existing=None):
     if set(arguments) != {'source','target','interval','duration','session_loss','servers'}:
         raise ValueError('SETUP-FIELDS')
     ids={p['id'] for p in profiles}
@@ -35,7 +35,22 @@ def system_payload(arguments, profiles):
     rows=server_rows(arguments['servers'],profiles)
     enabled={row['profile'] for row in rows if row['enabled']=='1'}
     if arguments['source'] not in enabled or arguments['target'] not in enabled:raise ValueError('SETUP-PRIMARY-RESERVE-DISABLED')
+    from vendor_observation import current_bindings, tunnel_identity
+    by_id={profile['id']:profile for profile in profiles}
+    bindings=current_bindings(profiles)
+    existing=existing if isinstance(existing,dict) else {}
+    def anchor(side):
+        identifier=arguments[side];bound=tunnel_identity(by_id[identifier])
+        if bound in bindings and bindings[bound]['id']==identifier:return bound
+        previous=existing.get('plan_'+side+'_tunnel')
+        # Keep an explicitly saved channel through a vendor's member change,
+        # only while that exact tunnel still has a known configured member.
+        if existing.get('plan_'+side)==identifier and isinstance(previous,str) and previous in bindings:return previous
+        return ''
+    source_anchor=anchor('source');target_anchor=anchor('target')
+    if source_anchor and source_anchor==target_anchor:raise ValueError('SETUP-SAME-TUNNEL')
     return {'main':{'plan_source':arguments['source'],'plan_target':arguments['target'],
+                    'plan_source_tunnel':source_anchor,'plan_target_tunnel':target_anchor,
                     'interval':integer(arguments['interval'],10,300),'native_duration':integer(arguments['duration'],1,240),
                     'native_session_loss':'1' if arguments['session_loss'] else '0','setup_complete':'1'},'servers':rows}
 
@@ -100,7 +115,7 @@ def monitor_payload(arguments, probe_max=16):
                     'probe_limit':integer(arguments['probe_limit'],1,probe_max),'plan_enabled':'1' if arguments['planning_enabled'] else '0'},'servers':[]}
 
 
-def onboarding_payload(arguments, profiles):
+def onboarding_payload(arguments, profiles, existing=None):
     """One explicit, complete app-owned preference transaction; no runtime actions."""
     if (not isinstance(arguments,dict) or set(arguments)!={'system','monitor','recovery','speed','telegram','appearance'}
             or any(not isinstance(value,dict) for value in arguments.values())):
@@ -119,7 +134,7 @@ def onboarding_payload(arguments, profiles):
                     native_session_loss='1' if system['session_loss'] else '0')
     else:
         paired=system_payload({key:value for key,value in system.items() if key!='defer_pair'} |
-                              {'interval':arguments['monitor']['interval']},profiles)
+                              {'interval':arguments['monitor']['interval']},profiles,existing)
         main.update(paired['main']);rows=paired['servers']
     from recovery_settings import payload as recovery_payload
     for payload in (recovery_payload(arguments['recovery']),speed_payload(arguments['speed'])):
@@ -158,7 +173,7 @@ def save_onboarding(arguments):
         try:reason=blocked(current.get('settings',{}))
         except (OSError,ValueError,TypeError,AttributeError):reason='CONFIG-RECOVERY-UNVERIFIED'
         if reason:return {'saved':False,'code':reason}
-        payload=onboarding_payload(arguments,current['profiles'])
+        payload=onboarding_payload(arguments,current['profiles'],current.get('settings'))
         telegram=arguments['telegram']
         if telegram['configure'] and telegram['enabled'] and not telegram['token']:
             from telegram_report import option
@@ -181,7 +196,7 @@ def save_onboarding(arguments):
 
 def save(arguments, kind):
     if kind=='onboarding':return save_onboarding(arguments)
-    if kind=='system':payload=system_payload(arguments,inventory()['profiles'])
+    if kind=='system':payload=None  # derive profile/channel anchors from a fresh snapshot inside the lock
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
@@ -200,6 +215,9 @@ def save(arguments, kind):
         payload=recovery_payload(arguments)
     else:raise ValueError('SETUP-KIND')
     with control_lock():
+        if kind=='system':
+            current=inventory()
+            payload=system_payload(arguments,current['profiles'],current.get('settings'))
         if kind in ('recovery','monitor'):
             from configuration_guard import blocked
             reason=blocked(inventory().get('settings',{}))

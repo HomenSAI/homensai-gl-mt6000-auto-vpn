@@ -7,7 +7,7 @@ local defaults={}
 c:foreach('firewall','defaults',function(s) defaults[#defaults+1]=s end)
 local own=c:get_all('homensai_vpn','main') or {}
 local settings={}
-for _,k in ipairs({'terms_version','native_enabled','native_trial','native_until','native_ack','native_session_loss','native_order_direction','native_baseline_exit','native_prepare_acceleration','plan_source','plan_target','interval','recovery_failures','recovery_successes','recovery_cooldown','recovery_min_dwell','recovery_return_policy','recovery_primary_successes','recovery_primary_stable'}) do
+for _,k in ipairs({'terms_version','monitor_only','native_enabled','native_trial','native_until','native_ack','native_session_loss','native_order_direction','native_baseline_exit','native_prepare_acceleration','plan_source','plan_target','plan_source_tunnel','plan_target_tunnel','interval','recovery_failures','recovery_successes','recovery_cooldown','recovery_min_dwell','recovery_return_policy','recovery_primary_successes','recovery_primary_stable'}) do
  settings[k]=own[k]
 end
 print(json.encode({sections=sections,settings=settings,firewall_defaults=defaults,

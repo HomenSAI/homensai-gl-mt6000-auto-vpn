@@ -23,7 +23,7 @@ import time
 import uuid
 from datetime import datetime
 
-from agent import RUNTIME, PERSIST, TERMS_VERSION, atomic_json, read_json, command, inventory, probe, bound_socket
+from agent import RUNTIME, PERSIST, TERMS_VERSION, atomic_json, read_json, command, inventory, probe, bound_socket,route_binding
 from failover_plan import streak
 from native_history import History, HistoryError
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
@@ -66,6 +66,37 @@ GUARD_RELEASE_SECONDS=90
 
 def return_request_path():return RUNTIME/'native-return.json'
 def return_result_path():return RUNTIME/'native-return-result.json'
+
+
+def progress_read(path,kind):
+    """Missing progress is initial state; corrupt progress never resets a budget.
+
+    This is not the recovery journal. Refuse new work while still allowing the
+    trusted journal's recovery, Stop, expiry and an explicit Return to proceed.
+    """
+    missing=object()
+    try:record=read_json(path,missing)
+    except (OSError,ValueError):raise Refused('NATIVE-PROGRESS-UNVERIFIED') from None
+    if record is missing:return {}
+    def stamp(value):
+        try:return type(value) in (int,float) and math.isfinite(value) and value>=0
+        except OverflowError:return False
+    valid=isinstance(record,dict)
+    if valid and kind=='attempts':
+        trial=record.get('trial')
+        valid=({'until','count','trial','time'}<=set(record)
+            and type(record['count']) is int and 0<=record['count']<=3
+            and stamp(record['until']) and stamp(record['time'])
+            and (trial is None and record['count']==0 or isinstance(trial,str)
+                 and re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',trial) is not None))
+    elif valid and kind=='return':
+        valid=({'request','ok','code','time'}<=set(record)
+            and stamp(record['request']) and record['request']>0 and stamp(record['time'])
+            and type(record['ok']) is bool and isinstance(record['code'],str)
+            and re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',record['code']) is not None)
+    else:valid=False
+    if not valid:raise Refused('NATIVE-PROGRESS-UNVERIFIED')
+    return record
 
 
 def clear_native_options():
@@ -161,6 +192,17 @@ def journal_read():
         raise Refused('JOURNAL-PHASE-INVALID')
     if not isinstance(value.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',value['hash']):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'vendor_identity' in value and (not isinstance(value['vendor_identity'],str) or not re.fullmatch(r'[a-f0-9]{64}',value['vendor_identity'])):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'control_revision' in value and (not isinstance(value['control_revision'],str) or not re.fullmatch(r'[a-f0-9]{32}',value['control_revision'])):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'vendor_profiles' in value:
+        from failure_diagnosis import profile_identity
+        proofs=value['vendor_profiles']
+        if (not isinstance(proofs,dict) or set(proofs)!={'source','target'}
+                or any(not isinstance(proofs[role],dict) or profile_identity(proofs[role])!=proofs[role]
+                       or proofs[role].get('id')!=value.get(role) for role in ('source','target'))):
+            raise Refused('JOURNAL-INTEGRITY-FAILED')
     for name in ('started','deadline','monotonic_deadline','lease_monotonic_until','confirmed','finished'):
         if name=='monotonic_deadline' and value.get(name) is None:continue  # legacy bounded journals
         if name in value and (type(value[name]) not in (int,float) or not math.isfinite(value[name]) or value[name]<0):
@@ -261,18 +303,36 @@ def choose(data,profiles):
     if [index for index,_ in generic]!=list(range(generic[0][0],generic[-1][0]+1)):raise Refused('GENERIC-RULES-NOT-ADJACENT')
     if len({row.get('via') for _,row in generic})!=len(generic):raise Refused('GENERIC-DUPLICATE-INTERFACE')
     if any(i>generic[0][0] for i,_ in special):raise Refused('SPECIAL-RULES-MUST-PRECEDE-GENERIC')
+    from failure_diagnosis import tunnel_identity,TUNNEL
     pmap={p['id']:p for p in profiles}
-    source=pmap.get(settings.get('plan_source')); target=pmap.get(settings.get('plan_target'))
+    if len(pmap)!=len(profiles):raise Refused('VENDOR-IDENTITY-UNKNOWN')
+    selected=[]
+    for role in ('source','target'):
+        anchor=settings.get('plan_'+role+'_tunnel')
+        if anchor in (None,''):profile=pmap.get(settings.get('plan_'+role))
+        else:
+            if not isinstance(anchor,str) or not TUNNEL.fullmatch(anchor):raise Refused('VENDOR-IDENTITY-UNKNOWN')
+            matches=[p for p in profiles if tunnel_identity(p)==anchor]
+            if len(matches)!=1:raise Refused('VENDOR-IDENTITY-UNKNOWN')
+            profile=matches[0]
+        selected.append(profile)
+    source,target=selected
     if not source or not target or source['id']==target['id']:raise Refused('SOURCE-RESERVE-NOT-CONFIGURED')
     if not source.get('interface') or not target.get('interface'):raise Refused('PROFILE-INACTIVE')
+    source_tunnel=tunnel_identity(source);target_tunnel=tunnel_identity(target)
+    if not source_tunnel or not target_tunnel:raise Refused('VENDOR-IDENTITY-UNKNOWN')
+    if source_tunnel==target_tunnel:raise Refused('VENDOR-SAME-TUNNEL')
     byvia={s.get('via'):(i,s) for i,s in generic}
     if source['interface'] not in byvia or target['interface'] not in byvia:raise Refused('PROFILES-NOT-GENERIC-RULES')
     if source['interface']==target['interface']:raise Refused('SAME-INTERFACE')
     direction=settings.get('native_order_direction')
     if direction not in ('first','last'):raise Refused('POLICY-ORDER-DIRECTION-UNVERIFIED')
+    from failure_diagnosis import profile_identity
+    identities={role:profile_identity(row) for role,row in (('source',source),('target',target))}
     return {'source':source,'target':target,'source_rule':section_id(byvia[source['interface']][1]),
             'target_rule':section_id(byvia[target['interface']][1]),
-            'order':policy_order(sections),'hash':policy_hash(sections),'direction':direction}
+            'order':policy_order(sections),'hash':policy_hash(sections),'direction':direction,
+            'vendor_identity':digest(identities) if all(identities.values()) else None}
 
 
 def trace(profile):
@@ -352,11 +412,34 @@ class Linux:
         except (OSError,ValueError):blockers.append('VENDOR-CODE-UNVERIFIED')
         try:
             data=self.policy(); lan=data.get('lan')
+            mode=data.get('settings',{}).get('monitor_only')
+            if mode not in (None,'0'):
+                blockers.append('MONITOR-ONLY-DEPLOYMENT' if mode=='1' else 'MONITOR-ONLY-INVALID')
             if data.get('settings',{}).get('terms_version')!=TERMS_VERSION:blockers.append('TERMS-NOT-ACCEPTED')
             if any(m in acceleration['loaded'] for m in ('mtkhnat','mtk_hnat')) and (data.get('hnat_enable')!='0' or acceleration['hnat_runtime']!='disabled'):
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')
             metadata=inventory();selection=choose(data,metadata['profiles'])
+            from failure_diagnosis import resolve_pair,profile_identity
+            interval=data.get('settings',{}).get('interval','30')
+            try:interval=int(interval)
+            except (ValueError,TypeError,OverflowError):raise Refused('OBSERVATION-STALE')
+            observed=read_json(RUNTIME/'status.json',{})
+            pair=resolve_pair(observed,data.get('settings',{}),time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
+            if pair['coordination']['state']!='READY':raise Refused(pair['coordination']['code'])
+            for role in ('source','target'):
+                current=selection[role];measured=pair[role]
+                if any(current.get(key)!=measured.get(key) for key in ('id','protocol','interface','vendor_tunnel_id')):
+                    raise Refused('PROFILE-IDENTITY-CHANGED')
+                selection[role]=dict(current,**{key:measured.get(key) for key in ('vendor_generation','vendor_state','vendor_changed_at')})
+                live=route_binding(current['interface'])
+                if (live.get('code') is not None and not (role=='source' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001')
+                        or any(live.get(key)!=measured.get(key) for key in ('device','mark','table','ifindex'))):
+                    raise Refused('PROFILE-IDENTITY-CHANGED')
+                selection[role]['kernel_binding']={key:live.get(key) for key in ('code','device','mark','table','ifindex')}
+            selection['vendor_identity']=digest({role:{'profile':profile_identity(selection[role]),
+                'kernel':selection[role]['kernel_binding']} for role in ('source','target')})
+            selection['coordination']=pair['coordination']
             from recovery_settings import fingerprint
             selection['settings_hash']=fingerprint(data.get('settings',{}))
             groups={s.get('profile'):s.get('channel','default') for s in metadata.get('servers',[])}
@@ -369,7 +452,7 @@ class Linux:
         return list(dict.fromkeys(blockers)),selection
     def order(self):
         data=self.policy();return policy_order(data['sections']),policy_hash(data['sections'])
-    def reorder(self,order):
+    def reorder(self,order,before_write=None,write_command=None):
         sections=self.policy()['sections']
         current=policy_order(sections)
         if len(order)!=len(current) or set(order)!=set(current):raise Refused('POLICY-IDENTITY-CHANGED')
@@ -380,10 +463,12 @@ class Linux:
             names={section_id(s):s['.name'] for s in live}
             section=names[identifier]
             if not SAFE.fullmatch(section):raise Refused('UNSAFE-SECTION')
-            command(['uci','reorder','route_policy.'+section+'='+str(index)])
-        command(['uci','commit','route_policy'])
+            if before_write:before_write()
+            (write_command or command)(['uci','reorder','route_policy.'+section+'='+str(index)])
+        if before_write:before_write()
+        (write_command or command)(['uci','commit','route_policy'])
         if self.order()!=(order,fingerprint):raise Refused('POLICY-REORDER-UNVERIFIED')
-    def apply(self):command(['/usr/bin/rtp2.sh','not_reload_network'],timeout=45)
+    def apply(self,write_command=None):(write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=45)
     def guard_exists(self):
         result=subprocess.run(['nft','list','table','inet',TABLE],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=5)
         if result.returncode==0:
@@ -391,7 +476,7 @@ class Linux:
             return True
         if result.returncode!=1:raise Refused('GUARD-QUERY-FAILED')
         return False
-    def guard(self,devices=None):
+    def guard(self,devices=None,control_revision=None):
         exists=self.guard_exists()
         if devices is not None:
             if not devices or any(not SAFE.fullmatch(d) or len(d)>15 for d in devices):raise Refused('UNSAFE-GUARD-DEVICE')
@@ -418,7 +503,11 @@ class Linux:
             checked=subprocess.run(['nft','-c','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
             if checked.returncode:raise Refused('GUARD-CHECK-FAILED')
             if devices is None:self.schedule_release(generation)
-            result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+            if control_revision is None:
+                result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
+            else:
+                forward_dispatch(['nft','-f',path],control_revision,timeout=5)
+                result=subprocess.CompletedProcess(['nft','-f',path],0)
         finally:os.unlink(path)
         if result.returncode or not self.guard_exists():raise Refused('GUARD-INSTALL-FAILED')
     def schedule_release(self,generation):
@@ -442,9 +531,15 @@ class Linux:
         return devices
     def recovery_ready(self,identifier,settings):
         from recovery_settings import normalized,stable_success
+        from failure_diagnosis import resolve_pair,scoped_samples
         policy=normalized(settings)
         status=read_json(RUNTIME/'status.json',{})
-        return stable_success(status.get('samples',[]),identifier,policy['primary_successes'],policy['primary_stable'],time.time()) and self.health(identifier) is True
+        interval=int(settings.get('interval',30))
+        pair=resolve_pair(status,settings,time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
+        row=next((pair[role] for role in ('source','target') if pair[role] and pair[role]['id']==identifier),None)
+        return (pair['coordination']['state']=='READY' and row is not None
+                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time())
+                and self.health(identifier) is True)
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
         if not profile or not profile.get('interface'):return False
@@ -580,7 +675,7 @@ def finish_committed(backend,journal,reason):
     return True
 
 
-def committed_recovery_decision(backend,journal,settings,samples,now):
+def committed_recovery_decision(backend,journal,settings,samples,now,status=None):
     """Observe a confirmed reserve without inventing permission for another hop.
 
     Returning to the certified original route requires stable primary samples
@@ -588,9 +683,19 @@ def committed_recovery_decision(backend,journal,settings,samples,now):
     never hidden behind the historical COMMITTED status.
     """
     from recovery_settings import normalized
+    from failure_diagnosis import resolve_pair,profile_identity
     recovery=normalized(settings)
     age=max(30,min(900,int(settings.get('interval',30))*3))
-    failed=streak(samples,journal['target'],recovery['failures'],now,age,False)
+    selection_settings=dict(settings)
+    for role in ('source','target'):
+        if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
+    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',30))*2)))
+    proofs=journal.get('vendor_profiles',{})
+    target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
+    if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
+            or expected is not None and profile_identity(target)!=expected):
+        return {'action':'HOLD','reason':'RESERVE-IDENTITY-UNKNOWN','reserve_healthy':None}
+    failed=streak(samples,target['id'],recovery['failures'],now,age,False,target)
     if recovery['return_policy']=='healthy_primary':
         dwell=now-journal.get('confirmed',journal.get('started',now))
         if (failed or dwell>=recovery['min_dwell']) and backend.recovery_ready(journal['source'],settings) is True:
@@ -670,20 +775,85 @@ def child(tx):
         time.sleep(.1)
     else:raise Refused('WATCHDOG-DID-NOT-ARM')
     if transaction_expired(journal):raise Refused('TRANSACTION-EXPIRED')
-    backend=Linux(); blockers,_=backend.diagnostic()
+    require_control_revision(journal.get('control_revision'))
+    backend=Linux();blockers,selection=backend.diagnostic()
     if blockers:raise Refused(blockers[0])
+    if not selection or selection.get('vendor_identity')!=journal.get('vendor_identity') or not journal.get('vendor_identity'):
+        raise Refused('PROFILE-IDENTITY-CHANGED')
     if backend.order()!=(journal['before'],journal['hash']):raise Refused('POLICY-GENERATION-CHANGED')
-    backend.guard()
-    backend.reorder(journal['after'])
-    backend.apply()
+    require_control_revision(journal.get('control_revision'))
+    backend.guard(control_revision=journal['control_revision'])
+    def before_write():
+        require_control_revision(journal.get('control_revision'))
+        assert_selection(backend,selection)
+        require_control_revision(journal.get('control_revision'))
+        if transaction_expired(journal):raise Refused('TRANSACTION-EXPIRED')
+    def write_command(args,timeout=5):
+        before_write()
+        return forward_dispatch(args,journal['control_revision'],timeout)
+    backend.reorder(journal['after'],write_command=write_command)
+    backend.apply(write_command=write_command)
 
 
 def transition_kind(source,target):
     source_protocol=source.get('protocol') or source['id'].split(':',1)[0]
     target_protocol=target.get('protocol') or target['id'].split(':',1)[0]
     if source_protocol!=target_protocol:return 'protocol'
-    if source.get('channel','default')!=target.get('channel','default'):return 'channel'
+    if source.get('vendor_tunnel_id')!=target.get('vendor_tunnel_id'):return 'channel'
     return 'server'
+
+
+def assert_selection(backend,selection):
+    """Fresh configured binding/epoch proof immediately before a forward write.
+
+    Recovery rollback deliberately does not use this gate: it must remain
+    possible after a vendor change invalidates the forward-action evidence.
+    """
+    blockers,current=backend.diagnostic()
+    if blockers:raise Refused(blockers[0])
+    identity=selection.get('vendor_identity')
+    if (not isinstance(identity,str) or not re.fullmatch(r'[a-f0-9]{64}',identity)
+            or not current or current.get('vendor_identity')!=identity
+            or current.get('hash')!=selection.get('hash')
+            or any(current[role]['id']!=selection[role]['id'] for role in ('source','target'))):
+        raise Refused('PROFILE-IDENTITY-CHANGED')
+    return current
+
+
+def require_control_revision(expected):
+    """Stop rotates this RAM marker even when its flash latch is deduplicated."""
+    if not isinstance(expected,str) or not re.fullmatch(r'[a-f0-9]{32}',expected):raise Refused('CLIENT-STOP')
+    try:record=read_json(RUNTIME/'auto-control-revision.json',{})
+    except (OSError,ValueError):raise Refused('CLIENT-STOP') from None
+    if not isinstance(record,dict) or set(record)!={'revision'} or record['revision']!=expected:
+        raise Refused('CLIENT-STOP')
+
+
+def forward_dispatch(args,control_revision,timeout=5):
+    """Fence dispatch against Stop; never wait on a command under the UI lock.
+
+    An already dispatched vendor command can remain in flight after Stop.
+    Inherit the owning apply child's process group for its existing cleanup.
+    """
+    from auto_control import control_lock
+    with control_lock(RUNTIME):
+        require_control_revision(control_revision)
+        process=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
+    try:output,_=process.communicate(timeout=timeout)
+    except BaseException:
+        try:process.kill()
+        except ProcessLookupError:pass
+        # A vendor grandchild can retain stdout after its parent is killed.
+        # The enclosing apply group owns descendant cleanup; never wait here
+        # without a bound and prevent a delayed pipe EOF from blocking Stop.
+        try:process.communicate(timeout=1)
+        except subprocess.TimeoutExpired:
+            if process.stdout:process.stdout.close()
+            if process.stderr:process.stderr.close()
+        raise
+    if process.returncode:raise subprocess.CalledProcessError(process.returncode,args)
+    if len(output)>2*1024*1024:raise Refused('NATIVE-SYSTEM-001')
+    return output
 
 
 def monotonic_lease(settings,until,wall=None,mono=None):
@@ -722,7 +892,12 @@ def transaction_expired(journal,wall=None,mono=None):
     return wall>=journal['deadline'] or (journal.get('monotonic_deadline') is not None and mono>=journal['monotonic_deadline'])
 
 
-def attempt(backend,selection,until,trial,probe_evidence=None):
+def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=None):
+    if control_revision is None:
+        from auto_control import current_revision
+        control_revision=current_revision(RUNTIME)
+    require_control_revision(control_revision)
+    assert_selection(backend,selection)
     cause='OPERATOR-TRIAL' if trial else 'SOURCE-FAILED' if probe_evidence and probe_evidence.get('source_streak_met') is True else 'SOURCE-HEALTH-UNKNOWN'
 
     before=selection['order'];after=list(before)
@@ -730,9 +905,14 @@ def attempt(backend,selection,until,trial,probe_evidence=None):
     if (i>j and selection['direction']=='first') or (i<j and selection['direction']=='last'):
         raise Refused('SOURCE-ORDER-MISMATCH')
     if trial:
+        require_control_revision(control_revision)
         baseline=backend.policy()['settings'].get('native_baseline_exit')
         if not baseline or trace(selection['source'])!=baseline:raise Refused('LAN-BASELINE-NOT-SOURCE')
+        require_control_revision(control_revision)
         if trace(selection['target'])==baseline:raise Refused('RESERVE-EXIT-NOT-DISTINCT')
+        require_control_revision(control_revision)
+    assert_selection(backend,selection)
+    require_control_revision(control_revision)
     after[i],after[j]=after[j],after[i]
     tx=uuid.uuid4().hex
     wall=time.time();mono=time.monotonic()
@@ -741,10 +921,17 @@ def attempt(backend,selection,until,trial,probe_evidence=None):
     journal={'tx':tx,'phase':'ARMED','before':before,'after':after,'hash':selection['hash'],
              'source':selection['source']['id'],'target':selection['target']['id'],
              'deadline':min(until,wall+90),'monotonic_deadline':min(lease_end,mono+90),'lease_monotonic_until':lease_end,'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
-             'pid':None,'started':time.time()}
+             'pid':None,'started':time.time(),'vendor_identity':selection['vendor_identity'],
+             'control_revision':control_revision,
+             'vendor_profiles':{role:{key:selection[role].get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')} for role in ('source','target')}}
     publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
+    require_control_revision(control_revision)
     journal_write(journal)
-    process=subprocess.Popen([sys.executable,__file__,'apply',tx],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+    require_control_revision(control_revision)
+    from auto_control import control_lock
+    with control_lock(RUNTIME):
+        require_control_revision(control_revision)
+        process=subprocess.Popen([sys.executable,__file__,'apply',tx],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     journal.update(pid=process.pid,phase='APPLYING')
     released=False
     try:
@@ -754,13 +941,14 @@ def attempt(backend,selection,until,trial,probe_evidence=None):
         if process.returncode:raise Refused('VENDOR-APPLY-FAILED')
         if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
         target_exit=trace(selection['target'])
-        blockers,_=backend.diagnostic()
-        if blockers:raise Refused(blockers[0])
-        backend.guard(backend.devices())
+        assert_selection(backend,selection)
+        require_control_revision(control_revision)
+        backend.guard(backend.devices(),control_revision=control_revision)
         journal.update(phase='WAIT-CLIENT',expected_exit=target_exit);journal_write(journal)
         publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],'source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),
                           'requires':'LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback'})
         while not transaction_expired(journal) and not STOP:
+            require_control_revision(control_revision)
             stopped=read_json(PERSIST/'native-stop.json',{})
             if stopped.get('requested',0)>=journal['started']:raise Refused('CLIENT-STOP')
             confirmation=read_json(RUNTIME/'native-confirm.json',{})
@@ -770,13 +958,16 @@ def attempt(backend,selection,until,trial,probe_evidence=None):
                     and time.time()-confirmation.get('time',0)<=30):
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
                 if trace(selection['target'])!=target_exit:raise Refused('EXIT-CHANGED')
-                blockers,_=backend.diagnostic()
-                if blockers:raise Refused(blockers[0])
+                assert_selection(backend,selection)
+                require_control_revision(control_revision)
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
+                require_control_revision(control_revision)
                 journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
                 if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
+                require_control_revision(control_revision)
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
-                                 'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),'time':time.time(),'until':until})
+                                 'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),
+                                 'vendor_identity':selection['vendor_identity'],'time':time.time(),'until':until})
                 publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
                                   'until':until,'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
@@ -847,11 +1038,19 @@ def serve():
             publish({'state':'BLOCKED','blockers':['CONTROL-REVISION-STALE'],
                      'alarm':'CONTROL-REVISION-STALE','original_restored':False})
             return
-        last_return=read_json(return_result_path(),{}).get('request',0)
-        consumed=read_json(ATTEMPTS,{})
-        last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
+        last_return=0;consumed={};last_trial=None;last_attempt=0
         while not STOP:
             try:
+                from auto_control import current_revision
+                decision_revision=current_revision(RUNTIME)
+                progress_error=None
+                try:
+                    returned=progress_read(return_result_path(),'return')
+                    attempts=progress_read(ATTEMPTS,'attempts')
+                except Refused:progress_error='NATIVE-PROGRESS-UNVERIFIED'
+                else:
+                    last_return=returned.get('request',0);consumed=attempts
+                    last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
                 data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
                 active=journal_read()
                 if active.get('phase')=='RELEASE-PENDING':
@@ -894,9 +1093,11 @@ def serve():
                     last_trial=settings.get('native_trial')
                 blockers,selection=backend.diagnostic()
                 if stop_latched:
+                    if progress_error:blockers.append(progress_error)
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'STOPPED','reason':'CLIENT-STOP','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'candidates':backend.candidates()});time.sleep(5);continue
                 if not enabled:
+                    if progress_error:blockers.append(progress_error)
                     if active.get('phase')=='ROLLED-BACK' and backend.order()==(active['before'],active['hash']):backend.unguard()
                     publish({'state':'DISABLED','original_restored':active.get('phase')=='ROLLED-BACK' and backend.order()==(active.get('before'),active.get('hash')),'blockers':blockers,'acceleration':backend.acceleration(),'candidates':backend.candidates(),'adapter':'experimental-existing-rule-order'});time.sleep(5);continue
                 if until>0 and lease_expired:
@@ -911,7 +1112,7 @@ def serve():
                     publish({'state':'BLOCKED','blockers':blockers});time.sleep(5);continue
                 if active.get('phase')=='COMMITTED':
                     status=read_json(RUNTIME/'status.json',{})
-                    decision=committed_recovery_decision(backend,active,settings,status.get('samples',[]),time.time())
+                    decision=committed_recovery_decision(backend,active,settings,status.get('samples',[]),time.time(),status)
                     if decision['action']=='RESTORE-PRIMARY':
                         if finish_committed(backend,active,decision['reason']):
                             publish({'state':'ROLLED-BACK','reason':decision['reason'],'source':active['source'],'target':active['target'],'original_restored':True})
@@ -920,6 +1121,9 @@ def serve():
                         publish(dict(previous,state='COMMITTED' if decision['action']=='OBSERVE' else 'DEGRADED-ON-RESERVE',
                                      source=active['source'],target=active['target'],reason=decision['reason'],
                                      reserve_healthy=decision.get('reserve_healthy'),candidates=backend.candidates()))
+                    time.sleep(5);continue
+                if progress_error:
+                    publish({'state':'BLOCKED','blockers':[progress_error]})
                     time.sleep(5);continue
                 trial=settings.get('native_trial') or ''
                 forced=bool(trial and trial!=last_trial)
@@ -930,20 +1134,24 @@ def serve():
                 from failure_diagnosis import diagnose
                 diagnosis=diagnose(status,selection['source']['id'],time.time())
                 if diagnosis.get('suppress_switch'):
-                    publish({'state':'BLOCKED','blockers':['UPLINK-LINK-DOWN'],'reason':'UPLINK-LINK-DOWN','source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
+                    publish({'state':'BLOCKED','blockers':[diagnosis['code']],'reason':diagnosis['code'],'source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
                 from recovery_settings import normalized
                 recovery=normalized(settings)
                 age=max(30,min(900,int(settings.get('interval',30))*3))
-                failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False)
-                healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True)
+                failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False,selection['source'])
+                healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True,selection['target'])
                 certificate=read_json(CERT,{})
-                certified=certificate.get('hash')==selection['hash'] and certificate.get('source')==selection['source']['id'] and certificate.get('target')==selection['target']['id'] and certificate.get('direction')==selection['direction'] and certificate.get('until',0)>=until and certificate.get('settings_hash')==selection.get('settings_hash')
+                certified=certificate.get('hash')==selection['hash'] and certificate.get('source')==selection['source']['id'] and certificate.get('target')==selection['target']['id'] and certificate.get('direction')==selection['direction'] and certificate.get('until',0)>=until and certificate.get('settings_hash')==selection.get('settings_hash') and certificate.get('vendor_identity')==selection.get('vendor_identity')
                 if time.time()-last_attempt>=max(recovery['cooldown'],recovery['min_dwell']) and (forced or (certified and failures and healthy)):
                     last_attempt=time.time();last_trial=trial
                     consumed.update(trial=trial,time=last_attempt,count=consumed.get('count',0)+1)
                     atomic_json(ATTEMPTS,consumed)
-                    attempt(backend,selection,until,forced,probe_evidence={'source_streak_met':failures,'reserve_streak_met':healthy,'required_failures':recovery['failures'],'required_successes':recovery['successes']})
-                else:publish({'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,'source_failures':failures,'reserve_healthy':healthy})
+                    attempt(backend,selection,until,forced,probe_evidence={'source_streak_met':failures,'reserve_streak_met':healthy,'required_failures':recovery['failures'],'required_successes':recovery['successes']},control_revision=decision_revision)
+                else:publish({'state':'OBSERVING' if certified else 'TRIAL-REQUIRED','certified':certified,
+                    'source':selection['source']['id'],'target':selection['target']['id'],
+                    'source_generation':selection['source'].get('vendor_generation'),
+                    'target_generation':selection['target'].get('vendor_generation'),
+                    'vendor_identity':selection.get('vendor_identity'),'source_failures':failures,'reserve_healthy':healthy})
             except (Refused,OSError,ValueError,KeyError,subprocess.SubprocessError,http.client.HTTPException) as e:
                 # Never log configuration, stderr, credentials or arbitrary exception values.
                 reason=str(e) if isinstance(e,Refused) else 'NATIVE-SYSTEM-001'

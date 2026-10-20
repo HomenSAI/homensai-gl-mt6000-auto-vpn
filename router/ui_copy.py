@@ -95,10 +95,6 @@ COPY = [
     ('Stop trial and restore', 'Stop and return to the primary', 'Остановить и вернуться на основной'),
     ('Stop requested. Wait for verified rollback status.', 'Stop requested. Wait until the router confirms it went back to the primary.', 'Остановка запрошена. Дождитесь, пока роутер подтвердит возврат на основной.'),
     ('Stop request failed; recovery is not confirmed.', 'The stop request failed and the return to the primary is not confirmed. Check the router by another route.', 'Запрос остановки не прошёл, возврат на основной не подтверждён. Проверьте роутер другим путём.'),
-    ('Controlled VPN failure test', 'Simulate a VPN failure (test)', 'Имитация сбоя VPN (тест)'),
-    ('This temporarily blocks IPv4 traffic through the selected VPN, keeping its process connected. It reproduces “Connected, but no internet”. Router INPUT, management routes and Kill Switch are unchanged.',
-     'This briefly blocks internet traffic through the chosen VPN while it stays connected, to reproduce “connected, but no internet”. Access to the router itself and the Kill Switch are not changed.',
-     'Временно блокирует интернет-трафик через выбранный VPN, не отключая его, чтобы воспроизвести «подключён, но интернета нет». Доступ к самому роутеру и Kill Switch не меняются.'),
 ]
 
 COPY += [

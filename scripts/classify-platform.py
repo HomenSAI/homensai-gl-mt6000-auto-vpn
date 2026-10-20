@@ -37,8 +37,11 @@ def classify(text):
         if name not in ('opkg','apk') and rows.get('tool_'+name)!='PRESENT':reasons.append('TOOL-MISSING:'+name)
     for name in PACKAGES:
         if rows.get('package_'+name)!='INSTALLED':reasons.append('DEPENDENCY-MISSING:'+name)
-    for key,pattern in (('python_version',r'Python 3\.[0-9]+\.[0-9]+'),
-                        ('lua_version',r'Lua 5\.[0-9]+\.[0-9]+(?: .*)?'),
+    python=re.fullmatch(r'Python 3\.([0-9]+)\.[0-9]+',rows.get('python_version',''))
+    # The aggregate setup transaction uses dictionary union (Python 3.9+).
+    # A Python 3.x banner alone is not a compatible application runtime.
+    if not python or int(python[1])<9:reasons.append('VERSION-NOT-VERIFIED:python_version')
+    for key,pattern in (('lua_version',r'Lua 5\.1\.[0-9]+(?: .*)?'),
                         ('nft_version',r'nftables v[0-9]+\.[0-9]+\.[0-9]+(?: .*)?'),
                         ('kernel',r'[0-9]+\.[0-9]+\.[0-9]+(?:[-+A-Za-z0-9._]*)'),
                         ('openwrt_version',r'[0-9]+\.[0-9]+(?:\.[0-9]+)?(?:[-A-Za-z0-9._]*)')):

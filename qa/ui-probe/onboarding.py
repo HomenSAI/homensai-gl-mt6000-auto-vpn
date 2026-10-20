@@ -1,4 +1,4 @@
-"""Frozen synthetic first-run browser checks; no router, credentials or external API."""
+"""Frozen synthetic setup/diagnostics browser checks; no router or external API."""
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -20,12 +20,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--quick', action='store_true')
+    parser.add_argument('--scenario', choices=('onboarding', 'vendor'), default='onboarding')
     args = parser.parse_args()
     out = args.out.resolve()
     if not out.is_relative_to((ROOT/'private').resolve()) or out.exists():
         raise ValueError('FRESH-PRIVATE-OUTPUT-REQUIRED')
     frozen, identity, manifest = freeze_preview(ROOT)
-    script = (Path(__file__).with_suffix('.js')).read_bytes()
+    script_path = Path(__file__).with_suffix('.js') if args.scenario == 'onboarding' else Path(__file__).with_name('vendor_coordination.js')
+    script = script_path.read_bytes()
+    scenes = ['stable', 'pending', 'changed', 'unknown', 'stale', 'wan', 'same-tunnel'] if args.scenario == 'vendor' else []
     groups = [dict(design=d, lang=lang, width=w) for d in 'abc'
               for lang in ('en', 'ru') for w in (1440, 390)]
     if args.quick:
@@ -36,7 +39,9 @@ def main():
     requests = {}
     event = threading.Event()
     out.mkdir(parents=True)
-    manifest['scope'] = 'synthetic first-run fixture; no router or real terms acceptance'
+    manifest['scope'] = 'synthetic '+args.scenario+' fixture; no router or real terms acceptance'
+    manifest['scenario'] = args.scenario
+    manifest['scenes'] = scenes
     manifest['groups'] = groups
     manifest['runner_sha256'] = hashlib.sha256(script).hexdigest()
     (out/'source.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
@@ -67,7 +72,7 @@ def main():
             path = self.path.split('?', 1)[0]
             requests[path] = requests.get(path, 0)+1
             if path == '/__onboarding/runner':
-                cfg = json.dumps(dict(id=run_id, groups=groups))
+                cfg = json.dumps(dict(id=run_id, groups=groups, scenes=scenes))
                 self.send(('<!doctype html><meta charset=utf-8><body style="margin:0">'
                            '<iframe id=f style="border:0"></iframe><script>const CFG='+
                            cfg+';').encode()+script+b'</script>', 'text/html; charset=utf-8')
@@ -87,7 +92,7 @@ def main():
 
         def do_POST(self):
             save_prefix = '/__onboarding/save/'+run_id+'/'
-            saving = self.path.startswith(save_prefix) and self.path[len(save_prefix):] in {str(i) for i in range(len(groups))}
+            saving = args.scenario == 'onboarding' and self.path.startswith(save_prefix) and self.path[len(save_prefix):] in {str(i) for i in range(len(groups))}
             if not self.allowed() or not (saving or self.path == '/__onboarding/result/'+run_id):
                 self.send_error(403)
                 return
@@ -146,7 +151,7 @@ def main():
                                   'http://127.0.0.1:'+str(server.server_port)+'/__onboarding/runner'],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
-            deadline = time.monotonic()+min(1200, len(groups)*90+30)
+            deadline = time.monotonic()+min(1800, len(groups)*(len(scenes)*25 if scenes else 90)+30)
             finished = False
             while time.monotonic() < deadline:
                 if event.wait(1):
@@ -163,7 +168,8 @@ def main():
     received.update(source_identity=identity, completed_at_utc=datetime.now(timezone.utc).isoformat())
     received.update(browser_exit_code=child.poll(), request_counts=requests)
     rows = received.get('rows', [])
-    passed = (finished and not received.get('errors') and len(rows) == len(groups)
+    expected = len(groups)*(len(scenes) if scenes else 1)
+    passed = (finished and not received.get('errors') and len(rows) == expected
               and all(row.get('result') == 'PASS' for row in rows))
     received['result'] = 'PASS' if passed else 'FAIL'
     if not finished and not received.get('errors'):

@@ -98,6 +98,15 @@ var ERROR_ROWS=[
  ['JOURNAL-INTEGRITY-FAILED','switch','Journal failed its check','Журнал не прошёл проверку','The transaction journal has a wrong checksum.','У журнала транзакций неверная контрольная сумма.','Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.','Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.']
 ];
 var AUTO_NAMES={
+  'MONITOR-ONLY-DEPLOYMENT':['Monitoring-only installation','Установка только для мониторинга'],
+  'MONITOR-ONLY-INVALID':['Deployment mode unverified','Режим установки не проверен'],
+  'NATIVE-PROGRESS-UNVERIFIED':['Controller progress records unverified','Записи состояния контроллера не проверены'],
+  'RESERVE-IDENTITY-UNKNOWN':['Current reserve identity unknown','Текущая идентичность резерва неизвестна'],
+  'OBSERVATION-STALE':['Tunnel observations stale','Наблюдения туннелей устарели'],
+  'VENDOR-IDENTITY-UNKNOWN':['Router tunnel identity unknown','Идентичность туннеля роутера неизвестна'],
+  'VENDOR-SAME-TUNNEL':['Profiles share one router tunnel','Профили относятся к одному туннелю'],
+  'PROFILE-IDENTITY-CHANGED':['Current profile binding changed','Текущая привязка профиля изменилась'],
+  'VENDOR-SETTLING':['Waiting for configuration observations','Ожидание наблюдений конфигурации'],
   'CONTROL-REVISION-STALE':['Auto controls changed','Управление Auto изменилось'],
   'START-STATE-UNVERIFIED':['Saved Auto state unverified','Состояние Auto не проверено'],
   'STOP-SUPERSEDED-START':['Pending Start cancelled','Ожидающий запуск отменён'],

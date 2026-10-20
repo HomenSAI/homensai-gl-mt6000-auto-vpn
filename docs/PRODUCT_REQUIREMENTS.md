@@ -69,3 +69,7 @@
 ## First-run wizard (owner request, 20 October 2026)
 
 After the explicit terms screen, offer one complete initial configuration wizard. Save the supported application preferences and a separate completion marker on the router. Later entries use the saved state; edits belong in Settings. Include monitoring, existing profile metadata and selection, recovery, optional speed tests and Telegram, and interface defaults. Permit deferred profile selection when profiles are not yet installed. See [First-run setup](FIRST-RUN-SETUP.md) for the persistence and failure contract.
+
+## Firmware-owned server failover (owner decision, 20 October 2026)
+
+The firmware owns server selection inside an existing VPN tunnel. The application observes configured member changes, diagnoses fresh path evidence and coordinates distinct channels/tunnels, including OpenVPN and WireGuard. Provider profile groups and editable channel names are not routing identities. No competing independent server loop is introduced. See [Tunnel coordination](TUNNEL-COORDINATION.md) for stable identities, evidence invalidation and live-application prerequisites. This decision supersedes the earlier intra-channel controller proposal above.

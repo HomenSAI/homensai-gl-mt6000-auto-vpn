@@ -1,6 +1,6 @@
 # HomenSAI Auto VPN — project entry point
 
-Active continuation, 20 October 2026: the owner explicitly resumed implementation/local tests, requested D-drive archives and Git saves, and selected the mobile GL-MT3000 for future physical trials. It is not yet connected. Read docs/handoff/ACTIVE-STATE-2026-10-20.json and docs/handoff/RECOVERY-TODO-2026-10-20.md first; older review imports below are historical. Do not infer an available management path or bypass model/vendor guards. The primary physical GL-MT6000 remains excluded from tests/writes.
+Active continuation, 20 October 2026: the owner explicitly resumed after the urgent pause and authorized physical trials on the cable-connected portable GL-MT3000. Read docs/handoff/CONTINUATION-2026-10-20.md first, then ACTIVE-STATE/RECOVERY-TODO. Primary GL-MT6000 and PC Wi-Fi remain excluded from changes. Authenticated stock-target facts and encrypted recovery evidence now exist; alpha15 has an explicit monitor-only startup gate. Native switching remains uncertified/refused. Do not resume the stopped VM observer or auto-accept terms. Private access and backup receipts stay outside public source.
 
 Read the imported handoff before planning work. The owner requested a checkpoint for an independent Claude review on 17 October 2026.
 

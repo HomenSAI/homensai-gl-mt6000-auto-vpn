@@ -348,6 +348,13 @@ if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
 
 HOMENSAI_LIFECYCLE_GUARD
 
+# Never launch an uncertified board's native instance if opkg replaced a
+# pre-staged conffile. Lifecycle/recovery refusal above remains the first gate.
+board=$$(ubus call system board 2>/dev/null | jsonfilter -e '@.board_name' 2>/dev/null || true)
+if [ "$$board" != "glinet,gl-mt6000" ]; then
+    monitor_only=$$(uci -q get homensai_vpn.main.monitor_only 2>/dev/null || true)
+    [ "$$monitor_only" = "1" ] || { echo MONITOR-ONLY-DEPLOYMENT >&2; exit 1; }
+fi
 /usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart

@@ -22,12 +22,14 @@ ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 sys.path.insert(0,str(ROOT))
 import native_switch as native
 import auto_control
+from vendor_fixture import stamp
 
-TX='t'*32
+TX='e'*32
 
 
 def fixture():
     profiles=[{'id':'openvpn:1_1','interface':'ovpnclient1'},{'id':'wireguard:peer_2','interface':'wgclient1'}]
+    for profile in profiles:stamp(profile)
     sections=[{'.name':'global','.type':'policy','enabled':'1'},
               {'.name':'default','.type':'default','enabled':'0','via':'novpn'},
               {'.name':'a','.type':'rule','enabled':'1','killswitch':'1','via':'ovpnclient1'},
@@ -44,7 +46,7 @@ class Backend:
         self.guarded=None;self.fail_reorder=0;self.fail_apply=False;self.blockers=[];self.healthy=True
     def policy(self):return self.data
     def order(self):return self.current[:],self.fingerprint
-    def guard(self,devices=None):self.calls.append(('guard',devices));self.guarded='full' if devices is None else 'vpn-only'
+    def guard(self,devices=None,control_revision=None):self.calls.append(('guard',devices));self.guarded='full' if devices is None else 'vpn-only'
     def unguard(self):self.calls.append(('unguard',));self.guarded=None
     def reorder(self,order):
         self.calls.append(('reorder',order))

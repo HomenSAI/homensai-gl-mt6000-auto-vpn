@@ -29,6 +29,65 @@ function fixtureOnboardingSave(args){
  return commit();
 }
 window.fixtureCalls=[];window.rpc={declare:spec=>(...args)=>{window.fixtureCalls.push({method:spec.method,params:spec.params,args:spec.method==='setup_telegram'?['<masked>',...args.slice(1)]:spec.method==='setup_onboarding'?args.map((part,index)=>index===4?{...part,token:part.token?'<masked>':''}:part):args});if(spec.method==='setup_onboarding'&&onboardingFixture)return fixtureOnboardingSave(args);if(spec.method==='scan'){if(new URLSearchParams(location.search).get('check')==='fail')return Promise.reject(new Error('OFFLINE-SCAN-FAILURE'));const stamp=Date.now()/1000,id=Math.floor(stamp*1000).toString(16).padStart(32,'0');status.scan={request_id:id,requested_at:stamp,state:'QUEUED'};setTimeout(()=>{status.scan.state='RUNNING';window.fixturePoll?.();},300);setTimeout(()=>{status.scan={...status.scan,state:'COMPLETED',finished_at:Date.now()/1000,measured_at:Date.now()/1000,measurement_request_id:id,checked:3,failed:0};window.fixturePoll?.();},1500);return Promise.resolve({...status.scan,queued:true});}if(new URLSearchParams(location.search).get('rpc')==='fail'&&spec.method.startsWith('setup_')&&spec.method!=='setup_check')return Promise.reject(new Error('OFFLINE-RPC-FAILURE'));if(new URLSearchParams(location.search).get('rpc')==='pending'&&spec.method.startsWith('setup_')&&spec.method!=='setup_check')return new Promise((resolve,reject)=>{window.fixturePending={resolve,reject};});return Promise.resolve(spec.method==='inventory'?inventory:spec.method==='status'?status:spec.method==='setup_check'?{passed:true}:spec.method.startsWith('setup_')?{saved:true}:spec.method==='native_start'?{accepted:false,blockers:['OFFLINE-NO-NATIVE-ADAPTER']}:{queued:true,accepted:true});}};
+// Explicit synthetic diagnostics scenes, never inferred from a real router.
+const vendorScene=new URLSearchParams(location.search).get('vendor');
+if(['stable','pending','changed','unknown','stale','wan','same-tunnel'].includes(vendorScene)){
+ const stamp=Date.now()/1000,changed=stamp-120;
+ settings.plan_source_tunnel='openvpn:vpna';settings.plan_target_tunnel='openvpn:vpnb';
+ status.capabilities={native_apply:false,reason:'SYNTHETIC-NO-VENDOR-ADAPTER'};
+ status.native_failover.state='DISABLED';status.auto_control.requested='off';
+ if(vendorScene==='changed'){
+  const replacement={...profiles[0],id:'a2',name:'Germany replacement',router_name:'Germany replacement',interface:'vpna'};
+  profiles[0].interface=null;profiles[0].code='PROFILE-INACTIVE';profiles.push(replacement);inventory.profiles.push(replacement);
+ }
+ profiles.forEach((p,index)=>{
+  p.vendor_tunnel_id=p.interface?p.protocol+':'+p.interface:null;
+  p.vendor_profile_group_id=p.protocol==='openvpn'?'openvpn:10':'wireguard:20';
+  p.vendor_generation=p.interface?'abcde'[index%5].repeat(32):null;
+  p.vendor_changed_at=changed;p.vendor_state=p.interface?'SETTLED':'UNKNOWN';
+  p.time=stamp;
+ });
+ const groups=profiles.filter(p=>p.interface).map(p=>({id:p.vendor_tunnel_id,protocol:p.protocol,profile_group_id:p.vendor_profile_group_id,
+  profiles:[p.id],active_profiles:[p.id],current_profile:p.id,previous_profile:null,state:'SETTLED',generation:p.vendor_generation,
+  changed_at:changed,stable_samples:4,time:stamp,vendor_attempts_exhausted:null}));
+ const source=groups.find(g=>g.id==='openvpn:vpna'),sourceRow=profiles.find(p=>p.id===source.current_profile);
+ const coordination={version:1,time:stamp,state:'READY',code:'CROSS-TUNNEL-READY',source_tunnel:settings.plan_source_tunnel,
+  target_tunnel:settings.plan_target_tunnel,transition:'channel',vendor_reason:'UNOBSERVED',can_apply:false,vendor_attempts_exhausted:null};
+ const observedEvents=[];
+ if(vendorScene==='pending'||vendorScene==='changed'){
+  source.state='PENDING';source.stable_samples=1;source.changed_at=stamp-5;
+  sourceRow.vendor_state='PENDING';sourceRow.vendor_changed_at=stamp-5;
+  Object.assign(coordination,{state:'HOLD',code:'VENDOR-SETTLING',settle_until:stamp+55});
+ }
+ if(vendorScene==='changed'){
+  source.profiles=['a','a2'];source.previous_profile='a';
+  observedEvents.push({time:stamp-5,tunnel:source.id,previous_profile:'a',current_profile:'a2',code:'VENDOR-PROFILE-CHANGED',cause:'UNOBSERVED'});
+ }
+ if(vendorScene==='unknown'){
+  Object.assign(source,{state:'UNKNOWN',generation:null,active_profiles:[],current_profile:null,stable_samples:0});
+  Object.assign(sourceRow,{vendor_state:'UNKNOWN',vendor_generation:null,code:'VENDOR-IDENTITY-UNKNOWN'});
+  Object.assign(coordination,{state:'UNKNOWN',code:'VENDOR-IDENTITY-UNKNOWN'});
+ }
+ if(vendorScene==='wan'){
+  sourceRow.code='VPN-003';sourceRow.https_success=0;
+  status.uplink_observation={time:stamp,state:'DOWN'};
+  Object.assign(coordination,{state:'HOLD',code:'UPLINK-LINK-DOWN'});
+ }
+ if(vendorScene==='same-tunnel'){
+  settings.plan_target_tunnel=settings.plan_source_tunnel;
+  Object.assign(coordination,{target_tunnel:settings.plan_source_tunnel,state:'HOLD',code:'VENDOR-SAME-TUNNEL',transition:null});
+ }
+ status.vendor_observation={version:1,time:stamp,groups,events:observedEvents,scope:'synthetic configured-identity observations only'};
+ status.failover_plan={mode:'dry-run',state:coordination.code,coordination,source:sourceRow.id,target:'b',recommendation:null,applied:false,native_apply:false,ready_to_apply:false};
+ status.decision_explanation={diagnosis:{code:vendorScene==='wan'?'UPLINK-LINK-DOWN':vendorScene==='changed'||vendorScene==='pending'?'VENDOR-SETTLING':'VPN-PROBE-HEALTHY'},
+  source:sourceRow.id,target:'b',coordination,required_failures:3,required_successes:2,source_failure_streak_met:false,reserve_success_streak_met:true};
+ status.samples=profiles.filter(p=>p.interface).flatMap(p=>[0,30,60].map(age=>({id:p.id,time:stamp-age,code:p.code,dns_ok:p.dns_ok,https_success:p.https_success,
+  interface:p.interface,vendor_tunnel_id:p.vendor_tunnel_id,vendor_generation:p.vendor_generation})));
+ if(vendorScene==='stale'){
+  status.time=stamp-600;status.native_failover.time=stamp-600;status.vendor_observation.time=stamp-600;coordination.time=stamp-600;
+  groups.forEach(g=>g.time=stamp-600);profiles.forEach(p=>p.time=stamp-600);
+ }
+}
 fetch('/preview-module.js',{cache:'no-store'}).then(r=>r.text()).then(s=>new Function(s)()).then(v=>v.load().then(d=>v.render(d))).then(n=>document.getElementById('app').append(n)).catch(e=>document.getElementById('app').textContent='OFFLINE FIXTURE ERROR: '+e.message);
 const refreshFixture=()=>{const stamp=Date.now()/1000;status.time=stamp;status.native_failover.time=stamp;profiles.forEach(p=>p.time=stamp);return window.fixturePoll?.();};
 for(const [caption,handler] of [['Refresh fixture',refreshFixture],['Mark selected failed',()=>{profiles[1].code='DNS-001';profiles[1].dns_ok=false;profiles[1].https_success=0;return refreshFixture();}],['Recover selected',()=>{profiles[1].code=null;profiles[1].dns_ok=true;profiles[1].https_success=2;return refreshFixture();}],

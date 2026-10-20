@@ -245,10 +245,14 @@ function renderTransitionAnalytics(status){
     period,summaryHost,groupHost,exports,table]);
 }
 
-function renderDecisionExplanation(status){
-  var explanation=status.decision_explanation||{},diagnosis=explanation.diagnosis||{},native=status.native_failover||{};
+function renderDecisionExplanation(status,inventory){
+  status=status||{};inventory=inventory||{};
+  var explanation=status.decision_explanation||{},diagnosis=explanation.diagnosis||{},native=status.native_failover||{},settings=inventory.settings||{};
   var now=Date.now()/1000;
-  var fresh=!status.rpc_error&&Number.isFinite(status.time)&&now-status.time>=0&&now-status.time<=90;
+  var interval=Number(settings.interval),age=Number.isInteger(interval)&&interval>=10&&interval<=300?Math.max(30,interval*3):90;
+  var fresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=0&&now-status.time<=age;
+  var nativeFresh=fresh&&Number.isFinite(native.time)&&now-native.time>=0&&now-native.time<=30;
+  var vendor=typeof vendorDiagnosticsModel==='function'?vendorDiagnosticsModel(status,inventory,now):null;
   // What the router sees on the VPN in use, in plain words, with a lamp colour.
   var seen={
     'VPN-PROBE-HEALTHY':['green','The VPN in use works: the router opened a website and looked up a name through it.','VPN в использовании работает: роутер открыл сайт и нашёл адрес через него.'],
@@ -257,7 +261,7 @@ function renderDecisionExplanation(status){
     'TUNNEL-DISCONNECTED':['red','The VPN tunnel is not connected.','VPN-туннель не подключён.'],
     'ROUTE-MISMATCH':['red','The check did not go through this VPN (the route does not match), so it proves nothing.','Проверка шла не через этот VPN (маршрут не совпал), поэтому она ничего не доказывает.'],
     'PATH-UNVERIFIED':['yellow','The router has not yet confirmed which way its check went.','Роутер ещё не подтвердил, каким путём прошла его проверка.'],
-    'UPLINK-LINK-DOWN':['red','The cable or line from your internet provider is down. Switching VPNs cannot help, so Auto waits.','Кабель или линия от провайдера отключены. Переключение VPN не поможет, поэтому Auto ждёт.'],
+    'UPLINK-LINK-DOWN':['red','The configured uplink reports link down. This does not establish why the router firmware changed a profile.','Настроенный uplink сообщает об отключении. Это не устанавливает причину смены профиля штатной прошивкой.'],
     'OBSERVATION-STALE':['grey','The measurements are too old to decide anything.','Измерения слишком старые, чтобы что-то решать.'],
     'OBSERVATION-UNKNOWN':['grey','There are not enough measurements yet.','Измерений пока недостаточно.']
   };
@@ -267,20 +271,28 @@ function renderDecisionExplanation(status){
   function line(kind,title,text){return E('li',{'class':'hv-why-line'},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('div',{},[E('b',{},title),E('p',{},text)])]);}
   var state=native.state;
   var next;
-  if(!fresh)next=bi('Auto cannot decide without fresh data.','Без свежих данных Auto ничего не решает.');
-  else if(state==='COMMITTED'||state==='DEGRADED-ON-RESERVE'||state==='STOPPED-ON-RESERVE')next=bi('Traffic is on the reserve now. Auto returns to the primary when it has recovered and passes its checks; you can also press “Return to primary” in the Auto card.','Трафик сейчас идёт через резерв. Auto вернётся на основной, когда он восстановится и пройдёт проверки; можно также нажать «Вернуться на основной» в блоке Auto.');
-  else if(failMet&&goodMet)next=bi('The primary has failed enough times and the reserve is ready: Auto will switch to the reserve as soon as a computer in your network confirms the new route (the LAN helper).','Основной отказал достаточно раз, а резерв готов: Auto переключится на резерв, как только компьютер в вашей сети подтвердит новый маршрут (LAN-помощник).');
-  else if(failMet)next=bi('The primary has failed, but the reserve is not ready yet. Auto waits for the reserve to pass its checks.','Основной отказал, но резерв ещё не готов. Auto ждёт, пока резерв пройдёт проверки.');
-  else next=bi('Nothing to do: the primary has not failed enough times, so traffic stays where it is.','Делать нечего: основной не отказал достаточное число раз, поэтому трафик остаётся там, где есть.');
+  if(!fresh)next=bi('Current control and measurements are unknown. No switch or automatic return can be predicted from stale data.','Текущее управление и измерения неизвестны. По устаревшим данным нельзя предсказывать переключение или автоматический возврат.');
+  else if((state==='STOPPED-ON-RESERVE'||state==='HELD-ON-RESERVE')&&!nativeFresh)next=bi('The last controller report retained the reserve after Stop, but current controller state is unknown. Review the explicit return control or a new validated trial; no automatic return is confirmed.','Последний отчёт контроллера указывал на сохранение резерва после остановки, но текущее состояние контроллера неизвестно. Проверьте отдельное действие возврата или новый подтверждённый тест; автоматический возврат не подтверждён.');
+  else if(state==='STOPPED-ON-RESERVE'||state==='HELD-ON-RESERVE')next=bi('Auto is stopped with the reserve retained. Use the explicit “Return to primary” control, or a new validated trial. Stop does not promise an automatic return.','Auto остановлен с сохранением резерва. Используйте отдельное действие «Вернуться на основной» или новый подтверждённый тест. Остановка не обещает автоматического возврата.');
+  else if((status.auto_control||{}).requested==='off'&&['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(state)>=0)next=bi('Stop was requested; recovery confirmation is still required. Review the Auto card and its explicit return control. No automatic return is confirmed.','Запрошена остановка; подтверждение восстановления ещё необходимо. Проверьте блок Auto и отдельное действие возврата. Автоматический возврат не подтверждён.');
+  else if(state==='DEGRADED-ON-RESERVE')next=bi('The last report retained the reserve with a recovery issue. Review the Auto card and the explicit return control; no automatic return is confirmed.','Последний отчёт указывает на сохранение резерва с проблемой восстановления. Проверьте блок Auto и отдельное действие возврата; автоматический возврат не подтверждён.');
+  else if(state==='COMMITTED'&&!nativeFresh)next=bi('The reserve was reported in use, but controller data is stale. A current route or automatic return is not confirmed.','Ранее сообщалось об использовании резерва, но данные контроллера устарели. Текущий маршрут и автоматический возврат не подтверждены.');
+  else if(state==='COMMITTED'&&settings.recovery_return_policy==='hold_reserve')next=bi('The hold-reserve policy keeps a healthy reserve for operator review. Use the explicit return control when appropriate; this policy does not promise automatic return.','Политика сохранения резерва оставляет работающий резерв до решения оператора. При необходимости используйте отдельное действие возврата; эта политика не обещает автоматического возврата.');
+  else if(state==='COMMITTED'&&settings.recovery_return_policy==='healthy_primary')next=bi('The healthy-primary policy may consider return only in an enabled, validated trial with fresh primary checks. LAN verification and recovery guards still apply; return is not promised.','Политика здорового основного может рассматривать возврат только во включённом подтверждённом тесте со свежими проверками основного. Проверка LAN и ограничения восстановления остаются обязательными; возврат не обещан.');
+  else if(state==='COMMITTED')next=bi('The return policy is unknown. Review Settings and the Auto card; no automatic return is confirmed.','Политика возврата неизвестна. Проверьте настройки и блок Auto; автоматический возврат не подтверждён.');
+  else if(failMet&&goodMet)next=bi('The router probe quorum is met: a candidate can be reviewed. These checks do not authorize a route change; router firmware coordination, native capability, Stop state, the bounded trial and LAN verification remain separate gates.','Порог проверок с роутера достигнут: можно рассмотреть кандидата. Эти проверки не разрешают изменение маршрута; координация со штатной прошивкой, нативные возможности, состояние Stop, ограниченный тест и проверка LAN остаются отдельными условиями.');
+  else if(failMet)next=bi('Router failures were observed, but reserve health is not yet confirmed. This card does not authorize a route change.','Наблюдались ошибки проверок с роутера, но здоровье резерва ещё не подтверждено. Эта карточка не разрешает изменение маршрута.');
+  else next=bi('The retained router checks do not meet the failure threshold. This card does not authorize a route change.','Сохранённые проверки с роутера не достигают порога сбоев. Эта карточка не разрешает изменение маршрута.');
+  if(vendor)next+=' '+bi('Application planning gate: ','Условие планировщика приложения: ')+vendorCoordinationText(vendor)+'.';
   var code=native.reason||native.state,techCode=typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)?code:null;
   return E('section',{'class':'hv-chart-card hv-why'},[
-    E('h3',{},bi('Why Auto acts or waits','Почему Auto действует или ждёт')),
-    E('p',{},bi('Auto switches only when two things are true at once: the VPN in use has failed several checks in a row, and the reserve has passed several checks in a row. This card shows the situation right now.','Auto переключается, только когда одновременно верно два условия: используемый VPN несколько проверок подряд не прошёл, а резерв несколько проверок подряд прошёл. Эта карточка показывает, как обстоят дела сейчас.')),
+    E('h3',{},bi('Why the planner proposes or waits','Почему планировщик предлагает или ждёт')),
+    E('p',{},bi('Failure and success thresholds describe router probe evidence. They do not prove firmware attempts are exhausted or authorize Auto. Tunnel identity, coordination, controller policy and independent LAN verification remain separate conditions.','Пороги сбоев и успешных проверок описывают результаты проверок с роутера. Они не доказывают завершение попыток прошивки и не разрешают Auto. Идентичность туннеля, координация, политика контроллера и независимая проверка LAN остаются отдельными условиями.')),
     E('ul',{'class':'hv-why-list'},[
       line(row[0],bi('What the router sees on the VPN in use','Что роутер видит на используемом VPN'),bi(row[1],row[2])),
       line(!fresh?'grey':failMet?'red':'green',bi('Has the VPN in use failed enough times?','Отказал ли используемый VPN достаточное число раз?'),(failMet?bi('Yes.','Да.'):bi('No.','Нет.'))+' '+bi('Auto needs '+(needFail||'—')+' failed checks in a row.','Auto нужно '+(needFail||'—')+' неудачных проверок подряд.')),
-      line(!fresh?'grey':goodMet?'green':'yellow',bi('Is the reserve ready?','Готов ли резерв?'),(goodMet?bi('Yes.','Да.'):bi('Not yet.','Пока нет.'))+' '+bi('Auto needs '+(needGood||'—')+' good checks in a row.','Auto нужно '+(needGood||'—')+' успешных проверок подряд.'))]),
-    E('p',{'class':'hv-why-next'},[E('strong',{},bi('What Auto does next: ','Что Auto сделает дальше: ')),next]),
+      line(!fresh?'grey':goodMet?'green':'yellow',bi('Has the reserve met the router probe threshold?','Достигнут ли порог проверок резерва с роутера?'),(goodMet?bi('Yes.','Да.'):bi('Not yet.','Пока нет.'))+' '+bi('Auto needs '+(needGood||'—')+' good checks in a row.','Auto нужно '+(needGood||'—')+' успешных проверок подряд.'))]),
+    E('p',{'class':'hv-why-next'},[E('strong',{},bi('Evidence and next review: ','Данные и дальнейшая проверка: ')),next]),
     E('p',{'class':'hv-why-note'},bi('These checks are made by the router itself, so they show whether the VPN tunnels work, not what your computer sees. That is why every switch also needs the LAN helper to confirm it.','Эти проверки делает сам роутер, поэтому они показывают, работают ли VPN-туннели, а не то, что видит ваш компьютер. Поэтому каждое переключение дополнительно подтверждает LAN-помощник.')),
     techCode?E('small',{'class':'hv-why-tech'},[bi('Technical state: ','Техническое состояние: '),errorCodeLink(techCode)]):null
   ].filter(Boolean));

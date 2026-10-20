@@ -14,7 +14,7 @@ import telegram_report
 class AgentIntegrationTests(unittest.TestCase):
     def test_main_monitor_feeds_wan_traffic_to_optional_speed_guard(self):
         with tempfile.TemporaryDirectory() as directory,ExitStack() as stack:
-            path=Path(directory);data={'profiles':[{'id':'wireguard:peer_1','name':'Example','interface':'wgclient1','protocol':'wireguard'}],
+            path=Path(directory);data={'profiles':[{'id':'wireguard:peer_1','name':'Example','interface':'wgclient1','protocol':'wireguard','vendor_tunnel_id':'wireguard:wgclient1'}],
                 'servers':[],'wan_interfaces':['wan'],'settings':{'interval':30,'checkpoint':900,'probe_limit':16,'plan_enabled':False}}
             for name,value in [('RUNTIME',path),('PERSIST',path),('STOP',False)]:stack.enter_context(patch.object(agent,name,value))
             stack.enter_context(patch('auto_control.RUNTIME',path))

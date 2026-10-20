@@ -21,9 +21,10 @@ import struct
 import subprocess
 import sys
 import time
+from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha14'
+VERSION = '0.9.0-alpha15'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -33,6 +34,7 @@ SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
 TERMS_VERSION = '1'  # bump when DISCLAIMER.md changes; the UI gate and the controller both compare it
 STOP = False
 EXIT_SEEN = {}
+EXIT_CONTEXT = local()
 
 
 PACKAGE_CONTROL = Path('/usr/lib/opkg/info/homensai-auto-vpn.control')
@@ -62,7 +64,7 @@ def remember_exit(device, body):
             except ValueError:
                 return
             if address.is_global:
-                EXIT_SEEN[device] = str(address)
+                getattr(EXIT_CONTEXT,'sink',EXIT_SEEN)[device] = str(address)
             return
 
 
@@ -319,7 +321,8 @@ class Accounting:
         profile = self.quality.setdefault(identifier, {'buckets': {}, 'last': None})
         profile['last'] = {k: result.get(k) for k in ('time','code','rtt_ms')}
         row = profile['buckets'].setdefault(bucket, {'n': 0, 'success': 0, 'rtt_sum': 0, 'unknown': 0})
-        if result.get('code') in ('CHECK-001','SYSTEM-001','ROUTE-001','PROFILE-INACTIVE','CHECK-LIMIT'):
+        if result.get('code') in ('CHECK-001','SYSTEM-001','ROUTE-001','PROFILE-INACTIVE','CHECK-LIMIT',
+                                  'VENDOR-IDENTITY-CHANGED','VENDOR-IDENTITY-UNKNOWN'):
             row['unknown'] += 1
         else:
             row['n'] += 1
@@ -441,7 +444,17 @@ def route_binding(logical):
         answer = json.loads(command(['ip', '-4', '-j', 'route', 'get', address, 'mark', str(mark)]))
         if len(answer) != 1 or answer[0].get('dev') != device or str(answer[0].get('table', 'main')) != table:
             return {'code': 'ROUTE-001', 'device': device}
-    return {'code': None, 'device': device, 'mark': mark, 'table': table}
+    ifindex=int((Path('/sys/class/net')/device/'ifindex').read_text())
+    if ifindex<=0:return {'code':'CHECK-001','device':device}
+    return {'code': None, 'device': device, 'mark': mark, 'table': table,'ifindex':ifindex}
+
+
+def https_for_probe(device,mark,target,sink):
+    # The trace belongs to this one probe, even when two logical tunnels share
+    # a device or a late worker finishes after another measurement started.
+    EXIT_CONTEXT.sink=sink
+    try:return https_probe(device,mark,target)
+    finally:del EXIT_CONTEXT.sink
 
 
 def probe(profile):
@@ -455,8 +468,9 @@ def probe(profile):
         result.update(binding)
         if binding['code']:
             return result
+        exit_seen={}
         with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = [pool.submit(https_probe, binding['device'], binding['mark'], t) for t in TARGETS]
+            futures = [pool.submit(https_for_probe, binding['device'], binding['mark'], t,exit_seen) for t in TARGETS]
             dns = pool.submit(dns_probe, binding['device'], binding['mark'])
             times = []
             for future in futures:
@@ -473,7 +487,14 @@ def probe(profile):
         result.update({'https_success': len(times), 'dns_ok': dns_ok,
                        'rtt_ms': round(sum(times)/len(times), 1) if times else None,
                        'code': 'VPN-003' if len(times) < 2 else 'DNS-001' if not dns_ok else None})
-        exit_ip = EXIT_SEEN.pop(binding['device'], None)
+        # A successful socket quorum cannot survive a kernel route/device epoch
+        # change during the measurement. Configuration is checked by the scan too.
+        after=route_binding(profile['interface'])
+        if after.get('code') or any(after.get(key)!=binding.get(key) for key in ('device','mark','table','ifindex')):
+            for key in ('https_success','dns_ok','rtt_ms','exit_ip'):result.pop(key,None)
+            result['code']='VENDOR-IDENTITY-CHANGED'
+            return result
+        exit_ip = exit_seen.pop(binding['device'], None)
         if exit_ip and not result['code']:
             result['exit_ip'] = exit_ip  # shown only in the authenticated UI; never in reports or history
     except (OSError, ValueError, subprocess.SubprocessError):
@@ -562,7 +583,13 @@ def restore():
 def monitoring_profiles(data):
     selected={s['profile']:s for s in data.get('servers',[]) if s.get('enabled')}
     profiles=data.get('profiles',[])
-    observed=[p for p in profiles if p['id'] in selected] if data.get('servers') else profiles
+    from vendor_observation import current_bindings
+    settings=data.get('settings',{})
+    anchors={settings.get('plan_'+side+'_tunnel') for side in ('source','target')
+             if isinstance(settings.get('plan_'+side+'_tunnel'),str)}
+    disabled={s['profile'] for s in data.get('servers',[]) if s.get('enabled') is False}
+    follow={p['id'] for tunnel,p in current_bindings(profiles).items() if tunnel in anchors and p['id'] not in disabled}
+    observed=[p for p in profiles if p['id'] in selected or p['id'] in follow] if data.get('servers') else profiles
     return observed,selected
 
 
@@ -580,6 +607,8 @@ def serve():
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
     speed_previous=None
+    from vendor_observation import VendorObserver
+    vendor_observer=VendorObserver()
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
@@ -593,6 +622,10 @@ def serve():
             bound = [p for p in observed if p.get('interface')][:settings['probe_limit']]
             with ThreadPoolExecutor(max_workers=2) as pool:
                 measured = list(pool.map(probe, bound))
+            # Read metadata again after the network observations. Never attach a
+            # former configured profile's success to its replacement on a tunnel.
+            after_inventory=inventory()
+            vendor_observation,measured=vendor_observer.observe(data,after_inventory,measured,time.time())
             mapped = {p['id']: p for p in measured}
             rows = []
             for p in observed:
@@ -613,7 +646,8 @@ def serve():
                 storage_error = 'CLOCK-001'
             for row in measured:
                 accounting.observe(row)
-                samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok')})
+                samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
+                    'interface','vendor_tunnel_id','vendor_generation')})
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*7][-10000:]
             try:
                 from speed_test import observe_traffic, automatic_new, active_job, cancel as cancel_speed, SpeedError
@@ -635,12 +669,13 @@ def serve():
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
             status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
+            status['vendor_observation']=vendor_observation
             status['package']=package_version()
             from failure_diagnosis import explain
             status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
             from candidate_hierarchy import rank_candidates
-            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,settings.get('plan_source',''),time.time(),max_age=settings.get('interval',30)*3)
+            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',30)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             from native_history import read_public
             status['native_history']=read_public(PERSIST)

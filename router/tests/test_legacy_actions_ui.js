@@ -11,10 +11,17 @@ const button=(root,label)=>walk(root).find(n=>n.tag==='button'&&n.textContent===
 const click=n=>n.attrs.click({target:n,currentTarget:n});
 function make(){
   let modal,calls=[],pending={},timers=[],reloads=0;
-  const c={E:(...a)=>new Node(...a),bi:en=>en,locale:'en',safeCode:s=>typeof s==='string'&&/^[A-Z][A-Z0-9-]+$/.test(s),errorCodeLink:s=>s,serverTitle:p=>p.name,setTimeout:fn=>timers.push(fn),window:{location:{reload(){reloads++;}}},
+  const c={E:(...a)=>new Node(...a),bi:en=>en,locale:'en',safeCode:s=>typeof s==='string'&&/^[A-Z][A-Z0-9-]+$/.test(s),errorCodeLink:s=>s,helpLink:(_,label)=>new Node('a',{},label),serverTitle:p=>p.name,setTimeout:fn=>timers.push(fn),window:{location:{reload(){reloads++;}}},
     ui:{showModal:(_,nodes)=>modal=new Node('modal',{},nodes),hideModal:()=>modal=null,addNotification(){}},rpc:{declare:spec=>(...args)=>{calls.push({method:spec.method,args});return new Promise(resolve=>(pending[spec.method]||(pending[spec.method]=[])).push(resolve));}}};
-  vm.createContext(c);for(const f of ['fool_guard','auto_panel','setup_wizard','fault_panel','speed_table'])vm.runInContext(fs.readFileSync('router/'+f+'.inc.js','utf8'),c);
+  vm.createContext(c);for(const f of ['fool_guard','ui_logic','auto_panel','vendor_diagnostics','setup_wizard','fault_panel','speed_table'])vm.runInContext(fs.readFileSync('router/'+f+'.inc.js','utf8'),c);
   return {c,calls,get reloads(){return reloads;},get modal(){return modal;},finish:(method,value)=>pending[method].shift()(value),tick:()=>{const old=timers;timers=[];old.forEach(fn=>fn());}};
+}
+function faultFixture(now){
+  const profiles=[['openvpn:a','openvpn','ovpnclient1','a'],['wireguard:b','wireguard','wgclient1','b']].map(([id,protocol,logical,letter])=>({id,name:id,protocol,interface:logical,channel:'Same editable label',time:now,code:null,dns_ok:true,https_success:2,vendor_tunnel_id:protocol+':'+logical,vendor_generation:letter.repeat(32),vendor_state:'SETTLED',vendor_changed_at:now-20}));
+  const groups=profiles.map(p=>({id:p.vendor_tunnel_id,protocol:p.protocol,profiles:[p.id],active_profiles:[p.id],current_profile:p.id,state:'SETTLED',stable_samples:2,generation:p.vendor_generation,time:now,changed_at:now-20}));
+  const inventory={settings:{plan_source:profiles[0].id,plan_target:profiles[1].id,plan_source_tunnel:profiles[0].vendor_tunnel_id,plan_target_tunnel:profiles[1].vendor_tunnel_id,native_session_loss:true,interval:30}};
+  const status={time:now,profiles,vendor_observation:{version:1,time:now,groups,events:[]},native_failover:{state:'OBSERVING',certified:true,time:now,source:profiles[0].id,target:profiles[1].id,vendor_identity:'c'.repeat(64),source_generation:profiles[0].vendor_generation,target_generation:profiles[1].vendor_generation},failover_plan:{coordination:{version:1,time:now,state:'READY',code:'CROSS-TUNNEL-READY',source_tunnel:groups[0].id,target_tunnel:groups[1].id,transition:'protocol',can_apply:false,vendor_attempts_exhausted:null,vendor_reason:'UNOBSERVED'}}};
+  return {status,inventory};
 }
 (async()=>{
   let m=make(),c=m.c,now=Date.now()/1000;
@@ -25,10 +32,19 @@ function make(){
   // Invalid stored values are rejected, rather than silently replaced with defaults.
   panel=c.speedPanel({profiles},{settings:{speed_enabled:true,speed_budget_mib:0}},'latest',()=>{});click(button(panel,'Test speed'));assert(!m.modal);assert.equal(m.calls.filter(x=>x.method==='speed_start').length,1);
   m=make();c=m.c;let refreshed=0;
-  panel=c.faultPanel({time:now,profiles,native_failover:{state:'OBSERVING',certified:true,time:now,source:'a'}},{settings:{plan_source:'a'}},()=>{refreshed++;return Promise.resolve();});
-  const selects=walk(panel).filter(n=>n.tag==='select');selects[0].value='profile';click(button(panel,'Simulate server failure'));run=button(m.modal,'Start bounded fault');
-  selects[0].value='channel';selects[1].value='30';work=click(run);click(run);assert.equal(m.calls.filter(x=>x.method==='fault_start').length,1);assert.deepEqual(Array.from(m.calls[0].args),['a','profile',150],'send precisely the reviewed values');
+  let fixture=faultFixture(now);panel=c.faultPanel(fixture.status,fixture.inventory,()=>{refreshed++;return Promise.resolve();});
+  const selects=walk(panel).filter(n=>n.tag==='select');assert.equal(selects[0].children.length,1,'only the truthful whole-tunnel scope is offered');assert.equal(selects[0].value,'channel');assert(!panel.textContent.includes('Simulate server failure'));
+  click(button(panel,'Simulate tunnel traffic failure'));run=button(m.modal,'Start bounded fault');assert(m.modal.textContent.includes('openvpn:ovpnclient1'));assert(!m.modal.textContent.includes('wireguard:wgclient1'),'equal editable labels never broaden affected tunnel scope');
+  selects[0].value='profile';selects[1].value='30';work=click(run);click(run);assert.equal(m.calls.filter(x=>x.method==='fault_start').length,1);assert.deepEqual(Array.from(m.calls[0].args),['openvpn:a','channel',150],'send precisely the reviewed tunnel/id/duration');
   const faultCancel=click(button(panel,'Cancel fault now'));assert.equal(m.calls.at(-1).method,'fault_cancel');m.finish('fault_cancel',{code:'FAULT-CANCELLED'});await faultCancel;m.finish('fault_start',{code:'FAULT-QUEUED'});await work;assert.equal(refreshed,2);
+  // Fresh public certificate hints must match the exact current members and generation; server authorization is separate.
+  for(const change of [s=>s.native_failover.source='openvpn:old',s=>s.native_failover.target='wireguard:old',s=>s.native_failover.source_generation='d'.repeat(32),s=>s.native_failover.vendor_identity=null,s=>s.native_failover.certified=false,s=>s.native_failover.time=now-31,s=>s.failover_plan.coordination.code='VENDOR-SETTLING',s=>s.vendor_observation.groups[0].state='PENDING',s=>s.profiles[0].vendor_generation='e'.repeat(32)]){
+    m=make();c=m.c;fixture=faultFixture(now);change(fixture.status);panel=c.faultPanel(fixture.status,fixture.inventory,()=>Promise.resolve());const disabled=button(panel,'Simulate tunnel traffic failure');assert(disabled.disabled);click(disabled);assert.equal(m.calls.length,0,'no fault RPC from unverified current identity');
+    const stopFault=click(button(panel,'Cancel fault now'));assert.equal(m.calls.at(-1).method,'fault_cancel','cleanup stays available for unknown state');m.finish('fault_cancel',{code:'FAULT-CANCELLED'});await stopFault;
+  }
+  // A new observed member or generation while the review is open refuses; it never retargets a reviewed destructive request.
+  m=make();c=m.c;fixture=faultFixture(now);fixture.inventory.settings.interval=300;fixture.status.profiles[0].time=now-91;fixture.status.profiles[0].vendor_changed_at=now-120;fixture.status.vendor_observation.groups[0].changed_at=now-120;panel=c.faultPanel(fixture.status,fixture.inventory,()=>Promise.resolve());assert(button(panel,'Simulate tunnel traffic failure').disabled,'fault probe freshness stays90s even if general observation allows900s');
+  m=make();c=m.c;fixture=faultFixture(now);panel=c.faultPanel(fixture.status,fixture.inventory,()=>Promise.resolve());click(button(panel,'Simulate tunnel traffic failure'));run=button(m.modal,'Start bounded fault');fixture.status.profiles[0].vendor_generation='e'.repeat(32);c.faultPanel(fixture.status,fixture.inventory,()=>Promise.resolve());click(run);assert.equal(m.calls.length,0);assert(m.modal,'stale review remains cancellable');
   m=make();c=m.c;const delivery=new Node('button',{},'Test Telegram');work=c.telegramTestDelivery(delivery);for(let i=0;i<20;i++)c.telegramTestDelivery(delivery);assert.equal(m.calls.length,1);m.finish('telegram_test',{code:'TELEGRAM-TEST-QUEUED'});await work;for(let i=0;i<20;i++)c.telegramTestDelivery(delivery);assert.equal(m.calls.length,1,'cooldown prevents repeated messages');for(let i=0;i<11;i++)m.tick();assert(!delivery.disabled);
   // Reopening System setup must not create expensive diagnostic storms or revive older dialogs.
   m=make();c=m.c;let checkClock=0;c.Date={now:()=>checkClock};for(let i=0;i<30;i++)c.setupWizard({settings:{},profiles:[]},'system');assert.equal(m.calls.length,1,'one shared pending readiness request');click(button(m.modal,'Cancel'));m.finish('setup_check',{passed:true});await Promise.resolve();await Promise.resolve();assert.equal(m.modal,null,'old readiness callbacks cannot reopen replaced/cancelled dialogs');
