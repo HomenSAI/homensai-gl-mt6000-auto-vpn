@@ -23,6 +23,8 @@ def change(arguments):
         if assess(settings,status,transaction,intent,stopped):
             return {'accepted':False,'code':'MONITOR-STOP-AUTO-FIRST'}
         enabled=arguments['enabled']
+        from rpc_throttle import allow
+        if not allow('monitor_control',3):return {'accepted':False,'code':'RPC-RATE-LIMIT'}
         try:
             result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
                 input=json.dumps({'main':{'enabled':'1' if enabled else '0'},'servers':[]}).encode(),

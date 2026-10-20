@@ -17,6 +17,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -76,15 +77,20 @@ def read_dict(path):
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
-    stopped=read_dict(persist/'native-stop.json');envelope=read_dict(persist/'native-transaction.json')
+    stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
+    envelope=read_dict(journal_path)
     transaction={}
-    if envelope:
+    if journal_path.exists():
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
         checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
         before=transaction.get('before');after=transaction.get('after')
-        if envelope.get('sha256')!=checksum or not isinstance(before,list) or not before or not isinstance(after,list) or len(before)!=len(after) or len(before)!=len(set(before)) or set(before)!=set(after):
+        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
+                or not isinstance(after,list) or len(before)!=len(after)
+                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
+                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'
@@ -162,6 +168,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -221,15 +228,20 @@ def read_dict(path):
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
-    stopped=read_dict(persist/'native-stop.json');envelope=read_dict(persist/'native-transaction.json')
+    stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
+    envelope=read_dict(journal_path)
     transaction={}
-    if envelope:
+    if journal_path.exists():
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
         checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
         before=transaction.get('before');after=transaction.get('after')
-        if envelope.get('sha256')!=checksum or not isinstance(before,list) or not before or not isinstance(after,list) or len(before)!=len(after) or len(before)!=len(set(before)) or set(before)!=set(after):
+        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
+                or not isinstance(after,list) or len(before)!=len(after)
+                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
+                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'
@@ -310,6 +322,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -369,15 +382,20 @@ def read_dict(path):
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
-    stopped=read_dict(persist/'native-stop.json');envelope=read_dict(persist/'native-transaction.json')
+    stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
+    envelope=read_dict(journal_path)
     transaction={}
-    if envelope:
+    if journal_path.exists():
         transaction=envelope.get('data')
         if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(transaction,dict):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
         checksum=hashlib.sha256(json.dumps(transaction,sort_keys=True,separators=(',',':'),allow_nan=False).encode()).hexdigest()
         before=transaction.get('before');after=transaction.get('after')
-        if envelope.get('sha256')!=checksum or not isinstance(before,list) or not before or not isinstance(after,list) or len(before)!=len(after) or len(before)!=len(set(before)) or set(before)!=set(after):
+        if (envelope.get('sha256')!=checksum or not isinstance(before,list) or not 2<=len(before)<=400
+                or not isinstance(after,list) or len(before)!=len(after)
+                or any(not isinstance(s,str) or not re.fullmatch(r'[A-Za-z0-9_]{1,64}',s) for s in before+after)
+                or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
+                or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'

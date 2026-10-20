@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 import subprocess
+import unicodedata
 from uci_result import failure_code
 from agent import inventory
 from auto_control import control_lock
@@ -16,7 +17,9 @@ def integer(value, low, high):
 
 
 def label(value):
-    if not isinstance(value,str) or not 1 <= len(value) <= 64 or any(ord(c)<32 for c in value):
+    # No control, format (bidi/zero-width), line/paragraph separator, surrogate or unassigned characters, and not only blanks.
+    if (not isinstance(value,str) or not 1 <= len(value) <= 64 or not value.strip()
+            or any(unicodedata.category(c) in ('Cc','Cf','Cs','Co','Cn','Zl','Zp') for c in value)):
         raise ValueError('SETUP-NAME')
     return value
 
@@ -121,9 +124,13 @@ def save(arguments, kind):
             from agent import RUNTIME, read_json
             if read_json(RUNTIME/'native-status.json',{}).get('state') in ('OBSERVING','ARMED','APPLYING','WAIT-CLIENT','COMMITTED'):
                 return {'saved':False,'code':'SETUP-STOP-FIRST'}
-            from native_switch import journal_read
-            if journal_read().get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
+            from native_switch import journal_read, Refused
+            try:phase=journal_read().get('phase')
+            except Refused:return {'saved':False,'code':'CONFIG-RECOVERY-UNVERIFIED'}
+            if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
                 return {'saved':False,'code':'SETUP-STOP-FIRST'}
+        from rpc_throttle import allow
+        if not allow('setup:'+kind,2):return {'saved':False,'code':'RPC-RATE-LIMIT'}
         # A hung or killed writer may or may not have committed: say so instead of failing without an answer.
         try:
             result=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/setup_save.lua'],
@@ -144,6 +151,8 @@ def self_test():
     import os
     from pathlib import Path
     import tempfile
+    from rpc_throttle import allow
+    if not allow('setup_check',2):return {'passed':False,'scope':'isolated-synthetic-UCI-config','code':'RPC-RATE-LIMIT'}
     with tempfile.TemporaryDirectory(prefix='homensai-setup-test-',dir='/tmp') as directory:
         root=Path(directory);(root/'config').mkdir();(root/'delta').mkdir()
         path=root/'config/homensai_vpn';path.write_text("config main 'main'\n option enabled '1'\n")

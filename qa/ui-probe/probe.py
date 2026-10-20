@@ -14,6 +14,7 @@ prev.discover_router_origin=lambda:None
 PORT=18898
 ANALYSE=(HERE/'analyse.js').read_text(encoding='utf8')
 SCEN=(HERE/'scenarios.js').read_text(encoding='utf8')
+FOOL=(HERE/'fool.js').read_text(encoding='utf8')
 RESULTS={};EVENTS={}
 class H(prev.Handler):
     def do_POST(self):
@@ -29,7 +30,7 @@ class H(prev.Handler):
         p=urlsplit(self.path).path
         if p.startswith('/__probe/'):
             kind,d,tab,theme,lang,w,h,qid=p.split('/')[2:10]
-            js=(ANALYSE if kind=='matrix' else SCEN)
+            js={'matrix':ANALYSE,'fool':FOOL}.get(kind,SCEN)
             body=("<!doctype html><meta charset=utf-8><body style='margin:0'><iframe id=f style='border:0;width:%spx;height:%spx'></iframe><pre id=result></pre><script>var CFG=%s;%s</script>"%(w,h,json.dumps(dict(design=d,tab=tab,theme=theme,lang=lang,w=int(w),h=int(h),id=self.path.split('/')[-1] if False else qid)),js)).encode()
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8');self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(body);return
         return super().do_GET()
@@ -46,7 +47,7 @@ def run(kind,d,tab,theme,lang,w,h=900,budget=0,timeout=240):
         got=ev.wait(timeout)
     finally:
         subprocess.run(['taskkill','/PID',str(proc.pid),'/T','/F'],capture_output=True)
-    if not got:return {'error':'TIMEOUT','cfg':[d,tab,theme,lang,w]}
+    if not got:return {'error':'TIMEOUT','cfg':[d,tab,theme,lang,w],'progress':RESULTS.pop('prog-'+qid,None)}
     try:out=json.loads(RESULTS.pop(qid));out['cfg']=[d,tab,theme,lang,w];return out
     except Exception as e:return {'error':'BAD-RESULT '+str(e)[:80],'cfg':[d,tab,theme,lang,w]}
 TABS=['start','overview','channels','statistics','settings','help','learn','tests','traffic','services','events','readiness']
@@ -77,9 +78,23 @@ def gate():
     srv.shutdown();sys.exit(1 if problems else 0)
 
 
+def fool(part):
+    """Persona numbers a-b. Each result retains its own failure; rerun selected cases as separate commands."""
+    a,b=map(int,part.split('-'))
+    jobs=[('fool','abc'[(p//10+p)%3],str(p),'light','en',1280) for p in range(a,b+1)]
+    with ThreadPoolExecutor(3) as ex:res=list(ex.map(lambda j:run(*j,timeout=120),jobs))
+    from datetime import datetime,timezone
+    result_path=OUTDIR/('result-fool-%s-%s.json'%(part,datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')))
+    result_path.write_text(json.dumps(res,indent=1),encoding='utf-8')
+    sys.path.insert(0,str(HERE));import fool_check
+    summary=fool_check.summarise(res);fool_check.show(summary);print('RESULT',result_path)
+    srv.shutdown();sys.exit(1 if fool_check.failed(summary) else 0)
+
+
 if __name__=='__main__':
     mode=sys.argv[1]
     if mode=='gate':gate()
+    if mode=='fool':fool(sys.argv[2] if len(sys.argv)>2 else '0-49')
     jobs=[]
     part=sys.argv[2] if len(sys.argv)>2 else 'main'
     if mode=='matrix':

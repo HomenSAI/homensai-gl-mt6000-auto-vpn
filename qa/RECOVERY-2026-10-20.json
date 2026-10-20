@@ -1,0 +1,311 @@
+{
+  "date": "2026-10-20",
+  "scope": "local hardening batch; not hardware/unattended acceptance",
+  "package": {
+    "version": "0.9.0-alpha9-1",
+    "bytes": 648680,
+    "sha256": "fd2e6c09e195cbce8741121e0d84aeb20df5702922dcef322e30686fa5678c2e"
+  },
+  "validated_product_source": "89910af0935dd712ce34c8179c285c577346aa01",
+  "immutable_runtime_matrix": [
+    {
+      "application_tests": 425,
+      "artifact": "homensai-auto-vpn_0.9.0-alpha9-1_all.ipk",
+      "bytes": 648680,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 58,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "fd2e6c09e195cbce8741121e0d84aeb20df5702922dcef322e30686fa5678c2e",
+      "skipped_tests": 9,
+      "source": "89910af0935dd712ce34c8179c285c577346aa01",
+      "ui_suites": 27,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 425,
+      "artifact": "homensai-auto-vpn_0.9.0-alpha9-1_all.ipk",
+      "bytes": 648680,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 9,
+      "qa_tests": 58,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "fd2e6c09e195cbce8741121e0d84aeb20df5702922dcef322e30686fa5678c2e",
+      "skipped_tests": 0,
+      "source": "89910af0935dd712ce34c8179c285c577346aa01",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "final_publication_gate": "Final committed metadata/test-tooling snapshot must pass its own exact-SHA matrix; publish-reviewed.py checks receipts, manifest and artifact before mutation.",
+  "browser": {
+    "synthetic_gate_cases": 24,
+    "synthetic_gate": "PASS",
+    "persona_initial": "PARTIAL: three reload/readiness failures retained",
+    "strict_sequential_reruns": [
+      {
+        "persona": 1,
+        "steps": 62,
+        "clicks": 43,
+        "rpc": 71,
+        "result": "PASS"
+      },
+      {
+        "persona": 3,
+        "steps": 80,
+        "clicks": 240,
+        "rpc": 91,
+        "result": "PASS"
+      },
+      {
+        "persona": 6,
+        "steps": 59,
+        "clicks": 22,
+        "rpc": 40,
+        "result": "PASS"
+      }
+    ],
+    "harness_corrections": "bounded app/CSS readiness; post-load interaction budget; per-document error/RPC capture; failing CLI exit",
+    "full_50_persona_matrix": "NOT_RUN"
+  },
+  "virtual": {
+    "environment": {
+      "openwrt": "21.02.7 x86/64",
+      "vcpus": 2,
+      "ram_mib": 512,
+      "container_network": "none",
+      "original_disks_resumed": false
+    },
+    "upgrade": {
+      "result": "PASS",
+      "phase": "upgrade",
+      "package_version": "0.9.0-alpha9-1",
+      "package_sha256": "fd2e6c09e195cbce8741121e0d84aeb20df5702922dcef322e30686fa5678c2e",
+      "passed": 17,
+      "checks": [
+        {
+          "name": "preflight-no-pending-uci",
+          "result": "PASS"
+        },
+        {
+          "name": "preflight-auto-disabled",
+          "result": "PASS"
+        },
+        {
+          "name": "candidate-sha256",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-opkg-upgrade",
+          "result": "PASS"
+        },
+        {
+          "name": "installed-version",
+          "result": "PASS"
+        },
+        {
+          "name": "own-config-preserved",
+          "result": "PASS"
+        },
+        {
+          "name": "protected-network-firewall-preserved",
+          "result": "PASS"
+        },
+        {
+          "name": "auto-stays-off",
+          "result": "PASS"
+        },
+        {
+          "name": "fresh-upgraded-agent",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-procd-monitor",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-selected-ui-file",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-candidate-ui",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-scan-id-ack",
+          "result": "PASS"
+        },
+        {
+          "name": "actual-correlated-scan-completion",
+          "result": "PASS"
+        },
+        {
+          "name": "no-fake-active-profiles",
+          "result": "PASS"
+        },
+        {
+          "name": "generic-board-auto-refused",
+          "result": "PASS"
+        },
+        {
+          "name": "final-protected-state-preserved",
+          "result": "PASS"
+        }
+      ],
+      "agent_version": "0.9.0-alpha9",
+      "protected_unchanged": true,
+      "private_values_exported": false,
+      "scope": "actual isolated x86 opkg/RPC/procd/UI files; no GL.iNet native or LAN acceptance",
+      "physical_router_access": false,
+      "guest_completed_at": 1792487597.4471288,
+      "host_observed_at_utc": "2026-10-20T09:14:37.676536+00:00"
+    },
+    "negative_integration": {
+      "state": "PASS",
+      "active": null,
+      "checks": [
+        {
+          "test": "hardening",
+          "result": "PASS",
+          "detail": {
+            "state": "PASS",
+            "scope": "actual disposable x86 RPC/lifecycle/nft/procd; no vendor or hardware acceptance",
+            "checks": [
+              "exact-agent-version",
+              "native-auto-off",
+              "native-supervisor-stopped-and-lock-owned",
+              "malformed-monitor-control-3",
+              "malformed-monitor-control-4",
+              "corrupt-journal-refuses-monitor-stop",
+              "corrupt-journal-refuses-auto",
+              "actual-package-lifecycle-refuses-empty-journal",
+              "release-pending-refuses-monitor-stop",
+              "release-pending-refuses-auto",
+              "expired-session-cannot-start-auto",
+              "isolated-guard-table-initially-absent",
+              "actual-nft-timeout-set-installed",
+              "kernel-releases-element-after-cleanup-process-loss",
+              "verified-guard-removal",
+              "old-timer-preserves-replacement-guard",
+              "native-auto-still-off",
+              "network-firewall-main-route-preserved"
+            ],
+            "passed": 18,
+            "journal_restored": true,
+            "guard_cleanup_confirmed": true,
+            "own_service_restart_requested": true,
+            "completed_at": 1792488384.305409
+          }
+        },
+        {
+          "test": "storage",
+          "result": "PASS",
+          "detail": {
+            "state": "PASS",
+            "scope": "disposable 64KiB tmpfs and synthetic timestamps; not physical flash wear",
+            "physical_router_access": false,
+            "checks": [
+              "ENOSPC-known-checkpoint-preserved",
+              "write-recovers-after-space-freed",
+              "checksummed-invalid-schema-recovers-backup",
+              "corrupt-current-replaced-safely",
+              "backward-forward-clock-gaps-no-invented-bytes",
+              "protected-config-network-unchanged"
+            ],
+            "temporary_mount_cleaned": true,
+            "source_sha256": "e13cecfa873283abdfcbadc5fafc269d73762f72751291dbba50a07e0ef892a6"
+          }
+        },
+        {
+          "test": "monitor-crash",
+          "result": "PASS",
+          "detail": {
+            "scope": "Own monitor process crash in marked x86 OpenWrt VM",
+            "result": "PASS",
+            "process_replaced": true,
+            "fresh_measurements": true,
+            "native_auto_enabled": false,
+            "network_firewall_main_route_preserved": true,
+            "recovery_seconds": 68.85,
+            "not_tested": [
+              "VPN executor crash",
+              "GL.iNet workers",
+              "Physical power loss"
+            ]
+          }
+        }
+      ],
+      "updated_at": 1792488509.1224236,
+      "physical_router_access": false
+    },
+    "smoke": {
+      "state": "PASS",
+      "duration_seconds": 180,
+      "elapsed_seconds": 180.002,
+      "samples": 6,
+      "failures": 0,
+      "gaps": 0,
+      "max_rss_bytes": 20893696,
+      "independent_cleanup_confirmed": true
+    },
+    "retained_failures": [
+      "Single-vCPU alpha8 RPC readiness timeout: 8 preceding checks passed, not acceptance PASS",
+      "First hardening harness refused still-held native lock before journal mutation",
+      "Second hardening harness tracked an nft subprocess as a timer; journal/guard cleanup confirmed, harness corrected"
+    ],
+    "long_endurance": "NOT_COMPLETED; 180-second smoke does not replace 12h/device observation"
+  },
+  "agents": [
+    {
+      "task": "UI guards and harness",
+      "ui_suites": "27/27 PASS",
+      "harness_tests": "3 PASS",
+      "strict_browser_reruns": "3 PASS"
+    },
+    {
+      "task": "backup/platform",
+      "isolated_tests": "15/15 PASS, 0 skip",
+      "seconds": 39.401,
+      "probe_syntax": "PASS",
+      "final_gate_review_files": 8
+    },
+    {
+      "task": "independent hardening review",
+      "files": 9,
+      "high_findings": 1,
+      "medium_findings": 3,
+      "fixed_by_root": 4,
+      "focused_checks": "4 PASS"
+    }
+  ],
+  "save_verification": {
+    "prior_source": "89910af0935dd712ce34c8179c285c577346aa01",
+    "gitea": "SAVED exact SHA",
+    "D_archive": "ZIP CRC/SHA256, stored bundle clone, HEAD/tree and fsck PASS",
+    "current_head_rule": "Compare current HEAD with Gitea and D:/homensai/homensai-gl-mt6000-auto-vpn/CURRENT.local.json after final commit. Publication ledger stays under .git/handoff; never publish bundles."
+  },
+  "physical": {
+    "selected_test_target": "mobile GL-MT3000",
+    "connected": false,
+    "actual_board_firmware_bootloader": "UNKNOWN",
+    "primary_GL_MT6000_accessed": false,
+    "native_adapter_certified": false
+  },
+  "still_open": [
+    "GL-MT3000 identity/firmware/bootloader/recoverable backup",
+    "Cooperative vendor writers and per-edge adapter certification",
+    "Native multi-hop/inactive profiles",
+    "Independent LAN DNS/HTTPS/exit, Kill Switch/IPv6 and special policies",
+    "Exact vendor SDK provenance/build",
+    "Actual warm-reboot/power-loss/unattended acceptance",
+    "Completed current-source long observation"
+  ]
+}

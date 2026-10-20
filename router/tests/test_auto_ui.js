@@ -131,6 +131,11 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   for(const state of ['DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE','TRIAL-REQUIRED'])assert.equal(light({state}).lamp,'red',state);
   assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'on'}).lamp,'red');
   assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'off'}).lamp,null);
+  for(const requested of ['on','off']){
+    const pending=light({state:'BLOCKED',blockers:['GUARD-RELEASE-UNCONFIRMED']},{requested});
+    assert.equal(pending.lamp,'red');assert(/not confirmed/.test(pending.title));
+    assert.equal(light({state:'RELEASE-PENDING'},{requested}).lamp,'red');
+  }
   for(const state of ['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'])assert.equal(light({state}).lamp,null,state);
   // Stale or missing status is never green; the light says there is no data.
   assert.equal(context.autoLightModel({time:now-500,native_failover:{time:now-1,state:'OBSERVING',certified:true}},{},now).key,'unknown');

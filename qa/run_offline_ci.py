@@ -45,6 +45,7 @@ def main():
                      application_tests=int(re.search(r'Ran (\d+) tests',application.stderr).group(1)),
                      skipped_tests=int(re.search(r'skipped=(\d+)',application.stderr).group(1)) if 'skipped=' in application.stderr else 0,
                      qa_tests=int(re.search(r'Ran (\d+) tests',qa.stderr).group(1)),ui_suites=ui_count,
+                     qa_skipped_tests=int(re.search(r'skipped=(\d+)',qa.stderr).group(1)) if 'skipped=' in qa.stderr else 0,
                      artifact=first.name,bytes=len(data),sha256=hashlib.sha256(data).hexdigest(),
                      scope='isolated source archive; no physical/virtual router acceptance')
     print('CI-RECEIPT '+json.dumps(receipt,sort_keys=True))

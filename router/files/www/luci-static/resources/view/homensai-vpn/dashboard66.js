@@ -85,6 +85,194 @@ function loadBrand(){
   });},Promise.resolve());
 }
 
+/* Fool-proofing helpers shared by every page and wizard (owner decision 18 Oct 2026, "clueless grandfather" user).
+   1. ONE table of allowed number ranges (FOOL_RANGES). The backend bounds are authoritative; qa tests compare this table with them.
+   2. Number fields: the allowed range is printed under the field, a wrong value turns the field red with a plain message and
+      the Save/Next button stays disabled until it is fixed. The typed value is never changed silently.
+   3. guardedAction(button,fn,opts): a button that sends an RPC is disabled while it works ("Working…"), then stays disabled
+      for 10 seconds with a visible countdown ("Wait 7 s"). Extra clicks are ignored (no second RPC).
+   4. confirmAction(): "Are you sure?" dialog (ui.showModal, never window.confirm) that gates the RPC. */
+var FOOL_PAUSE_SECONDS=10;
+// key -> [min, max, unit EN, unit RU, label EN, label RU]; unit is '' for plain counts.
+var FOOL_RANGES={
+  'system.interval':[10,300,'seconds','секунд'],
+  'system.duration':[1,240,'minutes','минут'],
+  'system.priority':[1,1000,'','' ],
+  'telegram.interval':[5,10080,'minutes','минут'],
+  'telegram.hour':[0,23,'','' ],
+  'monitor.interval':[10,300,'seconds','секунд'],
+  'monitor.checkpoint':[300,3600,'seconds','секунд'],
+  'monitor.probe_limit':[1,16,'','' ],
+  'speed.budget_mib':[1,32,'MiB','МиБ'],
+  'speed.duration':[2,15,'seconds','секунд'],
+  'speed.streams':[1,4,'','' ],
+  'speed.daily_mib':[1,1024,'MiB','МиБ'],
+  'speed.busy_mbps':[1,1000,'Mbps','Мбит/с'],
+  // mirrors recovery_settings.py RANGES
+  'recovery.failures':[3,10,'','' ],
+  'recovery.successes':[2,10,'','' ],
+  'recovery.cooldown':[60,1800,'seconds','секунд'],
+  'recovery.min_dwell':[60,3600,'seconds','секунд'],
+  'recovery.primary_successes':[2,10,'','' ],
+  'recovery.primary_stable':[30,600,'seconds','секунд']
+};
+// Text limits that match the backend (names and channel groups 1-64 characters; chat id; bot token).
+var FOOL_TEXT={name:[1,64],channel:[1,64],chat:[1,33],token:[0,120]};
+function foolRangeText(key){
+  var r=FOOL_RANGES[key];
+  return bi('from '+r[0]+' to '+r[1]+(r[2]?' '+r[2]:''),'от '+r[0]+' до '+r[1]+(r[3]?' '+r[3]:''));
+}
+// Check one raw value of a number field. Returns {ok, value, message}; message is plain words (bilingual), never a code.
+function foolCheckNumber(key,raw){
+  var r=FOOL_RANGES[key],text=String(raw==null?'':raw),range=foolRangeText(key);
+  if(text==='')return {ok:false,message:bi('This field is empty. Type a whole number '+range+'.','Поле пустое. Введите целое число '+range+'.')};
+  if(!/^-?[0-9]+$/.test(text))return {ok:false,message:bi('“'+text.slice(0,20)+'” is not a whole number. Use digits only, no letters, spaces, commas or decimals. Allowed: '+range+'.','«'+text.slice(0,20)+'» — не целое число. Только цифры, без букв, пробелов, запятых и дробей. Допустимо: '+range+'.')};
+  var n=Number(text);
+  if(!isFinite(n)||n<r[0])return {ok:false,message:bi('This number is too small. Allowed: '+range+'.','Число слишком маленькое. Допустимо: '+range+'.')};
+  if(n>r[1])return {ok:false,message:bi('This number is too big. Allowed: '+range+'.','Число слишком большое. Допустимо: '+range+'.')};
+  return {ok:true,value:n,message:''};
+}
+// Text field check (names, channel). Returns {ok,message}.
+function foolCheckText(kind,raw){
+  var lim=FOOL_TEXT[kind],rawText=String(raw==null?'':raw),text=rawText.trim();
+  if(/[\x00-\x1f\x7f]/.test(rawText))return {ok:false,message:bi('Line breaks and control characters are not allowed.','Переносы строк и управляющие символы не допускаются.')};
+  if(text.length<lim[0])return {ok:false,message:bi('This field cannot be empty. Type '+lim[0]+' to '+lim[1]+' characters.','Поле не может быть пустым. Введите от '+lim[0]+' до '+lim[1]+' символов.')};
+  if(text.length>lim[1])return {ok:false,message:bi('Too long. At most '+lim[1]+' characters.','Слишком длинно. Не больше '+lim[1]+' символов.')};
+  if(kind==='chat'&&!/^(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$/.test(rawText))return {ok:false,message:bi('Enter a numeric chat ID or a channel name such as @channel_name.','Введите числовой ID чата или имя канала, например @channel_name.')};
+  if(kind==='token'&&text!==''&&!/^[0-9]{6,15}:[A-Za-z0-9_-]{30,100}$/.test(rawText))return {ok:false,message:bi('Use the complete bot token from BotFather, without spaces.','Введите полный токен бота из BotFather, без пробелов.')};
+  return {ok:true,message:''};
+}
+function foolSetText(node,text){node.textContent=text;}
+/* Wrap a number input: sets min/max/step, prints the range under it, validates on every input.
+   Returns {row, check}: row = <label> to append; check() re-validates, updates the red message, returns true/false.
+   onChange() is called after each input so the caller can enable/disable its Save/Next button. */
+function foolNumberRow(title,node,key,onChange){
+  var r=FOOL_RANGES[key];
+  node.setAttribute('min',String(r[0]));node.setAttribute('max',String(r[1]));node.setAttribute('step','1');node.setAttribute('inputmode','numeric');
+  node.setAttribute('aria-label',title);
+  var hint=E('small',{'class':'hv-fool-hint'},bi('Allowed: ','Допустимо: ')+foolRangeText(key)+'.');
+  var error=E('small',{'class':'hv-fool-error','role':'alert','aria-live':'polite'},'');
+  function check(){
+    var res=foolCheckNumber(key,node.value);
+    foolSetText(error,res.message);
+    node.setAttribute('aria-invalid',res.ok?'false':'true');
+    if(node.classList){if(res.ok)node.classList.remove('hv-fool-invalid');else node.classList.add('hv-fool-invalid');}
+    node.fool_ok=res.ok;
+    return res.ok;
+  }
+  function handler(){check();if(onChange)onChange();}
+  if(typeof node.addEventListener==='function'){node.addEventListener('input',handler);node.addEventListener('change',handler);}
+  var row=E('label',{'class':'hv-wizard-field hv-fool-field'},[E('span',{},title),node,hint,error]);
+  check();
+  return {row:row,check:check,node:node,error:error};
+}
+// The same for a text input (name, channel).
+function foolTextRow(title,node,kind,onChange,required){
+  var lim=FOOL_TEXT[kind];
+  node.setAttribute('maxlength',String(lim[1]));node.setAttribute('aria-label',title);
+  var hint=E('small',{'class':'hv-fool-hint'},bi(lim[0]+' to '+lim[1]+' characters.','от '+lim[0]+' до '+lim[1]+' символов.'));
+  var error=E('small',{'class':'hv-fool-error','role':'alert','aria-live':'polite'},'');
+  function check(){
+    var res=foolCheckText(kind,node.value);
+    if(required&&String(node.value||'').trim()==='')res={ok:false,message:bi('Paste the bot token from BotFather. No stored token is available.','Вставьте токен бота из BotFather. Сохранённого токена нет.')};
+    foolSetText(error,res.message);node.setAttribute('aria-invalid',res.ok?'false':'true');
+    if(node.classList){if(res.ok)node.classList.remove('hv-fool-invalid');else node.classList.add('hv-fool-invalid');}
+    return res.ok;
+  }
+  function handler(){check();if(onChange)onChange();}
+  if(typeof node.addEventListener==='function'){node.addEventListener('input',handler);node.addEventListener('change',handler);}
+  var row=E('label',{'class':'hv-wizard-field hv-fool-field'},[E('span',{},title),node,hint,error]);
+  check();
+  return {row:row,check:check,node:node,error:error};
+}
+// Disable or enable a Save/Next button from a list of checks (every check also paints its own red message).
+function foolGate(button,checks){
+  var ok=true;checks.forEach(function(check){if(!check())ok=false;});
+  if(button){button.fool_checks=checks;button.disabled=!ok||!!button.fool_lock;if(button.setAttribute)button.setAttribute('aria-disabled',button.disabled?'true':'false');}
+  return ok;
+}
+
+/* ---- guardedAction ---- */
+var FOOL_LOCKS=Object.create(null);
+function foolLabelTarget(button,opts){return opts&&opts.status?opts.status:button;}
+function foolShow(button,opts,text){
+  var target=foolLabelTarget(button,opts);
+  if(!button.fool_saved){
+    button.fool_saved={snapshot:target.childNodes?Array.prototype.slice.call(target.childNodes):null,text:target.textContent,title:button.getAttribute?button.getAttribute('title'):null,aria:button.getAttribute?button.getAttribute('aria-label'):null};
+  }
+  target.textContent=text;
+  if(opts&&opts.status){button.setAttribute('title',text);}
+}
+function foolRestore(button,opts){
+  var saved=button.fool_saved,target=foolLabelTarget(button,opts);
+  if(!saved)return;
+  if(saved.snapshot&&saved.snapshot.length&&typeof target.appendChild==='function'){target.textContent='';saved.snapshot.forEach(function(n){target.appendChild(n);});}
+  else target.textContent=saved.text==null?'':saved.text;
+  if(opts&&opts.status){if(saved.title==null){if(button.removeAttribute)button.removeAttribute('title');}else button.setAttribute('title',saved.title);}
+  button.fool_saved=null;
+}
+function foolPause(button,lock,opts){
+  lock.left=FOOL_PAUSE_SECONDS;
+  button.disabled=true;
+  function tick(){
+    if(lock.left>0){
+      lock.display=lock.left;
+      lock.watchers.forEach(function(w){foolShow(w.button,w.opts,bi('Wait '+lock.left+' s','Подождите '+lock.left+' с'));});
+      lock.left--;
+      lock.timer=setTimeout(tick,1000);
+      return;
+    }
+    lock.timer=null;lock.phase='idle';
+    if(lock.key)delete FOOL_LOCKS[lock.key];
+    lock.watchers.forEach(function(w){
+      w.button.fool_lock=null;foolRestore(w.button,w.opts);
+      if(w.button.fool_checks)foolGate(w.button,w.button.fool_checks);else w.button.disabled=w.disabled;
+    });
+    lock.watchers=[];
+  }
+  lock.phase='pause';tick();
+}
+/* guardedAction(button, fn, opts): fn() must return a promise (the RPC). opts: key (shared lock for re-created buttons),
+   status (node that shows the text instead of the button, for icon-only buttons), failCode (shown as a link on rejection). */
+function guardedAction(button,fn,opts){
+  opts=opts||{};
+  var key=opts.key||null,existing=key?FOOL_LOCKS[key]:button.fool_lock;
+  if(existing){guardResume(button,key,opts);return Promise.resolve(undefined);}
+  var lock={key:key,phase:'work',left:0,timer:null,watchers:[]};
+  if(key)FOOL_LOCKS[key]=lock;
+  foolWatch(button,lock,opts);
+  var promise;
+  try{promise=Promise.resolve(fn());}catch(error){promise=Promise.reject(error);}
+  function finish(){foolPause(button,lock,opts);}
+  return promise.then(function(value){finish();return value;},function(error){
+    var code=error&&safeCode(error.code)?error.code:(opts.failCode||'UI-ACTION-FAILED');
+    ui.addNotification(null,E('p',{},[errorCodeLink(code),' · ',bi('The request did not finish. Wait a moment and try again.','Запрос не завершился. Подождите немного и повторите.')]));
+    finish();
+  });
+}
+/* A button that was re-created while its lock is still running (the page redraws after each refresh) continues the pause. */
+function guardResume(button,key,opts){
+  var lock=key?FOOL_LOCKS[key]:button.fool_lock;
+  if(!lock)return button;
+  foolWatch(button,lock,opts||{});
+  return button;
+}
+function foolWatch(button,lock,opts){
+  if(!lock.watchers.some(function(w){return w.button===button;}))lock.watchers.push({button:button,opts:opts,disabled:!!button.disabled});
+  button.disabled=true;button.fool_lock=lock;
+  foolShow(button,opts,lock.phase==='pause'?bi('Wait '+lock.display+' s','Подождите '+lock.display+' с'):bi('Working…','Выполняется…'));
+}
+/* Confirm dialog. Cancel closes it and nothing is sent; Confirm closes it and then calls onConfirm(). */
+function confirmAction(title,paragraphs,confirmLabel,onConfirm,danger){
+  var confirmed=false;
+  var body=(paragraphs||[]).map(function(text){return E('p',{},text);});
+  body.unshift(E('p',{'class':'hv-fool-ask'},bi('Are you sure?','Вы уверены?')));
+  var buttons=E('div',{'class':'hv-wizard-actions'},[
+    E('button',{'type':'button','class':'cbi-button hv-confirm-cancel','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),
+    E('button',{'type':'button','class':'cbi-button '+(danger?'cbi-button-negative hv-danger-action':'cbi-button-action hv-primary-action')+' hv-confirm-ok','click':function(){if(confirmed)return;confirmed=true;ui.hideModal();return onConfirm();}},confirmLabel)]);
+  ui.showModal(title,body.concat([buttons]));
+}
+
 function autoRequestAcknowledged(result,stop){return !!result&&typeof result==='object'&&result.queued===true&&result.accepted!==false&&(stop||result.accepted===true);}
 // Display-only parsing; the controller separately enforces bounded deadlines.
 function autoWindowDeadline(intent,settings){
@@ -249,6 +437,7 @@ function autoLightModel(status,inventory,now){
   if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),bi('The primary is out, traffic goes through the reserve. Auto returns to the primary when it has recovered.','Основной не работает, трафик идёт через резерв. Auto вернётся на основной, когда он восстановится.'));
   if(state==='DEGRADED-ON-RESERVE')return out('problem',bi('The reserve is failing too','Резерв тоже не работает'),bi('Auto stays on the reserve and returns to the primary when it passes its check. Check both VPNs in GL.iNet.','Auto остаётся на резерве и вернётся на основной, когда тот пройдёт проверку. Проверьте оба VPN в GL.iNet.'));
   if(state==='STOPPED-ON-RESERVE')return out('problem',bi('Stopped, but still on the reserve','Остановлен, но роутер всё ещё на резерве'),bi('The original route is not restored. Press Return to primary when the primary works.','Исходный маршрут не восстановлен. Нажмите «Вернуться на основной», когда основной заработает.'));
+  if(state==='RELEASE-PENDING'||blockers.indexOf('GUARD-RELEASE-UNCONFIRMED')>=0)return out('problem',bi('Traffic block removal is not confirmed','Снятие блокировки трафика не подтверждено'),bi('Recovery is still pending. See Help → emergency return; Stop has not completed.','Восстановление ещё не завершено. См. «Помощь» → аварийный возврат; остановка не завершена.'),'GUARD-RELEASE-UNCONFIRMED');
   if(state==='BLOCKED'&&intent.requested==='on')return out('problem',bi('Auto is blocked','Auto заблокирован'),blockers.length?autoBlockerText(blockers[0]):bi('The router reports a condition that blocks Auto. See the list below.','Роутер сообщает условие, блокирующее Auto. См. список ниже.'),blockers[0]);
   if(state==='TRIAL-REQUIRED')return out('problem',bi('A LAN trial is required','Нужен LAN-тест'),autoBlockerText('LAN-TRIAL-REQUIRED'),'LAN-TRIAL-REQUIRED');
   if(state==='EXPIRED')return out('off',bi('Auto is off: the test window ended','Auto выключен: окно теста закончилось'),autoBlockerText('BOUNDED-DEADLINE-REQUIRED'));
@@ -370,25 +559,28 @@ function setupWizard(inventory,kind){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
   var setupCheck=kind==='system'?'pending':'passed';
   var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];
-  var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval||30,duration:settings.native_duration||10,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority||100,enabled:saved.enabled!==false};})};
-  var tg={token:'',chat:settings.telegram_destination||'',enabled:!!settings.telegram_enabled,interval:settings.telegram_interval||60,schedule:settings.telegram_schedule||'interval',hour:settings.telegram_hour==null?7:settings.telegram_hour,weekly:settings.telegram_weekly!==false,monthly:settings.telegram_monthly!==false,items:tgItemsFromSetting(settings.telegram_items)};
+  var draft={source:settings.plan_source||'',target:settings.plan_target||'',interval:settings.interval==null?30:settings.interval,duration:settings.native_duration==null?10:settings.native_duration,session_loss:!!settings.native_session_loss,servers:profiles.map(function(p){var saved=custom.filter(function(s){return s.profile===p.id;})[0]||{};return {profile:p.id,name:saved.name||p.name,channel:saved.channel||'default',priority:saved.priority==null?100:saved.priority,enabled:saved.enabled!==false};})};
+  var tg={token:'',chat:settings.telegram_destination||'',enabled:!!settings.telegram_enabled,interval:settings.telegram_interval==null?60:settings.telegram_interval,schedule:settings.telegram_schedule||'interval',hour:settings.telegram_hour==null?7:settings.telegram_hour,weekly:settings.telegram_weekly!==false,monthly:settings.telegram_monthly!==false,items:tgItemsFromSetting(settings.telegram_items)};
   function field(title,node){node.setAttribute('aria-label',title);return E('label',{'class':'hv-wizard-field'},[E('span',{},title),node]);}
   function input(value,type){var node=E('input',{'type':type||'text'});node.value=value;return node;}
   function choice(value){var node=E('select',{},[E('option',{value:''},bi('Choose existing profile','Выберите существующий профиль'))].concat(profiles.map(function(p){return E('option',{value:p.id},p.name+' · '+p.protocol);})));node.value=value;return node;}
   function notify(code){ui.addNotification(null,E('p',{},code));}
   function show(){
-    var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
+    var body=E('div',{'class':'hv-wizard'}),read=function(){return true;},checks=[],nextButton;
+    function updateGate(){if(nextButton)foolGate(nextButton,checks.concat([function(){return !busy&&(kind!=='system'||setupCheck==='passed');}]));}
+    function numberField(title,node,key){var item=foolNumberRow(title,node,key,updateGate);checks.push(item.check);return item.row;}
+    function textField(title,node,key){var item=foolTextRow(title,node,key,updateGate,key==='token'&&!settings.telegram_configured);checks.push(item.check);return item.row;}
     body.appendChild(E('p',{'class':'hv-eyebrow'},bi('Step ','Шаг ')+(step+1)+' / 3'));
     if(kind==='system'){
       body.appendChild(E('p',{'role':'status'},setupCheck==='passed'?'SETUP-CHECK-OK: installed UCI writer passed isolated check.':setupCheck==='pending'?'Checking installed UCI writer…':'SETUP-CHECK-FAILED: saving is blocked. After an upgrade, sign out and sign in to refresh application permissions.'));
       if(step===0){
         var primary=choice(draft.source),reserve=choice(draft.target),interval=input(draft.interval,'number'),duration=input(draft.duration,'number'),consent=input('','checkbox');consent.checked=draft.session_loss;
-        [field(bi('Primary VPN','Основной VPN'),primary),field(bi('Reserve VPN','Резервный VPN'),reserve),field(bi('How often to check each VPN, seconds (10–300)','Как часто проверять каждый VPN, секунд (10–300)'),interval),field(bi('Test window, minutes (1–240)','Окно теста, минут (1–240)'),duration),field(bi('Allow a short interruption of calls and downloads while switching','Разрешить кратковременный разрыв звонков и загрузок при переключении'),consent)].forEach(function(n){body.appendChild(n);});
+        [field(bi('Primary VPN','Основной VPN'),primary),field(bi('Reserve VPN','Резервный VPN'),reserve),numberField(bi('How often to check each VPN, seconds (10–300)','Как часто проверять каждый VPN, секунд (10–300)'),interval,'system.interval'),numberField(bi('Test window, minutes (1–240)','Окно теста, минут (1–240)'),duration,'system.duration'),field(bi('Allow a short interruption of calls and downloads while switching','Разрешить кратковременный разрыв звонков и загрузок при переключении'),consent)].forEach(function(n){body.appendChild(n);});
         body.appendChild(E('p',{},bi('Existing router profiles are reused. This wizard never imports, displays or replaces VPN keys.','Используются существующие профили роутера. Мастер не импортирует, не показывает и не заменяет VPN-ключи.')));
         read=function(){draft.source=primary.value;draft.target=reserve.value;draft.interval=Number(interval.value);draft.duration=Number(duration.value);draft.session_loss=consent.checked;return !!draft.source&&!!draft.target&&draft.source!==draft.target&&Number.isInteger(draft.interval)&&draft.interval>=10&&draft.interval<=300&&Number.isInteger(draft.duration)&&draft.duration>=1&&draft.duration<=240;};
       }else if(step===1){
         body.appendChild(E('p',{},bi('Names, channels and priorities are used for display and ranking only. Real route changes happen only after the LAN trial.','Названия, каналы и приоритеты нужны только для отображения и рейтинга. Реальная смена маршрута возможна только после LAN-теста.')));
-        var editors=draft.servers.map(function(row){var name=input(row.name),channel=input(row.channel),priority=input(row.priority,'number'),enabled=input('','checkbox');enabled.checked=row.enabled;body.appendChild(E('fieldset',{},[E('legend',{},row.profile),field(bi('Display name','Название'),name),field(bi('Channel group','Группа канала'),channel),field(bi('Priority (1–1000)','Приоритет (1–1000)'),priority),field(bi('Check this VPN','Проверять этот VPN'),enabled)]));return {row:row,name:name,channel:channel,priority:priority,enabled:enabled};});
+        var editors=draft.servers.map(function(row){var name=input(row.name),channel=input(row.channel),priority=input(row.priority,'number'),enabled=input('','checkbox');enabled.checked=row.enabled;body.appendChild(E('fieldset',{},[E('legend',{},row.profile),textField(bi('Display name','Название'),name,'name'),textField(bi('Channel group','Группа канала'),channel,'channel'),numberField(bi('Priority (1–1000)','Приоритет (1–1000)'),priority,'system.priority'),field(bi('Check this VPN','Проверять этот VPN'),enabled)]));return {row:row,name:name,channel:channel,priority:priority,enabled:enabled};});
         read=function(){var valid=editors.every(function(e){e.row.name=e.name.value.trim();e.row.channel=e.channel.value.trim();e.row.priority=Number(e.priority.value);e.row.enabled=e.enabled.checked;return e.row.name.length>0&&e.row.name.length<=64&&!/[\x00-\x1f]/.test(e.row.name)&&e.row.channel.length>0&&e.row.channel.length<=64&&!/[\x00-\x1f]/.test(e.row.channel)&&Number.isInteger(e.row.priority)&&e.row.priority>=1&&e.row.priority<=1000;});return valid&&draft.servers.some(function(r){return r.profile===draft.source&&r.enabled;})&&draft.servers.some(function(r){return r.profile===draft.target&&r.enabled;});};
       }else{
         body.appendChild(E('h3',{},bi('Review monitoring configuration','Проверьте настройки мониторинга')));
@@ -401,7 +593,7 @@ function setupWizard(inventory,kind){
         body.appendChild(E('p',{},bi('Saving does not start Auto. Next: run the LAN trial, then press Start on the Overview.','Сохранение не запускает Auto. Дальше: пройдите LAN-тест и нажмите «Старт» на странице «Обзор».')));
       }
     }else{
-      if(step===0){var token=input(tg.token,'password');token.autocomplete='off';body.appendChild(E('p',{},bi('Create a bot with BotFather. For a channel, add it as an administrator with permission to post. A token is secret and is never returned by the router.','Создайте бота через BotFather. В канале добавьте его администратором с правом публикации. Токен секретный и не возвращается роутером.')));body.appendChild(telegramTokenHelp());body.appendChild(field(bi('Bot token (leave blank to keep the stored token)','Токен бота (пусто — сохранить имеющийся)'),token));if(settings.telegram_configured)body.appendChild(E('p',{},E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){
+      if(step===0){var token=input(tg.token,'password');token.autocomplete='off';body.appendChild(E('p',{},bi('Create a bot with BotFather. For a channel, add it as an administrator with permission to post. A token is secret and is never returned by the router.','Создайте бота через BotFather. В канале добавьте его администратором с правом публикации. Токен секретный и не возвращается роутером.')));body.appendChild(telegramTokenHelp());body.appendChild(textField(bi('Bot token (leave blank to keep the stored token)','Токен бота (пусто — сохранить имеющийся)'),token,'token'));if(settings.telegram_configured)body.appendChild(E('p',{},E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(ev){
           if(!window.confirm(bi('Delete the stored bot token? Telegram reports will be turned off.','Удалить сохранённый токен бота? Отчёты в Telegram будут выключены.')))return;
           ev.target.disabled=true;
           return rpc.declare({object:'homensai-vpn',reject:true,method:'telegram_forget',expect:{}})().then(function(result){
@@ -414,7 +606,7 @@ function setupWizard(inventory,kind){
         var schedule=E('select',{},[E('option',{value:'interval'},bi('Every interval','Через интервал')),E('option',{value:'daily'},bi('Daily at selected hour','Ежедневно в выбранный час'))]);
         schedule.value=tg.schedule;enabled.checked=tg.enabled;weekly.checked=tg.weekly;monthly.checked=tg.monthly;
         chat.placeholder='@channel_name or -100…';
-        [field(bi('Channel / destination ID','Канал / ID получателя'),chat),field(bi('Schedule','Расписание'),schedule),field(bi('Report interval, minutes (5–10080)','Интервал отчётов, минут (5–10080)'),interval),field(bi('Daily hour, Europe/Berlin (0–23)','Час отчёта, Europe/Berlin (0–23)'),hour),field(bi('Weekly summary on Monday','Недельная сводка в понедельник'),weekly),field(bi('Monthly summary on day 1','Месячная сводка первого числа'),monthly),field(bi('Enable scheduled reports','Включить отчёты по расписанию'),enabled)].forEach(function(n){body.appendChild(n);});body.appendChild(tgItemsBlock(tg));
+        [textField(bi('Channel / destination ID','Канал / ID получателя'),chat,'chat'),field(bi('Schedule','Расписание'),schedule),numberField(bi('Report interval, minutes (5–10080)','Интервал отчётов, минут (5–10080)'),interval,'telegram.interval'),numberField(bi('Daily hour, Europe/Berlin (0–23)','Час отчёта, Europe/Berlin (0–23)'),hour,'telegram.hour'),field(bi('Weekly summary on Monday','Недельная сводка в понедельник'),weekly),field(bi('Monthly summary on day 1','Месячная сводка первого числа'),monthly),field(bi('Enable scheduled reports','Включить отчёты по расписанию'),enabled)].forEach(function(n){body.appendChild(n);});body.appendChild(tgItemsBlock(tg));
         read=function(){tg.chat=chat.value.trim();tg.interval=Number(interval.value);tg.enabled=enabled.checked;tg.schedule=schedule.value;tg.hour=Number(hour.value);tg.weekly=weekly.checked;tg.monthly=monthly.checked;return /^(?:-?[0-9]{1,20}|@[A-Za-z][A-Za-z0-9_]{4,31})$/.test(tg.chat)&&Number.isInteger(tg.interval)&&tg.interval>=5&&tg.interval<=10080&&Number.isInteger(tg.hour)&&tg.hour>=0&&tg.hour<=23;};
       }else{
         body.appendChild(E('h3',{},bi('Review Telegram destination','Проверьте получателя Telegram')));
@@ -427,16 +619,16 @@ function setupWizard(inventory,kind){
     var progress=E('p',{'class':'hv-wizard-progress','role':'status','aria-live':'polite'},'');body.appendChild(progress);
     var actions=E('div',{'class':'hv-wizard-actions'});
     actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy)return;closed=true;ui.hideModal();}},bi('Cancel','Отмена')));
-    if(step>0)actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy)return;read();step--;show();}},bi('Back','Назад')));
-    actions.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','disabled':kind==='system'&&setupCheck!=='passed'?'':null,'click':function(ev){
-      if(busy)return;if(!read()){notify('SETUP-VALIDATION: check profiles, names and numeric ranges.');return;}
+    if(step>0)actions.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){if(busy||!foolGate(null,checks))return;read();step--;show();}},bi('Back','Назад')));
+    actions.appendChild(nextButton=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','disabled':kind==='system'&&setupCheck!=='passed'?'':null,'click':function(ev){
+      if(busy||kind==='system'&&setupCheck!=='passed')return;if(!foolGate(null,checks)||!read()){notify(bi('Check the highlighted fields, choose different primary and reserve profiles, and keep both monitored.','Проверьте выделенные поля, выберите разные основной и резервный профили и включите наблюдение за обоими.'));updateGate();return;}
       if(step<2){step++;show();return;}
       busy=true;body.setAttribute('aria-busy','true');progress.textContent=bi('Saving settings…','Сохранение настроек…');Array.from(actions.children).forEach(function(node){node.disabled=true;});
       var save=kind==='system'?rpc.declare({object:'homensai-vpn',reject:true,method:'setup_system',params:['source','target','interval','duration','session_loss','servers'],expect:{}})(draft.source,draft.target,draft.interval,draft.duration,draft.session_loss,draft.servers):rpc.declare({object:'homensai-vpn',reject:true,method:'setup_telegram',params:['token','chat','enabled','interval','schedule','hour','weekly','monthly','items'],expect:{}})(tg.token,tg.chat,tg.enabled,tg.interval,tg.schedule,tg.hour,tg.weekly,tg.monthly,tgItemsToSetting(tg.items));
-      return save.then(function(result){if(!result||result.saved!==true){notify(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(result.code)?result.code:'SETUP-SAVE-FAILED');return;}tg.token='';closed=true;ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;body.setAttribute('aria-busy','false');progress.textContent='';Array.from(actions.children).forEach(function(node){node.disabled=false;});});
+      return save.then(function(result){if(!result||result.saved!==true){notify(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(result.code)?result.code:'SETUP-SAVE-FAILED');return;}tg.token='';closed=true;ui.hideModal();notify('SETUP-SAVED: settings stored; automatic switching was not started.');window.location.reload();}).catch(function(){notify('SETUP-SAVE-FAILED: no confirmed result.');}).finally(function(){busy=false;body.setAttribute('aria-busy','false');progress.textContent='';Array.from(actions.children).forEach(function(node){node.disabled=false;});updateGate();});
     }},step<2?bi('Next','Далее'):bi('Save configuration','Сохранить настройки')));
     if(kind==='system'&&setupCheck!=='passed')body.querySelectorAll('input,select').forEach(function(node){node.disabled=true;});
-    body.appendChild(actions);ui.showModal(kind==='system'?bi('System setup wizard','Мастер настройки системы'):bi('Telegram channel wizard','Мастер Telegram-канала'),[body]);
+    body.appendChild(actions);updateGate();ui.showModal(kind==='system'?bi('System setup wizard','Мастер настройки системы'):bi('Telegram channel wizard','Мастер Telegram-канала'),[body]);
   }
   show();
   if(kind==='system')rpc.declare({object:'homensai-vpn',reject:true,method:'setup_check',expect:{}})().then(function(result){if(closed)return;setupCheck=result&&result.passed===true?'passed':'failed';show();}).catch(function(){if(closed)return;setupCheck='failed';show();});
@@ -444,12 +636,17 @@ function setupWizard(inventory,kind){
 
 var prioritySelections={};
 function speedSettings(inventory){
-  var s=inventory.settings||{},enabled=E('input',{type:'checkbox'}),auto=E('input',{type:'checkbox'});enabled.checked=!!s.speed_enabled;auto.checked=!!s.speed_auto_new;
-  function number(value,label){var n=E('input',{type:'number','aria-label':label});n.value=value;return n;}
-  var budget=number(s.speed_budget_mib||8,bi('Payload budget per server, MiB','Лимит полезного трафика на сервер, МиБ')),duration=number(s.speed_duration||5,bi('Measurement seconds per direction','Секунд измерения на направление')),streams=number(s.speed_streams||2,bi('Parallel streams','Параллельные потоки')),daily=number(s.speed_daily_mib||128,bi('Daily reserved quota, MiB','Суточная резервируемая квота, МиБ')),busy=number(s.speed_busy_mbps||2,bi('Skip above current VPN traffic, Mbps','Не запускать при текущем VPN-трафике выше, Мбит/с'));
+  var s=inventory.settings||{},enabled=E('input',{type:'checkbox'}),auto=E('input',{type:'checkbox'}),checks=[],saveButton;enabled.checked=!!s.speed_enabled;auto.checked=!!s.speed_auto_new;
   function field(text,node){node.setAttribute('aria-label',text);return E('label',{'class':'hv-wizard-field'},[E('span',{},text),node]);}
-  var nodes=[E('h3',{},bi('Speed test settings','Настройки тестов скорости')),E('p',{},bi('Tests use HTTPS through the chosen VPN and consume bandwidth. Payload quota excludes protocol overhead. Failed attempts keep their quota reservation.','HTTPS-тесты идут через выбранный VPN и расходуют трафик. Квота полезных данных не включает служебный трафик. Резерв квоты сохраняется и при ошибке.')),field(bi('Enable speed tests (off by default)','Включить тесты скорости (по умолчанию выключено)'),enabled),field(bi('Test after a new server connects','Тестировать после подключения нового сервера'),auto),field(budget.getAttribute('aria-label'),budget),field(duration.getAttribute('aria-label'),duration),field(streams.getAttribute('aria-label'),streams),field(daily.getAttribute('aria-label'),daily),field(busy.getAttribute('aria-label'),busy)];
-  nodes.push(E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_speed',params:['enabled','auto_new','budget_mib','duration','streams','daily_mib','busy_mbps'],expect:{}})(enabled.checked,auto.checked,Number(budget.value),Number(duration.value),Number(streams.value),Number(daily.value),Number(busy.value)).then(function(result){if(!result.saved){ui.addNotification(null,E('p',{},result.code||'SPEED-CONFIG-FAILED'));return;}ui.addNotification(null,E('p',{},'SPEED-CONFIG-SAVED'));window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-CONFIG-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Save speed settings','Сохранить настройки скорости')));
+  var nodes=[E('h3',{},bi('Speed test settings','Настройки тестов скорости')),E('p',{},bi('Tests use HTTPS through the chosen VPN and consume bandwidth. Payload quota excludes protocol overhead. Failed attempts keep their quota reservation.','HTTPS-тесты идут через выбранный VPN и расходуют трафик. Квота полезных данных не включает служебный трафик. Резерв квоты сохраняется и при ошибке.')),field(bi('Enable speed tests (off by default)','Включить тесты скорости (по умолчанию выключено)'),enabled),field(bi('Test after a new server connects','Тестировать после подключения нового сервера'),auto)];
+  function updateGate(){if(saveButton)foolGate(saveButton,checks);}
+  function number(key,fallback,label){var node=E('input',{type:'number'});node.value=s['speed_'+key]==null?fallback:s['speed_'+key];var item=foolNumberRow(label,node,'speed.'+key,updateGate);checks.push(item.check);nodes.push(item.row);return node;}
+  var budget=number('budget_mib',8,bi('Payload budget per server, MiB','Лимит полезного трафика на сервер, МиБ')),duration=number('duration',5,bi('Measurement seconds per direction','Секунд измерения на направление')),streams=number('streams',2,bi('Parallel streams','Параллельные потоки')),daily=number('daily_mib',128,bi('Daily reserved quota, MiB','Суточная резервируемая квота, МиБ')),busy=number('busy_mbps',2,bi('Skip above current VPN traffic, Mbps','Не запускать при текущем VPN-трафике выше, Мбит/с'));
+  saveButton=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','click':function(){
+    if(!foolGate(saveButton,checks))return;
+    return guardedAction(saveButton,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_speed',params:['enabled','auto_new','budget_mib','duration','streams','daily_mib','busy_mbps'],expect:{}})(enabled.checked,auto.checked,Number(budget.value),Number(duration.value),Number(streams.value),Number(daily.value),Number(busy.value)).then(function(result){if(!result||result.saved!==true){ui.addNotification(null,E('p',{},result&&result.code||'SPEED-CONFIG-FAILED'));return;}ui.addNotification(null,E('p',{},'SPEED-CONFIG-SAVED'));window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-CONFIG-FAILED: no confirmed response.'));});},{key:'setup-speed'});
+  }},bi('Save speed settings','Сохранить настройки скорости'));
+  updateGate();guardResume(saveButton,'setup-speed');nodes.push(saveButton);
   return E('section',{'class':'hv-chart-card hv-speed-settings'},nodes);
 }
 function speedPanel(status,inventory,period,onPeriod){
@@ -457,7 +654,7 @@ function speedPanel(status,inventory,period,onPeriod){
   var chooser=E('select',{'aria-label':bi('Speed test server','Сервер для теста скорости')},[E('option',{value:'all'},bi('All listed interfaces (up to 8)','Все перечисленные интерфейсы (до 8)'))].concat(active.map(function(p){return E('option',{value:p.id},p.name+' · '+p.protocol);}))),section=E('section',{'class':'hv-chart-card hv-speed-panel'},[E('h3',{},bi('VPN server speed tests','Тесты скорости VPN-серверов')),E('p',{},bi('Bounded HTTPS payload goodput to Cloudflare. This is a sampled application-level result, not an Ookla score or a guarantee of current capacity. Inactive profiles are not started.','Ограниченное измерение полезной скорости HTTPS до Cloudflare. Это выборочный результат на уровне приложения, не оценка Ookla и не гарантия текущей пропускной способности. Неактивные профили не запускаются.'))]);
   var controls=E('div',{'class':'hv-native-actions'},[chooser,E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','disabled':s.speed_enabled&&active.length?null:'','click':function(){
     var selected=chooser.value==='all'?active.map(function(p){return p.id;}):[chooser.value],mib=s.speed_budget_mib||8,duration=s.speed_duration||5,streams=s.speed_streams||2;
-    ui.showModal(bi('Review speed test','Проверьте запуск теста'),[E('p',{},bi('Payload quota reservation: ','Резервируемая квота полезного трафика: ')+(selected.length*mib)+' MiB'),E('p',{},bi('Protocol overhead adds traffic; tests may slow other applications.','Служебный трафик расходуется дополнительно; тесты могут замедлить другие приложения.')),E('ul',{},selected.map(function(id){return E('li',{},(profiles.filter(function(p){return p.id===id;})[0]||{}).name||id);})),E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'speed_start',params:['profiles','budget_mib','duration','streams'],expect:{}})(selected,mib,duration,streams).then(function(result){ui.addNotification(null,E('p',{},result.accepted?'SPEED-QUEUED':result.code||'SPEED-START-FAILED'));ui.hideModal();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-START-FAILED: no confirmed response.'));}).finally(function(){button.disabled=false;});}},bi('Run test','Запустить тест'))]);
+    ui.showModal(bi('Review speed test','Проверьте запуск теста'),[E('p',{},bi('Payload quota reservation: ','Резервируемая квота полезного трафика: ')+(selected.length*mib)+' MiB'),E('p',{},bi('Protocol overhead adds traffic; tests may slow other applications.','Служебный трафик расходуется дополнительно; тесты могут замедлить другие приложения.')),E('ul',{},selected.map(function(id){return E('li',{},(profiles.filter(function(p){return p.id===id;})[0]||{}).name||id);})),E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),guardResume(E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','click':function(ev){var button=ev.currentTarget;return guardedAction(button,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'speed_start',params:['profiles','budget_mib','duration','streams'],expect:{}})(selected,mib,duration,streams).then(function(result){ui.addNotification(null,E('p',{},result.accepted?'SPEED-QUEUED':result.code||'SPEED-START-FAILED'));ui.hideModal();}).catch(function(){ui.addNotification(null,E('p',{},'SPEED-START-FAILED: no confirmed response.'));});},{key:'speed-start'});}},bi('Run test','Запустить тест')),'speed-start')]);
   }},bi('Test speed','Тестировать скорость')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'speed_cancel',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.queued?'SPEED-CANCEL-QUEUED':result.code||'SPEED-NOT-RUNNING'));});}},bi('Cancel current test','Отменить текущий тест'))]);
   section.appendChild(controls);
   section.appendChild(E('p',{},bi('Speed test: ','Тест скорости: ')+(history.state||'IDLE')+(history.code?' · '+history.code:'')+' · '+bi('Completed: ','Завершено: ')+(history.completed||0)));
@@ -500,7 +697,7 @@ function reviewPriorities(ordered){
       E('p',{},bi('Only this program’s priorities are saved. No route is changed.','Сохраняются только приоритеты этой программы. Маршрут не меняется.')),
       E('ol',{},result.rows.map(function(row){return E('li',{},row.name+' · '+row.protocol+' / '+row.channel+(row.enabled?'':' · disabled'));})),
       E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),
-      E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'priority_apply',params:['ordered','revision'],expect:{}})(ordered,result.revision).then(function(saved){ui.addNotification(null,E('p',{},saved.code||'PRIORITY-UNKNOWN'));if(saved.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'PRIORITY-RPC-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},bi('Apply priorities','Применить приоритеты'))
+      guardResume(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;return guardedAction(button,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'priority_apply',params:['ordered','revision'],expect:{}})(ordered,result.revision).then(function(saved){ui.addNotification(null,E('p',{},saved.code||'PRIORITY-UNKNOWN'));if(saved.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'PRIORITY-RPC-UNCONFIRMED'));});},{key:'priority-apply'});}},bi('Apply priorities','Применить приоритеты')),'priority-apply')
     ]);
   }).catch(function(){ui.addNotification(null,E('p',{},'PRIORITY-PREVIEW-UNCONFIRMED'));});
 }
@@ -513,7 +710,8 @@ function recoveryWizard(inventory){
   // A saved set that equals a reviewed preset is shown as that preset; any other set is Custom.
   Object.keys(RECOVERY_PRESETS).forEach(function(name){var row=RECOVERY_PRESETS[name];if(!presetName&&Object.keys(defaults).every(function(key){return String(row[key])===String(draft[key]);}))presetName=name;});
   function show(){
-    var body=E('div',{'class':'hv-wizard'}),read=function(){return true;};
+    var body=E('div',{'class':'hv-wizard'}),read=function(){return true;},checks=[],nextButton;
+    function updateGate(){if(nextButton)foolGate(nextButton,checks);}
     body.appendChild(E('p',{},bi('These rules decide when Auto switches to the reserve and when it returns. They apply only inside a LAN-tested time window. Auto never connects a VPN that is switched off.','Эти правила определяют, когда Auto переходит на резерв и когда возвращается. Они действуют только внутри окна, прошедшего LAN-тест. Auto никогда не подключает выключенный VPN.')));
     if(step===0){
       var presetSelect=E('select',{'aria-label':bi('Recovery preset','Профиль восстановления')},[
@@ -521,30 +719,38 @@ function recoveryWizard(inventory){
       presetSelect.value=presetName;
       presetSelect.addEventListener('change',function(){presetName=presetSelect.value;var preset=RECOVERY_PRESETS[presetName];if(!preset)return;Object.keys(preset).forEach(function(key){draft[key]=preset[key];});show();});
       body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},bi('Preset (review before saving)','Профиль (проверьте перед сохранением)')),presetSelect]));
-      var editors={};Object.keys(labels).forEach(function(key){var node=E('input',{type:'number','aria-label':labels[key]});node.value=draft[key];node.addEventListener('input',function(){presetName='';presetSelect.value='';});editors[key]=node;body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},labels[key]),node]));});
+      var editors={};Object.keys(labels).forEach(function(key){var node=E('input',{type:'number','aria-label':labels[key]});node.value=draft[key];node.addEventListener('input',function(){presetName='';presetSelect.value='';});editors[key]=node;var item=foolNumberRow(labels[key],node,'recovery.'+key,updateGate);checks.push(item.check);body.appendChild(item.row);});
       var policy=E('select',{'aria-label':bi('Return policy','Политика возврата')},[E('option',{value:'healthy_primary'},bi('Return to the primary once it has been healthy for a while','Вернуться на основной, когда он некоторое время исправен')),E('option',{value:'hold_reserve'},bi('Stay on the working reserve until you decide','Оставаться на рабочем резерве, пока вы не решите иначе'))]);policy.value=draft.return_policy;policy.addEventListener('change',function(){presetName='';presetSelect.value='';});body.appendChild(policy);
-      read=function(){var limits={failures:[3,10],successes:[2,10],cooldown:[60,1800],min_dwell:[60,3600],primary_successes:[2,10],primary_stable:[30,600]};var valid=Object.keys(editors).every(function(key){draft[key]=Number(editors[key].value);return Number.isInteger(draft[key])&&draft[key]>=limits[key][0]&&draft[key]<=limits[key][1];});draft.return_policy=policy.value;return valid;};
+      read=function(){if(!foolGate(null,checks))return false;var limits={failures:[3,10],successes:[2,10],cooldown:[60,1800],min_dwell:[60,3600],primary_successes:[2,10],primary_stable:[30,600]};var valid=Object.keys(editors).every(function(key){draft[key]=Number(editors[key].value);return Number.isInteger(draft[key])&&draft[key]>=limits[key][0]&&draft[key]<=limits[key][1];});draft.return_policy=policy.value;return valid;};
     }else{
       body.appendChild(E('h3',{},bi('Review recovery settings','Проверьте настройки восстановления')));
       body.appendChild(E('ul',{},Object.keys(labels).map(function(key){return E('li',{},labels[key]+': '+draft[key]);})));
       body.appendChild(E('p',{},bi('Return policy: ','Политика возврата: ')+draft.return_policy));
       body.appendChild(E('p',{},bi('Changing these rules cancels the earlier LAN test. Auto stays off; run the LAN helper again before you start Auto.','Изменение правил отменяет прежний LAN-тест. Auto остаётся выключенным; перед запуском Auto снова запустите LAN-помощник.')));
     }
-    var actions=[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена'))];
-    if(step)actions.push(E('button',{'type':'button','class':'cbi-button','click':function(){step=0;show();}},bi('Back','Назад')));
-    actions.push(E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){if(!read()){ui.addNotification(null,E('p',{},'RECOVERY-RANGE'));return;}if(!step){step=1;show();return;}var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_recovery',params:['failures','successes','cooldown','min_dwell','return_policy','primary_successes','primary_stable'],expect:{}})(draft.failures,draft.successes,draft.cooldown,draft.min_dwell,draft.return_policy,draft.primary_successes,draft.primary_stable).then(function(result){ui.addNotification(null,E('p',{},result.saved?'RECOVERY-SAVED':result.code||'RECOVERY-SAVE-FAILED'));if(result.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'RECOVERY-SAVE-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},step?bi('Save recovery settings','Сохранить настройки восстановления'):bi('Next','Далее')));
-    body.appendChild(E('div',{'class':'hv-wizard-actions'},actions));ui.showModal(bi('Recovery setup wizard','Мастер восстановления'),[body]);
+    var actions=[E('button',{'type':'button','class':'cbi-button','click':function(){if(FOOL_LOCKS['setup-recovery']&&FOOL_LOCKS['setup-recovery'].phase==='work')return;ui.hideModal();}},bi('Cancel','Отмена'))];
+    if(step)actions.push(E('button',{'type':'button','class':'cbi-button','click':function(){if(FOOL_LOCKS['setup-recovery']&&FOOL_LOCKS['setup-recovery'].phase==='work')return;step=0;show();}},bi('Back','Назад')));
+    actions.push(nextButton=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){if(!read()){ui.addNotification(null,E('p',{},'RECOVERY-RANGE'));return;}if(!step){step=1;show();return;}var button=ev.currentTarget;return guardedAction(button,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_recovery',params:['failures','successes','cooldown','min_dwell','return_policy','primary_successes','primary_stable'],expect:{}})(draft.failures,draft.successes,draft.cooldown,draft.min_dwell,draft.return_policy,draft.primary_successes,draft.primary_stable).then(function(result){ui.addNotification(null,E('p',{},result.saved?'RECOVERY-SAVED':result.code||'RECOVERY-SAVE-FAILED'));if(result.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'RECOVERY-SAVE-UNCONFIRMED'));});},{key:'setup-recovery'});}},step?bi('Save recovery settings','Сохранить настройки восстановления'):bi('Next','Далее')));
+    updateGate();guardResume(nextButton,'setup-recovery');body.appendChild(E('div',{'class':'hv-wizard-actions'},actions));ui.showModal(bi('Recovery setup wizard','Мастер восстановления'),[body]);
   }
   show();
 }
 
 function monitorPreferences(inventory){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
-  var settings=inventory.settings||{},interval=E('input',{type:'number','aria-label':bi('How often to check each VPN, seconds','Как часто проверять каждый VPN, секунд')}),checkpoint=E('input',{type:'number','aria-label':bi('Save statistics every, seconds','Сохранять статистику каждые, секунд')}),limit=E('input',{type:'number','aria-label':bi('Most VPNs checked per round','Максимум VPN за один раунд проверки')}),planning=E('input',{type:'checkbox','aria-label':bi('Show the failover forecast on the Overview','Показывать прогноз переключения на странице «Обзор»')});
-  interval.value=settings.interval||30;checkpoint.value=settings.checkpoint||900;limit.value=settings.probe_limit||16;planning.checked=!!settings.plan_enabled;
+  var settings=inventory.settings||{},saveButton,checks=[];
+  var planning=E('input',{type:'checkbox','aria-label':bi('Show the failover forecast on the Overview','Показывать прогноз переключения на странице «Обзор»')});planning.checked=!!settings.plan_enabled;
   var body=E('div',{'class':'hv-wizard'},[E('p',{},bi('Only this program’s own settings change. Saving statistics more often wears the router flash memory faster. This does not start Auto or connect any VPN.','Меняются только настройки этой программы. Частое сохранение статистики быстрее изнашивает флеш-память роутера. Auto не запускается, VPN не подключаются.'))]);
-  [[bi('How often to check each VPN (10–300 seconds)','Как часто проверять каждый VPN (10–300 секунд)'),interval],[bi('Save statistics every (300–3600 seconds)','Сохранять статистику каждые (300–3600 секунд)'),checkpoint],[bi('Most VPNs checked per round (1–16)','Максимум VPN за один раунд проверки (1–16)'),limit],[bi('Show the failover forecast','Показывать прогноз переключения'),planning]].forEach(function(row){body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},row[0]),row[1]]));});
-  body.appendChild(E('div',{'class':'hv-wizard-actions'},[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(ev){var button=ev.currentTarget;button.disabled=true;return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_monitor',params:['interval','checkpoint','probe_limit','planning_enabled'],expect:{}})(Number(interval.value),Number(checkpoint.value),Number(limit.value),planning.checked).then(function(result){ui.addNotification(null,E('p',{},result.saved?'MONITOR-PREFERENCES-SAVED':result.code||'MONITOR-PREFERENCES-FAILED'));if(result.saved){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-PREFERENCES-UNCONFIRMED'));}).finally(function(){button.disabled=false;});}},bi('Save monitoring preferences','Сохранить параметры мониторинга'))]));
+  function updateGate(){if(saveButton)foolGate(saveButton,checks);}
+  function number(label,key,value,ariaLabel){var node=E('input',{type:'number'});node.value=value;var item=foolNumberRow(label,node,key,updateGate);node.setAttribute('aria-label',ariaLabel);checks.push(item.check);body.appendChild(item.row);return node;}
+  var interval=number(bi('How often to check each VPN (10–300 seconds)','Как часто проверять каждый VPN (10–300 секунд)'),'monitor.interval',settings.interval==null?30:settings.interval,bi('How often to check each VPN, seconds','Как часто проверять каждый VPN, секунд')),checkpoint=number(bi('Save statistics every (300–3600 seconds)','Сохранять статистику каждые (300–3600 секунд)'),'monitor.checkpoint',settings.checkpoint==null?900:settings.checkpoint,bi('Save statistics every, seconds','Сохранять статистику каждые, секунд')),limit=number(bi('Most VPNs checked per round (1–16)','Максимум VPN за один раунд проверки (1–16)'),'monitor.probe_limit',settings.probe_limit==null?16:settings.probe_limit,bi('Most VPNs checked per round','Максимум VPN за один раунд проверки'));
+  body.appendChild(E('label',{'class':'hv-wizard-field'},[E('span',{},bi('Show the failover forecast','Показывать прогноз переключения')),planning]));
+  saveButton=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){
+    if(!foolGate(saveButton,checks))return;
+    return guardedAction(saveButton,function(){return rpc.declare({object:'homensai-vpn',reject:true,method:'setup_monitor',params:['interval','checkpoint','probe_limit','planning_enabled'],expect:{}})(Number(interval.value),Number(checkpoint.value),Number(limit.value),planning.checked).then(function(result){ui.addNotification(null,E('p',{},result&&result.saved===true?'MONITOR-PREFERENCES-SAVED':result&&result.code||'MONITOR-PREFERENCES-FAILED'));if(result&&result.saved===true){ui.hideModal();window.location.reload();}}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-PREFERENCES-UNCONFIRMED'));});},{key:'setup-monitor'});
+  }},bi('Save monitoring preferences','Сохранить параметры мониторинга'));
+  updateGate();guardResume(saveButton,'setup-monitor');
+  body.appendChild(E('div',{'class':'hv-wizard-actions'},[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),saveButton]));
   ui.showModal(bi('Monitoring preferences','Параметры мониторинга'),[body]);
 }
 
@@ -1580,7 +1786,7 @@ function renderTermsGate(inventory){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard66',UI_AGENT='0.9.0-alpha6';
+var UI_BUILD='dashboard66',UI_AGENT='0.9.0-alpha9';
 function identityModel(status){
   var agent=typeof status.version==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.version)?status.version:null;
   var pkg=typeof status.package==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.package)?status.package:null;
@@ -1799,9 +2005,30 @@ function planCheckState(code,unproven,reported){
   if(failure)return {state:'failed',failure:failure};
   return {state:unproven.indexOf(code)>=0?'pending':'verified',failure:null};
 }
+/* Open a section and scroll to an element of it (by id), highlighting it. Works also when the section is already open, where a plain #hash link does nothing. */
+function pageKeyNow(){var p=document.querySelector('[data-hv-page]:not([hidden])');return p?p.getAttribute('data-hv-page'):null;}
+function goToSection(tab,id){
+  var link=document.querySelector('[data-hv-tab="'+tab+'"]');if(link&&pageKeyNow()!==tab)link.click();
+  setTimeout(function(){var n=id&&document.getElementById(id);if(!n){window.scrollTo(0,0);return;}n.scrollIntoView({block:'start'});n.classList.add('hv-errflash');setTimeout(function(){n.classList.remove('hv-errflash');},3000);},160);
+}
+/* "Back" after following an error link: returns to the page and scroll position where the link was clicked. */
+var errorReturn=null,errorBackButton=null,errorBackTimer=null;
+function hideErrorBack(){errorReturn=null;if(errorBackButton)errorBackButton.setAttribute('hidden','');if(errorBackTimer){clearInterval(errorBackTimer);errorBackTimer=null;}}
+function showErrorBack(){
+  if(!document.querySelector('.hv-app')||!errorReturn)return;
+  if(!errorBackButton||!errorBackButton.isConnected){errorBackButton=E('button',{'type':'button','class':'hv-errback-button','click':function(){
+    var r=errorReturn;hideErrorBack();if(!r||!r.tab)return;
+    var l=document.querySelector('[data-hv-tab="'+r.tab+'"]');if(l&&pageKeyNow()!==r.tab)l.click();
+    setTimeout(function(){window.scrollTo(0,r.y||0);},120);}},[E('span',{'aria-hidden':'true'},'←'),E('span',{},bi('Back to where you were','Вернуться назад'))]);document.body.appendChild(errorBackButton);}
+  errorBackButton.removeAttribute('hidden');
+  if(errorBackTimer)clearInterval(errorBackTimer);
+  errorBackTimer=setInterval(function(){if(pageKeyNow()!=='events')hideErrorBack();},700);
+}
 // Jump to the row of a code in the error table on the Events page, open its "how to fix" and highlight it.
 function showErrorCode(code){
-  var link=document.querySelector('[data-hv-tab="events"]');if(link)link.click();
+  if(!errorReturn&&pageKeyNow())errorReturn={tab:pageKeyNow(),y:window.pageYOffset||0};
+  var link=document.querySelector('[data-hv-tab="events"]');if(link&&pageKeyNow()!=='events')link.click();
+  setTimeout(showErrorBack,300);
   setTimeout(function(){
     var key=Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)?code:((typeof errorFamilyOf==='function'&&errorFamilyOf(code))?errorFamilyOf(code)[0]+'*':code);
     if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;
@@ -1886,6 +2113,12 @@ function renderThemeSelect(){
    Nothing here is a promise about a real router: a code tells what was observed, the cause may stay unknown. */
 var ERROR_EXTRA_GROUPS=[['state',['Controller states and phases','Состояния и этапы контроллера']],['internal',['Internal checks and safety stops','Внутренние проверки и защитные остановки']]];
 var ERROR_EXTRA_ROWS=[
+ ['GUARD-RELEASE-ARM-FAILED','switch','Safety timer unavailable','Аварийный таймер недоступен','The independent cleanup timer could not start. No new traffic block was installed.','Независимый таймер очистки не запустился. Новая блокировка трафика не установлена.','Check router resources and retry later.','Проверьте ресурсы роутера и повторите позже.'],
+ ['GUARD-RELEASE-UNCONFIRMED','switch','Safety block removal unconfirmed','Снятие блокировки не подтверждено','Removal of the traffic block is unverified; recovery remains pending.','Снятие блокировки трафика не подтверждено; восстановление ещё не завершено.','See Help → emergency return; do not assume Stop completed.','См. «Помощь» → аварийный возврат; остановка ещё не подтверждена.'],
+ ['RELEASE-PENDING','state','Waiting for block removal','Ожидается снятие блокировки','No new switching is allowed while the old block is being removed.','Новые переключения запрещены, пока снимается прежняя блокировка.','Check cleanup; use emergency recovery if it persists.','Проверьте очистку; при повторении используйте аварийное восстановление.'],
+ ['RETURN-TRANSACTION-MISMATCH','switch','Old return request rejected','Старый запрос возврата отклонён','The request belongs to another transaction. Nothing changed.','Запрос относится к другой транзакции. Ничего не изменено.','Refresh and request return again if needed.','Обновите страницу и при необходимости запросите возврат ещё раз.'],
+ ['RETURN-REQUEST-EXPIRED','switch','Return request expired','Запрос возврата устарел','The request is outside the transaction or its one-minute validity window.','Запрос находится вне транзакции или минутного срока действия.','Refresh and request return again.','Обновите страницу и запросите возврат ещё раз.'],
+ ['JOURNAL-PHASE-INVALID','switch','Invalid recovery phase','Неверная фаза восстановления','The journal phase is missing or unknown. Auto refuses to proceed.','Фаза журнала отсутствует или неизвестна. Auto не продолжает работу.','Use Help → emergency return; inspect recovery before restarting.','Используйте «Помощь» → аварийный возврат; проверьте восстановление до перезапуска.'],
  // ---- states and phases (not errors) ----
  ['OBSERVING','state','Watching the primary','Слежу за основным','Auto is on and watches the primary VPN. Nothing is switched now.','Auto включён и следит за основным VPN. Сейчас ничего не переключается.','Nothing to do.','Делать ничего не нужно.','If the line says OBSERVING and the Auto lamp is green, everything is normal.','Если в строке OBSERVING и лампа Auto зелёная — всё в порядке.'],
  ['ARMED','state','Ready to switch','Готов к переключению','The controller has prepared a switch (saved the old order and started its safety timer) but has not changed anything yet.','Контроллер подготовил переключение (сохранил прежний порядок и запустил страхующий таймер), но пока ничего не менял.','Nothing to do; the next state follows within seconds.','Делать ничего не нужно; следующее состояние наступит через секунды.','In an incident: ARMED → APPLYING → WAIT-CLIENT → COMMITTED is a normal successful switch.','В инциденте: ARMED → APPLYING → WAIT-CLIENT → COMMITTED — обычное успешное переключение.'],
@@ -2371,9 +2604,10 @@ function installTopButton(root){
     try{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}catch(e){window.scrollTo(0,0);}
     try{if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}
   }},[E('span',{'aria-hidden':'true'},'↑'),E('span',{'class':'hv-top-label'},bi('Top','Вверх'))]);
-  root.appendChild(button);
+  Array.prototype.slice.call(document.querySelectorAll('.hv-top-button')).forEach(function(old){if(old.parentNode)old.parentNode.removeChild(old);});
+  document.body.appendChild(button);  /* on the body: an ancestor with a transform would otherwise become the containing block of a fixed button */
   function update(){
-    if(!document.body.contains(root)){window.removeEventListener('scroll',update);return;}
+    if(!root.isConnected){button.setAttribute('hidden','');return;}  /* not attached yet (or gone): stay hidden, keep listening */
     var y=window.pageYOffset||(document.scrollingElement&&document.scrollingElement.scrollTop)||0;
     if(y>240)button.removeAttribute('hidden');else button.setAttribute('hidden','');
   }
@@ -2918,7 +3152,7 @@ function speedPanel(status,inventory,period,onPeriod){
   var periodSelect=E('select',{'aria-label':bi('Show results for','Показать результаты за'),'change':function(ev){onPeriod(ev.target.value);}},[['latest',bi('Latest test','Последний тест')],['day',bi('Today','Сегодня')],['week',bi('Last 7 days','Последние 7 дней')],['month',bi('Current calendar month','Текущий календарный месяц')]].map(function(row){return E('option',{value:row[0]},row[1]);}));periodSelect.value=period;
   section.appendChild(E('div',{'class':'hv-native-actions'},[test,cancel,E('label',{'class':'hv-speed-period'},[bi('Results for: ','Результаты за: '),periodSelect])]));
   section.appendChild(E('p',{'role':'status'},speedStateText(history)+' '+bi('Finished tests: ','Завершено тестов: ')+(history.completed||0)));
-  if(!s.speed_enabled)section.appendChild(E('p',{'class':'alert-message warning'},[bi('Speed tests are switched off. ','Тесты скорости выключены. '),E('a',{'href':'#tests'},bi('Turn them on in Advanced → Tests → Speed test settings.','Включите их в «Расширенное» → «Тесты» → «Настройки тестов скорости».'))]));
+  if(!s.speed_enabled)section.appendChild(E('p',{'class':'alert-message warning'},[bi('Speed tests are switched off. ','Тесты скорости выключены. '),E('a',{'href':'#tests','click':function(ev){ev.preventDefault();goToSection('tests','hv-speed-settings');}},bi('Turn them on in Advanced → Tests → Speed test settings.','Включите их в «Расширенное» → «Тесты» → «Настройки тестов скорости».'))]));
   section.appendChild(table);
   section.appendChild(E('small',{},bi('Mean of successful tests; failed or cancelled tests are not counted as zero speed. History is sampled and bounded.','Среднее по успешным тестам; ошибки и отмены не считаются нулевой скоростью. История выборочная и ограниченная.')));
   if(history.history_error)section.appendChild(E('p',{},history.history_error));
@@ -3007,13 +3241,17 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
   }
   tick();if(liveLogTimer)clearInterval(liveLogTimer);liveLogTimer=setInterval(function(){if(!document.body.contains(head)){clearInterval(liveLogTimer);liveLogTimer=null;return;}tick();},1000);
   var monitorKind=fresh?'green':status.rpc_error?'red':'yellow';
-  var lines=[
-    E('div',{},[time(status.time,'—'),lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных')),E('strong',{},'  HomenS.AI monitor: '),badge(status.error)]),
-    E('div',{},[time(ns.time,'—'),lamp(light.lamp==='orange'?'yellow':(light.lamp||'grey'),light.title),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN'])
-  ];
-  var terminal=E('pre',{'class':'hv-live-terminal'},lines);
+  function pill(kind,text){return E('strong',{'class':'hv-badge hv-health-'+kind},text);}
+  function row(cls,t,fallback,lampNode,name,status){return E('div',{'class':cls||'notice'},[time(t,fallback),lampNode,E('strong',{'class':'hv-log-name'},name),E('span',{'class':'hv-log-status'},status)]);}
+  var monitorKind=fresh?'green':status.rpc_error?'red':'yellow';
+  var kindToHealth={green:'healthy',yellow:'checking',red:'failed',grey:'unknown'};
+  var autoKind=light.lamp==='orange'?'yellow':(light.lamp||'grey');
+  var terminal=E('pre',{'class':'hv-live-terminal'},[
+    E('div',{'class':'hv-live-colnames','aria-hidden':'true'},[E('span',{},bi('Time','Время')),E('span',{},''),E('span',{},bi('What','Что')),E('span',{},bi('Status','Статус'))]),
+    row('notice',status.time,'—',lamp(monitorKind,fresh?bi('Monitoring works','Мониторинг работает'):bi('No fresh data','Нет свежих данных')),'HomenS.AI monitor',status.error?badge(status.error):pill(kindToHealth[monitorKind],fresh?'OK':bi('No fresh data','Нет свежих данных'))),
+    row('notice',ns.time,'—',lamp(autoKind,light.title),'Auto VPN',pill(kindToHealth[autoKind]||'unknown',stateNames[ns.state]||ns.state||'UNKNOWN'))]);
   rows.slice(0,20).forEach(function(p){
-    terminal.appendChild(E('div',{'class':p.code?'error':'notice'},[time(p.time,'—:—:—'),lamp(liveLampKind(p,now),profileHealth(p,now).label),E('strong',{},'  '+p.protocol+' / '+serverTitle(p)+': '),healthBadge(p)]));
+    terminal.appendChild(row(p.code?'error':'notice',p.time,'—:—:—',lamp(liveLampKind(p,now),profileHealth(p,now).label),p.protocol+' / '+serverTitle(p),healthBadge(p)));
   });
   return E('div',{'class':'hv-live'},[head,terminal]);
 }
@@ -3269,7 +3507,7 @@ return view.extend({
             launcher(bi('Recovery rules','Правила восстановления'),bi('Failures before switching, reserve checks, cooldown and return policy.','Сколько сбоев до переключения, проверки резерва, пауза и политика возврата.'),function(){recoveryWizard(inventory);},false,'recovery'),
             launcher(bi('Monitoring parameters','Параметры мониторинга'),bi('Check interval, profile limit and statistics saving.','Интервал проверок, лимит профилей и сохранение статистики.'),function(){monitorPreferences(inventory);},false,'monitoring')
           ])]));
-        if(speedCard){speedCardNode=speedCard;put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCard);}
+        if(speedCard){speedCardNode=speedCard;speedCard.setAttribute('id','hv-speed-settings');put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCard);}
       })();
       panel.addEventListener('pointerdown',function(){pointerHeld=true;});
       ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});

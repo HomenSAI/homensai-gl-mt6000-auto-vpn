@@ -26,6 +26,7 @@ from datetime import datetime
 from agent import RUNTIME, PERSIST, TERMS_VERSION, atomic_json, read_json, command, inventory, probe, bound_socket
 from failover_plan import streak
 from native_history import History, HistoryError
+from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
 HELPER='/usr/lib/homensai-vpn/native_policy.lua'
 TABLE='homensai_vpn_guard'
@@ -80,7 +81,17 @@ def clear_native_options():
 def abandon(backend,journal,code):
     """The router policy was changed by someone else: stop, release our traffic guard, never hold the LAN."""
     try:backend.unguard()
-    except (Refused,OSError,subprocess.SubprocessError):pass
+    except (Refused,OSError,subprocess.SubprocessError):
+        # Preserve recovery work across restart; never publish released/STOPPED
+        # when removal of our guard has not been confirmed.
+        journal.update(phase='RELEASE-PENDING',reason=code,abandoned=True)
+        journal_write(journal)
+        atomic_json(PERSIST/'native-stop.json',{'requested':time.time(),'trial':journal.get('trial_nonce'),'all_trials':True})
+        clear_native_options()
+        publish({'state':'BLOCKED','reason':'GUARD-RELEASE-UNCONFIRMED',
+                 'blockers':['GUARD-RELEASE-UNCONFIRMED'],'guard':'unverified',
+                 'original_restored':False,'source':journal.get('source'),'target':journal.get('target')})
+        raise Refused('GUARD-RELEASE-UNCONFIRMED') from None
     journal.update(phase='ROLLED-BACK',reason=code,abandoned=True,finished=time.time())
     try:journal_write(journal)
     except (OSError,ValueError):pass
@@ -106,17 +117,44 @@ def journal_write(value):
 
 def journal_read():
     # A truncated or non-JSON journal is an integrity failure with a code, never an uncaught error.
-    try:envelope=read_json(JOURNAL,{})
+    missing=object()
+    try:
+        if JOURNAL.is_symlink() or JOURNAL.exists() and (not JOURNAL.is_file() or JOURNAL.stat().st_size>1024*1024):
+            raise Refused('JOURNAL-INTEGRITY-FAILED')
+        envelope=read_json(JOURNAL,missing)
     except (ValueError,UnicodeDecodeError,OSError):raise Refused('JOURNAL-INTEGRITY-FAILED') from None
-    if not envelope:return {}
+    if envelope is missing:return {}
     if not isinstance(envelope,dict):raise Refused('JOURNAL-INTEGRITY-FAILED')
     value=envelope.get('data')
-    if envelope.get('schema')!=1 or not isinstance(value,dict) or envelope.get('sha256')!=digest(value):
+    if type(envelope.get('schema')) is not int or envelope['schema']!=1 or not isinstance(value,dict) or envelope.get('sha256')!=digest(value):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
     before=value.get('before',[]);after=value.get('after',[])
-    if not before or len(before)!=len(set(before)) or set(before)!=set(after) or len(before)!=len(after):
+    if (not isinstance(before,list) or not isinstance(after,list) or not 2<=len(before)<=400
+            or len(before)!=len(after)):
         raise Refused('JOURNAL-ORDER-INVALID')
-    if any(not isinstance(s,str) or not SAFE.fullmatch(s) for s in before):raise Refused('JOURNAL-SECTION-INVALID')
+    if any(not isinstance(s,str) or not SAFE.fullmatch(s) for s in before+after):raise Refused('JOURNAL-SECTION-INVALID')
+    if len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after):
+        raise Refused('JOURNAL-ORDER-INVALID')
+    if value.get('phase') not in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','ROLLED-BACK','RELEASE-PENDING'):
+        raise Refused('JOURNAL-PHASE-INVALID')
+    if not isinstance(value.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',value['hash']):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
+    for name in ('started','deadline','monotonic_deadline','lease_monotonic_until','confirmed','finished'):
+        if name=='monotonic_deadline' and value.get(name) is None:continue  # legacy bounded journals
+        if name in value and (type(value[name]) not in (int,float) or not math.isfinite(value[name]) or value[name]<0):
+            raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'pid' in value and value['pid'] is not None and (type(value['pid']) is not int or value['pid']<=1):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'rollback_failures' in value and (type(value['rollback_failures']) is not int or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'trial' in value and type(value['trial']) is not bool:raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
+        for name in ('tx','source','target','trial_nonce'):
+            if not isinstance(value.get(name),str) or not re.fullmatch(r'[A-Za-z0-9_:.\-]{1,96}',value[name]):
+                raise Refused('JOURNAL-INTEGRITY-FAILED')
+        if value['source']==value['target'] or any(name not in value for name in ('started','deadline')):
+            raise Refused('JOURNAL-INTEGRITY-FAILED')
+        if value['deadline']<value['started']:raise Refused('JOURNAL-INTEGRITY-FAILED')
     return value
 
 
@@ -213,13 +251,18 @@ def trace(profile):
     if result.get('code') or not result.get('dns_ok') or result.get('https_success',0)<2:
         raise Refused('TARGET-HTTPS-DNS-FAILED')
     raw=bound_socket(result['device'],result['mark'])
+    end=time.monotonic()+HTTP_SECONDS
     try:
+        raw.settimeout(remaining(end))
         raw.connect(('1.1.1.1',443))
+        raw.settimeout(remaining(end))
         with ssl.create_default_context().wrap_socket(raw,server_hostname='one.one.one.one') as sock:
+            sock.settimeout(remaining(end))
             sock.sendall(b'GET /cdn-cgi/trace HTTP/1.1\r\nHost: one.one.one.one\r\nConnection: close\r\n\r\n')
             # A cut, garbled or non-IPv4 reply is a coded refusal, never an uncaught error that ends the supervisor.
             try:
-                response=http.client.HTTPResponse(sock);response.begin();body=response.read(32769)
+                response=http.client.HTTPResponse(DeadlineSocket(sock,end));response.begin();body=response.read(32769)
+                remaining(end)
                 if response.status!=200 or len(body)>32768:raise Refused('EXIT-TRACE-FAILED')
                 rows=dict(line.split('=',1) for line in body.decode('ascii').splitlines() if '=' in line)
                 value=str(ipaddress.IPv4Address(rows['ip'].strip()))
@@ -327,32 +370,40 @@ class Linux:
             rules='iifname "br-lan" meta nfproto ipv6 drop comment "homensai-owned-guard"; iifname "br-lan" oifname != { '+elements+' } drop comment "homensai-owned-guard";'
         else:
             generation=uuid.uuid4().hex[:8]
-            rules='iifname "br-lan" drop comment "homensai-owned-guard-'+generation+'";'
+            # The kernel expires the match even if both Python and the cleanup
+            # process die. No unbounded full-block rule is ever installed.
+            rules='iifname @blocked_lan_'+generation+' drop comment "homensai-owned-guard-'+generation+'";'
         # One nft transaction: never delete/recreate the table in separate invocations.
-        script=('delete table inet '+TABLE+'; ' if exists else '')+'table inet '+TABLE+' { chain forward { type filter hook forward priority -310; policy accept; '+rules+' } }'
         # Vendor nft opens /dev/stdin for '-', but that node is absent here.
         fd,path=tempfile.mkstemp(prefix='guard-',suffix='.nft',dir=str(RUNTIME))
         try:
             with os.fdopen(fd,'w') as stream:
                 if exists:stream.write('delete table inet '+TABLE+';\n')
-                stream.write('table inet '+TABLE+' {\n  chain forward {\n    type filter hook forward priority -310; policy accept;\n')
+                stream.write('table inet '+TABLE+' {\n')
+                if devices is None:
+                    stream.write('  set blocked_lan_%s { type ifname; flags timeout; timeout %ds; elements = { "br-lan" timeout %ds }; }\n' % (generation,GUARD_RELEASE_SECONDS,GUARD_RELEASE_SECONDS))
+                stream.write('  chain forward {\n    type filter hook forward priority -310; policy accept;\n')
                 for rule in rules.split(';'):
                     if rule.strip():stream.write('    '+rule.strip()+';\n')
                 stream.write('  }\n}\n')
             checked=subprocess.run(['nft','-c','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
             if checked.returncode:raise Refused('GUARD-CHECK-FAILED')
+            if devices is None:self.schedule_release(generation)
             result=subprocess.run(['nft','-f',path],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=5)
         finally:os.unlink(path)
         if result.returncode or not self.guard_exists():raise Refused('GUARD-INSTALL-FAILED')
-        if devices is None:self.schedule_release(generation)
     def schedule_release(self,generation):
-        """Independent timer: a full LAN block never outlives its owner; only this exact guard generation is removed."""
-        script=('sleep %d; nft list table inet %s 2>/dev/null | grep -q "homensai-owned-guard-%s" && nft delete table inet %s'
-                %(GUARD_RELEASE_SECONDS,TABLE,generation,TABLE))
+        """Release only this generation's element; never delete a later replacement table."""
+        # A read/check followed by table deletion races with guard replacement.
+        # Unique set identity makes this single nft mutation harmless after any
+        # replacement. The kernel timeout still works if this process is lost.
+        script=('sleep %d; nft delete element inet %s blocked_lan_%s \'{ "br-lan" }\' 2>/dev/null || :'
+                %(GUARD_RELEASE_SECONDS,TABLE,generation))
         try:subprocess.Popen(['sh','-c',script],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
-        except OSError:pass
+        except OSError:raise Refused('GUARD-RELEASE-ARM-FAILED') from None
     def unguard(self):
         if self.guard_exists():command(['nft','delete','table','inet',TABLE])
+        if self.guard_exists():raise Refused('GUARD-RELEASE-UNCONFIRMED')
     def devices(self):
         devices=[]
         for p in inventory()['profiles']:
@@ -454,14 +505,20 @@ def handle_return(backend,journal,request,last_time):
     """Answer each operator return request exactly once with a public result. Returns (handled,last_time)."""
     stamp=request.get('time') if isinstance(request,dict) else None
     if type(stamp) not in (int,float) or not math.isfinite(stamp) or stamp<=0 or stamp<=last_time:return False,last_time
-    try:code=operator_return(backend,journal)
-    except Refused as error:code=str(error)
+    now=time.time()
+    if (not isinstance(request.get('tx'),str) or not request['tx']
+            or request['tx']!=journal.get('tx')):code='RETURN-TRANSACTION-MISMATCH'
+    elif not journal.get('started',0)<=stamp<=now or now-stamp>60:code='RETURN-REQUEST-EXPIRED'
+    else:
+        try:code=operator_return(backend,journal)
+        except Refused as error:code=str(error)
     if code is None:
         try:backend.unguard()
-        except (Refused,OSError,subprocess.SubprocessError):pass
-        clear_native_options()
-        try:publish({'state':'STOPPED','reason':'OPERATOR-RETURN','original_restored':True,'source':journal.get('source'),'target':journal.get('target'),'trial':journal.get('trial',False)})
-        except Refused:pass
+        except (Refused,OSError,subprocess.SubprocessError):code='GUARD-RELEASE-UNCONFIRMED'
+        if code is None:
+            clear_native_options()
+            try:publish({'state':'STOPPED','reason':'OPERATOR-RETURN','original_restored':True,'source':journal.get('source'),'target':journal.get('target'),'trial':journal.get('trial',False)})
+            except Refused:pass
     atomic_json(return_result_path(),{'request':stamp,'ok':code is None,'code':code or 'RETURNED','time':time.time()})
     return True,stamp
 
@@ -707,7 +764,8 @@ def serve():
         try:journal=journal_read()
         except Refused:
             # Block the LAN once (timed release); on every later start only the VPN-only guard is used, never another full block.
-            try:first=not read_json(JOURNAL_ALARM,{}).get('first_block')
+            missing_alarm=object()
+            try:first=read_json(JOURNAL_ALARM,missing_alarm) is missing_alarm
             except (OSError,ValueError):first=False  # an unreadable marker means we already blocked once
             if first:
                 try:backend.guard()
@@ -717,6 +775,8 @@ def serve():
             give_up(backend,{},'JOURNAL-INTEGRITY-FAILED');return
         try:JOURNAL_ALARM.unlink()
         except OSError:pass
+        if journal.get('phase')=='RELEASE-PENDING':
+            abandon(backend,journal,journal.get('reason','EXTERNAL-POLICY-CHANGE'))
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
         if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
             if journal.get('phase')=='APPLYING' and journal.get('pid'):
@@ -742,6 +802,9 @@ def serve():
             try:
                 data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
                 active=journal_read()
+                if active.get('phase')=='RELEASE-PENDING':
+                    abandon(backend,active,active.get('reason','EXTERNAL-POLICY-CHANGE'))
+                    time.sleep(2);continue
                 enabled=settings.get('native_enabled')=='1'
                 stopped=read_json(PERSIST/'native-stop.json',{})
                 from auto_control import effective_intent

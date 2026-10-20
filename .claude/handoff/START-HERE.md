@@ -1,5 +1,7 @@
 # Start here: independent review checkpoint 1.0.0
 
+Historical review package. Active 20 October continuation: ../../docs/handoff/ACTIVE-STATE-2026-10-20.json and ../../docs/handoff/RECOVERY-TODO-2026-10-20.md. Read those first; the stopped run described here remains historical and was not resumed.
+
 ## Read order
 
 1. STATE.md — current product, completed evidence, stopped run and limitations.

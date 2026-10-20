@@ -1,5 +1,7 @@
 # Start here — VS Code continuation
 
+Active crash-recovery continuation (20 October 2026): [current tasks and evidence](docs/handoff/RECOVERY-TODO-2026-10-20.md), [machine-readable checkpoint](docs/handoff/ACTIVE-STATE-2026-10-20.json). The older branch/version/STOPPED descriptions below are historical and do not supersede this continuation.
+
 Working folder: `C:\homensai\homensai-gl-mt6000-auto-vpn`.
 
 Open `homensai-gl-mt6000-auto-vpn.code-workspace` in VS Code.

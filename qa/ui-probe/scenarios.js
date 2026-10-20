@@ -63,6 +63,40 @@
       ok('recovered: primary green again',node('source')==='green',node('source'));
       ok('recovered: Return button is gone',!Array.prototype.slice.call(D().querySelectorAll('button')).some(function(x){return /Вернуться на основной|Return to primary/.test(x.textContent);}));
     }
+    // S9 Top button: hidden at the top, shown after scrolling, bottom right, jumps back up
+    await load('help');await sleep(3500);W().scrollTo(0,0);await sleep(300);
+    var topBtn=D().querySelector('.hv-top-button');ok('Top button exists',!!topBtn);
+    if(topBtn){
+      ok('Top button hidden at the top',topBtn.hasAttribute('hidden'));
+      W().scrollTo(0,3000);await sleep(500);
+      ok('Top button shown after scrolling',!topBtn.hasAttribute('hidden')&&W().pageYOffset>240,String(W().pageYOffset));
+      var tr=topBtn.getBoundingClientRect();ok('Top button is bottom right',tr.width>0&&tr.right>W().innerWidth-60&&tr.bottom>W().innerHeight-60,JSON.stringify([tr.right,tr.bottom,W().innerWidth,W().innerHeight]));
+      topBtn.click();await sleep(1500);ok('Top button scrolls to the top',W().pageYOffset<5,String(W().pageYOffset));
+    }
+    // S10 service monitor: four aligned columns, same status pill style
+    await load('services');await sleep(3500);
+    var lrows=Array.prototype.slice.call(D().querySelectorAll('.hv-live-terminal > div:not(.hv-live-colnames)'));
+    ok('monitor rows found',lrows.length>=3,String(lrows.length));
+    ok('every row has 4 columns',lrows.every(function(r){return r.children.length===4;}));
+    var sx=lrows.map(function(r){return Math.round(r.children[3].getBoundingClientRect().left);});
+    ok('status column aligned',sx.length>0&&sx.every(function(x){return Math.abs(x-sx[0])<=1;}),sx.join(',')+' display='+(lrows[2]?W().getComputedStyle(lrows[2]).display:'-')+' cls='+(lrows[2]?lrows[2].className:'')+' children='+(lrows[2]?lrows[2].children.length:0));
+    var nx=lrows.map(function(r){return Math.round(r.children[2].getBoundingClientRect().left);});
+    ok('name column aligned',nx.every(function(x){return Math.abs(x-nx[0])<=1;}),nx.join(','));
+    ok('status pills have one shape',lrows.every(function(r){return !!r.children[3].querySelector('.hv-badge');}));
+    // S11 the speed-test link jumps to the settings card even when the Tests page is already open
+    await load('tests');await sleep(4000);
+    var speedLink=Array.prototype.slice.call(D().querySelectorAll('a')).filter(function(a){return /Turn them on in Advanced|Включите их в/.test(a.textContent);})[0];
+    if(speedLink){speedLink.click();await sleep(900);var card=D().getElementById('hv-speed-settings');ok('speed settings card has the anchor',!!card);
+      if(card){var cr=card.getBoundingClientRect();ok('speed link scrolls to the settings',cr.top>=-5&&cr.top<W().innerHeight,String(Math.round(cr.top)));}}
+    else res.steps.push('SKIP speed link (speed tests enabled in the fixture)');
+    // S12 error link -> Back button returns to the place the link was clicked
+    await load('events');await sleep(4000);
+    var hist=Array.prototype.slice.call(D().querySelectorAll('.hv-errlink')).filter(function(a){return !a.closest('.hv-errtable');})[0];
+    if(hist){hist.scrollIntoView({block:'center'});await sleep(300);var y0=W().pageYOffset;hist.click();await sleep(900);
+      var back=D().querySelector('.hv-errback-button');ok('Back button appears after an error link',!!back&&!back.hasAttribute('hidden'));
+      if(back){back.click();await sleep(700);ok('Back returns to the same place',Math.abs(W().pageYOffset-y0)<60&&visiblePage()==='events',String(y0)+' -> '+W().pageYOffset);ok('Back button is gone afterwards',back.hasAttribute('hidden'));}}
+    else res.steps.push('SKIP error link on events (no code shown outside the table)');
+    var svc=D().querySelectorAll('x');
   }catch(e){ok('scenario ran to the end',false,String(e&&e.message||e));}
   fetch('/__result/'+CFG.id,{method:'POST',body:JSON.stringify(res)});
 })();

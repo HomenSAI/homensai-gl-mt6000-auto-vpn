@@ -1,4 +1,4 @@
-> Historical snapshot retained for audit. Current stopped checkpoint and review instructions: ../../.claude/handoff/START-HERE.md. Do not treat old versions, locations, approvals or device claims below as freshly verified current state.
+Active 20 October continuation: [current recovery TODO](RECOVERY-TODO-2026-10-20.md) and [machine-readable checkpoint](ACTIVE-STATE-2026-10-20.json). The alpha10 snapshot below is historical; old versions, approvals and device claims are not freshly verified current state.
 
 # Current state - alpha10
 

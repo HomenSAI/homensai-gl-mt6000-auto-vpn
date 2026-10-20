@@ -1,4 +1,10 @@
 """Pure bounded endurance verdict; unfinished or gapped runs cannot pass."""
+
+def container_name(value):
+    import re
+    if not isinstance(value,str) or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}',value):
+        raise ValueError('ENDURANCE-CONTAINER-NAME')
+    return value
 def sample_errors(sample,expected,baseline):
     errors=[]
     if sample.get('version')!=expected['version']:errors.append('VERSION-MISMATCH')

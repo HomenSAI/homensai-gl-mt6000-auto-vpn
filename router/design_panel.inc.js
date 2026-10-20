@@ -59,9 +59,10 @@ function installTopButton(root){
     try{window.scrollTo({top:0,behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}catch(e){window.scrollTo(0,0);}
     try{if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}
   }},[E('span',{'aria-hidden':'true'},'↑'),E('span',{'class':'hv-top-label'},bi('Top','Вверх'))]);
-  root.appendChild(button);
+  Array.prototype.slice.call(document.querySelectorAll('.hv-top-button')).forEach(function(old){if(old.parentNode)old.parentNode.removeChild(old);});
+  document.body.appendChild(button);  /* on the body: an ancestor with a transform would otherwise become the containing block of a fixed button */
   function update(){
-    if(!document.body.contains(root)){window.removeEventListener('scroll',update);return;}
+    if(!root.isConnected){button.setAttribute('hidden','');return;}  /* not attached yet (or gone): stay hidden, keep listening */
     var y=window.pageYOffset||(document.scrollingElement&&document.scrollingElement.scrollTop)||0;
     if(y>240)button.removeAttribute('hidden');else button.setAttribute('hidden','');
   }

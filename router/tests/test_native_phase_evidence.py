@@ -10,7 +10,7 @@ import native_switch as native
 class Backend:
     def __init__(self):self.current=['b','a'];self.calls=[]
     def guard(self,devices=None):self.calls.append('guard')
-    def order(self):return list(self.current),'policy-hash'
+    def order(self):return list(self.current),'a'*64
     def reorder(self,order):self.calls.append('reorder');self.current=list(order)
     def apply(self):self.calls.append('apply')
     def devices(self):return ['fixture-tun']
@@ -18,7 +18,7 @@ class Backend:
 
 class NativePhaseTests(unittest.TestCase):
     def journal(self):
-        return dict(phase='ARMED',before=['a','b'],after=['b','a'],hash='policy-hash')
+        return dict(phase='ARMED',before=['a','b'],after=['b','a'],hash='a'*64)
 
     def test_phase_timeline_is_bounded_and_rollback_calls_are_unchanged(self):
         with tempfile.TemporaryDirectory() as directory,patch.object(native,'JOURNAL',Path(directory)/'journal'):

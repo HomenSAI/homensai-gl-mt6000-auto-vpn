@@ -44,7 +44,7 @@ class GuardFileCompatibility(unittest.TestCase):
             calls=[]
             def run(args,**kwargs):
                 p=Path(args[-1]);self.assertTrue(p.is_file());self.assertEqual(p.stat().st_mode & 0o777,0o600);self.assertIn('homensai-owned-guard',p.read_text());calls.append(args);return MagicMock(returncode=0)
-            with patch.object(native.subprocess,'run',side_effect=run):native.Linux().guard()
+            with patch.object(native.subprocess,'run',side_effect=run),patch.object(native.subprocess,'Popen'):native.Linux().guard()
             self.assertEqual(len(calls),2);self.assertIn('-c',calls[0]);self.assertNotIn('-c',calls[1]);self.assertEqual(list(Path(d).iterdir()),[])
     def test_failed_check_never_applies_and_removes_file(self):
         import tempfile

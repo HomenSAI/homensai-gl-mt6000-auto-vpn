@@ -4,6 +4,10 @@ import unittest
 p=Path(__file__).resolve().parents[1]/'lab/endurance_state.py'
 spec=importlib.util.spec_from_file_location('endurance_state',p);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class EnduranceVerdicts(unittest.TestCase):
+    def test_explicit_disposable_container_name_rejects_cli_options_and_paths(self):
+        self.assertEqual(m.container_name('homensai-vpn-recovery-20261020'),'homensai-vpn-recovery-20261020')
+        for value in ('--help','../original','',None,'bad name','x'*129):
+            with self.subTest(value=value),self.assertRaises(ValueError):m.container_name(value)
     def test_running_stopped_failures_gaps_and_incomplete_samples_never_pass(self):
         self.assertEqual(m.verdict(43199,43200,720,0,0,60),'RUNNING')
         for samples,failures,gaps in [(720,1,0),(720,0,1),(10,0,0)]:self.assertEqual(m.verdict(43200,43200,samples,failures,gaps,60),'FAIL')

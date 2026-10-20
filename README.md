@@ -1,5 +1,7 @@
 # HomenSAI Auto VPN · GL-MT6000
 
+Current development candidate (20 October 2026): **0.9.0-alpha9-1**. Continue from the [active recovery backlog](docs/handoff/RECOVERY-TODO-2026-10-20.md) and [current checkpoint](docs/handoff/ACTIVE-STATE-2026-10-20.json). The mobile GL-MT3000 is the selected future test target and is not yet connected; its platform/native adapter is not certified. Older dated review/STOPPED/version descriptions below remain historical evidence.
+
 > ## ⚠ Experimental software: use at your own risk
 >
 > HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.

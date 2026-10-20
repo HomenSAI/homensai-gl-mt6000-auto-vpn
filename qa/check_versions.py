@@ -28,6 +28,13 @@ def validate(path):
     if app['artifact']!='homensai-auto-vpn_'+package+'_all.ipk' or not re.fullmatch('[a-f0-9]{64}',app['sha256']):raise ValueError('VERSION-ARTIFACT')
     artifact=ROOT/'router/dist'/app['artifact']
     if artifact.exists() and hashlib.sha256(artifact.read_bytes()).hexdigest()!=app['sha256']:raise ValueError('VERSION-ARTIFACT-HASH')
+    released=ROOT/'releases'/app['artifact']
+    if app['sha256']!='0'*64:
+        kit=(ROOT/'router-test-kit/02-install.sh').read_text(encoding='utf-8')
+        if re.search(r'^EXPECTED_SHA=(.+)$',kit,re.M).group(1)!=app['sha256'] or re.search(r'^EXPECTED_VERSION=(.+)$',kit,re.M).group(1)!=package:
+            raise ValueError('VERSION-INSTALL-KIT')
+        if released.exists() and (hashlib.sha256(released.read_bytes()).hexdigest()!=app['sha256'] or int(re.search(r'^EXPECTED_SIZE=(.+)$',kit,re.M).group(1))!=released.stat().st_size):
+            raise ValueError('VERSION-RELEASE-ARTIFACT')
     return {'result':'PASS','application':app['version'],'package':package,'ui':app['ui_module']+'/'+app['ui_stylesheet'],'handoff':review['version'],'scope':'read-only metadata agreement; not a product test or device acceptance'}
 
 if __name__=='__main__':

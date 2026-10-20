@@ -1,11 +1,12 @@
 """Independent bounded cleanup witness for a single virtual endurance run."""
 import argparse,json,subprocess,time
-from endurance_state import pid_alive,producer_lost
+from endurance_state import pid_alive,producer_lost,container_name
 from pathlib import Path
 CONTAINER='homensai-vpn-qemu-alpha7'
 p=argparse.ArgumentParser();p.add_argument('--out',type=Path,required=True);p.add_argument('--duration',type=int,required=True);p.add_argument('--leave-running',action='store_true');p.add_argument('--pause',action='store_true');a=p.parse_args()
 if not 120<=a.duration<=86520 or not a.out.is_dir():raise ValueError('WATCHDOG-BOUNDS')
 initial=json.loads((a.out/'status.json').read_text());deadline=time.monotonic()+a.duration;alive=[];lost=False
+CONTAINER=container_name(initial.get('container_name',CONTAINER))
 while time.monotonic()<deadline:
     try:
         current=json.loads((a.out/'status.json').read_text())

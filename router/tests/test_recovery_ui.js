@@ -1,9 +1,10 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-class Node{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.value=attrs.value||'';this.checked=false;this.addEventListener=(event,fn)=>{this.attrs[event]=fn;};this.children=[];this.appendChild=child=>this.children.push(child);(Array.isArray(children)?children:[children]).forEach(this.appendChild);this.setAttribute=(k,v)=>this.attrs[k]=v;this.getAttribute=k=>this.attrs[k];}}
+class Node{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.value=attrs.value||'';this.checked=false;this.addEventListener=(event,fn)=>{const before=this.attrs[event];this.attrs[event]=(...args)=>{if(before)before(...args);fn(...args);};};this.children=[];this.appendChild=child=>this.children.push(child);(Array.isArray(children)?children:[children]).forEach(this.appendChild);this.setAttribute=(k,v)=>this.attrs[k]=v;this.getAttribute=k=>this.attrs[k];}}
+Node.prototype.addEventListener=function(event,fn){this.attrs[event]=fn;};
 function walk(n){return n instanceof Node?[n,...n.children.flatMap(walk)]:[];}
 let modal,calls=[],reloads=0;
 const context={RECOVERY_PRESETS:JSON.parse(fs.readFileSync('router/files/usr/lib/homensai-vpn/recovery_presets.json','utf8')),E:(...args)=>new Node(...args),bi:en=>en,locale:'en',ui:{showModal:(_,children)=>modal=new Node('modal',{},children),hideModal:()=>modal=null,addNotification:()=>{}},window:{location:{reload:()=>reloads++}},rpc:{declare:spec=>(...args)=>{calls.push({spec,args});return Promise.resolve(spec.method==='priority_preview'?{accepted:true,revision:'a'.repeat(64),rows:[{profile:'b',name:'B',protocol:'wireguard',channel:'Reserve',enabled:true},{profile:'a',name:'A',protocol:'openvpn',channel:'Main',enabled:true}]}:{saved:true});}}};
-vm.createContext(context);vm.runInContext(fs.readFileSync('router/recovery_panel.inc.js','utf8'),context);vm.runInContext(fs.readFileSync('router/speed_panel.inc.js','utf8'),context);
+context.setTimeout=function(){return 0;};vm.createContext(context);vm.runInContext(fs.readFileSync('router/fool_guard.inc.js','utf8'),context);vm.runInContext(fs.readFileSync('router/recovery_panel.inc.js','utf8'),context);vm.runInContext(fs.readFileSync('router/speed_panel.inc.js','utf8'),context);
 const field=label=>walk(modal).find(n=>n.attrs['aria-label']===label);
 async function click(label){const button=walk(modal).find(n=>n.tag==='button'&&n.children.includes(label));assert(button,label);await button.attrs.click({currentTarget:button,target:button});}
 (async()=>{

@@ -34,6 +34,14 @@ def save(branch):
     run('C:/Program Files/PowerShell/7/pwsh.exe','-NoProfile','-File',str(ROOT/'scripts/save-gitea.ps1'),'-Branch',branch)
 
 
+def checked_manifest(data,package_hash,release=None):
+    app=data.get('application',{}) if isinstance(data,dict) else {}
+    if not isinstance(app,dict) or app.get('sha256')!=package_hash or package_hash=='0'*64:
+        raise ValueError('PUBLICATION-MANIFEST-PACKAGE-MISMATCH')
+    if release and app.get('release_tag')!=release:raise ValueError('PUBLICATION-MANIFEST-TAG-MISMATCH')
+    return app
+
+
 def main():
     p=argparse.ArgumentParser();p.add_argument('--source',required=True);p.add_argument('--receipt',type=Path,required=True)
     p.add_argument('--resume',type=Path);p.add_argument('--publish',action='store_true');p.add_argument('--release');p.add_argument('--artifact',type=Path);p.add_argument('--notes',type=Path)
@@ -42,6 +50,7 @@ def main():
     if run('git','status','--porcelain'):raise ValueError('PUBLICATION-DIRTY')
     if run('git','rev-parse','HEAD')!=a.source:raise ValueError('PUBLICATION-NONCURRENT-SOURCE')
     package_hash=checked_receipt(json.loads(a.receipt.read_text(encoding='utf-8-sig')),a.source)
+    checked_manifest(json.loads((ROOT/'VERSION.json').read_text(encoding='utf-8-sig')),package_hash,a.release)
     if a.release:
         if not a.publish or not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+-alpha[0-9]+',a.release):raise ValueError('RELEASE-SCOPE')
         if not a.artifact or not a.notes or not a.notes.is_file() or hashlib.sha256(a.artifact.read_bytes()).hexdigest()!=package_hash:raise ValueError('RELEASE-ARTIFACT-HASH')

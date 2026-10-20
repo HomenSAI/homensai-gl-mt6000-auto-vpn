@@ -4,6 +4,7 @@ class Node {
  appendChild(n){this.children.push(n);return n;} setAttribute(k,v){this.attrs[k]=v;}
  querySelectorAll(selector){const tags=selector.split(',').map(v=>v.trim());return walk(this).filter(n=>tags.includes(n.tag));}
 }
+Node.prototype.addEventListener=function(event,fn){this.attrs[event]=fn;};
 function walk(n){return n instanceof Node?[n,...n.children.flatMap(walk)]:[];}
 const source=fs.readFileSync('router/setup_wizard.inc.js','utf8');
 function make(options={}){
@@ -14,7 +15,7 @@ function make(options={}){
   if(options.pending)return new Promise((resolve,reject)=>{resolveSave=resolve;rejectSave=reject;});
   return Promise.resolve(options.save===undefined?{saved:true}:options.save);
  }}};
- vm.createContext(context);vm.runInContext(source,context);
+ context.setTimeout=function(){return 0;};vm.createContext(context);vm.runInContext(fs.readFileSync('router/fool_guard.inc.js','utf8'),context);vm.runInContext(source,context);
  function button(name){const node=walk(modal).find(n=>n.tag==='button'&&n.children.includes(name));assert(node,'missing '+name);return node;}
  async function click(name){const node=button(name);return node.attrs.click({target:node});}
  return {context,button,click,get modal(){return modal;},get reloads(){return reloads;},get calls(){return calls;},get notes(){return notes;},get resolveSave(){return resolveSave;},get rejectSave(){return rejectSave;},get resolveCheck(){return resolveCheck;}};

@@ -1,8 +1,10 @@
 # HomenSAI Auto VPN — project entry point
 
+Active continuation, 20 October 2026: the owner explicitly resumed implementation/local tests, requested D-drive archives and Git saves, and selected the mobile GL-MT3000 for future physical trials. It is not yet connected. Read docs/handoff/ACTIVE-STATE-2026-10-20.json and docs/handoff/RECOVERY-TODO-2026-10-20.md first; older review imports below are historical. Do not infer an available management path or bypass model/vendor guards. The primary physical GL-MT6000 remains excluded from tests/writes.
+
 Read the imported handoff before planning work. The owner requested a checkpoint for an independent Claude review on 17 October 2026.
 
-Current scope: audit the repository and evidence, reconcile the 50-item backlog, and assess readiness for a future physical-router test. The owner stopped the running virtual endurance test. Do not resume it, start background tests, deploy to a physical router, enable Auto, change routes/DNS/firewall/acceleration, or alter Windows networking without a fresh direct user instruction.
+Historical 17 October scope: audit the repository/evidence and reconcile the 50-item backlog. The owner stopped that virtual endurance run; it remains STOPPED. The later 20 October continuation authorizes local implementation/tests and separate disposable VM copies, not resumption of an old run or access to the primary router. Keep physical GL-MT3000 work dependent on its actual connection/identity/backup and verified platform adapter; never bypass technical guards or alter Windows networking implicitly.
 
 Use the current checkout as the source of truth. Keep evidence, assumptions and unverified device claims separate. Reports/work logs and diagnostic codes are English; English is the UI default with Russian available.
 

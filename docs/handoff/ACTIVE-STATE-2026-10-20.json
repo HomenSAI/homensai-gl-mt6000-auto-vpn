@@ -1,0 +1,109 @@
+{
+  "status": "LOCAL_BATCH_VALIDATED_DEVICE_PENDING",
+  "date": "2026-10-20",
+  "purpose": "Resumed after crash by direct owner instruction on 20 October; not a pause or completion claim",
+  "branch": "feature/design-0.9",
+  "base_commit": "00391bc7d058e588a9983ffb9c68dad3434ad50c",
+  "owner_steering": [
+    "Continue the entire hardening plan autonomously, including long tests where useful",
+    "Save current state and all TODOs to local Git and archive on D drive",
+    "Do not disrupt the primary GL-MT6000; physical fault tests move to newly purchased GL-MT3000 Beryl AX",
+    "GL-MT3000 is not yet powered/connected: prepare support and identify exact device/firmware/bootloader before installation"
+  ],
+  "baseline_audit": "private/audit-2026-10-20/summary.json",
+  "baseline_verdict": "406 application tests pass on Python 3.9/Lua; 26 UI suites pass; QA 41/42, VERSION-STALE; six additional defects reproduced",
+  "current_validation": "425 app tests; immutable dual-runtime CI on product source89910af PASS, 58 QA and27 UI; final metadata/tooling snapshot is gated separately before publication. VM:17 upgrade+18 hardening+6 storage PASS; own monitor crash recovery68.85s PASS; 180s smoke6 samples0failures0gaps with independent pause PASS.",
+  "todo_in_order": [
+    "Verify final HEAD exact-source CI, manifest/IPK/kit pins, Gitea/public snapshot and refreshed D archive receipts",
+    "When the GL-MT3000 is connected, identify actual device/management path and run read-only platform probe; retain private report",
+    "Verify firmware family, bootloader/recovery procedure and recoverable backup before a compatible monitor-only installation",
+    "Implement/certify a separate GL-MT3000 adapter and cooperative vendor arbitration; never bypass MT6000 board/hash guards",
+    "Run controlled test-target failover/rollback with independent LAN DNS/HTTPS/exit, failed reserves, Stop/expiry/crash, IPv6/Kill Switch/special policies",
+    "Complete exact vendor SDK provenance, long observation and separately defined reboot/unattended acceptance; keep unsupported criteria open"
+  ],
+  "environment_observations": [
+    "Physical primary LuCI responds 403 Login Required; no authenticated browser available in this session",
+    "Browser inventory empty; opening in-app LuCI timed out",
+    "Shell ssh command resolves to sandbox deny stub, not an authenticated management channel",
+    "Saved QEMU containers are exited, original disks not changed in this run",
+    "No physical router configuration was changed"
+  ],
+  "official_mt3000_references": [
+    "https://docs.gl-inet.com/router/en/4/user_guide/gl-mt3000/",
+    "https://dl.gl-inet.com/router/mt3000/stable",
+    "https://dl.gl-inet.com/router/mt3000/open",
+    "https://www.gl-inet.com/en-us/pages/firmware-versions"
+  ],
+  "resume": "Read this state, qa/RECOVERY-2026-10-20.json and current git status/log; match current HEAD to .git/handoff CI/publication receipts, Gitea ls-remote and D CURRENT.local.json. This file cannot name its own commit. Do not restart old tests blindly. Mobile GL-MT3000 is not connected; actual platform/native acceptance remains pending.",
+  "recovery_base_commit": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
+  "active_backlog": "docs/handoff/RECOVERY-TODO-2026-10-20.md",
+  "verified_checkpoint_save": {
+    "head": "62e4fa9ee41ba15283d2860525c5475f83ec0b59",
+    "gitea": "SAVED exact SHA",
+    "d_archive": "VERIFIED_WIP_BACKUP with entry checksums; refreshed final archive pending"
+  },
+  "test_target": {
+    "model": "mobile GL-MT3000",
+    "owner_selected": true,
+    "connected": false,
+    "firmware": "UNKNOWN",
+    "bootloader": "UNKNOWN",
+    "native_certified": false,
+    "plan": "docs/GL-MT3000-TEST-PLAN.md"
+  },
+  "agent_statistics": [
+    {
+      "task": "UI guards",
+      "product_files": 5,
+      "test_files": 5,
+      "node_suites_passed": 27,
+      "failures_current": 0,
+      "scope": "settings/setup integration, not every legacy RPC"
+    },
+    {
+      "task": "backup/platform",
+      "files": 6,
+      "integration_and_classifier_tests_passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "integration_seconds": 39.401,
+      "probe_shell_syntax": "PASS"
+    },
+    {
+      "task": "independent hardening review",
+      "files_inspected": 9,
+      "high_findings": 1,
+      "medium_findings": 3,
+      "focused_checks_passed": 4,
+      "scope": "read-only; fixes implemented by root"
+    }
+  ],
+  "evidence": "qa/RECOVERY-2026-10-20.json",
+  "completed_local_changes": [
+    "Full LAN guard uses kernel timeout element; cleanup timer must arm before applying guard",
+    "Emergency Stop persists an all-trials latch when current policy is unavailable",
+    "Existing falsy/corrupt journal contents refuse instead of being treated as missing; additional schema checks",
+    "Failed guard cleanup keeps RELEASE-PENDING recovery rather than claiming STOPPED",
+    "Return checks transaction ID and one-minute request age",
+    "New probe_deadline.py bounds connect/TLS/HTTP buffered reads by one monotonic deadline",
+    "Permanent regression tests in test_audit_hardening.py; related old fixtures being reconciled",
+    "Inherited two test edits and untracked fool_guard.inc.js preserved",
+    "Validate active journal identity/counters; refuse existing empty lifecycle journals",
+    "Malformed UI intent cannot bypass emergency Stop or prevent durable Stop",
+    "Explicit red release-pending UI even when intent is off",
+    "Read-only GL-MT3000 platform probe and local non-authorizing classifier prepared",
+    "Independent review fixes: upgrade stale Stop to global, scalar alarm recovery, malformed per-trial epoch and public status",
+    "Generation-specific nft element cleanup removes table-deletion race",
+    "Inherited UI helpers integrated; 27 suites and actual page generation pass",
+    "Backup ZIP bundle restoration/tree/fsck and strict 41-field platform classification tested"
+  ],
+  "disposable_vm": {
+    "scope": "independent disk copy only",
+    "container": "homensai-vpn-recovery-20261020",
+    "vcpus": 2,
+    "ram_mib": 512,
+    "short_smoke": "PASS",
+    "state": "PAUSED by producer and independent witness",
+    "original_stopped_containers_resumed": false
+  }
+}

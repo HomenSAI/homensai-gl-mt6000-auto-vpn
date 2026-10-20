@@ -914,11 +914,29 @@
 .hv-app .hv-tg-presets{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
 
 /* ---- Top button ---- */
-.hv-app .hv-top-button{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border:0;border-radius:999px;background:var(--accent);color:var(--accent-text);font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
-.hv-app .hv-top-button[hidden]{display:none}
-.hv-app .hv-top-button:hover{filter:brightness(1.1)}
-@media(max-width:640px){.hv-app .hv-top-label{display:none}.hv-app .hv-top-button{padding:8px 14px}}
+.hv-top-button{position:fixed;right:18px;bottom:18px;z-index:60;display:flex;align-items:center;gap:6px;min-height:44px;padding:8px 16px;border:0;border-radius:999px;background:#159b80;color:#fff;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+.hv-top-button[hidden]{display:none}
+.hv-top-button:hover{filter:brightness(1.1)}
+@media(max-width:640px){.hv-top-label{display:none}.hv-top-button{padding:8px 14px}}
 /* Service monitor: everything is aligned to the left (the lamp no longer pushes the line to the right) */
 .hv-app .hv-live-terminal div{justify-content:flex-start;text-align:left}
 .hv-app .hv-live-terminal .hv-live-lamp{margin-left:0}
 .hv-app .hv-live-terminal .hv-log-time{flex:0 0 auto}
+
+/* ---- Service monitor: four aligned columns (time | lamp | what | status) with one pill style for every status ---- */
+.hv-app .hv-live-terminal div{display:grid;grid-template-columns:96px 24px minmax(180px,340px) minmax(150px,1fr);column-gap:10px;align-items:center;justify-content:start;text-align:left}
+.hv-app .hv-live-terminal .hv-live-colnames{opacity:.55;font-size:11px;letter-spacing:.08em;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:4px;line-height:1.6}
+.hv-app .hv-live-terminal .hv-log-name{overflow-wrap:anywhere}
+.hv-app .hv-live-terminal .hv-log-status{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.hv-app .hv-live-terminal .hv-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-weight:700;font-size:12px;background:transparent;border:1px solid currentColor}
+.hv-app .hv-live-terminal .hv-health-healthy,.hv-app .hv-live-terminal .hv-ok{color:#4dff8f;background:rgba(0,224,96,.14)}
+.hv-app .hv-live-terminal .hv-health-checking{color:#ffd84d;background:rgba(255,212,0,.14)}
+.hv-app .hv-live-terminal .hv-health-failed,.hv-app .hv-live-terminal .hv-warn{color:#ff6b7d;background:rgba(255,31,61,.16)}
+.hv-app .hv-live-terminal .hv-health-unknown,.hv-app .hv-live-terminal .hv-health-inactive,.hv-app .hv-live-terminal .hv-idle{color:#b4bfcb;background:rgba(150,160,175,.14)}
+.hv-app .hv-live-terminal a.hv-errlink{color:inherit;text-decoration:underline}
+@media(max-width:640px){.hv-app .hv-live-terminal div{grid-template-columns:78px 22px 1fr}.hv-app .hv-live-terminal .hv-log-status{grid-column:3}.hv-app .hv-live-terminal .hv-live-colnames{display:none}}
+/* ---- Back button after an error link ---- */
+.hv-errback-button{position:fixed;right:18px;bottom:72px;z-index:61;display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 18px;border:2px solid #159b80;border-radius:999px;background:#fff;color:#0d6b58;font-weight:700;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.hv-errback-button[hidden]{display:none}
+
+.hv-fool-field .hv-fool-hint,.hv-fool-field .hv-fool-error{display:block;margin-top:.3rem}.hv-fool-error{color:#c32938}.hv-fool-error:empty{display:none}.hv-fool-invalid{border-color:#c32938!important;outline:1px solid #c32938}

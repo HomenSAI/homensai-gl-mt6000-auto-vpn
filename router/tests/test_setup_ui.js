@@ -3,10 +3,11 @@ class Node {
  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[];this.value=attrs.value||'';this.disabled=false;this.checked=false;this.appendChild=child=>{this.children.push(child);return child;};this.setAttribute=(k,v)=>this.attrs[k]=v;(Array.isArray(children)?children:[children]).forEach(this.appendChild);}
  querySelectorAll(){return walk(this).filter(n=>n.tag==='input'||n.tag==='select');}
 }
+Node.prototype.addEventListener=function(event,fn){this.attrs[event]=fn;};
 function walk(n){return n instanceof Node?[n,...n.children.flatMap(walk)]:[];}
 let modal,calls=[],reloads=0,notes=[];
 const context={E:(...a)=>new Node(...a),bi:(en)=>en,ui:{showModal:(title,body)=>{modal=new Node('modal',{},body);},hideModal:()=>{modal=null;},addNotification:(_,n)=>notes.push(n)},rpc:{declare:spec=>(...args)=>{calls.push({spec,args});return Promise.resolve({saved:true});}},window:{location:{reload:()=>reloads++}}};
-vm.createContext(context);vm.runInContext(fs.readFileSync('router/setup_wizard.inc.js','utf8'),context);
+context.setTimeout=function(){return 0;};vm.createContext(context);vm.runInContext(fs.readFileSync('router/fool_guard.inc.js','utf8'),context);vm.runInContext(fs.readFileSync('router/setup_wizard.inc.js','utf8'),context);
 function field(label){return walk(modal).find(n=>n.attrs['aria-label']===label);}
 function button(label){return walk(modal).find(n=>n.tag==='button'&&n.children.includes(label));}
 async function click(label){const b=button(label);assert(b,label);await b.attrs.click({target:b});}

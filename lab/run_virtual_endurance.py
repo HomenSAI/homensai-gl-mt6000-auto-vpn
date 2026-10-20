@@ -2,7 +2,7 @@
 import argparse,hashlib,json,os,re,subprocess,sys,time
 from datetime import datetime,timezone
 from pathlib import Path
-from endurance_state import sample_errors,verdict,slept
+from endurance_state import sample_errors,verdict,slept,container_name
 CONTAINER='homensai-vpn-qemu-alpha7'
 
 def utc():return datetime.now(timezone.utc).isoformat()
@@ -17,7 +17,9 @@ def inspect():
     return row['Id']
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--repo',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--manifest',type=Path,required=True);p.add_argument('--duration',type=int,default=43200);p.add_argument('--interval',type=int,default=60);p.add_argument('--smoke',action='store_true');p.add_argument('--leave-running',action='store_true');a=p.parse_args()
+    global CONTAINER
+    p=argparse.ArgumentParser();p.add_argument('--repo',type=Path,required=True);p.add_argument('--out',type=Path,required=True);p.add_argument('--manifest',type=Path,required=True);p.add_argument('--duration',type=int,default=43200);p.add_argument('--interval',type=int,default=60);p.add_argument('--smoke',action='store_true');p.add_argument('--leave-running',action='store_true');p.add_argument('--container',default=CONTAINER);a=p.parse_args()
+    CONTAINER=container_name(a.container)
     repo=a.repo.resolve();out=a.out.resolve()
     if not out.is_relative_to((repo/'private').resolve()) or out.exists():raise ValueError('PRIVATE-FRESH-OUTPUT')
     if not 30<=a.interval<=300 or not (60<=a.duration<=180 if a.smoke else 43200<=a.duration<=86400):raise ValueError('ENDURANCE-BOUNDS')
@@ -30,6 +32,7 @@ def main():
     lease=repo/'.git/handoff/virtual-endurance.lock';lease.parent.mkdir(exist_ok=True)
     fd=os.open(lease,os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600);os.write(fd,str(os.getpid()).encode());os.close(fd)
     started=time.monotonic();baseline=None;state={'state':'RUNNING','scope':'virtual x86 monitor endurance; no real provider/native/LAN acceptance','source':source,'package_sha256':expected['package_sha256'],'version':expected['version'],'duration_seconds':a.duration,'interval_seconds':a.interval,'started_at_utc':utc(),'deadline_epoch':time.time()+a.duration,'pid':os.getpid(),'container_id':identity,'samples':0,'failures':0,'gaps':0,'max_rss_bytes':0,'smoke':a.smoke,'physical_router_access':False,'runner_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
+    state['container_name']=CONTAINER
     atomic(out/'status.json',state)
     # Independent process checks terminal cleanup or pauses the same clone after deadline/producer exit.
     watch=Path(__file__).with_name('virtual_endurance_watchdog.py')

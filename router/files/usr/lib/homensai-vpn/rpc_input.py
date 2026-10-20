@@ -13,6 +13,9 @@ def decode_request(request):
     def constant(value):raise ValueError('RPC-NONFINITE-NUMBER')
     try:arguments=json.loads(request,object_pairs_hook=pairs,parse_constant=constant) if request.strip() else {}
     except RecursionError:raise ValueError('RPC-INPUT-DEPTH') from None
+    except ValueError as error:
+        # Our own codes pass through; a library message (it can quote the request) becomes a fixed code.
+        raise ValueError(str(error) if str(error).startswith('RPC-') else 'RPC-INPUT-INVALID') from None
     if not isinstance(arguments,dict):raise ValueError('RPC-INPUT-OBJECT')
     stack=[(arguments,0)];nodes=0
     while stack:

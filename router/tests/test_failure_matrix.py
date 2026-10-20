@@ -103,7 +103,7 @@ class Matrix(unittest.TestCase):
         self.assert_restored();self.assertEqual(self.state()['state'],'ROLLED-BACK');self.assertEqual(self.state()['blockers'],['NATIVE-SYSTEM-001'])
 
     def test_no_client_answer_times_out_and_rolls_back(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process)
+        process=MagicMock(pid=123,returncode=0);self.spawn(process)
         self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
         clock=iter([False]*5+[True]*50)
         self.stack.enter_context(patch.object(native,'transaction_expired',side_effect=lambda *a,**k:next(clock)))
@@ -112,14 +112,14 @@ class Matrix(unittest.TestCase):
 
     # ---- operator buttons during a switch ----
     def test_stop_pressed_while_waiting_for_the_client_rolls_back(self):
-        process=MagicMock(pid=1,returncode=0)
+        process=MagicMock(pid=123,returncode=0)
         self.spawn(process,lambda:native.atomic_json(native.PERSIST/'native-stop.json',{'requested':time.time()+1,'trial':'x'}))
         self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
         with self.assertRaisesRegex(native.Refused,'CLIENT-STOP'):native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assert_restored()
 
     def test_service_stop_signal_rolls_back_instead_of_committing(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process,self.confirm)
+        process=MagicMock(pid=123,returncode=0);self.spawn(process,self.confirm)
         self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
         self.stack.enter_context(patch.object(native,'STOP',True))
         with self.assertRaisesRegex(native.Refused,'CLIENT-CONFIRMATION-TIMEOUT'):native.attempt(self.b,self.b.selection,time.time()+120,False)
@@ -130,7 +130,7 @@ class Matrix(unittest.TestCase):
         for over in ({'tx':'f'*32},{'exit_ipv4':'1.2.3.4'},{'dns_ok':False},{'https_ok':False},{'time':time.time()-31},{'time':time.time()+60}):
             with self.subTest(over=over):
                 self.setUp()
-                process=MagicMock(pid=1,returncode=0);self.spawn(process,lambda:self.confirm(**over))
+                process=MagicMock(pid=123,returncode=0);self.spawn(process,lambda:self.confirm(**over))
                 self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
                 clock=iter([False]*3+[True]*50)
                 self.stack.enter_context(patch.object(native,'transaction_expired',side_effect=lambda *a,**k:next(clock)))
@@ -138,25 +138,25 @@ class Matrix(unittest.TestCase):
                 self.assert_restored()
 
     def test_exit_changing_at_confirmation_rolls_back(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process,self.confirm)
+        process=MagicMock(pid=123,returncode=0);self.spawn(process,self.confirm)
         self.stack.enter_context(patch.object(native,'trace',side_effect=['9.9.9.9','7.7.7.7']))
         with self.assertRaisesRegex(native.Refused,'EXIT-CHANGED'):native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assert_restored()
 
     def test_new_blocker_after_apply_rolls_back(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process,lambda:setattr(self.b,'blockers',['VENDOR-WORKER-BUSY']))
+        process=MagicMock(pid=123,returncode=0);self.spawn(process,lambda:setattr(self.b,'blockers',['VENDOR-WORKER-BUSY']))
         self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
         with self.assertRaisesRegex(native.Refused,'VENDOR-WORKER-BUSY'):native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assert_restored()
 
     def test_reserve_probe_failure_after_apply_rolls_back(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process)
+        process=MagicMock(pid=123,returncode=0);self.spawn(process)
         self.stack.enter_context(patch.object(native,'trace',side_effect=native.Refused('TARGET-HTTPS-DNS-FAILED')))
         with self.assertRaisesRegex(native.Refused,'TARGET-HTTPS-DNS-FAILED'):native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assert_restored()
 
     def test_successful_switch_commits_only_after_matching_confirmation(self):
-        process=MagicMock(pid=1,returncode=0);self.spawn(process,self.confirm)
+        process=MagicMock(pid=123,returncode=0);self.spawn(process,self.confirm)
         self.stack.enter_context(patch.object(native,'trace',return_value='9.9.9.9'))
         native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assertNotEqual(self.b.current,self.before);self.assertEqual(self.state()['state'],'COMMITTED')
@@ -164,7 +164,7 @@ class Matrix(unittest.TestCase):
 
     # ---- rollback itself fails ----
     def test_failing_rollback_keeps_the_transaction_for_supervisor_recovery(self):
-        process=MagicMock(pid=1,returncode=1);self.spawn(process)
+        process=MagicMock(pid=123,returncode=1);self.spawn(process)
         self.b.fail_reorder=1
         with self.assertRaisesRegex(native.Refused,'POLICY-IDENTITY-CHANGED'):native.attempt(self.b,self.b.selection,time.time()+120,False)
         # The journal still names the unfinished step, so the restarted supervisor rolls back again.
@@ -175,7 +175,7 @@ class Matrix(unittest.TestCase):
         self.assertEqual(self.b.guarded,'vpn-only')
 
     def test_unverified_rollback_never_leaves_the_lan_closed(self):
-        process=MagicMock(pid=1,returncode=1);self.spawn(process)
+        process=MagicMock(pid=123,returncode=1);self.spawn(process)
         real=self.b.order;calls={'n':0}
         def order():
             calls['n']+=1
@@ -189,7 +189,8 @@ class Matrix(unittest.TestCase):
     def write_journal(self,phase,order=None):
         value={'tx':TX,'phase':phase,'before':self.before,'after':self.before[:-2]+[self.before[-1],self.before[-2]],
                'hash':self.b.fingerprint,'source':self.b.selection['source']['id'],'target':self.b.selection['target']['id'],
-               'deadline':time.time()+60,'monotonic_deadline':None,'trial':False,'pid':None,'started':time.time()}
+               'deadline':time.time()+60,'monotonic_deadline':None,'trial':False,'pid':None,'started':time.time(),
+               'trial_nonce':self.b.data['settings']['native_trial']}
         native.journal_write(value);return value
 
     def test_restart_in_every_unfinished_phase_restores_the_original_route(self):
@@ -257,7 +258,7 @@ class Matrix(unittest.TestCase):
         self.assertFalse(native.JOURNAL_ALARM.exists())
 
     def test_rollback_that_fails_twice_is_given_up_without_new_full_blocks(self):
-        process=MagicMock(pid=1,returncode=1);self.spawn(process);self.b.fail_reorder=99
+        process=MagicMock(pid=123,returncode=1);self.spawn(process);self.b.fail_reorder=99
         with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
         self.assertEqual(native.journal_read()['rollback_failures'],1)
         # second failure: the supervisor's recovery; it gives up at the limit
@@ -273,7 +274,7 @@ class Matrix(unittest.TestCase):
         self.assertTrue((native.PERSIST/'native-stop.json').exists())
 
     def test_one_failed_rollback_still_recovers_on_the_next_start(self):
-        process=MagicMock(pid=1,returncode=1);self.spawn(process);self.b.fail_reorder=1
+        process=MagicMock(pid=123,returncode=1);self.spawn(process);self.b.fail_reorder=1
         with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
         with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
         self.assertEqual(self.b.current,self.before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
@@ -357,7 +358,7 @@ class Buttons(unittest.TestCase):
         backend=MagicMock();backend.policy.return_value={'settings':{}};backend.diagnostic.return_value=([],None)
         with patch('native_switch.Linux',return_value=backend),patch('native_switch.journal_read',side_effect=native.Refused('JOURNAL-INTEGRITY-FAILED')),\
              patch.object(auto_control,'RUNTIME',self.dir):
-            with self.assertRaises(native.Refused):auto_control.start()
+            self.assertEqual(auto_control.start(),{'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']})
         self.assertFalse((self.dir/'auto-control.json').exists())
 
     def test_return_button_only_acts_on_a_held_or_committed_reserve(self):

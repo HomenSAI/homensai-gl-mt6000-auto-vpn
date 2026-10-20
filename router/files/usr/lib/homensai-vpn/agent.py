@@ -20,8 +20,9 @@ import struct
 import subprocess
 import sys
 import time
+from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha6'
+VERSION = '0.9.0-alpha9'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -347,18 +348,23 @@ def https_probe(device, mark, target):
     address, hostname, path, kind = target
     ipaddress.IPv4Address(address)
     started = time.monotonic()
+    end = started + HTTP_SECONDS
     token = None
     if kind == 'dns-wire':
         token, packet, _ = dns_question()
         path += '?dns=' + base64.urlsafe_b64encode(packet).decode().rstrip('=')
     raw = bound_socket(device, mark)
     try:
+        raw.settimeout(remaining(end))
         raw.connect((address, 443))
+        raw.settimeout(remaining(end))
         with ssl.create_default_context().wrap_socket(raw, server_hostname=hostname) as sock:
+            sock.settimeout(remaining(end))
             sock.sendall(('GET %s HTTP/1.1\r\nHost: %s\r\nAccept: application/dns-json, application/dns-message, text/plain\r\nConnection: close\r\n\r\n' % (path, hostname)).encode('ascii'))
-            response = http.client.HTTPResponse(sock)
+            response = http.client.HTTPResponse(DeadlineSocket(sock,end))
             response.begin()
             body = response.read(32769)
+            remaining(end)
             if response.status != 200 or len(body) > 32768:
                 return None
             if kind == 'trace':
@@ -688,30 +694,33 @@ def rpc(method):
     arguments=decode_request(request)
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
-            raise ValueError('invalid confirmation fields')
+            raise ValueError('RPC-CONFIRM-FIELDS')
         # The trial number is private (never in status, inventory or history): only the helper that started the trial knows it.
         import hmac
         configured=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua'])).get('settings',{}).get('native_trial')
         if (not isinstance(arguments['trial'],str) or not isinstance(configured,str) or not re.fullmatch(r'[a-f0-9]{32}',configured)
                 or not hmac.compare_digest(arguments['trial'].encode('ascii','replace'),configured.encode('ascii','replace'))):
-            raise ValueError('confirmation not bound to the running trial')
+            raise ValueError('RPC-CONFIRM-TRIAL')
         if not isinstance(arguments['tx'],str) or not re.fullmatch(r'[a-f0-9]{32}',arguments['tx']):
-            raise ValueError('invalid confirmation transaction')
+            raise ValueError('RPC-CONFIRM-TRANSACTION')
+        # Only a dotted-quad string: IPv4Address(int) would accept 134744072 as 8.8.8.8.
+        if not isinstance(arguments['exit_ipv4'],str) or not re.fullmatch(r'[0-9]{1,3}(?:\.[0-9]{1,3}){3}',arguments['exit_ipv4']):
+            raise ValueError('RPC-CONFIRM-ADDRESS')
         address=ipaddress.IPv4Address(arguments['exit_ipv4'])
         if not address.is_global or arguments['dns_ok'] is not True or arguments['https_ok'] is not True:
-            raise ValueError('unverified client confirmation')
+            raise ValueError('RPC-CONFIRM-UNVERIFIED')
         pending=read_json(RUNTIME/'native-status.json',{})
         if pending.get('state')!='WAIT-CLIENT' or pending.get('tx')!=arguments['tx'] or pending.get('expected_exit')!=str(address) or time.time()>pending.get('deadline',0):
-            raise ValueError('no matching pending transaction')
+            raise ValueError('RPC-CONFIRM-NO-PENDING')
         envelope=read_json(PERSIST/'native-transaction.json',{})
         transaction=envelope.get('data')
         if (envelope.get('schema')!=1 or not isinstance(transaction,dict)
                 or envelope.get('sha256')!=checksum(transaction)
                 or transaction.get('phase')!='WAIT-CLIENT' or transaction.get('tx')!=arguments['tx']
                 or transaction.get('expected_exit')!=str(address) or time.time()>transaction.get('deadline',0)):
-            raise ValueError('transaction no longer awaiting confirmation')
+            raise ValueError('RPC-CONFIRM-NO-PENDING')
         if transaction.get('monotonic_deadline') is not None and time.monotonic()>=transaction['monotonic_deadline']:
-            raise ValueError('confirmation elapsed-time window expired')
+            raise ValueError('RPC-CONFIRM-EXPIRED')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
     if method in ('fault_start','fault_cancel'):
@@ -750,7 +759,7 @@ def rpc(method):
         except SpeedError as error:result={'accepted':False,'code':error.code}
         print(json.dumps(result));return
     if arguments:
-        raise ValueError('unexpected RPC arguments')
+        raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
         from telegram_report import retry_unknown
         print(json.dumps(retry_unknown()));return
@@ -796,7 +805,23 @@ def rpc(method):
             except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
         print(json.dumps({'events': status.get('events', [])} if method=='events' else trim_status_reply(status)))
     else:
-        raise ValueError('unknown RPC method')
+        raise ValueError('RPC-UNKNOWN-METHOD')
+
+
+def rpc_error_code(error):
+    """Only a deliberate diagnostic code of ours is shown; any other text (paths, library messages) becomes SYSTEM-001."""
+    text = str(error) if isinstance(error, ValueError) else ''
+    return text if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}', text) else 'SYSTEM-001'
+
+
+def call(method):
+    """One command-line RPC: always a JSON line on stdout, never a traceback for input problems."""
+    try:
+        rpc(method)
+        return 0
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        print(json.dumps({'error': rpc_error_code(error)}))
+        return 1
 
 
 def main():
@@ -813,7 +838,9 @@ def main():
                   'mode': 'monitor', 'native_apply': False}
         print(json.dumps(result));return
     if args.action in ('list','call'):
-        rpc('list' if args.action == 'list' else args.method);return
+        if args.action == 'list':
+            rpc('list');return
+        raise SystemExit(call(args.method))
 
     def stop(*_):
         global STOP

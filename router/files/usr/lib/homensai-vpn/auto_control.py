@@ -7,6 +7,8 @@ Intent lives in RAM: a UI start never enables unattended reboot startup.
 from contextlib import contextmanager
 import fcntl
 import os
+import math
+import re
 import time
 from agent import RUNTIME, PERSIST, atomic_json, read_json
 
@@ -54,13 +56,31 @@ def readiness(settings, certificate, consumed, selection, blockers, now):
 def effective_intent(settings, stopped, request, now):
     """Malformed, stale/future or different-trial intents cannot enable anything."""
     from native_switch import deadline
+    if any(not isinstance(row, dict) for row in (settings, stopped, request)):
+        return False, True
     enabled = settings.get('native_enabled') == '1'
+    # An emergency Stop with unknown settings stops the current config-enabled
+    # trial too. Only a later explicit UI Start can supersede its durable epoch.
+    epoch = stopped.get('requested', 0)
+    if stopped.get('all_trials') is True:
+        stamp = request.get('time')
+        # Only a well-formed later Start for this exact bounded trial can
+        # override a global Stop. Malformed records never bypass the latch.
+        if not (type(epoch) in (int, float) and math.isfinite(epoch) and epoch > 0
+                and request.get('mode') == 'on' and type(stamp) in (int, float)
+                and math.isfinite(stamp) and epoch < stamp <= now
+                and isinstance(request.get('trial'), str) and request['trial']
+                and request['trial'] == settings.get('native_trial')):
+            return False, True
     stop_latched = bool(stopped and stopped.get('trial') == settings.get('native_trial'))
+    if stop_latched and not (type(epoch) in (int,float) and math.isfinite(epoch) and epoch>0):
+        return False, True
     if not request or request.get('trial') != settings.get('native_trial'):
         return enabled, stop_latched
     valid = (request.get('trial') == settings.get('native_trial')
              and request.get('until') == deadline(settings.get('native_until'))
-             and isinstance(request.get('time'), (int, float))
+             and type(request.get('time')) in (int, float)
+             and math.isfinite(request['time'])
              and 0 < request['time'] <= now
              and request.get('mode') in ('on','off'))
     if not valid:
@@ -73,12 +93,15 @@ def effective_intent(settings, stopped, request, now):
 
 
 def start():
-    from native_switch import Linux, journal_read, deadline
+    from native_switch import Linux, journal_read, deadline, Refused
     with control_lock():
         backend = Linux()
         settings = backend.policy()['settings']
         blockers, selection = backend.diagnostic()
-        if journal_read().get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'):
+        # A damaged journal is a refusal with a code, never a traceback.
+        try:phase=journal_read().get('phase')
+        except Refused:return {'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}
+        if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
             return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
         now = time.time()
         reasons = readiness(settings, read_json(PERSIST/'native-certificate.json',{}),
@@ -101,7 +124,9 @@ def stop(runtime=None,persist=None):
     import json
     import subprocess
     with control_lock(runtime):
-        request=read_json(runtime/'auto-control.json',{})
+        try:request=read_json(runtime/'auto-control.json',{})
+        except (OSError,ValueError):request={}
+        if not isinstance(request,dict):request={}
         # Stop must never depend on reading the router settings: if they cannot be read, the trial named by
         # the current start request is latched (an in-flight switch stops on any newer stop latch anyway).
         unverified=False
@@ -111,11 +136,22 @@ def stop(runtime=None,persist=None):
         except (OSError,ValueError,AttributeError,subprocess.SubprocessError):
             trial=request.get('trial');unverified=True
         # One durable write targets the current trial, including an in-flight worker.
-        old=read_json(persist/'native-stop.json',{})
+        try:old=read_json(persist/'native-stop.json',{})
+        except (OSError,ValueError):old={}
+        if not isinstance(old,dict):old={}
         extra={'settings_unverified':True} if unverified else {}
-        if old.get('trial') == trial and old.get('requested',0) >= request.get('time',0):
+        previous = old.get('requested')
+        requested = request.get('time',0)
+        if type(requested) not in (int,float) or not math.isfinite(requested):requested=float('inf')
+        needs_global = unverified or not trial
+        if (old and type(previous) in (int, float) and math.isfinite(previous) and previous > 0
+                and (old.get('all_trials') is True or not needs_global and old.get('trial') == trial)
+                and previous >= requested):
             return dict({'queued':True,'already_requested':True},**extra)
-        atomic_json(persist/'native-stop.json',{'requested':time.time(),'trial':trial})
+        record = {'requested':time.time(),'trial':trial}
+        if needs_global:
+            record['all_trials'] = True
+        atomic_json(persist/'native-stop.json',record)
         return dict({'queued':True},**extra)
 
 
@@ -133,11 +169,31 @@ def return_request(runtime=None):
 
 
 def public_status():
-    request=read_json(RUNTIME/'auto-control.json',{})
-    stopped=read_json(PERSIST/'native-stop.json',{})
+    valid=True
+    def record(path):
+        nonlocal valid
+        try:row=read_json(path,{})
+        except (OSError,ValueError):row=None
+        if not isinstance(row,dict):valid=False;return {}
+        return row
+    def stamp(row,key):
+        nonlocal valid
+        value=row.get(key,0)
+        if type(value) not in (int,float) or not math.isfinite(value) or value<0:
+            valid=False;return 0
+        return value
+    request=record(RUNTIME/'auto-control.json')
+    stopped=record(PERSIST/'native-stop.json')
+    requested=stamp(request,'time');stop=stamp(stopped,'requested');until=stamp(request,'until')
     mode=request.get('mode','off')
-    if stopped.get('requested',0) >= request.get('time',0):mode='off'
-    result=read_json(RUNTIME/'native-return-result.json',{})
-    return_result={k:result.get(k) for k in ('request','ok','code','time')} if isinstance(result,dict) and result else None
-    return {'requested':mode,'requested_at':max(request.get('time',0),stopped.get('requested',0)),
-            'until':request.get('until',0),'reboot_autostart':False,'return_result':return_result}
+    if mode not in ('on','off'):valid=False
+    if stop>=requested:mode='off'
+    result=record(RUNTIME/'native-return-result.json')
+    return_result=None
+    if result:
+        request_stamp=stamp(result,'request');result_stamp=stamp(result,'time');code=result.get('code')
+        if type(result.get('ok')) is not bool or code is not None and (not isinstance(code,str) or not re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',code)):
+            valid=False
+        else:return_result={'request':request_stamp,'ok':result['ok'],'code':code,'time':result_stamp}
+    return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
+            'until':until,'reboot_autostart':False,'return_result':return_result}

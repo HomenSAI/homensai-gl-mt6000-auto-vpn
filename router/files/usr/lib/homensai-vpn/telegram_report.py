@@ -204,6 +204,8 @@ def deliver(status,saved,now):
 def retry_unknown():
     from agent import RUNTIME,atomic_json
     from auto_control import control_lock
+    from rpc_throttle import allow
+    if not allow('telegram_retry',10):return {'queued':False,'code':'RPC-RATE-LIMIT'}
     with control_lock(RUNTIME):atomic_json(RUNTIME/'telegram-retry.json',{'id':uuid.uuid4().hex,'time':time.time()})
     return {'queued':True,'may_duplicate_uncertain_delivery':True}
 

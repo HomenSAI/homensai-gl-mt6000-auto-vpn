@@ -62,9 +62,30 @@ function planCheckState(code,unproven,reported){
   if(failure)return {state:'failed',failure:failure};
   return {state:unproven.indexOf(code)>=0?'pending':'verified',failure:null};
 }
+/* Open a section and scroll to an element of it (by id), highlighting it. Works also when the section is already open, where a plain #hash link does nothing. */
+function pageKeyNow(){var p=document.querySelector('[data-hv-page]:not([hidden])');return p?p.getAttribute('data-hv-page'):null;}
+function goToSection(tab,id){
+  var link=document.querySelector('[data-hv-tab="'+tab+'"]');if(link&&pageKeyNow()!==tab)link.click();
+  setTimeout(function(){var n=id&&document.getElementById(id);if(!n){window.scrollTo(0,0);return;}n.scrollIntoView({block:'start'});n.classList.add('hv-errflash');setTimeout(function(){n.classList.remove('hv-errflash');},3000);},160);
+}
+/* "Back" after following an error link: returns to the page and scroll position where the link was clicked. */
+var errorReturn=null,errorBackButton=null,errorBackTimer=null;
+function hideErrorBack(){errorReturn=null;if(errorBackButton)errorBackButton.setAttribute('hidden','');if(errorBackTimer){clearInterval(errorBackTimer);errorBackTimer=null;}}
+function showErrorBack(){
+  if(!document.querySelector('.hv-app')||!errorReturn)return;
+  if(!errorBackButton||!errorBackButton.isConnected){errorBackButton=E('button',{'type':'button','class':'hv-errback-button','click':function(){
+    var r=errorReturn;hideErrorBack();if(!r||!r.tab)return;
+    var l=document.querySelector('[data-hv-tab="'+r.tab+'"]');if(l&&pageKeyNow()!==r.tab)l.click();
+    setTimeout(function(){window.scrollTo(0,r.y||0);},120);}},[E('span',{'aria-hidden':'true'},'←'),E('span',{},bi('Back to where you were','Вернуться назад'))]);document.body.appendChild(errorBackButton);}
+  errorBackButton.removeAttribute('hidden');
+  if(errorBackTimer)clearInterval(errorBackTimer);
+  errorBackTimer=setInterval(function(){if(pageKeyNow()!=='events')hideErrorBack();},700);
+}
 // Jump to the row of a code in the error table on the Events page, open its "how to fix" and highlight it.
 function showErrorCode(code){
-  var link=document.querySelector('[data-hv-tab="events"]');if(link)link.click();
+  if(!errorReturn&&pageKeyNow())errorReturn={tab:pageKeyNow(),y:window.pageYOffset||0};
+  var link=document.querySelector('[data-hv-tab="events"]');if(link&&pageKeyNow()!=='events')link.click();
+  setTimeout(showErrorBack,300);
   setTimeout(function(){
     var key=Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)?code:((typeof errorFamilyOf==='function'&&errorFamilyOf(code))?errorFamilyOf(code)[0]+'*':code);
     if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;

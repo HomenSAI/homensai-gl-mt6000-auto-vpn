@@ -3,6 +3,7 @@ from pathlib import Path
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
+source=source.replace('return view.extend({',(Path(__file__).parent/'fool_guard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 source=source.replace("var locale = localStorage.getItem('homensai-vpn-language') || 'en';", """var savedLanguage='en';
 try { savedLanguage=localStorage.getItem('homensai-vpn-language')||'en'; } catch(e) {}
 var requestedLanguage=new URLSearchParams(window.location.search).get('lang');
@@ -393,7 +394,7 @@ must_replace("  learn:['A short interactive training","  start:['First steps: te
 must_replace("nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')));","nativePanel.appendChild(lanHelperExplain());nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')));nativePanel.appendChild(E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск')));")
 # One place for speed: the Tests page shows the server ranking, the speed test button/results and, right under them, the speed settings.
 must_replace("      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));","      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));\n      put('tests',E('h2',{'class':'hv-speed-heading'},bi('Speed tests and server ranking','Тесты скорости и рейтинг серверов')));put('tests',E('p',{},bi('Which servers are fastest and most reliable, and the button to measure speed. If a server needs settings (budget, duration, streams), they are right below the table: change them and press the test button here.','Какие серверы быстрее и надёжнее, и кнопка замера скорости. Если нужны настройки (бюджет, длительность, потоки), они сразу под таблицей: измените их и нажмите кнопку теста здесь.')));if(pages.ranking){while(pages.ranking.firstChild)pages.tests.appendChild(pages.ranking.firstChild);}if(speedCardNode){put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCardNode);}")
-must_replace("if(speedCard){put('tests',E('h2',{},bi('VPN speed tests','Тесты скорости VPN')));put('tests',setupGuide('speed'));put('tests',speedCard);}","if(speedCard){speedCardNode=speedCard;put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCard);}")
+must_replace("if(speedCard){put('tests',E('h2',{},bi('VPN speed tests','Тесты скорости VPN')));put('tests',setupGuide('speed'));put('tests',speedCard);}","if(speedCard){speedCardNode=speedCard;speedCard.setAttribute('id','hv-speed-settings');put('tests',E('h3',{},bi('Speed test settings','Настройки тестов скорости')));put('tests',setupGuide('speed'));put('tests',speedCard);}")
 must_replace('return view.extend({',"var speedCardNode=null;\nreturn view.extend({")
 # Accessibility: skip link, focus moves to the page heading when the user opens another section, heading is focusable.
 must_replace("appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':currentDesign()},[","appRoot=E('div',{'class':'hv-app hv-workspace','data-hv-design':currentDesign()},[E('a',{'class':'hv-skip','href':'#','click':function(ev){ev.preventDefault();var m=appRoot.querySelector('main');if(m){m.setAttribute('tabindex','-1');m.focus();}}},bi('Skip to content','К содержимому')),")
@@ -411,6 +412,7 @@ source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
 must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
-(root/'ui44.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+fool_css='\n.hv-fool-field .hv-fool-hint,.hv-fool-field .hv-fool-error{display:block;margin-top:.3rem}.hv-fool-error{color:#c32938}.hv-fool-error:empty{display:none}.hv-fool-invalid{border-color:#c32938!important;outline:1px solid #c32938}\n'
+(root/'ui44.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/'dashboard66.js').write_text(source,encoding='utf8')
 print('Generated dashboard66.js with sidebar, language persistence and sortable tables')

@@ -1,5 +1,7 @@
 # State at independent-review handoff
 
+Historical snapshot. Active 20 October state/TODO: ../../docs/handoff/ACTIVE-STATE-2026-10-20.json and ../../docs/handoff/RECOVERY-TODO-2026-10-20.md. Do not substitute this older evidence for the current checkout or device observations.
+
 Recorded 2026-10-17T13:30:29.306937+00:00. This is a checkpoint, not a production-readiness certificate.
 
 ## Product and source identities
