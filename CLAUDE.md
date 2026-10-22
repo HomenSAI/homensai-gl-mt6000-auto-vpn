@@ -1,4 +1,4 @@
-COMPLETED22October: alpha27 released and verified in public/canonical main; read docs/handoff/CURRENT.md. Physical test window is finished. No old observers, six-hour trials, router changes or VM tests should resume automatically. Installed MT3000 monitoring remains on and Auto is off after verified cleanup. Further testing requires a new owner instruction. This is completed work, not an owner pause. Historical handoff entries follow.
+ACTIVE NEW OWNER INSTRUCTION22October: complete all eleven router-only tasks in docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md. Read docs/handoff/CURRENT.md and private/ACTIVE-EXECUTOR.local.json. Dedicated MT3000 work is authorized; Windows networking and primary MT6000 are excluded. Use fresh bounded trials, never resume old observers. Save critical/long results to current status and Git/Gitea. Historical completed-window entries follow.
 
 # HomenSAI Auto VPN — project entry point
 

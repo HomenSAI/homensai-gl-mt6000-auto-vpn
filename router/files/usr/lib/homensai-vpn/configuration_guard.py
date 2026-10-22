@@ -4,6 +4,8 @@ from native_switch import journal_read, Refused
 
 
 def blocked(settings):
+    from pair_auto import public_intent
+    if public_intent():return 'CONFIG-STOP-AUTO-FIRST'
     try:
         journal=journal_read()
         state=read_json(RUNTIME/'native-status.json',{})

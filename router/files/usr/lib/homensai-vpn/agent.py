@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha27'
+VERSION = '0.9.0-alpha35'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -745,7 +745,7 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'auto_live': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -867,6 +867,9 @@ def rpc(method):
             try:result['fault_cleanup']=cancel().get('cleaned',False)
             except (FaultError,OSError,ValueError,subprocess.SubprocessError):result['fault_cleanup']=False
         print(json.dumps(result));return
+    elif method=='auto_live':
+        from auto_live import snapshot
+        print(json.dumps(snapshot()))
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':

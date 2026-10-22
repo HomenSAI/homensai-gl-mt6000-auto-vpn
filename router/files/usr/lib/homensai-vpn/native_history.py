@@ -108,7 +108,7 @@ class History:
         codes=sorted({c for c in codes if isinstance(c,str) and CODE.fullmatch(c)})
         item={'state':state,'codes':codes,'trial':value.get('trial') is True}
         scope=value.get('proof_scope','external-lan')
-        if scope not in('external-lan','router-hosted-ipv4'):raise HistoryError('HISTORY-SCOPE')
+        if scope not in('external-lan','router-hosted-ipv4','router-probed-ipv4'):raise HistoryError('HISTORY-SCOPE')
         if 'proof_scope'in value:item['proof_scope']=scope
         for key in ('source','target'):
             identifier=value.get(key)

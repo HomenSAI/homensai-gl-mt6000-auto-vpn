@@ -1,9 +1,11 @@
 """Exact derived GL.iNet process binding, scoped to the selected VPN pair.
 
-Audited RTP sets gl_process_vpn to the first enabled VPN rule. The controller
-hashes its other fields and the exact pair; a third interface/mark is foreign.
+The adapter aligns gl_process_vpn with the first enabled VPN rule before RTP;
+the observed stock reload can otherwise retain its earlier binding. Other
+fields and the exact pair stay hashed; a third interface/mark is foreign.
 """
 import re
+import json
 
 
 def mark(value):
@@ -57,3 +59,39 @@ def applied(sections,bindings):
     system=next((s for s in sections if s.get('.name')=='gl_process_vpn'),None)
     return bool(first and system and recognizes(system,bindings)
                 and system.get('via')==first.get('via') and mark(system.get('mark'))==mark(first.get('mark')))
+
+
+def synchronization_script(sections,bindings,stage):
+    """CAS only the two already-owned derived fields before stock RTP.
+
+    The observed FW3 order can preserve the old process rule on RTP reload.
+    Both values must change atomically: an intermediate new-via/old-mark pair
+    is deliberately foreign to the policy identity checks.
+    """
+    bindings=validate(bindings)
+    if bindings is None or applied(sections,bindings):return None
+    system=next((s for s in sections if s.get('.name')=='gl_process_vpn'),None)
+    first=next((s for s in sections if s.get('.type')=='rule'and s.get('enabled')=='1'and s.get('via')!='novpn'),None)
+    if (not system or not recognizes(system,bindings)or not first or first.get('via')not in bindings
+            or mark(first.get('mark'))!=bindings[first['via']]):
+        raise ValueError('POLICY-IDENTITY-CHANGED')
+    if not isinstance(stage,str)or not re.fullmatch(r'/[A-Za-z0-9_./-]{1,240}',stage):
+        raise ValueError('POLICY-IDENTITY-CHANGED')
+    # Only validated interface names and mark literals enter this Lua source.
+    values=[stage,system['via'],system['mark'],first['via'],first['mark']]
+    quoted=[json.dumps(x)for x in values]
+    return """local u=require('uci')
+local pending=u.cursor():changes('route_policy');assert(not pending or next(pending)==nil,'pending')
+local c=u.cursor('/etc/config',%s)
+local s=c:get_all('route_policy','gl_process_vpn')
+assert(s and s['.type']=='rule_process'and s.enabled=='1'and s.from_type=='process_gid','identity')
+assert(s.via==%s and s.mark==%s,'changed')
+local first=nil
+c:foreach('route_policy','rule',function(r)if not first and r.enabled=='1'and r.via~='novpn'then first=r end end)
+assert(first and first.via==%s and first.mark==%s,'order')
+assert(c:set('route_policy','gl_process_vpn','via',first.via))
+assert(c:set('route_policy','gl_process_vpn','mark',first.mark))
+assert(c:save('route_policy'));assert(c:commit('route_policy'))
+local fresh=u.cursor('/etc/config',%s)
+assert(fresh:get('route_policy','gl_process_vpn','via')==first.via and fresh:get('route_policy','gl_process_vpn','mark')==first.mark,'readback')
+""" % tuple(quoted+[quoted[0]])

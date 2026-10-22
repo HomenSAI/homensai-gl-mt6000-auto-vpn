@@ -145,6 +145,9 @@ def request(direction, control_revision):
         with control_lock():
             if control_revision != revision_locked(RUNTIME):
                 return refusal('CONTROL-REVISION-STALE')
+            from pair_auto import public_intent
+            if public_intent():
+                return refusal('MANUAL-STOP-AUTO-FIRST')
         # Slow diagnostics do not hold Stop's lock. A later Stop invalidates
         # this request at the second fence before anything is queued.
         backend = Linux()

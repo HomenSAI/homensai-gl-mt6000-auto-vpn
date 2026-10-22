@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0-alpha35 — 2026-10-22
+
+- Explicit prepared-MT3000 continuous Auto starts saved WG/OV profiles, repeatedly fails over and returns after stable recovery; durable ownership and independent Stop/restart recovery.
+- Atomic derived process policy synchronization, shared CLI/helper control identity, bounded transition leases and persistent rolling attempt budget.
+- Live colored primary/reserve timeline, lightweight read-only RPC, narrow-screen labels and persistent preparation readiness.
+- Full dual-runtime681app/107QA and34UI matrix; real cycles, Start/Stop/startup cancellation, native crash recovery and reboot. Scope/limitations: releases/v0.9.0-alpha35.md.
+
 ## 0.9.0-alpha27 — 2026-10-22
 
 - Validated MT6000/MT3000 model choice; actual identity and mismatch rejection.

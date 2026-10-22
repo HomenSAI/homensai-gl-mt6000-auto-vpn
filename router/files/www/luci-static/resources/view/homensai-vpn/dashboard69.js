@@ -342,6 +342,83 @@ function renderManualSwitch(status,inventory){
   ].filter(Boolean));
 }
 
+/* Live selected-route timeline. It does not invent throughput or LAN health. */
+var autoLivePoints=[],autoLiveKey='',autoLiveContext=null,autoLivePollAdded=false,autoLiveCall=null;
+var AUTO_LIVE_COLORS={source:'#16a34a',target:'#2563eb',switching:'#d97706',unknown:'#94a3b8',off:'#64748b'};
+function autoLiveSample(status,now){
+  status=status||{};
+  var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
+  var kind='unknown',state=String(ns.state||'UNKNOWN');
+  if(valid){
+    if(state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))kind='source';
+    else if(['COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE'].indexOf(state)>=0)kind='target';
+    else if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(state)>=0)kind='switching';
+    else if(['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(state)>=0)kind='off';
+  }
+  return {time:now,stamp:valid?ns.time:null,kind:kind,state:state};
+}
+function autoLiveAppend(points,sample){
+  var rows=points.slice(-599),last=rows[rows.length-1];
+  if(!Number.isFinite(sample.time)||last&&sample.time<last.time)return rows;
+  if(last&&sample.time===last.time){rows[rows.length-1]=sample;return rows;}
+  if(last&&sample.stamp!==null&&last.stamp!==null&&sample.stamp<last.stamp)return rows;
+  rows.push(sample);
+  return rows.filter(function(p){return sample.time-p.time<=1800;});
+}
+function autoLiveSegments(points){
+  var rows=[];
+  for(var i=1;i<points.length;i++){
+    var a=points[i-1],b=points[i],gap=b.time-a.time;
+    rows.push({a:a,b:b,kind:gap>15?'unknown':a.kind===b.kind?a.kind:'switching',gap:gap>15});
+  }
+  return rows;
+}
+function autoLiveLabel(kind){return kind==='source'?bi('Primary selected','Выбран основной'):kind==='target'?bi('Reserve selected','Выбран резерв'):kind==='switching'?bi('Starting / switching / restoring','Запуск / переключение / восстановление'):kind==='off'?bi('Auto off','Auto выключен'):bi('No fresh confirmation','Нет свежего подтверждения');}
+function autoLiveSvg(tag,attributes,text){
+  var node=document.createElementNS('http://www.w3.org/2000/svg',tag);
+  Object.keys(attributes||{}).forEach(function(key){node.setAttribute(key,String(attributes[key]));});
+  if(text!==undefined)node.textContent=text;
+  return node;
+}
+function drawAutoLive(root,status,inventory){
+  var now=Date.now()/1000,settings=(inventory||{}).settings||{},ns=(status||{}).native_failover||{};
+  var key=[settings.plan_source||ns.source||'',settings.plan_target||ns.target||''].join('|');
+  if(key!==autoLiveKey){autoLivePoints=[];autoLiveKey=key;}
+  var sample=autoLiveSample(status,now);autoLivePoints=autoLiveAppend(autoLivePoints,sample);
+  var width=Math.max(280,Math.min(720,root.clientWidth||document.documentElement.clientWidth-80||720));
+  var points=autoLivePoints,from=Math.max(now-1800,Math.min(now-60,points.length?points[0].time:now-60)),span=now-from,left=width<480?88:122,right=width-16;
+  sample=points.length?points[points.length-1]:sample;
+  var x=function(t){return left+(t-from)/span*(right-left);};
+  var y=function(kind){return kind==='source'?44:kind==='target'?91:kind==='switching'?67:132;};
+  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Live selected VPN route over time','Выбранный VPN-маршрут в реальном времени')});
+  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',width<480?bi('No data / off','Нет / выкл.'):bi('Off / unknown','Выкл. / неизвестно')]].forEach(function(row){var yy=y(row[0]);svg.appendChild(autoLiveSvg('line',{x1:left,y1:yy,x2:right,y2:yy,stroke:'#cbd5e1','stroke-dasharray':'3 5'}));svg.appendChild(autoLiveSvg('text',{x:6,y:yy+4,fill:'currentColor','font-size':12},row[1]));});
+  autoLiveSegments(points).forEach(function(segment){var a=segment.a,b=segment.b;svg.appendChild(autoLiveSvg('path',{d:'M '+x(a.time)+' '+y(a.kind)+' H '+x(b.time)+' V '+y(b.kind),fill:'none',stroke:AUTO_LIVE_COLORS[segment.kind],'stroke-width':3,'stroke-dasharray':segment.gap?'3 5':'none'}));});
+  var lastRoute=null,changes=[];
+  points.forEach(function(point){if(point.kind==='source'||point.kind==='target'){if(lastRoute&&lastRoute.kind!==point.kind)changes.push(point);lastRoute=point;}});
+  changes.slice(-5).forEach(function(point){var xx=x(point.time);svg.appendChild(autoLiveSvg('line',{x1:xx,y1:23,x2:xx,y2:106,stroke:AUTO_LIVE_COLORS[point.kind],'stroke-dasharray':'2 3'}));svg.appendChild(autoLiveSvg('text',{x:Math.max(left,Math.min(right-54,xx+3)),y:17,fill:'currentColor','font-size':10},new Date(point.time*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));});
+  if(points.length)svg.appendChild(autoLiveSvg('circle',{cx:x(sample.time),cy:y(sample.kind),r:5,fill:AUTO_LIVE_COLORS[sample.kind]}));
+  [from,from+span/2,from+span].forEach(function(stamp){svg.appendChild(autoLiveSvg('text',{x:x(stamp),y:157,'text-anchor':stamp===from?'start':stamp===from+span?'end':'middle',fill:'currentColor','font-size':10},new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));});
+  while(root.firstChild)root.removeChild(root.firstChild);
+  root.appendChild(E('h3',{},bi('Live channel switching','Переключение каналов в реальном времени')));
+  root.appendChild(E('p',{'class':'hv-auto-live-state'},autoLiveLabel(sample.kind)+' · '+new Date(now*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));
+  root.appendChild(svg);
+  root.appendChild(E('p',{'class':'hv-muted'},bi('Green: primary · Blue: reserve · Amber: transition · Grey/dashes: off or missing observations. Updated every 2 seconds while this page is open; the timeline starts when opened. This shows route selection, not bandwidth or external-LAN verification.','Зелёный: основной · Синий: резерв · Жёлтый: переход · Серый/пунктир: выключено или нет наблюдений. Обновление каждые 2 секунды, пока страница открыта; история начинается с открытия. График показывает выбор маршрута, а не скорость или подтверждение внешнего LAN.')));
+}
+function renderAutoLive(status,inventory){
+  var root=E('div',{'id':'hv-auto-live-chart','class':'hv-auto-live-chart'});
+  autoLiveContext={status:status,inventory:inventory};drawAutoLive(root,status,inventory);
+  if(!autoLivePollAdded&&typeof poll!=='undefined'){
+    autoLivePollAdded=true;
+    poll.add(function(){
+      var node=document.getElementById('hv-auto-live-chart');
+      if(!node||!node.getClientRects().length)return Promise.resolve();
+      if(!autoLiveCall)autoLiveCall=rpc.declare({object:'homensai-vpn',reject:true,method:'auto_live',expect:{}});
+      return autoLiveCall().then(function(live){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,live,autoLiveContext.inventory);}).catch(function(){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,{rpc_error:true},autoLiveContext.inventory);});
+    },2);
+  }
+  return root;
+}
+
 function autoRequestAcknowledged(result,stop){return !!result&&typeof result==='object'&&result.queued===true&&result.accepted!==false&&(stop||result.accepted===true);}
 // Display-only parsing; the controller separately enforces bounded deadlines.
 function autoWindowDeadline(intent,settings){
@@ -359,7 +436,7 @@ function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
   var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var on=fresh&&((ns.state==='OBSERVING'&&ns.certified===true)||ns.state==='COMMITTED');
+  var on=fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED');
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
@@ -373,7 +450,7 @@ function autoPathModel(status,source,target,now){
   var neutral={source:'neutral',target:'neutral',direction:'none',moving:false,selected:null};
   if(!model.fresh||model.off||model.awaiting)return neutral;
   if(source&&target&&source.id&&source.id===target.id)return neutral;
-  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&ns.certified===true?'source':null;
+  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true)?'source':null;
   if(!selected&&!model.transitioning)return neutral;
   var destination=model.transitioning?(ns.state==='RESTORING'?'source':'target'):null;
   function color(p,key){
@@ -519,6 +596,15 @@ function autoLightModel(status,inventory,now){
   function out(key,title,hint,code){return {key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
+  if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
+    var scopeHint=bi('Two selected VPN channels; verified by router IPv4 probes. External LAN is not independently verified.','Два выбранных VPN-канала; проверяются IPv4-запросами роутера. Внешний LAN независимо не проверен.');
+    if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
+    if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint);
+    if(state==='OBSERVING'&&ns.readiness_verified===true)return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
+    if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
+    if(state==='STOPPED')return out('off',bi('Auto is off','Auto выключен'),scopeHint);
+    return out('problem',bi('Auto needs attention','Auto требует внимания'),scopeHint,blockers[0]);
+  }
   if(ns.proof_scope==='router-hosted-ipv4')return out('problem',bi('Router test: external LAN unverified','Тест роутера: внешний LAN не проверен'),bi('This trial checks IPv4 forwarding with a client inside the router. It does not certify traffic from a separate LAN computer.','Этот тест проверяет пересылку IPv4 клиентом внутри роутера. Трафик отдельного компьютера LAN им не подтверждён.'));
   if(model.awaiting)return out('switching',intent.requested==='off'?bi('Stopping Auto','Auto останавливается'):bi('Starting Auto','Auto запускается'),bi('Waiting for the router to confirm. The lamp changes when it does.','Ожидается подтверждение роутера. Лампа изменится, когда оно придёт.'));
   if(state==='RESTORING')return out('switching',bi('Returning to the previous route','Возврат на прежний маршрут'),bi('The router is putting the original route back and checking it.','Роутер возвращает исходный маршрут и проверяет его.'));
@@ -600,10 +686,13 @@ function renderAutoControl(status,inventory){
     if(p&&p.exit_ip&&profileHealth(p,Date.now()/1000).state==='healthy')attributes.title=bi('Exit IP: ','Внешний IP: ')+p.exit_ip;
     return E('div',attributes,[E('small',{},label),E('strong',{'class':'hv-node-protocol'},p?protocolLabel(p):'—'),E('b',{},p?countryLabel(p):bi('Choose in Settings','Выберите в настройках')),p?E('span',{'title':bi('Group: a label you can set in Settings → System. It does not change how the VPN works.','Группа: метка, которую можно задать в «Настройки» → «Система». Она не влияет на работу VPN.')},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')):null,E('span',{'class':'hv-path-label','title':pathLabels[state]},[E('span',{'class':'hv-node-dot','aria-hidden':'true'}),tone.text])].filter(Boolean));}
   var diagram=E('div',{'class':'hv-auto-diagram hv-path-diagram'+(path.moving?' hv-path-moving':'')+(path.direction==='back'?' hv-path-back':''),'aria-label':bi('Configured failover path','Настроенная схема переключения')},[box(source,bi('Primary','Основной'),'source'),E('span',{'class':'hv-auto-arrow '+(path.direction!=='none'?'hv-arrow-on':''),'aria-label':path.moving?bi('Switching in progress','Выполняется переключение'):path.direction!=='none'?bi('Reserve selected','Выбран резерв'):bi('Automatic transition inactive','Автопереход неактивен')},path.direction==='back'?'←':path.direction==='forward'?'→':'⋯'),box(target,bi('Reserve','Резерв'),'target')]);
-  var until=autoWindowDeadline(intent,settings);
+  var pairMode=settings.pair_auto_mode==='router-probed-ipv4';
+  var until=pairMode?0:autoWindowDeadline(intent,settings);
   var readiness=autoReadiness(status,inventory,Date.now()/1000);
   var checklist=null;
-  if(!model.on&&!model.transitioning&&!model.stop){
+  if(pairMode){
+    checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Two-channel Auto starts the saved primary and reserve, watches their IPv4 DNS/HTTPS checks, switches on repeated failure and returns after stable recovery. Stop remains available during startup. This mode uses router probes; external LAN is not independently verified. Auto stays off after a router or service restart.','Авторежим двух каналов запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается при повторных отказах и возвращается после устойчивого восстановления. Stop доступен и во время запуска. Проверки выполняет роутер; внешний LAN независимо не проверен. После перезапуска роутера или службы Auto остаётся выключенным.'))]);
+  }else if(!model.on&&!model.transitioning&&!model.stop){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Step 2 · Turn on Auto. Do it after step 1 (“Check the VPNs now”, at the top of this page) shows that your VPNs work and the list below is complete.','Шаг 2 · Включите Auto. Делайте это после шага 1 («Проверить VPN сейчас», вверху страницы), когда проверка показала, что ваши VPN работают, и список ниже выполнен.')),E('h3',{},readiness.ready?bi('Ready to start','Готово к запуску'):bi('Before you can start Auto','Что нужно перед запуском Auto')),E('ol',{'class':'hv-req-list'},readiness.steps.map(function(step){
       var isNext=readiness.next&&readiness.next.key===step.key;
       var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[safeCode(code)?errorCodeLink(code):E('code',{},code),' · '+autoBlockerText(code)]);})):null;
@@ -625,7 +714,8 @@ function renderAutoControl(status,inventory){
     holdReturn=E('div',{'class':'hv-auto-hold'},[E('p',{},bi('The router is using the reserve. When the primary works again, send traffic back to it.','Роутер использует резерв. Когда основной снова заработает, верните трафик на него.')),returnButton,E('a',{'href':'#help'},bi('Help: no internet?','Справка: нет интернета?')),answerText?E('p',{'role':'status'},answerText):null].filter(Boolean));
   }
   var technicalCode=ns.state?ns.state+(ns.reason?' · '+ns.reason:'')+(model.fresh?'':' · STATUS-STALE'):'UNKNOWN';
-  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},bi('Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.','Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.')+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
+  var liveChart=typeof renderAutoLive==='function'?renderAutoLive(status,inventory):null;
+  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,liveChart,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. Each switch is checked by the router. External LAN remains unverified.','Два выбранных VPN-канала. Каждый переход проверяет роутер. Внешний LAN остаётся непроверенным.'):bi('Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.','Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
 }
 
 /* Help inside the Telegram wizard: the same steps as Help -> "Telegram reports do not arrive", plus examples of both values. */
@@ -1460,6 +1550,31 @@ function readinessTile(code,state){
 function readinessInfo(icon,label,value,waiting){
   return E('div',{'class':'hv-rd-info'+(waiting?' hv-rd-info-waiting':'')},[E('span',{'class':'hv-rd-info-icon','aria-hidden':'true'},icon),E('small',{},label),waiting?E('span',{'class':'hv-rd-skeleton'},bi('waiting for data…','ожидаются данные…')):E('strong',{},value)]);
 }
+var PREPARATION_CHECKS={
+  'PREP-HNAT-CONFIG':['Hardware acceleration stays disabled','Аппаратное ускорение остаётся выключенным'],
+  'PREP-WGCLIENT1-AUTOSTART':['WireGuard automatic startup is disabled','Автозапуск WireGuard выключен'],
+  'PREP-OVPNCLIENT1-AUTOSTART':['OpenVPN automatic startup is disabled','Автозапуск OpenVPN выключен'],
+  'PREP-STOCK-VPN-BOOT':['Stock VPN startup does not compete','Штатный автозапуск VPN не конкурирует'],
+  'PREP-SFE-BOOT':['SFE startup is disabled','Автозапуск SFE выключен'],
+  'PREP-SFE-AUTOLOAD':['SFE autoload is preserved outside startup','Автозагрузка SFE сохранена вне запуска'],
+  'PREP-SFE-RUNTIME':['Software acceleration is not loaded','Программное ускорение не загружено']
+};
+function preparationModel(status,now){
+  var ready=readinessModel(status,now),data=(status&&status.system_readiness||{}).preparation;
+  if(!ready.environmentFresh||!data||data.scope!=='persistent-mt3000-preparation')return {state:'unknown',checks:[]};
+  var rows=Array.isArray(data.checks)?data.checks:[],seen={},valid=true;
+  rows.forEach(function(row){if(!row||!Object.prototype.hasOwnProperty.call(PREPARATION_CHECKS,row.code)||seen[row.code]||['pass','fail','unknown'].indexOf(row.state)<0)valid=false;else seen[row.code]=row.state;});
+  if(data.state==='unsupported'&&!rows.length)return {state:'unsupported',checks:[]};
+  if(!valid||rows.length!==Object.keys(PREPARATION_CHECKS).length)return {state:'unknown',checks:[]};
+  return {state:Object.keys(seen).every(function(code){return seen[code]==='pass';})?'pass':'incomplete',checks:rows};
+}
+function renderPreparation(status,now){
+  var m=preparationModel(status,now);
+  var explanation=m.state==='unsupported'?bi('These persistent checks apply to the tested MT3000 setup. This is not a compatibility verdict for another model.','Эти постоянные настройки проверяются для испытанной конфигурации MT3000. Это не заключение о совместимости другой модели.'):
+    m.state==='unknown'?bi('Fresh preparation evidence is not available.','Свежие сведения о подготовке отсутствуют.'):
+    bi('These settings keep the tested MT3000 preparation across reboot. A passing check does not start a VPN or authorize Auto.','Эти настройки сохраняют проверенную подготовку MT3000 после перезагрузки. Успешная проверка не запускает VPN и не разрешает Auto.');
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),E('ul',{},m.checks.map(function(row){var label=PREPARATION_CHECKS[row.code],word=row.state==='pass'?bi('OK','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено');return E('li',{},bi(label[0],label[1])+': '+word+' · '+row.code);})),E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
+}
 function renderReadiness(status,inventory){
   var now=Date.now()/1000,m=readinessModel(status,now),b=m.board||{};
   function known(v){return v&&v!=='unknown';}
@@ -1501,7 +1616,7 @@ function renderReadiness(status,inventory){
   }));
   var autoCard=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('What Auto still needs','Чего ещё не хватает для Auto')),stepper,
     E('p',{'class':'hv-ready-note'},bi('A tick here does not give permission to switch. At Start the router checks the current device, the time window, your computer’s confirmation, the safe return and the transaction lease again. The router never restarts by itself to enable Auto.','Галочка здесь не разрешает переключение. При запуске роутер заново проверит текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат и блокировку транзакции. Роутер сам никогда не перезагружается ради включения Auto.'))]);
-  return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,autoCard]);
+  return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,renderPreparation(status,now),autoCard]);
 }
 
 // Top of the System readiness page: what it is, that nothing needs to be pressed, how to read the colours.
@@ -2319,7 +2434,7 @@ function openOnboardingSettings(inventory,status){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha27';
+var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha35';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';
@@ -2941,6 +3056,8 @@ var ERROR_EXTRA_ROWS=[
 ];
 // Families: any code that starts with the prefix gets this explanation (internal checks of the offline models and storage formats).
 var ERROR_FAMILIES=[
+ ['PREP-','platform','Persistent router preparation (PREP-…)','Постоянная подготовка роутера (PREP-…)','A saved startup or acceleration prerequisite is missing, changed or unverified. A passing dependency check alone does not establish safe native operation.','Постоянная настройка запуска или ускорения отсутствует, изменена либо не проверена. Наличия зависимостей недостаточно для безопасного переключения.','Review the preparation card and the documented original values/undo procedure. Do not disable a working DNS owner or force-unload drivers.','Проверьте карточку подготовки и инструкцию с исходными значениями и отменой изменений. Не отключайте рабочий DNS и не выгружайте драйверы принудительно.'],
+ ['PAIR-','internal','Two-channel Auto (PAIR-…)','Авторежим двух каналов (PAIR-…)','The two-channel controller is preparing profiles or refused an unverified operation. Router probes do not certify an external LAN client.','Контроллер двух каналов готовит профили либо отклонил непроверенное действие. Проверки роутера не подтверждают внешний LAN-клиент.','Read the current phase and reason. Stop remains available; keep the recovery record and do not delete it to bypass a refusal.','Прочитайте текущий этап и причину. Остановка остаётся доступной; сохраните запись восстановления и не удаляйте её ради обхода отказа.'],
  ['CASCADE-','internal','Internal check of the fallback model (CASCADE-…)','Внутренняя проверка модели каскада (CASCADE-…)','A safety check of the model that plans server → channel → protocol switching refused a step. These checks exist to stop a wrong or stale step; the model is not applied to the router in this version.','Защитная проверка модели, планирующей переключение сервер → канал → протокол, отклонила шаг. Эти проверки нужны, чтобы остановить неверный или устаревший шаг; в этой версии модель на роутер не применяется.','Nothing to do for a normal user. Send the full code to support if it appears on a real router.','Обычному пользователю делать ничего не нужно. Если код появился на настоящем роутере, отправьте его полностью в поддержку.','CASCADE-PROOF-EXPIRED: a confirmation arrived too late and was ignored.','CASCADE-PROOF-EXPIRED: подтверждение пришло слишком поздно и было проигнорировано.'],
  ['CANDIDATE-','internal','Internal check of candidate probing (CANDIDATE-…)','Внутренняя проверка пробы кандидатов (CANDIDATE-…)','A safety check of the model that tests replacement servers refused a step (limits, timing or ownership).','Защитная проверка модели, проверяющей замену серверов, отклонила шаг (лимиты, время или принадлежность).','Nothing to do for a normal user. Send the full code to support if it appears on a real router.','Обычному пользователю делать ничего не нужно. Если код появился на настоящем роутере, отправьте его полностью в поддержку.','CANDIDATE-BUDGET-EXCEEDED: the test would have used more traffic than allowed, so it was not run.','CANDIDATE-BUDGET-EXCEEDED: тест использовал бы больше трафика, чем разрешено, поэтому не запускался.'],
  ['MODEL-','internal','Internal check of the switching model (MODEL-…)','Внутренняя проверка модели переключения (MODEL-…)','A rule of the model of the switch process (used in tests) refused or reported a step.','Правило модели процесса переключения (она используется в тестах) отклонило или отметило шаг.','Nothing to do for a normal user.','Обычному пользователю делать ничего не нужно.'],

@@ -15,7 +15,7 @@ function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
   var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var on=fresh&&((ns.state==='OBSERVING'&&ns.certified===true)||ns.state==='COMMITTED');
+  var on=fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED');
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
@@ -29,7 +29,7 @@ function autoPathModel(status,source,target,now){
   var neutral={source:'neutral',target:'neutral',direction:'none',moving:false,selected:null};
   if(!model.fresh||model.off||model.awaiting)return neutral;
   if(source&&target&&source.id&&source.id===target.id)return neutral;
-  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&ns.certified===true?'source':null;
+  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true)?'source':null;
   if(!selected&&!model.transitioning)return neutral;
   var destination=model.transitioning?(ns.state==='RESTORING'?'source':'target'):null;
   function color(p,key){
@@ -175,6 +175,15 @@ function autoLightModel(status,inventory,now){
   function out(key,title,hint,code){return {key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
+  if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
+    var scopeHint=bi('Two selected VPN channels; verified by router IPv4 probes. External LAN is not independently verified.','Два выбранных VPN-канала; проверяются IPv4-запросами роутера. Внешний LAN независимо не проверен.');
+    if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
+    if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint);
+    if(state==='OBSERVING'&&ns.readiness_verified===true)return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
+    if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
+    if(state==='STOPPED')return out('off',bi('Auto is off','Auto выключен'),scopeHint);
+    return out('problem',bi('Auto needs attention','Auto требует внимания'),scopeHint,blockers[0]);
+  }
   if(ns.proof_scope==='router-hosted-ipv4')return out('problem',bi('Router test: external LAN unverified','Тест роутера: внешний LAN не проверен'),bi('This trial checks IPv4 forwarding with a client inside the router. It does not certify traffic from a separate LAN computer.','Этот тест проверяет пересылку IPv4 клиентом внутри роутера. Трафик отдельного компьютера LAN им не подтверждён.'));
   if(model.awaiting)return out('switching',intent.requested==='off'?bi('Stopping Auto','Auto останавливается'):bi('Starting Auto','Auto запускается'),bi('Waiting for the router to confirm. The lamp changes when it does.','Ожидается подтверждение роутера. Лампа изменится, когда оно придёт.'));
   if(state==='RESTORING')return out('switching',bi('Returning to the previous route','Возврат на прежний маршрут'),bi('The router is putting the original route back and checking it.','Роутер возвращает исходный маршрут и проверяет его.'));
@@ -256,10 +265,13 @@ function renderAutoControl(status,inventory){
     if(p&&p.exit_ip&&profileHealth(p,Date.now()/1000).state==='healthy')attributes.title=bi('Exit IP: ','Внешний IP: ')+p.exit_ip;
     return E('div',attributes,[E('small',{},label),E('strong',{'class':'hv-node-protocol'},p?protocolLabel(p):'—'),E('b',{},p?countryLabel(p):bi('Choose in Settings','Выберите в настройках')),p?E('span',{'title':bi('Group: a label you can set in Settings → System. It does not change how the VPN works.','Группа: метка, которую можно задать в «Настройки» → «Система». Она не влияет на работу VPN.')},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')):null,E('span',{'class':'hv-path-label','title':pathLabels[state]},[E('span',{'class':'hv-node-dot','aria-hidden':'true'}),tone.text])].filter(Boolean));}
   var diagram=E('div',{'class':'hv-auto-diagram hv-path-diagram'+(path.moving?' hv-path-moving':'')+(path.direction==='back'?' hv-path-back':''),'aria-label':bi('Configured failover path','Настроенная схема переключения')},[box(source,bi('Primary','Основной'),'source'),E('span',{'class':'hv-auto-arrow '+(path.direction!=='none'?'hv-arrow-on':''),'aria-label':path.moving?bi('Switching in progress','Выполняется переключение'):path.direction!=='none'?bi('Reserve selected','Выбран резерв'):bi('Automatic transition inactive','Автопереход неактивен')},path.direction==='back'?'←':path.direction==='forward'?'→':'⋯'),box(target,bi('Reserve','Резерв'),'target')]);
-  var until=autoWindowDeadline(intent,settings);
+  var pairMode=settings.pair_auto_mode==='router-probed-ipv4';
+  var until=pairMode?0:autoWindowDeadline(intent,settings);
   var readiness=autoReadiness(status,inventory,Date.now()/1000);
   var checklist=null;
-  if(!model.on&&!model.transitioning&&!model.stop){
+  if(pairMode){
+    checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Two-channel Auto starts the saved primary and reserve, watches their IPv4 DNS/HTTPS checks, switches on repeated failure and returns after stable recovery. Stop remains available during startup. This mode uses router probes; external LAN is not independently verified. Auto stays off after a router or service restart.','Авторежим двух каналов запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается при повторных отказах и возвращается после устойчивого восстановления. Stop доступен и во время запуска. Проверки выполняет роутер; внешний LAN независимо не проверен. После перезапуска роутера или службы Auto остаётся выключенным.'))]);
+  }else if(!model.on&&!model.transitioning&&!model.stop){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Step 2 · Turn on Auto. Do it after step 1 (“Check the VPNs now”, at the top of this page) shows that your VPNs work and the list below is complete.','Шаг 2 · Включите Auto. Делайте это после шага 1 («Проверить VPN сейчас», вверху страницы), когда проверка показала, что ваши VPN работают, и список ниже выполнен.')),E('h3',{},readiness.ready?bi('Ready to start','Готово к запуску'):bi('Before you can start Auto','Что нужно перед запуском Auto')),E('ol',{'class':'hv-req-list'},readiness.steps.map(function(step){
       var isNext=readiness.next&&readiness.next.key===step.key;
       var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[safeCode(code)?errorCodeLink(code):E('code',{},code),' · '+autoBlockerText(code)]);})):null;
@@ -281,5 +293,6 @@ function renderAutoControl(status,inventory){
     holdReturn=E('div',{'class':'hv-auto-hold'},[E('p',{},bi('The router is using the reserve. When the primary works again, send traffic back to it.','Роутер использует резерв. Когда основной снова заработает, верните трафик на него.')),returnButton,E('a',{'href':'#help'},bi('Help: no internet?','Справка: нет интернета?')),answerText?E('p',{'role':'status'},answerText):null].filter(Boolean));
   }
   var technicalCode=ns.state?ns.state+(ns.reason?' · '+ns.reason:'')+(model.fresh?'':' · STATUS-STALE'):'UNKNOWN';
-  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.')+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
+  var liveChart=typeof renderAutoLive==='function'?renderAutoLive(status,inventory):null;
+  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,liveChart,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. Each switch is checked by the router. External LAN remains unverified.','Два выбранных VPN-канала. Каждый переход проверяет роутер. Внешний LAN остаётся непроверенным.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
 }

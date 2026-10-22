@@ -5,6 +5,8 @@ vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
 const model=(ns,intent={})=>context.autoControlModel({native_failover:ns,auto_control:intent,time:1000},1000);
 assert.equal(model({state:'OBSERVING',certified:true,time:999}).on,true);
 assert.equal(model({state:'OBSERVING',certified:false,time:999}).on,false);
+assert.equal(model({state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,certified:false,time:999}).on,true);
+assert.equal(model({state:'OBSERVING',mode:'continuous-pair',readiness_verified:false,certified:false,time:999}).on,false);
 assert.equal(model({state:'COMMITTED',time:900}).on,false);
 assert.equal(model({state:'COMMITTED',time:1100}).on,false);
 assert.equal(model({state:'WAIT-CLIENT',time:999}).stop,true);

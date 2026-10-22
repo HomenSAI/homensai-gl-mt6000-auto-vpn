@@ -5,6 +5,7 @@
       "ubus": {
         "homensai-vpn": [
           "status",
+          "auto_live",
           "inventory",
           "events",
           "priority_preview"

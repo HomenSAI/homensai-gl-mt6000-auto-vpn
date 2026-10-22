@@ -101,6 +101,10 @@ def read_dict(path):
 
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
+    pair=read_dict(runtime/'pair-auto-control.json')
+    owned=read_dict(persist/'pair-auto-state.json')
+    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)
@@ -277,6 +281,10 @@ def read_dict(path):
 
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
+    pair=read_dict(runtime/'pair-auto-control.json')
+    owned=read_dict(persist/'pair-auto-state.json')
+    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)
@@ -463,6 +471,10 @@ def read_dict(path):
 
 def snapshot(root=Path('/')):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
+    pair=read_dict(runtime/'pair-auto-control.json')
+    owned=read_dict(persist/'pair-auto-state.json')
+    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)

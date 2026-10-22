@@ -33,6 +33,31 @@ function readinessTile(code,state){
 function readinessInfo(icon,label,value,waiting){
   return E('div',{'class':'hv-rd-info'+(waiting?' hv-rd-info-waiting':'')},[E('span',{'class':'hv-rd-info-icon','aria-hidden':'true'},icon),E('small',{},label),waiting?E('span',{'class':'hv-rd-skeleton'},bi('waiting for data…','ожидаются данные…')):E('strong',{},value)]);
 }
+var PREPARATION_CHECKS={
+  'PREP-HNAT-CONFIG':['Hardware acceleration stays disabled','Аппаратное ускорение остаётся выключенным'],
+  'PREP-WGCLIENT1-AUTOSTART':['WireGuard automatic startup is disabled','Автозапуск WireGuard выключен'],
+  'PREP-OVPNCLIENT1-AUTOSTART':['OpenVPN automatic startup is disabled','Автозапуск OpenVPN выключен'],
+  'PREP-STOCK-VPN-BOOT':['Stock VPN startup does not compete','Штатный автозапуск VPN не конкурирует'],
+  'PREP-SFE-BOOT':['SFE startup is disabled','Автозапуск SFE выключен'],
+  'PREP-SFE-AUTOLOAD':['SFE autoload is preserved outside startup','Автозагрузка SFE сохранена вне запуска'],
+  'PREP-SFE-RUNTIME':['Software acceleration is not loaded','Программное ускорение не загружено']
+};
+function preparationModel(status,now){
+  var ready=readinessModel(status,now),data=(status&&status.system_readiness||{}).preparation;
+  if(!ready.environmentFresh||!data||data.scope!=='persistent-mt3000-preparation')return {state:'unknown',checks:[]};
+  var rows=Array.isArray(data.checks)?data.checks:[],seen={},valid=true;
+  rows.forEach(function(row){if(!row||!Object.prototype.hasOwnProperty.call(PREPARATION_CHECKS,row.code)||seen[row.code]||['pass','fail','unknown'].indexOf(row.state)<0)valid=false;else seen[row.code]=row.state;});
+  if(data.state==='unsupported'&&!rows.length)return {state:'unsupported',checks:[]};
+  if(!valid||rows.length!==Object.keys(PREPARATION_CHECKS).length)return {state:'unknown',checks:[]};
+  return {state:Object.keys(seen).every(function(code){return seen[code]==='pass';})?'pass':'incomplete',checks:rows};
+}
+function renderPreparation(status,now){
+  var m=preparationModel(status,now);
+  var explanation=m.state==='unsupported'?bi('These persistent checks apply to the tested MT3000 setup. This is not a compatibility verdict for another model.','Эти постоянные настройки проверяются для испытанной конфигурации MT3000. Это не заключение о совместимости другой модели.'):
+    m.state==='unknown'?bi('Fresh preparation evidence is not available.','Свежие сведения о подготовке отсутствуют.'):
+    bi('These settings keep the tested MT3000 preparation across reboot. A passing check does not start a VPN or authorize Auto.','Эти настройки сохраняют проверенную подготовку MT3000 после перезагрузки. Успешная проверка не запускает VPN и не разрешает Auto.');
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),E('ul',{},m.checks.map(function(row){var label=PREPARATION_CHECKS[row.code],word=row.state==='pass'?bi('OK','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено');return E('li',{},bi(label[0],label[1])+': '+word+' · '+row.code);})),E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
+}
 function renderReadiness(status,inventory){
   var now=Date.now()/1000,m=readinessModel(status,now),b=m.board||{};
   function known(v){return v&&v!=='unknown';}
@@ -74,7 +99,7 @@ function renderReadiness(status,inventory){
   }));
   var autoCard=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('What Auto still needs','Чего ещё не хватает для Auto')),stepper,
     E('p',{'class':'hv-ready-note'},bi('A tick here does not give permission to switch. At Start the router checks the current device, the time window, your computer’s confirmation, the safe return and the transaction lease again. The router never restarts by itself to enable Auto.','Галочка здесь не разрешает переключение. При запуске роутер заново проверит текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат и блокировку транзакции. Роутер сам никогда не перезагружается ради включения Auto.'))]);
-  return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,autoCard]);
+  return E('div',{'class':'hv-rd'},[hero,router,monitor,parts,renderPreparation(status,now),autoCard]);
 }
 
 // Top of the System readiness page: what it is, that nothing needs to be pressed, how to read the colours.

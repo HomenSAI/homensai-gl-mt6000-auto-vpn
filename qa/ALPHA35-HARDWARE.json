@@ -1,0 +1,93 @@
+{
+  "release": "v0.9.0-alpha35",
+  "package_sha256": "220261bbf1e876c2ca0429b491ab79b7a4f0d1e7ef3bfb34185370d484e07465",
+  "package_bytes": 740585,
+  "qualified_product_source": "beabca86d7a7106102284338a3d5a170e9b21709",
+  "device": "GL-MT3000",
+  "firmware": "4.11.0",
+  "proof_scope": "router-probed-ipv4",
+  "external_lan_verified": false,
+  "mt6000_continuous_mode_verified": false,
+  "actual_checks": [
+    {
+      "check": "pair34-failover-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:07:16.466397+00:00",
+      "script_sha256": "f2f38689e1edf75bcbef410c247c410251a7ddc25f76714952923e44bda01b86",
+      "output_sha256": "86ad3c673f2b2119d7c97ae568b1d635c69be220359f4afc3bef8ec1c799ab43"
+    },
+    {
+      "check": "pair34-failover-02",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:10:17.163616+00:00",
+      "script_sha256": "f2f38689e1edf75bcbef410c247c410251a7ddc25f76714952923e44bda01b86",
+      "output_sha256": "3ac8d0fdd3b111568b7687159582c349339bd1a0aeeee4db7c8ea38bcf8ed48f"
+    },
+    {
+      "check": "pair-start35-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:13:25.220942+00:00",
+      "script_sha256": "fa1ceab04e07fc88686429cc2d4d54bbb6fb06b7c31a4685aa92624cb1f9910a",
+      "output_sha256": "3d2be3c7f204f2533e6b9f68440c547e369f11c9535a6044f4416363ab0493dc"
+    },
+    {
+      "check": "pair35-failover-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:16:14.251652+00:00",
+      "script_sha256": "71ef96ff046251ae6d2870cb2405741b2b451069ed27b16574314382dc1e71d2",
+      "output_sha256": "fb0be202ec57af2068eb3466ce9aed57ccc1879ae93f59fceec97217665ca3f5"
+    },
+    {
+      "check": "pair-stop34-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:10:58.545775+00:00",
+      "script_sha256": "2fbd982d1c4c276c4f1610a62e19acf05483f829e4ac05617862e61741062fbf",
+      "output_sha256": "b0566cd45b1f62260ffbc96c820b6b54210fa4ec3cbe88cc85294aa4080a5109"
+    },
+    {
+      "check": "pair35-crash-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:17:10.326519+00:00",
+      "script_sha256": "cb1c929b91cc95973c4f1466421ec7a33da6db477431d0ee6bf39b92afe5c633",
+      "output_sha256": "fc7bedd2a2ac5c8009f85a676ffdfb323467585775caf4c243136dc545cc1a28"
+    },
+    {
+      "check": "pair35-stop-starting-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:17:48.835358+00:00",
+      "script_sha256": "4a0c76e57b641a6965af15f0ceafbaaa41098c51a5d2f93f008060ac4aae7d90",
+      "output_sha256": "a24c3d70d1ab1f469ed6b7e441f7e296f9695c5e3629e3c8e846fe42b333e322"
+    },
+    {
+      "check": "live-rpc35-01",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:17:50.281140+00:00",
+      "script_sha256": "fbf48feb4b51d94c7a3985ab20459982bab82e221abc0d9c857b0c36092017bb",
+      "output_sha256": "2829fc1e5cfcbb5ac590178f670f19623e9e58f37ef4e9e4c500d63a4b16639f"
+    },
+    {
+      "check": "post-reboot35-state02",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:22:44.143359+00:00",
+      "script_sha256": "a6e51b086f9cc648bc17034b2933d370b11796e775c5c4d9edcca7861c36e2b3",
+      "output_sha256": "394f9315582c17dca0ea23139f954a83a19d417610c09fc208be0bbcfcc69eb8"
+    }
+  ],
+  "post_reboot_final_checks": 23,
+  "final_auto_enabled": false,
+  "final_clients_enabled": false,
+  "final_fault_guard_fixture_absent": true,
+  "earlier_failures_preserved": [
+    "AUTH_FAILED during two cold starts",
+    "derived process policy mismatch before alpha34 fix",
+    "early reboot check before S99 start",
+    "first live observer exceeded transport deadline"
+  ],
+  "limits": [
+    "No external Windows routes/NIC changes",
+    "No independent external LAN proof",
+    "No generic multireserve hierarchy",
+    "No physical power cut or 24-hour traffic soak"
+  ],
+  "recovery_export": "189 entries encrypted and DPAPI decrypt-read verified; private only"
+}

@@ -23,6 +23,12 @@ import time
 import uuid
 from datetime import datetime
 
+# The daemon/apply CLI and imported helpers must share exception classes,
+# Stop and proof scope. A second module instance can turn a coded refusal into
+# an uncaught daemon crash and make procd roll an otherwise owned session back.
+if __name__=='__main__':
+    sys.modules['native_switch']=sys.modules[__name__]
+
 from agent import RUNTIME, PERSIST, TERMS_VERSION, atomic_json, read_json, command, inventory, probe, bound_socket,route_binding
 from failover_plan import streak
 from native_history import History, HistoryError
@@ -56,6 +62,9 @@ def bind_policy_context(backend,record):
 def publish(value):
     value=dict(value,time=time.time())
     value.setdefault('proof_scope',PROOF_SCOPE)
+    if value['proof_scope']=='router-probed-ipv4':
+        value.setdefault('mode','continuous-pair')
+        value['external_lan_verified']=False
     try:History(PERSIST).record(value)
     except (OSError,ValueError,KeyError,TypeError):
         atomic_json(STATE,{'state':'BLOCKED','blockers':['HISTORY-001']})
@@ -509,6 +518,14 @@ class Linux:
         (write_command or command)(['uci','commit','route_policy'])
         if self.order()!=(order,fingerprint):raise Refused('POLICY-REORDER-UNVERIFIED')
     def apply(self,write_command=None):
+        from process_policy import synchronization_script
+        with tempfile.TemporaryDirectory(prefix='homensai-process-')as stage:
+            try:script=synchronization_script(self.policy()['sections'],self.process_bindings,stage)
+            except ValueError:raise Refused('POLICY-IDENTITY-CHANGED')from None
+            if script is not None:
+                # One UCI transaction; the same Stop/revision fence used for
+                # rule ordering protects this already-modelled derived state.
+                (write_command or command)(['lua','-e',script],timeout=8)
         (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=45)
         from device_profile import detect
         if detect()=='mt3000':
@@ -1003,7 +1020,10 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
         journal_write(journal);released=True
         process.wait(timeout=max(1,min(50,journal['monotonic_deadline']-time.monotonic())))
-        if process.returncode:raise Refused('VENDOR-APPLY-FAILED')
+        if process.returncode:
+            result=read_json(RUNTIME/'native-apply-result.json',{})
+            code=result.get('code')if isinstance(result,dict)and result.get('tx')==tx else None
+            raise Refused(code if isinstance(code,str)and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',code)else'VENDOR-APPLY-FAILED')
         if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
         target_exit=trace(selection['target'])
         assert_selection(backend,selection)
@@ -1017,6 +1037,15 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
             stopped=read_json(PERSIST/'native-stop.json',{})
             if stopped.get('requested',0)>=journal['started']:raise Refused('CLIENT-STOP')
             confirmation=read_json(RUNTIME/'native-confirm.json',{})
+            if PROOF_SCOPE=='router-probed-ipv4':
+                # Explicit router-only mode: these are bound tunnel probes,
+                # never an external-LAN or hosted-forwarding acknowledgement.
+                measured=probe(selection['target'])
+                require_control_revision(control_revision)
+                if (measured.get('code') is None and measured.get('dns_ok') is True
+                        and measured.get('https_success',0)>=2 and trace(selection['target'])==target_exit):
+                    confirmation={'tx':tx,'exit_ipv4':target_exit,'dns_ok':True,'https_ok':True,
+                                  'time':time.time(),'proof_scope':PROOF_SCOPE}
             from native_proof import matches
             if (confirmation.get('tx')==tx and confirmation.get('exit_ipv4')==target_exit
                     and matches(confirmation,journal)
@@ -1086,7 +1115,7 @@ def serve():
         except OSError:pass
         bind_policy_context(backend,journal)
         PROOF_SCOPE=journal.get('proof_scope','external-lan')
-        if PROOF_SCOPE not in('external-lan','router-hosted-ipv4'):raise Refused('JOURNAL-INTEGRITY-FAILED')
+        if PROOF_SCOPE not in('external-lan','router-hosted-ipv4','router-probed-ipv4'):raise Refused('JOURNAL-INTEGRITY-FAILED')
         if journal.get('phase')=='RELEASE-PENDING':
             abandon(backend,journal,journal.get('reason','EXTERNAL-POLICY-CHANGE'))
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
@@ -1112,6 +1141,8 @@ def serve():
                     journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL');journal_write(journal)
         from manual_dispatch import recover_pending
         recover_pending(backend,runtime=RUNTIME,persist=PERSIST)
+        from pair_auto import recover as pair_recover
+        pair_recover(backend)
         if revision_error:
             # A UI freshness marker failure alone does not authorize a traffic
             # guard on a monitor-only installation. Preserve the durable stop
@@ -1135,6 +1166,9 @@ def serve():
                     last_return=returned.get('request',0);consumed=attempts
                     last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
                 data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
+                from pair_auto import tick as pair_tick
+                if pair_tick(backend,settings,decision_revision):
+                    time.sleep(2);continue
                 from native_proof import requested,matches
                 try:PROOF_SCOPE=requested(settings)
                 except ValueError:raise Refused('LAN-TRIAL-REQUIRED') from None
@@ -1255,6 +1289,8 @@ def serve():
         active=journal_read()
         if active.get('phase')=='COMMITTED':
             if finish_committed(backend,active,'SERVICE-STOPPED') and backend.order()==(active['before'],active['hash']):backend.unguard()
+        from pair_auto import recover as pair_shutdown
+        pair_shutdown(backend)
 
 
 def configure_timezone():
@@ -1272,6 +1308,23 @@ if __name__=='__main__':
         global STOP
         STOP=True
     signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-    if len(sys.argv)==3 and sys.argv[1]=='apply':child(sys.argv[2])
+    if len(sys.argv)==3 and sys.argv[1]=='apply':
+        try:child(sys.argv[2])
+        except (Refused,OSError,ValueError,subprocess.SubprocessError)as error:
+            code=str(error)if isinstance(error,Refused)and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error))else'NATIVE-SYSTEM-001'
+            frames=[];cursor=error.__traceback__
+            while cursor:
+                frames.append({'file':Path(cursor.tb_frame.f_code.co_filename).name,'line':cursor.tb_lineno})
+                cursor=cursor.tb_next
+            result={'tx':sys.argv[2],'code':code,'time':time.time(),'error_at':frames[-5:]}
+            if code=='POLICY-IDENTITY-CHANGED':
+                try:
+                    sections=Linux().policy()['sections']
+                    system=next((s for s in sections if s.get('.name')=='gl_process_vpn'),{})
+                    first=next((s for s in sections if s.get('.type')=='rule'and s.get('enabled')=='1'and s.get('via')!='novpn'),{})
+                    result['derived_context']={name:{k:row.get(k)for k in('.type','via','mark','enabled','from_type')}for name,row in(('system',system),('first_rule',first))}
+                except (Refused,OSError,ValueError,subprocess.SubprocessError):result['context_unavailable']=True
+            atomic_json(RUNTIME/'native-apply-result.json',result)
+            raise SystemExit(1)
     elif len(sys.argv)==2 and sys.argv[1]=='daemon':serve()
     else:raise SystemExit('fixed daemon/apply actions only')

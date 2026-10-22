@@ -8,4 +8,17 @@ assert.equal(c.readinessModel({},101).checks.length,0);
 const css=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/ui39.css','utf8');assert(css.includes('.hv-app input.hv-search{box-sizing:border-box!important'));
 console.log('PASS: readiness unknown/future/stale/RPC refusal and actual-LuCI search sizing guard');
 
+const codes=Object.keys(c.PREPARATION_CHECKS);
+const prepared={time:100,system_readiness:{time:100,preparation:{scope:'persistent-mt3000-preparation',state:'pass',checks:codes.map(code=>({code,state:'pass'}))}}};
+assert.equal(c.preparationModel(prepared,101).state,'pass');
+assert.equal(c.preparationModel(prepared,191).state,'unknown');
+let bad=JSON.parse(JSON.stringify(prepared));bad.system_readiness.preparation.checks[0].state='fail';
+assert.equal(c.preparationModel(bad,101).state,'incomplete');
+bad.system_readiness.preparation.checks.pop();assert.equal(c.preparationModel(bad,101).state,'unknown');
+bad=JSON.parse(JSON.stringify(prepared));bad.system_readiness.preparation.checks[1].code=codes[0];
+assert.equal(c.preparationModel(bad,101).state,'unknown');
+bad.system_readiness.preparation={scope:'persistent-mt3000-preparation',state:'unsupported',checks:[]};
+assert.equal(c.preparationModel(bad,101).state,'unsupported');
+console.log('PASS: persistent preparation rejects stale, missing, duplicate and unsupported evidence');
+
 const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard61.js','utf8');assert(dashboard.indexOf("'require rpc'")<dashboard.indexOf('var RECOVERY_PRESETS='));assert(dashboard.replace(/^\/\/[^\n]*\n/,'').trimStart().startsWith("'use strict';"));

@@ -70,6 +70,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.speed_daily_mib=math.max(1,math.min(1024,tonumber(s.speed_daily_mib) or 128))
   main.speed_busy_mbps=math.max(1,math.min(1000,tonumber(s.speed_busy_mbps) or 2))
   main.plan_enabled=s.plan_enabled=='1'
+  main.pair_auto_mode=s.pair_auto_mode=='router-probed-ipv4' and 'router-probed-ipv4' or 'off'
   main.native_enabled=s.native_enabled=='1'
   main.native_session_loss=s.native_session_loss=='1'
   main.native_duration=math.max(1,math.min(240,tonumber(s.native_duration) or 10))

@@ -25,5 +25,7 @@ def snapshot(now=None):
     try:free=shutil.disk_usage('/etc').free
     except OSError:free=None
     checks.append({'code':'CONFIG-STORAGE-FREE','state':'unknown' if free is None else 'pass' if free>=1048576 else 'fail'})
+    from preparation_status import snapshot as preparation_snapshot
     return {'time':now,'board':board,'checks':checks,'config_free_bytes':free,
+            'preparation':preparation_snapshot(),
             'native_permission':'not_assessed','scope':'Dependencies only; native Start performs authoritative certification and lease checks.'}

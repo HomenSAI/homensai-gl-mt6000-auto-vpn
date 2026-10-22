@@ -1,0 +1,57 @@
+# Two-channel Auto — 22 October 2026
+
+Owner priority: working Start/Stop and repeated automatic primary/reserve transitions on the dedicated MT3000 today; target handover 23:00 Europe/Berlin. Windows network and primary MT6000 remain untouched. Other broad backlog work is deferred.
+
+## Final alpha35 hardware checkpoint20:24UTC
+
+Final alpha35 cycle PASS124.94seconds, including the newly visible RESTORING/PRIMARY-STABLY-RECOVERED state, original rule order and successful DNS/two HTTPS/exit-hash confirmation on both paths. Persistent three-attempt budget reached PAIR-RATE-LIMIT after the three completed trials; it was preserved, never reset for a PASS. Start PASS64.08seconds. Owned native SIGKILL recovery PASS20.21seconds: new supervisor, same monitor, both owned profiles restored off, no guard, unchanged budget/certificate, old revision revoked and no automatic resume. Stop while STARTING after first profile ownership: ACK1.33seconds, cleanup10.35seconds, old-revision Start rejected.
+
+Thirty bounded actual auto_live RPC samples completed successfully. Actual HTTPS dashboard69.js and ui46.css hashes equal canonical alpha35 payload over certificate-pinned/interface-bound cable access. No browser login, wizard or terms were fabricated.
+
+Actual reboot scheduled only with Auto/clients off and no guard. Early45second state check failed because S99 application services were not yet registered. Read-only inspection at92seconds found both running; repeated final state at121seconds passed all23checks, changed boot-id, preparation preserved, original policy/bridge preserved, both profiles disabled1/auto0, no fault/guard/fixture. Distinguish ordinary reboot from physical power loss. Final encrypted export and release publication follow.
+
+## Checkpoint 20:05 UTC
+
+20:15UTC update: second alpha34 complete cycle PASS131.47seconds without another Start. Ordinary Stop PASS16.1seconds, both original disabled1 flags restored, links absent, guard absent. Alpha35 sourcebeabca86d7a7106102284338a3d5a170e9b21709 full matrix PASS681app/107QA per runtime/34UI. Reproducible740585byte IPK SHA220261bbf1e876c2ca0429b491ab79b7a4f0d1e7ef3bfb34185370d484e07465 installed after fresh189entry encrypted verified export;80 files/modes/protected configuration hashes PASS. Actual Start PASS64.1seconds, complete fault/return in progress.
+
+Graph desktop and actual390px iframe layout viewed; labels, primary/reserve colors, transitions and timestamps fit. These are synthetic layout fixtures, not hardware evidence. Separate actual auto_live RPC observations captured COMMITTED on reserve and OBSERVING on primary with fresh timestamps about2-3seconds apart. The80-iteration collector exceeded its200second transport budget (each RPC adds overhead), so the run remains PARTIAL despite useful real samples. No claim of complete80sample acceptance.
+
+Subsequent actual alpha34 full cycle PASS at20:07UTC,126.98seconds from bounded fault insertion. The exact real typed Start had passed56.1seconds. Fault affected only selected WG IPv4; kernel timeout120seconds and independent125second guardian bounded cleanup. Controller detected source failure, applied reserve, independently verified router-bound DNS/two HTTPS/distinct exit hash and committed. Fault was removed; controller automatically restored original WG order, journal ROLLED-BACK, OBSERVING, with DNS/two HTTPS/original exit hash reconfirmed. This is router-probed-ipv4 evidence; no Windows/external-LAN proof. Receipt records script/output hashes and pinned cable device. A second cycle in the same session is running. Do not erase the earlier AUTH_FAILED/rollback failures.
+
+Alpha34 exact source86bd49beddaa1a1174e2b36a1b8af53fe0df4708 passed full681 application/107QA per runtime/34UI CI. Installed740412-byte package SHA0743c1312fd7d53b0de19dddf3aa4ff8aba60a2ab8520f5adf8eabce506fa00e passed80 payload file/mode and protected configuration checks. Fresh encrypted supported recovery export preceded installation. Atomic process-policy synchronization passed a synthetic isolated transaction using actual vendor Lua/UCI; real transition acceptance remains separate.
+
+Two cold-start attempts failed. In the second, OpenVPN received seven AUTH_FAILED replies, each followed by stock teardown and retry. Worker telemetry found repeated ovpnclient.sh handlers with no held shared firewall lock, RTP lock or service queue. Existing auth-file metadata was two nonempty lines; no credentials were changed or exported. Owner reports unchanged credentials/subscription. After a pause the same configuration started successfully in56.1seconds. The upstream reason is unknown; do not report a credential repair or deterministic startup acceptance. Actual fault/return test follows.
+
+Read the actual /sbin/ifup before changing its invocation: -w disables unrelated Wi-Fi setup; it does not wait. New alpha35 source uses ifup -w for the exact owned selected interface, retaining command bounds and worker quiet checks. It also records RESTORING before return for the live timeline and preserves readable chart labels on narrow screens. Tests, installation and real acceptance of this source are pending.
+
+## Implemented scope
+
+Explicit opt-in pair_auto_mode=router-probed-ipv4 uses saved primary/reserve bindings. Start queues a volatile controller intent; the native supervisor journals ownership before starting disabled existing profiles. Actual stock code/platform, preparation, acceleration, profile and policy guards remain. One session can monitor continuously; each route transition has its own finite monotonic lease. A persistent rolling budget limits attempts to three per 15 minutes, with configured cooldown and dwell. Reboot/service recovery stops and restores owned startup work instead of silently resuming Auto.
+
+Post-switch DNS/HTTPS and exit evidence is explicitly router-probed IPv4. It is neither an external-LAN certificate nor the previous hosted-forwarding proof. Default legacy mode remains separate; unsupported targets are refused. Stop preserves a healthy reserve if the primary cannot safely be restored. Its state must be shown truthfully.
+
+## Verification checkpoint, 18:11 UTC
+
+Exact source 8282011dd2e1d88db696eb4e14f7e4b31fef35f9: full offline CI PASS on Python3.9/Lua and Python3.11,675 application and107 QA tests per runtime,33 Node UI suites. Complementary skips retain their actual matrix scope. IPK736330bytes SHA256 4e624cb7938d0f6413274d0819cc03a8b332be87dd1308df42e468fed2d3a848; independent Linux build matches exactly.
+
+Earlier alpha28 full CI stopped at missing diagnostic family explanations; corrected. Alpha30 full CI stopped at a stale generated SDK lifecycle hook; regenerated from the shared checker. These failures remain preserved privately, not counted as successful matrices.
+
+Fresh187-entry encrypted/DPAPI-decrypt-read-verified configuration export preceded installation. Actual alpha31 install passed79 payload file/mode checks, protected configuration hashes unchanged, native_enabled remains0. Auto startup/physical transitions are NOT accepted yet.
+
+New30-minute read-only alpha27 resource baseline completed1800seconds/60samples/0failures. Kernel omits /proc/pid/io; write-byte metrics remain unavailable. The first collector incorrectly required that optional kernel file, failed and was stopped; its evidence remains FAILED. This is resource observation, not a VPN traffic soak.
+
+Private receipts and failed attempts: private/completion-20261022b/. No credentials or raw configurations belong in public source.
+
+## Actual startup and first fault
+
+Actual alpha33 refusal location is native_switch.Linux.apply final derived-process check. Safe captured metadata: first selected rule ovpnclient1/0xa000, gl_process_vpn still wgclient1/0x1000. The route order changed; stock not_reload_network did not align the service-process binding in this observed case. Guards correctly rejected the inconsistent outcome. New source atomically compare-and-sets only the already-modelled gl_process_vpn via+mark to the verified first selected rule before stock RTP, preserves all other fields, refuses foreign bindings/pending UCI edits and retains the exact final check. Recovery performs the symmetric update. Vendor files are unchanged. Unit/full and actual acceptance are pending.
+
+Alpha32 exact source199e05478947ecb7a5c7f1eda4093b5af6dd76ce full CI PASS:678 app+107QA per runtime/34UI suites; IPK739300bytes SHA c6be18b0487d18c14e243b360e8bd9252de14ee0f19b0643d674c46c46b3902f. Fresh189-entry encrypted verified export preceded install;80 installed files/modes and protected configuration hashes PASS. Actual Start58.1s PASS. First source packet-drop produced the precise POLICY-IDENTITY-CHANGED refusal, rollback and continued observation/retry; no reserve acceptance. Actual Stop14.1s PASS, original disabled flags restored/links and guard absent. Actual vendor libuci synthetic isolated reorder test PASS with unchanged semantic hash. It did not copy or change real configuration. Next source records sanitized error file/line and derived binding metadata to locate the actual refusal; guards remain intact.
+
+Explicit owner-authorized pair mode configured without starting profiles or changing protected configuration. Actual ordinary native_start RPC queued both profiles. The first harness stopped prematurely on transient VENDOR-SETTLING; cleanup restored both disabled clients and removed the guard. A second startup hit MT3000-COLLECTION-DEADLINE and cleaned up. A third startup, observed through lightweight RAM status instead of repeated heavy full-status RPC, reached OBSERVING in60.1seconds. This closes only startup in that run; it does not establish reliable failover or the cause of the earlier collection timeout.
+
+The first actual bounded WG packet-drop fault reached SOURCE-FAILED/APPLYING but failed VENDOR-APPLY-FAILED, rolled the route back and then native procd respawned (monitor unchanged). Both owned clients were restored off. No reserve acceptance is claimed. A review found a CLI/import module-identity defect: the CLI daemon could use different Refused/Stop globals from imported helpers, allowing a coded refusal to escape its recovery handler. New source aliases the running CLI module, catches scoped refusals in pair control and records a sanitized per-transaction apply-child result. The specific apply refusal still needs the next actual test.
+
+Owner additionally requested a live colored route graph beside Auto. New source adds a bounded browser timeline, primary/reserve/transition/unknown states and a lightweight read-only auto_live RPC polled every2seconds; it performs no probes, commands or locks. Older full-status polling stays at10seconds. Graph scope is observed route selection, not invented bandwidth or external-LAN verification. New source/full CI/installation and visual acceptance remain pending.
+
+Owner asked about user outage messages. A future read-only LAN status page is recorded; captive-portal interception is deferred behind working Auto and cannot promise replacement of arbitrary HTTPS pages. No interception or DNS redirect is enabled.

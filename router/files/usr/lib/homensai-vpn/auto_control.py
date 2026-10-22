@@ -182,6 +182,9 @@ def start(control_revision=None,trial_nonce=None):
     except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+    from pair_auto import MODE, request as pair_request
+    if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
+        return pair_request(control_revision)
     blockers, selection = backend.diagnostic()
     try:
         consumed=read_json(PERSIST/'native-attempts.json',{})
@@ -236,6 +239,10 @@ def stop(runtime=None,persist=None):
         revision_error=None
         try:revision_locked(runtime,rotate=True)
         except (OSError,ValueError) as error:revision_error=error
+        if (runtime/'pair-auto-control.json').exists():
+            # Same serialized Stop cancels preparation and all later hops.
+            marker=read_json(runtime/'auto-control-revision.json',{}).get('revision','unverified')
+            atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time()})
         try:request=read_json(runtime/'auto-control.json',{})
         except (OSError,ValueError):request={}
         if not isinstance(request,dict):request={}
@@ -315,6 +322,10 @@ def public_status():
     try:revision=current_revision()
     except (OSError,ValueError):revision=None
     if stopped.get('control_revision_failed') is True:revision=None
+    from pair_auto import public_intent
+    pair=public_intent()
+    if pair and valid and pair.get('revision')==revision and pair.get('time',0)>stop:
+        mode='on';requested=max(requested,pair['time']);until=0
     return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
             'control_revision':revision,
             'until':until,'reboot_autostart':False,'return_result':return_result}
