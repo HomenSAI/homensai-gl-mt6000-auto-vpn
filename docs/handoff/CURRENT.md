@@ -1,3 +1,21 @@
+# COMPLETE — alpha27 release and main verification, 22 October 2026
+
+Released v0.9.0-alpha27: GitHub release/tag/source snapshot a05018bee9c61379a140f2a59aaa2c8a03dbe686; canonical Gitea main de9ab00a007816f5b723e112c3c75c2d393a71af verified through protected Gitflow checks and normal FF save. Public main/local main verified. Release IPK and checksum independently downloaded and checked; package SHA5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6,728294bytes. Later documentation-only main snapshots may descend from the release object without changing this package.
+
+Actual MT3000 alpha27 acceptance completed:655 app+107 QA per runtime/33 Node UI,40 lab checks; actual calibration/Auto fault/reserve/recovery/Stop/manual operations, active native SIGKILL recovery, monitor off/on, final persistent reboot19 checks. Installed77 payload files and served HTTPS assets match canonical IPK. Auto and both clients off after tests, monitor/native supervisor running, default external-lan scope, no fault/guard/fixture. Native packet decisions were verified with ordinary router-hosted IPv4 client; external Windows forwarding remains unverified by the owner's no-host-changes instruction. No external certificate, MT6000 hardware requalification, six-hour traffic soak or power-cut acceptance is claimed.
+
+Final187-entry encrypted/DPAPI-decrypt-read-verified configuration backup includes own state/preserved SFE autoload. Complete-history18MB Git bundle verification PASS. All882 source export files match canonical Git blobs after the configured Windows CRLF export normalization (405 text files); executable modes verified. The earlier tar assertion was a normalization mismatch, not lost files. Recovery receipts are private/acceptance-20261022/final-recovery-receipt.json and final-alpha27-config.receipt.json.
+
+Physical work ended within the six-hour window; only Git publication bookkeeping followed. No automatic router/VM/fixture tests should resume. Old entries below are history. The owner can start a fresh task explicitly.
+
+# Published release checkpoint — 22 October, 15:57 UTC
+
+GitHub main and immutable v0.9.0-alpha27 are published at a05018bee9c61379a140f2a59aaa2c8a03dbe686. Exact canonical source de9ab00a007816f5b723e112c3c75c2d393a71af, final CI PASS, downloaded IPK/checksum verified SHA5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6. Local main fast-forward verified to the same public commit. Canonical source and publication branches saved to primary Gitea. Protected Gitea default-main synchronization is still finalizing after a local clone/working-system error; no force/protection bypass.
+
+Physical six-hour window is CLOSED as completed testing, not an owner pause. No automated tests/fixtures/router changes should resume. MT3000 alpha27 installed; native happy path/fault/manual and active supervisor crash recovery passed in hosted IPv4 scope; monitor off/on and corrected reboot19 checks passed. Final Auto off, selected clients disabled/auto0, stock arbitration boot disabled, SFE autoload preserved/masked, HNAT disabled, services monitoring. Windows and primary MT6000 unchanged. External LAN remains unverified and hosted certificate cannot satisfy external scope.
+
+Final supported backup187 entries encrypted and DPAPI-decrypt/read verified; own state and preserved autoload explicitly included. Complete-history source bundle verification PASS. Source tar export normalization verification is being reconciled; do not claim exact blob restoration from that tar yet. Git-only final bookkeeping remains; old entries below are history.
+
 # Latest status — 22 October 2026, 15:33 UTC
 
 Final product:0.9.0-alpha27-1, dashboard69/ui46. Exact CI655 app+107 QA per runtime/33 UI PASS; canonical728294-byte IPK SHA5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6 installed and77 payload files/modes plus actual HTTPS assets verified. Native calibration/Auto source fault/reserve/automatic return/Stop/manual reserve and return PASS in hosted IPv4 scope. Actual alpha27 SIGKILL during WAIT-CLIENT recovered without lease/quota reset or false certificate; original DNS/HTTPS passed. Monitor off/on5 checks PASS. Final main publication/ref/download verification is the remaining release step.

@@ -1,3 +1,5 @@
+COMPLETED22October: alpha27 released and verified in public/canonical main; read docs/handoff/CURRENT.md. Physical test window is finished. No old observers, six-hour trials, router changes or VM tests should resume automatically. Installed MT3000 monitoring remains on and Auto is off after verified cleanup. Further testing requires a new owner instruction. This is completed work, not an owner pause. Historical handoff entries follow.
+
 # HomenSAI Auto VPN — project entry point
 
 SINGLE ACTIVE EXECUTOR 22 October 09:41–15:55 UTC: owner-authorized interactive thread 01a162e9-6703-7b41-8334-561a48debe2c is completing release/model/hardware work. Read private/ACTIVE-EXECUTOR.local.json and docs/handoff/CURRENT.md. Other heartbeat threads MUST DEFER without edits, tests, agents or router calls while the claim is live. This prevents overlapping executors; it is not an owner pause.
