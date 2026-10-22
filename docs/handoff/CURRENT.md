@@ -1,3 +1,9 @@
+# Dual release publication — 22 October 2026
+
+Owner requested release publication in both GitHub and primary Gitea. v0.9.0-alpha27 is now a published prerelease in both services, with the 728294-byte IPK independently downloaded and verified against SHA256 5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6. Each release includes its SHA256 text attachment. GitHub's checksum file uses CRLF and Gitea's uses LF; both name the same package and hash. No existing release or tag was overwritten.
+
+Gitea and local Git canonical tag point to de9ab00a007816f5b723e112c3c75c2d393a71af; immutable GitHub tag points to a05018bee9c61379a140f2a59aaa2c8a03dbe686. Their complete source trees are identical. Main already contains the release in both histories; later documentation commits preserve the released package. See [publication receipt](../../qa/ALPHA27-PUBLICATION.json) and [release notes](../../releases/v0.9.0-alpha27.md). The temporary local release token was removed and its absence verified after Gitea refused API self-revocation; no secret was persisted. Only documentation bookkeeping follows; product, router and acceptance scope are unchanged.
+
 # COMPLETE — alpha27 release and main verification, 22 October 2026
 
 Released v0.9.0-alpha27: GitHub release/tag/source snapshot a05018bee9c61379a140f2a59aaa2c8a03dbe686; canonical Gitea main de9ab00a007816f5b723e112c3c75c2d393a71af verified through protected Gitflow checks and normal FF save. Public main/local main verified. Release IPK and checksum independently downloaded and checked; package SHA5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6,728294bytes. Later documentation-only main snapshots may descend from the release object without changing this package.
