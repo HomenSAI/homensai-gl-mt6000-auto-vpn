@@ -18,7 +18,7 @@ Changes may affect the dedicated GL-MT3000 at 192.168.11.1 only. Windows routes/
 | 08 | RPC/security/privacy and statistics/report stress | PARTIAL: exact full CI/privacy/RPC suite PASS; new broad stress extension deferred |
 | 09 | Fresh bounded hardware resource observation and hosted trials | PARTIAL: new30min read-only60sample baseline PASS; no new traffic soak; kernel I/O metrics unavailable |
 | 10 | Fake Telegram API lifecycle and bounded, routed speed-test lab | DEFERRED: fake API/routed speed lab; no real delivery attempted |
-| 11 | Restricted server-triggered Gitea CI and consolidated guides/start prompt/release | PARTIAL: exact offline matrices PASS, guides updated; server runner activation deferred; dual release in progress |
+| 11 | Restricted server-triggered Gitea CI and consolidated guides/start prompt/release | PARTIAL: exact offline/protected matrices PASS, guides updated, dual release/main verified; server runner activation deferred |
 
 After every critical or long operation update this record/current state and commit/save to primary Gitea. Record failed/refused runs. Run exact-source full CI before reviewed GitHub publication; preserve immutable tags. A missing device must not prevent independent software/virtual work.
 

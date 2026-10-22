@@ -20,6 +20,7 @@ from unittest.mock import patch, MagicMock
 
 ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 sys.path.insert(0,str(ROOT))
+import agent
 import native_switch as native
 import auto_control
 from vendor_fixture import stamp
@@ -70,6 +71,7 @@ class Matrix(unittest.TestCase):
         for name,value in (('PERSIST',self.dir),('RUNTIME',self.dir),('JOURNAL',self.dir/'journal'),('STATE',self.dir/'status'),
                            ('CERT',self.dir/'cert'),('ATTEMPTS',self.dir/'attempts'),('PREPARE',self.dir/'prepare'),('JOURNAL_ALARM',self.dir/'journal-alarm')):
             self.stack.enter_context(patch.object(native,name,value))
+            if name in ('RUNTIME','PERSIST'):self.stack.enter_context(patch.object(agent,name,value))
         self.killpg=self.stack.enter_context(patch.object(native.os,'killpg'))
         self.stack.enter_context(patch.object(native,'RETURN_PAUSE',0))
         self.stack.enter_context(patch.object(native,'clear_native_options',return_value=True))

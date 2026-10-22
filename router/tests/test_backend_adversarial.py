@@ -24,7 +24,7 @@ class AdversarialState(unittest.TestCase):
     def setUp(self):
         self.stack=ExitStack();self.addCleanup(self.stack.close)
         self.root=Path(self.stack.enter_context(tempfile.TemporaryDirectory()))
-        for module,names in ((native,('RUNTIME','PERSIST')),(control,('RUNTIME','PERSIST'))):
+        for module,names in ((native,('RUNTIME','PERSIST')),(control,('RUNTIME','PERSIST')),(agent,('RUNTIME','PERSIST'))):
             for name in names:self.stack.enter_context(patch.object(module,name,self.root))
         self.stack.enter_context(patch.object(native,'JOURNAL',self.root/'journal'))
 

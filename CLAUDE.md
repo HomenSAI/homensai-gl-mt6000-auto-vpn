@@ -1,4 +1,4 @@
-ACTIVE NEW OWNER INSTRUCTION22October: complete all eleven router-only tasks in docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md. Read docs/handoff/CURRENT.md and private/ACTIVE-EXECUTOR.local.json. Dedicated MT3000 work is authorized; Windows networking and primary MT6000 are excluded. Use fresh bounded trials, never resume old observers. Save critical/long results to current status and Git/Gitea. Historical completed-window entries follow.
+22October immediate owner priority completed: continuous MT3000 Auto + live chart installed, physically tested and published as alpha35 in both services/main histories. Read docs/handoff/CURRENT.md, qa/ALPHA35-HARDWARE.json and qa/ALPHA35-PUBLICATION.json. The broader eleven-item matrix remains partly deferred by the later instruction to deliver Auto today without scope growth. Windows networking and primary MT6000 remain excluded. Never resume old observers. Save critical/long results to current status and Git/Gitea. All older active/pause/completed-window entries below are chronological history; consult the current private executor claim before any new work.
 
 # HomenSAI Auto VPN — project entry point
 

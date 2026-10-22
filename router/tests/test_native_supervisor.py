@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import MagicMock,patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
+import agent
 import native_switch as native
 from vendor_fixture import attach
 
@@ -18,6 +19,7 @@ class SupervisorTests(unittest.TestCase):
             directory=Path(d)
             for name,value in {'RUNTIME':directory,'PERSIST':directory,'JOURNAL':directory/'journal','STATE':directory/'status','CERT':directory/'cert','ATTEMPTS':directory/'attempts','PREPARE':directory/'prepare','STOP':False}.items():
                 stack.enter_context(patch.object(native,name,value))
+                if name in ('RUNTIME','PERSIST'):stack.enter_context(patch.object(agent,name,value))
             backend=MagicMock()
             until=time.time()+(-10 if expired else 100)
             backend.policy.return_value={'settings':{'native_enabled':'1','native_trial':'test','native_until':str(until),'native_session_loss':'1'}}

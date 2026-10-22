@@ -71,6 +71,27 @@
       "at_utc": "2026-10-22T20:22:44.143359+00:00",
       "script_sha256": "a6e51b086f9cc648bc17034b2933d370b11796e775c5c4d9edcca7861c36e2b3",
       "output_sha256": "394f9315582c17dca0ea23139f954a83a19d417610c09fc208be0bbcfcc69eb8"
+    },
+    {
+      "check": "pair-start35-postboot",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:32:32.551072+00:00",
+      "script_sha256": "fa1ceab04e07fc88686429cc2d4d54bbb6fb06b7c31a4685aa92624cb1f9910a",
+      "output_sha256": "d5987d0feb8f49ecf2e5d2db6837fd796f9e5363843014efef77d335c4fcef57"
+    },
+    {
+      "check": "pair-stop35-final",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:33:41.458727+00:00",
+      "script_sha256": "2fbd982d1c4c276c4f1610a62e19acf05483f829e4ac05617862e61741062fbf",
+      "output_sha256": "d09a454f3697c2cc752f7e52a1975cc829456625c6db2dd079e6767a14193e39"
+    },
+    {
+      "check": "handover35-state",
+      "result": "PASS",
+      "at_utc": "2026-10-22T20:35:09.806936+00:00",
+      "script_sha256": "a6e51b086f9cc648bc17034b2933d370b11796e775c5c4d9edcca7861c36e2b3",
+      "output_sha256": "13f133bf9ec96b918487b0c81c0234df3c0d9f5069dff635c5e23fa43c8bf1ff"
     }
   ],
   "post_reboot_final_checks": 23,
