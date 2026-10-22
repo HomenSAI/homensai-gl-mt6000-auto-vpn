@@ -17,7 +17,7 @@ say "== HomenSAI preflight $(date -u '+%Y-%m-%dT%H:%M:%SZ') (read-only) =="
 # 1. Exact device identity (gate 1)
 BOARD=$(ubus call system board 2>/dev/null)
 NAME=$(echo "$BOARD" | jsonfilter -e '@.board_name' 2>/dev/null)
-[ "$NAME" = "glinet,gl-mt6000" ] && ok "board_name=$NAME" || bad "board_name='$NAME' (expected glinet,gl-mt6000)"
+case "$NAME" in glinet,gl-mt6000|glinet,mt3000-snand) ok "board_name=$NAME";; *) bad "board_name='$NAME' (expected verified MT6000 or MT3000)";; esac
 GLV=$(cat /etc/glversion 2>/dev/null | tr -d '\n')
 [ "$GLV" = "4.11.0" ] && ok "GL.iNet firmware=$GLV" || bad "GL.iNet firmware='$GLV' (native controller pins 4.11.0; monitor still works)"
 say "INFO  kernel=$(uname -r) openwrt=$(echo "$BOARD" | jsonfilter -e '@.release.description' 2>/dev/null)"
@@ -55,7 +55,7 @@ say "INFO  flow_offloading: $(uci -q show firewall | grep -E 'flow_offloading' |
 
 # 7. Own configuration: non-secret native_* options only
 if [ -f /etc/config/homensai_vpn ]; then
-  for k in enabled native_enabled native_until native_trial native_prepare_acceleration native_order_direction; do
+  for k in enabled monitor_only native_enabled native_until native_proof_scope native_order_direction; do
     say "INFO  homensai_vpn.main.$k=$(uci -q get homensai_vpn.main.$k)"
   done
   [ "$(uci -q get homensai_vpn.main.native_enabled)" = "1" ] && bad "native_enabled=1 (Auto must be OFF before installing)"

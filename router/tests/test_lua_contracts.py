@@ -14,7 +14,7 @@ ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 
 @unittest.skipUnless(LUA and LUAC,'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
 class LuaContracts(unittest.TestCase):
-    def run_setup(self,payload,failure='',testroot=None,pending=None):
+    def run_setup(self,payload,failure='',testroot=None,pending=None,board=None):
         with tempfile.TemporaryDirectory() as directory:
             output=Path(directory)/'calls.json'
             delta=Path(directory)/'delta';delta.mkdir()
@@ -78,6 +78,8 @@ package.preload['uci']=function()
 end
 '''.replace('OUTPUT',json.dumps(str(output))).replace('FAILURE',json.dumps(failure)).replace('DELTA',json.dumps(str(delta)))
             environment=dict(os.environ)
+            if board is not None:
+                prelude += "\nlocal original_open=io.open;io.open=function(path,mode) if path=='/tmp/sysinfo/board_name' then local f=io.tmpfile();f:write("+json.dumps(board)+");f:seek('set');return f end;return original_open(path,mode) end\n"
             if testroot is not None:environment['HOMENSAI_SETUP_TEST_ROOT']=testroot
             result=subprocess.run([LUA,'-e',prelude,str(ROOT/'setup_save.lua')],
                                   input=payload,capture_output=True,env=environment,timeout=5)
@@ -87,6 +89,20 @@ end
     def payload(self):
         return json.dumps(dict(main={'interval':'30'},servers=[dict(section='srv_new',
             profile='wireguard:peer_7',name='Имя пользователя',channel='Main',priority='2',enabled='1')])).encode()
+
+    def test_model_is_verified_before_any_uci_change(self):
+        for board, selected, expected in (
+                ('glinet,mt3000-snand\n', 'mt3000', True),
+                ('glinet,gl-mt6000\n', 'mt6000', True),
+                ('glinet,mt3000-snand\n', 'mt6000', False),
+                ('unknown\n', 'mt3000', False),
+                ('unknown\n', 'auto', True),
+                ('glinet,mt3000-snand\n', 'bad', False)):
+            payload=json.dumps({'main':{'router_model':selected},'servers':[]}).encode()
+            result,calls=self.run_setup(payload,board=board)
+            self.assertEqual(result.returncode==0, expected, (board,selected,result.stderr))
+            if not expected:
+                self.assertFalse(any(call['name'] in ('set','save','commit') for call in calls))
 
     def test_pending_delta_refuses_without_writes_or_revert(self):
         for pending in (b"homensai_vpn.main.interval='99'\n",b'\x00'):

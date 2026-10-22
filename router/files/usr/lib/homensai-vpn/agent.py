@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha16'
+VERSION = '0.9.0-alpha27'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -747,11 +747,12 @@ def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
+                          'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':''}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -788,6 +789,7 @@ def rpc(method):
             raise ValueError('RPC-CONFIRM-NO-PENDING')
         if transaction.get('monotonic_deadline') is not None and time.monotonic()>=transaction['monotonic_deadline']:
             raise ValueError('RPC-CONFIRM-EXPIRED')
+        if transaction.get('proof_scope','external-lan')!='external-lan':raise ValueError('RPC-CONFIRM-UNVERIFIED')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
     if method in ('fault_start','fault_cancel'):
@@ -825,7 +827,11 @@ def rpc(method):
         try:result=start(arguments)
         except SpeedError as error:result={'accepted':False,'code':error.code}
         print(json.dumps(result));return
-    if arguments and method!='native_start':
+    if method=='manual_switch':
+        from manual_control import request,refusal
+        result=request(arguments['direction'],arguments['control_revision']) if set(arguments)=={'direction','control_revision'} else refusal('MANUAL-FIELDS')
+        print(json.dumps(result));return
+    if arguments and method not in('native_start','native_trial_start'):
         raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
         from telegram_report import retry_unknown
@@ -844,7 +850,7 @@ def rpc(method):
     elif method == 'scan':
         from scan_control import enqueue
         print(json.dumps(enqueue(RUNTIME,read_json,atomic_json)))
-    elif method in ('native_start','native_stop','native_return'):
+    elif method in ('native_start','native_trial_start','native_stop','native_return'):
         from auto_control import start, stop, return_request
         if method=='native_stop':
             # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
@@ -852,6 +858,9 @@ def rpc(method):
             except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
         elif method=='native_start':
             result=start(arguments['control_revision']) if set(arguments)=={'control_revision'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        elif method=='native_trial_start':
+            valid=(set(arguments)=={'control_revision','trial'}and isinstance(arguments['trial'],str)and re.fullmatch('[a-f0-9]{32}',arguments['trial']))
+            result=start(arguments['control_revision'],trial_nonce=arguments['trial']) if valid else {'accepted':False,'blockers':['LAN-TRIAL-REQUIRED']}
         else:result=return_request()
         if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
             from fault_control import cancel,FaultError
@@ -868,6 +877,11 @@ def rpc(method):
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
+            from manual_control import public_status as manual_status, control_status
+            from channel_path import public_status as path_status
+            status['manual_switch']=manual_status()
+            status['manual_switch_control']=control_status()
+            status['channel_path']=path_status(status)
             try:
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()

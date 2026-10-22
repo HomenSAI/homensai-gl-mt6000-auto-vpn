@@ -27,7 +27,17 @@ local ok=pcall(function()
     telegram_enabled=true,telegram_interval=true,telegram_schedule=true,telegram_hour=true,telegram_weekly=true,telegram_monthly=true,telegram_items=true,speed_enabled=true,speed_auto_new=true,
     speed_budget_mib=true,speed_duration=true,speed_streams=true,speed_daily_mib=true,speed_busy_mbps=true,
     onboarding_version=true,onboarding_complete=true,onboarding_pair_deferred=true,
-    appearance_language=true,appearance_design=true,appearance_theme=true}
+    appearance_language=true,appearance_design=true,appearance_theme=true,router_model=true}
+  if data.main.router_model then
+    local selected=data.main.router_model
+    assert(selected=='auto' or selected=='mt6000' or selected=='mt3000')
+    if selected~='auto' then
+      local f=assert(io.open(testroot and testroot..'/board_name' or '/tmp/sysinfo/board_name','r'))
+      local board=f:read(128);f:close()
+      local actual=({['glinet,gl-mt6000']='mt6000',['glinet,mt3000-snand']='mt3000'})[(board or ''):match('^%s*(.-)%s*$')]
+      assert(selected==actual)
+    end
+  end
   for key,value in pairs(data.main) do
     assert(allowed[key] and type(value)=='string')
     assert(c:set('homensai_vpn','main',key,value))

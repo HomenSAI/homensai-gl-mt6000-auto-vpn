@@ -43,6 +43,7 @@ function onboardingComplete(inventory){
 }
 function onboardingDisplayDefaults(inventory){
   var s=inventory&&inventory.settings||{};
+  HV_DETECTED_ROUTER_MODEL=s.detected_router_model||'unknown';
   HV_ROUTER_DISPLAY={language:s.appearance_language,theme:s.appearance_theme,design:s.appearance_design};
   var browserLanguage=null;
   try{browserLanguage=window.localStorage.getItem('homensai-vpn-language');}catch(e){}
@@ -57,7 +58,7 @@ function onboardingDraft(inventory){
   var speedDefaults={budget_mib:8,duration:5,streams:2,daily_mib:128,busy_mbps:2};
   Object.keys(speedDefaults).forEach(function(k){speed[k]=value('speed_'+k,speedDefaults[k]);});
   return {
-    appearance:{language:s.appearance_language||locale,theme:s.appearance_theme||storedTheme(),design:s.appearance_design||currentDesign()},
+    appearance:{language:s.appearance_language||locale,theme:s.appearance_theme||storedTheme(),design:s.appearance_design||currentDesign(),router_model:s.router_model||'auto'},
     monitor:{interval:value('interval',30),checkpoint:value('checkpoint',900),probe_limit:value('probe_limit',16),planning_enabled:!!s.plan_enabled},
     system:{defer_pair:!!s.onboarding_pair_deferred,source:s.plan_source||'',target:s.plan_target||'',duration:value('native_duration',10),session_loss:!!s.native_session_loss,
       servers:profiles.map(function(p){var row=servers.filter(function(r){return r.profile===p.id;})[0]||{};return {profile:p.id,name:row.name==null?p.name:row.name,channel:row.channel==null?'default':row.channel,priority:row.priority==null?100:row.priority,enabled:row.enabled!==false};})},
@@ -74,7 +75,7 @@ function onboardingPayload(draft){
   ['failures','successes','cooldown','min_dwell','primary_successes','primary_stable'].forEach(function(k){recovery[k]=Number(draft.recovery[k]);});recovery.return_policy=draft.recovery.return_policy;
   ['enabled','auto_new'].forEach(function(k){speed[k]=draft.speed[k];});['budget_mib','duration','streams','daily_mib','busy_mbps'].forEach(function(k){speed[k]=Number(draft.speed[k]);});
   if(draft.telegram.configure){telegram={configure:true,token:draft.telegram.token,chat:draft.telegram.chat,enabled:draft.telegram.enabled,interval:Number(draft.telegram.interval),schedule:draft.telegram.schedule,hour:Number(draft.telegram.hour),weekly:draft.telegram.weekly,monthly:draft.telegram.monthly,items:tgItemsToSetting(draft.telegram.items)};}
-  return [system,monitor,recovery,speed,telegram,{language:draft.appearance.language,theme:draft.appearance.theme,design:draft.appearance.design}];
+  return [system,monitor,recovery,speed,telegram,{language:draft.appearance.language,theme:draft.appearance.theme,design:draft.appearance.design,router_model:draft.appearance.router_model}];
 }
 function onboardingApplyAppearance(appearance){
   HV_ROUTER_DISPLAY=appearance;locale=appearance.language;
@@ -138,6 +139,12 @@ function renderOnboarding(inventory,status,firstRun){
     }else{
       card.appendChild(E('p',{'class':'hv-eyebrow'},bi('Step ','Шаг ')+(session.step+1)+' / '+ONBOARDING_STEPS.length));
       if(session.step===0){
+        select(bi('Router model','Модель роутера'),draft.appearance,'router_model','appearance.router_model',[['auto',bi('Automatic detection (recommended)','Автоопределение (рекомендуется)')],['mt6000','GL-MT6000 · Flint 2'],['mt3000','GL-MT3000 · Beryl AX']]);
+        var detected=settings.detected_router_model||'unknown',modelLabels={mt6000:'GL-MT6000 · Flint 2',mt3000:'GL-MT3000 · Beryl AX'};
+        card.appendChild(E('p',{'data-onboarding-device':'detected'},bi('Detected router: ','Обнаружен роутер: ')+(modelLabels[detected]||bi('Unknown','Не определён'))));
+        var modelError=E('p',{'role':'alert','data-onboarding-device':'error'});card.appendChild(modelError);
+        checks.push(function(){var ok=draft.appearance.router_model==='auto'||draft.appearance.router_model===detected;modelError.textContent=ok?'':bi('The selected model does not match this router. Choose automatic detection or the detected model.','Выбранная модель не соответствует роутеру. Выберите автоопределение или обнаруженную модель.');return ok;});
+        note('The model choice is checked against the router hardware. It does not enable Auto or change network settings. MT3000 currently supports monitoring; channel switching is not yet supported.','Модель сверяется с оборудованием роутера. Выбор не включает Auto и не меняет сеть. Сейчас MT3000 поддерживает мониторинг; переключение каналов ещё не поддерживается.');
         note('These defaults are saved on the router. The language, theme and design controls in Settings can override them in one browser. Your current appearance changes only after the final save.','Эти значения сохраняются на роутере. Отдельные переключатели языка, темы и оформления в настройках могут переопределить их в одном браузере. Текущее оформление изменится только после общего сохранения.');
         select(bi('Default language','Язык по умолчанию'),draft.appearance,'language','appearance.language',[['en','English'],['ru','Русский']]);
         select(bi('Default theme','Тема по умолчанию'),draft.appearance,'theme','appearance.theme',[['system',bi('Follow system','Как в системе')],['light',bi('Light','Светлая')],['dark',bi('Dark','Тёмная')]]);
@@ -202,7 +209,7 @@ function renderOnboarding(inventory,status,firstRun){
         note('Review every section. One save writes application preferences and the first-run completion marker together on the router. This does not start Auto; legal terms remain a separate decision.','Проверьте каждый раздел. Одно сохранение записывает параметры приложения и отметку первого запуска вместе на роутере. Это не запускает Auto; условия использования принимаются отдельно.');
         function review(title,rows){card.appendChild(E('h3',{},title));card.appendChild(E('dl',{'style':'margin:0;overflow-wrap:anywhere'},rows.reduce(function(nodes,row){return nodes.concat([E('dt',{},row[0]),E('dd',{},String(row[1]))]);},[])));}
         function yes(v){return v?bi('Yes','Да'):bi('No','Нет');}
-        review(headings[0],[[bi('Language / theme / design','Язык / тема / оформление'),draft.appearance.language+' / '+draft.appearance.theme+' / '+draft.appearance.design],[bi('Reporting timezone','Часовой пояс отчётов'),'Europe/Berlin']]);
+        review(headings[0],[[bi('Router model / detected','Модель роутера / обнаружено'),draft.appearance.router_model+' / '+(settings.detected_router_model||bi('Unknown','Не определён'))],[bi('Language / theme / design','Язык / тема / оформление'),draft.appearance.language+' / '+draft.appearance.theme+' / '+draft.appearance.design],[bi('Reporting timezone','Часовой пояс отчётов'),'Europe/Berlin']]);
         review(headings[1],[[bi('Probe / checkpoint (seconds) / profiles per round','Проверка / checkpoint (секунд) / профилей за раунд'),draft.monitor.interval+' / '+draft.monitor.checkpoint+' / '+draft.monitor.probe_limit],[bi('Planning enabled','Планирование включено'),yes(draft.monitor.planning_enabled)]]);
         review(headings[2],[[bi('Primary / reserve','Основной / резерв'),draft.system.defer_pair?bi('Deferred; planning off','Отложено; планирование выключено'):draft.system.source+' / '+draft.system.target],[bi('Trial minutes / sessions may reconnect','Тест, минут / сессии могут переподключаться'),draft.system.duration+' / '+yes(draft.system.session_loss)]]);
         review(headings[3],draft.system.servers.map(function(s){return [s.profile,s.name+' / '+s.channel+' / '+s.priority+' / '+yes(s.enabled)];}));

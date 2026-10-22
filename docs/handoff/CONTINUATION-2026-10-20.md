@@ -1,5 +1,9 @@
 # Active continuation - 20 October 2026
 
+OWNER PAUSE / NEXT START: read [RESUME-TODO.md](RESUME-TODO.md) first. On20October the owner asked to save the complete remaining plan for the next start. All implementation/tests/agents remain stopped; no automatic continuation. The later resume TODO supersedes planning order below without converting WIP into acceptance.
+
+LATEST DEVELOPMENT CHECKPOINT: [ALPHA17-WIP-CHECKPOINT-2026-10-20.md](ALPHA17-WIP-CHECKPOINT-2026-10-20.md). The owner requested saving all statuses/TODOs and uploading current work. Alpha17 manual controls/colors are unfinished WIP, with known integration failures and no device installation; the physical/published baseline remains alpha16. Read that checkpoint before resuming. A WIP Git backup is not a release or full-CI PASS.
+
 The owner explicitly resumed after the urgent pause and authorized work and physical trials on the separate portable GL-MT3000. The PC Wi-Fi and primary GL-MT6000 must remain untouched. The previous paused observer stays STOPPED; it is not a completed endurance result.
 
 Historical recovery checkpoint (superseded by the current alpha16 state below): bounded physical recovery is observed complete. The original stock FW3 restart finished after cancellation of exact stale requests and inner lock waiters; no vendor file was patched. Runtime state parses, repeated reads show no FW3/rtp2/flock queue, and memory recovered. Only the own monitor is RUNNING; native/optional active functions are OFF and both portable VPNs are saved disabled=1 (each previously0). Eight deployment checks, two concurrent read RPCs within20s, fresh normal LuCI200 and scoped cable reconnect passed. Read ../PHYSICAL-MT3000-2026-10-20.md for precise limits and the corrected reload=0 analysis. Active VPN/native/LAN readiness, physical first-run save and permanent vendor repair remain open.

@@ -1,10 +1,10 @@
 #!/bin/sh
 # HomenSAI Auto VPN test kit, step 2: install/upgrade the audited package. Monitor only; Auto stays OFF.
-# Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.0-alpha16-1_all.ipk
+# Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.0-alpha27-1_all.ipk
 # Requires step 1 to have passed. Does not touch network, firewall, VPN or routes.
-EXPECTED_SHA=3678843ab1873bb2537832cad3f34b4ed14990a89853346a0628662d96536b8a
-EXPECTED_SIZE=696460
-EXPECTED_VERSION=0.9.0-alpha16-1
+EXPECTED_SHA=5357b80acb21ac7ee0bc5e9a36082318adf59004d15184c6ce3e2a936e4acad6
+EXPECTED_SIZE=728294
+EXPECTED_VERSION=0.9.0-alpha27-1
 KIT=/tmp/homensai-kit
 IPK="$1"
 die() { echo "STOP: $*" >&2; exit 1; }
@@ -21,10 +21,8 @@ if nft list table inet homensai_vpn_guard >/dev/null 2>&1; then die "owned nft g
 [ "$(uci -q get homensai_vpn.main.native_enabled)" = "1" ] && die "native_enabled=1; stop Auto first"
 [ -n "$(uci -q changes homensai_vpn)" ] && die "pending uci changes for homensai_vpn"
 
-# Private config backup kept in RAM-backed /tmp; ALSO copy it to your PC (it can contain a Telegram token).
-if [ -f /etc/config/homensai_vpn ]; then
-  cp -p /etc/config/homensai_vpn "$KIT/homensai_vpn.before" && chmod 600 "$KIT/homensai_vpn.before"
-fi
+# Complete a verified encrypted configuration export before this step.
+# opkg preserves the own conffile; the kit never duplicates tokens in plaintext.
 opkg status homensai-auto-vpn | sed -n 's/^Version: //p' > "$KIT/version.before"
 echo "previous version: $(cat "$KIT/version.before" 2>/dev/null)"
 

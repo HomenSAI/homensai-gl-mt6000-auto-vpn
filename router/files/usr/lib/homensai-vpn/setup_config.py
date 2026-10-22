@@ -140,10 +140,14 @@ def onboarding_payload(arguments, profiles, existing=None):
     for payload in (recovery_payload(arguments['recovery']),speed_payload(arguments['speed'])):
         main.update(payload['main'])
     appearance=arguments['appearance']
-    if (set(appearance)!={'language','design','theme'} or appearance['language'] not in ('en','ru')
+    if (not {'language','design','theme'} <= set(appearance) or set(appearance)-{'language','design','theme','router_model'} or appearance['language'] not in ('en','ru')
             or appearance['design'] not in ('a','b','c') or appearance['theme'] not in ('system','light','dark')):
         raise ValueError('ONBOARDING-APPEARANCE')
-    main.update({'appearance_'+key:value for key,value in appearance.items()})
+    main.update({'appearance_'+key:appearance[key] for key in ('language','design','theme')})
+    if 'router_model' in appearance:
+        from device_profile import validate
+        detected = (existing or {}).get('detected_router_model', 'unknown')
+        main['router_model'] = validate(appearance['router_model'], detected)
     telegram=arguments['telegram']
     if type(telegram.get('configure')) is not bool:raise ValueError('ONBOARDING-TELEGRAM-FIELDS')
     if telegram['configure']:
@@ -174,6 +178,9 @@ def save_onboarding(arguments):
         except (OSError,ValueError,TypeError,AttributeError):reason='CONFIG-RECOVERY-UNVERIFIED'
         if reason:return {'saved':False,'code':reason}
         payload=onboarding_payload(arguments,current['profiles'],current.get('settings'))
+        if 'router_model' in payload['main']:
+            from device_profile import detect, validate
+            validate(payload['main']['router_model'], detect())
         telegram=arguments['telegram']
         if telegram['configure'] and telegram['enabled'] and not telegram['token']:
             from telegram_report import option

@@ -1,0 +1,15 @@
+{
+  "primary": {"remote": "origin", "urls": ["ssh://git@gitea/localadmin/homensai-gl-mt6000-auto-vpn.git", "ssh://git@127.0.0.1:2223/localadmin/homensai-gl-mt6000-auto-vpn.git"]},
+  "secondary": {"remote": "github", "urls": ["https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn.git"]},
+  "coord_ref": "refs/heads/coord/agents",
+  "checks": [["python3", "-m", "unittest", "discover", "-s", "tools/tests", "-q"], ["python3", "-m", "unittest", "discover", "-s", "prototype", "-q"]],
+  "optional_checks": {
+    "router/tests": ["python3", "-m", "unittest", "discover", "-s", "router/tests", "-q"],
+    "router/tests/test_inventory_ui.js": ["node", "router/tests/test_inventory_ui.js"],
+    "router/tests/test_recovery_ui.js": ["node", "router/tests/test_recovery_ui.js"],
+    "router/tests/test_setup_ui.js": ["node", "router/tests/test_setup_ui.js"],
+    "router/tests/test_traffic_ui.js": ["node", "router/tests/test_traffic_ui.js"],
+    "router/tests/test_auto_ui.js": ["node", "router/tests/test_auto_ui.js"],
+    "qa/privacy_audit.py": ["python3", "qa/privacy_audit.py"]
+  }
+}

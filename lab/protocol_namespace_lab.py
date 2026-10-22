@@ -3,12 +3,14 @@
 Four real local tunnels and synthetic TLS/DNS endpoints. Keys remain in guest
 RAM/tmp. A separate simple lab selector is NOT the application's native adapter.
 """
-import sys as _boot_sys
-_boot_sys.stderr.write('LABBOOT:PYTHON\n');_boot_sys.stderr.flush()
-try:
- import faulthandler as _boot_trace
- _boot_trace.dump_traceback_later(20,repeat=False)
-except ImportError:_boot_trace=None
+_boot_trace=None
+if __name__=='__main__':
+ import sys as _boot_sys
+ _boot_sys.stderr.write('LABBOOT:PYTHON\n');_boot_sys.stderr.flush()
+ try:
+  import faulthandler as _boot_trace
+  _boot_trace.dump_traceback_later(20,repeat=False)
+ except ImportError:pass
 import argparse
 import hashlib
 import ipaddress
@@ -30,7 +32,7 @@ import threading
 import time
 import uuid
 
-print('LABBOOT:IMPORTS',file=sys.stderr,flush=True)
+if __name__=='__main__':print('LABBOOT:IMPORTS',file=sys.stderr,flush=True)
 NETWORK_TIMEOUT=3  # Match agent.bound_socket; do not retry away failed samples.
 VIP='203.0.113.10'
 PROFILES=('wga','wgb','ova','ovb')

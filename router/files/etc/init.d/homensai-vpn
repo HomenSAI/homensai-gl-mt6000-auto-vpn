@@ -18,7 +18,7 @@ start_service() {
         0)
             local board
             board=$(ubus call system board 2>/dev/null | jsonfilter -e '@.board_name' 2>/dev/null || true)
-            if [ "$board" != "glinet,gl-mt6000" ]; then
+            if [ "$board" != "glinet,gl-mt6000" ] && [ "$board" != "glinet,mt3000-snand" ]; then
                 echo 'MONITOR-ONLY-DEPLOYMENT: explicit monitor-only mode required on this board' >&2
                 return 0
             fi

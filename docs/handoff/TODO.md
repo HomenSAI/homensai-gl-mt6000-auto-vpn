@@ -1,5 +1,7 @@
 # Remaining work — what and why
 
+**Latest owner pause / next start:** [RESUME-TODO.md](RESUME-TODO.md) is the consolidated active list of remaining work, known failures, design options, evidence and exact restart order. Alpha17 is saved WIP; installed/published baseline is alpha16. Resume only when the owner starts the next session. Older entries below retain their original evidence scope.
+
 Current 20 October continuation: [crash-recovery backlog](RECOVERY-TODO-2026-10-20.md). The dated completion records below retain their original evidence scope.
 
 Complete next-stage backlog: [24 tasks with priorities, dependencies and acceptance criteria](../TODO-NEXT-STAGE.md), including additional features NEXT-16 through NEXT-20. All are planned; this link does not claim implementation.

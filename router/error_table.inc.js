@@ -98,6 +98,13 @@ var ERROR_ROWS=[
  ['JOURNAL-INTEGRITY-FAILED','switch','Journal failed its check','Журнал не прошёл проверку','The transaction journal has a wrong checksum.','У журнала транзакций неверная контрольная сумма.','Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.','Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.']
 ];
 var AUTO_NAMES={
+ 'EXISTING-TUNNEL-BINDING-UNVERIFIED':['Tunnel binding unverified','Привязка туннеля не проверена'],
+ 'MT3000-FIRMWARE-UNVERIFIED':['MT3000 firmware unverified','Прошивка MT3000 не проверена'],
+ 'MT3000-FIREWALL-UNVERIFIED':['MT3000 firewall unverified','Firewall MT3000 не проверен'],
+ 'FW3-INCLUDE-CONTRACT-UNVERIFIED':['FW3 include unverified','Include FW3 не проверен'],
+ 'FW3-RUNTIME-STATE-UNVERIFIED':['Running FW3 unverified','Рабочий FW3 не проверен'],
+ 'FW3-SELECTED-ZONE-UNVERIFIED':['VPN firewall zone unverified','VPN-зона firewall не проверена'],
+ 'VENDOR-WORKER-QUIET-UNVERIFIED':['Background completion unverified','Завершение фоновых операций не проверено'],
   'MONITOR-ONLY-DEPLOYMENT':['Monitoring-only installation','Установка только для мониторинга'],
   'MONITOR-ONLY-INVALID':['Deployment mode unverified','Режим установки не проверен'],
   'NATIVE-PROGRESS-UNVERIFIED':['Controller progress records unverified','Записи состояния контроллера не проверены'],

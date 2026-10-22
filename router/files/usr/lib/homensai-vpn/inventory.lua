@@ -39,9 +39,10 @@ uci:foreach('homensai_vpn','server',function(s)
 end)
 local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
   onboarding_version=0,onboarding_complete=false,onboarding_pair_deferred=false,
-  appearance_language='',appearance_design='b',appearance_theme='',monitor_only=false,deployment_mode='standard'}
+  appearance_language='',appearance_design='b',appearance_theme='',router_model='auto',monitor_only=false,deployment_mode='standard'}
 uci:foreach('homensai_vpn','main',function(s)
   main.enabled=s.enabled=='1'
+  main.router_model=s.router_model or 'auto'
   main.monitor_only=s.monitor_only=='1'
   main.deployment_mode=s.monitor_only=='1' and 'monitor-only' or
     (s.monitor_only==nil or s.monitor_only=='0') and 'standard' or 'invalid'
@@ -91,6 +92,12 @@ uci:foreach('homensai_vpn','main',function(s)
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
 end)
+-- Model preference never replaces hardware detection or controller platform guards.
+local board_file=io.open('/tmp/sysinfo/board_name','r')
+local board=board_file and board_file:read(128) or ''
+if board_file then board_file:close() end
+main.detected_router_model=({['glinet,gl-mt6000']='mt6000',['glinet,mt3000-snand']='mt3000'})[board:match('^%s*(.-)%s*$')] or 'unknown'
+main.router_model_matches=main.router_model=='auto' or main.router_model==main.detected_router_model
 local by_interface={}
 for _,p in ipairs(profiles) do if type(p.interface)=='string' then by_interface[p.interface]=p end end
 local native_candidates={}

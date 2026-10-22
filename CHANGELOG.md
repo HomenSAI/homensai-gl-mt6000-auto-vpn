@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0-alpha27 — 2026-10-22
+
+- Validated MT6000/MT3000 model choice; actual identity and mismatch rejection.
+- Strict MT3000 FW3 native profile, pair-bound derived process policy and journal recovery, asynchronous apply settling.
+- Nonce/revision-bound calibration preserving Stop, explicit hosted/external proof scopes and truthful status.
+- Route-free Windows witness; kit no longer logs private trial identifiers or copies token-bearing configuration.
+- Exact dual-runtime CI and actual MT3000 native Auto/manual/fault/crash/reboot evidence; see releases/v0.9.0-alpha27.md for limits.
+
 ## 0.9.0-alpha16-1 - 2026-10-20
 
 B · Calm is the default page design for first entry, terms, onboarding and missing or invalid preferences. Explicit A/C preferences remain available and retain the existing browser/router precedence. The current page is dashboard67, so an older cached dashboard does not hide the new default. Native platform guards and VPN activation behavior are unchanged.

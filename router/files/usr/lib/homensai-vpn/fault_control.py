@@ -145,7 +145,9 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
             or native.get('vendor_identity')!=selection.get('vendor_identity')):
         raise FaultError('FAULT-CERTIFICATE-STALE')
     identity=selection.get('vendor_identity')
+    from native_proof import matches
     if (not isinstance(identity,str) or not re.fullmatch(r'[a-f0-9]{64}',identity) or not isinstance(certificate,dict)
+            or not matches(certificate,selection) or not matches(native,selection)
             or certificate.get('vendor_identity')!=identity
             or any(certificate.get(key)!=selection.get(key) for key in ('hash','direction','settings_hash'))
             or certificate.get('source')!=selection['source']['id'] or certificate.get('target')!=selection['target']['id']

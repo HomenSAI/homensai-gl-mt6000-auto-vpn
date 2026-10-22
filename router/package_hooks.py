@@ -19,7 +19,7 @@ def scripts():
 # Never launch an uncertified board's native instance if opkg replaced a
 # pre-staged conffile. Lifecycle/recovery refusal above remains the first gate.
 board=$(ubus call system board 2>/dev/null | jsonfilter -e '@.board_name' 2>/dev/null || true)
-if [ "$board" != "glinet,gl-mt6000" ]; then
+if [ "$board" != "glinet,gl-mt6000" ] && [ "$board" != "glinet,mt3000-snand" ]; then
     monitor_only=$(uci -q get homensai_vpn.main.monitor_only 2>/dev/null || true)
     [ "$monitor_only" = "1" ] || { echo MONITOR-ONLY-DEPLOYMENT >&2; exit 1; }
 fi

@@ -7,6 +7,12 @@ spec=importlib.util.spec_from_file_location('protocol_lab',Path(__file__).resolv
 lab=importlib.util.module_from_spec(spec);spec.loader.exec_module(lab)
 
 class ProtocolLabTests(unittest.TestCase):
+    def test_import_has_no_global_watchdog_or_console_side_effect(self):
+        import contextlib,faulthandler,io
+        output=io.StringIO()
+        with patch.object(faulthandler,'dump_traceback_later') as timer,contextlib.redirect_stdout(output),contextlib.redirect_stderr(output):
+            fresh=importlib.util.module_from_spec(spec);spec.loader.exec_module(fresh)
+        timer.assert_not_called();self.assertEqual(output.getvalue(),'')
     def query(self):return struct.pack('!HHHHHH',1234,0x100,1,0,0,0)+b'\x03vpn\x03lab\x04test\x00\x00\x01\x00\x01'
     def test_dns_identity_question_and_answer_preserved(self):
         query=self.query();reply=lab.dns_reply(query)

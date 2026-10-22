@@ -21,7 +21,7 @@ def main():
         result=subprocess.run(argv,cwd=root,capture_output=True,text=True,timeout=120)
         if result.returncode:
             print(result.stdout);print(result.stderr,file=sys.stderr)
-            raise RuntimeError('CI-CHECK-FAILED')
+            raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
         return result
     check([sys.executable,'qa/privacy_audit.py','--manifest',str(args.manifest)])
     application=check([sys.executable,'-m','unittest','discover','-s','router/tests','-q'])

@@ -1,6 +1,6 @@
 # HomenS.AI / Serhii Khomenko / https://homensai.com — MIT
 # Run on an independently connected Windows LAN client. Secrets stay in memory.
-param([uri]$Router='http://192.168.8.1:8080/',[DateTimeOffset]$Until=[DateTimeOffset]::Now.AddMinutes(10),[int]$CableInterface=0,[switch]$CheckOnly,[switch]$SelfTest)
+param([uri]$Router='http://192.168.8.1:8080/',[DateTimeOffset]$Until=[DateTimeOffset]::Now.AddMinutes(10),[int]$CableInterface=0,[switch]$CheckOnly,[switch]$ProbeOnly,[switch]$SelfTest)
 $ErrorActionPreference='Stop'
 
 function Assert-LocalRouter([uri]$Value) {
@@ -23,7 +23,7 @@ function Assert-LanPath {
         $local=@(Find-NetRoute -InterfaceIndex $CableInterface -LocalIPAddress $script:CableAddress -RemoteIPAddress $Router.Host|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
         if($local.Count -ne 1 -or $local[0].InterfaceIndex -ne $CableInterface -or $local[0].NextHop -ne '0.0.0.0'){throw 'CLIENT-CABLE-NOT-LOCAL'}
         foreach($destination in @('1.1.1.1','1.0.0.1')) {
-            $route=@(Find-NetRoute -InterfaceIndex $CableInterface -LocalIPAddress $script:CableAddress -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})
+            try {$route=@(Find-NetRoute -InterfaceIndex $CableInterface -LocalIPAddress $script:CableAddress -RemoteIPAddress $destination|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})}catch{throw 'CLIENT-CABLE-PROBE-ROUTE-MISMATCH'}
             if($route.Count -ne 1 -or $route[0].InterfaceIndex -ne $CableInterface -or $route[0].NextHop -ne $Router.Host){throw 'CLIENT-CABLE-PROBE-ROUTE-MISMATCH'}
         }
         return
@@ -106,6 +106,7 @@ function Test-BoundDns($Binding) {
     $query=New-DnsQuery $id
     $client=[Net.Sockets.UdpClient]::new([Net.Sockets.AddressFamily]::InterNetwork)
     try {
+        if($IsWindows){$client.Client.SetSocketOption([Net.Sockets.SocketOptionLevel]::IP,[Net.Sockets.SocketOptionName]31,[Net.IPAddress]::HostToNetworkOrder([int]$Binding.Index))}
         $client.Client.Bind([Net.IPEndPoint]::new([Net.IPAddress]::Parse($Binding.Address),0))
         $client.Client.ReceiveTimeout=5000
         $server=[Net.IPEndPoint]::new([Net.IPAddress]::Parse($Router.Host),53)
@@ -129,14 +130,65 @@ function New-ClientConfirmation($Native,[double]$Now,[double]$ObservedAt,$Bindin
     return @{tx=$Native.tx;exit_ipv4=$Exit;dns_ok=$true;https_ok=$true}
 }
 
+function Initialize-BoundHttps {
+    if('HomenSAIBoundIPv4' -as [type]){return}
+    Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Threading;
+using System.Threading.Tasks;
+public static class HomenSAIBoundIPv4 {
+ public static async Task<string> Trace(int index, string source, string destination) {
+  if(index<=0 || (destination!="1.1.1.1" && destination!="1.0.0.1")) throw new InvalidOperationException();
+  using(var cancel=new CancellationTokenSource(TimeSpan.FromSeconds(10)))
+  using(var handler=new SocketsHttpHandler { UseProxy=false, AllowAutoRedirect=false }) {
+   handler.ConnectCallback=async (context, token) => {
+    if(context.DnsEndPoint.Host!=destination || context.DnsEndPoint.Port!=443) throw new InvalidOperationException();
+    var socket=new Socket(AddressFamily.InterNetwork,SocketType.Stream,ProtocolType.Tcp);
+    try {
+     if(OperatingSystem.IsWindows()) socket.SetSocketOption(SocketOptionLevel.IP,(SocketOptionName)31,IPAddress.HostToNetworkOrder(index));
+     socket.Bind(new IPEndPoint(IPAddress.Parse(source),0));
+     await socket.ConnectAsync(new IPEndPoint(IPAddress.Parse(destination),443),token).ConfigureAwait(false);
+     if(((IPEndPoint)socket.LocalEndPoint).Address.ToString()!=source) throw new InvalidOperationException();
+     return new NetworkStream(socket,true);
+    } catch { socket.Dispose(); throw; }
+   };
+   using(var client=new HttpClient(handler) { Timeout=Timeout.InfiniteTimeSpan })
+   using(var request=new HttpRequestMessage(HttpMethod.Get,"https://"+destination+"/cdn-cgi/trace")) {
+    request.Version=HttpVersion.Version11;
+    request.VersionPolicy=HttpVersionPolicy.RequestVersionExact;
+    using(var response=await client.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,cancel.Token).ConfigureAwait(false)) {
+     response.EnsureSuccessStatusCode();
+     using(var stream=await response.Content.ReadAsStreamAsync(cancel.Token).ConfigureAwait(false))
+     using(var body=new MemoryStream()) {
+      var buffer=new byte[4096];
+      while(true) {
+       int size=await stream.ReadAsync(buffer.AsMemory(),cancel.Token).ConfigureAwait(false);
+       if(size==0) break;
+       if(body.Length+size>32768) throw new InvalidOperationException();
+       body.Write(buffer,0,size);
+      }
+      cancel.Token.ThrowIfCancellationRequested();
+      return System.Text.Encoding.ASCII.GetString(body.ToArray());
+     }
+    }
+   }
+  }
+ }
+}
+'@
+}
 function Test-ClientInternet {
     $binding=Get-ClientBinding
     $null=Test-BoundDns $binding
+    Initialize-BoundHttps
     $exits=@()
     foreach($destination in @('1.1.1.1','1.0.0.1')) {
-        $text=& curl.exe --interface $binding.Address --connect-timeout 5 --max-time 10 --fail --silent "https://$destination/cdn-cgi/trace"
-        if($LASTEXITCODE -ne 0){throw 'CLIENT-CABLE-HTTPS-FAILED'}
-        $exits+=Get-TraceIPv4 ($text -join "`n")
+        try {$text=[HomenSAIBoundIPv4]::Trace([int]$binding.Index,$binding.Address,$destination).GetAwaiter().GetResult()}catch{throw 'CLIENT-CABLE-HTTPS-FAILED'}
+        $exits+=Get-TraceIPv4 $text
     }
     Assert-ClientBinding $binding (Get-ClientBinding)
     if($exits[0] -ne $exits[1]){throw 'CLIENT-CABLE-EXIT-INCONSISTENT'}
@@ -163,6 +215,12 @@ function Test-TransientNetworkError($Record) {
 }
 
 if($SelfTest) {
+    Initialize-BoundHttps
+    foreach($bad in @(@(0,'1.1.1.1'),@(3,'127.0.0.1'))){
+        $rejected=$false
+        try {$null=[HomenSAIBoundIPv4]::Trace([int]$bad[0],'192.168.8.2',[string]$bad[1]).GetAwaiter().GetResult()}catch{$rejected=$true}
+        if(-not $rejected){throw 'SELFTEST-BOUND-HTTPS-SCOPE'}
+    }
     Assert-LocalRouter ([uri]'http://192.168.8.1:8080/')
     foreach($url in @('https://example.com/','http://user:password@192.168.8.1/','http://127.0.0.1/','http://8.8.8.8/')) {
         $rejected=$false;try {Assert-LocalRouter ([uri]$url)}catch{$rejected=$true}
@@ -202,7 +260,7 @@ if($SelfTest) {
     Write-Output 'PASS: input/DNS parsers, three sequential witnesses, replay/interface/exit/freshness/DNS/HTTPS refusals; no network calls or router changes.';exit 0
 }
 
-$script:Session=$null;$script:ProbeRoutes=@();$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
+$script:Session=$null;$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
 try {
     if($PSVersionTable.PSVersion.Major -lt 7){throw 'POWERSHELL-7-REQUIRED'}
     Assert-LocalRouter $Router
@@ -210,14 +268,10 @@ try {
         $script:CableAddress=@(Get-NetIPAddress -InterfaceIndex $CableInterface -AddressFamily IPv4|Where-Object {$_.AddressState -eq 'Preferred' -and $_.IPAddress -notlike '169.254.*'})
         if($script:CableAddress.Count -ne 1){throw 'CLIENT-CABLE-ADDRESS-AMBIGUOUS'}
         $script:CableAddress=$script:CableAddress[0].IPAddress
-        foreach($destination in @('1.1.1.1/32','1.0.0.1/32')) {
-            $existing=@(Get-NetRoute -DestinationPrefix $destination -PolicyStore ActiveStore -ErrorAction SilentlyContinue)
-            if($existing.Count){throw 'CLIENT-PROBE-ROUTE-CONFLICT'}
-            $script:ProbeRoutes+=New-NetRoute -DestinationPrefix $destination -InterfaceIndex $CableInterface -NextHop $Router.Host -RouteMetric 1 -PolicyStore ActiveStore
-        }
     }
     Assert-LanPath
     if($CheckOnly){Write-Output 'Selected client path prerequisites verified; router unchanged. Cable mode preserves Wi-Fi default.';exit 0}
+    if($ProbeOnly){$null=Test-ClientInternet;Write-Output 'PASS: physical LAN DNS and two bound HTTPS checks; no settings changed.';exit 0}
     if($Until -le [DateTimeOffset]::Now -or $Until -gt [DateTimeOffset]::Now.AddHours(4)){throw 'BOUNDED-DEADLINE-REQUIRED'}
     $baseline=Test-ClientInternet
     $script:Api=([uri]::new($Router,'/ubus/')).AbsoluteUri
@@ -243,13 +297,16 @@ try {
     $direction=if($a[0].order -lt $b[0].order){'first'}else{'last'}
     # Save only own metadata first; the controller stays disabled during preflight.
     $trial=[guid]::NewGuid().ToString('N')
-    Save-OwnSettings @{native_enabled='0';native_trial=$trial;native_order_direction=$direction;native_baseline_exit=$baseline;native_until=$Until.ToString('o')}
+    Save-OwnSettings @{native_enabled='0';native_proof_scope='external-lan';native_trial=$trial;native_order_direction=$direction;native_baseline_exit=$baseline;native_until=$Until.ToString('o')}
     Start-Sleep -Seconds 6
     $status=Invoke-Router 'homensai-vpn' 'status' @{}
     if(@($status.native_failover.blockers).Count){throw 'NATIVE-PREFLIGHT-BLOCKED'}
     Write-Host 'A brief outage is possible. Original policy must be restored after the first trial.'
     if((Read-Host 'Type TEST to start') -cne 'TEST'){throw 'CLIENT-CANCELLED'}
-    Save-OwnSettings @{native_enabled='1';native_trial=$trial;native_until=$Until.ToString('o');native_session_loss='1'}
+    Save-OwnSettings @{native_enabled='0';native_trial=$trial;native_until=$Until.ToString('o');native_session_loss='1'}
+    $revision=(Invoke-Router 'homensai-vpn' 'status' @{}).auto_control.control_revision
+    $begin=Invoke-Router 'homensai-vpn' 'native_trial_start' @{control_revision=$revision;trial=$trial}
+    if($begin.accepted -ne $true){throw 'CLIENT-TRIAL-START-REFUSED'}
     $started=$true;$lastTx=$null;$confirmedTx=[Collections.Generic.HashSet[string]]::new();$end=[DateTimeOffset]::UtcNow.AddSeconds(100)
     while([DateTimeOffset]::UtcNow -lt $Until -and [DateTimeOffset]::UtcNow -lt $end) {
         $status=Invoke-Router 'homensai-vpn' 'status' @{};$native=$status.native_failover
@@ -320,6 +377,5 @@ try {
     exit 2
 } finally {
     if($started -and $script:Session -and -not $stopRequested){try {$null=Invoke-Router 'homensai-vpn' 'native_stop' @{};$stopRequested=$true}catch {}}
-    foreach($route in $script:ProbeRoutes){$route|Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue}
     Remove-Variable Session,baseline,exit,body,reply,trial -Scope Script -ErrorAction SilentlyContinue
 }

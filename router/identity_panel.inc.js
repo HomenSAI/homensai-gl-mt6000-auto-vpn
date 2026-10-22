@@ -1,6 +1,10 @@
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
 var UI_BUILD='__UI_BUILD__',UI_AGENT='__UI_AGENT__';
+var HV_DETECTED_ROUTER_MODEL='unknown';
+function routerModelLabel(){
+  return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';
+}
 function identityModel(status){
   var agent=typeof status.version==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.version)?status.version:null;
   var pkg=typeof status.package==='string'&&/^[0-9A-Za-z.+~_-]{1,48}$/.test(status.package)?status.package:null;

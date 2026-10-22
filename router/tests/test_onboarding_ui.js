@@ -43,6 +43,21 @@ function advance(f,target='review'){
   while(f.step()!==target){assert(!f.button('next').disabled,'unexpected validation at '+f.step());f.click('next');}
 }
 (async()=>{
+  // Hardware selection survives save/reload and never allows a different detected model.
+  for(const detected of ['mt6000','mt3000','unknown']){
+    const inventory=baseInventory();inventory.settings.detected_router_model=detected;
+    let device=fixture({inventory});assert.equal(device.field('appearance.router_model').value,'auto');
+    device.set('appearance.router_model',detected==='mt6000'?'mt3000':'mt6000');
+    assert(device.button('next').disabled);device.click('next');assert.equal(device.step(),'appearance');assert.equal(device.calls.length,0);
+    device.set('appearance.router_model','auto');assert(!device.button('next').disabled);
+    if(detected!=='unknown'){
+      device.set('appearance.router_model',detected);assert(!device.button('next').disabled);advance(device);await device.click('save');
+      assert.equal(device.calls[0].args[5].router_model,detected);
+      inventory.settings.router_model=detected;device=fixture({inventory});assert.equal(device.field('appearance.router_model').value,detected);
+      assert(device.c.renderAttribution({}).children.some(n=>text(n).includes(detected==='mt3000'?'Beryl AX':'Flint 2')));
+      assert(!text(device.c.renderAttribution({})).includes(detected==='mt3000'?'Flint 2':'Beryl AX'));
+    }
+  }
   // Completion is a typed router marker, never the old profile flag or local browser persistence.
   let f=fixture();
   for(const settings of [{setup_complete:true},{onboarding_complete:true},{onboarding_complete:1,onboarding_version:1},{onboarding_complete:true,onboarding_version:'1'},{onboarding_complete:true,onboarding_version:2}])assert.equal(f.c.onboardingComplete({settings}),false);
@@ -104,7 +119,7 @@ function advance(f,target='review'){
   assert.deepEqual(full[0],{defer_pair:false,source:'p1',target:'p0',duration:20,session_loss:true,servers:[{profile:'p0',name:'Main display',channel:'Group A',priority:12,enabled:true},{profile:'p1',name:'Reserve display',channel:'Group B',priority:34,enabled:true}]});
   assert.deepEqual(full[1],{interval:45,checkpoint:1200,probe_limit:24,planning_enabled:true});assert.deepEqual(full[2],customRecovery);assert.deepEqual(full[3],customSpeed);
   assert.deepEqual(full[4],{configure:true,token,chat:'-1001234567890',enabled:true,interval:120,schedule:'daily',hour:22,weekly:false,monthly:false,items:'servers,events,traffic,delta,controller,controller_events,controller_totals'});
-  assert.deepEqual(full[5],{language:'ru',theme:'light',design:'b'});assert.equal(f.store['homensai-vpn-language'],'ru');assert.equal(f.store['homensai-vpn-theme'],'light');assert.equal(f.store['homensai-vpn-design'],'b');
+  assert.deepEqual(full[5],{language:'ru',theme:'light',design:'b',router_model:'auto'});assert.equal(f.store['homensai-vpn-language'],'ru');assert.equal(f.store['homensai-vpn-theme'],'light');assert.equal(f.store['homensai-vpn-design'],'b');
   // Router defaults survive an empty browser, browser overrides win, and Settings reopens the same values/draft.
   const saved=baseInventory();Object.assign(saved.settings,{onboarding_complete:true,onboarding_version:1,appearance_language:'ru',appearance_design:'c',appearance_theme:'dark',probe_limit:32,recovery_cooldown:420});
   f=fixture({inventory:saved});assert.equal(f.c.locale,'ru');assert.equal(f.c.currentDesign(),'c');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.onboardingComplete(saved),true);f.open();assert.equal(f.field('appearance.language').value,'ru');advance(f,'monitor');assert.equal(f.field('monitor.probe_limit').value,'32');f.set('monitor.checkpoint','1200');f.click('cancel');assert.equal(f.modal,null);f.open();assert.equal(f.field('monitor.checkpoint').value,'1200');advance(f,'recovery');assert.equal(f.field('recovery.cooldown').value,'420');

@@ -10,7 +10,7 @@ A small script for **Windows, written in PowerShell 7**. The source is a plain t
 
 It runs on **your computer**, not on the router. Its job is to prove, from the computer’s side, that the internet really works through the router before and after an automatic switch (gateway, router DNS, HTTPS and the VPN exit address). The router cannot see this by itself, which is why Auto asks for a passed LAN trial first.
 
-What it does not do: it installs nothing, saves nothing (the router password is typed privately and kept in memory only), and changes no network settings of the computer. During a full trial it only adds two temporary probe routes and removes them at the end.
+It installs nothing, saves no credentials (the router password stays in memory), and changes no computer routes, adapters or DNS settings. DNS and HTTPS sockets use the chosen interface/source. CheckOnly reads prerequisites; ProbeOnly performs DNS/HTTPS without starting a trial. If Windows ignores the Ethernet default route, the helper refuses rather than changing the computer network. A reachable router page alone does not establish the client Internet path.
 
 ## Files
 

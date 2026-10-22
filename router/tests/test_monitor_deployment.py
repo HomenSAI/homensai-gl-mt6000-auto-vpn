@@ -37,9 +37,10 @@ start_service
         return [line[5:] for line in result.stdout.splitlines() if line.startswith('OPEN ')],result.stderr
 
     def test_default_and_zero_preserve_existing_monitor_and_native_instances(self):
-        for mode in (None,'0'):
-            instances,diagnostic=self.instances(mode)
-            self.assertEqual(instances,['monitor','native']);self.assertEqual(diagnostic,'')
+        for board in ('glinet,gl-mt6000','glinet,mt3000-snand'):
+            for mode in (None,'0'):
+                instances,diagnostic=self.instances(mode,board=board)
+                self.assertEqual(instances,['monitor','native']);self.assertEqual(diagnostic,'')
 
     def test_exact_one_launches_monitor_without_native_instance(self):
         instances,diagnostic=self.instances('1')
@@ -60,13 +61,13 @@ start_service
             self.assertEqual(instances,['monitor']);self.assertIn('MONITOR-ONLY-INVALID',diagnostic)
 
     def test_sdk_wrapper_cannot_start_instances_after_failed_postinst_with_default_mode(self):
-        for board in ('glinet,mt3000-snand','unknown',''):
+        for board in ('unknown',''):
             for mode in (None,'0'):
                 instances,diagnostic=self.instances(mode,board=board)
                 self.assertEqual(instances,[]);self.assertIn('MONITOR-ONLY-DEPLOYMENT',diagnostic)
             self.assertEqual(self.instances('1',board=board)[0],['monitor'])
 
-    def test_native_diagnostic_blocks_explicit_or_invalid_mode_without_relaxing_model_pin(self):
+    def test_native_diagnostic_blocks_explicit_mode_and_unverified_mt3000_firmware(self):
         for mode,expected in ((None,None),('0',None),('1','MONITOR-ONLY-DEPLOYMENT'),('', 'MONITOR-ONLY-INVALID'),
                               ('yes','MONITOR-ONLY-INVALID'),(False,'MONITOR-ONLY-INVALID')):
             settings={'terms_version':native.TERMS_VERSION}
@@ -84,7 +85,7 @@ start_service
                 stack.enter_context(patch.object(Path,'glob',return_value=[]))
                 stack.enter_context(patch.object(Path,'exists',return_value=False))
                 blockers,selection=router.diagnostic()
-            self.assertIn('UNSUPPORTED-BOARD',blockers)
+            self.assertIn('MT3000-FIRMWARE-UNVERIFIED',blockers)
             if expected:self.assertIn(expected,blockers)
             else:self.assertFalse(any(code.startswith('MONITOR-ONLY-') for code in blockers))
             self.assertIsNone(selection)
@@ -137,7 +138,7 @@ rpcd_test() { printf 'rpcd:%s\n' "$1" >> "$QA_CALLS"; }
             return result,trace.read_text().splitlines()
 
     def test_postinst_other_board_requires_marker_before_any_runtime_start(self):
-        for board in ('glinet,mt3000-snand','unknown',''):
+        for board in ('unknown',''):
             for mode in ('MISSING','0','','yes'):
                 result,trace=self.postinst(board,mode)
                 self.assertNotEqual(result.returncode,0)
@@ -146,7 +147,7 @@ rpcd_test() { printf 'rpcd:%s\n' "$1" >> "$QA_CALLS"; }
                 self.assertFalse(any(line.startswith(('service:','rpcd:')) for line in trace))
 
     def test_postinst_supported_default_or_explicit_monitor_only_starts_after_lifecycle_guard(self):
-        for board,mode in (('glinet,gl-mt6000','MISSING'),('glinet,mt3000-snand','1')):
+        for board,mode in (('glinet,gl-mt6000','MISSING'),('glinet,mt3000-snand','MISSING'),('glinet,mt3000-snand','0'),('glinet,mt3000-snand','1')):
             result,trace=self.postinst(board,mode)
             self.assertEqual(result.returncode,0,result.stderr)
             self.assertLess(trace.index('lifecycle'),trace.index('board'))

@@ -107,6 +107,9 @@ class History:
         if value.get('reason'):codes=list(codes)+[value['reason']]
         codes=sorted({c for c in codes if isinstance(c,str) and CODE.fullmatch(c)})
         item={'state':state,'codes':codes,'trial':value.get('trial') is True}
+        scope=value.get('proof_scope','external-lan')
+        if scope not in('external-lan','router-hosted-ipv4'):raise HistoryError('HISTORY-SCOPE')
+        if 'proof_scope'in value:item['proof_scope']=scope
         for key in ('source','target'):
             identifier=value.get(key)
             if isinstance(identifier,str) and PROFILE.fullmatch(identifier):item[key]=identifier

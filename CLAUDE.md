@@ -1,5 +1,15 @@
 # HomenSAI Auto VPN — project entry point
 
+SINGLE ACTIVE EXECUTOR 22 October 09:41–15:55 UTC: owner-authorized interactive thread 01a162e9-6703-7b41-8334-561a48debe2c is completing release/model/hardware work. Read private/ACTIVE-EXECUTOR.local.json and docs/handoff/CURRENT.md. Other heartbeat threads MUST DEFER without edits, tests, agents or router calls while the claim is live. This prevents overlapping executors; it is not an owner pause.
+
+ACTIVE 22 October: owner resumed completion and real tests on the dedicated cable-connected GL-MT3000; primary MT6000 and host Wi-Fi remain excluded from changes. Read docs/handoff/CURRENT.md first. Owner requires a local Git checkpoint and current done/not-done state after every critical or long operation. Owner also explicitly requests a release on main and a model selection during installation/settings for MT6000 and MT3000. Model preference must never bypass detected hardware/capability guards. No claim of real Auto acceptance until actual transitions and recovery pass.
+
+ACTIVE RESUME21October after reboot: owner explicitly resumed full testing on the dedicated portable GL-MT3000. Read docs/handoff/CONTINUATION-2026-10-21.md first. Wi-Fi is independently confirmed on primary MT6000/gateway8.1; cable is portable11.1. Owner retains router-only scope, no separate LAN witness. Earlier stop records below are historical for this resumed session; do not resume old observers or bypass technical guards.
+
+URGENT OWNER STOP21October for PC reboot: read docs/handoff/STOP-2026-10-21.md first. Preserve uncommitted21October WIP; ask the deferred Wi-Fi/gateway question only after owner resumes. No tests/agents/router/copy jobs may resume automatically.
+
+Latest owner checkpoint (20 October): implementation is paused for the next owner-started session. Read docs/handoff/RESUME-TODO.md first, then docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md. The saved/pushed alpha17 WIP has known integration failures; alpha16 remains installed/published. Do not resume agents, tests, router actions or old observers automatically.
+
 Active continuation, 20 October 2026: the owner explicitly resumed after the urgent pause and authorized physical trials on the cable-connected portable GL-MT3000. Read docs/handoff/CONTINUATION-2026-10-20.md first, then ACTIVE-STATE/RECOVERY-TODO. Primary GL-MT6000 and PC Wi-Fi remain excluded from changes. Authenticated stock-target facts and encrypted recovery evidence now exist; alpha15 has an explicit monitor-only startup gate. Native switching remains uncertified/refused. Do not resume the stopped VM observer or auto-accept terms. Private access and backup receipts stay outside public source.
 
 Read the imported handoff before planning work. The owner requested a checkpoint for an independent Claude review on 17 October 2026.

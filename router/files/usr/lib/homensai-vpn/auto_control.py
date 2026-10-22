@@ -77,6 +77,7 @@ def readiness(settings, certificate, consumed, selection, blockers, now):
     if type(count) is not int or not 0<=count<3:
         reasons.append('TRIAL-ATTEMPT-LIMIT')
     certified_until=certificate.get('until',0)
+    from native_proof import matches
     if not isinstance(selection,dict) or not all(isinstance(selection.get(k),dict) for k in ('source','target')) or not all((
         certificate.get('hash') == selection.get('hash'),
         certificate.get('source') == selection.get('source', {}).get('id'),
@@ -84,6 +85,7 @@ def readiness(settings, certificate, consumed, selection, blockers, now):
         certificate.get('direction') == selection.get('direction'),
         type(certified_until) in (int,float) and math.isfinite(certified_until) and certified_until >= until,
         certificate.get('settings_hash') == selection.get('settings_hash'),
+        matches(certificate,selection),
     )):
         reasons.append('LAN-TRIAL-REQUIRED')
     return sorted(set(reasons))
@@ -133,7 +135,34 @@ def effective_intent(settings, stopped, request, now):
     return True, False
 
 
-def start(control_revision=None):
+def trial_readiness(settings,consumed,selection,blockers,trial,now):
+    """A private explicit calibration intent, never a certificate or Auto resume."""
+    import hmac,ipaddress
+    from native_switch import deadline,Refused
+    reasons=list(blockers)
+    if (not isinstance(settings,dict)or not isinstance(consumed,dict)or not isinstance(selection,dict)
+            or any(not isinstance(selection.get(k),dict)for k in('source','target'))):return sorted(set(reasons+['START-STATE-UNVERIFIED']))
+    configured=settings.get('native_trial')
+    if (not isinstance(trial,str)or not re.fullmatch('[a-f0-9]{32}',trial)
+            or not isinstance(configured,str)or not re.fullmatch('[a-f0-9]{32}',configured)or not hmac.compare_digest(trial,configured)):
+        reasons.append('LAN-TRIAL-REQUIRED')
+    if consumed.get('trial')==trial:reasons.append('LAN-TRIAL-REQUIRED')
+    try:until=deadline(settings.get('native_until'))
+    except Refused:until=0
+    count=consumed.get('count',0)
+    if 'until'in consumed and type(consumed['until'])in(int,float)and math.isfinite(consumed['until'])and consumed['until']!=until and now<until<=now+14400:count=0
+    if type(count)is not int or not 0<=count<3:reasons.append('TRIAL-ATTEMPT-LIMIT')
+    if not now<until<=now+14400:reasons.append('BOUNDED-DEADLINE-REQUIRED')
+    if settings.get('native_session_loss')!='1':reasons.append('SESSION-LOSS-NOT-ACCEPTED')
+    if settings.get('native_enabled')!='0':reasons.append('START-STATE-UNVERIFIED')
+    try:
+        value=settings.get('native_baseline_exit')
+        if type(value)is not str or not ipaddress.IPv4Address(value).is_global:raise ValueError()
+    except (ValueError,TypeError):reasons.append('LAN-TRIAL-REQUIRED')
+    return sorted(set(reasons))
+
+
+def start(control_revision=None,trial_nonce=None):
     from native_switch import Linux, journal_read, deadline, Refused
     arrived=time.time()
     if not isinstance(control_revision,str) or not re.fullmatch(r'[a-f0-9]{32}',control_revision):
@@ -155,8 +184,9 @@ def start(control_revision=None):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
     blockers, selection = backend.diagnostic()
     try:
-        reasons = readiness(settings, read_json(PERSIST/'native-certificate.json',{}),
-                            read_json(PERSIST/'native-attempts.json',{}), selection, blockers, time.time())
+        consumed=read_json(PERSIST/'native-attempts.json',{})
+        reasons = (readiness(settings, read_json(PERSIST/'native-certificate.json',{}),consumed,selection,blockers,time.time())
+                   if trial_nonce is None else trial_readiness(settings,consumed,selection,blockers,trial_nonce,time.time()))
     except (OSError,ValueError,TypeError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if reasons:return {'accepted':False,'blockers':reasons}
     with control_lock():
@@ -187,7 +217,7 @@ def start(control_revision=None):
         now = time.time()
         if not arrived<=now<deadline(settings.get('native_until')):
             return {'accepted':False,'blockers':['BOUNDED-DEADLINE-REQUIRED']}
-        if old.get('mode') == 'on' and effective_intent(settings,stopped,old,now) == (True,False):
+        if old.get('mode') == 'on' and old.get('trial')==settings.get('native_trial') and effective_intent(settings,stopped,old,now) == (True,False):
             return {'accepted':True,'queued':True,'already_requested':True}
         if type(old.get('time')) in (int,float) and old['time']>arrived:
             return {'accepted':False,'blockers':['STOP-SUPERSEDED-START']}
