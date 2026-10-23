@@ -89,3 +89,7 @@ All checked items above now refer to final43 completion, superseding their histo
 ## Appearance step correction — alpha44 in progress
 
 Owner asks to remove Emergency Stop and its note from Language and appearance only, keep the dashboard/recovery escape with soft green emphasis, and apply language changes immediately on that first page. Other setup steps stay unchanged. Draft preview rerenders all labels without saving settings/reloading/losing draft values; dashboard escape follows selected language. Targeted onboarding tests PASS. Full44CI/build/install/actual snapshot still pending. Installed43 Auto was left ON reserve; refresh state/backup before update. GitHub full-history push remains refused pending explicit105commit/78MB publication approval; never retry that merely for this UI task.
+
+## Alpha44 appearance correction completed — 17:53 Berlin
+
+All three new owner corrections installed and verified. Language/appearance first step has no Stop/note; green recovery escape, immediate EN/RU preview including first-step heading/buttons and link locale, other draft fields retained/no RPC/no browser-pref save/no reload. Other steps retain prior behavior. Corrected stale help. Exact5189933 fullCI724app/107QA per runtime/39UI and actual84files/protected configs/HTTPS+HTTP8080 PASS. Start57.66s, owner reserve restored35.78s; Auto leftON, both VPN checks healthy; final encrypted backup189entries verified. See APPEARANCE report. No further device action needed; finish Gitea/recovery closure only. Prior GitHub history approval request remains unresolved.
