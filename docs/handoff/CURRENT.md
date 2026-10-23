@@ -1,3 +1,13 @@
+# Alpha45 final wording CI — Auto temporarily OFF
+
+Stop44 PASS,16:10:48UTC; pre45 encrypted backup verified. Visual review of intro/wizard/agreement PASS. User added illustrated intro after initial45 build; final wording now explicitly says agreement→illustrated explanation→eight-step setup. Earlier2ae94dd package dbdd... is superseded and must not be installed. Final candidate769863bytes SHA10857c90e28e9f8fec01ecec9d059a577f3c22e49e7f090e9996e4fa5974b0f2. Repeat exact CI pending; then install/RPC/assets/Start45 and restore owner reserve (reconnect pause runs concurrently with CI). Do not hand over while Auto OFF. No test faults or primary-router/Windows changes.
+
+# Alpha45 first-run flow — final CI RUNNING, not installed
+
+Owner additions: existing typed MIT/experimental/own-risk agreement stays first for unaccepted users; next a read-only two-paragraph/three-schematic operating intro, OK then eight-step wizard. Bottom green skip after navigation, accurate unchanged-existing-config copy, same-origin help tab with all8EN/RU steps/examples. No fake acceptance reset or Auto start. Terms Help registration order corrected. Targeted tests PASS. Canonical product2ae94dd,769811bytes SHAdbddf7c6c9e0959a257a17d7662c2aab1d121d9f851cb3272d8a2484a65e536d. Exact full CI RUNNING. Installed44 remains AutoON reserve, fresh pre45snapshot PASS. Need backup, exactCI PASS, oneStop44/install45/RPC/assets, reconnect pause/Start45, restore owner reserve, final snapshot/backup/QA/report/both Git remotes. Dedicated MT3000 only; no Windows/primary-router changes or test faults.
+
+Older entries:
+
 # Publication completed: GitHub and Gitea feature branch
 
 Owner explicitly approved full-history publication after the earlier review refusal. Source/report checkpoint5fb6ea8 was pushed and independently verified in BOTH GitHub HomenSAI/homensai-gl-mt6000-auto-vpn and Gitea localadmin/homensai-gl-mt6000-auto-vpn, branch feature/recovery-auto-20261023. Complete reachable history audit PASS111commits/2409blobs/80,843,335bytes, no secret-pattern or private-path findings. This closure note is synchronized next. Prior paragraphs saying GitHub is blocked/pending approval are historical and superseded. Main/tags/releases were not changed. Installed44 device state is unchanged by publication.
