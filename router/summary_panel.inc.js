@@ -89,6 +89,9 @@ function showErrorCode(code){
   setTimeout(function(){
     var key=Object.prototype.hasOwnProperty.call(ERROR_GROUP_OF,code)?code:((typeof errorFamilyOf==='function'&&errorFamilyOf(code))?errorFamilyOf(code)[0]+'*':code);
     if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;
+    if(typeof ERROR_TABLE_STATE!=='undefined'){ERROR_TABLE_STATE.selected=key;persistErrorTableState();}
+    var search=errorTable&&errorTable.querySelector('input[type="search"]');
+    if(search){search.value=key;search.dispatchEvent(new Event('input',{bubbles:true}));}
     var row=document.querySelector('[data-error-code="'+key+'"]');if(!row)return;
     var fix=row.nextElementSibling;if(fix&&fix.classList&&fix.classList.contains('hv-errfix')&&fix.hidden){var b=row.querySelector('button');if(b)b.click();}
     document.querySelectorAll('.hv-err-selected').forEach(function(old){old.classList.remove('hv-err-selected');});row.classList.add('hv-err-selected');row.scrollIntoView({block:'center'});

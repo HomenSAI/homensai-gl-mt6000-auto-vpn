@@ -8,8 +8,8 @@
     "ui_module": "dashboard69",
     "ui_stylesheet": "ui46.css",
     "artifact": "homensai-auto-vpn_0.9.0-alpha36-1_all.ipk",
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "source_fingerprint": "4ce02aff06661b8948da850798972071d8a8249e4c95e19cb9b914c2eeae05cf"
+    "sha256": "bc87b860bfa651ab90d486c6889dccbc75f872f71d14aa64197ee67d75b47a12",
+    "source_fingerprint": "b50020c86a9a8a7b1f3b78ba7a449d56f68c984f1328c20fb5fcf85108f31999"
   },
   "handoff": {
     "version": "1.0.0",

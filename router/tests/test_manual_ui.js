@@ -12,11 +12,11 @@ async function main(){
  assert(/Emergency Stop/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));assert(/may have been stored/.test(c.manualReason(['MANUAL-REQUEST-UNCONFIRMED'])));assert(/not certify|not passed/.test(c.manualReason(['MT3000-MANUAL-ADAPTER-NOT-CERTIFIED'])));assert(/integration/.test(c.manualReason(['FW3-INCLUDE-CONTRACT-UNVERIFIED'])));
  const english=c.bi;c.bi=(_en,ru)=>ru;assert(/аварийную остановку/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));c.bi=english;
  for(const code of ['__proto__','constructor','PRIVATE_SENTINEL'])assert(!c.manualReason([code]).includes(code),'unknown codes never echo untrusted text');
- let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'red');assert(/Not in use.*available/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
- s.manual_switch={state:'QUEUED',updated_at:999,target_id:'b'};assert.equal(tone(s,'source').color,'green','queue never swaps route colors');assert.equal(tone(s,'target').color,'red');
- s.manual_switch.state='COMPLETED';assert.equal(tone(s,'target').color,'red','completion record alone never selects route');
+ let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');assert(/Waiting.*ready/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
+ s.manual_switch={state:'QUEUED',updated_at:999,target_id:'b'};assert.equal(tone(s,'source').color,'green','queue never swaps route colors');assert.equal(tone(s,'target').color,'yellow');
+ s.manual_switch.state='COMPLETED';assert.equal(tone(s,'target').color,'yellow','completion record alone never selects route');
  s.channel_path.transitioning=true;assert.equal(tone(s,'source').color,'yellow');assert.equal(tone(s,'target').color,'yellow');
- s.channel_path.transitioning=false;s.channel_path.active_profile_id='b';assert.equal(tone(s,'source').color,'red');assert.equal(tone(s,'target').color,'green','fresh backend route confirmation swaps lamps');
+ s.channel_path.transitioning=false;s.channel_path.active_profile_id='b';assert.equal(tone(s,'source').color,'yellow');assert.equal(tone(s,'target').color,'green','fresh backend route confirmation swaps lamps');
  for(const edit of [s=>s.time=800,s=>s.rpc_error='RPC-FAILED',s=>s.channel_path.time=800,s=>s.channel_path.confirmed=false,s=>s.channel_path.active_profile_id='unknown',s=>s.channel_path.source_profile_id='other']){s=status();edit(s);assert.equal(tone(s,'source').color,'grey');assert.equal(tone(s,'target').color,'grey');}
  s=status();assert.equal(tone(s,'source',{...profiles[0],time:800}).color,'grey');assert.equal(tone(s,'source',{...profiles[0],code:'DNS-001'}).color,'red');assert(/connectivity failed/.test(tone(s,'source',{...profiles[0],code:'DNS-001'}).text));
  s=status();s.channel_path.confirmed=false;
@@ -29,6 +29,11 @@ async function main(){
  n=c.renderManualSwitch(s,{});assert(n.all().filter(x=>x.attrs['data-manual-direction']).every(x=>x.disabled),'rerender shares busy guard');pending.resolve(response);await task;pending=null;assert(notices.some(x=>/Wait for the router/.test(x)));assert(calls.every(x=>x.spec.method==='manual_switch'),'never enables Auto, accepts terms or stops by itself');
  for(const value of [{accepted:true,queued:true,completed:true,request_id:'a'.repeat(32)},{accepted:'true',queued:true,completed:false,request_id:'a'.repeat(32)},{accepted:false,queued:false,completed:false,blockers:['UNSUPPORTED-BOARD']},null]){response=value;n=c.renderManualSwitch(status(),{});await n.all().find(x=>x.attrs['data-manual-direction']==='reserve').attrs.click();assert(!/confirmed active|switch completed/i.test(notices.at(-1)));}
  pending={};n=c.renderManualSwitch(status(),{});task=n.all().find(x=>x.attrs['data-manual-direction']==='reserve').attrs.click();pending.reject(Error('PRIVATE_SENTINEL'));await task;assert(!notices.some(x=>x.includes('PRIVATE_SENTINEL')));assert(!c.MANUAL_SWITCH_PENDING);
- console.log('PASS: manual intent uses typed direction/revision contract, safe blocked controls, single-flight, no Auto mutation; green/red swap only from fresh confirmed route, idle red distinct from failure, verified transition yellow and stale/unknown grey');
+ s=status();s.native_failover={state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,source:'a',target:'b',time:999};s.channel_path.confirmed=false;
+ assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');
+ s.manual_switch_control.mode='continuous-pair';s.manual_switch_control.hold='target';s.manual_switch_control.resume={allowed:true,blockers:[]};response={accepted:true,queued:true,completed:false,request_id:'c'.repeat(32)};pending=null;
+ n=c.renderManualSwitch(s,{});assert.equal(n.tag,'section');assert(/hv-chart-card/.test(n.attrs.class));
+ await n.all().find(x=>x.attrs['data-manual-direction']==='resume').attrs.click();assert.equal(calls.at(-1).spec.method,'pair_manual');assert.equal(calls.at(-1).args[0],'resume');
+ console.log('PASS: legacy and pair manual RPC, Resume Auto, single-flight/Stop-safe eligibility, one green selected path, yellow standby, red failure and neutral stale evidence');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

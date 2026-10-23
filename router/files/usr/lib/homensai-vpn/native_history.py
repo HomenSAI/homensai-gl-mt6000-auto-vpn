@@ -9,7 +9,7 @@ import time
 
 CODE=re.compile(r'^[A-Z0-9_-]{1,96}$')
 PROFILE=re.compile(r'^(?:openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$')
-METRICS=('attempts','committed','trials_passed','rollbacks','returns','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches','rate_limited_episodes')
+METRICS=('attempts','committed','manual_attempts','manual_committed','trials_passed','rollbacks','returns','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches','rate_limited_episodes')
 WEEK=7*86400
 
 
@@ -119,17 +119,19 @@ class History:
             recorded.append(metric)
         if state=='APPLYING':
             add('attempts',identity)
-            if not item['trial']:add('automatic_attempts',identity)
+            if item.get('manual'):add('manual_attempts',identity)
+            elif not item['trial']:add('automatic_attempts',identity)
         if state=='COMMITTED':
+            new=identity>seen.get('committed',0)
             add('committed',identity)
-            if not item['trial']:
-                add('automatic_committed',identity)
+            if new and not item['trial']:
+                add('manual_committed' if item.get('manual') else 'automatic_committed',identity)
                 kind=item.get('transition_kind')
                 if kind in ('server','channel','protocol'):add(kind+'_switches',identity)
         if state=='ARMED' and 'TRIAL-PASSED' in item['codes']:add('trials_passed',identity)
         if state=='ROLLED-BACK':
             add('rollbacks',identity)
-            if item.get('original_restored') is True and 'PRIMARY-STABLY-RECOVERED' in item['codes']:add('returns',identity)
+            if item.get('original_restored') is True and ('PRIMARY-STABLY-RECOVERED' in item['codes'] or item.get('manual')):add('returns',identity)
         prior=data.get('counted_state')
         if state=='BLOCKED' and prior!='BLOCKED':add('blocked_episodes')
         if 'PAIR-RATE-LIMIT' in item['codes'] and data.get('counted_reason')!='PAIR-RATE-LIMIT':add('rate_limited_episodes')
@@ -177,6 +179,7 @@ class History:
         if value.get('reason'):codes=list(codes)+[value['reason']]
         codes=sorted({c for c in codes if isinstance(c,str) and CODE.fullmatch(c)})
         item={'state':state,'codes':codes,'trial':value.get('trial') is True}
+        if value.get('manual') is True or 'OPERATOR-MANUAL' in codes:item['manual']=True
         if type(value.get('original_restored')) is bool:item['original_restored']=value['original_restored']
         scope=value.get('proof_scope','external-lan')
         if scope not in('external-lan','router-hosted-ipv4','router-probed-ipv4'):raise HistoryError('HISTORY-SCOPE')

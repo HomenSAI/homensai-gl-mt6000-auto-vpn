@@ -145,7 +145,16 @@ var AUTO_NAMES={
   if(typeof ERROR_EXTRA_ROWS!=='undefined')ERROR_EXTRA_ROWS.forEach(function(r){if(!have[r[0]]){ERROR_ROWS.push(r);have[r[0]]=true;}});
   if(typeof ERROR_FAMILIES!=='undefined')ERROR_FAMILIES.forEach(function(f){var code=f[0]+'*';if(!have[code]){ERROR_ROWS.push([code].concat(f.slice(1)));have[code]=true;}});
 })();
-var ERROR_GROUP_OF={},errorTable=null,ERROR_TABLE_STATE={query:'',open:Object.create(null)};
+var ERROR_GROUP_OF={},errorTable=null,ERROR_TABLE_STATE={query:'',open:Object.create(null),selected:null};
+try{
+  var savedErrorState=JSON.parse(sessionStorage.getItem('homensai-vpn-error-table')||'null');
+  if(savedErrorState&&typeof savedErrorState.query==='string'&&savedErrorState.query.length<=128){
+    ERROR_TABLE_STATE.query=savedErrorState.query;
+    Object.keys(savedErrorState.open||{}).slice(0,500).forEach(function(code){if(/^[A-Z0-9*-]{1,96}$/.test(code))ERROR_TABLE_STATE.open[code]=savedErrorState.open[code]===true;});
+    if(typeof savedErrorState.selected==='string'&&/^[A-Z0-9*-]{1,96}$/.test(savedErrorState.selected))ERROR_TABLE_STATE.selected=savedErrorState.selected;
+  }
+}catch(error){}
+function persistErrorTableState(){try{sessionStorage.setItem('homensai-vpn-error-table',JSON.stringify(ERROR_TABLE_STATE));}catch(error){}}
 (function(){
   // Auto start blockers come from the dictionary of the Auto panel; they get a readable name and are grouped under Switching.
   var seen={};ERROR_ROWS.forEach(function(r){seen[r[0]]=true;});
@@ -170,6 +179,7 @@ function renderErrorTable(){
     while(host.firstChild)host.removeChild(host.firstChild);
     var q=search.value.trim().toLowerCase();
     ERROR_TABLE_STATE.query=search.value;
+    persistErrorTableState();
     ERROR_GROUPS.forEach(function(g){
       var rows=ERROR_ROWS.filter(function(r){return r[1]===g[0]&&matches(r,q);});
       if(!rows.length)return;
@@ -178,8 +188,8 @@ function renderErrorTable(){
       rows.forEach(function(r){
         var fixRow=null;
         var expanded=ERROR_TABLE_STATE.open[r[0]]===true;
-        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},expanded?bi('Hide','Скрыть'):bi('How to fix','Как исправить')):null;
-        table.appendChild(E('tr',{'data-error-code':r[0]},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
+        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;persistErrorTableState();button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},expanded?bi('Hide','Скрыть'):bi('How to fix','Как исправить')):null;
+        table.appendChild(E('tr',{'data-error-code':r[0],'class':ERROR_TABLE_STATE.selected===r[0]?'hv-err-selected':null},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
         if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
       });
       host.appendChild(table);

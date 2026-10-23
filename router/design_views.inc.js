@@ -54,18 +54,29 @@ function dvChannelUse(profile,m,status){
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
   if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time<0||m.now-status.time>90){result.label=bi('No fresh confirmation','Нет свежего подтверждения');return result;}
   if(h.state==='failed'){result.kind='red';result.state='failed';return result;}
-  if(h.state==='inactive'){result.label=bi('Off','Выключен');result.state='off';return result;}
+  if(h.state==='inactive'){result.label=bi('Off','Отключён');result.kind='red';result.state='off';return result;}
   if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
   var ns=status.native_failover||{};
   if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='yellow';result.state='switching';result.label=bi('Switching','Переключение');return result;}
   if(h.state==='healthy'){
-    if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Carries traffic','Пропускает трафик');}
-    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Ready, waiting','Готов, ожидает');}
+    if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Waiting','Ожидает');}
     else result.label=bi('Connected; route unconfirmed','Подключён; путь не подтверждён');
   }
   return result;
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
+function channelDisplayUse(profile,status,inventory){
+  var now=Date.now()/1000,settings=(inventory||{}).settings||{},m={now:now,settings:settings,
+    primary:vendorDisplayMember(status,inventory,'source',now),reserve:vendorDisplayMember(status,inventory,'target',now),selected:vendorDisplaySelected(status,inventory,now)};
+  return dvChannelUse(profile,m,status);
+}
+function renderChannelHeader(profile,status,inventory){
+  var use=channelDisplayUse(profile,status,inventory);
+  return E('div',{'class':'hv-server-top'},[dvChannelLamp(use),E('strong',{'class':'hv-protocol'},use.role+' · '+protocolLabel(profile)),
+    E('span',{'class':'hv-route-badge hv-route-'+use.kind,'data-route-state':use.state},use.label+(safeCode(profile.code)?' · '+profile.code:'')),
+    E('span',{'class':'hv-profile-detail'},bi('Tunnel: ','Туннель: ')+(profile.interface?bi('Connected','Подключён'):bi('Off','Отключён'))+' · '+bi('Traffic: ','Трафик: ')+(use.state==='selected'?bi('Selected channel','Выбранный канал'):use.state==='standby'?bi('Standby','Ожидание'):bi('Unconfirmed','Не подтверждён')))]);
+}
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
 function dvModel(status,inventory,rows,month){
@@ -111,7 +122,7 @@ function dvEventList(status,rows,limit){
 function renderDesignA(ctx,m){
   var strip=E('section',{'class':'hv-dv-strip hv-dv-tone-'+m.tone,'role':'region','aria-label':bi('Status summary','Сводка состояния')},[
     E('div',{},[E('strong',{},m.headline),E('p',{},m.sub)]),
-    E('div',{'class':'hv-dv-kpis'},[dvKpi(bi('VPNs working','VPN работают'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
+    E('div',{'class':'hv-dv-kpis'},[dvKpi(bi('VPN links ready','Доступные VPN-подключения'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
       dvKpi(bi('Checks passed','Проверок успешно'),dvPercentText(m.passPercent)),dvKpi(bi('Traffic this month','Трафик за месяц'),m.traffic)])]);
   var control=E('div',{'class':'hv-dv-control'},[ctx.controlCard]);
   var servers=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-rowhead','aria-hidden':'true'},[E('span'),E('span',{},bi('Server','Сервер')),E('span'),E('span',{'class':'hv-dv-num'},bi('HTTPS','HTTPS')),E('span',{'class':'hv-dv-num'},bi('Passed','Успех'))]),dvServerRows(ctx.status,ctx.rows,m)]);
@@ -121,7 +132,7 @@ function renderDesignA(ctx,m){
 
 /* ---------- B · Calm ---------- */
 function renderDesignB(ctx,m){
-  var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('Working VPNs','Работающие VPN'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
+  var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('VPN links ready','Доступные VPN-подключения'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
     dvKpi(bi('Problems today','Проблемы сегодня'),m.passPercent==null?bi('No data','Нет данных'):m.passPercent>=99.5?bi('None','Нет'):bi('Some','Есть')),dvKpi(bi('Used this month','Использовано за месяц'),m.traffic)]);
   var list=E('div',{'class':'hv-dv-list'},sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
     var h=profileHealth(p,m.now),country=countryOf(p),use=dvChannelUse(p,m,ctx.status),role=use.role,kind=use.kind;

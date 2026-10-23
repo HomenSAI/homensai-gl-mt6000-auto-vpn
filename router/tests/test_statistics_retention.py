@@ -110,6 +110,15 @@ class TransitionStatisticsTests(unittest.TestCase):
             h.record(self.base('OBSERVING'),BASE+3)
             self.assertEqual(h.public()['totals']['returns'],1)
 
+    def test_manual_commit_is_not_counted_again_when_auto_resumes_observing_it(self):
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d);h.record(self.base('APPLYING',reason='OPERATOR-MANUAL'),BASE)
+            h.record(self.base('COMMITTED',manual=True),BASE+1)
+            h.record(self.base('COMMITTED',reason='CLIENT-CONFIRMED'),BASE+2)
+            totals=h.public()['totals']
+            self.assertEqual(totals['committed'],1);self.assertEqual(totals['manual_committed'],1)
+            self.assertEqual(totals['automatic_committed'],0)
+
     def test_week_pagination_is_bounded_and_uses_a_snapshot_watermark(self):
         with tempfile.TemporaryDirectory() as d:
             h=History(d)

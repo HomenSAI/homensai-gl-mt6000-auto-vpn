@@ -68,6 +68,7 @@ def read_state():
             or any(x not in ('0', '1') for x in data['before_flags'].values())
             or not isinstance(data.get('network_identity'), str) or not __import__('re').fullmatch('[a-f0-9]{64}', data['network_identity'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
+    if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     return data
 
 
@@ -329,6 +330,8 @@ def cleanup(backend, state):
 def recover(backend):
     """Called after core journal recovery on supervisor restart; never resumes."""
     state = read_state()
+    from pair_manual import recover as recover_manual
+    recover_manual()
     if state and state['phase'] not in TERMINAL:
         cleanup(backend, state)
     from auto_control import control_lock, revision_locked
@@ -393,6 +396,9 @@ def tick(backend, settings, revision):
             raise ValueError('PAIR-EXTERNAL-CONFIG-CHANGE')
         journal = n.journal_read()
         status = read_json(RUNTIME / 'status.json', {})
+        from pair_manual import consume as consume_manual,held_reserve
+        if consume_manual(backend,state,settings,revision):return True
+        if held_reserve(backend,state,journal,settings,status):return True
         if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
             decision = n.committed_recovery_decision(backend, journal, settings, status.get('samples', []), time.time(), status)
             if decision['action'] == 'RESTORE-PRIMARY':
@@ -426,6 +432,8 @@ def tick(backend, settings, revision):
         events, permitted = budget(ledger.get('events'), now)
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])
         if failed and healthy and permitted and dwell and not diagnosis.get('suppress_switch'):
+            if state.get('manual_hold'):
+                state.pop('manual_hold',None);save(state)
             atomic_json(PERSIST / 'pair-auto-budget.json', {'events': events + [now]})
             until = configure_lease(state)
             blockers, selection = backend.diagnostic()
@@ -441,7 +449,7 @@ def tick(backend, settings, revision):
                        'source': selection['source']['id'], 'target': selection['target']['id'],
                        'vendor_identity':selection.get('vendor_identity'),
                        'source_failures': failed, 'reserve_healthy': healthy,
-                       'reason': 'PAIR-RATE-LIMIT' if not permitted else diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-WATCHING',
+                       'reason': 'PAIR-RATE-LIMIT' if not permitted else diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-MANUAL-HOLD-PRIMARY' if state.get('manual_hold')=='source' else 'PAIR-WATCHING',
                        'blockers': []})
     except (n.Refused, OSError, ValueError, subprocess.SubprocessError) as error:
         code = str(error) if isinstance(error, (n.Refused, ValueError)) and n.re.fullmatch('[A-Z][A-Z0-9_-]{0,95}', str(error)) else 'PAIR-SYSTEM-001'

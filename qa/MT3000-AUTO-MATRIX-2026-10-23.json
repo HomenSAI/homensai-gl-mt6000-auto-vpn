@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-23",
+  "device": "GL-MT3000",
+  "firmware": "4.11.0",
+  "scope": "router-probed-ipv4",
+  "external_lan_verified": false,
+  "original_package": "0.9.0-alpha35-1",
+  "session_age_at_retrospective_capture_seconds": 11893.320022821426,
+  "retrospective_spontaneous_unique_attempts": 1,
+  "retrospective_spontaneous_unique_commits": 1,
+  "matrix_alpha35": {
+    "event": "FINAL",
+    "time": 1792752067.149468,
+    "elapsed": 1162.725,
+    "result": "PASS",
+    "cases": [
+      {
+        "name": "healthy-no-false-switch",
+        "result": "PASS",
+        "seconds": 183.046,
+        "switches": 0
+      },
+      {
+        "name": "brief-primary-loss",
+        "result": "PASS",
+        "seconds": 54.551,
+        "switches": 0
+      },
+      {
+        "name": "reserve-only-failure",
+        "result": "PASS",
+        "seconds": 81.75,
+        "switches": 0
+      },
+      {
+        "name": "both-paths-failed",
+        "result": "PASS",
+        "seconds": 92.013,
+        "switches": 0
+      },
+      {
+        "name": "primary-failure-and-return-1",
+        "result": "PASS",
+        "seconds": 147.414,
+        "switches": 1,
+        "returns": 1
+      },
+      {
+        "name": "reserve-failure-while-primary-down",
+        "result": "PASS",
+        "seconds": 174.882,
+        "switches": 1,
+        "returns": 1
+      },
+      {
+        "name": "primary-failure-and-return-3",
+        "result": "PASS",
+        "seconds": 138.347,
+        "switches": 1,
+        "returns": 1
+      },
+      {
+        "name": "rate-limit-preserved",
+        "result": "PASS",
+        "seconds": 106.569,
+        "switches": 0,
+        "reason": "PAIR-RATE-LIMIT"
+      },
+      {
+        "name": "final-stability",
+        "result": "PASS",
+        "seconds": 184.035,
+        "switches": 0
+      }
+    ],
+    "counts": {
+      "samples": 100,
+      "commits": 3,
+      "returns": 3
+    },
+    "observation_seconds": 1162.7246342630024,
+    "max_poll_gap_seconds": 10.223386370002117,
+    "auto_left_running": true,
+    "external_lan_verified": false
+  },
+  "test_fault_cleanup_confirmed": true,
+  "new_package": {
+    "version": "0.9.0-alpha36-1",
+    "bytes": 759280,
+    "sha256": "bc87b860bfa651ab90d486c6889dccbc75f872f71d14aa64197ee67d75b47a12",
+    "hardware_acceptance": "NOT_INSTALLED"
+  },
+  "limits": [
+    "No independent external LAN witness; owner chose router-only scope.",
+    "Session age is not continuously measured Internet/LAN uptime.",
+    "No physical power cut or completed 24-hour traffic soak.",
+    "Native browser tools have no attached surface; UI tests are synthetic, not a real-browser claim."
+  ]
+}

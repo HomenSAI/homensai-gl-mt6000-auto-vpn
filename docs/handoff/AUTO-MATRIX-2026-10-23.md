@@ -28,3 +28,11 @@ An earlier alpha36 build (749210 bytes, SHA d952a89c1608fa73e29e9bbf5d752da0842f
 4. Stop through the ordinary RPC, verify cleanup, install the exact accepted package with protected config/history preservation, verify every installed file and served UI asset.
 5. Run fresh actual statistics/manual/fault tests; compare counter deltas with real confirmed transitions and verify persistence/export/restart. Leave requested Auto on after final acceptance.
 6. Produce English durable evidence plus a Russian owner report with durations, scenarios, counts, refusal reasons and limits; save local Git/Gitea and a restore-verified checkpoint. No claim of external-LAN/MT6000/24h traffic-soak acceptance.
+
+## Later owner UI/manual steering
+
+The owner added explicit primary/reserve labels and green selected/yellow standby/red known disconnected or failed/grey unknown states on Channels and all designs, persistent 24h graph below the unchanged live graph, page-specific return scroll and expanded error-state preservation (including document reload), smaller WAN/VPN selector text, a separate manual card, safe manual override during Auto with explicit Resume, and visible 1→2 / 2→1 confirmed-transition badges. Implementations are in the current WIP. Mocked manual tests and day-history tests pass; complete source/CI/device validation remains necessary.
+
+Browser tool inventory returned no attached apps or browsers; no actual browser-interaction/stock-dashboard priority-display acceptance has succeeded. User screenshots are reference observations, not evidence that the new UI is served. No native/browser control fallback was used to bypass that missing connection.
+
+Automatic permission review rejected the combined new-code Git commit + Gitea-save command because this payload/destination lacked explicit authorization in its view. A safer local-only checkpoint succeeded at 6667705. Do not retry or work around external publication; complete local/device work first and present exact payload/destination for approval if publication is still wanted. Local Git/restore checks remain allowed. No new Gitea/GitHub publication is claimed.

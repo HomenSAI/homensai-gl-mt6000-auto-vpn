@@ -758,7 +758,7 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -776,6 +776,9 @@ def rpc(method):
     if method=='statistics':
         from statistics_export import page
         print(json.dumps(page(PERSIST,arguments)));return
+    if method=='pair_manual':
+        from pair_manual import request
+        print(json.dumps(request(arguments['direction'],arguments['control_revision']) if set(arguments)=={'direction','control_revision'} else {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}));return
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
             raise ValueError('RPC-CONFIRM-FIELDS')
@@ -898,8 +901,12 @@ def rpc(method):
             status['auto_control']=public_status()
             from manual_control import public_status as manual_status, control_status
             from channel_path import public_status as path_status
-            status['manual_switch']=manual_status()
-            status['manual_switch_control']=control_status()
+            from pair_manual import controls as pair_controls,public as pair_status
+            pair_control=pair_controls()
+            if pair_control.get('available'):
+                status['manual_switch_control']=pair_control;status['manual_switch']=pair_status()
+            else:
+                status['manual_switch']=manual_status();status['manual_switch_control']=control_status()
             status['channel_path']=path_status(status)
             try:
                 from speed_test import public_status as speed_status

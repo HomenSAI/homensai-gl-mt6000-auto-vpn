@@ -28,7 +28,7 @@ def active_controller(native,state,intent,now):
             and isinstance(state.get('id'),str) and state['id']==intent.get('id')
             and state.get('revision')==intent.get('revision')
             and native.get('mode')=='continuous-pair'
-            and native.get('state') not in ('STOPPED','STOPPED-ON-RESERVE','DISABLED','EXPIRED','SERVICE-STOPPED')
+            and native.get('state') in ('OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ARMED','APPLYING','WAIT-CLIENT','RESTORING','BLOCKED')
             and finite(stamp) and finite(now) and 0<=now-stamp<90)
 
 

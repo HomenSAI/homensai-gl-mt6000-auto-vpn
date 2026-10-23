@@ -18,14 +18,14 @@ function restorePageViewport(root,saved){
   if(!root||!root.isConnected||!saved||!Number.isFinite(saved.y))return;
   var section=root.querySelector('[data-hv-page="'+saved.page+'"]')||root;
   var details=section.querySelectorAll('details');
-  (saved.details||[]).forEach(function(item){if(details[item.index])details[item.index].open=item.open;});
+  (Array.isArray(saved.details)?saved.details.slice(0,1000):[]).forEach(function(item){if(item&&Number.isSafeInteger(item.index)&&item.index>=0&&details[item.index])details[item.index].open=item.open===true;});
   var top=saved.y,anchor=saved.anchor,node=null;
-  if(anchor){
+  if(anchor&&Number.isFinite(anchor.top)){
     if(anchor.id==='hv-auto-live-chart'||anchor.id==='hv-auto-day-chart')node=section.querySelector('#'+anchor.id);
     else if(typeof anchor.code==='string'&&/^[A-Z0-9*-]{1,96}$/.test(anchor.code))node=section.querySelector('[data-error-code="'+anchor.code+'"]');
     if(node)top=(window.scrollY||window.pageYOffset||0)+node.getBoundingClientRect().top-anchor.top;
   }
-  window.scrollTo({left:saved.x||0,top:Math.max(0,top),behavior:'instant'});
+  window.scrollTo({left:Number.isFinite(saved.x)?saved.x:0,top:Math.max(0,top),behavior:'instant'});
 }
 function rememberPageViewport(root,page){var saved=capturePageViewport(root,page);if(saved)pageViewportStates[page]=saved;return saved;}
 function revisitPageViewport(root,page){restorePageViewport(root,pageViewportStates[page]||{page:page,x:0,y:0,details:[]});}

@@ -62,12 +62,12 @@ assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');a
 assert(b.all().some(n=>/hv-dv-flag/.test(n.attrs.class||'')&&n.text().trim()==='DE'));
 // The VPN list has a separate status column with a lamp per profile.
 const lampCol=b.all().filter(n=>/hv-dv-statuscol/.test(n.attrs.class||''));assert.equal(lampCol.length,3);
-assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[2].all().some(n=>/hv-check-grey/.test(n.attrs.class||'')),'not connected: grey lamp');
+assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[1].all().some(n=>/hv-check-yellow/.test(n.attrs.class||'')),'healthy standby: yellow lamp');assert(lampCol[2].all().some(n=>/hv-check-red/.test(n.attrs.class||'')),'known disconnected: red lamp');
 // C: status line with real identifiers, latency chart, log with codes, server table, keys.
 const c=render(ctx,'c',fixture()).node;t=c.text();
 const tc=t.replace(/\s+/g,' ');assert(/ctrl OBSERVING/.test(tc)&&/auto (OFF|ON)/.test(tc)&&/ui dashboard/.test(tc));assert(/Event log/.test(t)&&/DNS-001/.test(t));
 const rowsC=c.all().filter(n=>n.tag==='tr'&&n.attrs['data-profile']);assert.equal(rowsC.length,3);
-assert(/use|ready/.test(rowsC[0].text()));
+assert(/Working|Waiting/.test(rowsC[0].text()));
 assert(/1.*9.*sections/.test(t.replace(/\s+/g,' '))&&/search/.test(t));
 // Hostile names stay inert text; nothing builds markup from them.
 const hostile=fixture();hostile.profiles[0].name='<img src=x onerror=alert(1)>';hostile.profiles[0].router_name='<b>de</b>';

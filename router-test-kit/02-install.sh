@@ -2,8 +2,8 @@
 # HomenSAI Auto VPN test kit, step 2: install/upgrade the audited package. Monitor only; Auto stays OFF.
 # Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.0-alpha36-1_all.ipk
 # Requires step 1 to have passed. Does not touch network, firewall, VPN or routes.
-EXPECTED_SHA=220261bbf1e876c2ca0429b491ab79b7a4f0d1e7ef3bfb34185370d484e07465
-EXPECTED_SIZE=740585
+EXPECTED_SHA=bc87b860bfa651ab90d486c6889dccbc75f872f71d14aa64197ee67d75b47a12
+EXPECTED_SIZE=759280
 EXPECTED_VERSION=0.9.0-alpha36-1
 KIT=/tmp/homensai-kit
 IPK="$1"

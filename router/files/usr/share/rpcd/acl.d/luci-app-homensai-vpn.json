@@ -23,6 +23,7 @@
           "native_trial_start",
           "native_return",
           "manual_switch",
+          "pair_manual",
           "setup_system",
           "setup_telegram",
           "telegram_test",

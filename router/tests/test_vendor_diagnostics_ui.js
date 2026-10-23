@@ -75,7 +75,7 @@ const control=live.renderAutoControl(status,inventory);assert(!text(control).inc
 for(const design of ['a','b','c']){
   const dm=live.dvModel(status,inventory,status.profiles,{rx:0,tx:0});assert.equal(dm.primary.id,'openvpn:a');assert.equal(dm.reserve.id,'wireguard:b');assert.equal(dm.selected,'openvpn:a');
   const node=live.renderDesignOverview(design,{status,inventory,rows:status.profiles,month:{rx:0,tx:0},controlCard:control});assert(walk(node).some(n=>n.attrs['data-profile']==='openvpn:a'));assert(!text(node).includes('openvpn:old'));
-  if(design==='b')assert(text(walk(node).find(n=>n.attrs['data-profile']==='wireguard:b')).includes('Backup'),'B role follows resolved reserve');
+  if(design==='b')assert(text(walk(node).find(n=>n.attrs['data-profile']==='wireguard:b')).includes('Reserve channel'),'B role follows resolved reserve');
 }
 status.native_failover.state='COMMITTED';assert.equal(live.vendorDisplaySelected(status,inventory,clock),'wireguard:b');
 status.vendor_observation.groups[0].generation='c'.repeat(32);assert.equal(live.vendorDisplayMember(status,inventory,'source',clock),null,'anchored unknown identity never falls back to stale saved profile');assert.equal(live.dvModel(status,inventory,status.profiles,{rx:0,tx:0}).primary,null);

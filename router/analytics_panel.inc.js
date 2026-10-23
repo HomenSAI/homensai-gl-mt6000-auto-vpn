@@ -198,7 +198,7 @@ function storedStatisticsRows(status){
   var history=status.native_history||{},health=(status.accounting||{}).reliability||{};
   var months=Array.from(new Set(Object.keys(history.months||{}).concat(Object.keys(health.months||{})))).sort().reverse();
   function row(period,checks,control){return {period:period,outages:checks.outages,failed_checks:checks.failed_checks,
-    attempts:control.attempts,switches:control.automatic_committed,returns:control.returns,
+    attempts:control.attempts,switches:control.committed,automatic:control.automatic_committed,manual:control.manual_committed,returns:control.returns,
     auto_seconds:checks.auto_observed_seconds};}
   return [row(bi('All recorded time','За всё время записи'),health.totals||{},history.totals||{}),
     row(bi('Last 7 days','Последние 7 дней'),health.weekly||{},history.weekly||{})].concat(months.map(function(month){
@@ -225,9 +225,9 @@ async function fetchStoredStatistics(kind,call){
 function renderStoredStatistics(status){
   var history=status.native_history||{},health=(status.accounting||{}).reliability||{},rows=storedStatisticsRows(status);
   var headings=[bi('Period','Период'),bi('Outages','Эпизоды отказа'),bi('Failed checks','Неудачные проверки'),
-    bi('Attempts','Попытки'),bi('Confirmed switches','Подтверждённые переключения'),bi('Returns since update','Возвраты с обновления'),bi('Auto observed, hours','Наблюдение Auto, часов')];
+    bi('Attempts','Попытки'),bi('Confirmed switches','Подтверждённые переключения'),bi('Automatic','Автоматические'),bi('Manual','Ручные'),bi('Returns since update','Возвраты с обновления'),bi('Auto observed, hours','Наблюдение Auto, часов')];
   var table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},headings.map(function(label){return E('th',{'scope':'col'},label);}))].concat(rows.map(function(row){
-    var values=[row.period,row.outages,row.failed_checks,row.attempts,row.switches,row.returns,
+    var values=[row.period,row.outages,row.failed_checks,row.attempts,row.switches,row.automatic,row.manual,row.returns,
       Number.isFinite(row.auto_seconds)?(row.auto_seconds/3600).toFixed(2):null];
     return E('tr',{},values.map(function(value){return E('td',{},value==null?'—':String(value));}));
   })));
