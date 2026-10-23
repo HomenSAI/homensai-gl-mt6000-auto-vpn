@@ -93,3 +93,7 @@ Owner asks to remove Emergency Stop and its note from Language and appearance on
 ## Alpha44 appearance correction completed — 17:53 Berlin
 
 All three new owner corrections installed and verified. Language/appearance first step has no Stop/note; green recovery escape, immediate EN/RU preview including first-step heading/buttons and link locale, other draft fields retained/no RPC/no browser-pref save/no reload. Other steps retain prior behavior. Corrected stale help. Exact5189933 fullCI724app/107QA per runtime/39UI and actual84files/protected configs/HTTPS+HTTP8080 PASS. Start57.66s, owner reserve restored35.78s; Auto leftON, both VPN checks healthy; final encrypted backup189entries verified. See APPEARANCE report. No further device action needed; finish Gitea/recovery closure only. Prior GitHub history approval request remains unresolved.
+
+## GitHub and Gitea publication authorized and completed
+
+Owner explicitly approved full-history upload after the dedicated historical-payload approval request. Checkpoint5fb6ea8, including installed44 sources and reports, pushed/remote-SHA-verified in feature/recovery-auto-20261023 in both services. Full history audit PASS111commits/2409blobs/80.8MB;0secret-pattern/private-path findings. Earlier blocked/pending approval notes are superseded. Final publication closure documentation synchronized to the same branch. No main/tag/release/router changes.
