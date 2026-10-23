@@ -1,0 +1,99 @@
+{
+  "observed_at_utc": "2026-10-23T07:27:50.660054+00:00",
+  "version": "0.9.0-alpha35-1",
+  "qualified_product_source": "6627e996db69ff0196d6274fcd9d70fb0bcfb734",
+  "device": "GL-MT3000",
+  "firmware": "4.11.0",
+  "scope": "router-probed-ipv4",
+  "automatic_switching": "PASS",
+  "unattended_production_acceptance": "PARTIAL",
+  "auto_left_running": true,
+  "external_lan_verified": false,
+  "real_failover_return_cycles": [
+    {
+      "result": "PASS",
+      "duration_seconds": 131.51259827300237,
+      "output_sha256": "7ad912b7fec1bd408ffe69df6a8f676fda48889513775b13be67224eaa6ba370"
+    },
+    {
+      "result": "PASS",
+      "duration_seconds": 131.70135058800224,
+      "output_sha256": "d20201b2f0ba587f554fb16b9f5e374420ac6b73b2238099792d5770a2effc10"
+    }
+  ],
+  "final_start_seconds": 62.08154635399842,
+  "crash_recovery_seconds": 20.17878154200298,
+  "stop_during_start": {
+    "event": "FINAL",
+    "result": "PASS",
+    "cleanup_seconds": 10.145547464002448,
+    "original_profiles_off": true,
+    "guard_absent": true,
+    "stale_start_rejected": true
+  },
+  "final_observation": {
+    "event": "FINAL",
+    "result": "PASS",
+    "auto_left_running": true,
+    "vpn_only_guard_present": true,
+    "vpn_only_guard_verified": true,
+    "samples": 7,
+    "duration_seconds": 66.64452894699934,
+    "proofs": [
+      {
+        "role": "source",
+        "dns_ok": true,
+        "https_success": 2,
+        "exit_sha256": "697dfb82c2c7bd09cb73f8be139abea838e823ed6cd75169b7382cf2fb90941e"
+      },
+      {
+        "role": "target",
+        "dns_ok": true,
+        "https_success": 2,
+        "exit_sha256": "48c5004b923c91e5222ede186ba6d95c7da3698ef6e2deffcd9d6418769ced5a"
+      }
+    ],
+    "recent_attempts": 2,
+    "attempt_permitted": true,
+    "scope": "actual MT3000 router-probed IPv4; no external LAN acceptance"
+  },
+  "program_payload_files_verified": 80,
+  "offline_ci": [
+    {
+      "python": "3.11.2",
+      "application_tests": 681,
+      "qa_tests": 107,
+      "ui_suites": 34,
+      "application_skips": 16,
+      "qa_skips": 0,
+      "result": "PASS"
+    },
+    {
+      "python": "3.9.15",
+      "application_tests": 681,
+      "qa_tests": 107,
+      "ui_suites": 0,
+      "application_skips": 0,
+      "qa_skips": 15,
+      "result": "PASS"
+    }
+  ],
+  "package_sha256": "220261bbf1e876c2ca0429b491ab79b7a4f0d1e7ef3bfb34185370d484e07465",
+  "package_bytes": 740585,
+  "product_changes": false,
+  "reinstalled": false,
+  "windows_network_changed": false,
+  "primary_router_changed": false,
+  "retained_failures": [
+    "A rapid restart received repeated OpenVPN AUTH_FAILED; safe cleanup passed; unchanged-config retry after pause succeeded; upstream cause UNKNOWN.",
+    "Windows cable DNS timed out and HTTPS socket calls returned 10051; no external-LAN acceptance.",
+    "First final-state harness incorrectly required absence of the active VPN-only guard; corrected exact structural guard validation passed.",
+    "Vendor nft JSON guard inspection failed; text inspection and exact structural verification used instead."
+  ],
+  "remaining": [
+    "Resolve intermittent upstream OpenVPN AUTH_FAILED for repeatable unattended startup.",
+    "Verify DNS/HTTPS/exit from an independent external LAN client; IPv6/Kill Switch/special policy acceptance remains open.",
+    "Auto intentionally stops on router/service restart and requires Start; boot/crash auto-resume is not implemented.",
+    "Complete long traffic soak, wider adverse matrix and deferred eleven-item backlog; MT6000 continuous mode remains unqualified."
+  ]
+}
