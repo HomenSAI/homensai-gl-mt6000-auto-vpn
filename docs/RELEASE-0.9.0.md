@@ -16,7 +16,15 @@ Package `homensai-auto-vpn_0.9.0-1_all.ipk`: **769849bytes**, SHA256 `7cf93df74c
 
 All85 selected payload files equal the physically checked alpha45 payload after replacing only the version and dashboard/CSS resource identity. There is no algorithm change. **0.9.0 was not installed on the router during this publication-only continuation**; installed/served-byte and Start/selection results above belong to alpha45. No new device acceptance is inferred from CI or byte comparison.
 
-Final release-tag/main mappings, final tagged-source CI and independently downloaded GitHub/Gitea assets are verified during publication and recorded in the release verification asset and subsequent publication record. A prepared local package alone is not publication proof.
+## Published release — PASS
+
+[GitHub v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0) and [Gitea v0.9.0](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0) are published normal releases: no Draft and no Pre-release. GitHub marks0.9.0 Latest. Each includes the IPK, matching checksum and [final-source verification JSON](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/download/v0.9.0/release-v0.9.0-verification.json). All three assets were independently downloaded from both hosts and their hashes match.
+
+GitHub tag/main at publication: `f0678decee7e932edb313efecc9e4697cb0569c1`. Canonical Gitea tag/main at publication: `5f7ea5089d82ad1544792c0dac9ee9be3027101f`. Both release trees are `14fdf2aac62bea80cf3deb3caf3057afc3825a4c`. Each exact tagged commit passed the full dual-runtime724application/107QA-per-runtime/39UI matrix. The Gitea merge retains both its former main and the public release as parents; no history was forced or exported to GitHub to equalize SHAs.
+
+Both repository descriptions now describe implemented primary/reserve Auto. Current-release notices were added to40 historical GitHub releases and4 Gitea releases; original notes remain below the notices and asset identities are unchanged. A19,933,974byte private source bundle was restored and both histories/HEADs/full fsck verified. The crash-damaged index of an old temporary worktree was backed up and rebuilt without modifying worktree files; full repository fsck now passes.
+
+See the [publication record](../qa/RELEASE-0.9.0-PUBLICATION.json). A subsequent documentation-only verification commit may advance main while the release tags and package bytes remain immutable.
 
 ## Boundaries retained
 

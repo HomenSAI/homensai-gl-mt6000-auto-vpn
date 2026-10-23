@@ -25,7 +25,7 @@ Both stock GL.iNet tunnels may show Connected while only one carries the selecte
 
 ## Evidence and limits
 
-The alpha45 behavior baseline passed 724 application tests and 107 QA tests in each of two runtime environments plus 39 UI suites. Actual MT3000 tests include controlled failures, automatic failover/return, operator switching with Auto on, native-process recovery, installation/served-file checks and statistics persistence. [Release evidence](docs/RELEASE-0.9.0.md) distinguishes the exact 0.9.0 checks from earlier physical runs.
+Both exact 0.9.0 tagged sources passed 724 application tests and 107 QA tests in each of two runtime environments plus 39 UI suites. Matching package/checksum/verification assets were independently downloaded from GitHub and Gitea. Actual MT3000 tests include controlled failures, automatic failover/return, operator switching with Auto on, native-process recovery, installation/served-file checks and statistics persistence. [Release evidence](docs/RELEASE-0.9.0.md) distinguishes the exact 0.9.0 checks from earlier physical runs.
 
 Independent external-LAN acceptance, a completed 24-hour traffic soak, physical power-cut testing, MT6000 continuous-mode acceptance, IPv6 failover and unrestricted multi-reserve hierarchy are not established. Auto requires explicit Start after a router/application restart. Some OpenVPN starts previously received AUTH_FAILED and safely stopped; no provider root cause is claimed.
 

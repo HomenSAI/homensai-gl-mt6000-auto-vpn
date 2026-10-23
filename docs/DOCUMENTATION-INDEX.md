@@ -6,6 +6,7 @@ Current instructions are listed first. Historical/versioned pages keep their ori
 
 |Document|Classification|
 |---|---|
+|[docs/handoff/OWNER-UI-TODO-2026-10-23.md](handoff/OWNER-UI-TODO-2026-10-23.md)|Current owner requests and crash recovery|
 |[CHANGELOG.md](../CHANGELOG.md)|Current|
 |[CLAUDE.md](../CLAUDE.md)|Current|
 |[README.md](../README.md)|Current|

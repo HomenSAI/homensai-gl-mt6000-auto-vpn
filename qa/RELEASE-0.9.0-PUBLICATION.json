@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "result": "PASS",
+  "release_tag": "v0.9.0",
+  "version": "0.9.0",
+  "published_at_verified_utc": "2026-10-23T17:19:36.528046+00:00",
+  "package": {
+    "name": "homensai-auto-vpn_0.9.0-1_all.ipk",
+    "bytes": 769849,
+    "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a"
+  },
+  "github": {
+    "url": "https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0",
+    "release_id": 422113598,
+    "main_at_release": "f0678decee7e932edb313efecc9e4697cb0569c1",
+    "tag_source": "f0678decee7e932edb313efecc9e4697cb0569c1",
+    "draft": false,
+    "prerelease": false,
+    "latest": true,
+    "download_verified": {
+      "homensai-auto-vpn_0.9.0-1_all.ipk": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "homensai-auto-vpn_0.9.0-1_all.ipk.sha256": "31296264ab1fc038c6a17c3fbe104bb979c5ccfd87ebb36148104c077f86a332",
+      "release-v0.9.0-verification.json": "ea498be24d5fe889a01bb59e3089842caaf13ec5e873c96ad5085971c257f69c"
+    },
+    "historical_release_notices": 40
+  },
+  "gitea": {
+    "url": "http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0",
+    "release_id": 154,
+    "main_at_release": "5f7ea5089d82ad1544792c0dac9ee9be3027101f",
+    "tag_source": "5f7ea5089d82ad1544792c0dac9ee9be3027101f",
+    "draft": false,
+    "prerelease": false,
+    "download_verified": {
+      "homensai-auto-vpn_0.9.0-1_all.ipk": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "homensai-auto-vpn_0.9.0-1_all.ipk.sha256": "31296264ab1fc038c6a17c3fbe104bb979c5ccfd87ebb36148104c077f86a332",
+      "release-v0.9.0-verification.json": "ea498be24d5fe889a01bb59e3089842caaf13ec5e873c96ad5085971c257f69c"
+    },
+    "historical_release_notices": 4
+  },
+  "release_tree": "14fdf2aac62bea80cf3deb3caf3057afc3825a4c",
+  "both_histories_preserved": true,
+  "force_updates": false,
+  "previous_tags_and_assets_preserved": true,
+  "repository_descriptions_updated": true,
+  "tagged_source_ci": [
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 16,
+      "source": "f0678decee7e932edb313efecc9e4697cb0569c1",
+      "ui_suites": 39,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 0,
+      "source": "f0678decee7e932edb313efecc9e4697cb0569c1",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "canonical_tagged_source_ci": [
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 16,
+      "source": "5f7ea5089d82ad1544792c0dac9ee9be3027101f",
+      "ui_suites": 39,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 0,
+      "source": "5f7ea5089d82ad1544792c0dac9ee9be3027101f",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "final_public_history_privacy": {
+    "result": "PASS",
+    "source": "f0678decee7e932edb313efecc9e4697cb0569c1",
+    "scope": "all reachable blobs and supported nested archives in complete public release history",
+    "objects": 4409,
+    "blobs": 2629,
+    "bytes_inspected": 85562161,
+    "secret_scan_findings": [],
+    "private_path_findings": [],
+    "time_utc": "2026-10-23T17:10:02.972376+00:00"
+  },
+  "source_bundle_restore": {
+    "result": "PASS",
+    "bundle_sha256": "c23fc2799243ee286833be2f730ecd5c1d1785e7b2e4d409caf7c5007a6c5c06",
+    "bundle_bytes": 19933974,
+    "restored_source": "f0678decee7e932edb313efecc9e4697cb0569c1",
+    "restored_canonical_source": "5f7ea5089d82ad1544792c0dac9ee9be3027101f",
+    "fsck": "PASS"
+  },
+  "gitea_temporary_authorization_removed": true,
+  "post_crash_git_repair": "Zero-filled index of stale temporary worktree rebuilt from its HEAD; original index retained privately; worktree files untouched; full fsck PASS",
+  "device_operations": "NONE during publication continuation; physical baseline remains alpha45",
+  "acceptance_limits": [
+    "Independent external LAN client",
+    "24-hour traffic soak",
+    "Physical power-cut",
+    "IPv6 failover",
+    "Current MT6000 continuous mode",
+    "Unrestricted multireserve hierarchy"
+  ]
+}

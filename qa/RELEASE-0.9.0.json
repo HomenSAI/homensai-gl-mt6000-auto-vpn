@@ -82,6 +82,6 @@
     "scope": "prepared MT3000, router-originated IPv4 DNS/twoHTTPS; no independent LAN acceptance"
   },
   "release_device_installation": "NOT_PERFORMED: publication-only continuation; alpha45 baseline retained",
-  "publication": "PENDING: final tag/main mapping and independent downloads recorded in ALPHA090-PUBLICATION.json after publication",
+  "publication": "PASS; see qa/RELEASE-0.9.0-PUBLICATION.json and attached release-v0.9.0-verification.json for final tagged-source CI and independent downloads",
   "retained_failure": "Pre-crash exact-source CI interrupted without completion receipt; not PASS. Fresh same-source full matrix passed."
 }
