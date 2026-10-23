@@ -85,15 +85,230 @@
   },
   "test_fault_cleanup_confirmed": true,
   "new_package": {
-    "version": "0.9.0-alpha36-1",
-    "bytes": 759280,
-    "sha256": "bc87b860bfa651ab90d486c6889dccbc75f872f71d14aa64197ee67d75b47a12",
-    "hardware_acceptance": "NOT_INSTALLED"
+    "version": "0.9.0-alpha37-1",
+    "source": "c477c5d041f93740e6ec0df65f84d77850b0f3b9",
+    "bytes": 759490,
+    "sha256": "c5f5d50ff29f789d0765380eaee33cd2647d9805ecbd8582aff263f1c1e60ee7",
+    "installed": true,
+    "installed_files_and_modes_verified": 84,
+    "protected_configs_unchanged": true,
+    "served_assets_verified": true,
+    "hardware_acceptance": "PASS_ROUTER_PROBED_IPV4"
   },
   "limits": [
     "No independent external LAN witness; owner chose router-only scope.",
     "Session age is not continuously measured Internet/LAN uptime.",
     "No physical power cut or completed 24-hour traffic soak.",
     "Native browser tools have no attached surface; UI tests are synthetic, not a real-browser claim."
-  ]
+  ],
+  "session_age_at_final_pre_stop_capture_seconds": 14910.40051317215,
+  "alpha37_auto_cycle": [
+    {
+      "event": "FINAL",
+      "time": 1792756555.306607,
+      "result": "PASS",
+      "duration_seconds": 133.01131544099917,
+      "external_lan_verified": false
+    },
+    {
+      "event": "STATISTICS-DELTA",
+      "result": "PASS",
+      "deltas": {
+        "committed": 1,
+        "automatic_committed": 1,
+        "manual_committed": 0,
+        "returns": 1
+      },
+      "reliability_totals": {
+        "checks": 227,
+        "failed_checks": 148,
+        "outages": 3,
+        "observed_down_seconds": 1565.5981872081757,
+        "observed_up_seconds": 802.12752866745,
+        "auto_observed_seconds": 417.18687772750854,
+        "recoveries": 1
+      }
+    }
+  ],
+  "alpha37_manual_test": [
+    {
+      "event": "HOLD-90S-PASS",
+      "time": 1792756692.9753113,
+      "elapsed": 124.24299271900236,
+      "manual_commits": 1,
+      "repeated_commit_status_not_double_counted": true
+    },
+    {
+      "event": "RESUME-AUTO-PASS",
+      "time": 1792756712.8779233,
+      "elapsed": 144.14560325600178
+    },
+    {
+      "event": "BAD-RESERVE-REFUSED",
+      "time": 1792756739.5357006,
+      "elapsed": 170.80338089699944,
+      "reason": [
+        "PAIR-MANUAL-TARGET-UNHEALTHY"
+      ],
+      "budget_unchanged": true,
+      "route_unchanged": true
+    },
+    {
+      "event": "FINAL",
+      "time": 1792756750.5702116,
+      "elapsed": 181.8378892289984,
+      "result": "PASS",
+      "duration_seconds": 181.83785783599888,
+      "deltas": {
+        "committed": 1,
+        "manual_committed": 1,
+        "automatic_committed": 0,
+        "returns": 1
+      },
+      "auto_left_running": true,
+      "manual_hold": null,
+      "external_lan_verified": false
+    }
+  ],
+  "alpha37_ordinary_stop": {
+    "event": "FINAL",
+    "result": "PASS",
+    "both_owned_profiles_restored_off": true,
+    "guard_absent": true,
+    "duration_seconds": 16.07339388100081
+  },
+  "exact_source_ci": {
+    "source": "c477c5d041f93740e6ec0df65f84d77850b0f3b9",
+    "result": "PASS",
+    "application_tests_per_runtime": 717,
+    "qa_tests_per_runtime": 107,
+    "ui_suites": 37,
+    "runtimes": [
+      "3.11.2",
+      "3.9.15"
+    ],
+    "complementary_environment_skips": true
+  },
+  "gitea_source_saved": "c477c5d041f93740e6ec0df65f84d77850b0f3b9",
+  "alpha37_persistence": {
+    "event": "FINAL",
+    "result": "PASS",
+    "duration_seconds": 8.43045606999658,
+    "route_history_preserved": true,
+    "configs_unchanged": true,
+    "auto_safely_off_after_restart": true,
+    "scope": "graceful service restart; no power-cut test"
+  },
+  "known_disabled_test_correction": {
+    "result": "PASS",
+    "before": {
+      "checks": 270,
+      "failed_checks": 153,
+      "outages": 6,
+      "observed_down_seconds": 1617.2003495693207,
+      "observed_up_seconds": 1218.939787387848,
+      "auto_observed_seconds": 602.152913570404,
+      "recoveries": 2
+    },
+    "after": {
+      "checks": 128,
+      "failed_checks": 11,
+      "outages": 4,
+      "observed_down_seconds": 115.58356738090515,
+      "observed_up_seconds": 1218.939787387848,
+      "auto_observed_seconds": 602.152913570404,
+      "recoveries": 2
+    },
+    "correction": {
+      "time": 1792756797.5650072,
+      "removed": {
+        "checks": 142,
+        "failed_checks": 142,
+        "outages": 2,
+        "observed_down_seconds": 1501.6167821884155
+      },
+      "events_removed": 4,
+      "old_checkpoint_sha256": "1b44f3ea29e60666d0bd1ff2b40d6a237c4e0fafddfaf288095250505a4f6b4f",
+      "reason": "Exact pre-Start alpha36 disabled-profile test window; earlier correction was overwritten by a still-exiting monitor; all daemon exits now verified."
+    },
+    "verified_after_service_start": true,
+    "sequence_preserved": true,
+    "native_history_untouched": true
+  },
+  "startup_refusal_after_service_restart": {
+    "result": "FAIL",
+    "upstream_log_marker": "AUTH_FAILED",
+    "safe_stop": true,
+    "no_credential_changes": true,
+    "retry_pending": false,
+    "duration_seconds": 243.00462129699736
+  },
+  "final_start_retry": {
+    "event": "START-FINAL",
+    "result": "PASS",
+    "duration_seconds": 58.07023060400388,
+    "scope": "actual installed two-channel Auto startup; no external LAN proof"
+  },
+  "final_handover": {
+    "result": "PASS",
+    "duration_seconds": 37.424601441998675,
+    "samples": 7,
+    "version": "0.9.0-alpha37",
+    "auto_left_running": true,
+    "native_state": "OBSERVING",
+    "manual_hold": null,
+    "test_fault_tables_absent": true,
+    "guard_policy": "VPN devices allowed; no temporary full-block set",
+    "proofs": {
+      "source": {
+        "dns_ok": true,
+        "https_success": 2
+      },
+      "target": {
+        "dns_ok": true,
+        "https_success": 2
+      }
+    },
+    "controller_totals": {
+      "attempts": 19,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 16,
+      "channel_switches": 0,
+      "committed": 12,
+      "manual_attempts": 1,
+      "manual_committed": 1,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 2,
+      "rollbacks": 7,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 150,
+      "failed_checks": 16,
+      "outages": 5,
+      "observed_down_seconds": 167.89521288871765,
+      "observed_up_seconds": 1374.8672428131104,
+      "auto_observed_seconds": 633.3695166110992,
+      "recoveries": 2
+    },
+    "correction_persisted": true,
+    "external_lan_verified": false
+  },
+  "aggregate_current_batch": {
+    "confirmed_automatic_reserve_commits": 4,
+    "confirmed_manual_reserve_commits": 1,
+    "confirmed_returns": 5,
+    "alpha35_no_switch_scenarios": 6,
+    "excludes_spontaneous_earlier_transition": true
+  },
+  "configuration_backup": {
+    "result": "ENCRYPTED_AND_DPAPI_DECRYPT_VERIFIED",
+    "entries": 189,
+    "plaintext_persisted": false,
+    "published": false
+  },
+  "retained_test_harness_failure": "First final check incorrectly expected no guard during active Auto; actual VPN-only allow guard is valid. Corrected check verified allowed VPN devices, no temporary full-block set, 7 stable observations and both DNS/HTTPS proofs."
 }

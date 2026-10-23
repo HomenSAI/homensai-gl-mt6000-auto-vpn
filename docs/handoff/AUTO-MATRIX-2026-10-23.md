@@ -1,3 +1,7 @@
+# Final candidate installed — 23 October 2026
+
+The later alpha37 candidate supersedes the alpha36 WIP below. Source c477c5d041f93740e6ec0df65f84d77850b0f3b9 is saved in the owner-authorized Gitea feature branch. Full report: [MT3000 acceptance](../MT3000-AUTO-TEST-REPORT-2026-10-23.md). Exact717app/107QA per runtime/37UI CI PASS; installed84files/modes/config preservation/served asset hashes PASS. Actual Auto cycle133.01s PASS; manual override,90s hold, return, Resume and unhealthy-reserve refusal181.84s PASS; graceful restart and weekly export8.43s PASS. Final Auto-on handover PASS37.42s/7samples after successful58.07s retry; one upstream AUTH_FAILED refusal retained. Auto LEFT ON, primary selected, no manual hold/test fault; normal VPN-only guard valid. Final189entry encrypted backup verified. Old WIP and permission-review records below are retained history; the owner subsequently gave explicit destination/payload/branch approval and Gitea save succeeded. No main/tag/GitHub publication.
+
 # Active MT3000 fault matrix and statistics/UI batch — 23 October 2026
 
 Owner requested continued real fault simulation, runtime/switch/no-switch reporting, seven-day detail/monthly/lifetime statistics, scroll/error reading preservation, a persistent 24-hour route chart, primary/reserve/standby labels, a separate manual panel, manual override during Auto, smaller WAN/VPN selection text and visible transition badges.
