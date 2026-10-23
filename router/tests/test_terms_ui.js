@@ -17,7 +17,7 @@ assert.equal(context.termsAccepted(accepted),true);
 for(const bad of [{settings:{terms_version:''}},{settings:{terms_version:'0'}},{settings:{}},{},null,undefined,{error:'X',settings:{terms_version:version}}])assert.equal(context.termsAccepted(bad),false);
 (async()=>{
   const gate=context.renderTermsGate({settings:{terms_version:''}});
-  assert.equal(gate.attrs['data-terms-gate'],version);
+  assert.equal(gate.attrs['data-terms-gate'],version);assert(gate.text().includes('MIT License'));assert(gate.text().includes('at your own risk'));assert(gate.text().includes('eight-step setup'));
   const boxes=gate.all().filter(n=>n.tag==='input'&&n.attrs.type==='checkbox'),button=gate.all().find(n=>n.attrs.class&&n.attrs.class.includes('hv-terms-accept'));
   assert.equal(boxes.length,2);assert.equal(button.disabled,true);
   const toggle=(box,on)=>{box.checked=on;(box.listeners.change||[]).forEach(f=>f());};

@@ -13,7 +13,7 @@ const walk=n=>n instanceof Node?[n,...n.children.flatMap(walk)]:[];
 const text=n=>n instanceof Node?[n.textContent,...n.children.map(text)].join(' '):String(n);
 const clean=v=>JSON.parse(JSON.stringify(v));
 const app=JSON.parse(fs.readFileSync('VERSION.json','utf8')).application;
-function fixture({language='en',design,inventory,store={},status}={}){
+function fixture({language='en',design,inventory,store={},status,showIntro=false}={}){
   let modal=null,reloads=0,response={saved:true,onboarding_complete:true,onboarding_version:1},pending=null,fail=false,stopPending=null,stopFail=false,stopResponse={queued:true,accepted:true};
   const calls=[],notes=[],writes=[];
   const storage={getItem:k=>Object.hasOwn(store,k)?store[k]:null,setItem:(k,v)=>{store[k]=String(v);writes.push([k,v]);}};
@@ -30,6 +30,7 @@ function fixture({language='en',design,inventory,store={},status}={}){
   if(design!==undefined)store['homensai-vpn-design']=design;
   inventory=inventory||baseInventory();c.onboardingDisplayDefaults(inventory);
   let root=c.renderOnboardingGate(inventory,status||{version:app.version,package_version:app.version+'-1'});
+  if(!showIntro){const intro=walk(root).find(n=>n.attrs['data-onboarding-action']==='intro-ok');if(intro)intro.attrs.click();}
   const active=()=>modal||root;
   const field=k=>{const n=walk(active()).find(n=>n.attrs['data-onboarding-field']===k);assert(n,'field '+k);return n;};
   const button=k=>{const n=walk(active()).find(n=>n.attrs['data-onboarding-action']===k);assert(n,'button '+k);return n;};
@@ -43,6 +44,8 @@ function advance(f,target='review'){
   while(f.step()!==target){assert(!f.button('next').disabled,'unexpected validation at '+f.step());f.click('next');}
 }
 (async()=>{
+  for(const language of ['en','ru']){const intro=fixture({language,showIntro:true});assert.equal(intro.step(),'intro');const section=walk(intro.root).find(n=>n.attrs['data-onboarding-intro']==='1');assert.equal(walk(section).filter(n=>n.tag==='p').length,2);assert.equal(walk(section).filter(n=>n.attrs['data-intro-mode']).length,3);assert.equal(walk(section).filter(n=>n.attrs.role==='img').length,3);assert(!walk(intro.root).some(n=>n.attrs['data-onboarding-action']==='open-dashboard'));assert.equal(intro.calls.length,0);intro.click('intro-ok');assert.equal(intro.step(),'appearance');assert.equal(intro.calls.length,0);assert.equal(intro.writes.length,0);assert.equal(intro.reloads,0);}
+
   // Hardware selection survives save/reload and never allows a different detected model.
   for(const detected of ['mt6000','mt3000','unknown']){
     const inventory=baseInventory();inventory.settings.detected_router_model=detected;
@@ -68,6 +71,7 @@ function advance(f,target='review'){
   assert.equal(f.c.currentDesign(),'b');assert.equal(f.field('appearance.design').value,'b','fresh wizard starts Calm without persisting a browser override');assert.equal(f.writes.length,0);
   assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'));assert(f.button('open-dashboard').attrs.class.includes('hv-onboarding-recovery-link'));
   f.set('appearance.theme','dark');f.set('appearance.language','ru');assert.equal(f.c.locale,'ru');assert(text(f.root).includes('Язык и оформление'));assert(text(f.root).includes('Далее'));assert.equal(new URL(f.button('open-dashboard').attrs.href).searchParams.get('lang'),'ru');assert(text(f.root).includes('Открыть панель и средства восстановления'));assert(!text(f.root).includes('Language and appearance'));assert.equal(f.field('appearance.theme').value,'dark');assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);assert.equal(f.reloads,0);
+  const skip=walk(f.root).find(n=>n.attrs['data-onboarding-skip']==='1'),nav=f.button('next').parentNode;assert.equal(skip.parentNode,nav.parentNode);assert(skip.parentNode.children.indexOf(skip)>skip.parentNode.children.indexOf(nav),'skip is below Cancel/Next');assert(text(skip).includes('ничего не сбрасывает'));const guideUrl=new URL(f.button('setup-help').attrs.href);assert.equal(guideUrl.hash,'#help');assert.equal(guideUrl.searchParams.get('setup_help'),'1');assert.equal(guideUrl.searchParams.get('onboarding'),'defer');assert.equal(f.button('setup-help').attrs.target,'_blank');
   f.set('appearance.language','en');assert(text(f.root).includes('Language and appearance'));assert(text(f.root).includes('Next'));assert(!text(f.root).includes('Язык и оформление'));
   f.set('appearance.theme','dark');f.click('next');assert.equal(f.step(),'monitor');assert.equal(f.writes.length,0,'draft does not change browser preferences');
   f.set('monitor.interval','9');assert(f.button('next').disabled);f.click('next');assert.equal(f.step(),'monitor');

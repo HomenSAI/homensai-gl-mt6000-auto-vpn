@@ -141,20 +141,53 @@ function helpCommand(command){
   return E('div',{'class':'hv-cmd-row'},[E('pre',{'class':'hv-cmd'},command),button]);
 }
 function renderHelp(){
-  var topics=HELP_TOPICS.map(function(topic){
+  var setupGuide=false;try{setupGuide=new URL(window.location.href).searchParams.get('setup_help')==='1';}catch(e){}
+  var topics=(setupGuide?HELP_TOPICS.filter(function(topic){return topic.id==='setup-guide';}):HELP_TOPICS).map(function(topic){
     var steps=topic.custom?topic.custom():E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){
       return E('li',{},[E('p',{},richText(bi(step.t[0],step.t[1]))),step.c?helpCommand(step.c):null].filter(Boolean));
     }));
     var attributes={'class':'hv-help-topic','id':'help-'+topic.id};
-    if(topic.open)attributes.open='open';
+    if(topic.open||setupGuide&&topic.id==='setup-guide')attributes.open='open';
     return E('details',attributes,[E('summary',{},bi(topic.title[0],topic.title[1])),E('p',{'class':'hv-help-when'},bi(topic.when[0],topic.when[1])),steps]);
   });
   return E('section',{'class':'hv-chart-card hv-help'},[
-    E('h2',{},bi('Help and recovery','Помощь и восстановление')),
-    E('p',{},bi('Pick the situation that matches. Commands are typed on the router over SSH (see “How to connect by SSH”); the Copy button copies a command so you can paste it.','Выберите подходящую ситуацию. Команды вводятся на роутере по SSH (см. «Как подключиться по SSH»); кнопка «Копировать» копирует команду, чтобы вставить её в терминал.'))
+    E('h2',{},setupGuide?bi('First setup: steps 1–8','Первая настройка: шаги 1–8'):bi('Help and recovery','Помощь и восстановление')),
+    E('p',{},setupGuide?bi('Return to the setup tab after reading. This guide changes no settings and keeps your draft. Examples are starting points; keep suitable existing values.','После чтения вернитесь во вкладку мастера. Помощь ничего не меняет и сохраняет ваш черновик. Примеры — отправная точка; подходящие текущие значения можно оставить.'):bi('Pick the situation that matches. Commands are typed on the router over SSH (see “How to connect by SSH”); the Copy button copies a command so you can paste it.','Выберите подходящую ситуацию. Команды вводятся на роутере по SSH (см. «Как подключиться по SSH»); кнопка «Копировать» копирует команду, чтобы вставить её в терминал.'))
   ].concat(topics));
 }
 
 var helpNode=null;
+function renderOnboardingGuide(){
+  var steps=[
+    ['Language and appearance','Язык и оформление',
+     'Keep Automatic detection for the router model. Choose English or Russian; the page translates immediately. Pick a readable theme and layout. Example: automatic model, English, system theme, Calm layout.',
+     'Оставьте автоопределение модели роутера. Выберите русский или английский — страница переведётся сразу. Выберите удобную тему и оформление. Пример: автоопределение, русский, тема как в системе, спокойное оформление.'],
+    ['Monitoring','Мониторинг',
+     'The interval controls how often VPN Internet is checked. Example: 10 seconds, checkpoint 900 seconds, profile limit 2 for a selected pair. Checkpoints save statistics to flash. Keep the current profile limit if you monitor more profiles. During Auto startup the monitor temporarily checks more frequently; saving this step does not start Auto.',
+     'Интервал задаёт частоту проверки Интернета через VPN. Пример: 10 секунд, checkpoint 900 секунд, лимит 2 профиля для выбранной пары. Checkpoint сохраняет статистику во flash-память. Если наблюдаете больше профилей, оставьте подходящий текущий лимит. При запуске Auto проверки временно учащаются; сохранение этого шага не включает Auto.'],
+    ['Existing VPN profiles and trial preferences','Существующие VPN и параметры теста',
+     'Create and connect VPN profiles in the router VPN panel first. Select two different existing profiles: for example WireGuard Germany as primary and OpenVPN Germany as reserve. Names and countries are examples; choose your own working profiles. If either is missing, defer pair setup and return later. Trial duration is in minutes; acknowledge that calls and sessions may reconnect before running a trial. A trial is separate from ordinary Auto startup.',
+     'Сначала создайте и подключите VPN-профили в VPN-панели роутера. Выберите два разных существующих профиля: например WireGuard Германия — основной, OpenVPN Германия — резерв. Названия и страны приведены для примера; выбирайте свои рабочие профили. Если профилей нет, отложите настройку пары и вернитесь позже. Длительность теста задаётся в минутах; перед тестом подтвердите, что звонки и сессии могут переподключиться. Тест выполняется отдельно от обычного запуска Auto.'],
+    ['Server names and priorities','Названия и приоритеты серверов',
+     'Use names you can recognize, for example Germany primary and Germany reserve. The channel field groups related profiles; default is suitable for one pair. Smaller priority numbers come first: for example 10 before 20. Priority does not replace the explicit primary/reserve choices in step 3. Enable monitoring only for profiles you want checked; saving names never connects an inactive VPN.',
+     'Задайте понятные названия, например Германия основной и Германия резерв. Поле канала объединяет связанные профили; для одной пары подходит default. Меньшее число приоритета идёт раньше: например 10 перед 20. Приоритет не заменяет явный выбор основного и резерва на шаге 3. Включайте наблюдение для нужных профилей; сохранение названия не подключает неактивный VPN.'],
+    ['Recovery rules','Правила восстановления',
+     'Avoid switching after a single failed check. Example: 3 primary failures, 2 successful reserve checks, cooldown 180 seconds and minimum dwell 180 seconds. For automatic primary return: 3 successful primary checks and 60 seconds of stable primary health. Keep a healthy reserve for operator review if you do not want automatic return. Counts are checks, while cooldown and stability are time intervals.',
+     'Не переключайте канал из-за одной неудачной проверки. Пример: 3 сбоя основного, 2 успешные проверки резерва, пауза 180 секунд и минимальное время работы 180 секунд. Для возврата на основной: 3 успешные проверки и 60 секунд устойчивой работы. Если автоматический возврат не нужен, выберите сохранение рабочего резерва до решения оператора. Счётчики означают проверки, а пауза и стабильность задаются временем.'],
+    ['Optional speed tests','Необязательные тесты скорости',
+     'Speed tests consume traffic and are not required for initial Auto setup. You can leave them disabled at first. An example for later is 8 MiB per test, 5 seconds, 2 streams and a 128 MiB daily budget. Review your traffic allowance before enabling automatic tests for new profiles. Actual usage is limited by the configured budgets.',
+     'Тесты скорости расходуют трафик и не обязательны для первого запуска Auto. Сначала их можно оставить выключенными. Пример на будущее: 8 МиБ на тест, 5 секунд, 2 потока, суточный бюджет 128 МиБ. Перед автоматическими тестами новых профилей проверьте свой лимит трафика. Расход ограничивается настроенными бюджетами.'],
+    ['Optional Telegram reports','Необязательные отчёты Telegram',
+     'You can skip Telegram. Leaving Configure off preserves an existing Telegram configuration. To configure it, create your bot with BotFather, send /start to the bot, enter its token and your destination, then choose the report contents and schedule. Example: a daily report at 07:00 Europe/Berlin. Never share the bot token in screenshots or reports.',
+     'Telegram можно пропустить. Выключенная настройка Configure сохраняет уже существующую конфигурацию Telegram. Для подключения создайте своего бота через BotFather, отправьте боту /start, укажите токен и получателя, выберите содержание и расписание. Пример: ежедневный отчёт в 07:00 по Europe/Berlin. Не показывайте токен бота на снимках экрана и в отчётах.'],
+    ['Review all settings','Проверьте все настройки',
+     'Check the model, primary/reserve pair, intervals and optional features. Back lets you correct a value. Save all settings writes the reviewed configuration; Next alone only moves through the draft. If saving is refused while Auto is active, open the dashboard, turn Auto off and return to finish saving. Afterwards open Overview, check the two VPN channels and explicitly start Auto. To skip setup, use the green button below navigation: current router settings remain unchanged, the draft is not saved, and you can resume through Settings → All application settings.',
+     'Проверьте модель, основной и резервный профили, интервалы и необязательные функции. Кнопка «Назад» позволяет исправить значения. «Сохранить все настройки» записывает проверенную конфигурацию; «Далее» только перемещает по черновику. Если сохранение запрещено при работающем Auto, откройте панель, выключите Auto и вернитесь для сохранения. Затем откройте «Обзор», проверьте оба VPN и явно включите Auto. Для пропуска мастера используйте зелёную кнопку под навигацией: текущие настройки роутера останутся прежними, черновик не сохранится, а продолжить можно через «Настройки → Все настройки приложения».']
+  ];
+  return E('div',{'class':'hv-setup-guide','data-setup-guide':'1'},[
+    E('p',{},bi('Before step 1, first-time setup shows the experimental-software agreement and MIT License. Read it, tick the confirmations and accept to continue. Previously accepted terms are remembered on this router. Next comes a short explanation with three diagrams; press OK to open the wizard.','Перед шагом 1 при первом запуске показывается соглашение об экспериментальном ПО и лицензии MIT. Прочитайте его, отметьте подтверждения и примите условия. Ранее принятое соглашение сохраняется на этом роутере. Затем откроется краткое объяснение с тремя схемами; нажмите OK для перехода к мастеру.')),
+    E('ol',{'class':'hv-help-steps'},steps.map(function(row,index){return E('li',{'data-setup-guide-step':String(index+1)},[E('h3',{},bi(row[0],row[1])),E('p',{},bi(row[2],row[3]))]);}))
+  ]);
+}
+HELP_TOPICS.push({id:'setup-guide',open:false,title:['First setup: eight steps with examples','Первая настройка: восемь шагов с примерами'],when:['Help for the complete setup wizard. Reading it saves nothing.','Помощь по общему мастеру настройки. Чтение ничего не сохраняет.'],steps:[],custom:renderOnboardingGuide});
 // The terms can be re-read at any time (same points as the first-run screen).
-if(typeof TERMS_POINTS!=='undefined'){HELP_TOPICS.push({id:'terms',title:["Terms of use (experimental software)","Условия использования (экспериментальное ПО)"],when:["What you accepted on the first screen. The full text is DISCLAIMER.md in the project repository.","Что вы приняли на первом экране. Полный текст — DISCLAIMER.ru.md в репозитории проекта."],steps:TERMS_POINTS.map(function(point){return {t:[point.h[0]+'. '+point.t[0],point.h[1]+'. '+point.t[1]]};})});}

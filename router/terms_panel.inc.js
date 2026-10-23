@@ -10,6 +10,7 @@ var TERMS_POINTS=[
   {h:["Optional reports","Необязательные отчёты"],t:["If you set up Telegram reports, summaries are sent through Telegram’s servers with a bot token stored on your router. Nothing is sent unless you set it up.","Если вы настроите отчёты в Telegram, сводки отправляются через серверы Telegram с токеном бота, хранящимся на вашем роутере. Без вашей настройки ничего не отправляется."]},
   {h:["No promise of support","Поддержка не обещана"],t:["Features, behaviour and these terms may change in later versions; you may be asked to accept them again.","Возможности, поведение и эти условия могут измениться в следующих версиях; вас могут попросить принять их снова."]}
 ];
+if(typeof HELP_TOPICS!=='undefined'){HELP_TOPICS.push({id:'terms',title:["Terms of use (experimental software)","Условия использования (экспериментальное ПО)"],when:["What you accepted on the first screen. The full text is DISCLAIMER.md in the project repository.","Что вы приняли на первом экране. Полный текст — DISCLAIMER.ru.md в репозитории проекта."],steps:TERMS_POINTS.map(function(point){return {t:[point.h[0]+'. '+point.t[0],point.h[1]+'. '+point.t[1]]};})});}
 var TERMS_CHECKS=[
   ["I understand that this software is experimental and may interrupt my internet connection.","Я понимаю, что это ПО экспериментальное и может прервать моё подключение к интернету."],
   ["I have read the terms above and accept full responsibility for installing and using it.","Я прочитал условия выше и принимаю полную ответственность за установку и использование."]
@@ -42,6 +43,8 @@ function renderTermsGate(inventory,status){
     E('section',{'class':'hv-chart-card hv-terms-card'},[
       E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),versionBadge]),
       E('h1',{},bi('Experimental software: please read','Экспериментальное ПО: прочитайте, пожалуйста')),
+      E('p',{'class':'hv-terms-license'},bi('MIT License · experimental alpha software · use at your own risk','Лицензия MIT · экспериментальная alpha-версия · использование на свой риск')),
+      E('p',{},bi('Read the agreement, tick both confirmations and press Accept and continue. The eight-step setup opens next.','Прочитайте соглашение, отметьте оба подтверждения и нажмите «Принять и продолжить». Затем откроется настройка из восьми шагов.')),
       E('p',{},[bi('Language: ','Язык: '),language]),
       E('ol',{'class':'hv-terms-list'},TERMS_POINTS.map(function(point){return E('li',{},[E('strong',{},bi(point.h[0],point.h[1])),E('p',{},bi(point.t[0],point.t[1]))]);})),
       E('p',{'class':'hv-terms-note'},bi('This is not legal advice. The full text is in DISCLAIMER.md in the project repository and on the Help page.','Это не юридическая консультация. Полный текст — в DISCLAIMER.ru.md в репозитории проекта и на странице «Помощь».')),

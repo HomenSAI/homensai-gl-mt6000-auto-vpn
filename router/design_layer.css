@@ -514,3 +514,5 @@
 
 .hv-app .hv-onboarding-recovery-link{background:#e5f5e9;border:1px solid #9dceb0;color:#175c30;padding:10px 14px;border-radius:9px}.hv-app .hv-onboarding-recovery-link:hover{background:#d5ecdd}
 [data-theme="dark"] .hv-app .hv-onboarding-recovery-link{background:#203e2c;border-color:#487c59;color:#d5f5df}
+.hv-app .hv-intro-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:24px 0}.hv-app .hv-intro-mode{margin:0;min-width:0}.hv-app .hv-intro-mode h2{font-size:19px}.hv-app .hv-intro-diagram svg{display:block;width:100%;height:auto}.hv-app .hv-intro-mode figcaption{font-size:14px;line-height:1.5}.hv-app .hv-onboarding-skip{margin-top:18px;padding-top:18px;border-top:1px solid var(--line,#cbd5e1)}
+@media(max-width:760px){.hv-app .hv-intro-grid{grid-template-columns:1fr}.hv-app .hv-intro-diagram{max-width:440px}}

@@ -83,6 +83,36 @@ function onboardingApplyAppearance(appearance){
   saveDesign(appearance.design);applyTheme(appearance.theme);
   try{var url=new URL(window.location.href);if(url.searchParams.has('lang')){url.searchParams.set('lang',appearance.language);window.history.replaceState(null,'',url.toString());}}catch(e){}
 }
+function renderOnboardingIntro(proceed){
+  function diagram(mode){
+    var primary=mode==='failover'?'#bd152b':'#12833b',reserve=mode==='failover'?'#12833b':'#a16a00';
+    var picture=E('div',{'class':'hv-intro-diagram','role':'img','aria-label':mode==='observe'?bi('Monitoring checks both channels without changing routes','Мониторинг проверяет оба канала без изменения маршрутов'):mode==='failover'?bi('Primary failure: traffic uses the healthy reserve','Отказ основного: трафик идёт через исправный резерв'):bi('Primary restored: traffic can return according to settings','Основной восстановлен: возврат выполняется по настройкам')});
+    picture.innerHTML='<svg viewBox="0 0 340 168" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'+
+      '<rect x="8" y="65" width="38" height="26" rx="3"/><path d="M27 91v9m-11 0h22M47 78h24"/>'+
+      '<rect x="72" y="66" width="40" height="25" rx="5"/><path d="M102 66V51M79 79h3m5 0h3"/>'+
+      '<path d="M113 78h20V36h33" stroke="'+primary+'"'+(mode==='failover'?' stroke-dasharray="5 4"':'')+'/>'+
+      '<path d="M113 78h20v43h33" stroke="'+reserve+'"'+(mode==='failover'?'':' stroke-dasharray="3 4"')+'/>'+
+      '<rect x="167" y="19" width="88" height="34" rx="7" fill="'+primary+'" fill-opacity=".13" stroke="'+primary+'"/>'+
+      '<rect x="167" y="104" width="88" height="34" rx="7" fill="'+reserve+'" fill-opacity=".13" stroke="'+reserve+'"/>'+
+      '<path d="M256 36h24v42h12" stroke="'+primary+'"'+(mode==='failover'?' stroke-dasharray="5 4"':'')+'/>'+
+      '<path d="M256 121h24V78h12" stroke="'+reserve+'"'+(mode==='failover'?'':' stroke-dasharray="3 4"')+'/>'+
+      '<circle cx="310" cy="78" r="17"/><path d="M294 78h32m-16-17c-9 9-9 25 0 34m0-34c9 9 9 25 0 34"/>'+
+      '<g fill="currentColor" stroke="none" font-family="inherit" font-size="15" text-anchor="middle">'+
+      '<text x="27" y="121">'+bi('PC','ПК')+'</text><text x="92" y="121">'+bi('Router','Роутер')+'</text>'+
+      '<text x="211" y="42">'+bi('Primary','Основной')+'</text><text x="211" y="127">'+bi('Reserve','Резерв')+'</text>'+
+      '<text x="307" y="112">'+bi('Internet','Интернет')+'</text></g>'+
+      (mode==='failover'?'<path d="M141 27l14 16m0-16l-14 16" stroke="#bd152b" stroke-width="3"/>':'')+'</svg>';
+    return picture;
+  }
+  var modes=[['observe',bi('1 · Monitoring','1 · Наблюдение'),bi('Checks only; routes stay unchanged','Только проверки, без изменения маршрута')],['failover',bi('2 · Switch to reserve','2 · Переход на резерв'),bi('Primary failed; healthy reserve carries traffic','Основной отказал; трафик идёт через исправный резерв')],['return',bi('3 · Return to primary','3 · Возврат на основной'),bi('Primary is stable again; return follows settings','Основной снова стабилен; возврат — по настройкам')]];
+  return E('section',{'class':'hv-chart-card hv-intro','data-onboarding-intro':'1'},[
+    E('h1',{},bi('How Auto VPN works','Как работает Auto VPN')),
+    E('p',{},bi('Monitoring checks the primary and reserve VPN channels and shows Internet availability. With Auto off, it only observes and never changes the channel on its own. With Auto on, ordinary traffic uses one selected channel while the other stays ready.','Мониторинг проверяет основной и резервный VPN-каналы и показывает доступность Интернета. При выключенном Auto он только наблюдает и самостоятельно не меняет канал. При включённом Auto обычный трафик идёт через один выбранный канал, а второй остаётся готовым.')),
+    E('p',{},bi('Repeated primary failures can trigger a switch to a healthy reserve. After stable primary recovery, return follows your settings. A brief failure need not cause a switch. You can also choose a channel manually while Auto remains on; a healthy operator choice stays preferred.','Повторные отказы основного могут вызвать переход на исправный резерв. После устойчивого восстановления основного возврат выполняется по вашим настройкам. Краткий сбой не обязательно вызывает переключение. При работающем Auto можно выбрать канал вручную; исправный выбор оператора сохраняет приоритет.')),
+    E('div',{'class':'hv-intro-grid'},modes.map(function(row){return E('figure',{'class':'hv-intro-mode','data-intro-mode':row[0]},[E('h2',{},row[1]),diagram(row[0]),E('figcaption',{},row[2])]);})),
+    E('button',{'type':'button','class':'cbi-button cbi-button-action','data-onboarding-action':'intro-ok','click':proceed},bi('OK — open setup','OK — перейти к настройке'))
+  ]);
+}
 function renderOnboarding(inventory,status,firstRun){
   var profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],settings=inventory.settings||{};
   // An inventory change discards only a closed, stale draft. Pending writes are always one shared session.
@@ -96,6 +126,10 @@ function renderOnboarding(inventory,status,firstRun){
     var recoveryLabels={failures:bi('Failures before switching','Сбоев до переключения'),successes:bi('Reserve successes required','Успешных проверок резерва'),cooldown:bi('Cooldown, seconds','Пауза, секунд'),min_dwell:bi('Minimum dwell, seconds','Минимальное время работы, секунд'),primary_successes:bi('Primary successes before return','Успешных проверок основного перед возвратом'),primary_stable:bi('Primary stable interval, seconds','Период стабильности основного, секунд')};
     var speedLabels={enabled:bi('Speed-test feature enabled','Функция тестов скорости включена'),auto_new:bi('Automatic tests for new profiles','Автоматические тесты новых профилей'),budget_mib:bi('Traffic per test, MiB','Трафик на тест, МиБ'),duration:bi('Test duration, seconds','Длительность теста, секунд'),streams:bi('Parallel streams','Параллельных потоков'),daily_mib:bi('Daily traffic budget, MiB','Суточный лимит трафика, МиБ'),busy_mbps:bi('Busy threshold, Mbps','Порог занятости, Мбит/с')};
     clear();host.setAttribute('data-step',session.paused?'paused':ONBOARDING_STEPS[session.step]);
+    if(firstRun&&!session.introSeen&&!onboardingComplete(inventory)){
+      host.setAttribute('data-step','intro');host.appendChild(renderOnboardingIntro(function(){session.introSeen=true;show();}));host.appendChild(renderAttribution(status||{}));
+      var introFooter=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(introFooter,locale,'platform');host.appendChild(introFooter);return;
+    }
     var card=E('section',{'class':'hv-chart-card hv-terms-card','style':'min-width:0;max-width:100%;box-sizing:border-box'}),checks=[],captures=[],next;
     function capture(){captures.forEach(function(f){f();});}
     function valid(){capture();return foolGate(null,checks);}
@@ -127,12 +161,9 @@ function renderOnboarding(inventory,status,firstRun){
     var model=identityModel(status||{});
     card.appendChild(E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · complete setup','HomenS.AI Auto VPN · общая настройка')),E('span',{'class':'hv-version'},'v'+(model.agent||model.uiAgent))]));
     card.appendChild(E('h1',{},session.paused?bi('Setup paused — draft kept','Настройка приостановлена — черновик сохранён'):headings[session.step]));
+    var helpUrl=new URL(window.location.href);helpUrl.searchParams.set('onboarding','defer');helpUrl.searchParams.set('lang',locale);helpUrl.searchParams.set('setup_help','1');helpUrl.hash='help';
+    card.appendChild(E('p',{},E('a',{'href':helpUrl.toString(),'target':'_blank','rel':'noopener noreferrer','data-onboarding-action':'setup-help','class':'cbi-button'},bi('Setup help: steps 1–8 with examples','Помощь по настройке: шаги 1–8 с примерами'))));
     if(session.paused||session.step!==0)card.appendChild(onboardingEmergencyControl());
-    if(firstRun){
-      var dashboardUrl=new URL(window.location.href);dashboardUrl.searchParams.set('onboarding','defer');dashboardUrl.searchParams.set('lang',locale);dashboardUrl.hash='overview';
-      card.appendChild(E('p',{},E('a',{'href':dashboardUrl.toString(),'target':'_blank','rel':'noopener noreferrer','class':'cbi-button hv-onboarding-recovery-link','data-onboarding-action':'open-dashboard','style':'white-space:normal;display:inline-block;max-width:100%;box-sizing:border-box'},bi('Open dashboard and recovery controls — setup remains incomplete','Открыть панель и средства восстановления — настройка не завершена'))));
-      note('Opens in a new tab with Stop and return-to-primary controls. This draft stays here. The link saves no settings; a normal reload offers unfinished setup again.','Откроется новая вкладка с остановкой и возвратом на основной VPN. Черновик останется здесь. Ссылка не сохраняет настройки; обычное обновление страницы снова предложит незавершённый мастер.');
-    }
     if(session.paused){
       note('Nothing was saved. This draft stays in this page only; closing or reloading the page discards it. Setup will open again until a complete reviewed save succeeds.','Ничего не сохранено. Черновик остаётся только на этой странице; закрытие или обновление страницы удалит его. Мастер откроется снова до успешного сохранения всех настроек.');
       card.appendChild(action('resume',bi('Resume setup','Продолжить настройку'),function(){session.paused=false;show();}));
@@ -235,6 +266,13 @@ function renderOnboarding(inventory,status,firstRun){
         }).catch(function(){session.error='ONBOARDING-SAVE-UNCONFIRMED · '+bi('No confirmation received. Your draft remains open; refresh to check the router before retrying.','Подтверждение не получено. Черновик остаётся открытым; обновите страницу, чтобы проверить состояние роутера перед повтором.');}).then(function(){session.busy=false;if(ONBOARDING_SESSION===session)show();});
       });
       actions.push(next);gate();actions.forEach(function(n){if(session.busy)n.disabled=true;});card.appendChild(E('div',{'class':'hv-wizard-actions','style':'display:flex;flex-wrap:wrap;gap:8px'},actions));
+    }
+    if(firstRun){
+      var dashboardUrl=new URL(window.location.href);dashboardUrl.searchParams.set('onboarding','defer');dashboardUrl.searchParams.set('lang',locale);dashboardUrl.searchParams.delete('setup_help');dashboardUrl.hash='overview';
+      card.appendChild(E('div',{'class':'hv-onboarding-skip','data-onboarding-skip':'1'},[
+        E('a',{'href':dashboardUrl.toString(),'target':'_blank','rel':'noopener noreferrer','class':'cbi-button hv-onboarding-recovery-link','data-onboarding-action':'open-dashboard','style':'white-space:normal;display:inline-block;max-width:100%;box-sizing:border-box'},bi('Open dashboard and recovery controls — setup remains incomplete','Открыть панель и средства восстановления — настройка не завершена')),
+        E('p',{},bi('Continue with the router’s existing settings and saved defaults. This button saves no draft, resets nothing and does not enable Auto. You can finish the eight steps here, or open Settings → All application settings later. The dashboard opens in a new tab and this draft stays here.','Перейти с текущими настройками роутера и сохранёнными значениями по умолчанию. Кнопка не сохраняет черновик, ничего не сбрасывает и не включает Auto. Вы можете пройти восемь шагов здесь либо позже открыть «Настройки → Все настройки приложения». Панель откроется в новой вкладке; черновик останется здесь.'))
+      ]));
     }
     host.appendChild(card);host.appendChild(renderAttribution(status||{}));
     var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');host.appendChild(footer);
