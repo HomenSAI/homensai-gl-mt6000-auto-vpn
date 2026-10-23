@@ -1,3 +1,15 @@
+# Alpha44 installed — reconnect pause before final Start
+
+Final5189933 CI PASS724app/107QA per runtime/39UI. Installed44:84immutable files/modes/protected configs PASS; actual HTTPS/HTTP8080 dashboard74/ui51 PASS. Canonical44 generated UI interaction check PASS: no Stop on appearance, soft-green recovery link, immediateRU/EN, other draft fields retained, no save/RPC/reload, dashboard link follows locale. Stop43 PASS20.18s at15:47:22UTC; Auto temporarily OFF, waiting reconnect pause before Start44. MUST complete Start44, restore pre-upgrade owner reserve, final snapshot/backup and report/Gitea closure before handing over. Earlier38edc52 package superseded; only765127byte SHAaabd1cf1839fe1f30538ba9896dddbed3852583e945b3d9ea31f820ffa052d1c is final. No test faults introduced; primary router/Windows networking unchanged.
+
+Older entries follow.
+
+# Active alpha44 appearance correction — final CI in progress
+
+Owner requested no Emergency Stop in Language and appearance, soft-green dashboard/recovery escape, immediate EN/RU preview on the first step. Implemented/tested locally in44, fresh assets dashboard74/ui51. Corrected stale MT3000 unsupported/help copy. Exact final source5189933 full CI RUNNING;765127byte canonical SHAaabd1cf1839fe1f30538ba9896dddbed3852583e945b3d9ea31f820ffa052d1c. Earlier38edc52 CI passed but its package is superseded and must not be installed. Installed43 remains AutoON reserve, pre44snapshot and189entry encrypted backup verified. After final CI: one Stop43/install44/RPC/assets, reconnect pause/Start44, restore pre-upgrade owner reserve selection and final snapshot/backup/report/Gitea. No new faults or main-router/Windows network changes. GitHub push remains blocked pending explicit historical payload approval; do not retry for this UI task.
+
+Historical entries follow.
+
 # Current handover: installed alpha43 verified ON, owner reserve restored
 
 Latest status supersedes chronological entries below. Read [owner status](OWNER-STATUS-2026-10-23.md) and [complete saved plan](OWNER-IDEAS-2026-10-23.md). All owner UI refinements and selected animation1 are installed in43, plus bounded adaptive2s startup polling with normal10s after readiness. Product85211db, exact CI724app/107QA per runtime/39UI PASS, canonical764983bytes SHA7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023.84files/modes/protected configs and actual served HTTPS/HTTP8080 PASS. Start59.81s and actual10→2→10 cadence PASS; no substantial overall startup speedup claimed. Actual manual reserve/90s/primary144.52s PASS with AutoON; owner reserve restored34.67s. Final17:29Berlin AutoON reserve, both DNS/twoHTTPS healthy, no test faults/full-block. Actual43 UI-frame replay passes red/static DNS error and green/moving healthy selections.189entry encrypted recovery export verified.
