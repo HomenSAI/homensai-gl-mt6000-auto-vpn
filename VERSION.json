@@ -9,7 +9,7 @@
     "ui_stylesheet": "ui52.css",
     "artifact": "homensai-auto-vpn_0.9.0-alpha45-1_all.ipk",
     "sha256": "dbddf7c6c9e0959a257a17d7662c2aab1d121d9f851cb3272d8a2484a65e536d",
-    "source_fingerprint": "1519a7832d69d57e40707256a471b61a5645582220dd1deb33b02a9a6836de4b"
+    "source_fingerprint": "83e9091dd24f59d14e5cafd636ac09cda3a701d4917d6370db455472fbf52997"
   },
   "handoff": {
     "version": "1.0.0",

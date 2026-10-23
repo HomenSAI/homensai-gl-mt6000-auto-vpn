@@ -44,7 +44,7 @@ function renderTermsGate(inventory,status){
       E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),versionBadge]),
       E('h1',{},bi('Experimental software: please read','Экспериментальное ПО: прочитайте, пожалуйста')),
       E('p',{'class':'hv-terms-license'},bi('MIT License · experimental alpha software · use at your own risk','Лицензия MIT · экспериментальная alpha-версия · использование на свой риск')),
-      E('p',{},bi('Read the agreement, tick both confirmations and press Accept and continue. The eight-step setup opens next.','Прочитайте соглашение, отметьте оба подтверждения и нажмите «Принять и продолжить». Затем откроется настройка из восьми шагов.')),
+      E('p',{},bi('Read the agreement, tick both confirmations and press Accept and continue. Next comes a short illustrated explanation, then the eight-step setup.','Прочитайте соглашение, отметьте оба подтверждения и нажмите «Принять и продолжить». Затем откроется краткое объяснение со схемами, а после него — настройка из восьми шагов.')),
       E('p',{},[bi('Language: ','Язык: '),language]),
       E('ol',{'class':'hv-terms-list'},TERMS_POINTS.map(function(point){return E('li',{},[E('strong',{},bi(point.h[0],point.h[1])),E('p',{},bi(point.t[0],point.t[1]))]);})),
       E('p',{'class':'hv-terms-note'},bi('This is not legal advice. The full text is in DISCLAIMER.md in the project repository and on the Help page.','Это не юридическая консультация. Полный текст — в DISCLAIMER.ru.md в репозитории проекта и на странице «Помощь».')),
