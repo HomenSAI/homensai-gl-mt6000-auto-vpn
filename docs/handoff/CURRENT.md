@@ -2,7 +2,7 @@
 
 Latest status supersedes chronological entries below. Read [owner status](OWNER-STATUS-2026-10-23.md) and [complete saved plan](OWNER-IDEAS-2026-10-23.md). All owner UI refinements and selected animation1 are installed in43, plus bounded adaptive2s startup polling with normal10s after readiness. Product85211db, exact CI724app/107QA per runtime/39UI PASS, canonical764983bytes SHA7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023.84files/modes/protected configs and actual served HTTPS/HTTP8080 PASS. Start59.81s and actual10→2→10 cadence PASS; no substantial overall startup speedup claimed. Actual manual reserve/90s/primary144.52s PASS with AutoON; owner reserve restored34.67s. Final17:29Berlin AutoON reserve, both DNS/twoHTTPS healthy, no test faults/full-block. Actual43 UI-frame replay passes red/static DNS error and green/moving healthy selections.189entry encrypted recovery export verified.
 
-Final source/report Gitea save and final recovery receipt follow; no further device changes needed. Do not resume old observers/faults. Primary MT6000/Windows networking unchanged. Router-only IPv4 acceptance; no independentLAN/24hsoak/powercut or unattended bootAuto claim.
+Source and final report saved/remote-verified in authorized Gitea feature branch at2fe3532. Source bundle restore passed; final documentation recovery receipt follows privately. No further device changes needed. Do not resume old observers/faults. Primary MT6000/Windows networking unchanged. Router-only IPv4 acceptance; no independentLAN/24hsoak/powercut or unattended bootAuto claim.
 
 Historical chronological entries:
 
