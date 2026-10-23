@@ -2620,7 +2620,7 @@ function openOnboardingSettings(inventory,status){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard70',UI_AGENT='0.9.0-alpha39';
+var UI_BUILD='dashboard70',UI_AGENT='0.9.0-alpha40';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';

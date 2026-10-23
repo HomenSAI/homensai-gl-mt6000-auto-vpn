@@ -67,6 +67,18 @@ class Tests(unittest.TestCase):
         pair.save(self.state)
         self.assertIn('PAIR-RECOVERY-REQUIRED',pair.request(self.revision)['blockers'])
 
+    def test_failed_start_stop_status_keeps_latest_request_timestamp(self):
+        pair.request(self.revision)
+        started=auto_control.public_status()
+        self.assertEqual(started['requested'],'on')
+        self.state.update(id=pair.intent()['id'],phase='STOPPED');pair.save(self.state)
+        with auto_control.control_lock():pair.stop_locked(self.revision)
+        stopped=auto_control.public_status()
+        self.assertEqual(stopped['requested'],'off')
+        self.assertEqual(stopped['pair_phase'],'STOPPED')
+        self.assertGreaterEqual(stopped['requested_at'],started['requested_at'])
+        self.assertEqual(stopped['requested_at'],pair.intent()['time'])
+
     def test_corrupt_state_never_becomes_fresh_start(self):
         pair.paths()[1].write_text('{"data":{},"sha256":"wrong"}')
         self.assertFalse(pair.request(self.revision)['accepted'])
