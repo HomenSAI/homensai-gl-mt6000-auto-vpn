@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 > Current checkpoint: the owner stopped the alpha2 run before its 12-hour deadline. See qa/alpha0802-endurance-stopped.json and .claude/handoff/STATE.md. Do not restart it automatically; the procedure below is reference for a future authorized run.
 
 # Virtual endurance procedure and evidence boundaries

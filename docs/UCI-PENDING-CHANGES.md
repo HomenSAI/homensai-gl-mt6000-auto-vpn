@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # UCI pending-change refusal
 
 The settings writer and package lifecycle must not silently commit a previous process's saved changes.

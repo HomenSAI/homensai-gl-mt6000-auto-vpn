@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../../docs/CURRENT-STATUS.md) · [documentation index](../../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # UI page probe
 
 Offline check of every LuCI page in every design (A/B/C), theme and width. Synthetic fixture only; it never contacts a router.

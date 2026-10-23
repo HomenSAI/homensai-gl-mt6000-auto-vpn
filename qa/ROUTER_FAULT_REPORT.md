@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Router fault and transaction recovery tests
 
 Historical report dated 2026-10-14. Target: the separate lab/router_sim.js simulator, not the GL.iNet device adapter. Neither the running demonstration nor real router was connected to this laboratory.

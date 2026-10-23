@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Final isolated protocol soak report
 
 Collected: 2026-10-17T01:23:51.015422+02:00 (Europe/Berlin).

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Alpha6 offline results
 
 232 application Python + 5 QA tests, 8 Node UI suites, 54 responsive/language checks, 256 cascade series/2048 steps, 200 statistics series/12000 steps. Broader prototype/demo regression and 50000-tick soak passed. Detailed report: ../../qa/ALPHA6-LOCAL-REPORT.json. QEMU was not resumed.

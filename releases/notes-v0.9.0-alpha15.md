@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenS.AI Auto VPN 0.9.0-alpha15
 
 The dashboard now observes firmware-owned profile/server changes inside each actual VPN tunnel. Current tunnel identity and generation scope health evidence; provider groups and editable labels do not create separate routing channels. Planning follows the current member of the saved tunnel and refuses same-tunnel application switches, stale evidence and unsettled observations.

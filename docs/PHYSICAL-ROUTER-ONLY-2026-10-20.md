@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # GL-MT3000 router-only continuation - 20 October 2026
 
 The owner confirmed independent portable-router VPN profiles, personally accepted terms version1, and selected router-only testing for this stage. Fresh device readback confirmed legal acceptance; no agent accepted terms. Physical first-run completion/edit persistence remains separate and unverified until the owner saves the wizard. Windows Wi-Fi stayed on the primary network; no host adapter/address/route settings were changed.

@@ -1,17 +1,9 @@
-# Publication workflow
+# Main and release publication
 
-Develop in the canonical local repository and save the exact reviewed commit to primary Gitea before GitHub publication. Scan tracked files and every nested package/archive for credentials/private material; keep backups, runtime state, tokens, sessions, private manifests and personal workspace details out of public snapshots. Author attribution and links use public author information.
+The owner authorized the current0.9.0 release on main in GitHub and Gitea. Publish the reviewed source, user documentation, IPK/checksum and exact verification record. [Release evidence](RELEASE-0.9.0.md).
 
-## Independent history boundary
+Preserve both existing histories. Current development descends from GitHub main; publish it by normal fast-forward only after full-history privacy review and exact tests. Canonical Gitea main has a different root but the previous main tree matched GitHub's. Integrate the new reviewed tree with both the old canonical main and the public release commit as parents; verify tree/package identity. Do not export unrelated, unaudited canonical history merely to make commit IDs equal. Equal reviewed trees/assets can have different main/tag SHAs, which must be recorded.
 
-The canonical Gitea development history and the existing GitHub main have different roots. Publish a reviewed snapshot as a new commit whose parent is the freshly fetched GitHub main. Preserve the full canonical development history in Gitea. Record canonical source SHA, public parent, tree identity and artifact hashes. This retains public history without making unreviewed canonical historical objects public.
+Respect branch protections and concurrent head changes; never force, mirror, delete old refs or overwrite tags/assets. Verify tag/main reachability, source/tree identity, metadata and independently downloaded assets. Existing releases remain historical; add a current-release notice without rewriting their test results or binaries. A new normal-numbered release retains experimental scope and does not imply external-LAN or unattended-production acceptance.
 
-Do not force-push, mirror, delete old refs or overwrite tags. Save the exact publication branch to Gitea first, then use a normal fast-forward-only push to GitHub main. If main moves or protection refuses the push, stop and rebase/review the publication candidate or use the required PR flow. User approval for publication does not authorize bypassing branch protection.
-
-A public release tag must reference the public snapshot commit. Local canonical tags may point to different history objects with the same reviewed product content; keep the public tag mapping in a separate namespace and never push canonical tags in bulk. Verify new public tag availability before creation, and preserve all historical public release/tag objects.
-
-## Validation and product claims
-
-Verify remote main SHA, published tree, release target, downloaded asset SHA256 and versioned notes. Automated scanning supplements manual review, not a universal guarantee. Monitor is implemented; native operation is a bounded client-certified experiment. Pure cascade/model and virtual tunnel results are not certification of full native multi-hop production, real vendor arbitration, IPv6 or power recovery. Never deploy a release to a router as part of GitHub publication.
-
-Repository names start with homensai-: homensai-gl-mt6000-auto-vpn. Local/Gitea first, GitHub second. Default interface and diagnostics are English; optional Russian remains available.
+Use a private restore-verified source bundle and private encrypted device backup. Public files/assets must exclude keys, bot tokens, sessions, passwords, raw device state and backups. Device installation is a separate authorized task, never an automatic side effect of publication. The user's ongoing dedicated-MT3000 update request is recorded separately from this Git authorization.

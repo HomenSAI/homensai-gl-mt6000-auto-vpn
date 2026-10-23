@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenSAI Auto VPN — Claude review handoff 1.0.0
 
 This is a versioned documentation/review checkpoint for application 0.8.0-alpha2 and package 0.8.0-alpha2-1. Application code and package bytes are unchanged. No physical-router installation or new product test is performed by this release.

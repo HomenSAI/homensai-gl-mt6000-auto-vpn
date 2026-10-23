@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Active continuation - 20 October 2026
 
 OWNER PAUSE / NEXT START: read [RESUME-TODO.md](RESUME-TODO.md) first. On20October the owner asked to save the complete remaining plan for the next start. All implementation/tests/agents remain stopped; no automatic continuation. The later resume TODO supersedes planning order below without converting WIP into acceptance.

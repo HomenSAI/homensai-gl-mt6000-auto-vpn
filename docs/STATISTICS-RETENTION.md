@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # Saved failure and switching statistics
 
 Alpha36 adds a persistent statistics section to Statistics / transition evidence. It shows lifetime observed counters, the last seven days and compact calendar-month summaries. Download weekly detail and monthly summaries (JSON) retrieves all retained pages, rather than only the last events rendered on screen. The authenticated read-only `statistics` RPC is also available:

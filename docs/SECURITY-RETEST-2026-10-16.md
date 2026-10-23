@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Security retest — 2026-10-16T21:30:48.6830986+02:00
 
 Scope: local application source, isolated RPC calls, synthetic HTTP server and package privacy. No WAN scan, brute-force, flooding, real fault injection or router settings changes. Physical router admin TCP ports were unavailable during the preceding URL verification. This report does not certify Internet-facing firmware security.

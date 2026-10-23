@@ -1,15 +1,13 @@
-# Overview route colours - alpha9
+# Channel and graph display contract — 0.9.0
 
-The Primary/Reserve diagram shows the controller-selected traffic path for this failover plan. It does not claim only one VPN process is connected or that destination-specific router policies cannot use other tunnels.
+| Context | Display | Meaning |
+|---|---|---|
+|Manual card / sidebar channel lamp|Green, motion/blink|Fresh confirmed selected channel with successful Internet checks|
+|Manual card|Red, static|Not selected or confirmed connection failure; exact error shown when known|
+|Manual action|Turn on only on eligible inactive red card|A command can be requested; never claim completion from ACK|
+|Pending manual command|Destination yellow/Switching; other red|Selection is not yet confirmed|
+|VPN inventory/Channels|Green selected healthy; yellow healthy standby; red off/failure|Connected tunnel and selected common-traffic route are distinct|
+|Monitoring/data error|Explicit unknown/checking/error message|Missing evidence is not fabricated as working|
+|Live/stored graphs|Primary/reserve/off only|Contiguous transition holds last confirmed selection; missing observations leave gaps|
 
-| State | Colour | Meaning |
-| --- | --- | --- |
-| Selected + fresh healthy probes | Green | Active confirmed plan path |
-| Healthy but not selected | Neutral grey | Ready for switching; no traffic selection claimed |
-| Transition destination | Yellow | Applying/checking; not active until controller confirmation |
-| Confirmed probe failure | Red | Connectivity failed, whether selected or not |
-| Inactive, stale, unknown or Auto off | Neutral grey | No current active-path confirmation; explicit text distinguishes the cases |
-
-After COMMITTED, the reserve alone can be green. After OBSERVING with fresh certification, the primary alone can be green. During RESTORING, the primary destination is yellow; the reserve is not green merely because its probe succeeds. A failed active reserve does not magically select the healthy primary. The controller must confirm the change.
-
-Test: 200 combinations across eight controller states and five health conditions per side; at most one green path and every green path is the selected side. Existing Auto/acknowledgement/clock/freshness/return tests retained. Synthetic browser preview is not real device evidence. No routing or VPN changes in this UI correction.
+Current UI uses router-response time plus monotonic elapsed browser time, so PC clock skew does not falsely expire fresh probes. Stale data still expires. The manual inactive-red convention intentionally differs from healthy-standby-yellow in the inventory. Both stock tunnels may remain Connected; only one common-traffic route is selected.

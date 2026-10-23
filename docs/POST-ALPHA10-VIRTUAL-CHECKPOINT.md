@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Post-alpha10 virtual acceptance checkpoint
 
 Recorded 2026-10-17T09:22:14.034105+00:00. Scope: marked isolated x86 OpenWrt copy only. Physical router and host networking untouched.

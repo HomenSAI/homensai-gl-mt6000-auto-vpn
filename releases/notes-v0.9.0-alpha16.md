@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenS.AI Auto VPN 0.9.0-alpha16
 
 B · Calm («Спокойный») now opens by default on first entry, the terms screen and initial setup. Missing or invalid appearance preferences use B. Explicit saved A/C choices still work, and the design remains selectable in Settings.

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenS.AI Auto VPN 0.9.0-alpha19 candidate
 
 This batch fixes manual-command Stop/revision handling and isolated runtime paths, and strengthens read-only MT3000 platform diagnosis. Manual controls remain separate from Auto; queue acceptance never means a completed route transition.

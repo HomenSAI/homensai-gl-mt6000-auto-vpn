@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=homensai-auto-vpn
-PKG_VERSION:=0.9.0-alpha45
+PKG_VERSION:=0.9.0
 PKG_RELEASE:=1
 PKG_LICENSE:=MIT
 

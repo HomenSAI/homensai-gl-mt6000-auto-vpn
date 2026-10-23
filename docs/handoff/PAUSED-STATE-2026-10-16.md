@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # PAUSED — 2026-10-16T17:26:04.3633100+02:00
 
 User requested a checkpoint and stop. Both QEMU guests were verified paused/running=false. No test was resumed. No physical-router changes, deployment, new release or GitHub write occurred in this work window.

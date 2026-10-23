@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Two-channel Auto — 22 October 2026
 
 Owner priority: working Start/Stop and repeated automatic primary/reserve transitions on the dedicated MT3000 today; target handover 23:00 Europe/Berlin. Windows network and primary MT6000 remain untouched. Other broad backlog work is deferred.

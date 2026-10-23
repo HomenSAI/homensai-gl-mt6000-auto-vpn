@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Owner-resumed testing - 21 October 2026
 
 The owner explicitly resumed after the PC reboot and authorized extensive testing of the dedicated portable GL-MT3000, including manual and automatic scenarios. This supersedes the earlier stop for the active session; original observers remain STOPPED and are not automatically resumed. Primary GL-MT6000 and PC Wi-Fi stay excluded from changes.

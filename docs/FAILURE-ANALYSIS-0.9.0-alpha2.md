@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Failure analysis and test report — 0.9.0-alpha2
 
 Date: 2026-10-18. Scope: the router program (switching supervisor, Auto buttons, rollback, settings writers, RPC) and the LuCI page in designs A/B/C. Everything here was done **offline**: a simulated router backend in unit tests, the synthetic UI fixture in headless Microsoft Edge, and the isolated Linux container (`network none`). The physical GL-MT6000 was not accessed, Auto was not enabled anywhere, no endurance test was started.

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenS.AI Auto VPN 0.9.0-alpha14
 
 After the separate terms screen, first entry opens one complete eight-stage setup wizard: language and appearance defaults, monitoring, existing VPN profiles and trial preferences, server metadata, recovery rules, optional speed tests, optional Telegram reports, and a full review. The same editor remains under Settings after completion. An independent Emergency Stop stays available through every stage and pending save. An explicit one-entry dashboard link keeps recovery/Return controls reachable while setup remains incomplete; a fresh entry opens the unfinished wizard again.

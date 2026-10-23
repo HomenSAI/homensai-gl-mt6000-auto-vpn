@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Sidebar UI acceptance — 0.5.0-alpha13
 
 2026-10-15, Europe/Berlin. Actual GL-MT6000 LuCI, not the synthetic preview.

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../../docs/CURRENT-STATUS.md) · [documentation index](../../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # State at independent-review handoff
 
 Historical snapshot. Active 20 October state/TODO: ../../docs/handoff/ACTIVE-STATE-2026-10-20.json and ../../docs/handoff/RECOVERY-TODO-2026-10-20.md. Do not substitute this older evidence for the current checkout or device observations.

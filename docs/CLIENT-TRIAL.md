@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 > **Current procedure (0.8.0-alpha7).** Follow router-test-kit/README.md, phase 3. Summary: the Overview shows a checklist "Before you can start Auto"; its last step is this LAN trial. Run `client-test.ps1 -Router http://<router>:8080/ -CableInterface <ifIndex>` (first with `-CheckOnly`); you type the router password and the word TEST yourself. The helper now sends the private trial number with every confirmation; the router refuses a confirmation without it. A passed trial returns to the primary on a fresh check; if the primary is not healthy the router stays on the reserve and the Overview offers "Return to primary". If someone changes the VPN rules during a trial, Auto stops and releases its own traffic block. Emergency steps: the Help page or router-test-kit/EMERGENCY.md. The text below is the original 0.5.0-alpha1 description and is kept for history.
 
 # Controlled client trial

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # First-run agreement, explanation and guided setup — alpha45
 
 The first-entry order is: experimental-software agreement and MIT License → explicit acceptance → operating-principle explanation → OK → eight-step setup. The existing router-side terms version remains authoritative; no existing acceptance is reset and no acceptance is fabricated. Fresh unaccepted configurations see the agreement first. English is the fresh-install default and Russian is available; subsequent pages follow the chosen language. The legal conditions have not changed, so the terms version remains1.

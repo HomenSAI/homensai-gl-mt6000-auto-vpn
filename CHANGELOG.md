@@ -1,11 +1,20 @@
 # Changelog
 
+## 0.9.0 — 2026-10-23
+
+- Numbered experimental release on main, incorporating the physically checked alpha45 behavior.
+- Continuous MT3000 primary/reserve Auto, operator switching while Auto ON, default monitoring and bounded faster startup polling.
+- Explicit channel roles, moving/static cards and sidebar lamps; three-level live/stored1–24h graphs; retained viewport/errors and persistent weekly/monthly/lifetime statistics.
+- Agreement→illustrated intro→eight-step EN/RU setup/help; bottom unchanged-settings escape and immediate language preview.
+- Refreshed public overview, installation/how-to/evidence/roadmap and historical-document context. See [release notes](releases/v0.9.0.md) and [exact release record](docs/RELEASE-0.9.0.md).
+
+
 ## 0.9.0-alpha35 — 2026-10-22
 
 - Explicit prepared-MT3000 continuous Auto starts saved WG/OV profiles, repeatedly fails over and returns after stable recovery; durable ownership and independent Stop/restart recovery.
 - Atomic derived process policy synchronization, shared CLI/helper control identity, bounded transition leases and persistent rolling attempt budget.
 - Live colored primary/reserve timeline, lightweight read-only RPC, narrow-screen labels and persistent preparation readiness.
-- Full dual-runtime681app/107QA and34UI matrix; real cycles, Start/Stop/startup cancellation, native crash recovery and reboot. Scope/limitations: releases/v0.9.0-alpha35.md.
+- Full dual-runtime681app/107 QA and34UI matrix; real cycles, Start/Stop/startup cancellation, native crash recovery and reboot. Scope/limitations: releases/v0.9.0-alpha35.md.
 
 ## 0.9.0-alpha27 — 2026-10-22
 

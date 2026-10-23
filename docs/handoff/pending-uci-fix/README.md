@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../../CURRENT-STATUS.md) · [documentation index](../../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Unverified UCI fix checkpoint
 
 Paused by the user on 2026-10-16. These .draft files are NOT executable package inputs, NOT validated, NOT installed and NOT released. Some are unchanged reference/test scaffolding. Do not copy them blindly into production.

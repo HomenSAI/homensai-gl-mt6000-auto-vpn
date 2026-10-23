@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # HomenSAI Auto VPN model tests
 
 Historical report dated 2026-10-14. Target: local JavaScript demo/model.js and demonstration UI. These tests neither connected to the router nor changed VPN settings.

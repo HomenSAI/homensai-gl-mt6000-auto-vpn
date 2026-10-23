@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Alpha4 development checkpoint — 2026-10-16
 
 This snapshot adds reviewed priority application, supported recovery/monitoring wizards and a bounded operator traffic-fault tool. Physical GL-MT6000 access and deployment remain deferred.

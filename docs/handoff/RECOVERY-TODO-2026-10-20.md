@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Current continuation after the 20 October crash
 
 Alpha16-1 is installed monitor-only with B · Calm as the default. All69 program files and served dashboard67/CSS match the canonical IPK; nine post-install checks passed and protected/app configuration stayed byte-identical across upgrade. Owner terms version1 and independent portable profiles are confirmed. Router-only existing WG/OpenVPN DNS/HTTPS checks and one bounded stock WG start/data/stop cycle passed; WG was up with a fresh handshake at4.826s. Earlier refused/aborted attempts remain distinct. Both VPNs are saved disabled=1, exact stock startup link restored, native/Auto/optional functions off. No Windows Wi-Fi/address/route change. Physical wizard Save, native/channel-switch certification, LAN/IPv6/Kill Switch and unattended/power recovery remain open. Read ../PHYSICAL-ROUTER-ONLY-2026-10-20.md for the current acceptance boundaries.

@@ -1,11 +1,9 @@
-# Auto control and setup — 0.6 experimental series
+# Auto controls and setup — 0.9.0
 
-The Overview power control requests Start or Stop. Its colour follows fresh controller observations; a queued request is not evidence of enabled switching. Start resumes only an already LAN-certified policy within its unchanged bounded deadline. It does not fabricate a trial, start inactive profiles or enable reboot autostart. Run the LAN helper when the window is absent/expired.
+The round Overview control requests Start/Stop and locks during the actual operation, beyond queue acknowledgement. Green means Auto enabled/ready; red means off. Monitoring is required/default-on, and a real monitoring error is explicit. Exceptional cancellation remains under Technical actions; the first Language and appearance step has no Emergency Stop button.
 
-A durable Stop request cancels an in-flight attempt and requests verified rollback. If the original VPN is not healthy, the controller may keep a confirmed reserve and explicitly report STOPPED-ON-RESERVE. This is not restoration of the original route. The monitor continues separately.
+The separate rounded manual panel has equal primary/reserve cards. The healthy selected card is green/animated and has no Turn on action. An eligible inactive red card offers Turn on; inactive/error diagrams are static. During switching the destination is yellow with Switching and the other card is red. Commands are authenticated, revision-bound and share Auto's health/worker/budget/rollback fences. Healthy manual preference stays preferred while Auto continues protecting it.
 
-Settings provides a three-step system wizard: existing profiles, names/channel groups/priorities, review. Saving changes only application metadata and monitoring settings. It does not change VPN keys or immediately apply route priorities. Unsupported profile pairs remain blocked by the native adapter.
+On the prepared MT3000, continuous router-probed IPv4 mode starts the saved pair and does not require an external-LAN certificate. The separate bounded LAN-confirmed trial path retains its own witness requirements; do not confuse the two modes or invent a certificate. Stop success requires verified cleanup, not only an ACK. Restart requires fresh explicit Auto Start.
 
-The Telegram channel wizard accepts a secret token, destination and report interval. Blank token keeps an existing valid token. Add the bot to a channel with permission to post; use its numeric channel ID or public @username. A separate authenticated Test delivery button sends a clearly labelled test and reports API acceptance. This is not proof of the recipient reading it. Token values are never returned or exported.
-
-Limits: bounded LAN-confirmed native operation, IPv4 acceptance only, two adjacent already-connected catch-all rules. Multi-server/channel hierarchy, inactive-profile activation and unattended production acceptance remain pending. Physical power loss is not covered by mocked process-crash tests.
+First entry and later preferences: [eight-step setup](FIRST-RUN-SETUP.md). Saving metadata does not import VPN keys or run a trial/speed test/Auto. Monitor observation alone never connects arbitrary inactive profiles. [Scope](CURRENT-STATUS.md) · [statistics](STATISTICS-RETENTION.md).

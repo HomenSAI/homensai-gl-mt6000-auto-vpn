@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # GL-MT3000 mobile test target: staged acceptance plan
 
 Prepared 20 October 2026. The owner selected the mobile **GL-MT3000 (Beryl AX)** for physical trials and explicitly confirmed that it is **not yet connected**. All device rows below are **BLOCKED: actual observations missing**. This document records a future procedure; no hardware action has been executed by preparing it.

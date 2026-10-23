@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Work log
 
 All times are Europe/Berlin unless an entry explicitly states otherwise. Historical entries describe the evidence available at that time; later entries supersede readiness statements. Missing timestamps are explicitly marked rather than invented. Format: timestamp → error → confirmed cause → change → verification → remaining limits.

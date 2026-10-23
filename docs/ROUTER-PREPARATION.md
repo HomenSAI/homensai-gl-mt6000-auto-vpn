@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # Persistent router preparation
 
 The System readiness page includes a read-only MT3000 preparation report. The same report is available locally with:

@@ -1,10 +1,9 @@
-# Initial commit verification
+# Verify a downloaded release
 
-Historical report dated 2026-10-14.
+1. Confirm the release tag0.9.0 and matching package/checksum names. Verify SHA256 locally before upload.
+2. Read [current scope](CURRENT-STATUS.md) and [exact release record](RELEASE-0.9.0.md); passing source tests alone are not device acceptance.
+3. Installation verification checks package version, all immutable payload hashes/modes, protected router settings and actual served JavaScript/CSS.
+4. Confirm advancing monitor data and DNS/twoHTTPS for the selected saved pair. A queue ACK is not Start or switch completion.
+5. Record final Auto/selected-route state, test cleanup and private recovery backup. Never claim an external-LAN certificate from router probes.
 
-- 30 local logic/replay tests passed.
-- The synthetic blackhole case recommended backup after three failed rounds; active remained primary and applied=false.
-- router-preflight.sh passed bash -n; it was not executed on the router.
-- These checks performed no real switching or installation.
-
-Before publication, repeat the prepared-workspace tests and inspect git ls-files for secrets, live data, binary firmware images and extracted vendor code. After push, compare HEAD with server refs/heads/main and verify the repository's intended visibility. This is the original historical procedure; subsequent owner-approved public publication is recorded in WORKLOG.md.
+For maintainers, `scripts/offline-ci.ps1` runs both preinstalled isolated runtimes from a committed Git archive and records a source-bound receipt. Matching deterministic package bytes and source fingerprint are mandatory. [Publication](PUBLICATION.md) · [CI isolation](CI-PRIMARY.md).

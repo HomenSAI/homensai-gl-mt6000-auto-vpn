@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Virtual OpenWrt acceptance — 2026-10-16
 
 Scope: an actual OpenWrt x86/64 guest kernel running under QEMU TCG inside the isolated `homensai-vpn-qemu` Docker container. No physical GL-MT6000 connection or modification occurred in this work window.

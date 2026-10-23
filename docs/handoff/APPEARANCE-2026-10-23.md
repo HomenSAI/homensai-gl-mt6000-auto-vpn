@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Language and appearance correction — alpha44
 
 Owner requested three changes to the first setup step. The Emergency Stop button and its explanatory note are absent from Language and appearance; the other setup steps retain their existing behavior. The dashboard/recovery escape has a soft green background. Selecting Russian or English rerenders the first step immediately, including headings, field labels, navigation, attribution and the recovery link language, while retaining the other draft fields. Preview sends no RPC, saves no router preferences and performs no reload. Final reviewed save still persists router defaults.

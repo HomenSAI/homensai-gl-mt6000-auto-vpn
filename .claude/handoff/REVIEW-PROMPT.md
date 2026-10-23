@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../../docs/CURRENT-STATUS.md) · [documentation index](../../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Prompt for Claude: independent completion and readiness audit
 
 You are reviewing HomenSAI Auto VPN at a stopped checkpoint. Read CLAUDE.md and every file in .claude/handoff/, then inspect the actual source and referenced receipts. The owner wants an independent answer: what is implemented, what is actually verified, what remains, and whether we can begin a controlled test on GL.iNet GL-MT6000.

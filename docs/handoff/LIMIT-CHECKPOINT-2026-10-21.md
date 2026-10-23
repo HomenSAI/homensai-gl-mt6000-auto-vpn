@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Active checkpoint before possible usage limit - 21 October 2026
 
 SINGLE ACTIVE EXECUTOR 22 October 09:41–15:55 UTC: owner-authorized interactive thread 01a162e9-6703-7b41-8334-561a48debe2c is completing release/model/hardware work. Read private/ACTIVE-EXECUTOR.local.json and docs/handoff/CURRENT.md. Other heartbeat threads MUST DEFER without edits, tests, agents or router calls while the claim is live. This prevents overlapping executors; it is not an owner pause.

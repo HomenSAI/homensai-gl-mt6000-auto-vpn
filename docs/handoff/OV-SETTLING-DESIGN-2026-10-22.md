@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Offline tunnel-readiness model — 22 October 2026
 
 This is an isolated evidence reducer in `private/ov-settling-model-20261022`, not installed code, a new router guard or a replacement for the existing observer. No physical calls or threshold changes.

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Resume TODO - owner pause checkpoint, 20 October 2026
 
 LATEST STOP21October: read [STOP-2026-10-21.md](STOP-2026-10-21.md) FIRST. Owner is rebooting the PC; new uncommitted fixes and test results are saved there. Ask the deferred Wi-Fi/gateway question only after the owner returns. No automatic resume.

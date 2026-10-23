@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Latest: alpha43 installed and accepted
 
 All later owner UI items and animation1 installed; adaptive startup polling included. See [complete owner checklist and measured results](OWNER-STATUS-2026-10-23.md) and [alpha43 machine evidence](../../qa/MT3000-ALPHA43-ACCEPTANCE.json). Prior41 facts below are historical. Final43 AutoON reserve restored,17:29Berlin; source85211db, fullCI724app/107QA per runtime/39UI PASS;84installed files/protected configs and served HTTPS/HTTP8080 PASS. Start59.81s, manual cycle144.52s, owner reserve restoration34.67s. Actual43 frame replay verifies health-dependent motion and error presentation.

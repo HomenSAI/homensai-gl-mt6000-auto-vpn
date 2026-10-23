@@ -1,78 +1,36 @@
-# HomenSAI Auto VPN · GL-MT6000
+# HomenS.AI Auto VPN
 
-Current prerelease (22 October 2026): **0.9.0-alpha35-1**. Continuous two-channel Auto and the live route chart are implemented and tested on the prepared GL-MT3000/GL.iNet4.11.0. See [release notes](releases/v0.9.0-alpha35.md), [current evidence](docs/handoff/CURRENT.md) and [Russian quick start](docs/AUTO-QUICKSTART.ru.md). Evidence is router-probed IPv4; independent external LAN and MT6000 continuous-mode hardware acceptance remain unverified. Older dated results below are historical.
+[English](README.md) · [Русский](README.ru.md) · [HomenS.AI / Serhii Khomenko](https://homensai.com)
 
-> ## ⚠ Experimental software: use at your own risk
->
-> HomenS.AI Auto VPN is an **experimental alpha release** for the GL.iNet GL-MT6000. It can interrupt your internet connection and it changes router VPN settings. It is provided **"AS IS", without warranty of any kind** (MIT License). **You install and use it entirely at your own risk and responsibility.** Make a backup first and keep another way to reach the internet and the router. Read the full [terms of use](DISCLAIMER.md). The program shows the same terms the first time you open it and does not allow Auto until you accept them.
+**Release 0.9.0 — 23 October 2026.** A router application for monitoring existing OpenVPN/WireGuard profiles and automatic switching between a primary and a reserve VPN. Continuous two-channel Auto is tested on the prepared **GL.iNet GL-MT3000 / firmware 4.11.0**. MT6000 identification and historical monitoring/native results are separate evidence; the current continuous mode is not hardware-qualified on MT6000.
 
-Latest prerelease: **0.9.0-alpha35-1** ([release notes](releases/v0.9.0-alpha35.md) · [install guide](docs/INSTALL.en.md) · [router test kit](router-test-kit/README.md) · [terms of use](DISCLAIMER.md)).
+**Experimental software, MIT License, use at your own risk.** Switching can interrupt calls and sessions. Version 0.9.0 is a numbered release, not a claim of unattended production certification. Read [terms](DISCLAIMER.md) and [supported scope](docs/CURRENT-STATUS.md).
 
-[English](README.md) · [Русский](README.ru.md) · [Developer: Serhii Khomenko / HomenS.AI](https://homensai.com)
+## Download and start
 
-[Exact verified router/firmware/LuCI versions and installation proof](docs/TESTED-ENVIRONMENT.en.md)
+Download the matching `.ipk` and `.ipk.sha256` from [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0). This is an application package, **not a firmware image**. Verify the checksum, preserve a private backup and [follow installation](docs/INSTALL.en.md). Do not force board/firmware/readiness checks.
 
-**Alpha10:** viewport-aware sidebar, accessible Settings, independent menu scroll and mobile wrapping; 126 EN/RU page transitions checked.
+First entry: agreement → two paragraphs and three diagrams explaining operation → OK → eight-step setup. English/Russian are available. Setup Help gives examples for every step. The green escape below Cancel/Next opens the dashboard with existing router settings unchanged; it does not save the draft, reset defaults or start Auto. Later changes belong in Settings → All application settings.
 
-**Previous alpha9:** only the selected healthy overview path is green; a healthy standby is grey/ready, transitions yellow and real failures red. [Colour contract](docs/OVERVIEW-PATH-COLOURS.md).
+## What works
 
-**Previous alpha8:** brighter raised controls and 18px server indicators, request-correlated VPN connectivity checks, explicit controller states, failure diagnosis and model quarantine. Verified locally with 329 application tests, 30 QA tests per runtime and 12 UI suites; [item-by-item limits](docs/ALPHA8-UX-ALGORITHMS-RESULTS.md). The physical router has not been upgraded to alpha8; full native multi-hop production acceptance is pending.
+- Continuous router-originated IPv4 DNS/HTTPS checks; two VPNs are measured in parallel. Startup temporarily targets 2-second rounds, then returns to the configured interval (10 seconds on the tested router). Slow checks can take longer; rounds do not overlap.
+- Auto starts the saved primary/reserve pair on the explicitly prepared MT3000, fails over after repeated failures and returns after stable recovery under the selected policy. Short failures need not switch. Stop, worker/readiness checks, rollback and a rolling attempt budget remain enforced.
+- Operator primary/reserve selection while Auto stays enabled. A healthy operator preference remains preferred; confirmed failure can trigger recovery. A queued command is not proof of a completed switch.
+- Live route chart and stored history with a 1–24-hour slider; exactly primary/reserve/off levels, with gaps for missing observations. Visible sidebar channel lamps, animated healthy selected cards and static inactive/error cards.
+- Detailed seven-day controller/failure history, calendar-month aggregates, lifetime counters and paginated export. Failed checks, outage episodes, attempts, successful switches and returns are different quantities. Storage limits/truncation are explicit.
+- Traffic accounting, diagnostics/error explanations, optional bounded speed tests and optional Telegram reports. Tokens and VPN credentials stay private.
 
-![Alpha10 interface - synthetic preview](qa/ui-review-alpha10/overview-en.jpg)
+Both stock GL.iNet tunnels may show Connected while only one carries the selected common traffic. The application changes verified routing-policy selection; it need not disconnect the standby tunnel or rename Tunnel 1/2.
 
-Previous verified checkpoint:
+## Evidence and limits
 
-**0.7.0-alpha6 local prerelease: complete offline cascade model and rollback/fault protection, 232 application + 5 QA tests, 8 Node suites and 54 responsive EN/RU checks. See [offline completion](docs/OFFLINE-COMPLETION.md). QEMU was not resumed and the physical router was not changed. Native multi-hop adaptation and unattended production remain unaccepted.**
+The alpha45 behavior baseline passed 724 application tests and 107 QA tests in each of two runtime environments plus 39 UI suites. Actual MT3000 tests include controlled failures, automatic failover/return, operator switching with Auto on, native-process recovery, installation/served-file checks and statistics persistence. [Release evidence](docs/RELEASE-0.9.0.md) distinguishes the exact 0.9.0 checks from earlier physical runs.
 
-[Virtual OpenWrt results and unresolved reboot failure](qa/OPENWRT-VIRTUAL-REPORT.md) · [Reproducible Docker/QEMU lab](lab/openwrt-qemu/README.md)
+Independent external-LAN acceptance, a completed 24-hour traffic soak, physical power-cut testing, MT6000 continuous-mode acceptance, IPv6 failover and unrestricted multi-reserve hierarchy are not established. Auto requires explicit Start after a router/application restart. Some OpenVPN starts previously received AUTH_FAILED and safely stopped; no provider root cause is claimed.
 
-## Why it exists
+## Documentation
 
-The idea came from a real troubleshooting session: VPN profiles showed Connected while internet access stopped. The standard interface and noisy logs did not clearly show which server/path was healthy or how connections changed. We needed coordinated switching between servers and between OpenVPN and WireGuard. Trustworthy monitoring comes first; bounded client-confirmed switching is experimental; full unattended hierarchy remains a development stage. Wi-Fi is an access medium and a firewall controls traffic; they are not VPN protocols.
+[Quick start](docs/AUTO-QUICKSTART.en.md) · [Eight setup steps](docs/FIRST-RUN-SETUP.md) · [How it works](docs/HOW-IT-WORKS.en.md) · [Install](docs/INSTALL.en.md) · [Current status](docs/CURRENT-STATUS.md) · [Statistics](docs/STATISTICS-RETENTION.md) · [Roadmap](docs/ROADMAP.md) · [Complete documentation index](docs/DOCUMENTATION-INDEX.md) · [Changelog](CHANGELOG.md)
 
-| Mode | Implementation status |
-|---|---|
-| Monitor | Working native service: existing profiles, IPv4 HTTPS/DNS probes, latency, traffic, events and Telegram. |
-| Operation / automatic failover | Explicit prepared-MT3000 two-channel Auto: saved-profile Start, repeated failover/return, Stop and crash recovery tested. Generic hierarchy and external-LAN acceptance remain separate. See [alpha35](releases/v0.9.0-alpha35.md). |
-
-## Interface and statistics
-
-English by default, explicit English/Russian selector. Server cards, real HTTPS-latency chart, grouped OpenVPN/WireGuard histograms for today, last seven calendar days and current calendar month. Green: healthy observed time; red: confirmed failed time; grey: unobserved time. Inactive reserve profiles are excluded. Counts mean observed inactive-to-active transitions and distinct failure episodes, not probe counts. Startup is not a new connection. Durations are estimates between probes. New history starts with this release.
-
-Calendar-month accounting sums unique VPN interfaces, including overhead, starting when monitoring begins. WAN is tracked separately where an explicit WAN device is identifiable; WAN and VPN counters overlap and must not be added. Neither reconstructs an unobserved previous month. Simultaneous connected tunnels do not prove which one carried a LAN client's traffic. Checkpoints default to 15 minutes; power loss can lose the latest interval. Monitor events are mostly RAM-only; bounded native-controller history has a checksummed persistent backup.
-
-Telegram is optional: setup wizard, private token, approved chat/channel destination, interval or daily Europe/Berlin hour, weekly/monthly summaries and a persistent deduplication ledger. The token is required even for sending. Router backups may contain it: keep them private.
-
-## Installation and test evidence
-
-[How it works (EN)](docs/HOW-IT-WORKS.en.md) · [Как это работает (RU)](docs/HOW-IT-WORKS.ru.md) · [Install (EN)](docs/INSTALL.en.md) · [Установка (RU)](docs/INSTALL.ru.md) · [AI installation prompt](docs/AI-INSTALL.en.md) · [Промпт для AI](docs/AI-INSTALL.ru.md) · [Validation](docs/VALIDATION.md) · [Changelog](CHANGELOG.md)
-
-Download matching `.ipk` and `.ipk.sha256` from release assets or `releases/`. This is NOT a firmware image. Target: **GL.iNet GL-MT6000, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, LuCI openwrt-21.02 git-22.335.71649-0ecaf74, vendor Python 3.9.15**. Development/tests use Linux Docker on Windows. `Architecture: all` means interpreted files, not universal router compatibility. Generic OpenWrt 21.02.7 x86/64 was tested separately in an isolated QEMU guest (kernel 5.4.238 / Python 3.9.16). Its proprietary GL.iNet adapter is intentionally blocked; this does not establish other-hardware failover compatibility.
-
-Earlier releases verified installation, three connected OpenVPN/WireGuard probe paths, accounting and Telegram delivery. On 15 Oct 2026, alpha10 verified a real client-confirmed transition/return and a separate automatic transition under controlled primary traffic failure, followed by independent rollback. Helper completion errors and later checks are documented without being counted as successful helper exits. See [work log](docs/WORKLOG.md) and [validation](docs/VALIDATION.md). Simulation reports under `qa/` are separate evidence.
-
-## Privacy
-
-Public files exclude the author's live router/VPN configuration, Telegram token/chat ID, private keys, passwords, browser sessions, logs, firmware dumps and live-device screenshots. Isolated VM screenshots contain only synthetic test profiles. Runtime secrets belong only on the router. Router probes do not validate LAN routing; IPv6, inactive-server bandwidth tests and automatic operation are unavailable.
-
-## Author, book and related work
-
-**Serhii Khomenko | HomenS.AI** combines mechanical engineering, project leadership, IT infrastructure and local AI. Public profile: practical tools, automation, Docker and local models. [Website/profile](https://homensai.com/profile.html) · [GitHub](https://github.com/HomenSAI) · [ORCID](https://orcid.org/0009-0009-5371-9717).
-
-Book: **Two Worlds. One Mind.**, edition 1.1, a handbook connecting mechanical engineering, software and AI. [Book repository](https://github.com/HomenSAI/two-worlds-one-mind) · [Zenodo / DOI 10.5281/zenodo.23160031](https://zenodo.org/records/23160031). Other public work: [local AI lab](https://github.com/HomenSAI/homensai-local-ai-lab), [RTX 3080 benchmarks](https://github.com/HomenSAI/rtx3080-local-ai-benchmarks).
-
-Independent project, not an official GL.iNet/OpenWrt product. Licensed under [MIT](LICENSE): use, modify and redistribute, including commercially, while retaining the author/site notice and licence. See [licensing scope and third-party notices](LICENSING.md).
-
-Physical device: last recorded installed application is 0.6.0-alpha5; this window did not query it. Current alpha5 here means 0.7.0-alpha5 in the isolated x86 VM, not a physical upgrade. See [current state](docs/STATE.md) and [alpha5 evidence](qa/ALPHA5-CHECKPOINT.md).
-
-[Failover planner and rollback contract / Планировщик и откат](docs/FAILOVER-RESEARCH.md): read-only planner integrated; full native hierarchy application remains unfinished; bounded pair operation is documented separately.
-
-[Native controller, actual device results and restrictions](docs/NATIVE-EXPERIMENTAL.md) · [Work log](docs/WORKLOG.md)
-
-[Working-system TODO / План доведения](docs/TODO-WORKING-SYSTEM.md) · [Client trial / Клиентское испытание](docs/CLIENT-TRIAL.md). Candidate 0.7.0-alpha5 adds committed-reserve observation and verified primary return; hardware acceptance of this candidate remains pending.
-
-Independent Claude review checkpoint: [start here](.claude/handoff/START-HERE.md), [all 50 audit items](.claude/handoff/TODO-50.md), [readiness gates](.claude/handoff/ROUTER-READINESS.md). Root CLAUDE.md imports the project handoff. Tests are stopped; this is an audit-first handoff, not device deployment authorization.
-
-Version identities: application **0.8.0-alpha2**, package **0.8.0-alpha2-1**, Claude review bundle **1.0.0** ([VERSION.json](VERSION.json), [policy](docs/VERSIONING.md), [handoff release notes](releases/handoff-v1.0.0.md)). Handoff releases contain review context and do not imply a new router package.
-
-Download the [Claude review handoff 1.0.0 release](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/handoff-v1.0.0): sanitized context ZIP, VERSION.json and SHA256SUMS.txt. This archive is not a router installation package.
+Private configurations, keys, bot tokens, sessions and backups are excluded from public source and release assets. Historical reports are dated evidence, not current installation instructions. Independent project; not an official GL.iNet/OpenWrt product. [MIT](LICENSE) · [third-party notices](LICENSING.md).

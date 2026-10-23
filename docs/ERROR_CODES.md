@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # HomenS.AI Auto VPN diagnostic codes
 
 This is the product-level catalogue. Some codes are emitted by the native monitor; others describe planned/demo states. Do not assume that every catalogue code is implemented on the device. A code denotes an evidenced symptom or cause, not an unsupported inference.

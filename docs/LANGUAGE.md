@@ -1,7 +1,5 @@
-# Language policy
+# Language and appearance
 
-English is the default language for the application, diagnostic descriptions, error/fix history, test statistics, release notes, new work-log entries and Telegram-generated report text.
+English is the fresh-install default; Russian is available. The first agreement has a language link. The explanation and wizard follow the selected language. Changing the wizard's language rerenders the current first page immediately, preserving other draft fields without a settings RPC or reload. The final reviewed save persists router defaults; normal browser controls can override language/theme/design for that browser.
 
-Optional Russian UI and explicitly named Russian installation guides may remain available. Diagnostic descriptions and technical error records remain English in either UI locale. User-supplied server/channel names are preserved exactly.
-
-Each incident entry records date/time and timezone, exact symptom/code, confirmed cause or explicitly unknown cause, concrete change, verification and remaining limits. Never invent historical timestamps or turn model results into device evidence. Preserve published Git history and release tags; translate current documents through ordinary commits rather than rewriting history.
+Свежая установка открывается на английском; доступен русский. В мастере язык меняется сразу, остальные введённые значения сохраняются. Тема системы и B Calm используются при отсутствии корректного выбора; A/C остаются доступны. Коды диагностики, технические идентификаторы и поля экспортов могут оставаться английскими.

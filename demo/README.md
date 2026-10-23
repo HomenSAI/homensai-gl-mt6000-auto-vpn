@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Component/lab reference, not current product-readiness evidence. [Current release and scope](../docs/CURRENT-STATUS.md).
+
 # Локальная демонстрация HomenSAI Auto VPN
 
 После массовых испытаний исправлены WAN-разрешение, свежесть рейтинга, таймеры восстановления, цепочки повторных попыток и независимость месячных/переходных счётчиков от коротких логов. Результаты: [1200 генерируемых сценариев, 4096 сочетаний флагов и длительный прогон](../qa/STRESS_REPORT.md).

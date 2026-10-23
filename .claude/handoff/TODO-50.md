@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../../docs/CURRENT-STATUS.md) · [documentation index](../../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Complete 50-item review backlog
 
 Original proposal numbering is preserved. P0 = reliability/security; P1 = product completeness; P2 = optional usability. These are audit targets, not blanket implementation or device authorization.

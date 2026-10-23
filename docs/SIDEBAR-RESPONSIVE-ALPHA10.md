@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Sidebar accessibility - alpha10
 
 The sidebar adapts to the actual available viewport height and external fixed/sticky headers. It has no fixed minimum height that can push Settings off-screen. Branding/footer remain stable; the menu gets independent vertical scrolling when it cannot fit. On exceptionally short desktop panels the whole sidebar scrolls. On mobile the nine navigation links wrap instead of hiding the last items in a single horizontal strip. Active links are revealed in the nav without a document jump; the nav can be focused and scrolled by keyboard.

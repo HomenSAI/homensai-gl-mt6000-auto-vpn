@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # Primary-Gitea CI preparation
 
 `scripts/offline-ci.ps1` tests a **clean committed SHA**, never a changing checkout.

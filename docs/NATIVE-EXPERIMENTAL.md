@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 > Historical snapshot retained for audit. Current stopped checkpoint and review instructions: ../.claude/handoff/START-HERE.md. Do not treat old versions, locations, approvals or device claims below as freshly verified current state.
 
 # Experimental native controller

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Working-system completion checklist
 
 Updated 2026-10-16. Check a task only after its stated evidence exists. Laboratory tests do not replace device acceptance. The detailed chronology is WORKLOG.md; exact firmware/model details are TESTED-ENVIRONMENT.en.md.

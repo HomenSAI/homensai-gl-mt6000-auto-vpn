@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Physical router baseline — 2026-10-16T18:53:54.0327526+02:00
 
 Read-only inspection and private backup only. No router configuration, installation, VPN, route, firewall or service changes; no Windows network changes; no failover trial.

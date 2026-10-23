@@ -1,8 +1,11 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # Firmware-owned server failover and application channel coordination
 
 Owner decision, 20 October 2026: observe how the router changes servers within a VPN tunnel; the application diagnoses those changes and coordinates the choice between distinct VPN tunnels, including OpenVPN and WireGuard. This supersedes the earlier proposal to implement a second independent server-selection loop.
 
-The official [GL.iNet VPN Dashboard guide](https://docs.gl-inet.com/router/en/4/interface_guide/vpn_dashboard/) for firmware 4.9 and later describes ordered server profiles within a tunnel and independent routing groups. It does not establish the configuration or compatibility of an unconnected device. Firmware-specific arbitration and independent LAN acceptance remain prerequisites for live application switching.
+The official [GL.iNet VPN Dashboard guide](https://docs.gl-inet.com/router/en/4/interface_guide/vpn_dashboard/) for firmware 4.9 and later describes ordered server profiles within a tunnel and independent routing groups. It does not establish the configuration or compatibility of an unconnected device. Firmware-specific arbitration remains enforced. Current prepared-MT3000 continuous mode uses router-probed IPv4 proof; independent LAN acceptance is a separate claim and remains required for the bounded LAN-confirmed trial path.
 
 ## Identities and ownership
 

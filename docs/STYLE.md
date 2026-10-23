@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
+
 # HomenS.AI Style integration
 
 Pinned source: HomenSAI/homensai-style tag **v1.14.3**. The owner explicitly requested reuse of his logo, original TV robot and style core in this public router project. Only the selected CSS, brand renderer, robot and local fonts are embedded, not the private repository/history.

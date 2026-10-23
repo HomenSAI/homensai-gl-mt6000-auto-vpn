@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Failure analysis addendum — 0.9.0-alpha3
 
 Date: 2026-10-18. Continues [FAILURE-ANALYSIS-0.9.0-alpha2.md](FAILURE-ANALYSIS-0.9.0-alpha2.md). Offline only: simulated router backend, synthetic UI fixture in headless Edge, isolated Linux container. The physical router was not accessed and Auto was not enabled anywhere. This is evidence about code behaviour under injected faults, not a certification of a real device.

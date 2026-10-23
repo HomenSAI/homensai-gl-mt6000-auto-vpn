@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](../CURRENT-STATUS.md) · [documentation index](../DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Alpha17 WIP checkpoint - 20 October 2026
 
 Owner request: save all current statuses/TODOs and upload the current work to Git. This is an unfinished development checkpoint, not an alpha17 release or installation approval. The stable/public main release remains alpha16. Read this file before resuming implementation.

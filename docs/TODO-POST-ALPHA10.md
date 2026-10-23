@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+
 # Approved post-alpha10 completion checklist
 
 Approved by the user on 17 October 2026: execute everything possible without the physical router, begin with virtual OpenWrt, journal exact failures/corrections and save local Git -> verified Gitea -> reviewed GitHub snapshots. Physical installation, configuration and traffic interruption are excluded.
