@@ -1,0 +1,211 @@
+{
+  "device": "GL-MT3000",
+  "installed_version": "0.9.0-alpha43-1",
+  "product_source": "85211dbf9f40c706b8b7d8a89568b459ba91a323",
+  "package_sha256": "7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023",
+  "package_bytes": 764983,
+  "ci": {
+    "result": "PASS",
+    "application_tests_per_runtime": 724,
+    "qa_tests_per_runtime": 107,
+    "ui_suites": 39,
+    "complementary_environment_skips": true
+  },
+  "installation": {
+    "installed_version": "0.9.0-alpha43-1",
+    "native_enabled": false,
+    "opkg_exit": 0,
+    "opkg_output_sha256": "2dc06fd4eb2eff57fcea9d9e4db543b3862c2030b658846aff1fb2470a49d2f9",
+    "package_sha256": "7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023",
+    "payload_files_verified": 84,
+    "protected_configs_unchanged": true
+  },
+  "served_https": {
+    "scope": "Actual HTTPS-served bytes over interface3/source192.168.11.228 with pinned certificate; no login/session/terms/wizard writes",
+    "assets": [
+      {
+        "asset": "dashboard73.js",
+        "http_status": 200,
+        "bytes": 864534,
+        "sha256": "95e4865958e4188a59b9e892db182787c772257d9bcd7b424d5c59d2d001426b",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui50.css",
+        "http_status": 200,
+        "bytes": 116600,
+        "sha256": "0d7b609689c681d965949b62eef178c464da0d871246189289192a9b1c8d5cea",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "pass": true,
+    "time": 1792768983.8616552
+  },
+  "served_http8080": {
+    "pass": true,
+    "assets": [
+      {
+        "asset": "dashboard73.js",
+        "http_status": 200,
+        "sha256": "95e4865958e4188a59b9e892db182787c772257d9bcd7b424d5c59d2d001426b",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui50.css",
+        "http_status": 200,
+        "sha256": "0d7b609689c681d965949b62eef178c464da0d871246189289192a9b1c8d5cea",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "time": 1792768984.1253164,
+    "scope": "actual HTTP8080 user-facing static assets; bound cable interface3/source192.168.11.228"
+  },
+  "start": {
+    "event": "START-FINAL",
+    "result": "PASS",
+    "duration_seconds": 59.812900606004405,
+    "scope": "actual installed two-channel Auto startup; no external LAN proof"
+  },
+  "adaptive_polling": {
+    "event": "ADAPTIVE-POLLING",
+    "result": "PASS",
+    "intervals": [
+      10,
+      2,
+      10
+    ],
+    "monitor_sample_gaps_seconds": [
+      10.59,
+      4.56,
+      2.89,
+      3.17,
+      2.03,
+      2.11,
+      2.05,
+      2.31,
+      2.33,
+      2.75,
+      2.74,
+      2.57,
+      2.71,
+      2.52,
+      2.34,
+      2.42,
+      2.55,
+      2.63,
+      2.41,
+      2.57,
+      2.48,
+      2.72
+    ],
+    "startup_budget_seconds": 180,
+    "steady_interval_seconds": 10
+  },
+  "manual_cycle": {
+    "event": "FINAL",
+    "time": 1792769296.7058148,
+    "elapsed": 144.52191219999804,
+    "result": "PASS",
+    "duration_seconds": 144.51953798899194,
+    "deltas": {
+      "committed": 1,
+      "manual_committed": 1,
+      "automatic_committed": 0,
+      "returns": 1
+    },
+    "auto_left_running": true,
+    "manual_hold": "source",
+    "resume_command_used": false,
+    "external_lan_verified": false
+  },
+  "owner_reserve_restored": {
+    "event": "FINAL",
+    "time": 1792769342.9866798,
+    "elapsed": 34.67402460001176,
+    "result": "PASS",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "owner_preference_restored": true
+  },
+  "actual_ui_frame_replay": {
+    "result": "PASS",
+    "frames": 3,
+    "motion": "confirmed selected healthy only",
+    "source": "canonical43IPK",
+    "frame_source": "manual-actual-alpha43.jsonl",
+    "real_browser_test": false
+  },
+  "final_snapshot": {
+    "result": "PASS",
+    "time": 1792769360.8819177,
+    "version": "0.9.0-alpha43",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 12.618983745574951,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 25,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 18,
+      "channel_switches": 0,
+      "committed": 17,
+      "manual_attempts": 7,
+      "manual_committed": 6,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 5,
+      "rollbacks": 11,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 2152,
+      "failed_checks": 33,
+      "outages": 18,
+      "observed_down_seconds": 337.3901319503784,
+      "observed_up_seconds": 22148.0957365036,
+      "auto_observed_seconds": 10835.463146924973,
+      "recoveries": 7,
+      "unknown_intervals": 2
+    },
+    "external_lan_verified": false
+  },
+  "configuration_backup": {
+    "at_utc": "2026-10-23T15:29:15.619264+00:00",
+    "script_sha256": "1ad29142228c60be52f2707b8324016c1360cb07ea340430739a330e28f9fcc6",
+    "output_sha256": "85439c9e7ea393cb30665bc726d9df74384cbd2127f8ca40934f335c6f60ef6b",
+    "exit_code": 0,
+    "error_bytes": 0,
+    "device": "glinet,mt3000-snand",
+    "access": "pinned-key-cable-only",
+    "backup": "ENCRYPTED_AND_DPAPI_DECRYPT_VERIFIED",
+    "entries": 189,
+    "plaintext_persisted": false
+  },
+  "source_recovery": {
+    "source": "85211dbf9f40c706b8b7d8a89568b459ba91a323",
+    "restore_head": "85211dbf9f40c706b8b7d8a89568b459ba91a323",
+    "bundle_sha256": "cc394f6464b5301601387c224e451aeb7475e9e0ef3c83b9b286bc0e9a35b84e",
+    "restore_check": "PASS",
+    "tree": "baf657590f4529141c11c9b40351f2496ed12335"
+  },
+  "retained_failures": [
+    "Two pre-Start harness timestamp comparisons failed before Start was sent; diagnostic showed RPC float rounding by about0.2microseconds; corrected tolerance10microseconds.",
+    "First UI replay assumed every selected channel healthy; actual first primary frame had DNS-001. Evidence-aware replay verifies red/static error and later healthy primary/reserve green/moving; original failure retained.",
+    "Native Windows test could not import Linux fcntl; full authoritative Linux CI passed."
+  ],
+  "scope_limits": [
+    "router-originated IPv4; no independent LAN client acceptance",
+    "no completed24h soak or physical power-cut test",
+    "fresh explicit Auto Start required after service/router restart",
+    "local browser screenshot of actual generated cards; not real-router-browser interactive acceptance"
+  ]
+}

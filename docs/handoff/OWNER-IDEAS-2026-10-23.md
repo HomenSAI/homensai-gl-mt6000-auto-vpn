@@ -6,22 +6,22 @@ Owner asked to persist every new idea in this plan and finish the current task f
 
 ## Current work
 
-- [ ] Auto toggle: lock immediately; keep locked after queued ACK and across redraw/reload until confirmed completion, including RUNNING supervisor while PAIR-WAITING-PROBES remains ARMED. Preserve independent Emergency Stop during startup and suppress duplicate pending Stop.
-- [ ] Live and daily graphs: exactly three plotted levels — primary, reserve, off. No amber intermediate level. Hold the last confirmed selection through a contiguous transition; unknown/unobserved intervals remain gaps. Explain transition reason as text.
-- [ ] Add regressions, freeze alpha39 (alpha38 has already been installed), canonical exact-source CI/build/hash, physical verification, installed/served-file verification, Git/Gitea checkpoint and final handover.
+- [x] Auto toggle: lock immediately; keep locked after queued ACK and across redraw/reload until confirmed completion, including RUNNING supervisor while PAIR-WAITING-PROBES remains ARMED. Preserve independent Emergency Stop during startup and suppress duplicate pending Stop.
+- [x] Live and daily graphs: exactly three plotted levels — primary, reserve, off. No amber intermediate level. Hold the last confirmed selection through a contiguous transition; unknown/unobserved intervals remain gaps. Explain transition reason as text.
+- [x] Add regressions, freeze alpha39 (alpha38 has already been installed), canonical exact-source CI/build/hash, physical verification, installed/served-file verification, Git/Gitea checkpoint and final handover.
 
 ## Queued owner requirements (implement after current batch)
 
-- [ ] Manual selection must work while Auto is running. Show which command is actually available and a concrete reason if it is refused. Earlier RPC hardware success does not resolve the owner's observed UI failure.
-- [ ] Replace standalone "switch to reserve / primary" buttons with two channel cards that act as buttons and contain "Turn on" (Russian: "Включить"). Primary and reserve roles/protocol/country must be obvious. Selected manual channel green, unselected red, command pending yellow. Do not fabricate a selected route on ACK.
-- [ ] Put the entire manual heading, two channel cards, actions and selection/Internet explanation inside its own rounded border; not merely a separator line or a border around the help text. Fix all applicable designs.
-- [ ] Remove confusing default group information from the ordinary manual workflow (hide default or move optional group details out of the main card).
-- [ ] Replace "No fresh path confirmation" as the primary manual status. State selected/unselected channel explicitly from verified router policy; show Internet verification separately. When actual selection cannot be read, say the router has not returned its selection and block an unsafe command rather than inventing one. Explain this exceptional condition clearly.
-- [ ] Step 1 "Check VPNs now": label the two status/progress cells above as "Primary channel" and "Reserve channel". Health bars do not by themselves mean both carry common traffic.
-- [ ] Ensure Overview actually contains the saved 24-hour chart directly beneath the live chart. Owner does not see it in the installed UI. Verify generated layout, not only existence of renderAutoDay. Keep live chart and viewport state.
-- [ ] Install all completed fixes on MT3000, verify actual served version/assets and tell owner which version to refresh. Screenshots show alpha37/38 and old layout; do not dismiss this as cache without checking generated code.
+- [x] Manual selection must work while Auto is running. Show which command is actually available and a concrete reason if it is refused. Earlier RPC hardware success does not resolve the owner's observed UI failure.
+- [x] Replace standalone "switch to reserve / primary" buttons with two channel cards that act as buttons and contain "Turn on" (Russian: "Включить"). Primary and reserve roles/protocol/country must be obvious. Selected manual channel green, unselected red, command pending yellow. Do not fabricate a selected route on ACK.
+- [x] Put the entire manual heading, two channel cards, actions and selection/Internet explanation inside its own rounded border; not merely a separator line or a border around the help text. Fix all applicable designs.
+- [x] Remove confusing default group information from the ordinary manual workflow (hide default or move optional group details out of the main card).
+- [x] Replace "No fresh path confirmation" as the primary manual status. State selected/unselected channel explicitly from verified router policy; show Internet verification separately. When actual selection cannot be read, say the router has not returned its selection and block an unsafe command rather than inventing one. Explain this exceptional condition clearly.
+- [x] Step 1 "Check VPNs now": label the two status/progress cells above as "Primary channel" and "Reserve channel". Health bars do not by themselves mean both carry common traffic.
+- [x] Ensure Overview actually contains the saved 24-hour chart directly beneath the live chart. Owner does not see it in the installed UI. Verify generated layout, not only existence of renderAutoDay. Keep live chart and viewport state.
+- [x] Install all completed fixes on MT3000, verify actual served version/assets and tell owner which version to refresh. Screenshots show alpha37/38 and old layout; do not dismiss this as cache without checking generated code.
 
-- [ ] Remove the stale firmware warning on verified GL-MT3000 /4.11.0. Determine the actual displayed-condition bug; do not claim Auto unconfirmed when router-probed acceptance is verified. Keep actual diagnostic failures concrete.
+- [x] Remove the stale firmware warning on verified GL-MT3000 /4.11.0. Determine the actual displayed-condition bug; do not claim Auto unconfirmed when router-probed acceptance is verified. Keep actual diagnostic failures concrete.
 
 ## Verified installed state / recovery boundary
 
@@ -81,3 +81,7 @@ Explicit choice received. Integrate computer → router → VPN server running d
 ## Adaptive startup polling — owner request during final installation
 
 Alpha42 UI installed and served, Auto OFF during controlled upgrade. Alpha43 targets2s monitor rounds only during correlated current startup for at most180s; rounds never overlap, all DNS/HTTPS and worker deadlines retained. Confirmed readiness restores configured10s. Exact43CI/build/install/Start/manual/final acceptance pending. Native Windows test attempt could not import Linux fcntl; authoritative tests run in isolated Linux CI.
+
+## Completed alpha43 acceptance — 17:29 Berlin
+
+All checked items above now refer to final43 completion, superseding their historical39/41/42 pending wording. Owner animation1 installed; full724app/107QA per runtime/39UI PASS;84installed file/mode/protected configs and served HTTPS/HTTP8080 PASS. Start59.81s, adaptive intervals10→2→10 PASS; actual monitor gaps about2–3s while preparing. No material overall speedup claimed versus41. Actual manual reserve/90s/primary144.52s PASS; separately restored owner reserve34.67s. Final AutoON reserve, both DNS/twoHTTPS healthy. Actual43 frames confirm DNS-001 primary red/static and healthy reserve/primary green/moving. Raw harness failures retained. Remaining broader boundaries: explicit Start after restart, no24hsoak/powercut/independentLAN. See OWNER-STATUS and qa/MT3000-ALPHA43-ACCEPTANCE.json. Finish final documentation commit/Gitea/source recovery and mark executor completed; no further router changes needed.

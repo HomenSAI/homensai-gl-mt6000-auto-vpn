@@ -1,3 +1,17 @@
+# Current handover: installed alpha43 verified ON, owner reserve restored
+
+Latest status supersedes chronological entries below. Read [owner status](OWNER-STATUS-2026-10-23.md) and [complete saved plan](OWNER-IDEAS-2026-10-23.md). All owner UI refinements and selected animation1 are installed in43, plus bounded adaptive2s startup polling with normal10s after readiness. Product85211db, exact CI724app/107QA per runtime/39UI PASS, canonical764983bytes SHA7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023.84files/modes/protected configs and actual served HTTPS/HTTP8080 PASS. Start59.81s and actual10→2→10 cadence PASS; no substantial overall startup speedup claimed. Actual manual reserve/90s/primary144.52s PASS with AutoON; owner reserve restored34.67s. Final17:29Berlin AutoON reserve, both DNS/twoHTTPS healthy, no test faults/full-block. Actual43 UI-frame replay passes red/static DNS error and green/moving healthy selections.189entry encrypted recovery export verified.
+
+Final source/report Gitea save and final recovery receipt follow; no further device changes needed. Do not resume old observers/faults. Primary MT6000/Windows networking unchanged. Router-only IPv4 acceptance; no independentLAN/24hsoak/powercut or unattended bootAuto claim.
+
+Historical chronological entries:
+
+# Active alpha43 adaptive polling completion
+
+Owner additionally requested faster startup polling. Alpha42 UI installed/served but Auto remains deliberately OFF during the upgrade. New43source85211db targets2s only during matching startup<=180s, restores configured10s after readiness, never overlaps monitor rounds or weakens proof/worker deadlines. Canonical43package764983bytes SHA7b4ea2dee269a68d1fb2517f21ceef30c478d0fc4460480c267554d66d44a023. Full43CI RUNNING. Do not Start/install unaccepted43. After CI: install43/RPC/assets, Start with cadence evidence, manual roundtrip and restore pre-upgrade owner reserve preference, final snapshot/backup/report/Gitea. No active test faults.
+
+Older history follows.
+
 # Active alpha42 installation — chosen running dots
 
 Owner chose variant1 and requested completion of all saved UI items. Alpha42 canonical source bf2d081, full dual-runtime CI PASS723app/107QA and39UI; package764669bytes SHA12444dccb45dc943ecd630ccc62861e40a97a1848b941e2437c1e1cceb49eee5. Installed84files/modes/protected configs PASS; actual HTTPS/HTTP8080 assets PASS. Auto temporarily OFF after verified Stop41 (20.19s), during reconnect pause before Start42. Must finish Start, actual manual roundtrip, restore pre-upgrade owner reserve preference, final snapshot/backup/report/Gitea save. Do not call hardware acceptance complete yet. No test faults introduced. No primary MT6000/Windows network changes.
