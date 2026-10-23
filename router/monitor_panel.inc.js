@@ -14,8 +14,7 @@ function monitorLightModel(status,inventory,now,recent){
   if(enabled&&fresh)return out('ok','green','✓',bi('Monitor is running','Мониторинг работает'),bi('Fresh data arrived '+Math.max(0,Math.round(age))+' s ago. Each connected VPN is checked about every '+(Number(settings.interval)||30)+' seconds.','Свежие данные пришли '+Math.max(0,Math.round(age))+' с назад. Каждый подключённый VPN проверяется примерно раз в '+(Number(settings.interval)||30)+' с.'));
   if(enabled&&(recent||(!status.error&&age<=300)))return out('transition','yellow','⟳',bi('Starting or catching up','Запускается или догоняет'),bi('The monitor is switched on and the first fresh data is not here yet. This takes up to a minute.','Мониторинг включён, первых свежих данных ещё нет. Это занимает до минуты.'));
   if(enabled)return out('problem','red','!',bi('Switched on, but not running','Включён, но не работает'),bi('The router program is not producing data.','Программа на роутере не выдаёт данные.'),status.error||'STATUS-STALE');
-  if(fresh)return out('transition','yellow','⟳',bi('Stopping','Останавливается'),bi('The monitor is switched off; the last data is still on screen. It stops within a minute.','Мониторинг выключен; на экране ещё последние данные. Он остановится в течение минуты.'));
-  return out('off',null,'○',bi('Monitor is off','Мониторинг выключен'),bi('Nothing is being checked and no statistics are collected. Auto cannot work without the monitor.','Ничего не проверяется и статистика не собирается. Без мониторинга Auto работать не может.'));
+  return out('problem','red','!',bi('Monitoring must be running','Мониторинг должен работать'),bi('Monitoring is required for Auto. Restore monitoring before starting automatic control.','Мониторинг необходим для Auto. Восстановите мониторинг перед запуском автоматического управления.'),'SERVICE-STOPPED');
 }
 // Numbers for the block: checks and failures of the last hour from the samples the monitor keeps.
 function monitorNumbers(status,now){
@@ -26,7 +25,7 @@ function monitorNumbers(status,now){
 }
 function fillMonitorBlock(host,status,inventory){
   while(host.firstChild)host.removeChild(host.firstChild);
-  var now=Date.now()/1000,light=monitorLightModel(status,inventory,now,monitorStartedRecently(now)),n=monitorNumbers(status,now);
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),light=monitorLightModel(status,inventory,now,monitorStartedRecently(now)),n=monitorNumbers(status,now);
   var tone=light.key==='ok'?'green':light.key==='transition'?'yellow':light.key==='problem'?'red':'grey';
   var title=light.key==='ok'?bi('Monitoring is on','Мониторинг включён'):light.title;
   var stats=light.key==='ok'||n.checks
@@ -37,10 +36,10 @@ function fillMonitorBlock(host,status,inventory){
     button=E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){
       if(monitorBusy)return;monitorBusy=true;button.disabled=true;
       return rpc.declare({object:'homensai-vpn',reject:true,method:'monitor_control',params:['enabled'],expect:{}})(true).then(function(result){
-        if(result&&result.accepted===true){try{window.sessionStorage.setItem('homensai-vpn-monitor-requested',String(Date.now()/1000));}catch(e){}window.location.reload();return;}
+        if(result&&result.accepted===true){try{window.sessionStorage.setItem('homensai-vpn-monitor-requested',String((typeof statusNow==='function'?statusNow(status):Date.now()/1000)));}catch(e){}window.location.reload();return;}
         ui.addNotification(null,E('p',{},(result&&result.code)||'MONITOR-UNKNOWN'));
       }).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){monitorBusy=false;button.disabled=false;});
-    }},bi('Start monitoring','Запустить мониторинг'));
+    }},bi('Restore monitoring','Восстановить мониторинг'));
   }
   host.appendChild(E('span',{'class':'hv-monitor-lamp hv-monitor-lamp-'+tone,'role':'img','aria-label':title}));
   host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number((inventory.settings||{}).interval)||30)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number((inventory.settings||{}).interval)||30)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,button].filter(Boolean)));

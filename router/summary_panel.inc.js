@@ -12,7 +12,7 @@ function startSteps(status,inventory,now){
   ];
 }
 function renderSummary(status,inventory){
-  var now=Date.now()/1000,rows=status.profiles||[],light=autoLightModel(status,inventory,now),tone=summaryTone(light),c=serverCounts(status,inventory,rows,now);
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),rows=status.profiles||[],light=autoLightModel(status,inventory,now),tone=summaryTone(light),c=serverCounts(status,inventory,rows,now);
   var headline=status.rpc_error?bi('No data from the router','Нет данных от роутера'):light.title;
   var line=c.connected?(c.working+' / '+c.connected+' '+bi('VPNs work','VPN работают')):bi('No VPN is connected','Ни один VPN не подключён');
   var steps=startSteps(status,inventory,now),open=steps.filter(function(s){return !s.done;}),next=open[0];
@@ -132,12 +132,12 @@ var START_DONE_KEY='homensai-vpn-start-done';
 function startAllDone(steps){return steps.every(function(s){return s.done;});}
 function startLanding(status,inventory){
   try{if(window.localStorage.getItem(START_DONE_KEY)==='1')return 'overview';}catch(e){}
-  var steps=startSteps(status||{},inventory||{},Date.now()/1000);
+  var steps=startSteps(status||{},inventory||{},(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   if(startAllDone(steps)){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}return 'overview';}
   return 'start';
 }
 function renderStartPage(status,inventory){
-  var steps=startSteps(status,inventory,Date.now()/1000),open=steps.filter(function(s){return !s.done;}),next=open[0];
+  var steps=startSteps(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),open=steps.filter(function(s){return !s.done;}),next=open[0];
   if(!open.length){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}}
   var targets={learn:['#learn',bi('Open training','Открыть обучение')],monitor:['#overview',bi('Open the Overview','Открыть «Обзор»')],profiles:['#settings',bi('Open Settings','Открыть настройки')],auto:['#overview',bi('Open the Overview','Открыть «Обзор»')]};
   var list=E('ol',{'class':'hv-start-list hv-start-page-list'},steps.map(function(s,i){

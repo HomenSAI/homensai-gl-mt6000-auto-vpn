@@ -43,4 +43,21 @@ class Tests(unittest.TestCase):
         for values in([1],[17],[True]):
             with self.assertRaises(ValueError):self.wait(values,4)
 
+    def test_transient_unverified_read_resets_quiet_streak_without_extending_deadline(self):
+        tick=[0.];calls=[0]
+        def sample(end):
+            calls[0]+=1
+            if calls[0] in (2,5):raise ValueError('process read unverified')
+            return {'busy':0,'verified':True}
+        with patch.object(Path,'exists',return_value=False),patch.object(Path,'is_symlink',return_value=False):
+            p.wait_quiet(12,lambda:tick[0],lambda n:tick.__setitem__(0,tick[0]+n),sample)
+        self.assertGreaterEqual(tick[0],6);self.assertLess(tick[0],12)
+
+    def test_persistently_unverified_worker_never_counts_as_quiet(self):
+        tick=[0.]
+        with patch.object(Path,'exists',return_value=False),patch.object(Path,'is_symlink',return_value=False):
+            with self.assertRaisesRegex(ValueError,'VENDOR-WORKER-QUIET-UNVERIFIED'):
+                p.wait_quiet(4,lambda:tick[0],lambda n:tick.__setitem__(0,tick[0]+n),lambda end:(_ for _ in ()).throw(ValueError('unverified')))
+        self.assertEqual(tick[0],4)
+
 if __name__=='__main__':unittest.main()

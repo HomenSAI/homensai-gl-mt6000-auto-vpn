@@ -10,8 +10,8 @@ assert.equal(model({rpc_error:true},{settings:{enabled:true}},now,false).lamp,'r
 assert.equal(model({time:now-200},{settings:{enabled:true}},now,false).lamp,'yellow');
 assert.equal(model({time:now-200},{settings:{enabled:true}},now,true).lamp,'yellow');
 assert.equal(model({time:now-4000},{settings:{enabled:true}},now,false).lamp,'red');
-assert.equal(model({time:now-4000},{settings:{enabled:false}},now,false).lamp,null);
-assert.equal(model({time:now-5},{settings:{enabled:false}},now,false).key,'transition');
+assert.equal(model({time:now-4000},{settings:{enabled:false}},now,false).lamp,'red');
+assert.equal(model({time:now-5},{settings:{enabled:false}},now,false).key,'problem');
 assert.equal(model({},{settings:{enabled:true}},now,false).lamp,'red');
 const cyrillic=/[А-Яа-я]/;
 for(const key of ['system','recovery','monitoring','telegram','speed']){

@@ -70,13 +70,13 @@ function manualSelectionModel(status,source,target,now){
   return {selected:path.selected==='source'?'primary':path.selected==='target'?'reserve':null,moving:path.moving};
 }
 function renderManualSwitch(status,inventory){
-  var now=Date.now()/1000,model=manualControlModel(status,now),buttons=[],settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=manualControlModel(status,now),buttons=[],settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
   var source=profiles.filter(function(p){return p.id===(settings.plan_source||route.source_profile_id||ns.source);})[0],target=profiles.filter(function(p){return p.id===(settings.plan_target||route.target_profile_id||ns.target);})[0];
   var selection=manualSelectionModel(status,source,target,now);
   function notice(text){ui.addNotification(null,E('p',{},text));}
   function button(direction,label){
     var enabled=model[direction].allowed,n=E('button',{'type':'button','class':'cbi-button cbi-button-action','data-manual-direction':direction,'disabled':enabled?null:'','click':function(){
-      if(MANUAL_SWITCH_PENDING||!enabled||!manualControlModel(status,Date.now()/1000)[direction].allowed)return;
+      if(MANUAL_SWITCH_PENDING||!enabled||!manualControlModel(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))[direction].allowed)return;
       MANUAL_SWITCH_PENDING=true;buttons.forEach(function(node){node.disabled=true;});var request;
       try{var call=model.mode==='continuous-pair'?rpc.declare({object:'homensai-vpn',reject:true,method:'pair_manual',params:['direction','control_revision'],expect:{}}):rpc.declare({object:'homensai-vpn',reject:true,method:'manual_switch',params:['direction','control_revision'],expect:{}});request=call(direction,model.revision);}catch(e){request=Promise.reject(e);}
       return Promise.resolve(request).then(function(result){
@@ -87,23 +87,22 @@ function renderManualSwitch(status,inventory){
   }
   function choice(direction,profile,role){
     var selected=selection.selected===direction,pending=model.busy||selection.moving;
-    var color=pending?'yellow':selection.off?'red':selection.selected?(selected?'green':'red'):'yellow';
-    var protocol=profile?(typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol==='wireguard'?'WireGuard':'OpenVPN'):bi('Profile not chosen','Профиль не выбран');
     var health=profile?profileHealth(profile,now).state:'unknown';
-    var healthText=health==='healthy'?bi('Internet: available','Интернет: доступен'):health==='failed'?bi('Internet: check failed','Интернет: проверка не пройдена'):health==='inactive'?bi('VPN tunnel: disconnected','VPN-туннель: отключён'):bi('Internet: awaiting check','Интернет: ожидается проверка');
+    var color=pending?'yellow':selection.off?'red':selection.selected?(selected?(health==='healthy'?'green':health==='failed'||health==='inactive'?'red':'yellow'):'red'):'yellow';
+    var protocol=profile?(typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol==='wireguard'?'WireGuard':'OpenVPN'):bi('Profile not chosen','Профиль не выбран');
+    var healthText=!selected?bi('Internet: channel not in use','Интернет: канал не задействован'):health==='healthy'?(direction==='primary'?bi('Internet works: primary channel','Интернет работает: основной канал'):bi('Internet works: reserve channel','Интернет работает: резервный канал')):health==='failed'?bi('Internet: connection check failed','Интернет: ошибка проверки соединения')+(profile&&profile.code?' · '+profile.code:''):health==='inactive'?bi('Internet: VPN tunnel disconnected','Интернет: VPN-туннель отключён'):bi('Internet: checking the connection','Интернет: выполняется проверка соединения');
     var text=pending?bi('Switching…','Переключение…'):selection.off?bi('Off','Выключено'):selected?bi('Selected channel','Выбранный канал'):selection.selected?bi('Not selected','Не выбран'):bi('Router selection is being checked','Проверяется выбор канала роутера');
     var country=profile&&typeof countryLabel==='function'?countryLabel(profile):null;
-    var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,E('span',{'class':'hv-manual-selection'},text),E('small',{'class':'hv-manual-health hv-health-'+health},healthText),E('b',{'class':'hv-manual-enable'},bi('Turn on','Включить'))].filter(Boolean));
+    var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,E('span',{'class':'hv-manual-selection'},text),E('strong',{'class':'hv-manual-health hv-health-'+health},healthText),!selected?E('small',{},direction==='reserve'?bi('To switch to the reserve, press Turn on.','Чтобы переключиться на резервный канал, нажмите «Включить».'):bi('To switch to the primary, press Turn on.','Чтобы переключиться на основной канал, нажмите «Включить».')):null,E('b',{'class':'hv-manual-enable'},bi('Turn on','Включить'))].filter(Boolean));
     card.setAttribute('class','hv-manual-channel hv-manual-'+color);card.setAttribute('aria-pressed',selected?'true':'false');card.setAttribute('data-selected',selected?'true':'false');
     if(selected&&!pending)card.disabled=true;
     return E('div',{'class':'hv-manual-choice'},[card,!selected&&!model[direction].allowed&&!model.busy?E('p',{'class':'hv-step-note'},manualReason(model[direction].blockers)):null].filter(Boolean));
   }
   return E('section',{'class':'hv-chart-card hv-manual-switch','data-manual-controls':'1'},[
     E('h3',{},bi('Manual channel switch','Ручное переключение канала')),
-    E('p',{},model.mode==='continuous-pair'?bi('Choose a channel even while Auto is on. Green is selected, red is not selected, yellow is a command in progress or selection check. Internet health is shown separately. A healthy manual choice is held until Resume Auto; confirmed failure can release the hold.','Выбирайте канал и при включённом Auto. Зелёный — выбран, красный — не выбран, жёлтый — выполняется команда или уточняется выбор. Проверка Интернета показана отдельно. Исправный ручной выбор удерживается до возврата к Auto; подтверждённый отказ может снять удержание.'):bi('Choose the primary or reserve channel. Green is selected, red is not selected, yellow means awaiting the router. Internet health is separate.','Выберите основной или резервный канал. Зелёный — выбран, красный — не выбран, жёлтый — ожидается ответ роутера. Проверка Интернета показана отдельно.')),
+    E('p',{},model.mode==='continuous-pair'?bi('Choose a channel even while Auto is on. Green is selected, red is not selected, yellow is a command in progress or selection check. Internet health is shown separately. Auto keeps monitoring; it can recover a confirmed channel failure.','Выбирайте канал и при включённом Auto. Зелёный — выбран, красный — не выбран, жёлтый — выполняется команда или уточняется выбор. Проверка Интернета показана отдельно. Auto продолжает наблюдение и восстанавливает соединение при подтверждённом отказе канала.'):bi('Choose the primary or reserve channel. Green is selected, red is not selected, yellow means awaiting the router. Internet health is separate.','Выберите основной или резервный канал. Зелёный — выбран, красный — не выбран, жёлтый — ожидается ответ роутера. Проверка Интернета показана отдельно.')),
     E('div',{'class':'hv-manual-channel-grid'},[choice('primary',source,bi('Primary channel','Основной канал')),choice('reserve',target,bi('Reserve channel','Резервный канал'))]),
     !selection.selected&&!selection.moving&&!selection.off?E('p',{'role':'status'},bi('The router has not returned a verified channel selection yet. Updating its policy state; no channel is assumed active from a button press.','Роутер ещё не передал проверенный выбор канала. Обновляем состояние маршрутизации; нажатие кнопки само по себе не означает, что канал выбран.')):null,
-    model.mode==='continuous-pair'?E('div',{'class':'hv-wizard-actions'},[button('resume',bi('Resume automatic control','Вернуться к автоматическому управлению')),E('p',{},model.hold==='target'?bi('Manual hold: reserve','Ручное удержание: резерв'):model.hold==='source'?bi('Manual hold: primary','Ручное удержание: основной'):bi('Automatic control is active','Автоматическое управление активно'))]):null,
     model.busy?E('p',{'role':'status'},bi('A switch request is pending. Wait for confirmation or use Emergency Stop.','Запрос переключения ожидает подтверждения. Дождитесь результата или нажмите «Аварийный стоп».')):null
   ].filter(Boolean));
 }

@@ -8,9 +8,9 @@ assert.equal(c.dvChannelUse(primary,model,status).kind,'green');assert.equal(c.d
 assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Waiting');
 assert.equal(c.dvChannelUse({...reserve,interface:null},model,status).kind,'red');
 assert.equal(c.dvChannelUse({...primary,code:'DNS-001'},model,status).kind,'red');
-assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'grey');
+assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'red');
 assert.equal(c.dvChannelUse(reserve,{...model,selected:'b'},status).kind,'green');assert.equal(c.dvChannelUse(primary,{...model,selected:'b'},status).kind,'yellow');
-assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'grey');
+assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'yellow');
 assert.equal(c.selectedProfile({native_failover:{state:'OBSERVING',source:'a',time:99,mode:'continuous-pair',readiness_verified:true}},100),'a');
 let segments=c.autoDaySegments({segments:[{start:0,end:10,kind:'source'},{start:99990,end:100000,kind:'target'},{start:100001,end:100002,kind:'source'},{start:99990,end:99999,kind:'invalid'}]},100000);
 assert.equal(segments.length,1);assert.equal(segments[0].kind,'target');
@@ -28,3 +28,16 @@ c.rememberPageViewport(root,'overview');scrollY=0;c.revisitPageViewport(root,'ov
 const src=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(src.includes("if(table.closest('.hv-errtable'))return;"));assert(src.includes('finally {if(refreshViewport'));
 const css=fs.readFileSync('router/design_layer.css','utf8');assert(css.includes('select.hv-traffic-scope option{font-size:13px!important'));
 console.log('PASS: primary/reserve and at most one green, yellow standby/red disconnected, persisted day segments, deduplicated transition badges, redraw clamp/anchor/details and page-return scroll preservation');
+
+// Router timestamps are compared on the router clock, not a drifting operator computer clock.
+{
+ let monotonic=0;c.performance={now:()=>monotonic};c.Date={now:()=>1300000};
+ const frame={server_time:1000,time:999,native_failover:{time:999}};
+ assert.equal(c.statusNow(frame),1000);
+ const row={id:'p',interface:'wgclient1',time:999,dns_ok:true,https_success:2};
+ assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'green');
+ monotonic=92000;assert.equal(c.statusNow(frame),1092);
+ assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'red','an old frame still expires');
+ delete c.Date;delete c.performance;
+}
+console.log('PASS: client clock skew does not grey out fresh VPN data; old observations still expire');

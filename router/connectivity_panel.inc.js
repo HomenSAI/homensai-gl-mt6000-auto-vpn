@@ -17,11 +17,11 @@ function connectivityModel(status,request,now){
 function updateConnectivityCheck(status){
   connectivityLatest=status;
   if(!connectivityControl)return;
-  var model=connectivityModel(status,connectivityRequest,Date.now()/1000);
+  var model=connectivityModel(status,connectivityRequest,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   if(connectivityFailure)model={state:'UNAVAILABLE',busy:false};
   var clock=function(seconds){return new Date(seconds*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'});};
   // The idle line shows the latest automatic check, so it always says something true.
-  var rows=(status.profiles||[]).filter(function(p){return p.interface;}),working=rows.filter(function(p){return profileHealth(p,Date.now()/1000).state==='healthy';}).length;
+  var rows=(status.profiles||[]).filter(function(p){return p.interface;}),working=rows.filter(function(p){return profileHealth(p,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)).state==='healthy';}).length;
   var latest=rows.reduce(function(newest,p){return Number.isFinite(p.time)&&p.time>newest?p.time:newest;},0);
   var summary=function(time,total,ok){return bi('Last check ','Последняя проверка ')+clock(time)+'\n'+ok+' '+bi('of','из')+' '+total+' '+bi('VPNs work','VPN работают');};
   var text;
@@ -39,7 +39,7 @@ function updateConnectivityCheck(status){
     var primary=ids.plan_source||path.source_profile_id||native.source,reserve=ids.plan_target||path.target_profile_id||native.target;
     var cells=rows.slice(0,16).map(function(p,index){return {profile:p,label:p.id===primary?bi('Primary channel','Основной канал'):p.id===reserve?bi('Reserve channel','Резервный канал'):bi('VPN channel ','VPN-канал ')+(index+1)};});
     cells.sort(function(a,b){return (a.profile.id===primary?0:a.profile.id===reserve?1:2)-(b.profile.id===primary?0:b.profile.id===reserve?1:2);});
-    cells.forEach(function(cell){var healthy=profileHealth(cell.profile,Date.now()/1000).state==='healthy';bar.appendChild(E('span',{'class':'hv-check-channel'},[E('small',{},cell.label),E('span',{'class':'hv-check-cell'+(healthy?' hv-check-cell-ok':''),'title':cell.label+' · '+(healthy?bi('Internet available','Интернет доступен'):bi('Internet check not passed','Проверка Интернета не пройдена'))})]));});
+    cells.forEach(function(cell){var healthy=profileHealth(cell.profile,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)).state==='healthy';bar.appendChild(E('span',{'class':'hv-check-channel'},[E('small',{},cell.label),E('span',{'class':'hv-check-cell'+(healthy?' hv-check-cell-ok':''),'title':cell.label+' · '+(healthy?bi('Internet available','Интернет доступен'):bi('Internet check not passed','Проверка Интернета не пройдена'))})]));});
     bar.hidden=!cells.length;bar.setAttribute('aria-label',working+' '+bi('of','из')+' '+rows.length+' '+bi('VPNs work','VPN работают'));
   }
   if(connectivityControl.next){

@@ -33,7 +33,8 @@ async function main(){
  assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');
  s.manual_switch_control.mode='continuous-pair';s.manual_switch_control.hold='target';s.manual_switch_control.resume={allowed:true,blockers:[]};response={accepted:true,queued:true,completed:false,request_id:'c'.repeat(32)};pending=null;
  n=c.renderManualSwitch(s,{});assert.equal(n.tag,'section');assert(/hv-chart-card/.test(n.attrs.class));
- await n.all().find(x=>x.attrs['data-manual-direction']==='resume').attrs.click();assert.equal(calls.at(-1).spec.method,'pair_manual');assert.equal(calls.at(-1).args[0],'resume');
+ assert(!n.all().some(x=>x.attrs['data-manual-direction']==='resume'),'operator does not need Resume Auto');
+ await n.all().find(x=>x.attrs['data-manual-direction']==='reserve').attrs.click();assert.equal(calls.at(-1).spec.method,'pair_manual');assert.equal(calls.at(-1).args[0],'reserve');
  console.log('PASS: legacy and pair manual RPC, Resume Auto, single-flight/Stop-safe eligibility, one green selected path, yellow standby, red failure and neutral stale evidence');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

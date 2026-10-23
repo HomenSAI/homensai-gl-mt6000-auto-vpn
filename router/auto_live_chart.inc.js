@@ -48,7 +48,7 @@ function autoLiveSvg(tag,attributes,text){
   return node;
 }
 function drawAutoLive(root,status,inventory){
-  var now=Date.now()/1000,settings=(inventory||{}).settings||{},ns=(status||{}).native_failover||{};
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},ns=(status||{}).native_failover||{};
   var key=[settings.plan_source||ns.source||'',settings.plan_target||ns.target||''].join('|');
   if(key!==autoLiveKey){autoLivePoints=[];autoLiveKey=key;}
   var sample=autoLiveSample(status,now);autoLivePoints=autoLiveAppend(autoLivePoints,sample);
@@ -98,7 +98,7 @@ function autoDaySegments(history,now){
   });return rows;
 }
 function renderAutoDay(status){
-  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'}),now=Date.now()/1000;
+  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'}),now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000);
   var history=(((status||{}).accounting||{}).reliability||{}).route_history||{},segments=autoDaySegments(history,now);
   var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
   var from=now-86400,x=function(t){return left+(t-from)/86400*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:132;};

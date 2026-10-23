@@ -47,17 +47,26 @@ def assess(board,data):
 def wait_quiet(seconds=20,clock=time.monotonic,sleep=time.sleep,sample=None):
     """RTP backgrounds DNS restart and firewall reload; command exit is not done."""
     from mt3000_manual_platform import _workers
-    sample=sample or _workers;end=clock()+seconds;quiet=None;count=0
+    sample=sample or _workers;end=clock()+seconds;quiet=None;count=0;unverified=False
     while clock()<end:
-        row=sample(end);busy=row.get('busy')
-        if row.get('verified')is not True or type(busy)is not int or not 0<=busy<=16:raise ValueError('VENDOR-WORKER-QUIET-UNVERIFIED')
-        queues=False
-        for name in ('gl_reload_service','gl_restart_service'):
-            p=Path('/var/run')/name
-            if p.is_symlink()or p.exists()and(not p.is_dir()or any(p.iterdir())):queues=True
+        try:
+            row=sample(end)
+            if not isinstance(row,dict):raise ValueError('VENDOR-WORKER-QUIET-UNVERIFIED')
+            busy=row.get('busy')
+            if row.get('verified')is not True or type(busy)is not int or not 0<=busy<=16:raise ValueError('VENDOR-WORKER-QUIET-UNVERIFIED')
+            queues=False
+            for name in ('gl_reload_service','gl_restart_service'):
+                p=Path('/var/run')/name
+                if p.is_symlink()or p.exists()and(not p.is_dir()or any(p.iterdir())):queues=True
+        except (OSError,ValueError):
+            # Process/queue reads can race a short-lived vendor child. Unknown
+            # never counts as quiet; restart the streak within the same deadline.
+            quiet=None;count=0;unverified=True
+            sleep(min(.75,max(0,end-clock())));continue
+        if clock()>=end:break
         if busy or queues:quiet=None;count=0
         else:
             quiet=clock()if quiet is None else quiet;count+=1
             if clock()-quiet>=3 and count>=4:return
         sleep(min(.75,max(0,end-clock())))
-    raise ValueError('VENDOR-WORKER-BUSY')
+    raise ValueError('VENDOR-WORKER-QUIET-UNVERIFIED' if unverified else 'VENDOR-WORKER-BUSY')

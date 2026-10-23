@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha40'
+VERSION = '0.9.0-alpha41'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -914,6 +914,7 @@ def rpc(method):
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()
             except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
+            status['server_time']=time.time()
         print(json.dumps({'events': status.get('events', [])} if method=='events' else trim_status_reply(status)))
     else:
         raise ValueError('RPC-UNKNOWN-METHOD')

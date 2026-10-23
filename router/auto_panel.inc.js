@@ -237,19 +237,20 @@ function autoCommandOperation(status,now){
   return null;
 }
 function renderAutoControl(status,inventory){
-  var ns=status.native_failover||{},intent=status.auto_control||{},model=autoControlModel(status,Date.now()/1000);
-  var light=autoLightModel(status,inventory,Date.now()/1000),controlRevision=intent.control_revision;
+  var ns=status.native_failover||{},intent=status.auto_control||{},model=autoControlModel(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
+  var light=autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),controlRevision=intent.control_revision;
+  var monitorReady=typeof monitorLightModel!=='function'||monitorLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),false).key==='ok';
   var actionLabel=E('span',{'class':'hv-auto-action'},'');
   function syncButton(){
-    var operation=autoCommandOperation(status,Date.now()/1000),stop=model.stop||autoStartPending;
-    button.disabled=!!(operation||autoRequestBusy||autoStopBusy||inventory.error||!model.fresh);
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending;
+    button.disabled=!!(operation||autoRequestBusy||autoStopBusy||inventory.error||!model.fresh||!stop&&!monitorReady);
     if(emergencyButton)emergencyButton.disabled=autoStopBusy||operation==='stopping';
     var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
     actionLabel.textContent=operation?label:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
-    var stop=model.stop||autoStartPending;if(autoCommandOperation(status,Date.now()/1000)||autoRequestBusy||autoStopBusy)return;
+    var stop=model.stop||autoStartPending;if(autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))||autoRequestBusy||autoStopBusy||!stop&&!monitorReady)return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
     autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};
     if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
@@ -264,33 +265,33 @@ function renderAutoControl(status,inventory){
     }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
   }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
   var emergencyButton=E('button',{'type':'button','class':'cbi-button cbi-button-negative hv-danger-action','click':function(){
-    if(autoStopBusy||autoCommandOperation(status,Date.now()/1000)==='stopping')return;
+    if(autoStopBusy||autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))==='stopping')return;
     autoCommandPending={stop:true,baseline:intent.requested_at||0,acknowledged:false};autoStopBusy=true;autoControlRefresh();
     return rpc.declare({object:'homensai-vpn',method:'native_stop',expect:{}})().then(function(result){
       if(autoCommandPending&&autoCommandPending.stop){if(autoRequestAcknowledged(result,true))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
       ui.addNotification(null,autoRequestAcknowledged(result,true)?E('p',{},bi('Stop requested. Monitoring continues.','Остановка запрошена. Мониторинг продолжается.')):autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
     }).catch(function(){if(autoCommandPending&&autoCommandPending.stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoStopBusy=false;autoControlRefresh();});
   }},bi('Emergency Stop','Аварийный стоп'));
-  var emergencyControl=E('div',{'class':'hv-auto-emergency'},[emergencyButton,E('small',{},bi('Cancels Auto and pending starts. Monitoring continues.','Отменяет Auto и ожидающие запросы запуска. Мониторинг продолжается.'))]);
+  var emergencyControl=E('details',{'class':'hv-auto-emergency hv-auto-technical-actions'},[E('summary',{},bi('Technical actions','Технические действия')),emergencyButton,E('small',{},bi('Cancels Auto and pending starts. Monitoring continues.','Отменяет Auto и ожидающие запросы запуска. Мониторинг продолжается.'))]);
   autoControlRefresh=syncButton;syncButton();
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
-  var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',Date.now()/1000,ns.source):profile(ns.source||settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',Date.now()/1000,ns.target):profile(ns.target||settings.plan_target);
-  var path=typeof manualConfirmedPath==='function'?manualConfirmedPath(status,source,target,Date.now()/1000):autoPathModel(status,source,target,Date.now()/1000);
+  var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',(typeof statusNow==='function'?statusNow(status):Date.now()/1000),ns.source):profile(ns.source||settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',(typeof statusNow==='function'?statusNow(status):Date.now()/1000),ns.target):profile(ns.target||settings.plan_target);
+  var path=typeof manualConfirmedPath==='function'?manualConfirmedPath(status,source,target,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)):autoPathModel(status,source,target,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   var pathLabels={neutral:bi('No current path confirmation','Нет свежего подтверждения пути'),healthy:bi('Active traffic path','Активный путь трафика'),ready:bi('Ready; not selected for traffic','Готов; трафик не направлен'),inactive:bi('Tunnel not connected','Туннель не подключён'),failed:bi('Connectivity failed','Ошибка доступности'),checking:bi('Checking / awaiting path confirmation','Проверяется / ожидается подтверждение пути')};
   // Channel selection is separate from probe health: an idle healthy reserve is not a failure.
   function nodeTone(p,key){
-    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,Date.now()/1000);
+    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
     return {color:'grey',text:bi('No fresh path confirmation','Нет свежего подтверждения пути'),carrier:false};
   }
   function box(p,label,key){var state=path[key],tone=nodeTone(p,key);var attributes={'class':'hv-auto-node hv-node-two hv-node-'+tone.color+(tone.carrier?' hv-node-carrier':''),'data-path-node':key,'data-path-state':state,'data-node-tone':tone.color};
     // The address the internet sees is not printed on screen; it is available as a tooltip only.
-    if(p&&p.exit_ip&&profileHealth(p,Date.now()/1000).state==='healthy')attributes.title=bi('Exit IP: ','Внешний IP: ')+p.exit_ip;
+    if(p&&p.exit_ip&&profileHealth(p,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)).state==='healthy')attributes.title=bi('Exit IP: ','Внешний IP: ')+p.exit_ip;
     return E('div',attributes,[E('small',{},label),E('strong',{'class':'hv-node-protocol'},p?protocolLabel(p):'—'),E('b',{},p?countryLabel(p):bi('Choose in Settings','Выберите в настройках')),p?E('span',{'title':bi('Group: a label you can set in Settings → System. It does not change how the VPN works.','Группа: метка, которую можно задать в «Настройки» → «Система». Она не влияет на работу VPN.')},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')):null,E('span',{'class':'hv-path-label','title':pathLabels[state]},[E('span',{'class':'hv-node-dot','aria-hidden':'true'}),tone.text])].filter(Boolean));}
   var diagram=E('div',{'class':'hv-auto-diagram hv-path-diagram'+(path.moving?' hv-path-moving':'')+(path.direction==='back'?' hv-path-back':''),'aria-label':bi('Configured failover path','Настроенная схема переключения')},[box(source,bi('Primary','Основной'),'source'),E('span',{'class':'hv-auto-arrow '+(path.direction!=='none'?'hv-arrow-on':''),'aria-label':path.moving?bi('Switching in progress','Выполняется переключение'):path.direction!=='none'?bi('Reserve selected','Выбран резерв'):bi('Automatic transition inactive','Автопереход неактивен')},path.direction==='back'?'←':path.direction==='forward'?'→':'⋯'),box(target,bi('Reserve','Резерв'),'target')]);
   var pairMode=settings.pair_auto_mode==='router-probed-ipv4';
   var until=pairMode?0:autoWindowDeadline(intent,settings);
-  var readiness=autoReadiness(status,inventory,Date.now()/1000);
+  var readiness=autoReadiness(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   var checklist=null;
   if(pairMode){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Two-channel Auto starts the saved primary and reserve, watches their IPv4 DNS/HTTPS checks, switches on repeated failure and returns after stable recovery. Stop remains available during startup. This mode uses router probes; external LAN is not independently verified. Auto stays off after a router or service restart.','Авторежим двух каналов запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается при повторных отказах и возвращается после устойчивого восстановления. Stop доступен и во время запуска. Проверки выполняет роутер; внешний LAN независимо не проверен. После перезапуска роутера или службы Auto остаётся выключенным.'))]);
@@ -304,7 +305,7 @@ function renderAutoControl(status,inventory){
   var holdReturn=null;
   // Return to the primary belongs to this card: it is offered whenever traffic is on the reserve (also while Auto is on).
   if(model.fresh&&['STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0){
-    var answer=intent.return_result,answerText=answer&&Number.isFinite(answer.time)&&Date.now()/1000-answer.time<600?(answer.ok?autoBlockerText('OPERATOR-RETURN'):autoBlockerText(answer.code)):'';
+    var answer=intent.return_result,answerText=answer&&Number.isFinite(answer.time)&&(typeof statusNow==='function'?statusNow(status):Date.now()/1000)-answer.time<600?(answer.ok?autoBlockerText('OPERATOR-RETURN'):autoBlockerText(answer.code)):'';
     var returnButton=guardResume(E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':autoRequestBusy||autoStopBusy?'':null,'click':function(){
       if(autoRequestBusy||autoStopBusy)return;return guardedAction(returnButton,function(){autoRequestBusy=true;
       return rpc.declare({object:'homensai-vpn',method:'native_return',expect:{}})().then(function(result){

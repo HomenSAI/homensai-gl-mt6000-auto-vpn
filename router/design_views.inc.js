@@ -52,7 +52,7 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
-  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time<0||m.now-status.time>90){result.label=bi('No fresh confirmation','Нет свежего подтверждения');return result;}
+  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.label=status.rpc_error?bi('Status request failed','Ошибка получения статуса'):bi('Monitor data is out of date','Мониторинг не обновляет данные');return result;}
   if(h.state==='failed'){result.kind='red';result.state='failed';return result;}
   if(h.state==='inactive'){result.label=bi('Off','Отключён');result.kind='red';result.state='off';return result;}
   if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
@@ -61,13 +61,14 @@ function dvChannelUse(profile,m,status){
   if(h.state==='healthy'){
     if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
     else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Waiting','Ожидает');}
-    else result.label=bi('Connected; route unconfirmed','Подключён; путь не подтверждён');
+    else{result.kind='yellow';result.label=bi('Internet available; checking selected channel','Интернет доступен; уточняется выбранный канал');}
   }
+  if(h.state==='unknown'){result.kind='yellow';result.label=bi('Internet check data unavailable','Нет результата проверки Интернета');}
   return result;
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
 function channelDisplayUse(profile,status,inventory){
-  var now=Date.now()/1000,settings=(inventory||{}).settings||{},m={now:now,settings:settings,
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},m={now:now,settings:settings,
     primary:vendorDisplayMember(status,inventory,'source',now),reserve:vendorDisplayMember(status,inventory,'target',now),selected:vendorDisplaySelected(status,inventory,now)};
   return dvChannelUse(profile,m,status);
 }
@@ -80,7 +81,7 @@ function renderChannelHeader(profile,status,inventory){
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
 function dvModel(status,inventory,rows,month){
-  var now=Date.now()/1000,settings=(inventory||{}).settings||{},light=autoLightModel(status,inventory,now),counts=serverCounts(status,inventory,rows,now);
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},light=autoLightModel(status,inventory,now),counts=serverCounts(status,inventory,rows,now);
   var selected=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):selectedProfile(status,now),selectedRow=dvProfile(rows,selected),primary=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',now):dvProfile(rows,settings.plan_source),reserve=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',now):dvProfile(rows,settings.plan_target);
   var active=rows.filter(function(p){return p.interface;}),good=0,total=0;
   var rank=dvRank(status);active.forEach(function(p){var r=rank[p.id];if(r){good+=r.good;total+=r.n;}});

@@ -1,6 +1,15 @@
+var UI_STATUS_CLOCKS=new WeakMap();
+function statusNow(status){
+  var wall=Date.now()/1000;
+  if(!status||typeof status!=='object'||!Number.isFinite(status.server_time)||status.server_time<=0||status.server_time>253370764799)return wall;
+  var tick=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now()/1000:wall;
+  var saved=UI_STATUS_CLOCKS.get(status);
+  if(!saved){saved={server:status.server_time,tick:tick};UI_STATUS_CLOCKS.set(status,saved);}
+  return saved.server+Math.max(0,tick-saved.tick);
+}
 function profileHealth(profile,now){
   if(!profile.interface||profile.administrative_state==='disabled')return {state:'inactive',label:bi('Inactive','Неактивен')};
-  if(!Number.isFinite(profile.time)||now-profile.time<0||now-profile.time>90)return {state:'unknown',label:bi('Unknown / stale','Неизвестно / устарело')};
+  if(!Number.isFinite(profile.time)||now-profile.time< -5||now-profile.time>90)return {state:'unknown',label:bi('Check data unavailable','Нет данных проверки')};
   if(['CHECK-001','CHECK-LIMIT'].indexOf(profile.code)>=0)return {state:'checking',label:bi('Checking','Проверяется')};
   if(profile.code)return {state:'failed',label:bi('Failed','Сбой')};
   if(profile.dns_ok===true&&profile.https_success>=2)return {state:'healthy',label:bi('Healthy','Работает')};

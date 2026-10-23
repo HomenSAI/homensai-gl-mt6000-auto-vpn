@@ -490,3 +490,11 @@
 .hv-app .hv-manual-protocol{font-size:24px}.hv-app .hv-manual-selection{font-weight:700}.hv-app .hv-manual-enable{display:inline-block;border:1px solid currentColor;border-radius:9px;padding:7px 14px;margin-top:auto}.hv-app .hv-health-failed{color:#b91c1c}
 .hv-app .hv-check-channel{display:flex;flex-direction:column;flex:1;gap:5px;min-width:0}.hv-app .hv-check-channel>small{font-size:12px;line-height:1.25;white-space:normal}.hv-app .hv-check-channel .hv-check-cell{flex:none;width:100%;display:block}
 @media(max-width:600px){.hv-app .hv-manual-channel-grid{grid-template-columns:1fr}.hv-app .hv-manual-switch{padding:16px}}
+
+/* High visibility operator controls. Green/red mean selected/not selected. */
+.hv-app .hv-manual-channel.hv-manual-green{border-color:#008c20;background:#24dc4b;color:#003d0b;box-shadow:0 0 18px #08c73655}.hv-app .hv-manual-channel.hv-manual-red{border-color:#bd0017;background:#ff6778;color:#52000b}.hv-app .hv-manual-health{font-size:17px;line-height:1.35}.hv-app .hv-manual-enable{background:#ffffffcf}
+.hv-app .hv-auto-power.hv-auto-lit-off{--hv-power-rgb:230,20,40;background:linear-gradient(145deg,#ff8796,#f52d47)!important;color:#790010!important;border-color:#bd001c!important;box-shadow:0 0 0 7px #ff30402b,0 0 24px #ee133d77!important}.hv-app .hv-auto-power.hv-auto-lit-on{--hv-power-rgb:0,180,45;background:linear-gradient(145deg,#9bffad,#28de54)!important;color:#006115!important;border-color:#009f2a!important;box-shadow:0 0 0 7px #00d74529,0 0 24px #04bc4a66!important}
+.hv-app .hv-auto-technical-actions{margin:12px 0}.hv-app .hv-auto-technical-actions>summary{cursor:pointer;font-size:13px;color:var(--muted)}.hv-app .hv-auto-technical-actions[open]{padding:12px;border:1px solid var(--line,#cbd5e1);border-radius:12px}.hv-app .hv-auto-technical-actions small{display:block;margin-top:8px}
+.hv-app .hv-side-channel-lamps{display:flex;flex-wrap:wrap;gap:10px;margin-top:9px}.hv-app .hv-side-channel-lamps .hv-auto-pill-knob{flex-shrink:0}
+
+@media(prefers-reduced-motion:no-preference){.hv-app .hv-side-channel-lamps .hv-auto-pill-knob.hv-lamp-off{animation:hv-lamp-blink 1.4s ease-in-out infinite}}
