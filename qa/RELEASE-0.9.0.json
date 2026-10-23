@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "version": "0.9.0",
+  "package_version": "0.9.0-1",
+  "software_result": "PASS",
+  "qualified_source": "2e69e867c876b64d3d0013cf03efdbbf5f0e63fa",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+    "bytes": 769849,
+    "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a"
+  },
+  "ci": [
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 16,
+      "source": "2e69e867c876b64d3d0013cf03efdbbf5f0e63fa",
+      "ui_suites": 39,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
+      "bytes": 769849,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
+      "skipped_tests": 0,
+      "source": "2e69e867c876b64d3d0013cf03efdbbf5f0e63fa",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "payload_comparison": {
+    "result": "PASS",
+    "source": "2e69e867c876b64d3d0013cf03efdbbf5f0e63fa",
+    "baseline": "8ce0fb265623f2fb5abb08f461f6d177419e48b1",
+    "selected_payload_files": 85,
+    "normalization": [
+      "0.9.0-alpha45 to 0.9.0",
+      "dashboard75 to dashboard76",
+      "ui52.css to ui53.css"
+    ],
+    "unexpected_differences": [],
+    "scope": "byte equality after version/resource identity replacement; not a new device installation"
+  },
+  "history_privacy": {
+    "result": "PASS",
+    "source": "2e69e867c876b64d3d0013cf03efdbbf5f0e63fa",
+    "scope": "all reachable blobs and supported nested archives in complete public release history",
+    "objects": 4398,
+    "blobs": 2624,
+    "bytes_inspected": 85478439,
+    "secret_scan_findings": [],
+    "private_path_findings": [],
+    "time_utc": "2026-10-23T17:05:03.806472+00:00"
+  },
+  "documentation": {
+    "markdown_files_audited": 170,
+    "broken_local_links": 0
+  },
+  "physical_baseline": {
+    "version": "0.9.0-alpha45",
+    "product_source": "8ce0fb265623f2fb5abb08f461f6d177419e48b1",
+    "record": "qa/MT3000-FIRST-RUN45-2026-10-23.json",
+    "scope": "prepared MT3000, router-originated IPv4 DNS/twoHTTPS; no independent LAN acceptance"
+  },
+  "release_device_installation": "NOT_PERFORMED: publication-only continuation; alpha45 baseline retained",
+  "publication": "PENDING: final tag/main mapping and independent downloads recorded in ALPHA090-PUBLICATION.json after publication",
+  "retained_failure": "Pre-crash exact-source CI interrupted without completion receipt; not PASS. Fresh same-source full matrix passed."
+}

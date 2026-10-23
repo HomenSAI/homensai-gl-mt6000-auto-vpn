@@ -1,6 +1,6 @@
 # Validation and evidence
 
-Current release: [0.9.0 evidence](RELEASE-0.9.0.md) and [scope matrix](CURRENT-STATUS.md). The0.9.0 source runs through immutable-source dual-runtime CI, package reproducibility/privacy/version checks and the release-specific device record. The alpha45 behavior baseline passed724 application/107 QA tests per runtime and39 UI suites; complementary skips are recorded, not silently counted as execution.
+Current release: [0.9.0 evidence](RELEASE-0.9.0.md), [machine record](../qa/RELEASE-0.9.0.json) and [scope matrix](CURRENT-STATUS.md). The0.9.0 source passed immutable-source dual-runtime CI and package reproducibility/privacy/version checks:724 application/107 QA tests per runtime and39 UI suites, with complementary skips retained. Its85 selected payload files equal alpha45 after version/resource identity replacement. Physical results retain their alpha45 version; this publication does not install0.9.0 or establish a new device result.
 
 Actual historical MT3000 physical evidence includes repeated automatic fault/return cycles, the nine-scenario19m23s matrix (3reserve commits/3returns), operator switching with Auto ON and90s hold, native-process recovery and ordinary/startup Stop. Statistical persistence/export and installed/served-byte checks are separately recorded. [23October matrix](MT3000-AUTO-TEST-REPORT-2026-10-23.md) · [alpha45 first-run evidence](handoff/FIRST-RUN-FLOW-2026-10-23.md).
 
