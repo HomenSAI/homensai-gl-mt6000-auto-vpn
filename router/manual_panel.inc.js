@@ -58,8 +58,21 @@ function manualReason(codes){
     if(row)return bi(row[4],row[5])+(row[6]?' '+bi(row[6],row[7]):'');
     return typeof AUTO_BLOCKERS!=='undefined'&&Object.prototype.hasOwnProperty.call(AUTO_BLOCKERS,code)?autoBlockerText(code):bi('Switching is currently unavailable.','Переключение сейчас недоступно.');}).filter(function(text,index,all){return all.indexOf(text)===index;}).join(' ');
 }
+function manualSelectionModel(status,source,target,now){
+  var native=status.native_failover||{};
+  if(!status.rpc_error&&manualFresh(status.time,now,90)&&manualFresh(native.time,now,30)&&['STOPPED','DISABLED','EXPIRED'].indexOf(native.state)>=0&&source&&target&&profileHealth(source,now).state==='inactive'&&profileHealth(target,now).state==='inactive')return {selected:null,moving:false,off:true};
+  var route=status.channel_path;
+  if(route){
+    var valid=!status.rpc_error&&!status.error&&manualFresh(status.time,now,90)&&manualFresh(route.time,now,30)&&source&&target&&source.id!==target.id&&route.source_profile_id===source.id&&route.target_profile_id===target.id;
+    return {selected:valid&&route.confirmed===true?(route.active_profile_id===source.id?'primary':route.active_profile_id===target.id?'reserve':null):null,moving:valid&&route.transitioning===true};
+  }
+  var path=manualConfirmedPath(status,source,target,now);
+  return {selected:path.selected==='source'?'primary':path.selected==='target'?'reserve':null,moving:path.moving};
+}
 function renderManualSwitch(status,inventory){
-  var model=manualControlModel(status,Date.now()/1000),buttons=[];
+  var now=Date.now()/1000,model=manualControlModel(status,now),buttons=[],settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
+  var source=profiles.filter(function(p){return p.id===(settings.plan_source||route.source_profile_id||ns.source);})[0],target=profiles.filter(function(p){return p.id===(settings.plan_target||route.target_profile_id||ns.target);})[0];
+  var selection=manualSelectionModel(status,source,target,now);
   function notice(text){ui.addNotification(null,E('p',{},text));}
   function button(direction,label){
     var enabled=model[direction].allowed,n=E('button',{'type':'button','class':'cbi-button cbi-button-action','data-manual-direction':direction,'disabled':enabled?null:'','click':function(){
@@ -72,11 +85,24 @@ function renderManualSwitch(status,inventory){
       }).catch(function(){notice(bi('The request was not confirmed. Refresh the router state before trying again.','Запрос не подтверждён. Обновите состояние роутера перед повтором.'));}).finally(function(){MANUAL_SWITCH_PENDING=false;buttons.forEach(function(node){node.disabled=true;});});
     }},label);buttons.push(n);return n;
   }
-  function choice(direction,label){return E('div',{},[button(direction,label),!model[direction].allowed&&!model.busy?E('p',{'class':'hv-step-note'},manualReason(model[direction].blockers)):null].filter(Boolean));}
+  function choice(direction,profile,role){
+    var selected=selection.selected===direction,pending=model.busy||selection.moving;
+    var color=pending?'yellow':selection.off?'red':selection.selected?(selected?'green':'red'):'yellow';
+    var protocol=profile?(typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol==='wireguard'?'WireGuard':'OpenVPN'):bi('Profile not chosen','Профиль не выбран');
+    var health=profile?profileHealth(profile,now).state:'unknown';
+    var healthText=health==='healthy'?bi('Internet: available','Интернет: доступен'):health==='failed'?bi('Internet: check failed','Интернет: проверка не пройдена'):health==='inactive'?bi('VPN tunnel: disconnected','VPN-туннель: отключён'):bi('Internet: awaiting check','Интернет: ожидается проверка');
+    var text=pending?bi('Switching…','Переключение…'):selection.off?bi('Off','Выключено'):selected?bi('Selected channel','Выбранный канал'):selection.selected?bi('Not selected','Не выбран'):bi('Router selection is being checked','Проверяется выбор канала роутера');
+    var country=profile&&typeof countryLabel==='function'?countryLabel(profile):null;
+    var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,E('span',{'class':'hv-manual-selection'},text),E('small',{'class':'hv-manual-health hv-health-'+health},healthText),E('b',{'class':'hv-manual-enable'},bi('Turn on','Включить'))].filter(Boolean));
+    card.setAttribute('class','hv-manual-channel hv-manual-'+color);card.setAttribute('aria-pressed',selected?'true':'false');card.setAttribute('data-selected',selected?'true':'false');
+    if(selected&&!pending)card.disabled=true;
+    return E('div',{'class':'hv-manual-choice'},[card,!selected&&!model[direction].allowed&&!model.busy?E('p',{'class':'hv-step-note'},manualReason(model[direction].blockers)):null].filter(Boolean));
+  }
   return E('section',{'class':'hv-chart-card hv-manual-switch','data-manual-controls':'1'},[
     E('h3',{},bi('Manual channel switch','Ручное переключение канала')),
-    E('p',{},model.mode==='continuous-pair'?bi('Manual choice while Auto monitors. Healthy selection is held until you resume automatic control; confirmed failure can release the hold for recovery. Calls may reconnect. Emergency Stop remains available.','Ручной выбор при работающем наблюдении Auto. Исправный выбранный канал удерживается до возврата к автоматическому управлению; подтверждённый отказ может снять удержание для восстановления. Сессии могут переподключиться. Аварийный стоп доступен.'):bi('One explicit switch without enabling Auto. Calls and sessions may reconnect. The channel colors change only after fresh router confirmation. Emergency Stop remains available.','Одно явное переключение без включения Auto. Звонки и сессии могут переподключиться. Цвета каналов меняются только после свежего подтверждения роутером. Аварийный стоп остаётся доступен.')),
-    E('div',{'class':'hv-wizard-actions'},[choice('reserve',bi('Switch to reserve','Переключить на резерв')),choice('primary',bi('Switch to primary','Переключить на основной'))]),
+    E('p',{},model.mode==='continuous-pair'?bi('Choose a channel even while Auto is on. Green is selected, red is not selected, yellow is a command in progress or selection check. Internet health is shown separately. A healthy manual choice is held until Resume Auto; confirmed failure can release the hold.','Выбирайте канал и при включённом Auto. Зелёный — выбран, красный — не выбран, жёлтый — выполняется команда или уточняется выбор. Проверка Интернета показана отдельно. Исправный ручной выбор удерживается до возврата к Auto; подтверждённый отказ может снять удержание.'):bi('Choose the primary or reserve channel. Green is selected, red is not selected, yellow means awaiting the router. Internet health is separate.','Выберите основной или резервный канал. Зелёный — выбран, красный — не выбран, жёлтый — ожидается ответ роутера. Проверка Интернета показана отдельно.')),
+    E('div',{'class':'hv-manual-channel-grid'},[choice('primary',source,bi('Primary channel','Основной канал')),choice('reserve',target,bi('Reserve channel','Резервный канал'))]),
+    !selection.selected&&!selection.moving&&!selection.off?E('p',{'role':'status'},bi('The router has not returned a verified channel selection yet. Updating its policy state; no channel is assumed active from a button press.','Роутер ещё не передал проверенный выбор канала. Обновляем состояние маршрутизации; нажатие кнопки само по себе не означает, что канал выбран.')):null,
     model.mode==='continuous-pair'?E('div',{'class':'hv-wizard-actions'},[button('resume',bi('Resume automatic control','Вернуться к автоматическому управлению')),E('p',{},model.hold==='target'?bi('Manual hold: reserve','Ручное удержание: резерв'):model.hold==='source'?bi('Manual hold: primary','Ручное удержание: основной'):bi('Automatic control is active','Автоматическое управление активно'))]):null,
     model.busy?E('p',{'role':'status'},bi('A switch request is pending. Wait for confirmation or use Emergency Stop.','Запрос переключения ожидает подтверждения. Дождитесь результата или нажмите «Аварийный стоп».')):null
   ].filter(Boolean));

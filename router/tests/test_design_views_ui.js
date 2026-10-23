@@ -96,3 +96,27 @@ assert(source.includes("installDesignKeys(appRoot,"));
 const css=fs.readFileSync(base+/ui[0-9]+\.css/.exec(source)[0],'utf8');
 for(const part of ['.hv-dv-a','.hv-dv-b','.hv-dv-c','[data-hv-design="c"]{color-scheme:dark','[data-hv-dv] .hv-summary','prefers-color-scheme:dark'])assert(css.includes(part),part);
 console.log('PASS: A/B/C overviews from real status, tones, hostile names, Russian, keys and wiring');
+
+// Render the actual control subtree, not a placeholder: daily graph/manual cards must survive every overview layout.
+{
+ const actual=sandbox('ru');actual.locale='ru';actual.document.documentElement={clientWidth:1200};actual.poll.add=()=>{};
+ const st=fixture({native_failover:{state:'OBSERVING',time:now,source:'a',target:'b',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true},
+   auto_control:{requested:'on',requested_at:now-60,pair_phase:'RUNNING',control_revision:'a'.repeat(32)},
+   manual_switch_control:{mode:'continuous-pair',time:now,available:true,control_revision:'a'.repeat(32),primary:{allowed:false,blockers:['RETURN-NOT-APPLICABLE']},reserve:{allowed:true,blockers:[]}},
+   channel_path:{time:now,confirmed:true,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a',transitioning:false},
+   accounting:{reliability:{route_history:{segments:[{start:now-100,end:now,kind:'source'}]}}}});
+ const inv={settings:{plan_source:'a',plan_target:'b',pair_auto_mode:'router-probed-ipv4'},profiles:st.profiles};
+ const card=actual.renderAutoControl(st,inv),nodes=card.all();
+ const live=nodes.findIndex(n=>n.attrs.id==='hv-auto-live-chart'),day=nodes.findIndex(n=>n.attrs.id==='hv-auto-day-chart');
+ assert(live>=0&&day>live,'Overview includes daily graph directly after live graph');
+ const manual=nodes.find(n=>n.attrs['data-manual-controls']==='1');assert(manual&&card.children.includes(manual),'manual panel is a separate sibling');
+ const choices=manual.all().filter(n=>n.tag==='button'&&n.attrs['data-manual-direction']!=='resume'&&n.attrs['data-manual-direction']);
+ assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-red'));assert(choices.every(n=>n.text().includes('Включить')));
+ assert(!manual.text().includes('default')&&!manual.text().includes('Нет свежего подтверждения пути'));
+ for(const design of ['a','b','c']){
+  const page=actual.renderDesignOverview(design,{status:st,inventory:inv,rows:st.profiles,month:{},controlCard:card});
+  assert(page.all().some(n=>n.attrs.id==='hv-auto-day-chart'),design+' keeps daily graph');
+  assert(page.all().some(n=>n.attrs['data-manual-controls']==='1'),design+' keeps manual card');
+ }
+ console.log('PASS: generated complete A/B/C control tree includes live/day graphs and separate primary/reserve card-buttons');
+}

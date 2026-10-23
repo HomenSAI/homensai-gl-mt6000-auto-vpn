@@ -32,12 +32,15 @@ function updateConnectivityCheck(status){
   connectivityControl.button.disabled=connectivityBusy||model.busy||status.error==='SERVICE-STOPPED';
   connectivityControl.message.textContent=text+(model.code?' · '+model.code:'');
   connectivityControl.message.setAttribute('data-check-state',model.state);
-  // One cell per connected VPN: green works, grey does not (or is not checked yet). Then the next step in plain words.
+  // A cell belongs to a named channel; do not sort healthy cells ahead of failed ones.
   if(connectivityControl.bar){
     var bar=connectivityControl.bar;while(bar.firstChild)bar.removeChild(bar.firstChild);
-    var cells=Math.min(rows.length,16);
-    for(var i=0;i<cells;i++)bar.appendChild(E('span',{'class':'hv-check-cell'+(i<working?' hv-check-cell-ok':'')}));
-    bar.hidden=!cells;bar.setAttribute('aria-label',working+' '+bi('of','из')+' '+rows.length+' '+bi('VPNs work','VPN работают'));
+    var ids=connectivityControl.settings||{},native=status.native_failover||{},path=status.channel_path||{};
+    var primary=ids.plan_source||path.source_profile_id||native.source,reserve=ids.plan_target||path.target_profile_id||native.target;
+    var cells=rows.slice(0,16).map(function(p,index){return {profile:p,label:p.id===primary?bi('Primary channel','Основной канал'):p.id===reserve?bi('Reserve channel','Резервный канал'):bi('VPN channel ','VPN-канал ')+(index+1)};});
+    cells.sort(function(a,b){return (a.profile.id===primary?0:a.profile.id===reserve?1:2)-(b.profile.id===primary?0:b.profile.id===reserve?1:2);});
+    cells.forEach(function(cell){var healthy=profileHealth(cell.profile,Date.now()/1000).state==='healthy';bar.appendChild(E('span',{'class':'hv-check-channel'},[E('small',{},cell.label),E('span',{'class':'hv-check-cell'+(healthy?' hv-check-cell-ok':''),'title':cell.label+' · '+(healthy?bi('Internet available','Интернет доступен'):bi('Internet check not passed','Проверка Интернета не пройдена'))})]));});
+    bar.hidden=!cells.length;bar.setAttribute('aria-label',working+' '+bi('of','из')+' '+rows.length+' '+bi('VPNs work','VPN работают'));
   }
   if(connectivityControl.next){
     connectivityControl.next.hidden=!rows.length;
@@ -45,7 +48,7 @@ function updateConnectivityCheck(status){
   }
   connectivityControl.button.setAttribute('aria-busy',model.busy?'true':'false');
 }
-function renderConnectivityCheck(status,refresh){
+function renderConnectivityCheck(status,refresh,inventory){
   var message=E('p',{'role':'status','aria-live':'polite'});
   var button=E('button',{'type':'button','class':'hv-connectivity-action','click':function(){
     if(connectivityBusy||button.disabled)return;
@@ -59,7 +62,7 @@ function renderConnectivityCheck(status,refresh){
   }},E('span',{'class':'hv-check-icon','aria-hidden':'true'},'↻'));
   button.setAttribute('aria-label',bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас'));button.setAttribute('title',bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас'));
   var bar=E('div',{'class':'hv-check-bar','role':'img'}),next=E('p',{'class':'hv-check-next'});
-  connectivityControl={button:button,message:message,bar:bar,next:next};
+  connectivityControl={button:button,message:message,bar:bar,next:next,settings:(inventory||{}).settings||{}};
   var node=E('section',{'class':'hv-connectivity-control'},[button,E('div',{'class':'hv-check-text'},[E('strong',{},bi('Step 1 · Check the VPNs now','Шаг 1 · Проверить VPN сейчас')),E('small',{},bi('First you need to check your VPNs. Press this button: it shows which VPNs give internet right now. The router also repeats this check by itself all the time.','Сначала нужно проверить VPN. Нажмите эту кнопку: она покажет, какие VPN сейчас дают интернет. Роутер и сам постоянно повторяет эту проверку.')),message,bar,next])]);
   updateConnectivityCheck(status);return node;
 }

@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
-from channel_path import snapshot
+from channel_path import snapshot, pair_snapshot
 
 
 class ChannelPathTests(unittest.TestCase):
@@ -66,6 +66,26 @@ class ChannelPathTests(unittest.TestCase):
     def test_failed_selected_path_stays_selected_for_red_display(self):
         self.status['profiles'][0]['code']='DNS-001'
         self.assertTrue(snapshot(self.status,self.journal,self.order,self.now)['confirmed'])
+
+
+    def test_pair_policy_selection_is_independent_of_internet_health(self):
+        state={'phase':'RUNNING','order':['r1','r2'],'policy_hash':'h'}
+        self.status['native_failover'].update(state='OBSERVING',source='openvpn:a',target='wireguard:b')
+        self.status['profiles'][0]['code']='DNS-001'
+        result=pair_snapshot(self.status,state,{},(['r1','r2'],'h'),self.now)
+        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'openvpn:a')
+        result=pair_snapshot(self.status,state,self.journal,self.order,self.now)
+        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'wireguard:b')
+        self.assertIn('Internet health is separate',result['scope'])
+
+    def test_pair_external_order_or_stale_state_never_invents_selection(self):
+        state={'phase':'RUNNING','order':['r1','r2'],'policy_hash':'h'}
+        self.status['native_failover'].update(state='OBSERVING',source='openvpn:a',target='wireguard:b')
+        self.assertFalse(pair_snapshot(self.status,state,self.journal,(['r1','r2'],'other'),self.now)['confirmed'])
+        state['phase']='STOPPED'
+        self.assertFalse(pair_snapshot(self.status,state,self.journal,self.order,self.now)['confirmed'])
+        state['phase']='RUNNING';self.status['native_failover']['time']=self.now-1000
+        self.assertFalse(pair_snapshot(self.status,state,self.journal,self.order,self.now)['confirmed'])
 
 
 if __name__=='__main__':unittest.main()

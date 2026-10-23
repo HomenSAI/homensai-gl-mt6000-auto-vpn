@@ -83,9 +83,9 @@ function renderReadiness(status,inventory){
   var router=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Your router','Ваш роутер')),E('div',{'class':'hv-rd-info-grid'},[
     readinessInfo('▣',bi('Model','Модель'),b.model,waiting||!known(b.model)),
     readinessInfo('▦',bi('Board','Плата'),b.board_name,waiting||!known(b.board_name)),
-    readinessInfo('⚑',bi('Firmware','Прошивка'),b.firmware,waiting||!known(b.firmware))]),
-    waiting?E('p',{'class':'hv-ready-intro'},bi('The router sends this with the monitoring data.','Роутер присылает это вместе с данными мониторинга.')):
-      tested===null?null:E('p',{'class':'hv-rd-note hv-rd-note-'+(tested?'ok':'warn')},tested?bi('✓ This is the tested firmware ('+READINESS_TESTED_FIRMWARE+').','✓ Это проверенная прошивка ('+READINESS_TESTED_FIRMWARE+').'):bi('⚠ Tested firmware is '+READINESS_TESTED_FIRMWARE+'. Monitoring should work, but Auto is not certified for this one.','⚠ Проверенная прошивка — '+READINESS_TESTED_FIRMWARE+'. Мониторинг должен работать, но Auto для этой не подтверждён.'))
+    readinessInfo('⚑',bi('GL.iNet firmware','Прошивка GL.iNet'),b.firmware,waiting||!known(b.firmware)),
+    readinessInfo('⚑','OpenWrt',b.openwrt,waiting||!known(b.openwrt))]),
+    waiting?E('p',{'class':'hv-ready-intro'},bi('Waiting for router information.','Ожидаются данные роутера.')):null
   ].filter(Boolean));
   var monitor=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Data from the monitor','Данные от мониторинга')),E('div',{'class':'hv-rd-tile hv-rd-'+(m.fresh?'ok':'waiting')},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},m.fresh?'✓':'…'),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},m.fresh?bi('Fresh data','Свежие данные'):bi('Waiting for data','Ожидаем данные')),E('small',{},m.fresh?bi('The monitor is running and sends data.','Мониторинг работает и присылает данные.'):bi('Monitoring starts by itself; wait a minute and reload the page.','Мониторинг запускается сам; подождите минуту и обновите страницу.'))]),E('b',{'class':'hv-rd-word'},m.fresh?bi('OK','Есть'):bi('Waiting…','Ожидается…'))])]);
   var parts=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Required parts on the router','Нужные части на роутере')+(waiting?'':' ('+passCount+' / '+order.length+')')),

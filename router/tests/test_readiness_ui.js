@@ -22,3 +22,5 @@ assert.equal(c.preparationModel(bad,101).state,'unsupported');
 console.log('PASS: persistent preparation rejects stale, missing, duplicate and unsupported evidence');
 
 const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard61.js','utf8');assert(dashboard.indexOf("'require rpc'")<dashboard.indexOf('var RECOVERY_PRESETS='));assert(dashboard.replace(/^\/\/[^\n]*\n/,'').trimStart().startsWith("'use strict';"));
+
+assert(!fs.readFileSync('router/readiness_panel.inc.js','utf8').includes('Monitoring should work, but Auto is not certified'));

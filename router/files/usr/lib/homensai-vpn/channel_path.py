@@ -61,10 +61,41 @@ def snapshot(status, journal, live_order, now=None):
     return result
 
 
+def pair_snapshot(status, state, journal, live_order, now=None):
+    """Verify selected policy independently of the selected VPN's Internet health."""
+    now = time.time() if now is None else now
+    result = snapshot({}, {}, None, now)
+    result['scope'] = 'verified live router policy selection; Internet health is separate'
+    native = status.get('native_failover', {})
+    if (state.get('phase') != 'RUNNING' or status.get('rpc_error')
+            or not fresh(status.get('time'), now, 90) or not isinstance(native, dict)
+            or not fresh(native.get('time'), now, 30)):
+        return result
+    source, target = native.get('source'), native.get('target')
+    if not all(isinstance(x, str) and x for x in (source, target)) or source == target:
+        return result
+    result.update(source_profile_id=source, target_profile_id=target,
+                  transitioning=native.get('state') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'))
+    active = source if live_order == (state.get('order'), state.get('policy_hash')) else None
+    if (active is None and journal.get('source') == source and journal.get('target') == target
+            and journal.get('before') == state.get('order') and journal.get('hash') == state.get('policy_hash')
+            and live_order == (journal.get('after'), journal.get('hash'))):
+        active = target
+    if active is not None:
+        result.update(confirmed=True, active_profile_id=active)
+    return result
+
+
 def public_status(status):
     try:
         from native_switch import Linux, journal_read, Refused
+        from pair_auto import read_state
         journal = journal_read()
-        return snapshot(status, journal, Linux().order() if journal else None)
+        state = read_state()
+        backend = Linux()
+        if state.get('phase') == 'RUNNING':
+            backend.use_process_bindings(state.get('process_bindings'))
+            return pair_snapshot(status, state, journal, backend.order())
+        return snapshot(status, journal, backend.order() if journal else None)
     except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
         return snapshot({}, {}, None)

@@ -10,7 +10,7 @@ class ReadinessTests(unittest.TestCase):
     def test_board_allowlist_and_no_permission(self):
         reply=subprocess.CompletedProcess([],0,b'{"model":"x86","board_name":"generic","serial":"private","release":{"version":"21.02"},"hostname":"private"}')
         with patch.object(module.subprocess,'run',return_value=reply):s=module.snapshot(100)
-        self.assertEqual(s['board'],{'model':'x86','board_name':'generic','firmware':'21.02'})
+        self.assertEqual(s['board'],{'model':'x86','board_name':'generic','firmware':'unknown','openwrt':'21.02'})
         self.assertEqual(s['native_permission'],'not_assessed');self.assertNotIn('private',str(s))
     def test_unavailable_board_is_unknown(self):
         with patch.object(module.subprocess,'run',side_effect=OSError):s=module.snapshot(100)
