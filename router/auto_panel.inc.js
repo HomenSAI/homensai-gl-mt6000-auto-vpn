@@ -223,8 +223,8 @@ var autoCommandPending=null,autoControlRefresh=function(){};
 function autoCommandOperation(status,now){
   var model=autoControlModel(status,now),intent=status.auto_control||{},phase=intent.pair_phase;
   if(autoCommandPending&&autoCommandPending.acknowledged&&model.fresh&&intent.requested_at>autoCommandPending.baseline){
-    var done=autoCommandPending.stop?['STOPPED','FAILED','HELD'].indexOf(phase)>=0:
-      ['RUNNING','FAILED','STOPPED','HELD'].indexOf(phase)>=0;
+    var terminal=['FAILED','STOPPED','HELD'].indexOf(phase)>=0;
+    var done=autoCommandPending.stop?terminal:terminal||phase==='RUNNING'&&model.on&&!model.awaiting&&!model.transitioning;
     var legacyDone=!phase&&!model.awaiting&&!model.transitioning&&
       (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
     if(done||legacyDone)autoCommandPending=null;
@@ -233,7 +233,7 @@ function autoCommandOperation(status,now){
   if(phase==='STARTING')return 'starting';
   if(phase==='STOPPING')return 'stopping';
   if(phase==='UNKNOWN')return 'unknown';
-  if(model.awaiting||!phase&&model.transitioning)return intent.requested==='off'?'stopping':'starting';
+  if(model.awaiting||model.transitioning)return intent.requested==='off'?'stopping':'starting';
   return null;
 }
 function renderAutoControl(status,inventory){

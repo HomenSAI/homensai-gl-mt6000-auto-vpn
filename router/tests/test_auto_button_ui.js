@@ -21,6 +21,7 @@ const render=s=>c.renderAutoControl(s,{settings:{}});
   assert.equal(view.button.disabled,true,'ACK is not completion');
   view=render(status('STARTING','ARMED','on',1000));assert.equal(view.button.disabled,true);
   assert(/Turning Auto on/.test(view.actionLabel.textContent));assert.equal(view.emergencyButton.disabled,false);
+  view=render(status('RUNNING','ARMED','on',1000));assert.equal(view.button.disabled,true,'supervisor RUNNING while probes are pending is not ready');
   view=render(status('RUNNING','OBSERVING','on',1000));assert.equal(view.button.disabled,false);
   const stop=view.button.attrs.click();view.button.attrs.click();assert.deepEqual(calls,['native_start','native_stop']);
   replies.shift()({queued:true});await stop;assert.equal(view.button.disabled,true);
