@@ -111,7 +111,7 @@ console.log('PASS: A/B/C overviews from real status, tones, hostile names, Russi
  assert(live>=0&&day>live,'Overview includes daily graph directly after live graph');
  const manual=nodes.find(n=>n.attrs['data-manual-controls']==='1');assert(manual&&card.children.includes(manual),'manual panel is a separate sibling');
  const choices=manual.all().filter(n=>n.tag==='button'&&n.attrs['data-manual-direction']!=='resume'&&n.attrs['data-manual-direction']);
- assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-red'));assert(choices.every(n=>n.text().includes('Включить')));
+ assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-red'));assert(!choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
  assert(!manual.text().includes('default')&&!manual.text().includes('Нет свежего подтверждения пути'));
  for(const design of ['a','b','c']){
   const page=actual.renderDesignOverview(design,{status:st,inventory:inv,rows:st.profiles,month:{},controlCard:card});

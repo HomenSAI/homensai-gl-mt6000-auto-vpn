@@ -1,0 +1,123 @@
+{
+  "device": "GL-MT3000",
+  "installed_version": "0.9.0-alpha41-1",
+  "product_source": "8239552a1120ceecace2f205e520ac5e1b34cc9d",
+  "package_bytes": 763381,
+  "package_sha256": "2a961726dce0b46296facc0453afaa841bbd2926425b5d73214df1742bcf5e7d",
+  "installed_files_and_modes": 84,
+  "protected_configs_unchanged": true,
+  "served_https_and_http8080_verified": true,
+  "ci": {
+    "application_tests_per_runtime": 723,
+    "qa_tests_per_runtime": 107,
+    "ui_suites": 39,
+    "result": "PASS",
+    "complementary_environment_skips": true
+  },
+  "start_seconds": 60.358083117993374,
+  "manual_cycle": {
+    "event": "FINAL",
+    "result": "PASS",
+    "duration_seconds": 151.65112105000298,
+    "deltas": {
+      "committed": 1,
+      "manual_committed": 1,
+      "automatic_committed": 0,
+      "returns": 1
+    },
+    "auto_left_running": true,
+    "manual_hold": "source",
+    "resume_command_used": false,
+    "external_lan_verified": false
+  },
+  "actual_ui_frames_replay": {
+    "result": "PASS",
+    "frames": [
+      {
+        "role": "primary",
+        "working": 2,
+        "connected": 2,
+        "selected_card": "green",
+        "inactive_card": "red",
+        "sidebar_matches": true,
+        "client_clock_skew_seconds": 300
+      },
+      {
+        "role": "reserve",
+        "working": 2,
+        "connected": 2,
+        "selected_card": "green",
+        "inactive_card": "red",
+        "sidebar_matches": true,
+        "client_clock_skew_seconds": 300
+      },
+      {
+        "role": "primary",
+        "working": 2,
+        "connected": 2,
+        "selected_card": "green",
+        "inactive_card": "red",
+        "sidebar_matches": true,
+        "client_clock_skew_seconds": 300
+      }
+    ],
+    "scope": "Generated UI models/rendered DOM on sanitized actual router frames; not a real-browser screenshot test"
+  },
+  "final_snapshot": {
+    "result": "PASS",
+    "time": 1792766366.3990529,
+    "version": "0.9.0-alpha41",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 5.150965929031372,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 23,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 18,
+      "channel_switches": 0,
+      "committed": 15,
+      "manual_attempts": 5,
+      "manual_committed": 4,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 4,
+      "rollbacks": 10,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 1598,
+      "failed_checks": 29,
+      "outages": 14,
+      "observed_down_seconds": 302.83509039878845,
+      "observed_up_seconds": 16523.98916578293,
+      "auto_observed_seconds": 8044.765087604523,
+      "recoveries": 5,
+      "unknown_intervals": 2
+    },
+    "external_lan_verified": false
+  },
+  "retained_failures": [
+    "Alpha38 initial missing RPC object; normal reload restored registration.",
+    "Alpha39 startup AUTH_FAILED; safe cleanup retained.",
+    "First alpha40 manual reserve refused VENDOR-WORKER-QUIET-UNVERIFIED; original order restored.",
+    "Primary-only final observer assertion failed after later operator reserve selection; selection-aware final snapshot passed."
+  ],
+  "pending_alpha42": [
+    "1\u201324h slider",
+    "equal channel card heights and eligibility-only Turn on",
+    "short copy and destination-only pending state",
+    "owner selection among four signal animation proposals",
+    "full final42 CI/build/install after choice"
+  ],
+  "external_lan_verified": false
+}

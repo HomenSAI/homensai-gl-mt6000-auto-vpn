@@ -85,36 +85,52 @@ function renderAutoLive(status,inventory){
   }
   return root;
 }
-function autoDaySegments(history,now){
+var autoDayHours=24;
+function autoDayWindow(value){var n=Number(value);return Number.isInteger(n)&&n>=1&&n<=24?n:24;}
+try{if(typeof window!=='undefined'&&window.sessionStorage)autoDayHours=autoDayWindow(window.sessionStorage.getItem('homensai-vpn-day-hours'));}catch(e){}
+function autoDaySegments(history,now,hours){
   if(!history||!Array.isArray(history.segments)||!Number.isFinite(now))return [];
-  var last=null,previousEnd=null,rows=[];
+  var from=now-autoDayWindow(hours)*3600,last=null,previousEnd=null,rows=[];
   history.segments.slice(-4096).forEach(function(row){
-    if(!row||['source','target','off','unknown','switching'].indexOf(row.kind)<0||!Number.isFinite(row.start)||!Number.isFinite(row.end)||row.start>row.end||row.end<=now-86400||row.start>now||row.end>now+5){last=null;previousEnd=null;return;}
+    if(!row||['source','target','off','unknown','switching'].indexOf(row.kind)<0||!Number.isFinite(row.start)||!Number.isFinite(row.end)||row.start>row.end||row.start>now||row.end>now+5){last=null;previousEnd=null;return;}
     if(previousEnd!==row.start)last=null;
     var kind=row.kind==='switching'?last:row.kind;
     previousEnd=row.end;
     if(!AUTO_LIVE_COLORS[kind]){last=null;return;}
-    last=kind;rows.push({start:Math.max(now-86400,row.start),end:Math.min(now,row.end),kind:kind});
+    last=kind;if(row.end>from)rows.push({start:Math.max(from,row.start),end:Math.min(now,row.end),kind:kind});
   });return rows;
 }
 function renderAutoDay(status){
-  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'}),now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000);
-  var history=(((status||{}).accounting||{}).reliability||{}).route_history||{},segments=autoDaySegments(history,now);
-  var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
-  var from=now-86400,x=function(t){return left+(t-from)/86400*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:132;};
-  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Saved selected VPN route over the last 24 hours','Сохранённый VPN-маршрут за последние 24 часа')});
-  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off','Выключено')]].forEach(function(row){
-    svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y(row[0]),y2:y(row[0]),stroke:'#cbd5e1','stroke-dasharray':'3 5'}));
-    svg.appendChild(autoLiveSvg('text',{x:6,y:y(row[0])+4,fill:'currentColor','font-size':12},row[1]));
-  });
-  var previous=null;
-  segments.forEach(function(row){
-    if(previous&&previous.end===row.start&&previous.kind!==row.kind)svg.appendChild(autoLiveSvg('line',{x1:x(row.start),x2:x(row.start),y1:y(previous.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':2}));
-    var path=autoLiveSvg('line',{x1:x(row.start),x2:x(row.end),y1:y(row.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':3,'stroke-dasharray':row.kind==='unknown'?'3 5':'none'});
-    path.appendChild(autoLiveSvg('title',{},autoLiveLabel(row.kind)+' · '+new Date(row.start*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+' — '+new Date(row.end*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));svg.appendChild(path);previous=row;
-  });
-  [0,6,12,18,24].forEach(function(hours,index){var stamp=from+hours*3600;svg.appendChild(autoLiveSvg('text',{x:x(stamp),y:157,'text-anchor':index===0?'start':index===4?'end':'middle',fill:'currentColor','font-size':10},new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})));});
-  root.appendChild(E('h3',{},bi('Channel switching · last 24 hours','Переключение каналов · последние 24 часа')));root.appendChild(svg);
-  root.appendChild(E('p',{'class':'hv-muted'},bi('Saved on the router; survives page reload. Three levels: primary, reserve, off. Transition intervals retain the last confirmed route; gaps mean no observations. Earlier hours are not reconstructed.','История хранится на роутере и сохраняется при обновлении страницы. Три уровня: основной, резерв, выключено. При переходе остаётся последний подтверждённый маршрут; разрыв означает отсутствие данных. Прошлые часы без наблюдений не восстанавливаются.')));
-  return root;
+  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'});
+  var heading=E('h3'),plot=E('div',{'class':'hv-auto-day-plot'}),value=E('output',{'for':'hv-auto-day-range','class':'hv-auto-day-window-value'});
+  var slider=E('input',{'type':'range','id':'hv-auto-day-range','min':1,'max':24,'step':1,'value':autoDayHours,'aria-label':bi('Graph window, 1 to 24 hours','Окно графика, от 1 до 24 часов'),'input':function(event){
+    autoDayHours=autoDayWindow(event.target.value);slider.value=autoDayHours;
+    try{window.sessionStorage.setItem('homensai-vpn-day-hours',String(autoDayHours));}catch(e){}
+    drawPlot();
+  }});
+  function drawPlot(){
+    var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),hours=autoDayWindow(autoDayHours),span=hours*3600;
+    var history=(((status||{}).accounting||{}).reliability||{}).route_history||{},segments=autoDaySegments(history,now,hours);
+    var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
+    var from=now-span,x=function(t){return left+(t-from)/span*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:132;};
+    var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Saved selected VPN route over the last '+hours+' hours','Сохранённый VPN-маршрут за последние '+hours+' ч')});
+    [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off','Выключено')]].forEach(function(row){
+      svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y(row[0]),y2:y(row[0]),stroke:'#cbd5e1','stroke-dasharray':'3 5'}));
+      svg.appendChild(autoLiveSvg('text',{x:6,y:y(row[0])+4,fill:'currentColor','font-size':12},row[1]));
+    });
+    var previous=null;
+    segments.forEach(function(row){
+      if(previous&&previous.end===row.start&&previous.kind!==row.kind)svg.appendChild(autoLiveSvg('line',{x1:x(row.start),x2:x(row.start),y1:y(previous.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':2}));
+      var path=autoLiveSvg('line',{x1:x(row.start),x2:x(row.end),y1:y(row.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':3});
+      path.appendChild(autoLiveSvg('title',{},autoLiveLabel(row.kind)+' · '+new Date(row.start*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+' — '+new Date(row.end*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));svg.appendChild(path);previous=row;
+    });
+    [0,.25,.5,.75,1].forEach(function(fraction,index){var stamp=from+fraction*span;svg.appendChild(autoLiveSvg('text',{x:x(stamp),y:157,'text-anchor':index===0?'start':index===4?'end':'middle',fill:'currentColor','font-size':10},new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})));});
+    while(plot.firstChild)plot.removeChild(plot.firstChild);plot.appendChild(svg);
+    heading.textContent=bi('Channel switching · last '+hours+' h','Переключение каналов · последние '+hours+' ч');
+    value.textContent=hours+' '+bi('h','ч');slider.setAttribute('aria-valuetext',hours+' '+bi('hours','ч'));
+  }
+  root.appendChild(heading);root.appendChild(plot);
+  root.appendChild(E('div',{'class':'hv-auto-day-window'},[E('label',{'for':'hv-auto-day-range'},[bi('Graph window: ','Окно графика: '),value]),slider,E('div',{'class':'hv-auto-day-range-labels'},[E('span',{},bi('1 h','1 ч')),E('span',{},bi('24 h','24 ч'))])]));
+  root.appendChild(E('p',{'class':'hv-muted'},bi('History is saved on the router. Three levels: primary, reserve, off. During a transition the last confirmed route remains; missing data leaves a gap.','История хранится на роутере. Три уровня: основной, резерв, выключено. При переходе остаётся последний подтверждённый маршрут; отсутствие данных показано разрывом.')));
+  drawPlot();return root;
 }

@@ -27,3 +27,18 @@ assert.equal(day[3].start,11,'missing observations are gaps, never invented off 
 const src=fs.readFileSync('router/auto_live_chart.inc.js','utf8');assert(src.includes("method:'auto_live'"));assert(src.includes('},2)'));assert(!src.includes('innerHTML'));assert(!src.includes('localStorage'));
 assert(!src.includes("kind==='switching'?67")&&!src.includes('#d97706'));
 console.log('PASS: exactly three plotted levels, held confirmed route during transitions, unknown gaps, freshness, delayed replies and bounded memory');
+
+assert.equal(c.autoDayWindow(1),1);assert.equal(c.autoDayWindow(24),24);
+for(const bad of [0,25,'oops',1.5])assert.equal(c.autoDayWindow(bad),24);
+const rangeHistory={segments:[{start:1,end:5000,kind:'source'},{start:5000,end:9500,kind:'target'}]};
+assert.equal(c.autoDaySegments(rangeHistory,10000,1)[0].start,6400);assert.equal(c.autoDaySegments(rangeHistory,10000,1)[0].kind,'target');
+assert.equal(c.autoDaySegments(rangeHistory,10000,24).length,2);
+console.log('PASS: 1–24h selected window clips saved history without changing stored intervals');
+
+class DayNode{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};this.value=this.attrs.value;this.children=[].concat(children||[]);}appendChild(n){this.children.push(n);}get firstChild(){return this.children[0];}removeChild(n){this.children.splice(this.children.indexOf(n),1);}setAttribute(k,v){this.attrs[k]=v;}all(){return [this,...this.children.filter(x=>x instanceof DayNode).flatMap(x=>x.all())];}}
+c.E=(...args)=>new DayNode(...args);c.document={documentElement:{clientWidth:800},createElementNS:(_,tag)=>new DayNode(tag)};c.Date=class extends Date{static now(){return 10000000;}};c.locale='en';const stored={};c.window={sessionStorage:{setItem:(k,v)=>stored[k]=v}};
+const plot=c.renderAutoDay({});const slider=plot.all().find(n=>n.tag==='input');assert.equal(slider.attrs.min,1);assert.equal(slider.attrs.max,24);
+slider.attrs.input({target:{value:'1'}});assert.equal(c.autoDayHours,1);assert.equal(plot.all().find(n=>n.tag==='input'),slider,'drag updates plot without replacing its slider');
+assert.equal(plot.all().filter(n=>n.tag==='svg').length,1);assert.equal(stored['homensai-vpn-day-hours'],'1');
+assert.equal(c.renderAutoDay({}).all().find(n=>n.tag==='input').value,1,'ordinary redraw keeps selected hours');
+console.log('PASS: live 1–24h slider interaction and redraw retention');
