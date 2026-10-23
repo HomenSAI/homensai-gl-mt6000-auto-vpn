@@ -40,6 +40,29 @@ class NativeTests(unittest.TestCase):
     def test_python38_syntax(self):
         ast.parse(AGENT.read_text(), feature_version=8)
 
+    def test_fast_poll_is_bounded_to_current_startup(self):
+        import pair_auto
+        state = dict(id='a'*32, revision='b'*32, phase='STARTING', started=990)
+        request = dict(id=state['id'], revision=state['revision'], mode='on')
+        native = dict(state='ARMED', mode='continuous-pair', reason='PAIR-WAITING-PROBES', time=999)
+        with patch.object(pair_auto, 'read_state', return_value=state), patch.object(pair_auto, 'intent', return_value=request), patch.object(agent, 'read_json', return_value=native):
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 2)
+            self.assertEqual(agent.monitor_poll_interval({'interval': 1}, 1000), 1)
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1200), 10)
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 980), 10)
+            state['phase'] = 'RUNNING'
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 2)
+            for edit in ({'state': 'OBSERVING'}, {'state': 'COMMITTED'}, {'state': 'BLOCKED'}, {'time': 800}):
+                with patch.object(agent, 'read_json', return_value=dict(native, **edit)):
+                    self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 10)
+            for field, value in (('mode', 'off'), ('id', 'c'*32), ('revision', 'd'*32)):
+                with patch.object(pair_auto, 'intent', return_value=dict(request, **{field: value})):
+                    self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 10)
+            state['phase'] = 'STOPPING'
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 10)
+        with patch.object(pair_auto, 'read_state', side_effect=ValueError('unverified')):
+            self.assertEqual(agent.monitor_poll_interval({'interval': 10}, 1000), 10)
+
     def test_atomic_storage_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:
             p = Path(d)/'state.json'

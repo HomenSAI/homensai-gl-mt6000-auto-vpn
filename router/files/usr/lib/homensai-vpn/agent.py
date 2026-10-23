@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha42'
+VERSION = '0.9.0-alpha43'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -599,6 +599,32 @@ def monitoring_profiles(data):
     return observed,selected
 
 
+def monitor_poll_interval(settings, now=None):
+    """Accelerate only a correlated bounded startup; never overlap probe rounds."""
+    normal = settings['interval']
+    now = time.time() if now is None else now
+    try:
+        import pair_auto
+        state, request = pair_auto.read_state(), pair_auto.intent()
+        if (request.get('mode') != 'on' or state.get('id') != request.get('id')
+                or state.get('revision') != request.get('revision')):
+            return normal
+        began = state.get('started')
+        if type(began) not in (int, float) or not math.isfinite(began) or not 0 <= now-began <= 180:
+            return normal
+        preparing = state.get('phase') == 'STARTING'
+        if state.get('phase') == 'RUNNING':
+            native = read_json(RUNTIME/'native-status.json', {})
+            observed = native.get('time')
+            preparing = (native.get('state') == 'ARMED' and native.get('mode') == 'continuous-pair'
+                         and native.get('reason') in ('PAIR-CONNECTING', 'PAIR-WAITING-PROBES')
+                         and type(observed) in (int, float) and math.isfinite(observed)
+                         and -5 <= now-observed <= 30)
+        return min(normal, 2) if preparing else normal
+    except (OSError, ValueError, TypeError, KeyError):
+        return normal
+
+
 def serve():
     RUNTIME.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock = os.open(str(RUNTIME/'agent.lock'), os.O_CREAT|os.O_RDWR|getattr(os, 'O_NOFOLLOW', 0), 0o600)
@@ -728,7 +754,7 @@ def serve():
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,'SCAN-MEASUREMENT-FAILED')
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
-        while not STOP and time.monotonic()-started < settings['interval']:
+        while not STOP and time.monotonic()-started < monitor_poll_interval(settings):
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
                 break

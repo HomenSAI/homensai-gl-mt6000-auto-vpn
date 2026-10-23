@@ -1,3 +1,9 @@
+# Active alpha42 installation — chosen running dots
+
+Owner chose variant1 and requested completion of all saved UI items. Alpha42 canonical source bf2d081, full dual-runtime CI PASS723app/107QA and39UI; package764669bytes SHA12444dccb45dc943ecd630ccc62861e40a97a1848b941e2437c1e1cceb49eee5. Installed84files/modes/protected configs PASS; actual HTTPS/HTTP8080 assets PASS. Auto temporarily OFF after verified Stop41 (20.19s), during reconnect pause before Start42. Must finish Start, actual manual roundtrip, restore pre-upgrade owner reserve preference, final snapshot/backup/report/Gitea save. Do not call hardware acceptance complete yet. No test faults introduced. No primary MT6000/Windows network changes.
+
+Older history follows.
+
 # Current handover: verified alpha41 ON; alpha42 awaits animation choice
 
 Read [the full owner idea/resume plan](OWNER-IDEAS-2026-10-23.md) and [operator acceptance](UI-OPERATOR-2026-10-23.md). Installed41 product source8239552, exact CI PASS723app/107QA per runtime/39UI,84file/mode/protected-config checks and actual HTTPS/HTTP8080 assets PASS. Start60.36s, actual operator reserve/90s hold/primary cycle151.65s PASS without disabling Auto or using Resume. Actual installed UI frame replay PASS. Final14:39UTC snapshot: Auto ON, reserve selected by later operator action, both VPN DNS/twoHTTPS healthy, monitor age5.15s, no test faults/full block. Preserve the operator's choice. Raw failures remain retained.

@@ -77,3 +77,7 @@ After owner chooses: read this plan/CURRENT/claim; resume source42WIP (never bum
 ## Owner chose animation 1 — running dots
 
 Explicit choice received. Integrate computer → router → VPN server running dots only on the confirmed healthy selected card; inactive, pending and failed channels remain static. Proceed with full alpha42 build/CI/install and actual operator acceptance, preserving the current selected channel. Four GIF proposals are retained locally in tmp/vpn-animation-options, excluded from Git.
+
+## Adaptive startup polling — owner request during final installation
+
+Alpha42 UI installed and served, Auto OFF during controlled upgrade. Alpha43 targets2s monitor rounds only during correlated current startup for at most180s; rounds never overlap, all DNS/HTTPS and worker deadlines retained. Confirmed readiness restores configured10s. Exact43CI/build/install/Start/manual/final acceptance pending. Native Windows test attempt could not import Linux fcntl; authoritative tests run in isolated Linux CI.
