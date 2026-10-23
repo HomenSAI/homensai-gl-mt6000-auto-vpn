@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard73'
+UI_MODULE='dashboard74'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -351,7 +351,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui50.css')
+source=source.replace('ui15.css','ui51.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -452,6 +452,6 @@ must_replace('checkLampCell(p),cell(serverTitle(p))','checkLampCell(p,status,inv
 must_replace("var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';\n  return E('td',{'class':'hv-check-status'", "var use=channelDisplayUse(p,status,inventory),kind=use.kind;h.label=use.label;\n  return E('td',{'class':'hv-check-status'")
 source=source.replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select')
 source=source.replace('renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})','renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory)')
-(root/'ui50.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
+(root/'ui51.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

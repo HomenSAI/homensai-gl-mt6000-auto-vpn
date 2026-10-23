@@ -66,6 +66,9 @@ function advance(f,target='review'){
   assert.equal(f.calls.length,0,'render must not add a status/readiness RPC');
   assert.equal(f.step(),'appearance');assert.equal(f.field('appearance.language').value,'en');
   assert.equal(f.c.currentDesign(),'b');assert.equal(f.field('appearance.design').value,'b','fresh wizard starts Calm without persisting a browser override');assert.equal(f.writes.length,0);
+  assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'));assert(f.button('open-dashboard').attrs.class.includes('hv-onboarding-recovery-link'));
+  f.set('appearance.theme','dark');f.set('appearance.language','ru');assert.equal(f.c.locale,'ru');assert(text(f.root).includes('Язык и оформление'));assert(text(f.root).includes('Далее'));assert.equal(new URL(f.button('open-dashboard').attrs.href).searchParams.get('lang'),'ru');assert(text(f.root).includes('Открыть панель и средства восстановления'));assert(!text(f.root).includes('Language and appearance'));assert.equal(f.field('appearance.theme').value,'dark');assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);assert.equal(f.reloads,0);
+  f.set('appearance.language','en');assert(text(f.root).includes('Language and appearance'));assert(text(f.root).includes('Next'));assert(!text(f.root).includes('Язык и оформление'));
   f.set('appearance.theme','dark');f.click('next');assert.equal(f.step(),'monitor');assert.equal(f.writes.length,0,'draft does not change browser preferences');
   f.set('monitor.interval','9');assert(f.button('next').disabled);f.click('next');assert.equal(f.step(),'monitor');
   assert.equal(f.field('monitor.interval').value,'9','never silently coerce input');
@@ -131,11 +134,12 @@ function advance(f,target='review'){
   for(const legacyStatus of [{native_failover:{state:'OBSERVING',certified:true},auto_control:{requested:'on'}},{rpc_error:'RPC-UNAVAILABLE'},{}]){
     const legacy=baseInventory();Object.assign(legacy.settings,{setup_complete:true,native_enabled:true});
     f=fixture({inventory:legacy,status:legacyStatus});assert(!f.c.onboardingComplete(legacy));assert.equal(f.calls.length,0,'render never automatically stops or starts Auto');
+    assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'),'appearance has no Stop');f.click('next');
     f.c.autoStartPending=true;f.c.autoRequestBusy=true;f.c.autoStopBusy=true;
     assert(!f.button('emergency-stop').disabled,'independent of status and other controls');
     f.stopPending={};let stopping=f.click('emergency-stop');assert.equal(f.calls.length,1);assert.equal(f.calls[0].spec.method,'native_stop');assert.deepEqual(f.calls[0].args,[]);assert(!f.calls[0].spec.params||f.calls[0].spec.params.length===0);
     await f.click('emergency-stop');assert.equal(f.calls.length,1,'only its own pending Stop is deduped');
-    f.click('next');assert.equal(f.step(),'monitor');assert(f.button('emergency-stop').disabled,'recreated control shares its pending Stop');
+    f.click('next');assert.equal(f.step(),'system');assert(f.button('emergency-stop').disabled,'recreated control shares its pending Stop');
     f.stopPending.resolve({queued:true,accepted:true});await stopping;assert(!f.button('emergency-stop').disabled,'current recreated control unlocks when request settles');
     f.stopPending=null;await f.click('emergency-stop');assert.equal(f.calls.length,2,'no Stop cooldown after settlement');assert.equal(f.reloads,0,'Stop preserves the wizard draft');
     f.stopResponse={queued:false,accepted:false};await f.click('emergency-stop');assert(!f.button('emergency-stop').disabled);assert(f.notes.some(n=>text(n).includes('AUTO-CONTROL-UNVERIFIED')));
@@ -171,7 +175,7 @@ function advance(f,target='review'){
   // Every step/pause in every design and locale retains complete owner identity; full-page styles load once.
   for(const language of ['en','ru'])for(const design of ['a','b','c']){
     f=fixture({language,design});assert.equal(walk(f.root).filter(n=>n.tag==='link').length,4);
-    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert(!f.button('emergency-stop').disabled,'always available on '+f.step());assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com','Style 1.14.3'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],design);if(f.step()==='review')break;f.click('next');}
+    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert.equal(walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'),f.step()!=='appearance','Stop removed only from appearance');assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com','Style 1.14.3'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],design);if(f.step()==='review')break;f.click('next');}
     if(language==='ru'){assert(text(f.root).includes('Пауза, секунд'));assert(!text(f.root).includes('budget_mib'));assert(!text(f.root).includes('primary_successes'));}
     f.click('cancel');assert.equal(f.step(),'paused');assert(!f.button('emergency-stop').disabled);assert(walk(f.root).some(n=>n.attrs['data-hv-attribution']==='1'));assert.equal(f.calls.length,0);
   }
