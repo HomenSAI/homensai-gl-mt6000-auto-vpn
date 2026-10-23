@@ -1,0 +1,187 @@
+{
+  "device": "GL-MT3000",
+  "installed_version": "0.9.0-alpha45-1",
+  "product_source": "8ce0fb265623f2fb5abb08f461f6d177419e48b1",
+  "package_sha256": "10857c90e28e9f8fec01ecec9d059a577f3c22e49e7f090e9996e4fa5974b0f2",
+  "package_bytes": 769863,
+  "ci": {
+    "result": "PASS",
+    "application_tests_per_runtime": 724,
+    "qa_tests_per_runtime": 107,
+    "ui_suites": 39,
+    "complementary_environment_skips": true
+  },
+  "generated_ui": {
+    "result": "PASS",
+    "source": "canonical45IPK dashboard75",
+    "terms_before_intro_before_wizard": true,
+    "intro_paragraphs": 2,
+    "intro_schematics": 3,
+    "intro_ok_no_rpc_or_save": true,
+    "skip_below_navigation": true,
+    "skip_preserves_current_config_copy": true,
+    "focused_guide_steps": 8,
+    "languages": [
+      "en",
+      "ru"
+    ],
+    "terms_help_registration": true,
+    "actual_router_browser_interaction": false
+  },
+  "existing_terms_acceptance_preserved": true,
+  "terms_version": "1",
+  "installation": {
+    "installed_version": "0.9.0-alpha45-1",
+    "native_enabled": false,
+    "opkg_exit": 0,
+    "opkg_output_sha256": "1fcef98ef66dc3cdd5c48d22384933c42e2d31338876b0828c454759f2003f61",
+    "package_sha256": "10857c90e28e9f8fec01ecec9d059a577f3c22e49e7f090e9996e4fa5974b0f2",
+    "payload_files_verified": 84,
+    "protected_configs_unchanged": true
+  },
+  "served_https": {
+    "scope": "Actual HTTPS-served bytes over interface3/source192.168.11.228 with pinned certificate; no login/session/terms/wizard writes",
+    "assets": [
+      {
+        "asset": "dashboard75.js",
+        "http_status": 200,
+        "bytes": 883806,
+        "sha256": "fb6476c78c5fe5a24e4cefbbaa69e5dc2c7b882c490b8c0d5cc6650891b6d2ef",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui52.css",
+        "http_status": 200,
+        "bytes": 117449,
+        "sha256": "4c4cc3d99474afa1bb1fe26605856cc589a13fc617e11270ca57345cc01a19bb",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "pass": true,
+    "time": 1792772099.4843605
+  },
+  "served_http8080": {
+    "pass": true,
+    "assets": [
+      {
+        "asset": "dashboard75.js",
+        "http_status": 200,
+        "sha256": "fb6476c78c5fe5a24e4cefbbaa69e5dc2c7b882c490b8c0d5cc6650891b6d2ef",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui52.css",
+        "http_status": 200,
+        "sha256": "4c4cc3d99474afa1bb1fe26605856cc589a13fc617e11270ca57345cc01a19bb",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "time": 1792772099.7621825,
+    "scope": "actual HTTP8080 user-facing static assets; bound cable interface3/source192.168.11.228"
+  },
+  "start": {
+    "event": "START-FINAL",
+    "result": "PASS",
+    "duration_seconds": 57.60769978899043,
+    "scope": "actual installed two-channel Auto startup; no external LAN proof"
+  },
+  "adaptive_polling": {
+    "event": "ADAPTIVE-POLLING",
+    "result": "PASS",
+    "intervals": [
+      10,
+      2,
+      10
+    ],
+    "monitor_sample_gaps_seconds": [
+      10.62,
+      2.95,
+      3.24,
+      2.15,
+      2.1,
+      2.1,
+      2.21,
+      2.42,
+      2.94,
+      2.9,
+      2.54,
+      2.48,
+      2.57,
+      2.62,
+      2.54,
+      2.49,
+      2.46,
+      2.69,
+      2.53,
+      2.46,
+      2.46
+    ],
+    "startup_budget_seconds": 180,
+    "steady_interval_seconds": 10
+  },
+  "owner_selection_restored": {
+    "event": "FINAL",
+    "time": 1792772241.4281042,
+    "elapsed": 34.73457195000083,
+    "result": "PASS",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "owner_preference_restored": true
+  },
+  "final_snapshot": {
+    "result": "PASS",
+    "time": 1792772254.7375045,
+    "version": "0.9.0-alpha45",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 3.2317304611206055,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 27,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 18,
+      "channel_switches": 0,
+      "committed": 19,
+      "manual_attempts": 9,
+      "manual_committed": 8,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 5,
+      "rollbacks": 11,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 2650,
+      "failed_checks": 37,
+      "outages": 22,
+      "observed_down_seconds": 364.08912110328674,
+      "observed_up_seconds": 26879.3690199852,
+      "auto_observed_seconds": 13137.45003604889,
+      "recoveries": 9,
+      "unknown_intervals": 2
+    },
+    "external_lan_verified": false
+  },
+  "encrypted_backup": {
+    "at_utc": "2026-10-23T16:17:28.861404+00:00",
+    "script_sha256": "1ad29142228c60be52f2707b8324016c1360cb07ea340430739a330e28f9fcc6",
+    "output_sha256": "8ded396f59c018eb790bb37dedd88aba108ebcdd120a6c8233402e92d770e048",
+    "exit_code": 0,
+    "error_bytes": 0,
+    "device": "glinet,mt3000-snand",
+    "access": "pinned-key-cable-only",
+    "backup": "ENCRYPTED_AND_DPAPI_DECRYPT_VERIFIED",
+    "entries": 189,
+    "plaintext_persisted": false
+  },
+  "scope": "Canonical generated EN/RU terms/intro/wizard/help interactions and local browser screenshots; actual router installation/served bytes/Auto startup/reserve restoration. No real-owner acceptance simulated and no interactive router browser, external LAN,24h or power-cut acceptance claimed."
+}

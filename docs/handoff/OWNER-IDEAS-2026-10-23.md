@@ -105,3 +105,7 @@ Owner requires agreement first (experimental alpha/MIT/own-risk/explicit checks,
 ## New owner steering: operating principle between agreement and wizard
 
 Add short read-only intro after accepted agreement and before first-run appearance step: exactly2paragraphs plus3computer/router/primary-reserve/Internet schematics for monitoring-only, primary failure/healthy reserve, stable primary return under configured policy. Explain brief failures need not switch and healthy operator choice stays preferred. OK advances into8step wizard without RPC/settings/browser preference write or Auto start. Session keeps intro acknowledgement while wizard draft remains; completed setup does not reopen it. Settings editor does not require intro. Added in same uninstalled45 batch; update tests/fullCI/build and actual deployment before calling it complete.
+
+## Alpha45 complete — 18:17 Berlin
+
+Both owner messages in this batch fulfilled and installed: agreement first when not accepted; illustrated2paragraph/3mode intro then OK to wizard; bottom green skip with unchanged-current-settings explanation; focused EN/RU help covering all8steps/examples. Existing consent preserved. Exact final8ce0fb2 CI,84files/modes/protected configs, served HTTPS/HTTP8080, canonical UI interactions and local screenshots PASS. Actual Start57.61s, original reserve restored with AutoON, final bothVPNhealth/no test faults PASS; encrypted189entry final backup verified. No further device work; final publication/restore receipt closure only. See FIRST-RUN-FLOW report.
