@@ -1,3 +1,7 @@
+# Owner-resumed crash recovery — 23 October 2026
+
+Owner resumed and requested final automatic switching acceptance. Fresh work and actual PASS/FAIL results are in [the recovery report](RECOVERY-2026-10-23.md). Two full hardware failover/return cycles and native crash recovery passed; a subsequent rapid restart encountered actual OpenVPN AUTH_FAILED and safely stopped. Final operation is still being checked. Do not infer that Auto is on from older release receipts. Dedicated MT3000 only; primary MT6000 and Windows networking remain excluded. No old observer resumed.
+
 # Active router-only completion — 22 October 2026
 
 ## Immediate Auto + chart handover completed
