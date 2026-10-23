@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Component/lab reference, not current product-readiness evidence. [Current release and scope](../../docs/CURRENT-STATUS.md).
+
 # OpenWrt virtual acceptance laboratory
 
 This is a real OpenWrt 21.02.7 x86/64 guest kernel under QEMU TCG inside Docker. It is **not** GL.iNet firmware or a GL-MT6000 emulator. Do not use it as evidence for proprietary GL.iNet workers, hardware acceleration, production VPN switching, radio drivers or physical power-loss behavior.

@@ -1,3 +1,6 @@
+<!-- current-release-context:0.9.0 -->
+> Component/lab reference, not current product-readiness evidence. [Current release and scope](../docs/CURRENT-STATUS.md).
+
 # Стенд отказов HomenSAI Auto VPN
 
 Это отдельный референсный симулятор будущего протокола применения маршрутов. Он не является драйвером GL.iNet и не подключён к локальному dashboard.
