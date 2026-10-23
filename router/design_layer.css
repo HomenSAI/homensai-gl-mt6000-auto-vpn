@@ -501,3 +501,13 @@
 
 .hv-app .hv-manual-channel-grid{grid-auto-rows:1fr;align-items:stretch}.hv-app .hv-manual-choice{display:flex;align-items:stretch;min-width:0}.hv-app .hv-manual-choice>.hv-manual-channel{height:100%;flex:1 1 auto}
 .hv-app .hv-auto-day-window{display:flex;flex-direction:column;gap:8px;max-width:720px;margin:12px 0}.hv-app .hv-auto-day-window input[type=range]{width:100%;margin:0;accent-color:#159b80}.hv-app .hv-auto-day-range-labels{display:flex;justify-content:space-between;font-size:13px}.hv-app .hv-auto-day-window-value{font-weight:700}
+
+/* Owner-selected animation 1: running dots, only on confirmed healthy traffic. */
+.hv-app .hv-channel-signal{display:grid;grid-template-columns:minmax(48px,1fr) minmax(12px,.65fr) minmax(48px,1fr) minmax(12px,.65fr) minmax(48px,1fr);gap:3px;align-items:start;width:100%;margin:12px 0;color:inherit}
+.hv-app .hv-signal-node{display:grid;justify-items:center;gap:7px;min-width:0;text-align:center;font-size:12px;line-height:1.25}
+.hv-app .hv-signal-device{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;background:#ffffffc9}.hv-app .hv-signal-device svg{width:32px;height:32px}
+.hv-app .hv-signal-wire{position:relative;display:block;height:2px;margin-top:23px;background:currentColor;opacity:.85}
+.hv-app .hv-signal-wire i{position:absolute;left:50%;top:50%;display:block;width:7px;height:7px;border-radius:50%;background:currentColor;transform:translate(-50%,-50%);opacity:.35}.hv-app .hv-signal-wire i+i{display:none}
+.hv-app .hv-channel-signal[data-active="true"] .hv-signal-wire i{display:block;animation:hv-signal-travel 2.4s linear infinite}.hv-app .hv-channel-signal[data-active="true"] .hv-signal-wire i:nth-child(2){animation-delay:-.8s}.hv-app .hv-channel-signal[data-active="true"] .hv-signal-wire i:nth-child(3){animation-delay:-1.6s}
+@keyframes hv-signal-travel{0%{left:0;opacity:0}12%{opacity:1}88%{opacity:1}100%{left:100%;opacity:0}}
+@media(prefers-reduced-motion:reduce){.hv-app .hv-channel-signal[data-active="true"] .hv-signal-wire i{animation:none}}
