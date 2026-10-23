@@ -70,7 +70,7 @@ function manualSelectionModel(status,source,target,now){
   return {selected:path.selected==='source'?'primary':path.selected==='target'?'reserve':null,moving:path.moving};
 }
 function renderManualSwitch(status,inventory){
-  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=manualControlModel(status,now),buttons=[],labels={},actionMarks={},settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=manualControlModel(status,now),buttons=[],labels={},actionMarks={},signals={},settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
   var source=profiles.filter(function(p){return p.id===(settings.plan_source||route.source_profile_id||ns.source);})[0],target=profiles.filter(function(p){return p.id===(settings.plan_target||route.target_profile_id||ns.target);})[0];
   var selection=manualSelectionModel(status,source,target,now);
   var pendingDirection=MANUAL_SWITCH_PENDING?MANUAL_SWITCH_DIRECTION:model.busy?(status.manual_switch||{}).direction:selection.moving?(ns.state==='RESTORING'||ns.reason==='PAIR-CONNECTING'||ns.reason==='PAIR-WAITING-PROBES'?'primary':'reserve'):null;
@@ -78,13 +78,29 @@ function renderManualSwitch(status,inventory){
   function button(direction,label){
     var enabled=model[direction].allowed,n=E('button',{'type':'button','class':'cbi-button cbi-button-action','data-manual-direction':direction,'disabled':enabled?null:'','click':function(){
       if(MANUAL_SWITCH_PENDING||!enabled||!manualControlModel(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))[direction].allowed)return;
-      MANUAL_SWITCH_PENDING=true;MANUAL_SWITCH_DIRECTION=direction;buttons.forEach(function(node){node.disabled=true;var key=node.hvManualDirection;if(key==='primary'||key==='reserve'){node.setAttribute('class','hv-manual-channel hv-manual-'+(key===direction?'yellow':'red'));if(labels[key])labels[key].textContent=key===direction?bi('Switching','Переключение'):'';if(actionMarks[key])actionMarks[key].hidden=true;}});var request;
+      MANUAL_SWITCH_PENDING=true;MANUAL_SWITCH_DIRECTION=direction;buttons.forEach(function(node){node.disabled=true;var key=node.hvManualDirection;if(key==='primary'||key==='reserve'){node.setAttribute('class','hv-manual-channel hv-manual-'+(key===direction?'yellow':'red'));if(labels[key])labels[key].textContent=key===direction?bi('Switching','Переключение'):'';if(actionMarks[key])actionMarks[key].hidden=true;if(signals[key])signals[key].setAttribute('data-active','false');}});var request;
       try{var call=model.mode==='continuous-pair'?rpc.declare({object:'homensai-vpn',reject:true,method:'pair_manual',params:['direction','control_revision'],expect:{}}):rpc.declare({object:'homensai-vpn',reject:true,method:'manual_switch',params:['direction','control_revision'],expect:{}});request=call(direction,model.revision);}catch(e){request=Promise.reject(e);}
       return Promise.resolve(request).then(function(result){
-        if(result&&result.accepted===true&&result.queued===true&&result.completed===false&&typeof result.request_id==='string'&&/^[a-f0-9]{32}$/.test(result.request_id))notice(model.mode==='continuous-pair'?bi('Request queued. Wait for confirmed completion. Auto stays on; a manual channel choice is held until Resume Auto or a confirmed failure requires recovery.','Запрос поставлен в очередь. Дождитесь подтверждения. Auto остаётся включённым; выбранный канал удерживается до возврата к Auto либо подтверждённого отказа, требующего восстановления.'):bi('Manual switch requested. Wait for the router to confirm the active path. This request does not enable Auto.','Ручное переключение запрошено. Дождитесь подтверждения активного пути роутером. Этот запрос не включает Auto.'));
+        if(result&&result.accepted===true&&result.queued===true&&result.completed===false&&typeof result.request_id==='string'&&/^[a-f0-9]{32}$/.test(result.request_id))notice(model.mode==='continuous-pair'?bi('Request queued. Wait for confirmed completion. Auto stays on and keeps protecting the selected channel.','Запрос поставлен в очередь. Дождитесь подтверждения. Auto остаётся включённым и продолжает защищать выбранный канал.'):bi('Manual switch requested. Wait for the router to confirm the active path. This request does not enable Auto.','Ручное переключение запрошено. Дождитесь подтверждения активного пути роутером. Этот запрос не включает Auto.'));
         else notice(manualReason(result&&Array.isArray(result.blockers)?result.blockers.filter(function(c){return typeof c==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(c);}):[]));
       }).catch(function(){notice(bi('The request was not confirmed. Refresh the router state before trying again.','Запрос не подтверждён. Обновите состояние роутера перед повтором.'));}).finally(function(){MANUAL_SWITCH_PENDING=false;MANUAL_SWITCH_DIRECTION=null;buttons.forEach(function(node){node.disabled=true;});});
     }},label);n.hvManualDirection=direction;buttons.push(n);return n;
+  }
+  function signal(direction,active){
+    var icons=[
+      '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+      '<rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 18h.01M10 18h.01M17 14V2M2 6a16 16 0 0 1 20 0M5 9a11 11 0 0 1 9-1"/>',
+      '<rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01M6 18h.01"/>'
+    ];
+    var names=[bi('Computer','Компьютер'),bi('Router','Роутер'),bi('VPN server','VPN-сервер')],parts=[];
+    icons.forEach(function(paths,index){
+      if(index)parts.push(E('span',{'class':'hv-signal-wire','aria-hidden':'true'},[E('i',{}),E('i',{}),E('i',{})]));
+      var icon=E('span',{'class':'hv-signal-device','aria-hidden':'true'});
+      icon.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+paths+'</svg>';
+      parts.push(E('span',{'class':'hv-signal-node'},[icon,E('span',{},names[index])]));
+    });
+    var diagram=E('span',{'class':'hv-channel-signal','data-active':active?'true':'false','role':'img','aria-label':bi('Computer connected through the router to the VPN server','Компьютер подключён через роутер к VPN-серверу')},parts);
+    signals[direction]=diagram;return diagram;
   }
   function choice(direction,profile,role){
     var selected=selection.selected===direction,pending=model.busy||selection.moving;
@@ -95,7 +111,7 @@ function renderManualSwitch(status,inventory){
     var country=profile&&typeof countryLabel==='function'?countryLabel(profile):null;
     var indicator=E('strong',{'class':'hv-manual-health hv-health-'+health},healthText);labels[direction]=indicator;
     var action=!selected&&model[direction].allowed&&!pending?E('b',{'class':'hv-manual-enable'},bi('Turn on','Включить')):null;actionMarks[direction]=action;
-    var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,indicator,
+    var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,signal(direction,color==='green'&&selected&&!pending),indicator,
       !selected&&!model[direction].allowed&&!pending?E('small',{'class':'hv-manual-reason'},manualReason(model[direction].blockers)):null,
       action].filter(Boolean));
     card.setAttribute('class','hv-manual-channel hv-manual-'+color);card.setAttribute('aria-pressed',selected?'true':'false');card.setAttribute('data-selected',selected?'true':'false');
