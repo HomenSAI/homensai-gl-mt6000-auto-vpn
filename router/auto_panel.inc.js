@@ -219,37 +219,60 @@ function autoCodeNotice(code,extra){
   return E('p',{},[errorCodeLink(code),row?' · '+bi(row[2],row[3]):'',extra?' · '+extra:'']);
 }
 var autoRequestBusy=false,autoStopBusy=false,autoStartPending=false;
+var autoCommandPending=null,autoControlRefresh=function(){};
+function autoCommandOperation(status,now){
+  var model=autoControlModel(status,now),intent=status.auto_control||{},phase=intent.pair_phase;
+  if(autoCommandPending&&autoCommandPending.acknowledged&&model.fresh&&intent.requested_at>autoCommandPending.baseline){
+    var done=autoCommandPending.stop?['STOPPED','FAILED','HELD'].indexOf(phase)>=0:
+      ['RUNNING','FAILED','STOPPED','HELD'].indexOf(phase)>=0;
+    var legacyDone=!phase&&!model.awaiting&&!model.transitioning&&
+      (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
+    if(done||legacyDone)autoCommandPending=null;
+  }
+  if(autoCommandPending)return autoCommandPending.stop?'stopping':'starting';
+  if(phase==='STARTING')return 'starting';
+  if(phase==='STOPPING')return 'stopping';
+  if(phase==='UNKNOWN')return 'unknown';
+  if(model.awaiting||!phase&&model.transitioning)return intent.requested==='off'?'stopping':'starting';
+  return null;
+}
 function renderAutoControl(status,inventory){
   var ns=status.native_failover||{},intent=status.auto_control||{},model=autoControlModel(status,Date.now()/1000);
   var light=autoLightModel(status,inventory,Date.now()/1000),controlRevision=intent.control_revision;
   var actionLabel=E('span',{'class':'hv-auto-action'},'');
   function syncButton(){
-    var stop=model.stop||autoStartPending;button.disabled=stop?autoStopBusy:autoRequestBusy||autoStopBusy||inventory.error||!model.fresh;
-    if(emergencyButton)emergencyButton.disabled=autoStopBusy;
-    button.setAttribute('aria-label',stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'));
-    actionLabel.textContent=stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
+    var operation=autoCommandOperation(status,Date.now()/1000),stop=model.stop||autoStartPending;
+    button.disabled=!!(operation||autoRequestBusy||autoStopBusy||inventory.error||!model.fresh);
+    if(emergencyButton)emergencyButton.disabled=autoStopBusy||operation==='stopping';
+    var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
+    button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
+    actionLabel.textContent=operation?label:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
-    var stop=model.stop||autoStartPending;if(stop?autoStopBusy:autoRequestBusy||autoStopBusy)return;
+    var stop=model.stop||autoStartPending;if(autoCommandOperation(status,Date.now()/1000)||autoRequestBusy||autoStopBusy)return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
-    if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}syncButton();
+    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};
+    if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
     var call=rpc.declare({object:'homensai-vpn',method:stop?'native_stop':'native_start',params:stop?[]:['control_revision'],expect:{}});
     return (stop?call():call(controlRevision)).then(function(result){
+      if(autoCommandPending&&autoCommandPending.stop===stop){if(autoRequestAcknowledged(result,stop))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
       if(!stop&&result&&result.accepted===false&&(result.code==='CONTROL-REVISION-STALE'||Array.isArray(result.blockers)&&result.blockers.indexOf('CONTROL-REVISION-STALE')>=0)){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
       if(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9-]{2,95}$/.test(result.code)&&(result.accepted===false||result.queued===false))ui.addNotification(null,autoCodeNotice(result.code,result.settings_unverified?bi('router settings could not be read','настройки роутера не прочитаны'):''));
       else if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+autoBlockerText(code));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
-    }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}syncButton();});
+    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
   }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
   var emergencyButton=E('button',{'type':'button','class':'cbi-button cbi-button-negative hv-danger-action','click':function(){
-    if(autoStopBusy)return;autoStopBusy=true;syncButton();
+    if(autoStopBusy||autoCommandOperation(status,Date.now()/1000)==='stopping')return;
+    autoCommandPending={stop:true,baseline:intent.requested_at||0,acknowledged:false};autoStopBusy=true;autoControlRefresh();
     return rpc.declare({object:'homensai-vpn',method:'native_stop',expect:{}})().then(function(result){
+      if(autoCommandPending&&autoCommandPending.stop){if(autoRequestAcknowledged(result,true))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
       ui.addNotification(null,autoRequestAcknowledged(result,true)?E('p',{},bi('Stop requested. Monitoring continues.','Остановка запрошена. Мониторинг продолжается.')):autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
-    }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoStopBusy=false;syncButton();});
+    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoStopBusy=false;autoControlRefresh();});
   }},bi('Emergency Stop','Аварийный стоп'));
   var emergencyControl=E('div',{'class':'hv-auto-emergency'},[emergencyButton,E('small',{},bi('Cancels Auto and pending starts. Monitoring continues.','Отменяет Auto и ожидающие запросы запуска. Мониторинг продолжается.'))]);
-  syncButton();
+  autoControlRefresh=syncButton;syncButton();
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
   var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',Date.now()/1000,ns.source):profile(ns.source||settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',Date.now()/1000,ns.target):profile(ns.target||settings.plan_target);

@@ -322,10 +322,11 @@ def public_status():
     try:revision=current_revision()
     except (OSError,ValueError):revision=None
     if stopped.get('control_revision_failed') is True:revision=None
-    from pair_auto import public_intent
+    from pair_auto import public_intent, public_phase
     pair=public_intent()
     if pair and valid and pair.get('revision')==revision and pair.get('time',0)>stop:
         mode='on';requested=max(requested,pair['time']);until=0
     return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
+            'pair_phase':public_phase(),
             'control_revision':revision,
             'until':until,'reboot_autostart':False,'return_result':return_result}

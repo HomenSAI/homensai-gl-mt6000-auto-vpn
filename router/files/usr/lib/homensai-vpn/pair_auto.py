@@ -122,6 +122,22 @@ def public_intent():
     return row if row.get('mode') == 'on' else None
 
 
+def public_phase():
+    """Display phase includes queued work before the supervisor consumes it."""
+    try:
+        requested = intent()
+        state = read_state()
+    except (OSError, ValueError):
+        return 'UNKNOWN'
+    if requested.get('mode') == 'on':
+        if state.get('id') != requested.get('id') or state.get('revision') != requested.get('revision'):
+            return 'STARTING'
+        return state.get('phase', 'STARTING')
+    if state.get('phase') in ('STARTING', 'RUNNING', 'STOPPING'):
+        return 'STOPPING'
+    return state.get('phase')
+
+
 def budget(events, now, window=900, limit=3):
     """Three attempts per rolling 15 min; a new Start never resets this ledger."""
     if (not isinstance(events, list) or len(events) > 16 or type(now) not in (int, float)

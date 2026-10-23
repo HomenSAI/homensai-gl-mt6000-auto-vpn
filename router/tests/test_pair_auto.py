@@ -45,6 +45,24 @@ class Tests(unittest.TestCase):
         with auto_control.control_lock():pair.stop_locked(new)
         self.assertIsNone(pair.public_intent())
 
+    def test_display_phase_covers_queue_start_cleanup_and_terminal_failure(self):
+        self.assertIsNone(pair.public_phase())
+        pair.request(self.revision)
+        self.assertEqual(pair.public_phase(),'STARTING')
+        self.state.update(id=pair.intent()['id'],phase='STARTING')
+        pair.save(self.state)
+        self.assertEqual(pair.public_phase(),'STARTING')
+        self.state['phase']='RUNNING';pair.save(self.state)
+        self.assertEqual(pair.public_phase(),'RUNNING')
+        with auto_control.control_lock():pair.stop_locked(self.revision)
+        self.assertEqual(pair.public_phase(),'STOPPING')
+        self.state['phase']='STOPPED';pair.save(self.state)
+        self.assertEqual(pair.public_phase(),'STOPPED')
+        pair.request(self.revision)
+        self.assertEqual(pair.public_phase(),'STARTING')
+        self.state.update(id=pair.intent()['id'],phase='FAILED');pair.save(self.state)
+        self.assertEqual(pair.public_phase(),'FAILED')
+
     def test_unrecovered_owned_profiles_refuse_new_start(self):
         pair.save(self.state)
         self.assertIn('PAIR-RECOVERY-REQUIRED',pair.request(self.revision)['blockers'])
