@@ -1080,7 +1080,7 @@ function loadInventory(attempt){
 }
 
 function profileHealth(profile,now){
-  if(!profile.interface)return {state:'inactive',label:bi('Inactive','Неактивен')};
+  if(!profile.interface||profile.administrative_state==='disabled')return {state:'inactive',label:bi('Inactive','Неактивен')};
   if(!Number.isFinite(profile.time)||now-profile.time<0||now-profile.time>90)return {state:'unknown',label:bi('Unknown / stale','Неизвестно / устарело')};
   if(['CHECK-001','CHECK-LIMIT'].indexOf(profile.code)>=0)return {state:'checking',label:bi('Checking','Проверяется')};
   if(profile.code)return {state:'failed',label:bi('Failed','Сбой')};
@@ -2549,7 +2549,7 @@ function openOnboardingSettings(inventory,status){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha36';
+var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha37';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';

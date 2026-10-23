@@ -1,5 +1,5 @@
 function profileHealth(profile,now){
-  if(!profile.interface)return {state:'inactive',label:bi('Inactive','Неактивен')};
+  if(!profile.interface||profile.administrative_state==='disabled')return {state:'inactive',label:bi('Inactive','Неактивен')};
   if(!Number.isFinite(profile.time)||now-profile.time<0||now-profile.time>90)return {state:'unknown',label:bi('Unknown / stale','Неизвестно / устарело')};
   if(['CHECK-001','CHECK-LIMIT'].indexOf(profile.code)>=0)return {state:'checking',label:bi('Checking','Проверяется')};
   if(profile.code)return {state:'failed',label:bi('Failed','Сбой')};

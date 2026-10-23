@@ -57,13 +57,13 @@ class Reliability:
             if (not isinstance(row,dict) or set(row)-{'sequence','time','profile','kind','code','observed_duration_seconds'}
                     or type(row.get('sequence')) is not int or not last<row['sequence']<=d['sequence']
                     or not finite(row.get('time')) or not PROFILE.fullmatch(str(row.get('profile','')))
-                    or row.get('kind') not in ('FAILURE','RECOVERY') or 'code' in row and row['code'] not in BAD
+                    or row.get('kind') not in ('FAILURE','RECOVERY','DISABLED') or 'code' in row and row['code'] not in BAD
                     or 'observed_duration_seconds' in row and not finite(row['observed_duration_seconds'])):
                 raise ValueError('STATISTICS-EVENT')
             last=row['sequence']
         for key,row in d['profiles'].items():
             if (not PROFILE.fullmatch(key) or not isinstance(row,dict) or set(row)-{'time','state','opened','opened_observed'}
-                    or not finite(row.get('time')) or row.get('state') not in ('up','down','unknown')
+                    or not finite(row.get('time')) or row.get('state') not in ('up','down','off','unknown')
                     or row.get('opened') is not None and not finite(row['opened'])):
                 raise ValueError('STATISTICS-PROFILE')
         old=d.get('controller')
@@ -113,17 +113,19 @@ class Reliability:
         if previous and now<=previous['time']:return False
         if d['since'] is None:d['since']=now
         code=row.get('code')
-        state='down' if code in BAD else 'up' if code is None and row.get('dns_ok') is True and row.get('https_success',0)>=2 else 'unknown'
-        self.add('checks',1,now)
+        state='off' if row.get('administrative_state')=='disabled' or code=='PROFILE-INACTIVE' else 'down' if code in BAD else 'up' if code is None and row.get('dns_ok') is True and row.get('https_success',0)>=2 else 'unknown'
+        if state!='off':self.add('checks',1,now)
         if state=='down':self.add('failed_checks',1,now)
         contiguous=previous and 0<now-previous['time']<=max_gap
         if contiguous and previous['state'] in ('up','down'):
             self.seconds('observed_'+previous['state']+'_seconds',previous['time'],now)
-        elif previous:self.add('unknown_intervals',1,now)
+        elif previous and (not contiguous or previous['state']=='unknown'):self.add('unknown_intervals',1,now)
         # An open outage survives restart/unknown samples; recovery needs fresh success.
         opened=previous.get('opened') if previous else None
         observed=bool(previous and previous.get('opened_observed') and contiguous and state!='unknown')
-        if state=='down' and opened is None:
+        if state=='off' and opened is not None:
+            self.event(key,'DISABLED',now);opened=None;observed=False
+        elif state=='down' and opened is None:
             self.add('outages',1,now);self.event(key,'FAILURE',now,code);opened=now;observed=True
         elif state=='up' and opened is not None:
             self.add('recoveries',1,now)

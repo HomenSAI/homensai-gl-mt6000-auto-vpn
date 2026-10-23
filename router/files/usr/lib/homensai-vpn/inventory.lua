@@ -7,7 +7,7 @@ uci:foreach('network','interface',function(s)
     local protocol=s.proto=='wgclient' and 'wireguard' or 'openvpn'
     local key=protocol..':'..s.config
     if interfaces[key] then interfaces[key].ambiguous=true
-    else interfaces[key]={logical=s['.name'],protocol=protocol} end
+    else interfaces[key]={logical=s['.name'],protocol=protocol,administrative_state=s.disabled=='1' and 'disabled' or (s.disabled==nil or s.disabled=='0') and 'enabled' or 'unknown'} end
   end
 end)
 local profiles={}
@@ -28,7 +28,7 @@ for _,entry in ipairs({{'ovpnclient','openvpn'},{'wireguard','wireguard'}}) do
         group_id=group,profile_id=tostring(b or peer or ''),
         vendor_profile_group_id=valid_group and entry[2]..':'..group or json.null,
         vendor_tunnel_id=logical and entry[2]..':'..logical or json.null,
-        interface=logical or json.null}
+        interface=logical or json.null,administrative_state=bound and bound.administrative_state or 'unknown'}
     end
   end)
 end

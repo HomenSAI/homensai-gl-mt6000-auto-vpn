@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha36'
+VERSION = '0.9.0-alpha37'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -317,8 +317,8 @@ class Accounting:
             activity[identifier]={'name':value.get('name',identifier),'protocol':value.get('protocol','unknown'),'days':{},'periods':periods}
         data['activity']=activity;return data
 
-    def observe(self, result):
-        self.reliability.observe(result)
+    def observe(self, result, max_gap=90):
+        self.reliability.observe(result,max_gap=max_gap)
         identifier, stamp = result['id'], result['time']
         self.quality = {key: value for key, value in self.quality.items() if (value.get('last') or {}).get('time', 0) >= stamp-7*86400}
         bucket = str(int(stamp//3600))
@@ -464,7 +464,9 @@ def https_for_probe(device,mark,target,sink):
 def probe(profile):
     result = {'id': profile['id'], 'time': time.time(), 'code': 'CHECK-001',
               'scope': 'router-originated', 'lan_path_verified': False}
-    if not profile.get('interface'):
+    administrative_state=profile.get('administrative_state','unknown')
+    if administrative_state in ('enabled','disabled','unknown'):result['administrative_state']=administrative_state
+    if not profile.get('interface') or administrative_state=='disabled':
         result['code'] = 'PROFILE-INACTIVE'
         return result
     try:
@@ -649,7 +651,7 @@ def serve():
             else:
                 storage_error = 'CLOCK-001'
             for row in measured:
-                accounting.observe(row)
+                accounting.observe(row,max_gap=settings['interval']*3)
                 samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
                     'interface','vendor_tunnel_id','vendor_generation')})
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*7][-10000:]
@@ -686,9 +688,9 @@ def serve():
             from pair_auto import read_state as pair_state, intent as pair_intent
             try:active=active_controller(native,pair_state(),pair_intent(),time.time())
             except (OSError,ValueError,TypeError):active=False
-            accounting.reliability.controller(active,time.time())
+            accounting.reliability.controller(active,time.time(),max_gap=settings['interval']*3)
             from route_history import observed_route
-            if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time()):accounting.reliability.critical=True
+            if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time(),max_gap=settings['interval']*3):accounting.reliability.critical=True
             status['accounting']['reliability']=accounting.reliability.public()
             from native_history import read_public
             status['native_history']=read_public(PERSIST)

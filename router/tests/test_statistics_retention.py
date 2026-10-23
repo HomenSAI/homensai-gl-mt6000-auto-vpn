@@ -52,6 +52,19 @@ class ReliabilityTests(unittest.TestCase):
         self.assertEqual(r.data['totals'].get('outages',0),0)
         self.assertEqual(r.data['totals'].get('failed_checks',0),0)
 
+    def test_explicit_operator_disable_is_not_a_failed_probe_or_recovery(self):
+        r=Reliability();row=probe(BASE,'VPN-001');row['administrative_state']='disabled';r.observe(row)
+        self.assertEqual(r.data['totals'].get('failed_checks',0),0);self.assertEqual(r.data['totals'].get('outages',0),0)
+        self.assertEqual(r.data['totals'].get('checks',0),0)
+        r.observe(probe(BASE+10,'DNS-001'));r.observe(dict(probe(BASE+20,'PROFILE-INACTIVE'),administrative_state='disabled'))
+        self.assertEqual(r.data['events'][-1]['kind'],'DISABLED');self.assertEqual(r.data['totals'].get('recoveries',0),0)
+        self.assertIsNone(r.data['profiles']['wireguard:peer_3']['opened'])
+
+    def test_disabled_profile_does_not_dispatch_network_probes(self):
+        with patch.object(agent,'route_binding') as binding:
+            result=agent.probe({'id':'wireguard:peer_3','interface':'wgclient1','administrative_state':'disabled'})
+            binding.assert_not_called();self.assertEqual(result['code'],'PROFILE-INACTIVE')
+
     def test_auto_time_uses_observed_active_intervals_only(self):
         r=Reliability();r.controller(True,BASE);r.controller(True,BASE+10);r.controller(True,BASE+1000);r.controller(False,BASE+1010)
         self.assertEqual(r.data['totals']['auto_observed_seconds'],10)
