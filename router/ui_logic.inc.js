@@ -10,7 +10,7 @@ function selectedProfile(status,now){
   var native=status.native_failover||{};
   if(status.rpc_error||!Number.isFinite(native.time)||now-native.time<0||now-native.time>30)return null;
   if(['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(native.state)>=0)return native.target||null;
-  if(native.state==='OBSERVING'&&native.certified===true)return native.source||null;
+  if(native.state==='OBSERVING'&&(native.certified===true||native.mode==='continuous-pair'&&native.readiness_verified===true))return native.source||null;
   return null;
 }
 function sortServerCards(rows,selected,now){

@@ -334,7 +334,7 @@ function renderManualSwitch(status,inventory){
     }},label);buttons.push(n);return n;
   }
   function choice(direction,label){return E('div',{},[button(direction,label),!model[direction].allowed&&!model.busy?E('p',{'class':'hv-step-note'},manualReason(model[direction].blockers)):null].filter(Boolean));}
-  return E('div',{'class':'hv-manual-switch','data-manual-controls':'1'},[
+  return E('section',{'class':'hv-chart-card hv-manual-switch','data-manual-controls':'1'},[
     E('h3',{},bi('Manual channel switch','Ручное переключение канала')),
     E('p',{},bi('One explicit switch without enabling Auto. Calls and sessions may reconnect. The channel colors change only after fresh router confirmation. Emergency Stop remains available.','Одно явное переключение без включения Auto. Звонки и сессии могут переподключиться. Цвета каналов меняются только после свежего подтверждения роутером. Аварийный стоп остаётся доступен.')),
     E('div',{'class':'hv-wizard-actions'},[choice('reserve',bi('Switch to reserve','Переключить на резерв')),choice('primary',bi('Switch to primary','Переключить на основной'))]),
@@ -416,6 +416,31 @@ function renderAutoLive(status,inventory){
       return autoLiveCall().then(function(live){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,live,autoLiveContext.inventory);}).catch(function(){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,{rpc_error:true},autoLiveContext.inventory);});
     },2);
   }
+  return root;
+}
+function autoDaySegments(history,now){
+  if(!history||!Array.isArray(history.segments)||!Number.isFinite(now))return [];
+  return history.segments.slice(-4096).filter(function(row){return row&&Object.prototype.hasOwnProperty.call(AUTO_LIVE_COLORS,row.kind)&&Number.isFinite(row.start)&&Number.isFinite(row.end)&&row.start<=row.end&&row.end>now-86400&&row.start<=now&&row.end<=now+5;}).map(function(row){return {start:Math.max(now-86400,row.start),end:Math.min(now,row.end),kind:row.kind};});
+}
+function renderAutoDay(status){
+  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'}),now=Date.now()/1000;
+  var history=(((status||{}).accounting||{}).reliability||{}).route_history||{},segments=autoDaySegments(history,now);
+  var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
+  var from=now-86400,x=function(t){return left+(t-from)/86400*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:kind==='switching'?67:132;};
+  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Saved selected VPN route over the last 24 hours','Сохранённый VPN-маршрут за последние 24 часа')});
+  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['unknown',bi('No data / off','Нет / выкл.')]].forEach(function(row){
+    svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y(row[0]),y2:y(row[0]),stroke:'#cbd5e1','stroke-dasharray':'3 5'}));
+    svg.appendChild(autoLiveSvg('text',{x:6,y:y(row[0])+4,fill:'currentColor','font-size':12},row[1]));
+  });
+  var previous=null;
+  segments.forEach(function(row){
+    if(previous&&previous.end===row.start&&previous.kind!==row.kind)svg.appendChild(autoLiveSvg('line',{x1:x(row.start),x2:x(row.start),y1:y(previous.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS.switching,'stroke-width':2}));
+    var path=autoLiveSvg('line',{x1:x(row.start),x2:x(row.end),y1:y(row.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':3,'stroke-dasharray':row.kind==='unknown'?'3 5':'none'});
+    path.appendChild(autoLiveSvg('title',{},autoLiveLabel(row.kind)+' · '+new Date(row.start*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+' — '+new Date(row.end*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));svg.appendChild(path);previous=row;
+  });
+  [0,6,12,18,24].forEach(function(hours,index){var stamp=from+hours*3600;svg.appendChild(autoLiveSvg('text',{x:x(stamp),y:157,'text-anchor':index===0?'start':index===4?'end':'middle',fill:'currentColor','font-size':10},new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})));});
+  root.appendChild(E('h3',{},bi('Channel switching · last 24 hours','Переключение каналов · последние 24 часа')));root.appendChild(svg);
+  root.appendChild(E('p',{'class':'hv-muted'},bi('Saved on the router; survives page reload. Same colors as the live graph. Empty/dashed intervals were not observed. History begins with this update; earlier hours are not reconstructed.','История хранится на роутере и сохраняется при обновлении страницы. Цвета как на живом графике. Пустые и пунктирные интервалы не наблюдались. Запись начинается с этого обновления; прошлые часы не восстанавливаются.')));
   return root;
 }
 
@@ -715,7 +740,9 @@ function renderAutoControl(status,inventory){
   }
   var technicalCode=ns.state?ns.state+(ns.reason?' · '+ns.reason:'')+(model.fresh?'':' · STATUS-STALE'):'UNKNOWN';
   var liveChart=typeof renderAutoLive==='function'?renderAutoLive(status,inventory):null;
-  return E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,liveChart,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. Each switch is checked by the router. External LAN remains unverified.','Два выбранных VPN-канала. Каждый переход проверяет роутер. Внешний LAN остаётся непроверенным.'):bi('Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.','Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
+  var dayChart=typeof renderAutoDay==='function'?renderAutoDay(status):null;
+  var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),emergencyControl,liveChart,dayChart,holdReturn,checklist,diagram,E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. Each switch is checked by the router. External LAN remains unverified.','Два выбранных VPN-канала. Каждый переход проверяет роутер. Внешний LAN остаётся непроверенным.'):bi('Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.','Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))].filter(Boolean));
+  return E('div',{'class':'hv-auto-sections'},[automatic,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null].filter(Boolean));
 }
 
 /* Help inside the Telegram wizard: the same steps as Help -> "Telegram reports do not arrive", plus examples of both values. */
@@ -1049,7 +1076,7 @@ function selectedProfile(status,now){
   var native=status.native_failover||{};
   if(status.rpc_error||!Number.isFinite(native.time)||now-native.time<0||now-native.time>30)return null;
   if(['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(native.state)>=0)return native.target||null;
-  if(native.state==='OBSERVING'&&native.certified===true)return native.source||null;
+  if(native.state==='OBSERVING'&&(native.certified===true||native.mode==='continuous-pair'&&native.readiness_verified===true))return native.source||null;
   return null;
 }
 function sortServerCards(rows,selected,now){
@@ -1252,6 +1279,79 @@ function analyticsExportRows(kind,status,transitions){
 }
 var recoveryAnalyticsPeriod='day';
 try {var savedRecoveryPeriod=localStorage.getItem('homensai-vpn-recovery-period');if(['day','week','month'].indexOf(savedRecoveryPeriod)>=0)recoveryAnalyticsPeriod=savedRecoveryPeriod;}catch(error){}
+function controllerTransitionMarks(events){
+  var marks=Object.create(null),committed=Object.create(null),attempted=Object.create(null),returned=Object.create(null);
+  (events||[]).slice().sort(function(a,b){return a.sequence-b.sequence;}).forEach(function(event){
+    var id=event.attempt_id||event.sequence;
+    if(event.trial)return;
+    if(event.state==='APPLYING'&&!attempted[id]){attempted[id]=true;marks[event.sequence]={from:1,to:2,confirmed:false};}
+    if(event.state==='COMMITTED'&&!committed[id]){committed[id]=true;marks[event.sequence]={from:1,to:2,confirmed:true};}
+    if(event.state==='ROLLED-BACK'&&event.original_restored===true&&committed[id]&&!returned[id]){returned[id]=true;marks[event.sequence]={from:2,to:1,confirmed:true};}
+  });
+  return marks;
+}
+function renderTransitionBadge(event,marks){
+  var mark=marks[event.sequence];if(!mark)return null;
+  var label=(mark.confirmed?bi('Confirmed switch: ','Подтверждённый переход: '):bi('Switch attempt: ','Попытка перехода: '))+mark.from+' → '+mark.to;
+  return E('span',{'class':'hv-transition-badge'+(mark.confirmed?'':' hv-transition-pending'),'aria-label':label,'title':label},[
+    E('span',{'class':'hv-transition-from','aria-hidden':'true'},String(mark.from)),E('span',{'aria-hidden':'true'},'→'),E('span',{'class':'hv-transition-to','aria-hidden':'true'},String(mark.to))]);
+}
+function storedStatisticsRows(status){
+  var history=status.native_history||{},health=(status.accounting||{}).reliability||{};
+  var months=Array.from(new Set(Object.keys(history.months||{}).concat(Object.keys(health.months||{})))).sort().reverse();
+  function row(period,checks,control){return {period:period,outages:checks.outages,failed_checks:checks.failed_checks,
+    attempts:control.attempts,switches:control.automatic_committed,returns:control.returns,
+    auto_seconds:checks.auto_observed_seconds};}
+  return [row(bi('All recorded time','За всё время записи'),health.totals||{},history.totals||{}),
+    row(bi('Last 7 days','Последние 7 дней'),health.weekly||{},history.weekly||{})].concat(months.map(function(month){
+      return row(month,(health.months||{})[month]||{},(history.months||{})[month]||{});
+    }));
+}
+async function fetchStoredStatistics(kind,call){
+  var after=0,until=0,events=[],summary=null,asOf=null;
+  for(var page=0;page<101;page++){
+    var response=await call(kind,after,until);
+    if(!response||response.kind!==kind||!Array.isArray(response.events)||response.events.length>100||
+       !Number.isSafeInteger(response.until)||response.until<0||typeof response.has_more!=='boolean')throw new Error('STATISTICS-REPLY');
+    if(summary===null){summary=response.summary;until=response.until;asOf=response.as_of;}
+    if(response.until!==until||!Number.isSafeInteger(response.next_after)||response.next_after<after||response.next_after>until)throw new Error('STATISTICS-CURSOR');
+    var previous=after;
+    response.events.forEach(function(event){if(!Number.isSafeInteger(event.sequence)||event.sequence<=previous||event.sequence>until)throw new Error('STATISTICS-SEQUENCE');previous=event.sequence;});
+    if(response.events.length&&response.next_after!==previous)throw new Error('STATISTICS-CURSOR');
+    events=events.concat(response.events);
+    if(!response.has_more)return {kind:kind,as_of:asOf,detail_days:7,summary:summary,events:events};
+    if(response.next_after<=after)throw new Error('STATISTICS-CURSOR');after=response.next_after;
+  }
+  throw new Error('STATISTICS-PAGE-LIMIT');
+}
+function renderStoredStatistics(status){
+  var history=status.native_history||{},health=(status.accounting||{}).reliability||{},rows=storedStatisticsRows(status);
+  var headings=[bi('Period','Период'),bi('Outages','Эпизоды отказа'),bi('Failed checks','Неудачные проверки'),
+    bi('Attempts','Попытки'),bi('Confirmed switches','Подтверждённые переключения'),bi('Returns since update','Возвраты с обновления'),bi('Auto observed, hours','Наблюдение Auto, часов')];
+  var table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},headings.map(function(label){return E('th',{'scope':'col'},label);}))].concat(rows.map(function(row){
+    var values=[row.period,row.outages,row.failed_checks,row.attempts,row.switches,row.returns,
+      Number.isFinite(row.auto_seconds)?(row.auto_seconds/3600).toFixed(2):null];
+    return E('tr',{},values.map(function(value){return E('td',{},value==null?'—':String(value));}));
+  })));
+  var note=E('p'),button=E('button',{'type':'button','class':'cbi-button','click':async function(){
+    button.disabled=true;note.textContent=bi('Reading saved weekly detail…','Чтение сохранённых событий недели…');
+    try{
+      var call=rpc.declare({object:'homensai-vpn',method:'statistics',params:['kind','after','until'],expect:{}});
+      var failures=await fetchStoredStatistics('failures',call),controller=await fetchStoredStatistics('controller',call);
+      var data={schema:1,failures:failures,controller:controller};
+      var url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json;charset=utf-8'}));
+      var link=document.createElement('a');link.href=url;link.download='homensai-vpn-week-and-months.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      note.textContent=bi('Saved detail downloaded. Unobserved intervals remain unknown.','Сохранённые события выгружены. Интервалы без наблюдений остаются неизвестными.');
+    }catch(error){note.textContent=bi('Statistics could not be read. Try again; counters were not reset.','Не удалось прочитать статистику. Повторите выгрузку; счётчики не сброшены.');}
+    finally{button.disabled=false;}
+  }},bi('Download weekly detail and monthly summaries (JSON)','Скачать подробности недели и сводки по месяцам (JSON)'));
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Saved outage and switching statistics','Сохранённая статистика сбоев и переключений')),
+    E('p',{},bi('Detailed incidents: last 7 days. Monthly and lifetime counters survive detail expiry and service restart. A repeated status of one transaction is counted once. Missing data is shown as —.','Подробные события: последние 7 дней. Месячные и общие счётчики сохраняются после удаления старых подробностей и перезапуска службы. Повторные статусы одной транзакции считаются один раз. Нет данных — прочерк.')),
+    E('p',{},bi('Outages are observed failure episodes; several failed probes may belong to one outage. Auto time includes only observed intervals. Old missing events and outage durations are not reconstructed.','Сбой — наблюдаемый эпизод отказа; в нём может быть несколько неудачных проверок. Время Auto включает только наблюдавшиеся интервалы. Утраченные старые события и длительность сбоев не восстанавливаются.')),
+    E('p',{},bi('Counter coverage: ','Покрытие счётчиков: ')+(history.counter_accuracy||bi('No saved controller counters','Нет сохранённых счётчиков контроллера'))),
+    (health.details_dropped||history.detail_budget_dropped)?E('p',{'role':'status'},bi('Detail storage limit was reached; aggregate counters are retained.','Достигнут предел подробных событий; сводные счётчики сохранены.')):null,
+    E('div',{'class':'hv-dv-tablewrap'},[table]),button,note].filter(Boolean));
+}
 function renderTransitionAnalytics(status){
   var history=status.native_history||{},rows=retainedTransitions(history),now=Date.now()/1000;
   var summaryHost=E('div'),groupHost=E('div'),period=E('select',{'aria-label':bi('Recovery period','Период восстановления')},[
@@ -1317,7 +1417,7 @@ function renderTransitionAnalytics(status){
     E('p',{},bi('Covers only the events kept on the router. This is not a measure of home-network uptime.','Охватывает только события, сохранённые на роутере. Это не показатель доступности домашней сети.')),
     E('p',{},age),
     E('p',{'class':'hv-ready-intro'},bi('Calendar boundaries: ','Границы дней: ')+(history.timezone||'Europe/Berlin')+bi('. Event times are in UTC. Durations are measured from the retained APPLYING event to the event that confirmed the outcome, not the full outage. Retry episode numbers describe what the controller saw, not certified LAN outages. Categories overlap and must not be added up.','. Время событий указано в UTC. Длительность считается от сохранённого события APPLYING до события, подтвердившего результат, а не как полный простой. Номера повторных эпизодов описывают то, что видел контроллер, а не подтверждённые сбои LAN. Категории пересекаются, их нельзя суммировать.')),
-    period,summaryHost,groupHost,exports,table]);
+    renderStoredStatistics(status),period,summaryHost,groupHost,exports,table]);
 }
 
 function renderDecisionExplanation(status,inventory){
@@ -1924,7 +2024,7 @@ function vendorDisplaySelected(status,inventory,now){
   var native=(status||{}).native_failover||{},role=null;
   if((status||{}).rpc_error||!vendorFresh(native.time,now,30))return null;
   if(['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(native.state)>=0)role='target';
-  else if(native.state==='OBSERVING'&&native.certified===true)role='source';
+  else if(native.state==='OBSERVING'&&(native.certified===true||native.mode==='continuous-pair'&&native.readiness_verified===true))role='source';
   var row=role?vendorDisplayMember(status,inventory,role,now,native[role]):null;
   return row?row.id:null;
 }
@@ -2434,7 +2534,7 @@ function openOnboardingSettings(inventory,status){
 
 /* Installed identity and part-mismatch diagnosis. The router program and this page are shipped together; they can differ after
    an interrupted upgrade or a cached page. Build values are written by the page generator. */
-var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha35';
+var UI_BUILD='dashboard69',UI_AGENT='0.9.0-alpha36';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';
@@ -2688,7 +2788,7 @@ function showErrorCode(code){
     if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;
     var row=document.querySelector('[data-error-code="'+key+'"]');if(!row)return;
     var fix=row.nextElementSibling;if(fix&&fix.classList&&fix.classList.contains('hv-errfix')&&fix.hidden){var b=row.querySelector('button');if(b)b.click();}
-    row.scrollIntoView({block:'center'});row.classList.add('hv-errflash');setTimeout(function(){row.classList.remove('hv-errflash');},3000);
+    document.querySelectorAll('.hv-err-selected').forEach(function(old){old.classList.remove('hv-err-selected');});row.classList.add('hv-err-selected');row.scrollIntoView({block:'center'});
   },150);
 }
 function renderPlanBlockers(codes,status){
@@ -3056,6 +3156,7 @@ var ERROR_EXTRA_ROWS=[
 ];
 // Families: any code that starts with the prefix gets this explanation (internal checks of the offline models and storage formats).
 var ERROR_FAMILIES=[
+ ['STATISTICS-','data','Saved statistics check','Проверка сохранённой статистики','The saved counters, incident details or download cursor failed validation. Unverified data is not presented as a successful observation.','Сохранённые счётчики, события или позиция выгрузки не прошли проверку. Непроверенные данные не считаются успешным наблюдением.','Retry the download. If the error persists, preserve both checkpoint files and inspect storage; do not reset the counters.','Повторите выгрузку. Если ошибка повторяется, сохраните оба файла контрольных точек и проверьте хранилище; не сбрасывайте счётчики.','STATISTICS-CURSOR: restart the download from the first page.','STATISTICS-CURSOR: начните выгрузку с первой страницы.'],
  ['PREP-','platform','Persistent router preparation (PREP-…)','Постоянная подготовка роутера (PREP-…)','A saved startup or acceleration prerequisite is missing, changed or unverified. A passing dependency check alone does not establish safe native operation.','Постоянная настройка запуска или ускорения отсутствует, изменена либо не проверена. Наличия зависимостей недостаточно для безопасного переключения.','Review the preparation card and the documented original values/undo procedure. Do not disable a working DNS owner or force-unload drivers.','Проверьте карточку подготовки и инструкцию с исходными значениями и отменой изменений. Не отключайте рабочий DNS и не выгружайте драйверы принудительно.'],
  ['PAIR-','internal','Two-channel Auto (PAIR-…)','Авторежим двух каналов (PAIR-…)','The two-channel controller is preparing profiles or refused an unverified operation. Router probes do not certify an external LAN client.','Контроллер двух каналов готовит профили либо отклонил непроверенное действие. Проверки роутера не подтверждают внешний LAN-клиент.','Read the current phase and reason. Stop remains available; keep the recovery record and do not delete it to bypass a refusal.','Прочитайте текущий этап и причину. Остановка остаётся доступной; сохраните запись восстановления и не удаляйте её ради обхода отказа.'],
  ['CASCADE-','internal','Internal check of the fallback model (CASCADE-…)','Внутренняя проверка модели каскада (CASCADE-…)','A safety check of the model that plans server → channel → protocol switching refused a step. These checks exist to stop a wrong or stale step; the model is not applied to the router in this version.','Защитная проверка модели, планирующей переключение сервер → канал → протокол, отклонила шаг. Эти проверки нужны, чтобы остановить неверный или устаревший шаг; в этой версии модель на роутер не применяется.','Nothing to do for a normal user. Send the full code to support if it appears on a real router.','Обычному пользователю делать ничего не нужно. Если код появился на настоящем роутере, отправьте его полностью в поддержку.','CASCADE-PROOF-EXPIRED: a confirmation arrived too late and was ignored.','CASCADE-PROOF-EXPIRED: подтверждение пришло слишком поздно и было проигнорировано.'],
@@ -3247,7 +3348,7 @@ var AUTO_NAMES={
   if(typeof ERROR_EXTRA_ROWS!=='undefined')ERROR_EXTRA_ROWS.forEach(function(r){if(!have[r[0]]){ERROR_ROWS.push(r);have[r[0]]=true;}});
   if(typeof ERROR_FAMILIES!=='undefined')ERROR_FAMILIES.forEach(function(f){var code=f[0]+'*';if(!have[code]){ERROR_ROWS.push([code].concat(f.slice(1)));have[code]=true;}});
 })();
-var ERROR_GROUP_OF={},errorTable=null;
+var ERROR_GROUP_OF={},errorTable=null,ERROR_TABLE_STATE={query:'',open:Object.create(null)};
 (function(){
   // Auto start blockers come from the dictionary of the Auto panel; they get a readable name and are grouped under Switching.
   var seen={};ERROR_ROWS.forEach(function(r){seen[r[0]]=true;});
@@ -3266,10 +3367,12 @@ var ERROR_GROUP_OF={},errorTable=null;
 function renderErrorTable(){
   var search=E('input',{'type':'search','class':'hv-search','placeholder':bi('Search a code or a word','Поиск по коду или слову'),'aria-label':bi('Search error codes','Поиск по кодам ошибок')});
   var host=E('div',{'class':'hv-errtable'});
+  search.value=ERROR_TABLE_STATE.query;
   function matches(r,q){return !q||(r.join(' ')).toLowerCase().indexOf(q)>=0;}
   function draw(){
     while(host.firstChild)host.removeChild(host.firstChild);
     var q=search.value.trim().toLowerCase();
+    ERROR_TABLE_STATE.query=search.value;
     ERROR_GROUPS.forEach(function(g){
       var rows=ERROR_ROWS.filter(function(r){return r[1]===g[0]&&matches(r,q);});
       if(!rows.length)return;
@@ -3277,9 +3380,10 @@ function renderErrorTable(){
       var table=E('table',{'class':'table hv-errors'},[E('tr',{},[E('th',{},bi('Code','Код')),E('th',{},bi('Name','Название')),E('th',{},bi('What it means','Что означает')),E('th',{},bi('What to do','Что делать'))])]);
       rows.forEach(function(r){
         var fixRow=null;
-        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},bi('How to fix','Как исправить')):null;
+        var expanded=ERROR_TABLE_STATE.open[r[0]]===true;
+        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},expanded?bi('Hide','Скрыть'):bi('How to fix','Как исправить')):null;
         table.appendChild(E('tr',{'data-error-code':r[0]},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
-        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=true;table.appendChild(fixRow);}
+        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
       });
       host.appendChild(table);
     });
@@ -3430,6 +3534,25 @@ function dvEvents(status,rows,limit){
   });
 }
 function dvLamp(profile,now){var h=profileHealth(profile,now);return E('span',{'class':'hv-server-lamp hv-lamp-'+h.state,'role':'img','aria-label':h.label,'title':h.label});}
+function dvChannelUse(profile,m,status){
+  var h=profileHealth(profile,m.now),settings=m.settings||{},primary=m.primary&&m.primary.id===profile.id||settings.plan_source===profile.id||settings.plan_source_tunnel&&settings.plan_source_tunnel===profile.vendor_tunnel_id;
+  var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
+  var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
+  var result={role:role,label:h.label,kind:'grey',state:'unknown'};
+  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time<0||m.now-status.time>90){result.label=bi('No fresh confirmation','Нет свежего подтверждения');return result;}
+  if(h.state==='failed'){result.kind='red';result.state='failed';return result;}
+  if(h.state==='inactive'){result.label=bi('Off','Выключен');result.state='off';return result;}
+  if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
+  var ns=status.native_failover||{};
+  if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='yellow';result.state='switching';result.label=bi('Switching','Переключение');return result;}
+  if(h.state==='healthy'){
+    if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Carries traffic','Пропускает трафик');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Ready, waiting','Готов, ожидает');}
+    else result.label=bi('Connected; route unconfirmed','Подключён; путь не подтверждён');
+  }
+  return result;
+}
+function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
 function dvModel(status,inventory,rows,month){
@@ -3459,9 +3582,9 @@ function dvServerRows(status,rows,m){
   var sorted=sortServerCards(rows,m.selected,m.now);
   if(!sorted.length)return E('p',{'class':'hv-dv-empty'},bi('No VPN profiles found on the router.','На роутере не найдено VPN-профилей.'));
   return E('div',{'class':'hv-dv-rows'},sorted.map(function(p){
-    var h=profileHealth(p,m.now),r=m.rank[p.id],pct=dvPercent(r);
-    return E('div',{'class':'hv-dv-row','data-profile':p.id},[dvLamp(p,m.now),
-      E('div',{'class':'hv-dv-name'},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},protocolLabel(p)+' · '+(p.interface?bi('Group: ','Группа: ')+(p.channel||'default'):bi('not connected','не подключён')))]),
+    var h=profileHealth(p,m.now),use=dvChannelUse(p,m,status),r=m.rank[p.id],pct=dvPercent(r);
+    return E('div',{'class':'hv-dv-row','data-profile':p.id,'data-route-state':use.state},[dvChannelLamp(use),
+      E('div',{'class':'hv-dv-name'},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},use.role+' · '+protocolLabel(p)+' · '+use.label)]),
       dvSpark(dvSeries(status,p.id,12)),
       E('span',{'class':'hv-dv-num'},h.state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0)+' '+bi('ms','мс'):'—'),
       E('span',{'class':'hv-dv-num'},dvPercentText(pct))]);
@@ -3488,11 +3611,10 @@ function renderDesignB(ctx,m){
   var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('Working VPNs','Работающие VPN'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
     dvKpi(bi('Problems today','Проблемы сегодня'),m.passPercent==null?bi('No data','Нет данных'):m.passPercent>=99.5?bi('None','Нет'):bi('Some','Есть')),dvKpi(bi('Used this month','Использовано за месяц'),m.traffic)]);
   var list=E('div',{'class':'hv-dv-list'},sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
-    var h=profileHealth(p,m.now),country=countryOf(p),role=m.selected===p.id?bi('In use','Используется'):m.reserve&&p.id===m.reserve.id?bi('Backup','Резерв'):p.interface?bi('Connected','Подключён'):bi('Not connected','Не подключён');
-    var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';
+    var h=profileHealth(p,m.now),country=countryOf(p),use=dvChannelUse(p,m,ctx.status),role=use.role,kind=use.kind;
     return E('div',{'class':'hv-dv-item','data-profile':p.id},[E('span',{'class':'hv-dv-flag','aria-hidden':'true'},country?country.code.toUpperCase():'··'),
       E('div',{},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},role+' · '+protocolLabel(p))]),
-      E('span',{'class':'hv-dv-statuscol','data-health':h.state},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{},h.state==='healthy'?bi('Works','Работает'):h.state==='inactive'?bi('Off','Выкл.'):h.label)])]);
+      E('span',{'class':'hv-dv-statuscol','data-health':h.state,'data-route-state':use.state},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{},use.label)])]);
   }));
   var autoOn=m.light.key==='ok';
   var q1=m.primary?E('div',{'class':'hv-dv-q'},[E('b',{},bi('What happens if '+(countryName(m.primary)||'the primary')+' stops working?','Что будет, если '+(countryName(m.primary)||'основной')+' перестанет работать?')),
@@ -3523,8 +3645,8 @@ function renderDesignC(ctx,m){
   var log=dvCard(bi('Event log','Журнал'),[lines.length?E('div',{'class':'hv-dv-log'},lines.slice(0,10).map(function(l){return dvLogLine(l.time,l.kind,l.text,l.codes);})):E('p',{'class':'hv-dv-empty'},bi('No checks recorded yet.','Проверок пока нет.'))],'hv-dv-logcard');
   var head=['St','Server','Proto','Group','HTTPS ms','Passed','Checks','Confidence'].map(function(h,i){return E('th',{'scope':'col','class':i>=4&&i<=6?'n':null},[bi(h,{'St':'Ст.','Server':'Сервер','Proto':'Прот.','Group':'Группа','HTTPS ms':'HTTPS, мс','Passed':'Успех','Checks':'Проверок','Confidence':'Достоверность'}[h])]);});
   var body=sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
-    var h=profileHealth(p,m.now),r=m.rank[p.id]||{n:0},mark=m.selected===p.id?'● use':h.state==='healthy'?'● ready':h.state==='inactive'?'○ off':'◐ '+h.state;
-    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id},[E('td',{'class':'hv-dv-st hv-dv-st-'+h.state},mark),E('td',{},countryName(p)||customName(p)||'—'),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
+    var h=profileHealth(p,m.now),use=dvChannelUse(p,m,ctx.status),r=m.rank[p.id]||{n:0},mark=use.label;
+    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id,'data-route-state':use.state},[E('td',{'class':'hv-dv-st'},[dvChannelLamp(use),mark]),E('td',{},[countryName(p)||customName(p)||'—',E('small',{},use.role)]),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
       E('td',{'class':'n'},h.state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'),E('td',{'class':'n'},dvPercentText(dvPercent(r))),E('td',{'class':'n'},String(r.n||0)),E('td',{},dvConfidence(r.n||0))]);});
   var table=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-tablewrap'},E('table',{},[E('thead',{},E('tr',{},head)),E('tbody',{},body)]))],'hv-dv-servers');
   var keys=E('div',{'class':'hv-dv-keys'},[E('span',{},[E('kbd',{},'1'),'–',E('kbd',{},'9'),bi('sections','разделы')]),E('span',{},[E('kbd',{},'/'),bi('search','поиск')]),E('span',{},bi('Error codes are links to the error table','Коды ошибок — ссылки на таблицу ошибок'))]);
@@ -3968,7 +4090,7 @@ function trafficDayChart(vpnDays,wanDays,days,scope,onScope){
     if((i%Math.max(1,Math.ceil(n/7))===0&&(n-1-i)>=Math.ceil(n/7)/2)||i===n-1)svg.appendChild(svgNode('text',{x:cx.toFixed(1),y:240,fill:'var(--muted)','font-size':11,'text-anchor':'middle'},d.day.slice(5)));
   });
   var legend=E('div',{'class':'hv-legend hv-legend-interactive'},[E('span',{'class':'hv-legend-item'},[E('i',{'style':'background:'+DOWN}),bi('Download ↓','Скачивание ↓')]),E('span',{'class':'hv-legend-item'},[E('i',{'style':'background:'+UP}),bi('Upload ↑','Отдача ↑')])]);
-  var select=E('select',{'aria-label':bi('Traffic to show','Какой трафик показать'),'change':function(ev){onScope(ev.target.value);}},[E('option',{value:'vpn'},bi('Through the VPNs','Через VPN')),E('option',{value:'wan'},bi('Through the WAN (provider)','Через WAN (провайдер)'))]);select.value=scope;
+  var select=E('select',{'class':'hv-traffic-scope','aria-label':bi('Traffic to show','Какой трафик показать'),'change':function(ev){onScope(ev.target.value);}},[E('option',{value:'vpn'},bi('Through the VPNs','Через VPN')),E('option',{value:'wan'},bi('Through the WAN (provider)','Через WAN (провайдер)'))]);select.value=scope;
   [svg,tip,legend].forEach(function(node){wrap.appendChild(node);});
   return E('div',{},[E('div',{'class':'hv-native-actions'},[select]),wrap,E('small',{},bi('Last '+n+' days, Europe/Berlin. A grey dash means there was no valid data that day (not zero traffic). Point at a day to see the numbers.','Последние '+n+' дней, Europe/Berlin. Серая черта означает, что за этот день нет достоверных данных (это не нулевой трафик). Наведите курсор на день, чтобы увидеть числа.'))]);
 }
@@ -4073,6 +4195,54 @@ function installErrorLinks(root){
   linkifyErrorCodes(root);
 }
 
+/* Preserve reading position across synchronous redraws and page round trips. */
+var pageViewportStates=Object.create(null);
+function capturePageViewport(root,page){
+  if(!root||!root.isConnected)return null;
+  var section=root.querySelector('[data-hv-page="'+page+'"]')||root;
+  var saved={page:page,x:window.scrollX||0,y:window.scrollY||window.pageYOffset||0,anchor:null,details:[]};
+  var candidates=section.querySelectorAll('#hv-auto-live-chart,#hv-auto-day-chart,[data-error-code]');
+  for(var i=0;i<candidates.length;i++){
+    var node=candidates[i],rect=node.getBoundingClientRect();
+    if(rect.bottom>0&&rect.top<(window.innerHeight||800)){
+      saved.anchor={id:node.id||null,code:node.getAttribute('data-error-code'),top:rect.top};break;
+    }
+  }
+  section.querySelectorAll('details').forEach(function(node,index){saved.details.push({index:index,open:node.open});});
+  return saved;
+}
+function restorePageViewport(root,saved){
+  if(!root||!root.isConnected||!saved||!Number.isFinite(saved.y))return;
+  var section=root.querySelector('[data-hv-page="'+saved.page+'"]')||root;
+  var details=section.querySelectorAll('details');
+  (saved.details||[]).forEach(function(item){if(details[item.index])details[item.index].open=item.open;});
+  var top=saved.y,anchor=saved.anchor,node=null;
+  if(anchor){
+    if(anchor.id==='hv-auto-live-chart'||anchor.id==='hv-auto-day-chart')node=section.querySelector('#'+anchor.id);
+    else if(typeof anchor.code==='string'&&/^[A-Z0-9*-]{1,96}$/.test(anchor.code))node=section.querySelector('[data-error-code="'+anchor.code+'"]');
+    if(node)top=(window.scrollY||window.pageYOffset||0)+node.getBoundingClientRect().top-anchor.top;
+  }
+  window.scrollTo({left:saved.x||0,top:Math.max(0,top),behavior:'instant'});
+}
+function rememberPageViewport(root,page){var saved=capturePageViewport(root,page);if(saved)pageViewportStates[page]=saved;return saved;}
+function revisitPageViewport(root,page){restorePageViewport(root,pageViewportStates[page]||{page:page,x:0,y:0,details:[]});}
+function installViewportPersistence(root,getPage){
+  window.addEventListener('pagehide',function(){
+    try{rememberPageViewport(root,getPage());sessionStorage.setItem('homensai-vpn-viewports',JSON.stringify({path:window.location.pathname,time:Date.now(),pages:pageViewportStates}));}catch(error){}
+  });
+  try{
+    var navigation=performance.getEntriesByType('navigation')[0];
+    if(!navigation||['reload','back_forward'].indexOf(navigation.type)<0)return;
+    var old=JSON.parse(sessionStorage.getItem('homensai-vpn-viewports')||'null');
+    if(!old||old.path!==window.location.pathname||Date.now()-old.time>86400000)return;
+    Object.keys(old.pages||{}).slice(0,20).forEach(function(key){
+      var value=old.pages[key];
+      if(/^[a-z]+$/.test(key)&&value&&value.page===key&&Number.isFinite(value.y)&&value.y>=0&&value.y<10000000)pageViewportStates[key]=value;
+    });
+    requestAnimationFrame(function(){revisitPageViewport(root,getPage());});
+  }catch(error){}
+}
+
 return view.extend({
   handleSave:null,handleSaveApply:null,handleReset:null,
   load:function(){return Promise.all([loadInventory(0),statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};}),loadBrand()]);},
@@ -4093,12 +4263,12 @@ return view.extend({
     function validTab(key){return tabs.some(function(t){return t[0]===key;});}
     var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);
     function showPage(key){
-      var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;if(appRoot)appRoot.setAttribute('data-hv-active',key);
+      var oldTab=activeTab;if(oldTab!==key)rememberPageViewport(appRoot||panel,oldTab);if(!validTab(key))key='overview';activeTab=key;if(appRoot)appRoot.setAttribute('data-hv-active',key);
       var scope=appRoot||panel;scope.querySelectorAll('[data-hv-page]').forEach(function(node){node.hidden=node.getAttribute('data-hv-page')!==key;});
       if(appRoot)appRoot.querySelectorAll('[data-hv-tab]').forEach(function(node){node.setAttribute('aria-current',node.getAttribute('data-hv-tab')===key?'page':'false');});
       if(appRoot){appRoot.querySelectorAll('.hv-connectivity-control').forEach(function(node){node.hidden=key!=='overview';});}
       if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);
-      if(oldTab!==key){try{window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}}
+      if(oldTab!==key)revisitPageViewport(appRoot||panel,key);
       if(heading)heading.textContent=key==='overview'?bi('Your internet under control','Ваш интернет под контролем'):tabs.filter(function(t){return t[0]===key;})[0][2];
       if(oldTab!==key&&heading&&document.body.contains(heading)){try{heading.focus({preventScroll:true});}catch(focusError){}}
       if(subtitle&&PAGE_SUBTITLES[key])subtitle.textContent=bi(PAGE_SUBTITLES[key][0],PAGE_SUBTITLES[key][1]);
@@ -4109,7 +4279,7 @@ return view.extend({
       pages[key].appendChild(node);return node;
     }
     function sortableTables(){
-      panel.querySelectorAll('table').forEach(function(table,index){
+      panel.querySelectorAll('table').forEach(function(table,index){if(table.closest('.hv-errtable'))return;
         var headers=table.querySelectorAll('tr:first-child th'),tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+':'+Array.from(headers).map(function(th){return th.textContent;}).join('|');
         function applySort(column,direction){
           var entries=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1).map(function(row,i){return {row:row,i:i,value:row.children[column]?(row.children[column].getAttribute('data-sort-value')||row.children[column].textContent||''):''};});
@@ -4130,6 +4300,8 @@ return view.extend({
     }
 
     function draw(status){
+      var refreshViewport=rememberPageViewport(appRoot||panel,activeTab);
+      try {
       if(pointerHeld){deferredStatus=status;updateConnectivityCheck(status);return;}
       var controlFocus=panel.contains(document.activeElement)&&document.activeElement.matches('button,input[type=checkbox],select')?{page:(document.activeElement.closest('[data-hv-page]')||{dataset:{hvPage:activeTab}}).dataset.hvPage,label:document.activeElement.getAttribute('aria-label'),text:document.activeElement.textContent,tag:document.activeElement.tagName}:null;
       updateConnectivityCheck(status);
@@ -4198,7 +4370,8 @@ return view.extend({
       if(nh.error)historyPanel.appendChild(badge(nh.error));
       if(nh.restored_from_backup)historyPanel.appendChild(E('p',{},'History loaded from the previous valid backup; the latest event may be missing.'));
       var historyTable=E('table',{'class':'table'},[E('tr',{},[E('th',{},bi('Time · Berlin','Время · Берлин')),E('th',{},bi('State','Состояние')),E('th',{},bi('Profiles','Профили')),E('th',{},bi('Reason','Причина'))])]);
-      (nh.events||[]).slice().reverse().forEach(function(event){var names=[event.source,event.target].filter(Boolean).map(function(id){return (rows.filter(function(p){return p.id===id;})[0]||{}).name||id;});historyTable.appendChild(E('tr',{},[E('td',{'data-sort-value':event.time},new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})),cell(event.state+(event.trial?' · '+'trial':'')),cell(names.join(' → ')),cell((event.codes||[]).join(' · '))]));});historyPanel.appendChild(historyTable);
+      var transitionMarks=controllerTransitionMarks(nh.events||[]);
+      (nh.events||[]).slice().reverse().forEach(function(event){var names=[event.source,event.target].filter(Boolean).map(function(id){return (rows.filter(function(p){return p.id===id;})[0]||{}).name||id;});historyTable.appendChild(E('tr',{},[E('td',{'data-sort-value':event.time},new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})),E('td',{},[renderTransitionBadge(event,transitionMarks),event.state+(event.trial?' · '+'trial':'')].filter(Boolean)),cell(names.join(' → ')),cell((event.codes||[]).join(' · '))]));});historyPanel.appendChild(historyTable);
       var monthly=E('table',{'class':'table'},[E('tr',{},[E('th',{},bi('Month','Месяц')),E('th',{},bi('Attempts','Попытки')),E('th',{},bi('Trials passed','Тестов пройдено')),E('th',{},bi('Automatic commits','Автопереключений')),E('th',{},bi('Rollbacks','Откатов')),E('th',{},bi('Blocked episodes','Заблокированных эпизодов'))])]);
       Object.keys(nh.months||{}).sort().reverse().forEach(function(month){var c=nh.months[month];monthly.appendChild(E('tr',{},[cell(month),cell(c.attempts),cell(c.trials_passed),cell(c.committed),cell(c.rollbacks),cell(c.blocked_episodes)]));});historyPanel.appendChild(monthly);put('events',historyPanel);put('events',renderTransitionAnalytics(status));put('events',renderVendorEvents(status,inventory));
 
@@ -4229,6 +4402,7 @@ return view.extend({
       if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));
       put('statistics',renderMonitorInfo(status,inventory));put('events',errorTable||(errorTable=renderErrorTable()));
       installErrorLinks(appRoot);sortableTables();showPage(activeTab);if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}
+      } finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport(appRoot||panel,refreshViewport);}
     }
     draw(data[1]);
     poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);
@@ -4287,7 +4461,7 @@ return view.extend({
       panel.addEventListener('pointerdown',function(){pointerHeld=true;});
       ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});
       showPage(activeTab);window.addEventListener('hashchange',function(){showPage(window.location.hash.slice(1));});
-      initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});
+      initSidebarLayout(appRoot);installViewportPersistence(appRoot,function(){return activeTab;});installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});
       return appRoot;
     });
   }

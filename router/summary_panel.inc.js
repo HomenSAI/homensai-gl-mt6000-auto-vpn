@@ -91,7 +91,7 @@ function showErrorCode(code){
     if(!/^[A-Z][A-Z0-9*-]{1,95}$/.test(key))return;
     var row=document.querySelector('[data-error-code="'+key+'"]');if(!row)return;
     var fix=row.nextElementSibling;if(fix&&fix.classList&&fix.classList.contains('hv-errfix')&&fix.hidden){var b=row.querySelector('button');if(b)b.click();}
-    row.scrollIntoView({block:'center'});row.classList.add('hv-errflash');setTimeout(function(){row.classList.remove('hv-errflash');},3000);
+    document.querySelectorAll('.hv-err-selected').forEach(function(old){old.classList.remove('hv-err-selected');});row.classList.add('hv-err-selected');row.scrollIntoView({block:'center'});
   },150);
 }
 function renderPlanBlockers(codes,status){

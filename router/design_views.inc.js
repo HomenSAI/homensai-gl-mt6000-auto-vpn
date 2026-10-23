@@ -47,6 +47,25 @@ function dvEvents(status,rows,limit){
   });
 }
 function dvLamp(profile,now){var h=profileHealth(profile,now);return E('span',{'class':'hv-server-lamp hv-lamp-'+h.state,'role':'img','aria-label':h.label,'title':h.label});}
+function dvChannelUse(profile,m,status){
+  var h=profileHealth(profile,m.now),settings=m.settings||{},primary=m.primary&&m.primary.id===profile.id||settings.plan_source===profile.id||settings.plan_source_tunnel&&settings.plan_source_tunnel===profile.vendor_tunnel_id;
+  var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
+  var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
+  var result={role:role,label:h.label,kind:'grey',state:'unknown'};
+  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time<0||m.now-status.time>90){result.label=bi('No fresh confirmation','Нет свежего подтверждения');return result;}
+  if(h.state==='failed'){result.kind='red';result.state='failed';return result;}
+  if(h.state==='inactive'){result.label=bi('Off','Выключен');result.state='off';return result;}
+  if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
+  var ns=status.native_failover||{};
+  if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='yellow';result.state='switching';result.label=bi('Switching','Переключение');return result;}
+  if(h.state==='healthy'){
+    if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Carries traffic','Пропускает трафик');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Ready, waiting','Готов, ожидает');}
+    else result.label=bi('Connected; route unconfirmed','Подключён; путь не подтверждён');
+  }
+  return result;
+}
+function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
 function dvModel(status,inventory,rows,month){
@@ -76,9 +95,9 @@ function dvServerRows(status,rows,m){
   var sorted=sortServerCards(rows,m.selected,m.now);
   if(!sorted.length)return E('p',{'class':'hv-dv-empty'},bi('No VPN profiles found on the router.','На роутере не найдено VPN-профилей.'));
   return E('div',{'class':'hv-dv-rows'},sorted.map(function(p){
-    var h=profileHealth(p,m.now),r=m.rank[p.id],pct=dvPercent(r);
-    return E('div',{'class':'hv-dv-row','data-profile':p.id},[dvLamp(p,m.now),
-      E('div',{'class':'hv-dv-name'},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},protocolLabel(p)+' · '+(p.interface?bi('Group: ','Группа: ')+(p.channel||'default'):bi('not connected','не подключён')))]),
+    var h=profileHealth(p,m.now),use=dvChannelUse(p,m,status),r=m.rank[p.id],pct=dvPercent(r);
+    return E('div',{'class':'hv-dv-row','data-profile':p.id,'data-route-state':use.state},[dvChannelLamp(use),
+      E('div',{'class':'hv-dv-name'},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},use.role+' · '+protocolLabel(p)+' · '+use.label)]),
       dvSpark(dvSeries(status,p.id,12)),
       E('span',{'class':'hv-dv-num'},h.state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0)+' '+bi('ms','мс'):'—'),
       E('span',{'class':'hv-dv-num'},dvPercentText(pct))]);
@@ -105,11 +124,10 @@ function renderDesignB(ctx,m){
   var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('Working VPNs','Работающие VPN'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
     dvKpi(bi('Problems today','Проблемы сегодня'),m.passPercent==null?bi('No data','Нет данных'):m.passPercent>=99.5?bi('None','Нет'):bi('Some','Есть')),dvKpi(bi('Used this month','Использовано за месяц'),m.traffic)]);
   var list=E('div',{'class':'hv-dv-list'},sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
-    var h=profileHealth(p,m.now),country=countryOf(p),role=m.selected===p.id?bi('In use','Используется'):m.reserve&&p.id===m.reserve.id?bi('Backup','Резерв'):p.interface?bi('Connected','Подключён'):bi('Not connected','Не подключён');
-    var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';
+    var h=profileHealth(p,m.now),country=countryOf(p),use=dvChannelUse(p,m,ctx.status),role=use.role,kind=use.kind;
     return E('div',{'class':'hv-dv-item','data-profile':p.id},[E('span',{'class':'hv-dv-flag','aria-hidden':'true'},country?country.code.toUpperCase():'··'),
       E('div',{},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},role+' · '+protocolLabel(p))]),
-      E('span',{'class':'hv-dv-statuscol','data-health':h.state},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{},h.state==='healthy'?bi('Works','Работает'):h.state==='inactive'?bi('Off','Выкл.'):h.label)])]);
+      E('span',{'class':'hv-dv-statuscol','data-health':h.state,'data-route-state':use.state},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{},use.label)])]);
   }));
   var autoOn=m.light.key==='ok';
   var q1=m.primary?E('div',{'class':'hv-dv-q'},[E('b',{},bi('What happens if '+(countryName(m.primary)||'the primary')+' stops working?','Что будет, если '+(countryName(m.primary)||'основной')+' перестанет работать?')),
@@ -140,8 +158,8 @@ function renderDesignC(ctx,m){
   var log=dvCard(bi('Event log','Журнал'),[lines.length?E('div',{'class':'hv-dv-log'},lines.slice(0,10).map(function(l){return dvLogLine(l.time,l.kind,l.text,l.codes);})):E('p',{'class':'hv-dv-empty'},bi('No checks recorded yet.','Проверок пока нет.'))],'hv-dv-logcard');
   var head=['St','Server','Proto','Group','HTTPS ms','Passed','Checks','Confidence'].map(function(h,i){return E('th',{'scope':'col','class':i>=4&&i<=6?'n':null},[bi(h,{'St':'Ст.','Server':'Сервер','Proto':'Прот.','Group':'Группа','HTTPS ms':'HTTPS, мс','Passed':'Успех','Checks':'Проверок','Confidence':'Достоверность'}[h])]);});
   var body=sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
-    var h=profileHealth(p,m.now),r=m.rank[p.id]||{n:0},mark=m.selected===p.id?'● use':h.state==='healthy'?'● ready':h.state==='inactive'?'○ off':'◐ '+h.state;
-    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id},[E('td',{'class':'hv-dv-st hv-dv-st-'+h.state},mark),E('td',{},countryName(p)||customName(p)||'—'),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
+    var h=profileHealth(p,m.now),use=dvChannelUse(p,m,ctx.status),r=m.rank[p.id]||{n:0},mark=use.label;
+    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id,'data-route-state':use.state},[E('td',{'class':'hv-dv-st'},[dvChannelLamp(use),mark]),E('td',{},[countryName(p)||customName(p)||'—',E('small',{},use.role)]),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
       E('td',{'class':'n'},h.state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'),E('td',{'class':'n'},dvPercentText(dvPercent(r))),E('td',{'class':'n'},String(r.n||0)),E('td',{},dvConfidence(r.n||0))]);});
   var table=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-tablewrap'},E('table',{},[E('thead',{},E('tr',{},head)),E('tbody',{},body)]))],'hv-dv-servers');
   var keys=E('div',{'class':'hv-dv-keys'},[E('span',{},[E('kbd',{},'1'),'–',E('kbd',{},'9'),bi('sections','разделы')]),E('span',{},[E('kbd',{},'/'),bi('search','поиск')]),E('span',{},bi('Error codes are links to the error table','Коды ошибок — ссылки на таблицу ошибок'))]);

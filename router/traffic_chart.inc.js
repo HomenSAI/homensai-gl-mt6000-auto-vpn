@@ -35,7 +35,7 @@ function trafficDayChart(vpnDays,wanDays,days,scope,onScope){
     if((i%Math.max(1,Math.ceil(n/7))===0&&(n-1-i)>=Math.ceil(n/7)/2)||i===n-1)svg.appendChild(svgNode('text',{x:cx.toFixed(1),y:240,fill:'var(--muted)','font-size':11,'text-anchor':'middle'},d.day.slice(5)));
   });
   var legend=E('div',{'class':'hv-legend hv-legend-interactive'},[E('span',{'class':'hv-legend-item'},[E('i',{'style':'background:'+DOWN}),bi('Download ↓','Скачивание ↓')]),E('span',{'class':'hv-legend-item'},[E('i',{'style':'background:'+UP}),bi('Upload ↑','Отдача ↑')])]);
-  var select=E('select',{'aria-label':bi('Traffic to show','Какой трафик показать'),'change':function(ev){onScope(ev.target.value);}},[E('option',{value:'vpn'},bi('Through the VPNs','Через VPN')),E('option',{value:'wan'},bi('Through the WAN (provider)','Через WAN (провайдер)'))]);select.value=scope;
+  var select=E('select',{'class':'hv-traffic-scope','aria-label':bi('Traffic to show','Какой трафик показать'),'change':function(ev){onScope(ev.target.value);}},[E('option',{value:'vpn'},bi('Through the VPNs','Через VPN')),E('option',{value:'wan'},bi('Through the WAN (provider)','Через WAN (провайдер)'))]);select.value=scope;
   [svg,tip,legend].forEach(function(node){wrap.appendChild(node);});
   return E('div',{},[E('div',{'class':'hv-native-actions'},[select]),wrap,E('small',{},bi('Last '+n+' days, Europe/Berlin. A grey dash means there was no valid data that day (not zero traffic). Point at a day to see the numbers.','Последние '+n+' дней, Europe/Berlin. Серая черта означает, что за этот день нет достоверных данных (это не нулевой трафик). Наведите курсор на день, чтобы увидеть числа.'))]);
 }

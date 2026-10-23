@@ -177,6 +177,79 @@ function analyticsExportRows(kind,status,transitions){
 }
 var recoveryAnalyticsPeriod='day';
 try {var savedRecoveryPeriod=localStorage.getItem('homensai-vpn-recovery-period');if(['day','week','month'].indexOf(savedRecoveryPeriod)>=0)recoveryAnalyticsPeriod=savedRecoveryPeriod;}catch(error){}
+function controllerTransitionMarks(events){
+  var marks=Object.create(null),committed=Object.create(null),attempted=Object.create(null),returned=Object.create(null);
+  (events||[]).slice().sort(function(a,b){return a.sequence-b.sequence;}).forEach(function(event){
+    var id=event.attempt_id||event.sequence;
+    if(event.trial)return;
+    if(event.state==='APPLYING'&&!attempted[id]){attempted[id]=true;marks[event.sequence]={from:1,to:2,confirmed:false};}
+    if(event.state==='COMMITTED'&&!committed[id]){committed[id]=true;marks[event.sequence]={from:1,to:2,confirmed:true};}
+    if(event.state==='ROLLED-BACK'&&event.original_restored===true&&committed[id]&&!returned[id]){returned[id]=true;marks[event.sequence]={from:2,to:1,confirmed:true};}
+  });
+  return marks;
+}
+function renderTransitionBadge(event,marks){
+  var mark=marks[event.sequence];if(!mark)return null;
+  var label=(mark.confirmed?bi('Confirmed switch: ','Подтверждённый переход: '):bi('Switch attempt: ','Попытка перехода: '))+mark.from+' → '+mark.to;
+  return E('span',{'class':'hv-transition-badge'+(mark.confirmed?'':' hv-transition-pending'),'aria-label':label,'title':label},[
+    E('span',{'class':'hv-transition-from','aria-hidden':'true'},String(mark.from)),E('span',{'aria-hidden':'true'},'→'),E('span',{'class':'hv-transition-to','aria-hidden':'true'},String(mark.to))]);
+}
+function storedStatisticsRows(status){
+  var history=status.native_history||{},health=(status.accounting||{}).reliability||{};
+  var months=Array.from(new Set(Object.keys(history.months||{}).concat(Object.keys(health.months||{})))).sort().reverse();
+  function row(period,checks,control){return {period:period,outages:checks.outages,failed_checks:checks.failed_checks,
+    attempts:control.attempts,switches:control.automatic_committed,returns:control.returns,
+    auto_seconds:checks.auto_observed_seconds};}
+  return [row(bi('All recorded time','За всё время записи'),health.totals||{},history.totals||{}),
+    row(bi('Last 7 days','Последние 7 дней'),health.weekly||{},history.weekly||{})].concat(months.map(function(month){
+      return row(month,(health.months||{})[month]||{},(history.months||{})[month]||{});
+    }));
+}
+async function fetchStoredStatistics(kind,call){
+  var after=0,until=0,events=[],summary=null,asOf=null;
+  for(var page=0;page<101;page++){
+    var response=await call(kind,after,until);
+    if(!response||response.kind!==kind||!Array.isArray(response.events)||response.events.length>100||
+       !Number.isSafeInteger(response.until)||response.until<0||typeof response.has_more!=='boolean')throw new Error('STATISTICS-REPLY');
+    if(summary===null){summary=response.summary;until=response.until;asOf=response.as_of;}
+    if(response.until!==until||!Number.isSafeInteger(response.next_after)||response.next_after<after||response.next_after>until)throw new Error('STATISTICS-CURSOR');
+    var previous=after;
+    response.events.forEach(function(event){if(!Number.isSafeInteger(event.sequence)||event.sequence<=previous||event.sequence>until)throw new Error('STATISTICS-SEQUENCE');previous=event.sequence;});
+    if(response.events.length&&response.next_after!==previous)throw new Error('STATISTICS-CURSOR');
+    events=events.concat(response.events);
+    if(!response.has_more)return {kind:kind,as_of:asOf,detail_days:7,summary:summary,events:events};
+    if(response.next_after<=after)throw new Error('STATISTICS-CURSOR');after=response.next_after;
+  }
+  throw new Error('STATISTICS-PAGE-LIMIT');
+}
+function renderStoredStatistics(status){
+  var history=status.native_history||{},health=(status.accounting||{}).reliability||{},rows=storedStatisticsRows(status);
+  var headings=[bi('Period','Период'),bi('Outages','Эпизоды отказа'),bi('Failed checks','Неудачные проверки'),
+    bi('Attempts','Попытки'),bi('Confirmed switches','Подтверждённые переключения'),bi('Returns since update','Возвраты с обновления'),bi('Auto observed, hours','Наблюдение Auto, часов')];
+  var table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},headings.map(function(label){return E('th',{'scope':'col'},label);}))].concat(rows.map(function(row){
+    var values=[row.period,row.outages,row.failed_checks,row.attempts,row.switches,row.returns,
+      Number.isFinite(row.auto_seconds)?(row.auto_seconds/3600).toFixed(2):null];
+    return E('tr',{},values.map(function(value){return E('td',{},value==null?'—':String(value));}));
+  })));
+  var note=E('p'),button=E('button',{'type':'button','class':'cbi-button','click':async function(){
+    button.disabled=true;note.textContent=bi('Reading saved weekly detail…','Чтение сохранённых событий недели…');
+    try{
+      var call=rpc.declare({object:'homensai-vpn',method:'statistics',params:['kind','after','until'],expect:{}});
+      var failures=await fetchStoredStatistics('failures',call),controller=await fetchStoredStatistics('controller',call);
+      var data={schema:1,failures:failures,controller:controller};
+      var url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)+'\n'],{type:'application/json;charset=utf-8'}));
+      var link=document.createElement('a');link.href=url;link.download='homensai-vpn-week-and-months.json';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      note.textContent=bi('Saved detail downloaded. Unobserved intervals remain unknown.','Сохранённые события выгружены. Интервалы без наблюдений остаются неизвестными.');
+    }catch(error){note.textContent=bi('Statistics could not be read. Try again; counters were not reset.','Не удалось прочитать статистику. Повторите выгрузку; счётчики не сброшены.');}
+    finally{button.disabled=false;}
+  }},bi('Download weekly detail and monthly summaries (JSON)','Скачать подробности недели и сводки по месяцам (JSON)'));
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Saved outage and switching statistics','Сохранённая статистика сбоев и переключений')),
+    E('p',{},bi('Detailed incidents: last 7 days. Monthly and lifetime counters survive detail expiry and service restart. A repeated status of one transaction is counted once. Missing data is shown as —.','Подробные события: последние 7 дней. Месячные и общие счётчики сохраняются после удаления старых подробностей и перезапуска службы. Повторные статусы одной транзакции считаются один раз. Нет данных — прочерк.')),
+    E('p',{},bi('Outages are observed failure episodes; several failed probes may belong to one outage. Auto time includes only observed intervals. Old missing events and outage durations are not reconstructed.','Сбой — наблюдаемый эпизод отказа; в нём может быть несколько неудачных проверок. Время Auto включает только наблюдавшиеся интервалы. Утраченные старые события и длительность сбоев не восстанавливаются.')),
+    E('p',{},bi('Counter coverage: ','Покрытие счётчиков: ')+(history.counter_accuracy||bi('No saved controller counters','Нет сохранённых счётчиков контроллера'))),
+    (health.details_dropped||history.detail_budget_dropped)?E('p',{'role':'status'},bi('Detail storage limit was reached; aggregate counters are retained.','Достигнут предел подробных событий; сводные счётчики сохранены.')):null,
+    E('div',{'class':'hv-dv-tablewrap'},[table]),button,note].filter(Boolean));
+}
 function renderTransitionAnalytics(status){
   var history=status.native_history||{},rows=retainedTransitions(history),now=Date.now()/1000;
   var summaryHost=E('div'),groupHost=E('div'),period=E('select',{'aria-label':bi('Recovery period','Период восстановления')},[
@@ -242,7 +315,7 @@ function renderTransitionAnalytics(status){
     E('p',{},bi('Coverage: incomplete retained window; not measured LAN availability.','Покрытие: неполное сохранённое окно; это не измерение доступности LAN.')),
     E('p',{},age),
     E('small',{},'Calendar boundaries: '+(history.timezone||'Europe/Berlin')+'. Event timestamps: UTC. Durations measure retained APPLYING → controller-confirmed outcome events, not full outage duration. Retry episode IDs describe controller evidence, not certified LAN outages. Categories overlap and must not be summed.'),
-    period,summaryHost,groupHost,exports,table]);
+    renderStoredStatistics(status),period,summaryHost,groupHost,exports,table]);
 }
 
 function renderDecisionExplanation(status,inventory){

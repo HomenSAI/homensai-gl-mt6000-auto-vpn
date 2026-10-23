@@ -145,7 +145,7 @@ var AUTO_NAMES={
   if(typeof ERROR_EXTRA_ROWS!=='undefined')ERROR_EXTRA_ROWS.forEach(function(r){if(!have[r[0]]){ERROR_ROWS.push(r);have[r[0]]=true;}});
   if(typeof ERROR_FAMILIES!=='undefined')ERROR_FAMILIES.forEach(function(f){var code=f[0]+'*';if(!have[code]){ERROR_ROWS.push([code].concat(f.slice(1)));have[code]=true;}});
 })();
-var ERROR_GROUP_OF={},errorTable=null;
+var ERROR_GROUP_OF={},errorTable=null,ERROR_TABLE_STATE={query:'',open:Object.create(null)};
 (function(){
   // Auto start blockers come from the dictionary of the Auto panel; they get a readable name and are grouped under Switching.
   var seen={};ERROR_ROWS.forEach(function(r){seen[r[0]]=true;});
@@ -164,10 +164,12 @@ var ERROR_GROUP_OF={},errorTable=null;
 function renderErrorTable(){
   var search=E('input',{'type':'search','class':'hv-search','placeholder':bi('Search a code or a word','Поиск по коду или слову'),'aria-label':bi('Search error codes','Поиск по кодам ошибок')});
   var host=E('div',{'class':'hv-errtable'});
+  search.value=ERROR_TABLE_STATE.query;
   function matches(r,q){return !q||(r.join(' ')).toLowerCase().indexOf(q)>=0;}
   function draw(){
     while(host.firstChild)host.removeChild(host.firstChild);
     var q=search.value.trim().toLowerCase();
+    ERROR_TABLE_STATE.query=search.value;
     ERROR_GROUPS.forEach(function(g){
       var rows=ERROR_ROWS.filter(function(r){return r[1]===g[0]&&matches(r,q);});
       if(!rows.length)return;
@@ -175,9 +177,10 @@ function renderErrorTable(){
       var table=E('table',{'class':'table hv-errors'},[E('tr',{},[E('th',{},bi('Code','Код')),E('th',{},bi('Name','Название')),E('th',{},bi('What it means','Что означает')),E('th',{},bi('What to do','Что делать'))])]);
       rows.forEach(function(r){
         var fixRow=null;
-        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},bi('How to fix','Как исправить')):null;
+        var expanded=ERROR_TABLE_STATE.open[r[0]]===true;
+        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},expanded?bi('Hide','Скрыть'):bi('How to fix','Как исправить')):null;
         table.appendChild(E('tr',{'data-error-code':r[0]},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
-        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=true;table.appendChild(fixRow);}
+        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
       });
       host.appendChild(table);
     });

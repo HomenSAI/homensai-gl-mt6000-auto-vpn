@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0-alpha35'
+VERSION = '0.9.0-alpha36'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -172,6 +172,8 @@ class Accounting:
         self.quality = data.get('quality', {}) if data else {}
         self.activity = data.get('activity', {}) if data else {}
         self.activity_previous = {}
+        from reliability import Reliability
+        self.reliability=Reliability(data.get('reliability') if data else None)
 
     def track_activity(self, rows, now, max_gap=90):
         for item in rows:
@@ -291,6 +293,7 @@ class Accounting:
 
     def public_export(self):
         self.compact();data=dict(self.export())
+        data['reliability']=self.reliability.public()
         if len(json.dumps(data,ensure_ascii=True).encode())<=500*1024:return data
         quality={}
         for identifier,value in self.quality.items():
@@ -315,6 +318,7 @@ class Accounting:
         data['activity']=activity;return data
 
     def observe(self, result):
+        self.reliability.observe(result)
         identifier, stamp = result['id'], result['time']
         self.quality = {key: value for key, value in self.quality.items() if (value.get('last') or {}).get('time', 0) >= stamp-7*86400}
         bucket = str(int(stamp//3600))
@@ -338,7 +342,7 @@ class Accounting:
             self.quality = {key: self.quality[key] for key in keep}
 
     def export(self):
-        return {'months':self.months,'days':self.days,'gaps':self.gaps,'quality':self.quality,'activity':self.activity,'retention':self.retention,'wan':self.wan.export() if self.wan else None}
+        return {'months':self.months,'days':self.days,'gaps':self.gaps,'quality':self.quality,'activity':self.activity,'retention':self.retention,'reliability':self.reliability.export(),'wan':self.wan.export() if self.wan else None}
 
 
 def bound_socket(device, mark, udp=False):
@@ -677,6 +681,15 @@ def serve():
             from candidate_hierarchy import rank_candidates
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',30)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+            native=status['native_failover']
+            from reliability import active_controller
+            from pair_auto import read_state as pair_state, intent as pair_intent
+            try:active=active_controller(native,pair_state(),pair_intent(),time.time())
+            except (OSError,ValueError,TypeError):active=False
+            accounting.reliability.controller(active,time.time())
+            from route_history import observed_route
+            if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time()):accounting.reliability.critical=True
+            status['accounting']['reliability']=accounting.reliability.public()
             from native_history import read_public
             status['native_history']=read_public(PERSIST)
             from auto_control import public_status
@@ -702,9 +715,9 @@ def serve():
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
-            if time.monotonic()-last_save >= settings['checkpoint']:
+            if accounting.reliability.critical or time.monotonic()-last_save >= settings['checkpoint']:
                 try:
-                    checkpoint(accounting);storage_error = None;last_save = time.monotonic()
+                    checkpoint(accounting);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -745,7 +758,7 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'auto_live': {}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -760,6 +773,9 @@ def rpc(method):
     request = sys.stdin.buffer.read(65537)
     from rpc_input import decode_request
     arguments=decode_request(request)
+    if method=='statistics':
+        from statistics_export import page
+        print(json.dumps(page(PERSIST,arguments)));return
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
             raise ValueError('RPC-CONFIRM-FIELDS')

@@ -74,3 +74,28 @@ function renderAutoLive(status,inventory){
   }
   return root;
 }
+function autoDaySegments(history,now){
+  if(!history||!Array.isArray(history.segments)||!Number.isFinite(now))return [];
+  return history.segments.slice(-4096).filter(function(row){return row&&Object.prototype.hasOwnProperty.call(AUTO_LIVE_COLORS,row.kind)&&Number.isFinite(row.start)&&Number.isFinite(row.end)&&row.start<=row.end&&row.end>now-86400&&row.start<=now&&row.end<=now+5;}).map(function(row){return {start:Math.max(now-86400,row.start),end:Math.min(now,row.end),kind:row.kind};});
+}
+function renderAutoDay(status){
+  var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'}),now=Date.now()/1000;
+  var history=(((status||{}).accounting||{}).reliability||{}).route_history||{},segments=autoDaySegments(history,now);
+  var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
+  var from=now-86400,x=function(t){return left+(t-from)/86400*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:kind==='switching'?67:132;};
+  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Saved selected VPN route over the last 24 hours','Сохранённый VPN-маршрут за последние 24 часа')});
+  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['unknown',bi('No data / off','Нет / выкл.')]].forEach(function(row){
+    svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y(row[0]),y2:y(row[0]),stroke:'#cbd5e1','stroke-dasharray':'3 5'}));
+    svg.appendChild(autoLiveSvg('text',{x:6,y:y(row[0])+4,fill:'currentColor','font-size':12},row[1]));
+  });
+  var previous=null;
+  segments.forEach(function(row){
+    if(previous&&previous.end===row.start&&previous.kind!==row.kind)svg.appendChild(autoLiveSvg('line',{x1:x(row.start),x2:x(row.start),y1:y(previous.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS.switching,'stroke-width':2}));
+    var path=autoLiveSvg('line',{x1:x(row.start),x2:x(row.end),y1:y(row.kind),y2:y(row.kind),stroke:AUTO_LIVE_COLORS[row.kind],'stroke-width':3,'stroke-dasharray':row.kind==='unknown'?'3 5':'none'});
+    path.appendChild(autoLiveSvg('title',{},autoLiveLabel(row.kind)+' · '+new Date(row.start*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+' — '+new Date(row.end*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));svg.appendChild(path);previous=row;
+  });
+  [0,6,12,18,24].forEach(function(hours,index){var stamp=from+hours*3600;svg.appendChild(autoLiveSvg('text',{x:x(stamp),y:157,'text-anchor':index===0?'start':index===4?'end':'middle',fill:'currentColor','font-size':10},new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})));});
+  root.appendChild(E('h3',{},bi('Channel switching · last 24 hours','Переключение каналов · последние 24 часа')));root.appendChild(svg);
+  root.appendChild(E('p',{'class':'hv-muted'},bi('Saved on the router; survives page reload. Same colors as the live graph. Empty/dashed intervals were not observed. History begins with this update; earlier hours are not reconstructed.','История хранится на роутере и сохраняется при обновлении страницы. Цвета как на живом графике. Пустые и пунктирные интервалы не наблюдались. Запись начинается с этого обновления; прошлые часы не восстанавливаются.')));
+  return root;
+}

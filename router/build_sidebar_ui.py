@@ -432,6 +432,16 @@ import sidebar_patch
 source=sidebar_patch.apply(source)
 must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
 fool_css='\n.hv-fool-field .hv-fool-hint,.hv-fool-field .hv-fool-error{display:block;margin-top:.3rem}.hv-fool-error{color:#c32938}.hv-fool-error:empty{display:none}.hv-fool-invalid{border-color:#c32938!important;outline:1px solid #c32938}\n'
+must_replace('return view.extend({',(Path(__file__).parent/'viewport_state.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('var oldTab=activeTab;','var oldTab=activeTab;if(oldTab!==key)rememberPageViewport(appRoot||panel,oldTab);')
+must_replace('if(oldTab!==key){try{window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;}catch(e){}}',
+             'if(oldTab!==key)revisitPageViewport(appRoot||panel,key);')
+must_replace('function draw(status){','function draw(status){\n      var refreshViewport=rememberPageViewport(appRoot||panel,activeTab);\n      try {')
+must_replace('    }\n    draw(data[1]);','      } finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport(appRoot||panel,refreshViewport);}\n    }\n    draw(data[1]);')
+must_replace('initSidebarLayout(appRoot);','initSidebarLayout(appRoot);installViewportPersistence(appRoot,function(){return activeTab;});')
+must_replace("panel.querySelectorAll('table').forEach(function(table,index){","panel.querySelectorAll('table').forEach(function(table,index){if(table.closest('.hv-errtable'))return;")
+must_replace("(nh.events||[]).slice().reverse().forEach(function(event)","var transitionMarks=controllerTransitionMarks(nh.events||[]);\n      (nh.events||[]).slice().reverse().forEach(function(event)")
+must_replace("cell(event.state+(event.trial?' · '+'trial':''))","E('td',{},[renderTransitionBadge(event,transitionMarks),event.state+(event.trial?' · '+'trial':'')].filter(Boolean))")
 (root/'ui46.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

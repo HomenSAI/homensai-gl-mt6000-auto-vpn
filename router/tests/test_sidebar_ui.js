@@ -15,8 +15,9 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
   const start=page.indexOf('function showPage(key){');a3(start>0);
   const body=page.slice(start,page.indexOf('\n    }',start));
   a3(body.includes('var oldTab=activeTab;'));
-  a3(/if\(oldTab!==key\)\{try\{window\.scrollTo\(0,0\)/.test(body),'scroll only on a real page change');
+  a3(body.includes('if(oldTab!==key)revisitPageViewport'),'restore the visited page position only on real navigation');
   // showPage must set activeTab before it compares, so a refresh of the same page never jumps.
-  a3(body.indexOf('var oldTab=activeTab;')<body.indexOf('window.scrollTo(0,0)'));
-  console.log('PASS: switching pages scrolls to the top');
+  a3(body.includes('rememberPageViewport(appRoot||panel,oldTab)'));
+  a3(page.includes('finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport'));
+  console.log('PASS: refresh preserves viewport; page navigation remembers each visited position');
 }

@@ -30,6 +30,9 @@ def accounting(value,nested=False):
         if not isinstance(profile,dict) or not isinstance(profile.get('days',{}),dict):raise ValueError('CHECKPOINT-ACTIVITY')
         timestamp(profile.get('last_seen',0));day_rows(profile.get('days',{}))
     wan=value.get('wan')
+    if 'reliability' in value:
+        from reliability import Reliability
+        Reliability(value['reliability'])
     if wan is not None:
         if nested:raise ValueError('CHECKPOINT-WAN-DEPTH')
         accounting(wan,True)
@@ -48,6 +51,9 @@ def validate(envelope):
             for key,item in value.items():
                 if not isinstance(key,str) or len(key)>256:raise ValueError('CHECKPOINT-KEY')
                 walk(item,depth+1)
+        elif isinstance(value,list):
+            if len(value)>10000:raise ValueError('CHECKPOINT-LIST')
+            for item in value:walk(item,depth+1)
         elif type(value) in (int,float):
             if not math.isfinite(value) or value<0 or value>1e30:raise ValueError('CHECKPOINT-NUMBER')
         elif isinstance(value,str):

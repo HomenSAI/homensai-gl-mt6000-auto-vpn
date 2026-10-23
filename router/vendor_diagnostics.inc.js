@@ -80,7 +80,7 @@ function vendorDisplaySelected(status,inventory,now){
   var native=(status||{}).native_failover||{},role=null;
   if((status||{}).rpc_error||!vendorFresh(native.time,now,30))return null;
   if(['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(native.state)>=0)role='target';
-  else if(native.state==='OBSERVING'&&native.certified===true)role='source';
+  else if(native.state==='OBSERVING'&&(native.certified===true||native.mode==='continuous-pair'&&native.readiness_verified===true))role='source';
   var row=role?vendorDisplayMember(status,inventory,role,now,native[role]):null;
   return row?row.id:null;
 }

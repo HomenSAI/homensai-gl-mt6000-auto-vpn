@@ -9,6 +9,8 @@ import time
 
 CODE=re.compile(r'^[A-Z0-9_-]{1,96}$')
 PROFILE=re.compile(r'^(?:openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$')
+METRICS=('attempts','committed','trials_passed','rollbacks','returns','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches','rate_limited_episodes')
+WEEK=7*86400
 
 
 class HistoryError(ValueError):
@@ -33,9 +35,9 @@ def atomic(path,value):
 
 
 class History:
-    RETENTION_BYTES=400*1024
-    def __init__(self,directory,limit=500):
-        if type(limit) is not int or not 1<=limit<=500:raise HistoryError('HISTORY-LIMIT')
+    RETENTION_BYTES=2*1024*1024
+    def __init__(self,directory,limit=10000):
+        if type(limit) is not int or not 1<=limit<=10000:raise HistoryError('HISTORY-LIMIT')
         self.path=Path(directory)/'native-history.json'
         self.backup=self.path.with_name('native-history.backup.json')
         self.limit=limit
@@ -47,7 +49,7 @@ class History:
                 if path.is_symlink():raise HistoryError('HISTORY-PATH')
                 if not path.exists():continue
                 found=True
-                if path.stat().st_size>512*1024:raise HistoryError('HISTORY-SIZE')
+                if path.stat().st_size>2300*1024:raise HistoryError('HISTORY-SIZE')
                 envelope=json.loads(path.read_text(encoding='utf8'));data=envelope['data']
                 if envelope.get('schema')!=1 or hashlib.sha256(encoded(data)).hexdigest()!=envelope.get('sha256'):raise HistoryError('HISTORY-CHECKSUM')
                 if not isinstance(data.get('events'),list) or not isinstance(data.get('months'),dict) or type(data.get('sequence')) is not int or not 0<=data['sequence']<2**53:raise HistoryError('HISTORY-SCHEMA')
@@ -62,7 +64,13 @@ class History:
                         if identifier is not None and (not isinstance(identifier,str) or not PROFILE.fullmatch(identifier)):raise HistoryError('HISTORY-METADATA')
                     for key in ('terminal','trial','closed'):
                         if key in fields and type(metadata[key]) is not bool:raise HistoryError('HISTORY-METADATA')
-                if len(data['events'])>500 or len(data['months'])>18 or not isinstance(data.get('days',{}),dict) or len(data.get('days',{}))>400:raise HistoryError('HISTORY-BOUNDS')
+                if len(data['events'])>10000 or len(data['months'])>1200 or not isinstance(data.get('days',{}),dict) or len(data.get('days',{}))>400:raise HistoryError('HISTORY-BOUNDS')
+                if data.get('counter_version')==2:
+                    for name in ('totals','counted'):
+                        values=data.get(name)
+                        if not isinstance(values,dict) or any(key not in METRICS or type(value) is not int or not 0<=value<2**53 for key,value in values.items()):raise HistoryError('HISTORY-COUNTERS')
+                    for row in data['events']:
+                        if 'counted_metrics' in row and (not isinstance(row['counted_metrics'],list) or len(row['counted_metrics'])>len(METRICS) or any(key not in METRICS for key in row['counted_metrics'])):raise HistoryError('HISTORY-COUNTERS')
                 self.restored=bool(index);return data
             except (OSError,ValueError,KeyError,TypeError):continue
         if found:raise HistoryError('HISTORY-CORRUPT')
@@ -96,10 +104,72 @@ class History:
             if item['state']=='COMMITTED' or 'TRIAL-PASSED' in item['codes']:
                 episode['closed']=True
         return active,episode
+    def counters(self,data,item):
+        """Count confirmed transactions once, not repeated status publications."""
+        state=item['state'];identity=item.get('attempt_id',item['sequence']);recorded=[]
+        seen=data.setdefault('counted',{})
+        month=time.strftime('%Y-%m',time.localtime(item['time']))
+        day=time.strftime('%Y-%m-%d',time.localtime(item['time']))
+        def add(metric,unique=None):
+            if unique is not None:
+                if unique<=seen.get(metric,0):return
+                seen[metric]=unique
+            for total in (data.setdefault('totals',{}),data['months'].setdefault(month,{}),data.setdefault('days',{}).setdefault(day,{})):
+                total[metric]=total.get(metric,0)+1
+            recorded.append(metric)
+        if state=='APPLYING':
+            add('attempts',identity)
+            if not item['trial']:add('automatic_attempts',identity)
+        if state=='COMMITTED':
+            add('committed',identity)
+            if not item['trial']:
+                add('automatic_committed',identity)
+                kind=item.get('transition_kind')
+                if kind in ('server','channel','protocol'):add(kind+'_switches',identity)
+        if state=='ARMED' and 'TRIAL-PASSED' in item['codes']:add('trials_passed',identity)
+        if state=='ROLLED-BACK':
+            add('rollbacks',identity)
+            if item.get('original_restored') is True and 'PRIMARY-STABLY-RECOVERED' in item['codes']:add('returns',identity)
+        prior=data.get('counted_state')
+        if state=='BLOCKED' and prior!='BLOCKED':add('blocked_episodes')
+        if 'PAIR-RATE-LIMIT' in item['codes'] and data.get('counted_reason')!='PAIR-RATE-LIMIT':add('rate_limited_episodes')
+        data['counted_state']=state
+        data['counted_reason']='PAIR-RATE-LIMIT' if 'PAIR-RATE-LIMIT' in item['codes'] else None
+        return recorded
+
+    def migrate(self,data):
+        if data.get('counter_version')==2:return
+        events=data['events']
+        complete=not data['sequence'] or bool(events) and len(events)==data['sequence'] and all(row.get('sequence')==i+1 for i,row in enumerate(events))
+        data['legacy_months']=json.loads(encoded(data['months']))
+        data['counter_version']=2;data['counted']={};data['totals']={}
+        data['returns_since']=time.time()
+        data['counter_accuracy']='complete retained event replay' if complete else 'legacy partial counters; deduplicated from upgrade'
+        if complete:
+            data['months']={};data['days']={}
+            for item in events:item['counted_metrics']=self.counters(data,item)
+        else:
+            for totals in data['months'].values():
+                for key,value in totals.items():
+                    if key in METRICS and type(value) is int and value>=0:data['totals'][key]=data['totals'].get(key,0)+value
+            # Seed deduplication without recounting any existing aggregate.
+            replay={'months':{},'days':{}}
+            for item in events:self.counters(replay,item)
+            for key in ('counted','counted_state','counted_reason'):
+                if key in replay:data[key]=replay[key]
+
+    def prune(self,data,now):
+        data['events']=[row for row in data['events'] if now-WEEK<=row['time']<=now]
+        for retired in sorted(data['months'])[:-1200]:del data['months'][retired]
+        cutoff=time.strftime('%Y-%m-%d',time.localtime(max(0,now-WEEK)))
+        for retired in list(data.get('days',{})):
+            if retired<cutoff:del data['days'][retired]
     def record(self,value,now=None):
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
         data=self.load()
+        legacy=data.get('counter_version')!=2
+        self.migrate(data)
         if data['last_time'] is not None and now<data['last_time']:raise HistoryError('HISTORY-CLOCK-BACKWARD')
         state=value.get('state','UNKNOWN')
         if not isinstance(state,str) or not CODE.fullmatch(state):raise HistoryError('HISTORY-STATE')
@@ -107,6 +177,7 @@ class History:
         if value.get('reason'):codes=list(codes)+[value['reason']]
         codes=sorted({c for c in codes if isinstance(c,str) and CODE.fullmatch(c)})
         item={'state':state,'codes':codes,'trial':value.get('trial') is True}
+        if type(value.get('original_restored')) is bool:item['original_restored']=value['original_restored']
         scope=value.get('proof_scope','external-lan')
         if scope not in('external-lan','router-hosted-ipv4','router-probed-ipv4'):raise HistoryError('HISTORY-SCOPE')
         if 'proof_scope'in value:item['proof_scope']=scope
@@ -135,6 +206,9 @@ class History:
         active,episode=self.correlate(data,item)
         key=hashlib.sha256(encoded(item)).hexdigest()
         if key==data['last_key']:
+            original_count=len(data['events']);self.prune(data,now)
+            if legacy or len(data['events'])!=original_count:
+                atomic(self.path,self.envelope(data))
             if data.get('daily_since') is None:
                 old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
                 atomic(self.backup,old);atomic(self.path,self.envelope(data))
@@ -144,40 +218,39 @@ class History:
         data['active_attempt']=active;data['retry_episode']=episode
         item.update(time=now,sequence=data['sequence']+1)
         data['sequence']+=1;data['last_key']=key;data['last_time']=now
-        data['events']=(data['events']+[item])[-self.limit:]
+        retained=data['events']+[item]
+        data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+sum(row['time']>=now-WEEK for row in retained[:-self.limit])
+        data['events']=retained[-self.limit:]
         month=time.strftime('%Y-%m',time.localtime(now));day=time.strftime('%Y-%m-%d',time.localtime(now))
         if data.get('daily_since') is None:data['daily_since']=now
         daily=data.setdefault('days',{})
-        metrics=('attempts','committed','trials_passed','rollbacks','blocked_episodes','automatic_attempts','automatic_committed','server_switches','channel_switches','protocol_switches')
-        for totals in (data['months'].setdefault(month,{}),daily.setdefault(day,{})):
-            for metric in metrics:totals.setdefault(metric,0)
-            if state=='APPLYING':
-                totals['attempts']+=1
-                if not item['trial']:totals['automatic_attempts']+=1
-            if state=='COMMITTED':
-                totals['committed']+=1
-                if not item['trial']:
-                    totals['automatic_committed']+=1
-                    if kind in ('server','channel','protocol'):totals[kind+'_switches']+=1
-            if state=='ARMED' and 'TRIAL-PASSED' in codes:totals['trials_passed']+=1
-            if state=='ROLLED-BACK':totals['rollbacks']+=1
-            if state=='BLOCKED':totals['blocked_episodes']+=1
-        for retired in sorted(data['months'])[:-18]:del data['months'][retired]
-        for retired in sorted(daily)[:-400]:del daily[retired]
+        item['counted_metrics']=self.counters(data,item)
+        for totals in (data['totals'],data['months'].setdefault(month,{}),daily.setdefault(day,{})):
+            for metric in METRICS:totals.setdefault(metric,0)
+        self.prune(data,now)
         # New phase evidence must not make our own next read exceed its bound.
         # Keep aggregate counters; trim only oldest detailed event observations.
         while len(data['events'])>1 and len(encoded(data))>self.RETENTION_BYTES:
             del data['events'][0]
+            data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+1
         if len(encoded(data))>self.RETENTION_BYTES:raise HistoryError('HISTORY-SIZE')
         atomic(self.backup,old);atomic(self.path,self.envelope(data))
         return True
-    def public(self):
-        data=self.load()
+    def public(self,data=None,now=None):
+        data=self.load() if data is None else json.loads(encoded(data))
+        self.migrate(data);self.prune(data,now if now is not None else data['last_time'] if data['last_time'] is not None else time.time())
+        weekly=({key:sum(key in row.get('counted_metrics',[]) for row in data['events']) for key in METRICS}
+                if all('counted_metrics' in row for row in data['events']) and not data.get('detail_budget_dropped') else None)
         return {'available':self.path.exists() or self.backup.exists(),'restored_from_backup':self.restored,
                 'timezone':data['timezone'],'sequence':data['sequence'],'events':data['events'][-100:],
+                'totals':data.get('totals',{}),'counter_accuracy':data.get('counter_accuracy'),
+                'returns_since':data.get('returns_since'),
+                'weekly':weekly,'weekly_detail_complete':not data['events'] or data['events'][-1]['sequence']-data['events'][0]['sequence']+1==len(data['events']),
+                'detail_days':7,'retained_events':len(data['events']),
+                'detail_budget_dropped':data.get('detail_budget_dropped',0),
                 'months':data['months'],'days':data.get('days',{}),'daily_since':data.get('daily_since'),'event_history_truncated':data['sequence']>min(100,len(data['events'])),'scope':'controller transitions; not LAN availability or router power-loss proof'}
 
 
 def read_public(directory):
-    try:return History(directory).public()
+    try:return History(directory).public(now=time.time())
     except (OSError,ValueError,KeyError,TypeError):return {'available':False,'error':'HISTORY-001'}

@@ -399,7 +399,10 @@ def tick(backend, settings, revision):
                 n.publish({'state': 'RESTORING', 'mode': 'continuous-pair', 'proof_scope': MODE,
                            'source': journal['source'], 'target': journal['target'],
                            'reason': decision['reason'], 'blockers': []})
-                n.finish_committed(backend, journal, decision['reason'])
+                if n.finish_committed(backend, journal, decision['reason']):
+                    n.publish({'state':'ROLLED-BACK','reason':decision['reason'],
+                               'source':journal['source'],'target':journal['target'],
+                               'original_restored':True,'mode':'continuous-pair','proof_scope':MODE})
             else:
                 n.publish({'state': 'COMMITTED' if decision['action'] == 'OBSERVE' else 'DEGRADED-ON-RESERVE',
                            'source': journal['source'], 'target': journal['target'], 'mode': 'continuous-pair',

@@ -6,6 +6,7 @@
         "homensai-vpn": [
           "status",
           "auto_live",
+          "statistics",
           "inventory",
           "events",
           "priority_preview"
