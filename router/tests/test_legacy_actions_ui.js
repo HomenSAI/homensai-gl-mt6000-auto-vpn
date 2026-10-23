@@ -11,7 +11,7 @@ const button=(root,label)=>walk(root).find(n=>n.tag==='button'&&n.textContent===
 const click=n=>n.attrs.click({target:n,currentTarget:n});
 function make(){
   let modal,calls=[],pending={},timers=[],reloads=0;
-  const c={E:(...a)=>new Node(...a),bi:en=>en,locale:'en',safeCode:s=>typeof s==='string'&&/^[A-Z][A-Z0-9-]+$/.test(s),errorCodeLink:s=>s,helpLink:(_,label)=>new Node('a',{},label),serverTitle:p=>p.name,setTimeout:fn=>timers.push(fn),window:{location:{reload(){reloads++;}}},
+  const c={E:(...a)=>new Node(...a),L:{resource:s=>s},bi:en=>en,locale:'en',safeCode:s=>typeof s==='string'&&/^[A-Z][A-Z0-9-]+$/.test(s),errorCodeLink:s=>s,helpLink:(_,label)=>new Node('a',{},label),serverTitle:p=>p.name,setTimeout:fn=>timers.push(fn),window:{location:{reload(){reloads++;}}},
     ui:{showModal:(_,nodes)=>modal=new Node('modal',{},nodes),hideModal:()=>modal=null,addNotification(){}},rpc:{declare:spec=>(...args)=>{calls.push({method:spec.method,args});return new Promise(resolve=>(pending[spec.method]||(pending[spec.method]=[])).push(resolve));}}};
   vm.createContext(c);for(const f of ['fool_guard','ui_logic','auto_panel','vendor_diagnostics','setup_wizard','fault_panel','speed_table'])vm.runInContext(fs.readFileSync('router/'+f+'.inc.js','utf8'),c);
   return {c,calls,get reloads(){return reloads;},get modal(){return modal;},finish:(method,value)=>pending[method].shift()(value),tick:()=>{const old=timers;timers=[];old.forEach(fn=>fn());}};
