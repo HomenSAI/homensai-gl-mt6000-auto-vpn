@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard76'
+UI_MODULE='dashboard86'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -19,7 +19,7 @@ source=source.replace(anchor,anchor+"""
     var appRoot=null,settingsHost=null,heading=null,sideState=null,versionBadge=null,pages={},sortStates={},searchTerms={};
     var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
     function routerVpnUrl(){return resolveRouterVpnUrl(window.location.href,window.HOMENSAI_PREVIEW_ROUTER_ORIGIN);}
-    function vpnSetupCard(){return E('section',{'class':'hv-chart-card hv-vpn-setup'},[E('div',{'class':'hv-auto-power-unit'},[E('a',{'class':'hv-auto-power hv-vpn-configure','href':routerVpnUrl()||null,'aria-disabled':routerVpnUrl()?null:'true','title':routerVpnUrl()?null:bi('Router address unavailable in this preview','Адрес роутера недоступен в этом просмотре'),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('Open router VPN settings (opens a new tab)','Открыть настройки VPN роутера (новая вкладка)')},E('span',{'aria-hidden':'true','class':'hv-configure-symbol'},'⚙')),E('strong',{'class':'hv-auto-action'},bi('Configure VPN','Настроить VPN'))]),E('p',{},[bi('Add servers and connection keys on the router page ','Добавляйте серверы и ключи на странице роутера '),routerVpnUrl()?E('a',{'class':'hv-vpn-profile-link','href':routerVpnUrl(),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('VPN Client Profile (opens the router VPN settings in a new tab)','VPN Client Profile (открывает настройки VPN роутера в новой вкладке)')},'VPN Client Profile ↗'):E('span',{},'VPN Client Profile'),'.',E('br'),bi('Monitoring and failover priorities are set in this program (not on the router page): ','Мониторинг и приоритеты переключения настраиваются в этой программе (не на странице роутера): '),E('a',{'href':'#settings'},bi('Settings → Setup → 1 · System setup','Настройки → Настройка → 1 · Настройка системы')),'.'])]);}
+    function vpnSetupCard(){return E('section',{'class':'hv-chart-card hv-vpn-setup'},[E('div',{'class':'hv-auto-power-unit'},[E('a',{'class':'hv-auto-power hv-vpn-configure','href':routerVpnUrl()||null,'aria-disabled':routerVpnUrl()?null:'true','title':routerVpnUrl()?null:bi('Router address unavailable in this preview','Адрес роутера недоступен в этом просмотре'),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('Open router VPN settings (opens a new tab)','Открыть настройки VPN роутера (новая вкладка)')},E('span',{'aria-hidden':'true','class':'hv-configure-symbol'},'⚙')),E('strong',{'class':'hv-auto-action'},bi('Configure VPN','Настроить VPN'))]),E('p',{},[bi('Add servers and connection keys on the router page ','Добавляйте серверы и ключи на странице роутера '),routerVpnUrl()?E('a',{'class':'hv-vpn-profile-link','href':routerVpnUrl(),'target':'_blank','rel':'noopener noreferrer','aria-label':bi('VPN Client Profile (opens the router VPN settings in a new tab)','VPN Client Profile (открывает настройки VPN роутера в новой вкладке)')},'VPN Client Profile ↗'):E('span',{},'VPN Client Profile'),'.',E('br'),bi('Monitoring and failover priorities are set in this program (not on the router page): ','Мониторинг и приоритеты переключения настраиваются в этой программе (не на странице роутера): '),E('a',{'href':'#settings'},bi('Settings → All application settings → 3 · Existing VPNs','Настройки → Все настройки приложения → 3 · Существующие VPN')),'.'])]);}
     function validTab(key){return tabs.some(function(t){return t[0]===key;});}
     var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab='overview';
     function showPage(key){
@@ -238,6 +238,7 @@ reorganizer = """      (function(){
         settingsHost.appendChild(E('section',{'class':'hv-chart-card hv-setup-card'},[
           E('h3',{},bi('Setup','Настройка')),
           E('button',{'type':'button','class':'cbi-button cbi-button-action','data-onboarding-action':'open','click':function(){openOnboardingSettings(inventory,lastGoodStatus||data[1]);}},bi('All application settings','Все настройки приложения')),
+          E('button',{'type':'button','class':'cbi-button','data-onboarding-action':'open-pair','click':function(){openOnboardingSettings(inventory,lastGoodStatus||data[1],'system');}},bi('Choose primary and reserve VPN','Выбрать основной и резервный VPN')),
           !onboardingComplete(inventory)?E('p',{'class':'alert-message warning','data-onboarding-incomplete':'1'},bi('Initial setup is incomplete. Open All application settings to review and save it. Stop and recovery controls remain available.','Первоначальная настройка не завершена. Откройте «Все настройки приложения», проверьте и сохраните её. Остановка и средства восстановления остаются доступны.')):null,
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
           E('p',{'class':'hv-setup-path','aria-label':bi('Order of the steps','Порядок шагов')},[E('b',{},bi('1 · System setup','1 · Настройка системы')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('2 · Telegram','2 · Telegram')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('3 · Test delivery','3 · Проверка доставки')),E('small',{},bi('Press a button below to open its wizard.','Нажмите кнопку ниже, чтобы открыть мастер.'))]),
@@ -314,7 +315,6 @@ must_replace('return view.extend({',(Path(__file__).parent/'servers_panel.inc.js
 must_replace("put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')));","put('channels',vpnSetupCard());put('channels',renderServerSummary(status,inventory,rows));")
 # Read-only vendor tunnel identity and inter-channel planning diagnostics.
 must_replace('return view.extend({',(Path(__file__).parent/'vendor_diagnostics.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-must_replace("put('overview',controlCard);put('tests',renderCascadePath(status));","put('overview',controlCard);put('overview',renderVendorOverview(status,inventory));put('tests',renderCascadePath(status));")
 must_replace("put('channels',renderServerSummary(status,inventory,rows));","put('channels',renderServerSummary(status,inventory,rows));put('channels',renderVendorChannels(status,inventory));")
 must_replace("put('events',renderTransitionAnalytics(status));","put('events',renderTransitionAnalytics(status));put('events',renderVendorEvents(status,inventory));")
 must_replace("put('tests',renderDecisionExplanation(status));","put('tests',renderDecisionExplanation(status,inventory));")
@@ -323,6 +323,8 @@ source=source.replace('selectedProfile(status,Date.now()/1000)','vendorDisplaySe
 # Idle/active check control moves to the left of the page header, under the subtitle.
 must_replace("E('div',{'class':'hv-page-actions'},[versionBadge,language,renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})])","E('div',{'class':'hv-page-actions'},[versionBadge,language])")
 must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))","(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))),renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
+# The shared subtitle can be followed by an absent connectivity widget. Never render that null child.
+must_replace("renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})]),E('div',{'class':'hv-page-actions'}", "renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'}")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
@@ -351,7 +353,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui53.css')
+source=source.replace('ui15.css','ui58.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -452,6 +454,48 @@ must_replace('checkLampCell(p),cell(serverTitle(p))','checkLampCell(p,status,inv
 must_replace("var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';\n  return E('td',{'class':'hv-check-status'", "var use=channelDisplayUse(p,status,inventory),kind=use.kind;h.label=use.label;\n  return E('td',{'class':'hv-check-status'")
 source=source.replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select')
 source=source.replace('renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})','renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory)')
-(root/'ui53.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
+# Owner follow-up: fixed roles and bounded disclosures, without routing writes.
+must_replace('Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.','The terminal shows real router observations. A separate optional LAN-helper test checks what a client sees; it is not required for prepared router-probed Auto mode.')
+must_replace('Мониторинг включён. Проверки выполняет сам роутер и показывают, работает ли каждый VPN; они не доказывают, что видит компьютер в вашей сети. Это отдельно подтверждает LAN-помощник перед включением Auto.','Терминал показывает реальные наблюдения роутера. Отдельный необязательный LAN-тест проверяет связь клиента; для подготовленного router-probed авторежима он не обязателен.')
+must_replace('return view.extend({',(Path(__file__).parent/'journal_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'live_terminal.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("put('events',historyPanel);","put('events',renderEventHistory(status));")
+must_replace("if(table.closest('.hv-errtable'))return;","if(table.closest('.hv-errtable')||table.hasAttribute('data-hv-no-sort'))return;")
+must_replace('return view.extend({',(Path(__file__).parent/'latency_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'channel_guidance.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("var cards=E('div',{'class':'hv-server-grid'});","var cards=E('div',{'class':'hv-server-grid'}),cardHosts=channelCardHosts(rows,status,inventory,cards);")
+must_replace("sortServerCards(rows,vendorDisplaySelected(status,inventory,Date.now()/1000),Date.now()/1000).forEach(function(p){var channelUse=channelDisplayUse(p,status,inventory);cards.appendChild(","roleOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){var channelUse=channelDisplayUse(p,status,inventory);cardHosts.get(p).appendChild(")
+must_replace("put('channels',cards);","cardHosts.finish();put('channels',cards);put('channels',renderLatencyPanel(status,inventory));")
+must_replace("addSearch('channels',table);put('channels',table)","addSearch('channels',table);put('channels',limitTableRows(table,5,'current-checks-other'))")
+must_replace("sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach(function(p){table.appendChild", "roleOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild")
+must_replace("cell(serverTitle(p)),cell(p.channel),cell(protocolLabel(p))", "cell(serverTitle(p)),cell(roleDescription(p,status,inventory)),cell(protocolLabel(p))")
+must_replace("checkLampCell(p,status,inventory),cell(serverTitle(p)),cell(roleDescription(p,status,inventory))", "checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000),cell(roleDescription(p,status,inventory))")
+must_replace("E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён')))","E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{'class':'hv-server-address'},endpointText(p,Date.now()/1000)),E('p',{},roleDescription(p,status,inventory))")
+source=source.replace("renderCascadePath(status))","renderCascadePath(status,inventory))")
+must_replace("E('small',{},'HomenS.AI Style 1.14.3'),",'')
+
+# Overview tools belong to the first Auto card; retain the same RPC and freshness renderers.
+must_replace("var controlCard=renderAutoControl(status,inventory);", "var controlCard=renderAutoControl(status,inventory,function(){return statusCall().then(draw);});")
+must_replace(",E('div',{'class':'hv-tools-row'},[renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory),renderMonitorBlock(data[1],inventory)])", "")
+
+# The monitor title and terminal already explain the live view.
+must_replace("put('services',E('p',{},bi('A live log of the router checks. “Connected” alone does not mean the internet works.','Живой журнал проверок роутера. Одного «подключено» мало, чтобы считать, что интернет работает.')));", "")
+# Keep the live monitor first; optional explanation belongs below its terminal.
+source,_services_note=_r.subn(r"put\('services',E\('p',\{'class':'alert-message warning'\},\s*bi\('The terminal shows real router observations\..*?\)\)\);",'',source,count=1,flags=_r.S)
+assert _services_note==1,'live terminal optional LAN explanation'
+must_replace("put('services',renderLiveLog(status,rows,ns,inventory,stateNames));", """put('services',renderLiveLog(status,rows,ns,inventory,stateNames));
+      var terminalExplanation=E('details',{'class':'hv-chart-card','data-live-explanation':'scope'},[
+        E('summary',{},bi('About router observations and the LAN test','О наблюдениях роутера и LAN-тесте')),
+        E('p',{},bi('The terminal shows real router observations. A separate optional LAN-helper test checks what a client sees; it is not required for prepared router-probed Auto mode.','Терминал показывает реальные наблюдения роутера. Отдельный необязательный LAN-тест проверяет связь клиента; для подготовленного router-probed авторежима он не обязателен.'))]);
+      if(typeof rememberDisclosure==='function')rememberDisclosure(terminalExplanation,'live-terminal-explanation');
+      put('services',terminalExplanation);""")
+
+source=source.replace('renderTransitionAnalytics(status)', 'renderTransitionAnalytics(status,inventory)')
+
+# Keep the LuCI dependency directives first. Scope the child guard to this module,
+# covering every page/modal without modifying LuCI globals or meaningful text.
+must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_guard.inc.js').read_text(encoding='utf8'))
+
+(root/'ui58.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

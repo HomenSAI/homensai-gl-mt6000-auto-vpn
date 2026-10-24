@@ -1,0 +1,230 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_WITH_BROWSER_LIMIT",
+  "version": "0.9.1-alpha6",
+  "source": "1ce9ffd0dd483bed1dd846b00028ef81ea17755c",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha6-1_all.ipk",
+    "bytes": 792363,
+    "sha256": "d76f49a4dfa1e51e97dd6b22938967a21cbc8591ce5c704246e515d14a8138c9"
+  },
+  "change": "Current server checks: five initially visible rows, remaining rows expandable by triangle; primary then reserve, explicit channel roles instead of default group, fresh kernel-bound VPN server IP/port below server title; full-list search and sorting remain available",
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha6-1_all.ipk",
+      "bytes": 792363,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d76f49a4dfa1e51e97dd6b22938967a21cbc8591ce5c704246e515d14a8138c9",
+      "skipped_tests": 16,
+      "source": "1ce9ffd0dd483bed1dd846b00028ef81ea17755c",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha6-1_all.ipk",
+      "bytes": 792363,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d76f49a4dfa1e51e97dd6b22938967a21cbc8591ce5c704246e515d14a8138c9",
+      "skipped_tests": 0,
+      "source": "1ce9ffd0dd483bed1dd846b00028ef81ea17755c",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "files_modes_verified": 86,
+  "actual_https": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard82.js",
+        "http_status": 200,
+        "bytes": 934918,
+        "sha256": "db53c94ac6aaa20a8e7f116b5bb76a4fc61f35829eb2ca6fc3b40df53a15808e",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "bytes": 120848,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "actual_http8080": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard82.js",
+        "http_status": 200,
+        "sha256": "db53c94ac6aaa20a8e7f116b5bb76a4fc61f35829eb2ca6fc3b40df53a15808e",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "final": {
+    "result": "PASS",
+    "time": 1792832070.5909321,
+    "version": "0.9.1-alpha6",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 4.6986870765686035,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 33,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 34,
+      "channel_switches": 0,
+      "committed": 25,
+      "manual_attempts": 15,
+      "manual_committed": 14,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 6,
+      "rollbacks": 12,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 14013,
+      "failed_checks": 558,
+      "outages": 154,
+      "observed_down_seconds": 5779.240735054016,
+      "observed_up_seconds": 138980.92202067375,
+      "auto_observed_seconds": 71631.65426969528,
+      "recoveries": 135,
+      "unknown_intervals": 5
+    },
+    "external_lan_verified": false
+  },
+  "current_checks": {
+    "event": "CURRENT-CHECKS",
+    "result": "PASS",
+    "five_row_limit_installed": true,
+    "primary_before_reserve_installed": true,
+    "role_labels_installed": true,
+    "server_ip_cell_installed": true,
+    "fresh_bound_peer_addresses": 2,
+    "scope": "actual installed module and fresh live RPC; generated renderer DOM regression tested offline; no native browser visual acceptance claim"
+  },
+  "stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 20.313,
+    "bytes": 736,
+    "sha256": "41f80f4295eff8f06842fd3790bcf0054f287384c93e91942e65b42089d8d850",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 60.891,
+    "bytes": 2024,
+    "sha256": "ce626af7e17863cdbbfba0c739c889bc4686a615e34207250b15e895549ef734",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "reserve": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 39.25,
+    "bytes": 11017,
+    "sha256": "174fe4b028316b9121af76fa0958473ec768abde60e14f4e3886ff44a3c5c5d9",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "ee7452fca06dfda07613dacaf7a5e43e9ba2aa0bccdadf94b86c2c09b89b3c9c",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_backup": {
+    "step": "backup-after",
+    "result": "PASS",
+    "encrypted_sha256": "76d34e5a6b10447042087e89f8d7a4a4c0199f92c48568352613ac4ff63f9903",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "scope": {
+    "native_browser_visual": "NOT_VERIFIED_NO_CONFIGURED_BROWSER",
+    "router_originated_ipv4": true,
+    "independent_LAN": false,
+    "host_network_changed": false,
+    "primary_MT6000_changed": false,
+    "fault_test_run": false,
+    "release_published": false
+  },
+  "recorded_utc": "2026-10-24T08:54:29.290500+00:00",
+  "retained_attempts": [
+    {
+      "step": "stop preflight",
+      "result": "REFUSED_BEFORE_MUTATION",
+      "reason": "Local template still expected historical version; corrected template, re-read live alpha5 running on reserve, then completed normal lifecycle. Private failed attempt retained."
+    }
+  ]
+}

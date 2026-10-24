@@ -54,11 +54,13 @@ class Reliability:
             if not re.fullmatch(r'[0-9]{4}-(?:0[1-9]|1[0-2])',month):raise ValueError('STATISTICS-MONTH')
         last=0
         for row in d['events']:
-            if (not isinstance(row,dict) or set(row)-{'sequence','time','profile','kind','code','observed_duration_seconds'}
+            if (not isinstance(row,dict) or set(row)-{'sequence','time','profile','kind','code','observed_duration_seconds','role','selected'}
                     or type(row.get('sequence')) is not int or not last<row['sequence']<=d['sequence']
                     or not finite(row.get('time')) or not PROFILE.fullmatch(str(row.get('profile','')))
                     or row.get('kind') not in ('FAILURE','RECOVERY','DISABLED') or 'code' in row and row['code'] not in BAD
-                    or 'observed_duration_seconds' in row and not finite(row['observed_duration_seconds'])):
+                    or 'observed_duration_seconds' in row and not finite(row['observed_duration_seconds'])
+                    or 'role' in row and row['role'] not in ('source','target','unknown')
+                    or 'selected' in row and row['selected'] not in ('source','target','off','unknown')):
                 raise ValueError('STATISTICS-EVENT')
             last=row['sequence']
         for key,row in d['profiles'].items():
@@ -106,7 +108,7 @@ class Reliability:
         for month in sorted(d['months'])[:-1200]:del d['months'][month]
         d['profiles']={key:value for key,value in d['profiles'].items() if now-value['time']<=WEEK}
 
-    def observe(self,row,max_gap=90):
+    def observe(self,row,max_gap=90,native=None):
         key=row.get('id');now=row.get('time')
         if not isinstance(key,str) or not PROFILE.fullmatch(key) or not finite(now) or now>253370764799:return False
         d=self.data;previous=d['profiles'].get(key)
@@ -127,6 +129,12 @@ class Reliability:
             self.event(key,'DISABLED',now);opened=None;observed=False
         elif state=='down' and opened is None:
             self.add('outages',1,now);self.event(key,'FAILURE',now,code);opened=now;observed=True
+            event=d['events'][-1];event.update(role='unknown',selected='unknown')
+            if isinstance(native,dict) and finite(native.get('time')) and 0<=now-native['time']<=30:
+                if native.get('source')!=native.get('target'):
+                    event['role']='source' if key==native.get('source') else 'target' if key==native.get('target') else 'unknown'
+                state=native.get('state')
+                event['selected']='target' if state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if state=='OBSERVING' and (native.get('certified') is True or native.get('readiness_verified') is True) else 'off' if state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED') else 'unknown'
         elif state=='up' and opened is not None:
             self.add('recoveries',1,now)
             self.event(key,'RECOVERY',now,duration=now-opened if observed else None);opened=None
@@ -155,5 +163,7 @@ class Reliability:
                 'months':copy.deepcopy(d['months']),'events':copy.deepcopy(d['events'][-100:]),
                 'sequence':d['sequence'],'detail_days':7,'details_dropped':d['details_dropped'],
                 'route_history':self.routes.export(),
+                'failure_history':{'events':[[e['time'],e.get('role','unknown'),e.get('selected','unknown')] for e in d['events'] if e['kind']=='FAILURE' and e['time']>=max((p['time'] for p in d['profiles'].values()),default=0)-86400],
+                                   'since':d['since'],'details_dropped':d['details_dropped']},
                 'scope':'observed VPN checks and outage edges; not LAN availability',
                 'checkpointed':True}

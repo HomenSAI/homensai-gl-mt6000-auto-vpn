@@ -22,6 +22,7 @@ function speedPanel(status,inventory,period,onPeriod){
   // Connected servers first (they can be ticked), then servers that only have history.
   var ids=active.map(function(p){return p.id;});
   Object.keys(grouped).forEach(function(id){if(ids.indexOf(id)<0)ids.push(id);});
+  ids=ids.map(function(id,i){return {id:id,i:i,time:grouped[id]&&grouped[id].last.time||0};}).sort(function(a,b){return b.time-a.time||a.i-b.i;}).map(function(row){return row.id;});
   var section=E('section',{'class':'hv-chart-card hv-speed-panel'},[
     E('h3',{},bi('VPN server speed tests','Тесты скорости VPN-серверов')),
     E('p',{},bi('Tick the servers you want to measure and press “Test speed”. The same table fills in with the results. A test downloads and uploads a small amount of data through the VPN to Cloudflare; it is a sample of what the application sees, not an Ookla score. VPNs that are not connected cannot be ticked: this program never connects them.','Отметьте серверы, которые хотите измерить, и нажмите «Тестировать скорость». Эта же таблица заполнится результатами. Тест скачивает и отдаёт небольшой объём данных через VPN до Cloudflare; это выборочный результат на уровне приложения, а не оценка Ookla. Неподключённые VPN отметить нельзя: эта программа их не подключает.'))]);
@@ -36,7 +37,7 @@ function speedPanel(status,inventory,period,onPeriod){
     box.checked=connected&&!!speedSelected[id];boxes.push(box);
     var down=mean(good,'download'),up=mean(good,'upload');
     var lastCell=g?[g.last.code?E('a',{'href':'#events','class':'hv-errlink','click':function(ev){ev.preventDefault();showErrorCode(g.last.code);}},g.last.code):E('span',{'class':'hv-speed-ok'},'✓ OK'),E('small',{},' '+new Date(g.last.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))]:[E('span',{'class':'hv-muted'},bi('not tested yet','ещё не тестировался'))];
-    table.appendChild(E('tr',{'class':connected?'':'hv-speed-off'},[E('td',{},box),E('td',{},[E('strong',{},p?serverTitle(p):id),connected?null:E('small',{},' '+bi('(not connected)','(не подключён)'))].filter(Boolean)),E('td',{},down==null?'—':down.toFixed(1)),E('td',{},up==null?'—':up.toFixed(1)),E('td',{},lastCell),E('td',{},g?good.length+' / '+g.count:'—')]));
+    table.appendChild(E('tr',{'class':connected?'':'hv-speed-off'},[E('td',{},box),E('td',{},[E('strong',{},p?serverTitle(p):id),typeof endpointText==='function'?E('small',{'class':'hv-server-address'},endpointText(p,now)):null,connected?null:E('small',{},' '+bi('(not connected)','(не подключён)'))].filter(Boolean)),E('td',{},down==null?'—':down.toFixed(1)),E('td',{},up==null?'—':up.toFixed(1)),E('td',{},lastCell),E('td',{},g?good.length+' / '+g.count:'—')]));
   });
   if(!ids.length)table.appendChild(E('tr',{},[E('td',{'colspan':'6'},bi('No connected VPN servers yet. Connect one in the GL.iNet VPN Dashboard.','Подключённых VPN-серверов пока нет. Подключите сервер в GL.iNet → VPN Dashboard.'))]));
   var test=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-primary-action','disabled':s.speed_enabled&&active.length?null:'','click':function(){
@@ -51,7 +52,7 @@ function speedPanel(status,inventory,period,onPeriod){
   section.appendChild(E('div',{'class':'hv-native-actions'},[test,cancel,E('label',{'class':'hv-speed-period'},[bi('Results for: ','Результаты за: '),periodSelect])]));
   section.appendChild(E('p',{'role':'status'},speedStateText(history)+' '+bi('Finished tests: ','Завершено тестов: ')+(history.completed||0)));
   if(!s.speed_enabled)section.appendChild(E('p',{'class':'alert-message warning'},[bi('Speed tests are switched off. ','Тесты скорости выключены. '),E('a',{'href':'#tests','click':function(ev){ev.preventDefault();goToSection('tests','hv-speed-settings');}},bi('Turn them on in Advanced → Tests → Speed test settings.','Включите их в «Расширенное» → «Тесты» → «Настройки тестов скорости».'))]));
-  section.appendChild(table);
+  section.appendChild(typeof limitTableRows==='function'?limitTableRows(table,5,'speed-other'):table);
   section.appendChild(E('small',{},bi('Mean of successful tests; failed or cancelled tests are not counted as zero speed. History is sampled and bounded.','Среднее по успешным тестам; ошибки и отмены не считаются нулевой скоростью. История выборочная и ограниченная.')));
   if(history.history_error)section.appendChild(E('p',{},history.history_error));
   if(history.history_truncated)section.appendChild(E('p',{},'SPEED-HISTORY-TRUNCATED: '+history.history_truncated));

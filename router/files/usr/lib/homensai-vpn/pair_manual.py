@@ -15,7 +15,8 @@ def path():
 
 
 def valid(row):
-    basic=(isinstance(row,dict) and set(row)=={'id','pair','revision','direction','state','requested','updated','selection','code'}
+    basic=(isinstance(row,dict) and set(row) in ({'id','pair','revision','direction','state','requested','updated','selection','code'},{'id','pair','revision','direction','state','requested','updated','selection','code','request_source'})
+        and ('request_source' not in row or isinstance(row['request_source'],str) and row['request_source'] in ('manual','test','programmatic','unknown'))
         and all(isinstance(row.get(key),str) and re.fullmatch('[a-f0-9]{32}',row[key]) for key in ('id','pair','revision'))
         and isinstance(row['direction'],str) and row['direction'] in ('primary','reserve','resume') and isinstance(row['state'],str) and row['state'] in STATES
         and all(type(row[key]) in (int,float) and math.isfinite(row[key]) and row[key]>0 for key in ('requested','updated'))
@@ -58,7 +59,7 @@ def public():
     except (OSError,ValueError):return {'state':'UNCONFIRMED','completed':False,'code':'PAIR-MANUAL-STATE-UNVERIFIED'}
     if not row:return {'state':'IDLE','completed':False}
     return {'state':row['state'],'direction':row['direction'],'request_id':row['id'],
-            'requested_at':row['requested'],'updated_at':row['updated'],'completed':row['state']=='COMPLETED','code':row['code']}
+            'requested_at':row['requested'],'updated_at':row['updated'],'request_source':row.get('request_source','unknown'),'completed':row['state']=='COMPLETED','code':row['code']}
 
 
 def controls():
@@ -95,9 +96,9 @@ def controls():
         result.update(available=False,blockers=['PAIR-MANUAL-STATE-UNVERIFIED']);return result
 
 
-def request(direction,revision):
+def request(direction,revision,request_source=None):
     from agent import RUNTIME,read_json,atomic_json
-    from auto_control import control_lock,revision_locked
+    from auto_control import control_lock,revision_locked,normalize_request_source
     import native_switch as n,pair_auto as pair
     def refuse(code):return {'accepted':False,'queued':False,'completed':False,'blockers':[code]}
     if direction not in ('primary','reserve','resume') or not isinstance(revision,str) or not re.fullmatch('[a-f0-9]{32}',revision):return refuse('PAIR-MANUAL-FIELDS')
@@ -118,7 +119,7 @@ def request(direction,revision):
             old=read()
             if old and old['state'] in PENDING:return refuse('PAIR-MANUAL-BUSY')
             now=time.time();row={'id':uuid.uuid4().hex,'pair':state['id'],'revision':revision,'direction':direction,
-                'state':'QUEUED','requested':now,'updated':now,'selection':selection,'code':None}
+                'state':'QUEUED','requested':now,'updated':now,'selection':selection,'code':None,'request_source':normalize_request_source(request_source)}
             atomic_json(path(),row)
         return {'accepted':True,'queued':True,'completed':False,'request_id':row['id'],'control_revision':revision}
     except (OSError,ValueError,KeyError,TypeError,n.Refused,subprocess.SubprocessError):return refuse('PAIR-MANUAL-REQUEST-UNCONFIRMED')
@@ -133,7 +134,7 @@ def recover():
 
 def consume(backend,state,settings,revision):
     from agent import RUNTIME,PERSIST,read_json,atomic_json
-    from auto_control import control_lock,revision_locked
+    from auto_control import control_lock,revision_locked,normalize_request_source
     import native_switch as n,pair_auto as pair
     row=read()
     if not row or row['state'] not in PENDING:return False
@@ -174,7 +175,7 @@ def consume(backend,state,settings,revision):
             pair.require_running(revision);atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
             until=pair.configure_lease(state);blockers,selection=backend.diagnostic()
             if blockers:raise n.Refused(blockers[0])
-            n.attempt(backend,selection,until,False,control_revision=revision,manual_request_id=row['id'])
+            n.attempt(backend,selection,until,False,control_revision=revision,manual_request_id=row['id'],request_source=row.get('request_source'))
             journal=n.journal_read()
             if journal.get('manual_request_id')!=row['id'] or journal.get('phase')!='HELD-ON-RESERVE' or not journal.get('confirmed') or backend.order()!=(journal['after'],journal['hash']):raise n.Refused('MANUAL-COMPLETION-UNVERIFIED')
             hold='target'
@@ -186,10 +187,10 @@ def consume(backend,state,settings,revision):
             if not handled or not _confirmed_return(record,read_json(n.return_result_path(),{}),n.journal_read(),backend.order(),time.time()):raise n.Refused('RETURN-UNCONFIRMED')
             hold='source'
         with control_lock(RUNTIME):
-            pair.require_running(revision);state['manual_hold']=hold;pair.save(state)
+            pair.require_running(revision);state['manual_hold']=hold;state['manual_hold_source']=row.get('request_source','unknown');pair.save(state)
         n.publish({'state':'COMMITTED' if hold=='target' else 'ROLLED-BACK','mode':'continuous-pair','proof_scope':pair.MODE,
                    'source':expected['source'],'target':expected['target'],'reason':'OPERATOR-MANUAL',
-                   'manual':True,'original_restored':hold=='source'})
+                   'manual':True,'transition_source':row.get('request_source','unknown'),'original_restored':hold=='source'})
         finish('COMPLETED')
     except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
         code=str(error) if isinstance(error,n.Refused) and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'PAIR-MANUAL-UNCONFIRMED'
@@ -212,11 +213,11 @@ def held_reserve(backend,state,journal,settings,status):
     verified=(resolved['coordination']['state']=='READY' and resolved['target'] is not None
               and resolved['target']['id']==journal['target'] and (expected is None or profile_identity(resolved['target'])==expected))
     if not verified:
-        n.publish({'state':'DEGRADED-ON-RESERVE','reason':'RESERVE-IDENTITY-UNKNOWN','manual':True,'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
+        n.publish({'state':'DEGRADED-ON-RESERVE','reason':'RESERVE-IDENTITY-UNKNOWN','manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
         return True
     failed=row and streak(scoped_samples(status.get('samples',[]),row),row['id'],recovery['failures'],now,90,False,row)
     if failed:
         state.pop('manual_hold',None);pair.save(state);return False
-    n.publish({'state':'COMMITTED','reason':'PAIR-MANUAL-HOLD-RESERVE','manual':True,'source':journal['source'],'target':journal['target'],
+    n.publish({'state':'COMMITTED','reason':'PAIR-MANUAL-HOLD-RESERVE','manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],
                'mode':'continuous-pair','proof_scope':pair.MODE})
     return True

@@ -7,8 +7,8 @@ function startSteps(status,inventory,now){
     {key:'terms',done:true,title:bi('Accept the terms','Принять условия'),hint:bi('Done on the first screen.','Сделано на первом экране.')},
     {key:'learn',done:learnDone(),title:bi('Take the 5-minute training','Пройти обучение на 5 минут'),hint:bi('What the system is, how to use it and what to do if the internet is gone.','Что это за система, как ею пользоваться и что делать, если пропал интернет.'),href:'#learn',action:bi('Open training','Открыть обучение')},
     {key:'monitor',done:monitor.key==='ok',title:bi('Monitoring is on','Мониторинг включён'),hint:bi('It starts by itself. Look at the Monitoring block at the top of this page: the lamp must be green. If it is not, press “Start monitoring” there.','Он запускается сам. Посмотрите на блок «Мониторинг» вверху этой страницы: лампа должна быть зелёной. Если нет, нажмите там «Запустить мониторинг».')},
-    {key:'profiles',done:!!(settings.setup_complete&&settings.plan_source&&settings.plan_target),title:bi('Choose the primary and the reserve VPN','Выбрать основной и резервный VPN'),hint:bi('Settings → Setup → 1 · System.','«Настройки» → «Настройка» → 1 · Система.'),href:'#settings',action:bi('Open Settings','Открыть настройки')},
-    {key:'auto',done:!!model.on,title:bi('Check the VPNs, run the LAN test, turn on Auto','Проверить VPN, пройти LAN-тест, включить Auto'),hint:ready.ready?bi('Everything is ready: press the Auto button below.','Всё готово: нажмите кнопку Auto ниже.'):bi('The list under the Auto button shows what is still missing.','Список под кнопкой Auto показывает, чего ещё не хватает.')}
+    {key:'profiles',done:!!(settings.setup_complete&&settings.plan_source&&settings.plan_target),title:bi('Choose the primary and the reserve VPN','Выбрать основной и резервный VPN'),hint:bi('Primary is your preferred everyday VPN. Reserve is a different saved VPN used when the primary fails. Open the pair fields directly, or Settings → All application settings → 3 · Existing VPNs.','Основной — предпочитаемый VPN для обычной работы. Резервный — другой сохранённый VPN на случай отказа основного. Кнопка откроет нужные поля; они также доступны: «Настройки → Все настройки приложения → 3 · Существующие VPN».'),href:'#settings',action:bi('Choose the VPN pair','Выбрать пару VPN')},
+    {key:'auto',done:!!model.on,title:bi('Check the VPNs and start Auto','Проверить VPN и включить Auto'),hint:ready.ready?bi('Everything is ready: press the Auto button below.','Всё готово: нажмите кнопку Auto ниже.'):bi('The list under the Auto button shows what is still missing. A separate LAN test checks a real client; it is not required for prepared-MT3000 router-probed IPv4 mode.','Список под кнопкой Auto показывает, чего ещё не хватает. Отдельный LAN-тест проверяет реального клиента; для router-probed IPv4 на подготовленном MT3000 он не обязателен.')}
   ];
 }
 function renderSummary(status,inventory){
@@ -139,13 +139,13 @@ function startLanding(status,inventory){
 function renderStartPage(status,inventory){
   var steps=startSteps(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),open=steps.filter(function(s){return !s.done;}),next=open[0];
   if(!open.length){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}}
-  var targets={learn:['#learn',bi('Open training','Открыть обучение')],monitor:['#overview',bi('Open the Overview','Открыть «Обзор»')],profiles:['#settings',bi('Open Settings','Открыть настройки')],auto:['#overview',bi('Open the Overview','Открыть «Обзор»')]};
+  var targets={learn:['#learn',bi('Open training','Открыть обучение')],monitor:['#overview',bi('Open the Overview','Открыть «Обзор»')],profiles:['#settings',bi('Choose the VPN pair','Выбрать пару VPN')],auto:['#overview',bi('Open the Overview','Открыть «Обзор»')]};
   var list=E('ol',{'class':'hv-start-list hv-start-page-list'},steps.map(function(s,i){
     var current=next&&next.key===s.key,target=targets[s.key];
     return E('li',{'class':'hv-start-step hv-start-'+(s.done?'done':current?'next':'todo')},[
       E('span',{'class':'hv-start-mark','aria-hidden':'true'},s.done?'✓':String(i+1)),
       E('div',{},[E('strong',{},s.title),E('p',{},s.done?bi('Done.','Готово.'):s.hint)]),
-      (!s.done&&target)?E('a',{'class':'cbi-button'+(current?' cbi-button-action':''),'href':target[0]},target[1]):E('span',{'class':'hv-visually-hidden'},s.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
+      (!s.done&&target)?E('a',{'class':'cbi-button'+(current?' cbi-button-action':''),'href':target[0],'click':s.key==='profiles'?function(ev){ev.preventDefault();openOnboardingSettings(inventory,status,'system');}:null},target[1]):E('span',{'class':'hv-visually-hidden'},s.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
   }));
   return E('section',{'class':'hv-chart-card hv-start-page'},[
     E('h3',{},open.length?bi('Step ','Шаг ')+(steps.indexOf(next)+1)+bi(' of ',' из ')+steps.length:bi('All steps are done','Все шаги выполнены')),

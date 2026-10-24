@@ -19,16 +19,55 @@ var READINESS_CHECKS={
   'DEPENDENCY-IP':['ip','ip','Network tool','Сетевой инструмент','⛓'],
   'RPC-PLUGIN':['Program plugin','Модуль программы','Connects this page to the program','Связывает эту страницу с программой','🔌'],
   'CA-BUNDLE':['Certificates','Сертификаты','For HTTPS checks','Для проверок HTTPS','🔒'],
-  'CONFIG-STORAGE-FREE':['Free storage','Свободное место','At least 1 MB for settings','Не менее 1 МБ для настроек','💾']
+  'CONFIG-STORAGE-FREE':['Writable configuration storage','Записываемое хранилище настроек','Writable filesystem and at least 1 MB free','Доступная запись и не менее 1 МБ свободно','💾']
 };
 var READINESS_TESTED_FIRMWARE='4.11.0';
+// Allowlisted remedies only. Never derive a shell command from RPC/user text.
+var READINESS_GUIDES={
+  'PYTHON-39-MINIMUM':{packages:'python3',install:'opkg install python3',verify:'python3 --version',en:'Runs the application. Version 3.9 or newer is required; installing an older vendor Python is not a pass.',ru:'Выполняет программу. Нужен Python 3.9 или новее; установка более старой версии из feeds не означает готовность.'},
+  'DEPENDENCY-UBUS':{packages:'ubus',install:'opkg install ubus',verify:'ubus call system board',en:'Connects the application to router services. A missing command and a stopped ubus service need different diagnoses.',ru:'Обеспечивает связь со службами роутера. Отсутствующая команда и остановленная служба ubus — разные причины.'},
+  'DEPENDENCY-UCI':{packages:'uci',install:'opkg install uci',verify:'command -v uci',en:'Reads and saves router settings. Never delete configuration or reset the router to repair this check.',ru:'Читает и сохраняет настройки. Не удаляйте конфигурацию и не сбрасывайте роутер ради исправления проверки.'},
+  'DEPENDENCY-LUA':{packages:'lua lua-cjson libuci-lua',install:'opkg install lua lua-cjson libuci-lua',verify:'lua -e "require(\'cjson\'); require(\'uci\')"',en:'Runs the settings helper. Both the interpreter and its JSON/UCI modules must load.',ru:'Запускает помощник настроек. Должны работать интерпретатор и модули JSON/UCI.'},
+  'DEPENDENCY-IP':{packages:'ip-full',install:'opkg install ip-full',verify:'ip -Version',en:'Inspects interfaces and policy routes. Keep the matching vendor package; do not remove networking packages to force a replacement.',ru:'Проверяет интерфейсы и маршруты. Нужен пакет этой прошивки; не удаляйте сетевые компоненты ради принудительной замены.'},
+  'RPC-PLUGIN':{packages:'application / rpcd',install:'',verify:'ubus -v list homensai-vpn',en:'Connects this page to the installed application. Check the verified application package and rpcd registration; a Python package alone cannot repair it. Follow the installation prompt for a verified repair, without force flags.',ru:'Связывает страницу с приложением. Проверьте проверенный пакет программы и регистрацию в rpcd: установка Python сама по себе это не исправит. Для восстановления используйте установочный промпт без force-флагов.'},
+  'CA-BUNDLE':{packages:'ca-bundle',install:'opkg install ca-bundle',verify:'test -s /etc/ssl/certs/ca-certificates.crt',en:'Supplies trusted certificate authorities for HTTPS. Also check the router clock; never disable TLS verification to make a probe pass.',ru:'Содержит доверенные центры сертификатов HTTPS. Проверьте и часы роутера; не отключайте проверку TLS ради зелёного результата.'},
+  'CONFIG-STORAGE-FREE':{packages:'none',install:'',verify:'df -k /etc/config; cat /proc/mounts',en:'Settings need a writable filesystem and at least 1 MiB free; installation preflight separately needs 20 MiB. Read-only storage can have plenty of space but cannot save settings. Diagnose filesystem/recovery first; never automatically remount a production router, delete arbitrary files or reset it.',ru:'Для настроек нужна записываемая файловая система и минимум 1 МиБ; установочный preflight отдельно требует 20 МиБ. Read-only хранилище может иметь много места, но не сохранять настройки. Сначала диагностика файловой системы/восстановления; не перемонтируйте рабочий роутер автоматически, не удаляйте произвольные файлы и не сбрасывайте его.'}
+};
+function readinessRepairPrompt(code){
+  var g=READINESS_GUIDES[code],r=READINESS_CHECKS[code];if(!g||!r)return '';
+  return bi('On the specific router I identify, diagnose and repair this failed application check: ','На указанном мной роутере проверь и исправь этот пункт готовности приложения: ')+code+' — '+bi(r[0],r[1])+'.\n'+
+    bi('Start read-only: verify model/firmware, package feeds, actual failure and free space. Preserve a verified private backup. Use existing authorized access; never request secrets in chat.\n','Сначала только чтением: модель/прошивка, штатные feeds, фактическая причина и место. Сохрани проверенную приватную копию. Используй разрешённый доступ; не запрашивай секреты в чат.\n')+
+    bi('Purpose: ','Назначение: ')+bi(g.en,g.ru)+'\n'+
+    (g.install?bi('After checking compatibility, install only from this firmware\'s original vendor feeds. Example: ','После проверки совместимости устанавливай только из штатных feeds этой прошивки. Пример: ')+g.install+'\n':'')+
+    bi('Verify using: ','Проверь командой: ')+g.verify+'\n'+
+    bi('Do not use force flags, mass upgrades, foreign feeds, firmware flashing, firewall resets or computer network changes. Do not start Auto or accept terms for me. Reload readiness and verify a fresh result, not only installer exit. Report PASS/FAIL/BLOCKED/UNKNOWN and remaining checks.\n','Без force, массового обновления, чужих feeds, прошивки, сброса firewall и изменений сети компьютера. Не запускай Auto и не принимай соглашение за меня. Обнови готовность и проверь свежий результат, не только exit установщика. Отчитайся PASS/FAIL/BLOCKED/UNKNOWN и перечисли непроверенное.\n')+
+    'https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/INSTALL.'+(locale==='ru'?'ru':'en')+'.md';
+}
+function renderReadinessHelp(code){
+  var g=READINESS_GUIDES[code],r=READINESS_CHECKS[code];
+  var prompt=E('textarea',{'readonly':'readonly','rows':'12','style':'width:100%;box-sizing:border-box','aria-label':bi('AI repair prompt','Промпт исправления с ИИ')});prompt.value=readinessRepairPrompt(code);
+  var copy=E('button',{'type':'button','class':'cbi-button','click':function(){
+    function select(){prompt.focus();prompt.select();}
+    if(typeof navigator!=='undefined'&&navigator.clipboard)return navigator.clipboard.writeText(prompt.value).then(function(){copy.textContent=bi('Copied','Скопировано');}).catch(select);
+    select();
+  }},bi('Copy repair prompt','Скопировать промпт исправления'));
+  return E('div',{'data-readiness-help':code},[
+    E('h3',{},bi(r[0],r[1])+' · '+code),E('p',{},bi(g.en,g.ru)),
+    E('h4',{},bi('Install manually','Установить самостоятельно')),
+    E('p',{},bi('Connect to the correct router, check firmware and free space, preserve a verified private backup. Use only the original matching vendor feeds. Run opkg update only when package lists need refreshing. Never run opkg upgrade or use force.','Подключитесь к нужному роутеру, проверьте прошивку/место и сохраните проверенную приватную копию. Используйте только штатные feeds этой прошивки. Выполняйте opkg update лишь для обновления списка пакетов. Не запускайте opkg upgrade и не используйте force.')),
+    g.install?E('pre',{'class':'hv-cmd'},g.install):E('p',{},bi('This needs diagnosis/recovery, not an arbitrary additional package.','Здесь нужна диагностика/восстановление, а не произвольный дополнительный пакет.')),
+    E('h4',{},bi('Verify the result','Проверить результат')),E('pre',{'class':'hv-cmd'},g.verify),
+    E('p',{},bi('Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.','Обновите «Готовность системы» и дождитесь свежих данных. Ошибка или устаревшая проверка остаётся непроверенной даже после успешной команды установки.')),
+    E('h4',{},bi('Let ChatGPT/Codex or Claude do it','Поручить ChatGPT/Codex или Claude')),E('p',{},bi('Use an agent with a terminal and router access. This prompt addresses only this check; it does not authorize other network changes.','Нужен агент с терминалом и доступом к роутеру. Промпт относится только к этому пункту и не разрешает другие сетевые изменения.')),copy,prompt
+  ].filter(Boolean));
+}
 function readinessCheckState(state){return state==='pass'?'ok':state==='fail'?'bad':state==='waiting'?'waiting':'unknown';}
 function readinessTile(code,state){
   var r=Object.prototype.hasOwnProperty.call(READINESS_CHECKS,code)?READINESS_CHECKS[code]:[code,code,'',' ','•'];
   var st=readinessCheckState(state);
   var word=st==='ok'?bi('OK','Есть'):st==='bad'?bi('Missing','Нет'):st==='waiting'?bi('Waiting…','Ожидается…'):bi('Not known','Неизвестно');
   var mark=st==='ok'?'✓':st==='bad'?'✗':st==='waiting'?'…':'?';
-  return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3]))]),E('b',{'class':'hv-rd-word'},word)]);
+  return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3])),typeof helpLink==='function'?helpLink('dependency-'+code,bi('Help','Помощь')):null].filter(Boolean)),E('b',{'class':'hv-rd-word'},word)]);
 }
 function readinessInfo(icon,label,value,waiting){
   return E('div',{'class':'hv-rd-info'+(waiting?' hv-rd-info-waiting':'')},[E('span',{'class':'hv-rd-info-icon','aria-hidden':'true'},icon),E('small',{},label),waiting?E('span',{'class':'hv-rd-skeleton'},bi('waiting for data…','ожидаются данные…')):E('strong',{},value)]);
@@ -56,7 +95,27 @@ function renderPreparation(status,now){
   var explanation=m.state==='unsupported'?bi('These persistent checks apply to the tested MT3000 setup. This is not a compatibility verdict for another model.','Эти постоянные настройки проверяются для испытанной конфигурации MT3000. Это не заключение о совместимости другой модели.'):
     m.state==='unknown'?bi('Fresh preparation evidence is not available.','Свежие сведения о подготовке отсутствуют.'):
     bi('These settings keep the tested MT3000 preparation across reboot. A passing check does not start a VPN or authorize Auto.','Эти настройки сохраняют проверенную подготовку MT3000 после перезагрузки. Успешная проверка не запускает VPN и не разрешает Auto.');
-  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),E('ul',{},m.checks.map(function(row){var label=PREPARATION_CHECKS[row.code],word=row.state==='pass'?bi('OK','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено');return E('li',{},bi(label[0],label[1])+': '+word+' · '+row.code);})),E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
+  var meaning={
+    'PREP-HNAT-CONFIG':['Keeps hardware acceleration from bypassing the checked path.','Не даёт аппаратному ускорению обходить проверяемый путь.'],
+    'PREP-WGCLIENT1-AUTOSTART':['Auto coordinates the selected WireGuard client startup.','Запуск выбранного WireGuard координирует Auto.'],
+    'PREP-OVPNCLIENT1-AUTOSTART':['Auto coordinates the selected OpenVPN client startup.','Запуск выбранного OpenVPN координирует Auto.'],
+    'PREP-STOCK-VPN-BOOT':['Avoids two competing VPN startup controllers.','Предотвращает конкуренцию двух механизмов запуска VPN.'],
+    'PREP-SFE-BOOT':['Prevents software acceleration restarting at boot.','Не позволяет программному ускорению вернуться при загрузке.'],
+    'PREP-SFE-AUTOLOAD':['Keeps original autoload bytes available for deliberate recovery.','Сохраняет исходный файл автозагрузки для осознанного восстановления.'],
+    'PREP-SFE-RUNTIME':['Checks loaded software acceleration separately from saved settings.','Проверяет загруженное ускорение отдельно от сохранённых настроек.']
+  };
+  var rows=m.checks.map(function(row){
+    var label=PREPARATION_CHECKS[row.code],detail=meaning[row.code],pass=row.state==='pass';
+    return E('tr',{'data-preparation-code':row.code},[
+      E('td',{},[E('strong',{},bi(label[0],label[1])),E('small',{'style':'display:block;overflow-wrap:anywhere'},row.code)]),
+      E('td',{},[E('span',{'class':'hv-check-lamp hv-check-'+(pass?'green':row.state==='fail'?'red':'grey'),'aria-hidden':'true'}),' '+(pass?bi('Ready','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено'))]),
+      E('td',{},bi(detail[0],detail[1])),
+      E('td',{},pass?bi('Keep the verified setting.','Сохранить проверенное значение.'):bi('Inspect the actual state and reviewed undo procedure before changing anything.','Проверить фактическое состояние и инструкцию отмены до изменений.')),
+      E('td',{},typeof helpLink==='function'?helpLink('router-preparation',bi('Help','Помощь')):bi('See router preparation instructions.','См. инструкцию подготовки роутера.'))]);
+  });
+  var table=E('div',{'class':'hv-dv-tablewrap','style':'overflow-x:auto'},E('table',{'class':'table hv-preparation-table','data-preparation-table':'1'},[
+    E('thead',{},E('tr',{},[bi('Check','Проверка'),bi('State','Состояние'),bi('Meaning','Что означает'),bi('Next action','Что делать'),bi('Help','Помощь')].map(function(label){return E('th',{'scope':'col'},label);}))),E('tbody',{},rows)]));
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),table,E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
 }
 function renderReadiness(status,inventory){
   var now=Date.now()/1000,m=readinessModel(status,now),b=m.board||{};

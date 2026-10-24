@@ -20,6 +20,7 @@ class Tests(unittest.TestCase):
                 self.assertFalse(a.start(revision,trial_nonce='b'*32)['accepted'])
                 result=a.start(revision,trial_nonce='a'*32);self.assertTrue(result['accepted'])
                 request=read_json(runtime/'auto-control.json',{})
+                self.assertEqual(request['request_source'],'test')
                 self.assertEqual(a.effective_intent(settings,stopped,request,now),(True,False))
                 self.assertEqual(read_json(persist/'native-stop.json',{}),stopped)
                 self.assertFalse((persist/'native-certificate.json').exists());self.assertEqual(settings['native_enabled'],'0')

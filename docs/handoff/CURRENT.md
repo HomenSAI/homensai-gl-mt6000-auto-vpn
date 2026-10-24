@@ -1,3 +1,73 @@
+# Alpha10 batch checked for GitHub/Gitea publication — 24 October 2026
+
+Items32–46 and the onboarding Stop actor marker are included in0.9.1-alpha10/dashboard86/ui58. Product source03fe2c9470683310d0571f6af5dd20063c197157 passed exact-commit dual-runtime CI:750 application +107QA tests per runtime,44UI suites on the primary runtime, complementary runtime skips. Canonical Linux IPK801579bytes, SHA2569a40e7ce48170bc76d2aada215764691edd60dd61d1f1f660e88afcad1b1896b. Windows draft package replaced with canonical artifact; no product source change. Receipt qa/OWNER-UI-ALPHA10-2026-10-24.json. Publication is authorized for both Git services; installation was not requested by this message. Device alpha9 and stable publicv0.9.0 remain unchanged. Native-browser acceptance and previous prompt/VM limits remain open.
+
+# Batch publication candidate 0.9.1-alpha10 — 24 October 2026
+
+Owner ended the local-only batch for GitHub/Gitea publication. Items32–46 source and generated UI are included in alpha10/dashboard86/ui58. Local source snapshot will undergo exact-commit dual-runtime offline CI before branch push. Includes grouped live observations, actor/direction/latency metadata, compact statistics/failure chart, no null child text, readable channel/server/outcome statistics and layout/copy corrections. Onboarding emergency Stop also explicitly records operator provenance. No physical router installation is part of this publication; installed alpha9 remains the last verified device baseline. Native-browser visual acceptance and older VM/prompt limitations remain open. Existing v0.9.0 release is unchanged. See NEXT-AI-2026-10-24.md and OWNER-UI-TODO-2026-10-23.md.
+
+# Item31 installed; item30 latency recommendation/statistics delivered
+
+0.9.1-alpha9/dashboard85/ui57 installed on dedicated MT3000. Auto works/power group raised to match right Step1 content with common12px top inset; old20px margin/22px padding removed. Literal null removed from page header. Previously saved item30 work completed: current lower-delay recommendation with rationale/bound endpoint/actual selected role before manual controls, weighted mean/minute min/max/success count table follows graph window. RPC errors and route-helper refusal fenced; no automatic route/pair change. Focused existing suites and new meaningful aggregation/refusal regressions PASS; exact-source dual-runtime full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA9-2026-10-24.json). Item30 broader audit remains open for item15 VM coverage limits/item19 native browser review. No new native visual proof: browser automation was stopped by URL-confidence policy.
+
+# Актуальная передача следующему ИИ — 24 октября 2026
+
+Читать [NEXT-AI-2026-10-24.md](NEXT-AI-2026-10-24.md) первым. Установлена alpha8; пункт30 (аудит старых диктовок, более заметная рекомендация минимальной задержки и таблица статистики) — незакоммиченный WIP в исходниках, НЕ установлен. Активных операций записи на роутер нет; последнее подтверждённое состояние AutoONreserve.
+
+# Item29 installed — short reserve label
+
+0.9.1-alpha8/dashboard84 installed on dedicated MT3000. Manual channel-switch card uses "Интернет: задействован резерв" (English "Internet: reserve in use"). Copy-only change; existing switching/status logic unchanged. Existing manual UI check and exact-source dual-runtime full CI PASS.86files/modes and actual HTTP8080/HTTPS bytes verified; final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted backup independently verified. [Evidence](../../qa/MT3000-ALPHA8-2026-10-24.json). No native browser visual acceptance claim, host-network/primary-router changes or public release.
+
+# Item28 installed — Auto first, monitoring and VPN check inside
+
+0.9.1-alpha7/dashboard83/ui56 installed on dedicated MT3000. Automatic VPN failover is first in all three Overview designs. Its header holds monitoring at upper right; its controls place the existing VPN check action at right. Former duplicate tools removed from page header. Narrow screens stack controls without changing actions or status freshness. Existing generated-tree regression covers first placement, real monitor lamp, real connectivity button, and retained graphs/manual controls; existing action tests PASS. Exact-source dual-runtime full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA7-2026-10-24.json). Native browser visual acceptance remains unavailable. No host-network/primary-router/fault changes or new release.
+
+# Item27 installed — compact current checks and VPN peer addresses
+
+0.9.1-alpha6/dashboard82 installed on dedicated MT3000. Generated current-checks renderer verified with 11 rows: five visible initially, remaining rows behind expandable triangle; full-list search and reordering preserve the limit. Primary and reserve precede other profiles; channel column shows their roles rather than default group. Each server cell includes a fresh, identity-bound live VPN peer IP/port when available; unavailable/stale endpoints remain explicitly unknown. Owner screenshot referenced alpha3, while pre-update live router was alpha5. New immutable module refreshes the page asset. Exact-source full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy and both bound peer addresses confirmed; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA6-2026-10-24.json). No native browser visual claim, host-network/primary-router/fault changes or new release.
+
+# Item26 installed — newest-first live terminal
+
+0.9.1-alpha5/dashboard81 installed on dedicated MT3000. Newest records appear at the top under pinned status. Timestamp-ordered insertion keeps delayed historical rows below fresher observations; oldest entries expire at the tail of the2000line buffer. Following live and return button use the top edge/up arrow. Reader anchoring preserves the same visible older record when rows arrive. One-second screen heartbeat and actual network probe cadence remain separate. Existing pair and settings preserved. Exact-source full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA5-2026-10-24.json). No native browser visual claim, host-network/primary-router/fault changes or new release. No further device mutation required.
+
+# Item25 installed — configured client pair chooser
+
+0.9.1-alpha4/dashboard80 installed on dedicated MT3000. Only configured client tunnels are offered, reserve excludes the same client. Explains role vs protocol vs assigned profile and the exact Auto/stock-VPN responsibilities. Saved profiles without a client binding are excluded; stopped configured clients remain selectable. Existing primary/reserve assignments preserved; WireGuard and OpenVPN UCI configuration bytes independently compared equal across encrypted pre/post exports. Standing owner authorization permits these application updates without repeated questions. Exact-source full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA4-2026-10-24.json). No native browser visual claim, host-network/primary-router/fault changes or new release. No further device mutation required.
+
+# Item24 installed — five visible current server probes
+
+Standing owner authorization: future HomenS.AI Auto VPN updates on this dedicated MT3000 may be installed without repeated questions, using the existing tested recovery/lifecycle flow and restoring reserve. Owner explicitly said “ставь сразу без вопросов на роутер - я разрашею всегда”. Earlier alpha3 scope rejection was resolved by explicit approval; no such approval remains pending.
+
+0.9.1-alpha3/dashboard79 installed on dedicated MT3000. Five initial table rows; triangle expands all others; full search/sort and expansion state retained. Default order primary then reserve, roles replace default grouping. Exact-source full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA3-2026-10-24.json). No native browser visual claim, host-network/primary-router/fault changes or new release. No further device mutation required.
+
+# Item24 alpha3 candidate ready — device update awaits explicit scope
+
+Five visible current-server probe rows, triangle expand/collapse of all remaining rows, persistent disclosure/full-list search and sort; default primary then reserve with role labels. Exact source ebc0df0 /790185bytes /SHAdab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad passed dual-runtime full CI. [Candidate evidence](../../qa/OWNER-UI-ALPHA3-2026-10-24.json). Automatic review rejected the combined device preparation/Stop command because the earlier explicit installation approval named alpha2. The command was not executed; no alpha3 backup, Stop or installation occurred. Current physical baseline remains alpha2 AutoONreserve. Await explicit owner approval before any alpha3 device mutation; do not bypass the rejection.
+
+# Item24: compact current server probes — alpha3 candidate
+
+Owner requested five visible rows and triangle expansion for all remaining rows. Source uses the existing persistent disclosure helper, retaining full-list search/sort. New0.9.1-alpha3/dashboard79 candidate is being validated for the same dedicated MT3000; installed alpha2 remains AutoONreserve until the normal update stages. No host/primary-router/fault changes.
+
+# Alpha2 installed on dedicated MT3000 — 24 October 2026
+
+Owner-approved alpha2/source bc8a298 /790193bytes/SHA2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857 installed.86immutable files/modes, freshRPC, actualHTTP8080/HTTPS assets PASS; unrelated settings and accepted terms preserved. Normal Stop20.06s, Start60.84s, explicit reserve selection39.91s. Final AutoONreserve/manual hold target, both selected VPNs DNS+twoHTTPS healthy, monitor4.29s old, current kernel peer data for both profiles and8live latency rows. Actual encrypted190entry final export independently decrypted/read; saved latency-history file validated from that export. [Machine evidence](../../qa/MT3000-ALPHA2-2026-10-24.json).
+
+Initial install harness returned nonzero on uci get of valid empty native_trial(exit1). Package was already installed; no opkg repeat. Independent exact file/mode/settings/RPC/HTTP checks passed, failed evidence retained. No Windows-network, primaryMT6000, unrelated router-network or fault-test changes. Real browser layout/clipboard and independentLAN/24h/IPv6/power-cut acceptance remain unverified. VM prompt evidence remains PARTIAL in its stated scope; published0.9.0 is unchanged. No further device mutation needed.
+
+# Alpha2 final offline/virtual candidate verified
+
+Sourcebc8a298e89d61b63bb27915c5f3135281ca190db; package790193bytes SHA2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857. Exact737app/107QA per runtime/44UI PASS. Actual VM install,86files/modes/HTTP assets and disk history tests PASS. [Candidate receipt](../../qa/OWNER-UI-ALPHA2-2026-10-23.json). Physical alpha1 remains AutoONreserve; no new release or physical alpha2 installation. Native browser unavailable; full LAN/GL/AI-model execution acceptance is not claimed. All23dictated items remain in the saved checklist with delivery gates.
+
+# Alpha2 offline candidate — weekly events and owner follow-up
+
+All23owner requests are saved. New0.9.1-alpha2 sources/package include items9–14and16–23;44UI suites pass, full exact-source CI is next. [Behavior and storage budgets](../OWNER-UI-ALPHA2.md), [executed prompt recipes and limits](../PROMPT-VALIDATION-2026-10-23.md). VM install/components/real missing-dependency repair/setup/diagnostics passed; complete prompt acceptance remains PARTIAL because physical LAN/GL/native Auto and browser tooling are unavailable. Browser layout/clipboard are not accepted. Installed physical alpha1 remains AutoONreserve; no additional installation or release is claimed.
+
+# Owner UI alpha1 installed — Auto ON reserve; new dictation active
+
+Source9daab2b/0.9.1-alpha1/dashboard77/ui54 installed on dedicated MT3000. Exact dual-runtime CI724application/107QA per runtime/40UI PASS. Canonical769169byte IPK SHA91d641ec3beacbef5ffa59e49daa492c26bc0b6d183073c55c69db8fe6de9e5d;84installed files/modes and actually servedHTTP8080/HTTPS bytes PASS. Start63.89s, owner reserve restored35.97s, final AutoONreserve/bothDNS+twoHTTPS healthy/no test faults/full-block.189entry encrypted final export independently decrypt/read verified. Terms retained. Installation harness initially refused byte-identical own config; only documented lifecycle resets of native_until/native_trial changed, all unrelated UCI options preserved; no opkg retry. [Machine evidence](../../qa/MT3000-OWNER-UI-2026-10-23.json).
+
+**Continue the latest saved owner requests(items9–23) in [OWNER-UI-TODO](OWNER-UI-TODO-2026-10-23.md).** New requests include live endpoint addresses, fixed role order, compact cards/tables, day latency graph/recommendation, diagnostic prompts for every Help section and full virtual prompt execution, native dropdown readability, Linux-style one-second terminal, and removing package/page/style noise. These are not yet delivered in alpha1. Save every new dictation immediately. Keep current Auto/reserve undisturbed during offline work; a later install requires its own tested package/checkpoint. Public0.9.0 tags/assets remain immutable.
+
 # Release0.9.0 published and verified —23October2026
 
 **New owner UI work is active:** immediately read [the saved dictation/TODO](OWNER-UI-TODO-2026-10-23.md). Save every additional owner request there by default before implementation. The release is published; new UI requests are not yet implemented/installed and require a new package identity. Do not confuse release completion with completion of this new work.

@@ -516,3 +516,83 @@
 [data-theme="dark"] .hv-app .hv-onboarding-recovery-link{background:#203e2c;border-color:#487c59;color:#d5f5df}
 .hv-app .hv-intro-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin:24px 0}.hv-app .hv-intro-mode{margin:0;min-width:0}.hv-app .hv-intro-mode h2{font-size:19px}.hv-app .hv-intro-diagram svg{display:block;width:100%;height:auto}.hv-app .hv-intro-mode figcaption{font-size:14px;line-height:1.5}.hv-app .hv-onboarding-skip{margin-top:18px;padding-top:18px;border-top:1px solid var(--line,#cbd5e1)}
 @media(max-width:760px){.hv-app .hv-intro-grid{grid-template-columns:1fr}.hv-app .hv-intro-diagram{max-width:440px}}
+.hv-app .hv-chart-card .hv-preparation-table{width:100%;font:inherit;font-size:13px;border-collapse:collapse;line-height:1.5}
+.hv-app .hv-chart-card .hv-preparation-table th,.hv-app .hv-chart-card .hv-preparation-table td{font-family:system-ui,'Segoe UI',sans-serif;font-size:13px;padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--hv-border,#e1dacd)}
+.hv-app .hv-preparation-table th{font-weight:600}
+.hv-app .hv-preparation-table small{font-size:11px}
+.hv-app .hv-vpn-more>summary,.hv-app [data-auto-explanation]>summary{list-style:none;cursor:pointer}
+.hv-app .hv-vpn-more>summary::-webkit-details-marker,.hv-app [data-auto-explanation]>summary::-webkit-details-marker{display:none}
+.hv-app .hv-vpn-more>summary::before,.hv-app [data-auto-explanation]>summary::before{content:'▸';display:inline-block;margin-right:8px;transform-origin:center}
+.hv-app .hv-vpn-more[open]>summary::before,.hv-app [data-auto-explanation][open]>summary::before{transform:rotate(90deg)}
+.hv-app .hv-channel-more{grid-column:1/-1;min-width:0;width:100%}
+.hv-app .hv-channel-more>summary,.hv-app [data-manual-diagnostic]>summary{list-style:none;cursor:pointer;padding:10px 0}
+.hv-app .hv-channel-more>summary::before,.hv-app [data-manual-diagnostic]>summary::before{content:'▸';display:inline-block;margin-right:8px}
+.hv-app .hv-channel-more[open]>summary::before,.hv-app [data-manual-diagnostic][open]>summary::before{transform:rotate(90deg)}
+.hv-app .hv-channel-more>summary::-webkit-details-marker,.hv-app [data-manual-diagnostic]>summary::-webkit-details-marker{display:none}
+.hv-app table[data-limited-table] tr[data-over-limit]{display:none}
+.hv-app select:not([multiple]){box-sizing:border-box!important;min-height:44px!important;height:44px!important;max-width:100%!important;padding:6px 34px 6px 12px!important;line-height:normal!important;font-size:14px!important}
+.hv-app select[multiple]{height:auto!important;min-height:88px!important;max-height:280px;font-size:14px!important}
+.hv-app select option{font-size:14px;line-height:normal}
+.hv-app .hv-native-actions{flex-wrap:wrap;align-items:center}
+.hv-app .hv-server-address{display:block;overflow-wrap:anywhere;margin:6px 0}
+@media(max-width:700px){.hv-app .hv-native-actions select{flex:1 1 100%;width:100%}.hv-app .hv-cascade-grid{grid-template-columns:1fr}}
+.hv-app .hv-linux-terminal{background:#0d1821;color:#d0e0eb;border-radius:14px;overflow:hidden;font:13px/1.6 ui-monospace,Consolas,monospace}
+.hv-app .hv-terminal-pinned{padding:14px 18px;border-bottom:1px solid #30404c;background:#10202b}
+.hv-app .hv-terminal-status{display:grid;grid-template-columns:22px minmax(150px,220px) minmax(0,1fr);gap:10px;align-items:center;overflow-wrap:anywhere}
+.hv-app .hv-terminal-scrollback{height:360px;overflow:auto;padding:10px 18px;overflow-anchor:none}
+.hv-app .hv-terminal-line{display:grid;grid-template-columns:190px minmax(0,1fr);gap:12px;border-bottom:1px solid #142c39;overflow-wrap:anywhere}
+.hv-app .hv-terminal-line time{color:#8da3b6}
+.hv-app .hv-terminal-error{color:#ff9c9c}.hv-app .hv-terminal-warning{color:#f0d27a}.hv-app .hv-terminal-info{color:#8196a6}
+.hv-app .hv-terminal-ok{color:#a2e6c0}
+@media(max-width:700px){.hv-app .hv-terminal-status{grid-template-columns:20px minmax(0,1fr)}.hv-app .hv-terminal-status>span:last-child{grid-column:2}.hv-app .hv-terminal-line{grid-template-columns:1fr;gap:0}}
+
+/* Overview: primary controls first, monitoring at upper right, manual check at right. */
+.hv-app .hv-auto-header{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,340px);align-items:start;gap:16px;margin-bottom:18px}
+.hv-app .hv-auto-header h2{margin:0}
+.hv-app .hv-auto-header .hv-monitor-block{margin:0;padding:0;border:0;box-shadow:none;background:none;max-width:none;width:auto;gap:10px;align-items:flex-start}
+.hv-app .hv-auto-header .hv-monitor-lamp{width:24px;height:24px;min-width:24px;flex:0 0 24px;margin-top:3px}
+.hv-app .hv-auto-header .hv-check-text{min-width:0;overflow-wrap:anywhere}
+.hv-app .hv-auto-header .hv-check-text strong{font-size:14px}
+.hv-app .hv-auto-header .hv-check-text small{font-size:12px}
+.hv-app .hv-auto-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);align-items:start;gap:24px}
+.hv-app .hv-auto-controls>.hv-connectivity-control{margin:0;max-width:none;width:auto;min-width:0;align-self:start;box-sizing:border-box}
+.hv-app .hv-auto-controls .hv-check-text{min-width:0;overflow-wrap:anywhere}
+@media(max-width:1100px){.hv-app .hv-auto-controls{grid-template-columns:1fr}.hv-app .hv-auto-controls>.hv-connectivity-control{justify-self:end;width:min(100%,440px)}}
+@media(max-width:700px){.hv-app .hv-auto-header{grid-template-columns:1fr}.hv-app .hv-auto-controls>.hv-connectivity-control{width:100%;justify-self:stretch}}
+
+/* Align Auto badge/power with the right Step1 content, without legacy centering offsets. */
+.hv-app .hv-auto-controls>.hv-auto-switch{margin:0;align-items:flex-start;min-height:0}
+.hv-app .hv-auto-controls .hv-auto-power-unit{padding-top:12px}
+.hv-app .hv-auto-controls>.hv-connectivity-control{padding-top:12px}
+.hv-app .hv-latency-recommendation{display:block;border:1px solid var(--line,#d8d9d8);border-left:4px solid var(--accent,#2563eb);border-radius:10px;padding:12px 16px;margin:14px 0;overflow-wrap:anywhere}
+.hv-app .hv-latency-recommendation p{margin:6px 0}
+.hv-app .hv-latency-recommendation small{display:block;line-height:1.5}
+.hv-app .hv-latency-statistics-wrap{overflow-x:auto;margin:14px 0}
+.hv-app table.hv-latency-statistics{min-width:540px;width:100%;font-size:13px;border-collapse:collapse}
+.hv-app .hv-latency-statistics th,.hv-app .hv-latency-statistics td{padding:10px 12px;text-align:left;white-space:normal}
+
+/* Keep the manual controls immediately after two compact optional disclosures. */
+.hv-app .hv-auto-sections>.hv-auto-details{margin:0;padding:10px 18px;min-width:0;border:1px solid var(--line,#d8d9d8);border-radius:12px;background:var(--surface)}
+.hv-app .hv-auto-details>summary{list-style:none;cursor:pointer;font-weight:600;line-height:1.5;padding:2px 0}
+.hv-app .hv-auto-details>summary::-webkit-details-marker{display:none}
+.hv-app .hv-auto-details>summary::before{content:'▸';display:inline-block;margin-right:8px;transform-origin:center}
+.hv-app .hv-auto-details[open]>summary::before{transform:rotate(90deg)}
+.hv-app .hv-auto-details[open]>summary{margin-bottom:12px}
+.hv-app .hv-auto-statistics .hv-auto-live-chart{margin-top:12px}
+
+/* Keep each delay-history caption beneath its own full-width slider. */
+.hv-app .hv-latency-controls{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:20px;align-items:start;margin:20px 0}
+.hv-app .hv-latency-slider{display:flex;flex-direction:column;align-items:stretch;gap:10px;min-width:0;margin:0;text-align:center}
+.hv-app .hv-latency-slider input[type="range"]{display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;height:24px;margin:0;padding:0}
+.hv-app .hv-latency-slider>span{display:block;font-size:13px;line-height:1.5;white-space:normal}
+.hv-app .hv-latency-controls>button{justify-self:end;margin:0}
+@media(max-width:640px){.hv-app .hv-latency-controls{grid-template-columns:minmax(0,1fr);gap:18px}.hv-app .hv-latency-controls>button{justify-self:center}}
+
+/* Recovery statistics: readable word boundaries and scroll rather than cramped letters. */
+.hv-app .hv-recovery-scroll{max-width:100%;overflow-x:auto;min-width:0}
+.hv-app .hv-chart-card table.hv-recovery-table{display:table;width:100%;min-width:680px;table-layout:auto;border-collapse:collapse;font-family:system-ui,"Segoe UI",sans-serif;font-size:13px}
+.hv-app .hv-chart-card table.hv-recovery-counters{min-width:1120px}
+.hv-app .hv-chart-card table.hv-recovery-table th,.hv-app .hv-chart-card table.hv-recovery-table td{white-space:normal;word-break:normal;overflow-wrap:normal;line-height:1.5;padding:12px 14px;vertical-align:top;text-align:left;font-family:inherit}
+.hv-app .hv-chart-card table.hv-recovery-table th{min-width:85px;font-size:12px}
+.hv-app .hv-chart-card table.hv-recovery-table th:first-child{min-width:160px}
+.hv-app .hv-chart-card table.hv-recovery-table .hv-recovery-identity{min-width:240px;max-width:520px;overflow-wrap:anywhere}

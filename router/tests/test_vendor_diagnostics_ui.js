@@ -21,7 +21,7 @@ const c=sandbox(),model=(s,i)=>c.vendorDiagnosticsModel(s,i,clock);
 let {status,inventory}=fixture(),m=model(freeze(status),freeze(inventory));
 assert.equal(m.groups.length,2);assert.equal(m.groups[0].health,'healthy');assert.equal(m.groups[0].state,'stable');assert(m.coordination.known);assert.equal(m.coordination.transition,'protocol');
 assert.equal(m.source,'openvpn:ovpnclient1');assert.equal(m.groups[0].current,'openvpn:a','shows the resolved current member, not saved stale chosen profile');
-for(const renderer of ['renderVendorOverview','renderVendorChannels','renderVendorEvents']){
+for(const renderer of ['renderVendorChannels','renderVendorEvents']){
   const node=c[renderer](status,inventory),body=text(node);assert(walk(node).some(n=>n.attrs['data-vendor-diagnostics']));
   assert(!body.includes('DO-NOT-DISPLAY'));assert(!walk(node).some(n=>n.tag==='button'),'observations have no mutating actions');
 }
@@ -61,7 +61,7 @@ for(const language of ['en','ru']){
   status.native_failover.time=800;body=text(ctx.renderDecisionExplanation(status,inventory));assert(body.includes(language==='ru'?'данные контроллера устарели':'controller data is stale'));
   ({status,inventory}=fixture());body=text(ctx.renderDecisionExplanation(status,inventory));assert(body.includes(language==='ru'?'не разрешают изменение маршрута':'do not authorize a route change'));assert(!body.includes('Auto will switch'));assert(!body.includes('Auto переключится'));
   status.time=800;body=text(ctx.renderDecisionExplanation(status,inventory));assert(body.includes(language==='ru'?'устаревшим данным':'stale data'));assert(!body.includes('Candidate for verification'));
-  ({status,inventory}=fixture());for(const renderer of ['renderVendorOverview','renderVendorChannels','renderVendorEvents'])assert.doesNotThrow(()=>ctx[renderer](status,inventory));
+  ({status,inventory}=fixture());for(const renderer of ['renderVendorChannels','renderVendorEvents'])assert.doesNotThrow(()=>ctx[renderer](status,inventory));
 }
 // A vendor member change keeps the saved tunnel anchor, updates every live display, and never revives the old member.
 const live=sandbox();Object.assign(live,{document:{createElementNS:(_,tag)=>new Node(tag)},chart:()=>new Node('svg',{},'Existing chart'),bytes:v=>String(v),UI_BUILD:'test',safeCode:code=>typeof code==='string'&&/^[A-Z][A-Z0-9-]+$/.test(code),L:{resource:p=>p},rpc:{declare:()=>()=>{throw Error('render dispatched an RPC');}},ui:{},setTimeout:()=>0});
@@ -84,5 +84,8 @@ delete inventory.settings.plan_source_tunnel;inventory.settings.plan_source='ope
 // Selected anchors remain visible even behind many other tunnel groups.
 ({status,inventory}=fixture());status.vendor_observation.groups=Array.from({length:39},(_,i)=>({id:'openvpn:spare'+i,protocol:'openvpn',profiles:[],active_profiles:[],state:'UNKNOWN',time:1000})).concat(status.vendor_observation.groups);
 const bounded=walk(c.renderVendorChannels(status,inventory)).filter(n=>n.attrs['data-vendor-tunnel']);assert.equal(bounded.length,32);assert.equal(bounded[0].attrs['data-vendor-tunnel'],inventory.settings.plan_source_tunnel);assert.equal(bounded[1].attrs['data-vendor-tunnel'],inventory.settings.plan_target_tunnel);
-const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');for(const anchor of ['vendor_diagnostics.inc.js',"put('overview',renderVendorOverview(status,inventory));","put('channels',renderVendorChannels(status,inventory));","put('events',renderVendorEvents(status,inventory));","renderDecisionExplanation(status,inventory)"])assert(builder.includes(anchor),anchor);
+const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');for(const anchor of ['vendor_diagnostics.inc.js',"put('channels',renderVendorChannels(status,inventory));","put('events',renderVendorEvents(status,inventory));","renderDecisionExplanation(status,inventory)"])assert(builder.includes(anchor),anchor);
 console.log('PASS: immutable vendor-tunnel identity vs labels/provider groups, current-generation health/freshness/unknown, bounded observed-change events, known read-only coordination vs unobserved cause, EN/RU and truthful held-reserve/return-policy/quorum decision explanation');
+
+assert(!builder.includes("put('overview',renderVendorOverview"));
+assert(!fs.readFileSync('router/vendor_diagnostics.inc.js','utf8').includes('Два уровня восстановления VPN'));

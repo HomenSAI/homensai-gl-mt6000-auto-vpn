@@ -1,6 +1,19 @@
 /* One reviewed transaction for first entry and Settings. Drafts live only in this page session;
    router completion is independent of browser storage, terms acceptance and profile setup. */
 var ONBOARDING_VERSION=1,ONBOARDING_SESSION=null,HV_ROUTER_DISPLAY=null;
+// A saved provider profile is not a second client tunnel. Match inventory's
+// exact configured binding; ambiguous/missing bindings never become choices.
+function onboardingPairChannels(profiles,settings){
+  var ids=Object.create(null),logicals=Object.create(null),rows=[];
+  (Array.isArray(profiles)?profiles:[]).slice(0,400).forEach(function(p){
+    if(!p||typeof p.id!=='string')return;ids[p.id]=(ids[p.id]||0)+1;
+    if(['wireguard','openvpn'].indexOf(p.protocol)<0||!p.id.startsWith(p.protocol+':')||!/^[A-Za-z0-9_.:-]{1,96}$/.test(p.id)||typeof p.interface!=='string'||!/^[A-Za-z0-9_.-]{1,64}$/.test(p.interface)||p.vendor_tunnel_id!==p.protocol+':'+p.interface||p.section!==undefined&&p.id!==p.protocol+':'+p.section)return;
+    logicals[p.interface]=(logicals[p.interface]||0)+1;rows.push(p);
+  });
+  var mt3000=(settings||{}).detected_router_model==='mt3000'||(settings||{}).pair_auto_mode==='router-probed-ipv4';
+  return rows.filter(function(p){return ids[p.id]===1&&logicals[p.interface]===1&&(!mt3000||(p.protocol==='wireguard'&&p.interface==='wgclient1'||p.protocol==='openvpn'&&p.interface==='ovpnclient1'));});
+}
+function onboardingPairChannelLabel(p){return (p.protocol==='wireguard'?'WireGuard':'OpenVPN')+' · '+(p.name||p.id);}
 var ONBOARDING_DEFER_USED=false;
 function onboardingEntryDeferred(){
   // An explicit recovery link bypasses only this entry, never router completion or terms.
@@ -22,7 +35,7 @@ function onboardingEmergencyControl(){
     ONBOARDING_STOP.pending=true;button.disabled=true;
     if(ONBOARDING_STOP.button)ONBOARDING_STOP.button.disabled=true;
     var request;
-    try{request=rpc.declare({object:'homensai-vpn',method:'native_stop',expect:{}})();}catch(e){request=Promise.reject(e);}
+    try{request=rpc.declare({object:'homensai-vpn',method:'native_stop',params:['request_source'],expect:{}})('manual');}catch(e){request=Promise.reject(e);}
     return Promise.resolve(request).then(function(result){
       ui.addNotification(null,autoRequestAcknowledged(result,true)?E('p',{},bi('Stop requested. Monitoring continues.','Остановка запрошена. Мониторинг продолжается.')):autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
     }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){
@@ -113,12 +126,13 @@ function renderOnboardingIntro(proceed){
     E('button',{'type':'button','class':'cbi-button cbi-button-action','data-onboarding-action':'intro-ok','click':proceed},bi('OK — open setup','OK — перейти к настройке'))
   ]);
 }
-function renderOnboarding(inventory,status,firstRun){
+function renderOnboarding(inventory,status,firstRun,requestedStep){
   var profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],settings=inventory.settings||{};
   // An inventory change discards only a closed, stale draft. Pending writes are always one shared session.
   var identity=JSON.stringify([settings,inventory.servers||[],profiles]);
   if(!ONBOARDING_SESSION||ONBOARDING_SESSION.identity!==identity&&!ONBOARDING_SESSION.busy)ONBOARDING_SESSION={identity:identity,draft:onboardingDraft(inventory),step:0,paused:false,busy:false,error:''};
   var session=ONBOARDING_SESSION,draft=session.draft,host=E('div',{'class':'hv-app hv-onboarding','data-hv-onboarding':'1','data-hv-design':currentDesign(),'style':'width:100%;min-width:0;box-sizing:border-box;overflow-wrap:anywhere'});
+  if(!firstRun&&!session.busy&&ONBOARDING_STEPS.indexOf(requestedStep)>=0){session.step=ONBOARDING_STEPS.indexOf(requestedStep);session.paused=false;}
   function notify(code){ui.addNotification(null,E('p',{},code));}
   function clear(){while(host.firstChild)host.removeChild(host.firstChild);}
   function show(){
@@ -189,16 +203,27 @@ function renderOnboarding(inventory,status,firstRun){
         number(bi('Profile limit per round','Лимит профилей за раунд'),draft.monitor,'probe_limit','monitor.probe_limit','onboarding.probe_limit');
         toggle(bi('Enable read-only planning','Включить планирование без применения'),draft.monitor,'planning_enabled','monitor.planning_enabled');
       }else if(session.step===2){
-        note('Choose two distinct installed profiles, or explicitly defer the pair. No VPN credentials are imported or displayed. Trial preferences do not start a trial or certify Auto.','Выберите два разных установленных профиля или явно отложите пару. Ключи VPN не импортируются и не показываются. Параметры теста не запускают тест и не подтверждают готовность Auto.');
+        note('Choose the roles of two configured VPN client tunnels, not arbitrary saved server profiles. Primary is preferred; reserve is a different client. Saving this step changes only Auto VPN settings and does not switch traffic.','Выберите роли двух настроенных VPN-клиентов, а не произвольные профили из каталога серверов. Основной — предпочтительный, резервный — другой клиент. Сохранение этого шага меняет только настройки Auto VPN и не переключает трафик.');
+        card.appendChild(E('details',{'data-onboarding-pair-help':'1'},[E('summary',{},bi('How this relates to the router VPN application','Как это связано с VPN-приложением роутера')),E('p',{},bi('On the supported MT3000 pair, one client is WireGuard and the other OpenVPN. Either can be primary. Create/edit profiles and assign a server to each client in the stock router VPN application; this selector does not change server addresses or VPN keys. Auto later starts/stops prepared tunnels and changes the selected traffic policy, with rollback on Stop.','В поддерживаемой паре MT3000 один клиент — WireGuard, другой — OpenVPN. Любой из них может быть основным. Профили и назначение сервера клиенту меняются в штатном VPN-приложении роутера; этот список не меняет адреса серверов и ключи VPN. Auto затем включает/выключает подготовленные туннели и выбирает политику трафика, с восстановлением при остановке.')),E('p',{},bi('Trial preferences do not run a trial or certify Auto. Configured does not mean connected or healthy.','Параметры теста не запускают тест и не подтверждают Auto. Настроен не означает подключён или исправен.'))]));
         var vpnUrl=resolveRouterVpnUrl(window.location.href,window.HOMENSAI_PREVIEW_ROUTER_ORIGIN);
         if(vpnUrl)card.appendChild(E('p',{},[E('a',{'href':vpnUrl,'target':'_blank','rel':'noopener noreferrer','data-onboarding-link':'router-vpn'},bi('Open router VPN settings ↗','Открыть настройки VPN роутера ↗')),bi(' · Add profiles there, then reload this page. Reloading discards this unsaved draft.',' · Добавьте профили там, затем обновите эту страницу. При обновлении несохранённый черновик будет удалён.')]));
-        if(profiles.length<2)note('Fewer than two profiles are installed. Defer the pair to finish other settings; add profiles later on the router and return to Settings.','Установлено меньше двух профилей. Отложите пару, чтобы закончить остальные настройки; затем добавьте профили на роутере и вернитесь в настройки.');
+        var pairChannels=onboardingPairChannels(profiles,settings);
+        if(pairChannels.length<2)note('Fewer than two distinct configured clients were found. Saved server profiles alone are not enough. Assign profiles to clients in the stock VPN application or defer this pair. A configured client is not yet proof of connection or Auto readiness.','Найдено меньше двух разных настроенных клиентов. Одного наличия серверов в каталоге недостаточно. Назначьте профили клиентам в штатном VPN-приложении или отложите пару. Настроенный клиент ещё не означает подключение или готовность Auto.');
+        card.appendChild(E('p',{'data-onboarding-pair-count':'1'},bi('Configured client choices: ','Доступно настроенных клиентов: ')+pairChannels.length+' · '+bi('Saved profiles in catalog: ','Профилей в каталоге: ')+profiles.length));
         var pairNote=E('p',{'role':'status'});card.appendChild(pairNote);
         toggle(bi('Defer the VPN pair and turn off read-only planning','Отложить пару VPN и выключить планирование'),draft.system,'defer_pair','system.defer_pair',function(on){if(on)draft.monitor.planning_enabled=false;pairNote.textContent=on?bi('Pair deferred; planning will be off. Existing router profiles are retained.','Пара отложена; планирование будет выключено. Существующие профили роутера сохраняются.'):'';});
-        var choices=[['',bi('Choose an existing profile','Выберите существующий профиль')]].concat(profiles.map(function(p){return [p.id,p.name+' · '+p.protocol];}));
-        select(bi('Primary VPN','Основной VPN'),draft.system,'source','system.source',choices);
-        select(bi('Reserve VPN','Резервный VPN'),draft.system,'target','system.target',choices);
-        checks.push(function(){var ok=draft.system.defer_pair?draft.monitor.planning_enabled===false:!!draft.system.source&&draft.system.source!==draft.system.target&&profiles.some(function(p){return p.id===draft.system.source;})&&profiles.some(function(p){return p.id===draft.system.target;});pairNote.textContent=ok?'':bi('Choose two different installed profiles, or defer the pair and disable planning.','Выберите два разных установленных профиля или отложите пару и выключите планирование.');return ok;});
+        var placeholder=['',bi('Choose a configured VPN client','Выберите настроенный VPN-клиент')],choices=[placeholder].concat(pairChannels.map(function(p){return [p.id,onboardingPairChannelLabel(p)];}));
+        var sourceSelect=select(bi('Primary VPN client','Основной VPN-клиент'),draft.system,'source','system.source',choices);
+        var reserveChoices=choices.filter(function(o){return !o[0]||o[0]!==draft.system.source;});
+        var targetSelect=select(bi('Reserve VPN client','Резервный VPN-клиент'),draft.system,'target','system.target',reserveChoices);
+        sourceSelect.addEventListener('change',function(){
+          var keep=targetSelect.value;reserveChoices.splice(0,reserveChoices.length,placeholder);
+          pairChannels.forEach(function(p){if(p.id!==sourceSelect.value)reserveChoices.push([p.id,onboardingPairChannelLabel(p)]);});
+          while(targetSelect.firstChild)targetSelect.removeChild(targetSelect.firstChild);
+          reserveChoices.forEach(function(o){targetSelect.appendChild(E('option',{value:o[0]},o[1]));});
+          targetSelect.value=reserveChoices.some(function(o){return o[0]===keep;})?keep:'';draft.system.target=targetSelect.value;gate();
+        });
+        checks.push(function(){var ok=draft.system.defer_pair?draft.monitor.planning_enabled===false:!!draft.system.source&&draft.system.source!==draft.system.target&&pairChannels.some(function(p){return p.id===draft.system.source;})&&pairChannels.some(function(p){return p.id===draft.system.target;});pairNote.textContent=ok?'':bi('Choose two different configured clients, or defer the pair. A saved but unassigned server cannot be a channel in this pair.','Выберите два разных настроенных клиента или отложите пару. Сохранённый сервер, не назначенный клиенту, не является каналом этой пары.');return ok;});
         // Missing saved IDs must not block an explicitly deferred pair.
         checks=checks.slice(-1);
         number(bi('Bounded trial duration, minutes','Длительность ограниченного теста, минут'),draft.system,'duration','system.duration','system.duration');
@@ -208,7 +233,7 @@ function renderOnboarding(inventory,status,firstRun){
         if(!draft.system.servers.length)note('No profiles yet. Metadata can be edited here after profiles are added on the router.','Профилей пока нет. Метаданные можно будет изменить здесь после добавления профилей на роутере.');
         draft.system.servers.forEach(function(row,i){
           card.appendChild(E('h3',{},row.profile));
-          text(bi('Display name','Название'),row,'name','servers.'+i+'.name','name');text(bi('Channel group','Группа канала'),row,'channel','servers.'+i+'.channel','channel');
+          text(bi('Display name','Название'),row,'name','servers.'+i+'.name','name');text(bi('Display group (not a VPN client)','Группа списка (не VPN-клиент)'),row,'channel','servers.'+i+'.channel','channel');
           number(bi('Priority','Приоритет'),row,'priority','servers.'+i+'.priority','system.priority');toggle(bi('Monitor this profile','Наблюдать этот профиль'),row,'enabled','servers.'+i+'.enabled');
         });
         var metadataError=E('p',{'role':'alert'});card.appendChild(metadataError);checks.push(function(){var ok=(!draft.system.defer_pair?draft.system.servers.some(function(r){return r.profile===draft.system.source&&r.enabled;})&&draft.system.servers.some(function(r){return r.profile===draft.system.target&&r.enabled;}):true);metadataError.textContent=ok?'':bi('Both selected profiles must be enabled for monitoring. Go Back to defer or change the pair.','Оба выбранных профиля должны участвовать в мониторинге. Вернитесь назад, чтобы изменить или отложить пару.');return ok;});
@@ -285,9 +310,9 @@ function renderOnboarding(inventory,status,firstRun){
   show();return shell;
 }
 function renderOnboardingGate(inventory,status){return renderOnboarding(inventory,status,true);}
-function openOnboardingSettings(inventory,status){
+function openOnboardingSettings(inventory,status,requestedStep){
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE'));return;}
   if(ONBOARDING_SESSION&&ONBOARDING_SESSION.busy)return;
   if(ONBOARDING_SESSION)ONBOARDING_SESSION.paused=false;
-  ui.showModal(bi('All application settings','Все настройки приложения'),[renderOnboarding(inventory,status,false)]);
+  ui.showModal(bi('All application settings','Все настройки приложения'),[renderOnboarding(inventory,status,false,requestedStep)]);
 }

@@ -33,7 +33,8 @@ var CASCADE_NOTES={
   'INACTIVE':['The VPN tunnel is not connected in GL.iNet.','VPN-туннель не подключён в GL.iNet.'],
   'UNKNOWN':['No fresh result yet.','Свежего результата пока нет.']
 };
-function renderCascadePath(status){
+function renderCascadePath(status,inventory){
+  if(typeof renderCompactCascade==='function')return renderCompactCascade(status,inventory);
   var model=cascadePathModel(status,Date.now()/1000);
   var rows=status.profiles||[],nextRow=rows.filter(function(p){return p.id===model.next;})[0];
   var legendKeys=[];
@@ -62,7 +63,7 @@ function renderCascadePath(status){
 }
 function retainedTransitions(history){
   var events=(history.events||[]).slice().sort(function(a,b){return a.sequence-b.sequence;}),rows=[],open=null,last=null,lastTime=null;
-  function close(outcome,event){if(!open)return;open.outcome=outcome;
+  function close(outcome,event,reason){if(!open)return;open.outcome=outcome;open.close_reason=reason||null;open.terminal_state=event&&event.state||null;
     if(event&&Number.isFinite(event.time)&&event.time>=open.start){open.end=event.time;open.duration=open.applied_at==null?null:event.time-open.applied_at;}
     rows.push(open);open=null;
   }
@@ -75,21 +76,21 @@ function retainedTransitions(history){
   events.forEach(function(e){
     if(!Number.isFinite(e.time)||e.time<0||e.time>253402300799||!Number.isSafeInteger(e.sequence)||e.sequence<1)return;
     if(last!==null&&e.sequence<=last)return;
-    if(lastTime!==null&&e.time<lastTime){close('unknown',null);last=e.sequence;return;}
+    if(lastTime!==null&&e.time<lastTime){close('unknown',null,'clock-order');last=e.sequence;return;}
     lastTime=e.time;
-    if(last!==null&&e.sequence!==last+1)close('unknown',null);
+    if(last!==null&&e.sequence!==last+1)close('unknown',null,'missing-events');
     last=e.sequence;
     var trialPassed=(e.codes||[]).indexOf('TRIAL-PASSED')>=0;
     var starting=e.state==='APPLYING'||e.state==='ARMED'&&!trialPassed;
     if(starting){
-      var same=open&&open.applied_at==null&&(e.state==='APPLYING'||identifier(e.attempt_id)===open.id)&&
+      var same=open&&open.applied_at==null&&(e.state==='APPLYING'||!identifier(e.attempt_id)||identifier(e.attempt_id)===open.id)&&
         (!e.attempt_id||e.attempt_id===open.id)&&(!e.source||e.source===open.source)&&(!e.target||e.target===open.target);
-      if(!same){close('unknown',null);begin(e);}
+      if(!same){close('unknown',null,'next-attempt');begin(e);}
       else if(e.state==='APPLYING'){open.applied_at=e.time;open.start=e.time;if(['server','channel','protocol'].indexOf(e.transition_kind)>=0)open.kind=e.transition_kind;}
     }
     if(!open)return;
     if(e.trial===true)open.trial=true;
-    if((identifier(e.attempt_id)&&e.attempt_id!==open.id)||(e.source&&e.source!==open.source)||(e.target&&e.target!==open.target)){close('unknown',null);return;}
+    if((identifier(e.attempt_id)&&e.attempt_id!==open.id)||(e.source&&e.source!==open.source)||(e.target&&e.target!==open.target)){close('unknown',null,'pair-changed');return;}
     open.phases.push({state:e.state,time:e.time});
     (e.codes||[]).forEach(function(code){if(typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)&&open.codes.indexOf(code)<0)open.codes.push(code);});
     var evidence=e.probe_evidence||{};
@@ -141,17 +142,48 @@ function recoveryWindow(period,now,timezone){
   for(var i=0;i<3;i++)candidate=desired-(localEpoch(candidate)-candidate);
   return {start:candidate/1000,end:now,timezone:timezone};
 }
-function recoveryGroups(rows,profiles,start,end){
+function recoveryPreparation(row){return row.applied_at==null&&(!row.source||row.source==='unknown'||!row.target||row.target==='unknown');}
+function recoveryOutcomeText(row){
+  if(recoveryPreparation(row))return row.close_reason==='next-attempt'?bi('Preparation ended; a new attempt followed','Подготовка завершена; началась новая попытка'):row.close_reason?bi('Preparation record interrupted','Запись подготовки прервана'):bi('Waiting for the VPN pair and checks','Ожидание пары VPN и проверок');
+  if(row.outcome==='committed')return bi('Switch confirmed','Переключение подтверждено');
+  if(row.outcome==='trial_passed')return bi('Test passed; original channel restored','Тест пройден; исходный канал восстановлен');
+  if(row.outcome==='rolled_back')return bi('Returned to the original channel','Возврат на исходный канал');
+  if(row.outcome==='held')return row.terminal_state==='STOPPED-ON-RESERVE'?bi('Reserve retained after Stop','После остановки оставлен резерв'):row.terminal_state==='BLOCKED'?bi('Switch blocked','Переключение заблокировано'):row.terminal_state==='EXPIRED'?bi('Attempt expired','Срок попытки истёк'):bi('Attempt stopped','Попытка остановлена');
+  if(row.outcome==='pending')return bi('Awaiting completion confirmation','Ожидается подтверждение завершения');
+  var reasons={'missing-events':['Result not recorded: missing history events','Результат не записан: пропуск событий истории'],'pair-changed':['Record interrupted by a VPN pair change','Запись прервана сменой пары VPN'],'clock-order':['Record interrupted by clock order mismatch','Запись прервана нарушением порядка времени'],'next-attempt':['Completion not recorded before the next attempt','Завершение не записано до следующей попытки']},reason=reasons[row.close_reason];
+  return reason?bi(reason[0],reason[1]):bi('Completion absent from saved history','В сохранённой истории нет завершения');
+}
+function recoveryChannelText(row,key,profiles,inventory){
+  var id=row[key];if(!id||id==='unknown')return recoveryPreparation(row)?bi('Pair not selected during preparation','На этапе подготовки пара ещё не выбрана'):bi('Channel profile absent from event','Профиль канала не записан в событии');
+  var identity=recoveryIdentity(id,profiles,inventory);
+  var channel=identity.channel===bi('Channel not recorded','Канал не записан')?(key==='source'?bi('Original channel','Исходный канал'):bi('Destination channel','Канал назначения')):identity.channel;
+  return channel+' · '+identity.server;
+}
+function recoveryIdentity(identifier,profiles,inventory){
+  profiles=Array.isArray(profiles)?profiles:[];
+  var valid=typeof identifier==='string'&&identifier!=='unknown'&&identifier!=='default',p=valid?profiles.find(function(p){return p.id===identifier;}):null;
+  var configured=((inventory||{}).profiles||[]);if(!Array.isArray(configured))configured=[];
+  if(!p&&valid)p=configured.find(function(p){return p.id===identifier;});p=p||{};
+  function meaningful(value){return typeof value==='string'&&value.trim()&&['unknown','default','null','undefined'].indexOf(value.trim().toLowerCase())<0;}
+  var protocol=valid&&identifier.indexOf('openvpn:')===0?'openvpn':valid&&identifier.indexOf('wireguard:')===0?'wireguard':p.protocol==='openvpn'||p.protocol==='wireguard'?p.protocol:null;
+  var protocolName=protocol==='openvpn'?'OpenVPN':protocol==='wireguard'?'WireGuard':bi('Protocol not recorded','Протокол не записан');
+  var name=meaningful(p.router_name)?p.router_name:meaningful(p.name)&&p.name!==identifier?p.name:null;
+  var server=name?name+' · '+protocolName+' · '+bi('current profile','текущий профиль'):valid?bi('Archived profile: ','Архивный профиль: ')+identifier+' · '+protocolName:bi('Server not recorded in event','Сервер не записан в событии');
+  if(name&&typeof endpointText==='function'){var endpoint=endpointText(p,Date.now()/1000);if(endpoint!==bi('Server address: not observed','Адрес сервера: не получен'))server+=' · '+endpoint;}
+  var settings=(inventory||{}).settings||{},role=valid&&identifier===settings.plan_source?bi('Primary channel (current pair)','Основной канал (текущая пара)'):valid&&identifier===settings.plan_target?bi('Reserve channel (current pair)','Резервный канал (текущая пара)'):meaningful(p.channel)?bi('Current group: ','Текущая группа: ')+p.channel:bi('Channel not recorded','Канал не записан');
+  return {server:server,channel:role,protocol:protocolName};
+}
+function recoveryGroups(rows,profiles,start,end,inventory){
   var result={server:{},channel:{},protocol:{}};
-  rows.forEach(function(row){var p=profiles.find(function(p){return p.id===row.target;})||{};
-    [['server',row.target],['channel',p.channel||'unknown'],['protocol',p.protocol||'unknown']].forEach(function(pair){
-      // Prefix untrusted labels, so '__proto__' is never an object prototype write.
+  rows.filter(function(row){return row.start>=start&&row.start<end;}).forEach(function(row){var identity=recoveryIdentity(row.target,profiles,inventory);
+    [['server',identity.server],['channel',identity.channel],['protocol',identity.protocol]].forEach(function(pair){
       var key='group:'+pair[1];if(!result[pair[0]][key])result[pair[0]][key]={name:pair[1],rows:[]};result[pair[0]][key].rows.push(row);
     });
   });
   Object.keys(result).forEach(function(kind){result[kind]=Object.keys(result[kind]).map(function(key){var g=result[kind][key];return {name:g.name,metrics:recoverySummary(g.rows,start,end)};});});
   return result;
 }
+function recoveryTableWrap(table){return E('div',{'class':'hv-recovery-scroll'},table);}
 var exportSchemas={
   ranking:['server','name','protocol','channel','latency_ms','state'],
   traffic:['month','rx_bytes','tx_bytes','scope'],
@@ -206,7 +238,7 @@ function storedStatisticsRows(status){
     }));
 }
 async function fetchStoredStatistics(kind,call){
-  var after=0,until=0,events=[],summary=null,asOf=null;
+  var after=0,until=0,events=[],summary=null,asOf=null,notice=null;
   for(var page=0;page<101;page++){
     var response=await call(kind,after,until);
     if(!response||response.kind!==kind||!Array.isArray(response.events)||response.events.length>100||
@@ -216,8 +248,8 @@ async function fetchStoredStatistics(kind,call){
     var previous=after;
     response.events.forEach(function(event){if(!Number.isSafeInteger(event.sequence)||event.sequence<=previous||event.sequence>until)throw new Error('STATISTICS-SEQUENCE');previous=event.sequence;});
     if(response.events.length&&response.next_after!==previous)throw new Error('STATISTICS-CURSOR');
-    events=events.concat(response.events);
-    if(!response.has_more)return {kind:kind,as_of:asOf,detail_days:7,summary:summary,events:events};
+    events=events.concat(response.events);if(response.storage_notice)notice=response.storage_notice;
+    if(!response.has_more)return {kind:kind,as_of:asOf,detail_days:7,summary:summary,events:events,storage_notice:notice};
     if(response.next_after<=after)throw new Error('STATISTICS-CURSOR');after=response.next_after;
   }
   throw new Error('STATISTICS-PAGE-LIMIT');
@@ -226,7 +258,7 @@ function renderStoredStatistics(status){
   var history=status.native_history||{},health=(status.accounting||{}).reliability||{},rows=storedStatisticsRows(status);
   var headings=[bi('Period','Период'),bi('Outages','Эпизоды отказа'),bi('Failed checks','Неудачные проверки'),
     bi('Attempts','Попытки'),bi('Confirmed switches','Подтверждённые переключения'),bi('Automatic','Автоматические'),bi('Manual','Ручные'),bi('Returns since update','Возвраты с обновления'),bi('Auto observed, hours','Наблюдение Auto, часов')];
-  var table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},headings.map(function(label){return E('th',{'scope':'col'},label);}))].concat(rows.map(function(row){
+  var table=E('table',{'class':'table hv-recovery-table hv-recovery-counters'},[E('tr',{},headings.map(function(label){return E('th',{'scope':'col'},label);}))].concat(rows.map(function(row){
     var values=[row.period,row.outages,row.failed_checks,row.attempts,row.switches,row.automatic,row.manual,row.returns,
       Number.isFinite(row.auto_seconds)?(row.auto_seconds/3600).toFixed(2):null];
     return E('tr',{},values.map(function(value){return E('td',{},value==null?'—':String(value));}));
@@ -250,9 +282,9 @@ function renderStoredStatistics(status){
     (health.details_dropped||history.detail_budget_dropped)?E('p',{'role':'status'},bi('Detail storage limit was reached; aggregate counters are retained.','Достигнут предел подробных событий; сводные счётчики сохранены.')):null,
     E('div',{'class':'hv-dv-tablewrap'},[table]),button,note].filter(Boolean));
 }
-function renderTransitionAnalytics(status){
-  var history=status.native_history||{},rows=retainedTransitions(history),now=Date.now()/1000;
-  var summaryHost=E('div'),groupHost=E('div'),period=E('select',{'aria-label':bi('Recovery period','Период восстановления')},[
+function renderTransitionAnalytics(status,inventory){
+  var history=status.native_history||{},allRows=retainedTransitions(history),preparations=allRows.filter(recoveryPreparation),rows=allRows.filter(function(r){return !recoveryPreparation(r);}),now=Date.now()/1000;
+  var summaryHost=E('div',{'class':'hv-recovery-scroll'}),groupHost=E('div',{'class':'hv-recovery-scroll'}),period=E('select',{'aria-label':bi('Recovery period','Период восстановления')},[
     E('option',{'value':'day'},bi('Day','Сутки')),E('option',{'value':'week'},bi('Week','Неделя')),E('option',{'value':'month'},bi('Month','Месяц'))]);
   var selectedRows=rows,table;
   period.value=recoveryAnalyticsPeriod;
@@ -276,13 +308,13 @@ function renderTransitionAnalytics(status){
        [bi('Recovery time, P95 (s)','Время восстановления, P95 (с)'),fmt(s.p95)],
        [bi('Recovery time, worst (s)','Время восстановления, максимум (с)'),fmt(s.worst)]].map(function(r){return E('tr',{'class':'tr'},[E('td',{'class':'td'},r[0]),E('td',{'class':'td'},String(r[1]))]);})].reduce(function(a,b){return a.concat(b);},[])));
     while(groupHost.firstChild)groupHost.removeChild(groupHost.firstChild);
-    var groups=recoveryGroups(rows,status.profiles||[],window.start,window.end);
+    var groups=recoveryGroups(rows,status.profiles||[],window.start,window.end,inventory);
     var kindTitle={server:bi('By server','По серверам'),channel:bi('By group (channel)','По группам (каналам)'),protocol:bi('By protocol','По протоколам')};
     Object.keys(groups).forEach(function(kind){
       if(!groups[kind].length)return;
       groupHost.appendChild(E('h4',{},ownGet(kindTitle,kind)||kind));
-      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[bi('Name','Имя'),bi('Successful / known','Удачных / известных'),bi('P95, s','P95, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
-        return E('tr',{'class':'tr'},[E('td',{'class':'td'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},m.p95==null?'—':m.p95.toFixed(1)),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
+      groupHost.appendChild(E('table',{'class':'table hv-recovery-table'},[E('tr',{'class':'tr table-titles'},[kind==='server'?bi('VPN server / protocol','VPN-сервер / протокол'):kind==='channel'?bi('Channel','Канал'):bi('Protocol','Протокол'),bi('Successful / known','Удачных / известных'),bi('P95, s','P95, с'),bi('Failures in a row','Сбоев подряд')].map(function(t){return E('th',{'scope':'col'},t);}))].concat(groups[kind].map(function(g){var m=g.metrics;
+        return E('tr',{'class':'tr'},[E('td',{'class':'td hv-recovery-identity'},g.name),E('td',{'class':'td'},(m.committed+m.trials_passed)+' / '+m.known_outcomes),E('td',{'class':'td'},m.p95==null?'—':m.p95.toFixed(1)),E('td',{'class':'td'},String(m.max_consecutive_failures))]);}))));
     });
     groupHost.appendChild(E('div',{'class':'hv-recovery-legend'},[E('strong',{},bi('How to read these tables','Как читать эти таблицы')),E('p',{},bi('There is one table per kind of grouping (server, group of servers, protocol). Example row: b · 1 / 1 · 5.0 · 0.','Для каждого вида группировки своя таблица (сервер, группа серверов, протокол). Пример строки: b · 1 / 1 · 5.0 · 0.')),
       E('ul',{},[
@@ -299,11 +331,11 @@ function renderTransitionAnalytics(status){
   }},'CSV · '+kind);}));
   exports.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){downloadIncidentReport(selectedRows);}},bi('Printable incident report','Отчёт об инцидентах для печати')));
   function stamp(t){return new Date(t*1000).toISOString().replace('T',' ').replace(/\.[0-9]+Z$/,'');}
-  table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},[bi('Time (UTC)','Время (UTC)'),'№',bi('From','Откуда'),bi('To','Куда'),bi('Outcome','Итог'),bi('Seconds','Секунд'),bi('Stages','Этапы'),bi('Codes','Коды'),''].map(function(h){return E('th',{'scope':'col'},h);}))]);
+  table=E('table',{'class':'table hv-recovery-table'},[E('tr',{},[bi('Time (UTC)','Время (UTC)'),'№',bi('Original channel','Исходный канал'),bi('Destination channel','Канал назначения'),bi('Outcome','Итог'),bi('Seconds','Секунд'),bi('Stages','Этапы'),bi('Codes','Коды'),''].map(function(h){return E('th',{'scope':'col'},h);}))]);
   rows.forEach(function(r){
-    var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r);}},bi('Details','Подробности'));
+    var detail=E('button',{'type':'button','class':'cbi-button','click':function(){showIncident(r,status,inventory);}},bi('Details','Подробности'));
     var evidence=r.probe_evidence&&typeof r.probe_evidence==='object'&&Object.keys(r.probe_evidence).length?' · '+Object.keys(r.probe_evidence).map(function(k){return k+'='+String(r.probe_evidence[k]);}).join(', '):'';
-    table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[stamp(r.start),String(r.id),r.source,r.target,r.outcome,r.duration==null?'—':String(r.duration),
+    table.appendChild(E('tr',{'data-recovery-start':String(r.start)},[stamp(r.start),String(r.id),recoveryChannelText(r,'source',status.profiles||[],inventory),recoveryChannelText(r,'target',status.profiles||[],inventory),recoveryOutcomeText(r),r.duration==null?'—':r.duration.toFixed(1),
       r.phases.map(function(p){return p.state;}).join(' → ')||'—',(r.codes.join(' · ')||'—')+evidence].map(function(v){return E('td',{},v);}).concat([E('td',{},detail)])));
   });
   update();
@@ -315,7 +347,7 @@ function renderTransitionAnalytics(status){
     E('p',{},bi('Coverage: incomplete retained window; not measured LAN availability.','Покрытие: неполное сохранённое окно; это не измерение доступности LAN.')),
     E('p',{},age),
     E('small',{},'Calendar boundaries: '+(history.timezone||'Europe/Berlin')+'. Event timestamps: UTC. Durations measure retained APPLYING → controller-confirmed outcome events, not full outage duration. Retry episode IDs describe controller evidence, not certified LAN outages. Categories overlap and must not be summed.'),
-    renderStoredStatistics(status),period,summaryHost,groupHost,exports,table]);
+    renderStoredStatistics(status),period,summaryHost,groupHost,E('p',{'class':'hv-muted'},bi('Names and channel roles marked current refer to today’s saved profiles. Older events without a profile cannot be assigned a server.','Названия и роли с пометкой «текущий» относятся к сохранённым сейчас профилям. Старым событиям без профиля нельзя достоверно назначить сервер.')),exports,recoveryTableWrap(table),preparations.length?E('details',{'class':'hv-recovery-preparations'},[E('summary',{},bi('Preparation before channel selection','Подготовка до выбора каналов')+' ('+preparations.length+')'),E('p',{},bi('No route application was recorded for these entries. They are separate from the switch-attempt table.','Для этих записей не зафиксировано применение маршрута. Они вынесены отдельно от таблицы попыток переключения.')),E('ul',{},preparations.map(function(r){return E('li',{},stamp(r.start)+' · '+recoveryOutcomeText(r)+' · '+r.codes.join(' · '));}))]):null].filter(Boolean));
 }
 
 function renderDecisionExplanation(status,inventory){
@@ -366,7 +398,7 @@ function renderDecisionExplanation(status,inventory){
       line(!fresh?'grey':failMet?'red':'green',bi('Has the VPN in use failed enough times?','Отказал ли используемый VPN достаточное число раз?'),(failMet?bi('Yes.','Да.'):bi('No.','Нет.'))+' '+bi('Auto needs '+(needFail||'—')+' failed checks in a row.','Auto нужно '+(needFail||'—')+' неудачных проверок подряд.')),
       line(!fresh?'grey':goodMet?'green':'yellow',bi('Has the reserve met the router probe threshold?','Достигнут ли порог проверок резерва с роутера?'),(goodMet?bi('Yes.','Да.'):bi('Not yet.','Пока нет.'))+' '+bi('Auto needs '+(needGood||'—')+' good checks in a row.','Auto нужно '+(needGood||'—')+' успешных проверок подряд.'))]),
     E('p',{'class':'hv-why-next'},[E('strong',{},bi('Evidence and next review: ','Данные и дальнейшая проверка: ')),next]),
-    E('p',{'class':'hv-why-note'},bi('These checks are made by the router itself, so they show whether the VPN tunnels work, not what your computer sees. That is why every switch also needs the LAN helper to confirm it.','Эти проверки делает сам роутер, поэтому они показывают, работают ли VPN-туннели, а не то, что видит ваш компьютер. Поэтому каждое переключение дополнительно подтверждает LAN-помощник.')),
+    E('p',{'class':'hv-why-note'},bi('These checks are made by the router itself, so they show whether the VPN tunnels work, not what your computer sees. A separate LAN helper can verify a real client path; current prepared-MT3000 router-probed IPv4 Auto does not require it.','Эти проверки делает сам роутер, поэтому они показывают, работают ли VPN-туннели, а не то, что видит ваш компьютер. Отдельный LAN-помощник проверяет путь реального клиента; для router-probed IPv4 Auto подготовленного MT3000 он не обязателен.')),
     techCode?E('small',{'class':'hv-why-tech'},[bi('Technical state: ','Техническое состояние: '),errorCodeLink(techCode)]):null
   ].filter(Boolean));
 }

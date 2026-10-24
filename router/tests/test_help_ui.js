@@ -32,7 +32,7 @@ assert.equal(details.length,topics.length);
 assert.equal(details.filter(n=>n.attrs.open).length,1);assert(details[0].attrs.id==='help-no-internet');
 const commands=topics.reduce((n,t)=>n+t.steps.filter(s=>s.c).length,0);
 assert.equal(page.all().filter(n=>n.tag==='pre').length,commands);
-assert.equal(page.all().filter(n=>n.tag==='button').length,commands);
+assert.equal(page.all().filter(n=>n.tag==='button').length,commands+topics.length,'each topic includes its diagnostic copy action');
 // The page is wired into the generated dashboard.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
@@ -44,7 +44,8 @@ for(const lang of ['en','ru']){
  context.bi=(en,ru)=>lang==='ru'?ru:en;
  const guide=context.renderHelp(),steps=guide.all().filter(n=>n.attrs['data-setup-guide-step']);
  assert.equal(steps.length,8);assert.equal(guide.all().filter(n=>n.tag==='details').length,1);assert(guide.all().find(n=>n.tag==='details').attrs.open);
- assert.equal(guide.all().filter(n=>n.tag==='button').length,0,'guide never performs a control operation');
+ assert.equal(guide.all().filter(n=>n.tag==='button').length,1,'focused guide offers only a diagnostic copy action, not a control operation');
+ assert.equal(guide.all().find(n=>n.tag==='button').attrs['data-diagnostic-copy'],'setup-guide');
  assert(guide.text().includes(lang==='ru'?'значения можно оставить':'existing values'));
  for(const step of steps){assert(step.text().length>150);assert.equal(/[А-Яа-я]/.test(step.text()),lang==='ru');}
 }

@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.0'
+VERSION = '0.9.1-alpha10'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -317,8 +317,8 @@ class Accounting:
             activity[identifier]={'name':value.get('name',identifier),'protocol':value.get('protocol','unknown'),'days':{},'periods':periods}
         data['activity']=activity;return data
 
-    def observe(self, result, max_gap=90):
-        self.reliability.observe(result,max_gap=max_gap)
+    def observe(self, result, max_gap=90, native=None):
+        self.reliability.observe(result,max_gap=max_gap,native=native)
         identifier, stamp = result['id'], result['time']
         self.quality = {key: value for key, value in self.quality.items() if (value.get('last') or {}).get('time', 0) >= stamp-7*86400}
         bucket = str(int(stamp//3600))
@@ -503,6 +503,9 @@ def probe(profile):
         exit_ip = exit_seen.pop(binding['device'], None)
         if exit_ip and not result['code']:
             result['exit_ip'] = exit_ip  # shown only in the authenticated UI; never in reports or history
+        from server_endpoint import observe as endpoint_observe
+        endpoint=endpoint_observe(profile,time.time())
+        if endpoint:result['server_endpoint']=endpoint
     except (OSError, ValueError, subprocess.SubprocessError):
         result['code'] = 'SYSTEM-001'
     return result
@@ -546,7 +549,7 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
     return devices
 
 
-def checkpoint(accounting):
+def checkpoint(accounting,latency=None):
     accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
     try:old = read_json(PERSIST/'checkpoint.json')
@@ -558,6 +561,10 @@ def checkpoint(accounting):
             if old.get('sha256') == checksum(old.get('data')):atomic_json(PERSIST/'checkpoint.backup.json', old)
         except (ValueError,TypeError,KeyError,OverflowError):pass
     atomic_json(PERSIST/'checkpoint.json', {'data': payload, 'sha256': checksum(payload)})
+    if latency is not None:
+        try:latency.save(PERSIST/'latency-history.json',atomic_json,time.time())
+        except (OSError,ValueError):
+            if latency.notice!='LATENCY-HISTORY-UNAVAILABLE':latency.notice='LATENCY-HISTORY-WRITE-FAILED'
 
 
 def restore():
@@ -634,6 +641,8 @@ def serve():
     except (OSError, ValueError, KeyError, TypeError):
         accounting, storage_error = Accounting(), 'STORAGE-001'
     events, samples, last_save = [], [], time.monotonic()
+    from latency_history import LatencyHistory
+    latency=LatencyHistory.load(PERSIST/'latency-history.json')
     from telegram_report import deliver
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
@@ -676,8 +685,9 @@ def serve():
                 accounting.track_activity(rows, time.time(), settings['interval']*3)
             else:
                 storage_error = 'CLOCK-001'
+            failure_context=read_json(RUNTIME/'native-status.json', {})
             for row in measured:
-                accounting.observe(row,max_gap=settings['interval']*3)
+                accounting.observe(row,max_gap=settings['interval']*3,native=failure_context)
                 samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
                     'interface','vendor_tunnel_id','vendor_generation')})
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*7][-10000:]
@@ -709,6 +719,8 @@ def serve():
             from candidate_hierarchy import rank_candidates
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',30)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+            latency.observe(status,settings,time.time())
+            status['latency_history']=latency.public()
             native=status['native_failover']
             from reliability import active_controller
             from pair_auto import read_state as pair_state, intent as pair_intent
@@ -745,7 +757,7 @@ def serve():
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
             if accounting.reliability.critical or time.monotonic()-last_save >= settings['checkpoint']:
                 try:
-                    checkpoint(accounting);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
+                    checkpoint(accounting,latency);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -764,7 +776,7 @@ def serve():
         cancel_speed()
     except (OSError,ValueError):pass
     try:
-        checkpoint(accounting)
+        checkpoint(accounting,latency)
     except (OSError, ValueError):
         pass
 
@@ -786,14 +798,14 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':''}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
-                          'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':''}, 'native_stop': {}, 'native_start': {'control_revision':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
+                          'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
                           'setup_system':{'source':'','target':'','interval':0,'duration':0,'session_loss':False,'servers':[]},
@@ -806,7 +818,7 @@ def rpc(method):
         print(json.dumps(page(PERSIST,arguments)));return
     if method=='pair_manual':
         from pair_manual import request
-        print(json.dumps(request(arguments['direction'],arguments['control_revision']) if set(arguments)=={'direction','control_revision'} else {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}));return
+        print(json.dumps(request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source')) if {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'} else {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}));return
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
             raise ValueError('RPC-CONFIRM-FIELDS')
@@ -876,9 +888,9 @@ def rpc(method):
         print(json.dumps(result));return
     if method=='manual_switch':
         from manual_control import request,refusal
-        result=request(arguments['direction'],arguments['control_revision']) if set(arguments)=={'direction','control_revision'} else refusal('MANUAL-FIELDS')
+        result=request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source')) if {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'} else refusal('MANUAL-FIELDS')
         print(json.dumps(result));return
-    if arguments and method not in('native_start','native_trial_start'):
+    if arguments and method not in('native_start','native_trial_start','native_stop'):
         raise ValueError('RPC-UNEXPECTED-ARGS')
     if method=='telegram_retry':
         from telegram_report import retry_unknown
@@ -900,11 +912,12 @@ def rpc(method):
     elif method in ('native_start','native_trial_start','native_stop','native_return'):
         from auto_control import start, stop, return_request
         if method=='native_stop':
+            if set(arguments)-{'request_source'}:raise ValueError('RPC-UNEXPECTED-ARGS')
             # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
-            try:result=stop(runtime=RUNTIME,persist=PERSIST)
+            try:result=stop(runtime=RUNTIME,persist=PERSIST,request_source=arguments.get('request_source'))
             except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
         elif method=='native_start':
-            result=start(arguments['control_revision']) if set(arguments)=={'control_revision'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+            result=start(arguments['control_revision'],request_source=arguments.get('request_source')) if 'control_revision' in arguments and set(arguments)<={'control_revision','request_source'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
         elif method=='native_trial_start':
             valid=(set(arguments)=={'control_revision','trial'}and isinstance(arguments['trial'],str)and re.fullmatch('[a-f0-9]{32}',arguments['trial']))
             result=start(arguments['control_revision'],trial_nonce=arguments['trial']) if valid else {'accepted':False,'blockers':['LAN-TRIAL-REQUIRED']}

@@ -13,6 +13,44 @@ METRICS=('attempts','committed','manual_attempts','manual_committed','trials_pas
 WEEK=7*86400
 
 
+def transition_destination(value):
+    role=('source' if value.get('state') in ('RESTORING','ROLLED-BACK') or value.get('state')=='STOPPED' and value.get('reason')=='OPERATOR-RETURN' else
+          'target' if value.get('state') in ('APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE') else None)
+    identifier=value.get(role) if role else None
+    return role,identifier if isinstance(identifier,str) and PROFILE.fullmatch(identifier) else None
+
+
+def clean_transition_latency(raw,value,now):
+    """A saved observation at this event, never a lookup of today's ping."""
+    role,identifier=transition_destination(value)
+    if not identifier or not isinstance(raw,dict) or raw.get('profile')!=identifier or raw.get('metric')!='https-rtt-ms':return None
+    stamp=raw.get('time');delay=raw.get('rtt_ms');interface=raw.get('interface');generation=raw.get('generation')
+    if (type(stamp) not in (int,float) or not now-90<=stamp<=now+5
+            or type(delay) not in (int,float) or not 0<=delay<=600000
+            or not isinstance(interface,str) or not re.fullmatch(r'(?:wgclient|ovpnclient)[0-9]{1,4}',interface)
+            or identifier.startswith('wireguard:')!=interface.startswith('wgclient')
+            or not isinstance(generation,str) or not re.fullmatch('[a-f0-9]{32}',generation)):return None
+    return {'profile':identifier,'metric':'https-rtt-ms','time':stamp,'rtt_ms':delay,'interface':interface,'generation':generation}
+
+
+def capture_transition_latency(value,status,binding,now):
+    role,identifier=transition_destination(value)
+    if not identifier or not isinstance(status,dict) or not isinstance(binding,dict) or binding.get('id')!=identifier:return None
+    stamp=status.get('time')
+    if status.get('error') or status.get('rpc_error') or type(stamp) not in (int,float) or not now-90<=stamp<=now+5:return None
+    rows=status.get('profiles',[])
+    if not isinstance(rows,list):return None
+    matched=[p for p in rows if isinstance(p,dict) and p.get('id')==identifier]
+    if len(matched)!=1:return None
+    p=matched[0]
+    if (p.get('code') is not None or p.get('dns_ok') is not True or type(p.get('https_success')) is not int or p['https_success']<2
+            or p.get('vendor_state')!='SETTLED' or p.get('protocol') not in ('wireguard','openvpn')
+            or p.get('vendor_tunnel_id')!=p.get('protocol')+':'+str(p.get('interface'))
+            or any(p.get(k)!=binding.get(k) for k in ('id','protocol','interface','vendor_tunnel_id','vendor_generation'))):return None
+    return clean_transition_latency({'profile':identifier,'metric':'https-rtt-ms','time':p.get('time'),'rtt_ms':p.get('rtt_ms'),
+        'interface':p.get('interface'),'generation':p.get('vendor_generation')},value,now)
+
+
 class HistoryError(ValueError):
     pass
 
@@ -179,6 +217,11 @@ class History:
         if value.get('reason'):codes=list(codes)+[value['reason']]
         codes=sorted({c for c in codes if isinstance(c,str) and CODE.fullmatch(c)})
         item={'state':state,'codes':codes,'trial':value.get('trial') is True}
+        if value.get('transition_source') in ('manual','automatic','test','programmatic','unknown'):item['transition_source']=value['transition_source']
+        control_time=value.get('control_time')
+        if (value.get('control_action') in ('start','stop') and value.get('control_source') in ('manual','test','programmatic','unknown')
+                and type(control_time) in (int,float) and 0<control_time<=now and math.isfinite(control_time)):
+            item.update({key:value[key] for key in ('control_action','control_source','control_time')})
         if value.get('manual') is True or 'OPERATOR-MANUAL' in codes:item['manual']=True
         if type(value.get('original_restored')) is bool:item['original_restored']=value['original_restored']
         scope=value.get('proof_scope','external-lan')
@@ -187,6 +230,8 @@ class History:
         for key in ('source','target'):
             identifier=value.get(key)
             if isinstance(identifier,str) and PROFILE.fullmatch(identifier):item[key]=identifier
+        latency=clean_transition_latency(value.get('latency'),value,now)
+        if latency is not None:item['latency']=latency
         kind=value.get('transition_kind')
         if kind in ('server','channel','protocol'):item['transition_kind']=kind
         raw=value.get('probe_evidence')
@@ -207,7 +252,8 @@ class History:
                     clean.append({'phase':phase,'time':stamp})
             if clean:item['phase_evidence']=clean
         active,episode=self.correlate(data,item)
-        key=hashlib.sha256(encoded(item)).hexdigest()
+        # A new RTT sample alone is not a controller transition or flash event.
+        key=hashlib.sha256(encoded({k:v for k,v in item.items() if k!='latency'})).hexdigest()
         if key==data['last_key']:
             original_count=len(data['events']);self.prune(data,now)
             if legacy or len(data['events'])!=original_count:

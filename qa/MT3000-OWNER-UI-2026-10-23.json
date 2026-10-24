@@ -1,0 +1,249 @@
+{
+  "schema": 1,
+  "result": "PASS_WITH_RETAINED_CHECK_FAILURES",
+  "version": "0.9.1-alpha1",
+  "source": "9daab2b752b00406015c348a16156d5ae0ab4457",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha1-1_all.ipk",
+    "bytes": 769169,
+    "sha256": "91d641ec3beacbef5ffa59e49daa492c26bc0b6d183073c55c69db8fe6de9e5d"
+  },
+  "ci": [
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha1-1_all.ipk",
+      "bytes": 769169,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "91d641ec3beacbef5ffa59e49daa492c26bc0b6d183073c55c69db8fe6de9e5d",
+      "skipped_tests": 16,
+      "source": "9daab2b752b00406015c348a16156d5ae0ab4457",
+      "ui_suites": 40,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 724,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha1-1_all.ipk",
+      "bytes": 769169,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "91d641ec3beacbef5ffa59e49daa492c26bc0b6d183073c55c69db8fe6de9e5d",
+      "skipped_tests": 0,
+      "source": "9daab2b752b00406015c348a16156d5ae0ab4457",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "device": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed_files_verified": 84,
+    "executable_modes_verified": true,
+    "actual_https_assets": {
+      "scope": "Actual HTTPS-served bytes over interface3/source192.168.11.228 with pinned certificate; no login/session/terms/wizard writes",
+      "assets": [
+        {
+          "asset": "dashboard77.js",
+          "http_status": 200,
+          "bytes": 878662,
+          "sha256": "71d69024e16e74dd0d3704d8c968aa9026bd4aaeaa5a4d0c9c75453ebd6db14d",
+          "matches_canonical_ipk": true
+        },
+        {
+          "asset": "ui54.css",
+          "http_status": 200,
+          "bytes": 118451,
+          "sha256": "c4cf026fc4c28f72e2532f5ff7b5276786a52ac7facc5d696495e8a117b36ce8",
+          "matches_canonical_ipk": true
+        }
+      ],
+      "pass": true,
+      "time": 1792778694.8434215
+    },
+    "actual_http8080_assets": {
+      "pass": true,
+      "assets": [
+        {
+          "asset": "dashboard77.js",
+          "http_status": 200,
+          "sha256": "71d69024e16e74dd0d3704d8c968aa9026bd4aaeaa5a4d0c9c75453ebd6db14d",
+          "matches_canonical_ipk": true
+        },
+        {
+          "asset": "ui54.css",
+          "http_status": 200,
+          "sha256": "c4cf026fc4c28f72e2532f5ff7b5276786a52ac7facc5d696495e8a117b36ce8",
+          "matches_canonical_ipk": true
+        }
+      ],
+      "time": 1792778695.0294387,
+      "scope": "actual HTTP8080 user-facing static assets; bound cable interface3/source192.168.11.228"
+    },
+    "final": {
+      "result": "PASS",
+      "time": 1792778965.1843088,
+      "version": "0.9.1-alpha1",
+      "auto_left_running": true,
+      "selected_role": "reserve",
+      "manual_preference": "target",
+      "both_vpn_dns_and_https_passed": true,
+      "live_policy_selection_confirmed": true,
+      "monitor_age_seconds": 7.787491798400879,
+      "server_clock_supplied": true,
+      "firmware": "4.11.0",
+      "openwrt": "21.02-SNAPSHOT",
+      "test_fault_tables_absent": true,
+      "temporary_full_block_absent": true,
+      "controller_totals": {
+        "attempts": 28,
+        "automatic_attempts": 16,
+        "automatic_committed": 11,
+        "blocked_episodes": 18,
+        "channel_switches": 0,
+        "committed": 20,
+        "manual_attempts": 10,
+        "manual_committed": 9,
+        "protocol_switches": 11,
+        "rate_limited_episodes": 3,
+        "returns": 5,
+        "rollbacks": 11,
+        "server_switches": 0,
+        "trials_passed": 1
+      },
+      "reliability_totals": {
+        "checks": 3863,
+        "failed_checks": 40,
+        "outages": 25,
+        "observed_down_seconds": 387.52756786346436,
+        "observed_up_seconds": 39565.638998270035,
+        "auto_observed_seconds": 19431.51209139824,
+        "recoveries": 11,
+        "unknown_intervals": 2
+      },
+      "external_lan_verified": false
+    },
+    "terms_preserved": true,
+    "own_settings_comparison": {
+      "scope": "Own UCI config compared with verified pre-Stop encrypted backup; only option names are reported, never values",
+      "byte_equal": false,
+      "semantic_equal": false,
+      "changed_options": [
+        "main.main/native_trial",
+        "main.main/native_until"
+      ],
+      "old_options": 29,
+      "new_options": 28,
+      "terms_preserved": true,
+      "expected_lifecycle_only": true,
+      "unrelated_options_preserved": true,
+      "before_sha256": "d84d6282bdb48d1a99283e8b9cde8984a410262e37414a150eefb8bb9741dbe3",
+      "after_sha256": "3ba191f870d6c6dcbbe21e5021fd9064436d713240ca5cafff8eca946d687ba4"
+    }
+  },
+  "stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 20.188,
+    "bytes": 725,
+    "sha256": "c95cfd1761ac3e1ad532ef72b71477a3e8c84fe25d583c44763b01742d947d82",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 63.891,
+    "bytes": 2027,
+    "sha256": "5a141e940aa258281ecaa0d4de83605175f4e108f16b07807dd449f32173ec24",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "owner_reserve_restoration": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 35.968,
+    "bytes": 11018,
+    "sha256": "9c1068a80b117d245db0b732d68b17e7f278bd5d8fb26a2133be4905e9c6bf49",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "recovery": {
+    "source": {
+      "result": "PASS",
+      "source": "9daab2b752b00406015c348a16156d5ae0ab4457",
+      "tree": "0d57841c698b6199269f558ea8f3819efa96cb3e",
+      "branch": "feature/owner-ui-20261023",
+      "bundle_bytes": 17737181,
+      "bundle_sha256": "0097d2035ae3495ec3788c42c238d9163dcefe515626c543b088dbf28e3af994",
+      "restore_head": "9daab2b752b00406015c348a16156d5ae0ab4457",
+      "fsck": "PASS"
+    },
+    "final_encrypted_configuration": {
+      "result": "PASS",
+      "scope": "independent in-memory DPAPI decrypt and all archive entry reads; configuration only, not bootloader/flash",
+      "entries": 189,
+      "sha256": "cab5871458f6bf650f65833ff63b793e17c93de47578a7031b102eadd360a607",
+      "plaintext_persisted": false
+    }
+  },
+  "retained_failures": [
+    "First canonical UI build refused old CSS identity mentioned in embedded prompt; corrected before tested package.",
+    "Immutable4696eb1 full CI failed vendor-diagnostics render because helpLink was not present; fixed in product, later full matrices passed.",
+    "First installed-package harness demanded byte-identical own config and refused after actual successful installation. Independent check verified84files/modes. Comparison with encrypted backup showed only documented lifecycle prepare resets of native_until/native_trial; all other UCI options and terms preserved. No opkg retry or bypass.",
+    "First source-bundle clone had no default HEAD because only feature ref was bundled; set the explicit restored feature HEAD and verify fsck. Original bundle retained."
+  ],
+  "scope": {
+    "physical": "actual dedicated MT3000 router-originated IPv4 installation/served files/Start/manual reserve/final health",
+    "ui": "focused generated UI regressions plus local standalone Edge fixture layout; owner supplied actual alpha1 screenshots",
+    "native_browser_operator_flows": "NOT_AUTOMATICALLY_VERIFIED",
+    "independent_lan": false,
+    "twenty_four_hour_soak": false,
+    "power_cut": false,
+    "windows_networking_changed": false,
+    "primary_mt6000_changed": false
+  },
+  "followup": "New owner tasks9\u201322 in docs/handoff/OWNER-UI-TODO-2026-10-23.md remain open; separate new package identity required.",
+  "recorded_utc": "2026-10-23T18:19:31.548043+00:00"
+}

@@ -1,0 +1,107 @@
+{
+  "schema": 1,
+  "result": "PASS_OFFLINE_AND_VIRTUAL_WITH_LIMITS",
+  "version": "0.9.1-alpha2",
+  "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+  "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+  "bytes": 790193,
+  "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+      "bytes": 790193,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+      "skipped_tests": 16,
+      "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+      "bytes": 790193,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+      "skipped_tests": 0,
+      "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "virtual_install": {
+    "case": "13-alpha2-real-upgrade",
+    "observed_utc": "2026-10-23T20:15:27.895262+00:00",
+    "receipt_sha256": "c0a06cf1ef962429f63dd26e8ca297df927e942366876b03af16011ff8b6e32b",
+    "result": {
+      "actual_opkg_exit": 0,
+      "auto_off": true,
+      "bytes": 790193,
+      "network_firewall_dhcp_unchanged": true,
+      "result": "PASS",
+      "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+      "terms_unchanged": true,
+      "version": "0.9.1-alpha2-1"
+    }
+  },
+  "virtual_files_http": {
+    "case": "14-alpha2-actual-runtime-assets",
+    "observed_utc": "2026-10-23T20:20:22.389940+00:00",
+    "receipt_sha256": "f1f2acdf57a812fefb7806f2a36f170f8bc14defb8f33073f68c24431cee28f9",
+    "result": {
+      "actual_http_assets": [
+        "dashboard78.js",
+        "ui55.css"
+      ],
+      "fresh_status": true,
+      "immutable_files_modes_verified": 86,
+      "latency_history_public": true,
+      "result": "PASS",
+      "scope": "actual x86 monitor-only upgrade; no browser or physical GL/LAN proof",
+      "version": "0.9.1-alpha2"
+    }
+  },
+  "virtual_history": {
+    "case": "15-installed-history-persistence-and-expiry",
+    "observed_utc": "2026-10-23T20:12:42.646448+00:00",
+    "receipt_sha256": "68dec56b87e6c2ffd0eb4ea7a35ba9eb5a27be817002c5865cad974a866057f9",
+    "result": {
+      "delay_day_retention_and_restart": true,
+      "delay_file_bytes": 80931,
+      "optional_delay_write_fault_does_not_break_accounting": true,
+      "paginated_rows": [
+        100,
+        30
+      ],
+      "result": "PASS",
+      "runtime": "installed alpha2 Python3.9 on actual x86/OpenWrt guest",
+      "scope": "synthetic timestamped observations in disposable temporary directories; no claim of seven elapsed days, live VPN latency or physical route tests",
+      "seven_day_expiry_and_lifetime_counters": true,
+      "synthetic_controller_events": 130
+    }
+  },
+  "prompt_matrix": "OWNER-PROMPT-VALIDATION-2026-10-23.json",
+  "acceptance_limits": [
+    "No configured browser: native visual layout/dropdowns/clipboard not verified",
+    "Physical MT3000 remains alpha1; alpha2 not installed on physical router",
+    "No physical client LAN/native GL Auto switch/24h/power-loss/IPv6 evidence",
+    "Prompt recipes are not external AI interpretation proof"
+  ],
+  "release_published": false,
+  "physical_router_mutation": false
+}

@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "result": "PASS_OFFLINE_CANDIDATE",
+  "version": "0.9.1-alpha3",
+  "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+  "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+  "bytes": 790185,
+  "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad",
+  "change": "Current server probes: five visible rows, triangle expands/collapses all remaining rows; state retained across polling and full-list search/sort; primary/reserve first with clear role labels",
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+      "bytes": 790185,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad",
+      "skipped_tests": 16,
+      "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+      "bytes": 790185,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad",
+      "skipped_tests": 0,
+      "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "deployment": "NOT_EXECUTED_PENDING_EXPLICIT_OWNER_ALPHA3_SCOPE",
+  "device_unchanged_by_this_task": true,
+  "installed_baseline": "0.9.1-alpha2, Auto ON reserve",
+  "native_browser_visual": "NOT_VERIFIED",
+  "recorded_utc": "2026-10-24T07:33:28.048774+00:00"
+}

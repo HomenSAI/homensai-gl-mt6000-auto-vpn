@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "result": "PASS_OFFLINE_WITH_VISUAL_DEVICE_LIMITS",
+  "product_source": "03fe2c9470683310d0571f6af5dd20063c197157",
+  "version": "0.9.1-alpha10",
+  "artifact": "homensai-auto-vpn_0.9.1-alpha10-1_all.ipk",
+  "sha256": "9a40e7ce48170bc76d2aada215764691edd60dd61d1f1f660e88afcad1b1896b",
+  "bytes": 801579,
+  "ci": [
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha10-1_all.ipk",
+      "bytes": 801579,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "9a40e7ce48170bc76d2aada215764691edd60dd61d1f1f660e88afcad1b1896b",
+      "skipped_tests": 16,
+      "source": "03fe2c9470683310d0571f6af5dd20063c197157",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha10-1_all.ipk",
+      "bytes": 801579,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "9a40e7ce48170bc76d2aada215764691edd60dd61d1f1f660e88afcad1b1896b",
+      "skipped_tests": 0,
+      "source": "03fe2c9470683310d0571f6af5dd20063c197157",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "limitations": [
+    "Native browser visual review not completed",
+    "No alpha10 physical-router installation",
+    "Previous prompt/VM coverage limits remain documented"
+  ],
+  "publication_scope": "Owner authorized GitHub/Gitea branch publication; stable v0.9.0 unchanged"
+}

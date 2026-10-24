@@ -12,6 +12,18 @@ def probe(stamp,code=None):return {'id':'wireguard:peer_3','time':stamp,'code':c
 
 
 class ReliabilityTests(unittest.TestCase):
+    def test_failure_chart_preserves_original_role_and_episode_across_pair_changes(self):
+        r=Reliability();native={'time':BASE,'source':'wireguard:peer_3','target':'openvpn:1_1','state':'COMMITTED'}
+        r.observe(probe(BASE,'DNS-001'),native=native)
+        r.observe(probe(BASE+10,'DNS-001'),native=dict(native,source='wireguard:peer_4'))
+        self.assertEqual(r.public()['failure_history']['events'],[[BASE,'source','target']])
+        r=Reliability(r.export());r.observe(probe(BASE+20))
+        r.observe(probe(BASE+40,'VPN-001'),native=native)
+        self.assertEqual(r.public()['failure_history']['events'][-1],[BASE+40,'unknown','unknown'])
+        self.assertEqual(len(r.public()['failure_history']['events']),2)
+        old=r.export();old['events'][0].pop('role');old['events'][0].pop('selected')
+        self.assertEqual(Reliability(old).public()['failure_history']['events'][0],[BASE,'unknown','unknown'])
+
     def test_outage_is_one_episode_and_probe_failures_are_separate(self):
         r=Reliability();r.observe(probe(BASE));r.observe(probe(BASE+10,'VPN-003'));r.observe(probe(BASE+20,'VPN-003'));r.observe(probe(BASE+30))
         totals=r.public()['totals']

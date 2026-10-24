@@ -28,5 +28,5 @@ if '--direct-kernel' in sys.argv:
     if not kernel.exists():
         subprocess.run(['curl','-fSL','--max-time','120','-o',str(kernel),'https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/openwrt-21.02.7-x86-64-generic-kernel.bin'],check=True)
     if hashlib.sha256(kernel.read_bytes()).hexdigest()!='4c5a50fe3de95b297308c27cf66a858be98fb14d9d85e8f302fa0f6d302fcfdd':raise SystemExit('Kernel checksum mismatch')
-    args += ['-kernel',str(kernel),'-append','root=/dev/vda2 rootwait console=ttyS0,115200 console=tty0 reboot=hard']
+    args += ['-kernel',str(kernel),'-append','root=/dev/vda2 rw rootwait console=ttyS0,115200 console=tty0 reboot=hard']
 os.execvp(args[0],args)

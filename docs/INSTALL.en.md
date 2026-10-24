@@ -2,6 +2,14 @@
 
 [Current status](CURRENT-STATUS.md) · [Quick start](AUTO-QUICKSTART.en.md) · [Terms](../DISCLAIMER.md)
 
+## Install manually or use an AI agent
+
+For manual installation follow the steps below. To have ChatGPT/Codex or Claude Code(Sonnet/Opus) install, configure and verify the application, use the [complete ready-to-copy prompt](AI-INSTALL.en.md). The agent needs a local terminal and access to your router; a chat without tools can only explain the steps. The prompt covers device checks, recovery, dependencies, artifact verification, installation, setup and the final report. Never paste passwords or keys into it.
+
+The agreement appears until the first acceptance of its current version. If already accepted on this router, the page may open the operating explanation directly; another acceptance is unnecessary.
+
+## Manual installation
+
 1. Verify actual model/firmware. Continuous mode is tested on the prepared MT3000/4.11.0. Keep independent management access. Architecture:all does not mean universal compatibility.
 2. Download `homensai-auto-vpn_0.9.0-1_all.ipk` and its `.ipk.sha256` from the same [release](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0). Verify SHA256 with `sha256sum <file>` or PowerShell `Get-FileHash <file> -Algorithm SHA256`. Stop on a mismatch.
 3. Preserve a private, verified configuration/statistics backup. It may contain VPN keys, passwords and a Telegram token; never publish it.

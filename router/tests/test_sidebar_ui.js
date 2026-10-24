@@ -21,3 +21,36 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
   a3(page.includes('finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport'));
   console.log('PASS: refresh preserves viewport; page navigation remembers each visited position');
 }
+
+// Real LuCI serialises null children; a module-local factory must clean all callers,
+// not hide literal words in CSS or alter meaningful zeroes/attributes/JSON text.
+{
+ const guard=fs.readFileSync('router/element_guard.inc.js','utf8');
+ class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};this.children=Array.isArray(children)?children:[children];this.nodeType=1;}text(){return this.children.map(n=>n instanceof Node?n.text():String(n)).join('');}}
+ const native=function(tag,attrs,children){if(Array.isArray(tag))return new Node('fragment',{},tag);if(Array.isArray(attrs)&&arguments.length===2)return new Node(tag,{},attrs);return new Node(tag,attrs,arguments.length>2?children:[]);};
+ let nativeThis;
+ const dom={create:function(){nativeThis=this;return native.apply(null,arguments);}};
+ const globalFactory=native;
+ const element=new Function('L',guard+'; return E;')({dom});
+ let clicked=0;const attrs={disabled:null,click:()=>clicked++};
+ const original=Object.freeze([null,undefined,0,'—',Object.freeze([null,'Нет данных'])]);
+ const node=element('div',attrs,original);assert.equal(node.text(),'0—Нет данных');assert.strictEqual(nativeThis,dom);assert.strictEqual(node.attrs,attrs);node.attrs.click();assert.equal(clicked,1);assert.strictEqual(node.attrs.disabled,null);
+ assert.equal(element('p',{},undefined).text(),'');assert.equal(element('p',{},null).text(),'');
+ assert.equal(element('div',[null,'two arguments',undefined]).text(),'two arguments');
+ assert.equal(element([null,'fragment',undefined]).text(),'fragment');
+ assert.equal(element('pre',{},'{"value":null}').text(),'{"value":null}','diagnostic data is not rewritten');
+ assert.equal(original.length,5,'source arrays remain untouched');
+ const ctx={E:globalFactory,bi:(en,ru)=>ctx.ru?ru:en,Date,window:{localStorage:{getItem:()=>null,setItem:()=>{}}}};vm.createContext(ctx);
+ vm.runInContext(guard,ctx);vm.runInContext(guard,ctx);assert.equal(ctx.E('span',{},[null,0,undefined]).text(),'0','reloading cannot recursively wrap its own factory');
+ vm.runInContext(fs.readFileSync('router/summary_panel.inc.js','utf8'),ctx);
+ for(const ru of [false,true])for(const done of [false,true]){
+  ctx.ru=ru;ctx.startSteps=()=>[{key:'terms',done:true,title:'Terms',hint:null},{key:'learn',done,title:'Training',hint:undefined},{key:'monitor',done,title:'Monitoring',hint:null}];
+  const start=ctx.renderStartPage({},{settings:{}});assert(!/null|undefined/.test(start.text()),'actual Getting started page with absent optional copy');
+  const journalIntro=ctx.ru?'Живой журнал того, что видит роутер.':'A live log of what the router sees.';
+  assert.equal(ctx.E('header',{},[ctx.E('p',{},journalIntro),null,undefined]).text(),journalIntro,'live journal shared subtitle omits absent connectivity slot');
+  const intro='Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto.';
+  assert.equal(ctx.E('header',{},[ctx.E('p',{},intro),null,undefined]).text(),intro,'reported subtitle/footer slot cannot print null');
+ }
+ const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(builder.includes("element_guard.inc.js"));assert(builder.includes("must_replace(\"'require ui';\""),'guard follows dependency directives');
+ console.log('PASS: module-local LuCI element guard, nested null/undefined cleanup, zero/attributes/callback preservation, reload safety and actual Getting started rendering in EN/RU');
+}

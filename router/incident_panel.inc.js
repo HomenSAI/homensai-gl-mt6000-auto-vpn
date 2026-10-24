@@ -21,9 +21,9 @@ function downloadIncidentReport(rows){
   var url=URL.createObjectURL(new Blob([incidentHTML(rows)],{type:'text/html;charset=utf-8'}));
   var link=document.createElement('a');link.href=url;link.download='homensai-incidents.html';link.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
 }
-function showIncident(row){
+function showIncident(row,status,inventory){
   var f=incidentFields(row);ui.showModal(bi('Incident evidence','Подтверждения инцидента'),[
-    E('p',{},f.source+' → '+f.target+' · '+f.outcome),E('p',{},f.codes.join(' · ')||'CAUSE-UNKNOWN'),
+    E('p',{},(status&&typeof recoveryChannelText==='function'?recoveryChannelText(row,'source',status.profiles||[],inventory):f.source)+' → '+(status&&typeof recoveryChannelText==='function'?recoveryChannelText(row,'target',status.profiles||[],inventory):f.target)+' · '+(typeof recoveryOutcomeText==='function'?recoveryOutcomeText(row):f.outcome)),E('p',{},f.codes.join(' · ')||bi('No reason recorded','Причина не записана')),
     E('ol',{},f.phases.map(function(phase){return E('li',{},phase);})),E('p',{},f.scope),
     E('button',{'type':'button','class':'cbi-button','click':function(){downloadIncidentReport([row]);}},bi('Download printable report','Скачать отчёт для печати')),
     E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть'))

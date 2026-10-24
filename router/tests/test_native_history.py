@@ -151,5 +151,63 @@ History(sys.argv[2]).record({'state':'APPLYING'},101)
             with self.assertRaisesRegex(native.Refused,'HISTORY-001'):native.publish({'state':'APPLYING'})
             self.assertEqual(json.loads(native.STATE.read_text())['blockers'],['HISTORY-001'])
 
+    def test_control_context_survives_persistence_without_becoming_a_transition(self):
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d);value={'state':'APPLYING','control_action':'start','control_source':'manual','control_time':100,'transition_source':'automatic'}
+            h.record(value,110);self.assertFalse(h.record(value,111))
+            row=h.public()['events'][-1]
+            self.assertEqual(row['control_source'],'manual');self.assertEqual(row['transition_source'],'automatic')
+            self.assertEqual(row['control_time'],100)
+            self.assertEqual(h.public()['totals']['attempts'],1)
+            self.assertEqual(h.public()['totals']['automatic_attempts'],1)
+            h.record(dict(value,control_source='PRIVATE_SENTINEL',transition_source='PRIVATE_SENTINEL'),112)
+            self.assertNotIn('PRIVATE_SENTINEL',str(h.public()))
+
+    def test_publish_preserves_independent_activation_and_switch_sources(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);runtime=root/'run';persist=root/'persist';runtime.mkdir();persist.mkdir()
+            (runtime/'auto-control.json').write_text(json.dumps({'mode':'on','time':100,'request_source':'manual'}))
+            with patch.object(native,'RUNTIME',runtime),patch.object(native,'PERSIST',persist),patch.object(native,'STATE',runtime/'native-status.json'),patch.object(native.time,'time',return_value=110):
+                native.publish({'state':'APPLYING','reason':'SOURCE-FAILED'})
+            row=History(persist).public()['events'][-1]
+            self.assertEqual(row['transition_source'],'automatic');self.assertEqual(row['control_source'],'manual')
+
+    def test_switch_latency_is_bound_to_target_generation_and_event_time(self):
+        from native_history import capture_transition_latency
+        value={'state':'APPLYING','source':'wireguard:peer_1','target':'openvpn:1_1'}
+        p={'id':'openvpn:1_1','protocol':'openvpn','interface':'ovpnclient1','vendor_tunnel_id':'openvpn:ovpnclient1','vendor_generation':'b'*32,'vendor_state':'SETTLED','time':109,'rtt_ms':26.4,'code':None,'dns_ok':True,'https_success':2}
+        binding={key:p[key] for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}
+        self.assertEqual(capture_transition_latency(value,{'time':110,'profiles':[p]},binding,110)['rtt_ms'],26.4)
+        for changes in ({'time':1},{'vendor_generation':'c'*32},{'vendor_state':'CHANGING'},{'code':'DNS-001'},{'dns_ok':False},{'https_success':0},{'rtt_ms':float('nan')},{'rtt_ms':True}):
+            bad=dict(p,**changes)
+            self.assertIsNone(capture_transition_latency(value,{'time':110,'profiles':[bad]},binding,110),changes)
+        self.assertIsNone(capture_transition_latency(value,{'time':1,'profiles':[p]},binding,110))
+        self.assertIsNone(capture_transition_latency(value,{'time':110,'profiles':[p,p]},binding,110))
+        self.assertIsNone(capture_transition_latency(dict(value,state='RESTORING'),{'time':110,'profiles':[p]},binding,110),'return must use primary, never reserve delay')
+
+    def test_new_latency_sample_alone_does_not_write_another_transition(self):
+        with tempfile.TemporaryDirectory() as d:
+            h=History(d);value={'state':'APPLYING','source':'wireguard:peer_1','target':'openvpn:1_1','latency':{'profile':'openvpn:1_1','metric':'https-rtt-ms','time':109,'rtt_ms':26.4,'interface':'ovpnclient1','generation':'b'*32,'extra':'PRIVATE_SENTINEL'}}
+            self.assertTrue(h.record(value,110))
+            changed=dict(value,latency=dict(value['latency'],time=111,rtt_ms=99))
+            self.assertFalse(h.record(changed,112))
+            self.assertEqual(h.public()['events'][-1]['latency']['rtt_ms'],26.4,'historical RTT remains the recorded observation')
+            self.assertTrue(h.record(dict(changed,state='COMMITTED'),113))
+            self.assertEqual(h.public()['events'][-1]['latency']['rtt_ms'],99)
+            self.assertNotIn('PRIVATE_SENTINEL',str(h.public()))
+            self.assertEqual(h.public()['totals']['attempts'],1)
+
+    def test_publish_captures_actual_target_observation_without_network_probe(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);runtime=root/'run';persist=root/'persist';runtime.mkdir();persist.mkdir()
+            p={'id':'openvpn:1_1','protocol':'openvpn','interface':'ovpnclient1','vendor_tunnel_id':'openvpn:ovpnclient1','vendor_generation':'b'*32,'vendor_state':'SETTLED','time':109,'rtt_ms':26.4,'code':None,'dns_ok':True,'https_success':2}
+            value={'state':'COMMITTED','source':'wireguard:peer_1','target':'openvpn:1_1'}
+            journal=dict(value,vendor_profiles={'target':{k:p[k] for k in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')}})
+            (runtime/'status.json').write_text(json.dumps({'time':110,'profiles':[p]}))
+            with patch.object(native,'RUNTIME',runtime),patch.object(native,'PERSIST',persist),patch.object(native,'STATE',runtime/'native-status.json'),patch.object(native,'journal_read',return_value=journal),patch.object(native.time,'time',return_value=110):
+                native.publish(value)
+            self.assertEqual(History(persist).public()['events'][-1]['latency']['profile'],'openvpn:1_1')
+            self.assertEqual(json.loads((runtime/'native-status.json').read_text())['latency']['rtt_ms'],26.4)
+
 
 if __name__=='__main__':unittest.main()

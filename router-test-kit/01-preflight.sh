@@ -37,6 +37,8 @@ FREE_KB=$(df -k /overlay 2>/dev/null | awk 'NR==2{print $4}')
 [ -z "$FREE_KB" ] && FREE_KB=$(df -k /etc | awk 'NR==2{print $4}')
 if [ "${FREE_KB:-0}" -ge 20480 ]; then ok "free writable storage ${FREE_KB} KiB"; else bad "free writable storage ${FREE_KB:-?} KiB (<20480)"; fi
 say "INFO  MemAvailable=$(awk '/MemAvailable/{print $2" kB"}' /proc/meminfo)"
+CONFIG_RW=$(python3 -c 'import os; print(int(not bool(os.statvfs("/etc/config").f_flag & os.ST_RDONLY) and os.access("/etc/config", os.W_OK)))' 2>/dev/null)
+if [ "$CONFIG_RW" = "1" ]; then ok "configuration filesystem is writable"; else bad "configuration filesystem is read-only or writability is unknown; free space alone is not readiness"; fi
 
 # 5. Vendor files pinned by the native controller (info only; Auto stays OFF in this kit)
 check_hash() { # path expected

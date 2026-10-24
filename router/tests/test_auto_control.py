@@ -134,6 +134,40 @@ class AtomicRequestTests(unittest.TestCase):
         answer=control.public_status()['return_result']
         self.assertEqual(answer,{'request':5.0,'ok':False,'code':'SOURCE-NOT-HEALTHY','time':6.0})
 
+    def test_request_origin_is_audit_only_and_does_not_bypass_revision(self):
+        answer=control.start('0'*32,request_source='manual')
+        self.assertFalse(answer['accepted']);self.assertFalse((self.path/'auto-control.json').exists())
+        self.assertTrue(control.start(self.revision,request_source='manual')['accepted'])
+        self.assertEqual(agent.read_json(self.path/'auto-control.json')['request_source'],'manual')
+        self.assertEqual(control.action_context(self.path,self.path)['control_source'],'manual')
+        self.assertTrue(control.start(self.revision,request_source='test')['already_requested'])
+        self.assertEqual(agent.read_json(self.path/'auto-control.json')['request_source'],'manual','duplicate Start cannot rewrite who initiated the accepted request')
+
+    def test_audit_context_allowlists_source_and_ignores_future_and_huge_times(self):
+        agent.atomic_json(self.path/'auto-control.json',{'mode':'on','time':100,'request_source':'PRIVATE_SENTINEL'})
+        self.assertEqual(control.action_context(self.path,self.path,110)['control_source'],'unknown')
+        agent.atomic_json(self.path/'native-stop.json',{'requested':105,'request_source':'programmatic'})
+        context=control.action_context(self.path,self.path,110)
+        self.assertEqual(context,{'control_action':'stop','control_source':'programmatic','control_time':105})
+        agent.atomic_json(self.path/'pair-auto-control.json',{'mode':'on','time':2**1024,'request_source':'manual'})
+        self.assertEqual(control.action_context(self.path,self.path,110),context)
+        self.assertNotIn('PRIVATE_SENTINEL',str(context))
+
+    def test_manual_stop_keeps_its_source_without_changing_stop_safety(self):
+        with patch.object(agent,'command',return_value='{"settings":{"native_trial":"nonce"}}'):
+            result=control.stop(runtime=self.path,persist=self.path,request_source='manual')
+        self.assertTrue(result['queued'])
+        self.assertEqual(agent.read_json(self.path/'native-stop.json')['request_source'],'manual')
+        context=control.action_context(self.path,self.path)
+        self.assertEqual(context['control_action'],'stop');self.assertEqual(context['control_source'],'manual')
+
+    def test_manual_transition_source_matches_active_pair_not_an_unrelated_request(self):
+        value={'source':'wireguard:peer_1','target':'openvpn:1_1'}
+        agent.atomic_json(self.path/'pair-manual-control.json',{'state':'CLAIMED','updated':100,'selection':dict(value),'request_source':'programmatic'})
+        self.assertEqual(control.manual_action_source(self.path,value,110),'programmatic')
+        self.assertEqual(control.manual_action_source(self.path,dict(value,target='openvpn:1_2'),110),'unknown')
+        self.assertEqual(control.manual_action_source(self.path,value,200),'unknown')
+
 
 if __name__ == '__main__':
     unittest.main()

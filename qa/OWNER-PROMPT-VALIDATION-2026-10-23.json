@@ -1,0 +1,1139 @@
+{
+  "schema": 1,
+  "result": "PARTIAL",
+  "prompts": 76,
+  "environment": "new isolated real OpenWrt21.02.7 x86/64 VM, Python3.9.16; network none/no mounts/no published ports/no privileges",
+  "method": "Actual command recipes corresponding to prompt instructions; not autonomous interpretation by named external AI services",
+  "evidence": [
+    {
+      "case": "02-backup",
+      "receipt_sha256": "b4e894608b81dfb2f307c362942fb6576beca7957e58c11bfc6c41b44621c2cb"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "receipt_sha256": "dc078579a17c14b8796b9d26cf23eb6a0728872ce4eaeb00b37abf7cce2474a7"
+    },
+    {
+      "case": "04-real-opkg-install-en",
+      "receipt_sha256": "d8f025b6d39c231a5270af6627ad71f7047e495858041710c4693d469b3d1362"
+    },
+    {
+      "case": "05-runtime-verify-and-idempotent-ru",
+      "receipt_sha256": "ecbe44d75d7490742b4680bb18ab8b1e3ba9feb1d8b438044eb50785afd57b59"
+    },
+    {
+      "case": "06-eight-component-recipes-en-ru",
+      "receipt_sha256": "5a88afc3c1c5f894cb6435cf50433c810349a379a50cfdfd79be30c6aeace869"
+    },
+    {
+      "case": "07-real-missing-lua-dependency-repair",
+      "receipt_sha256": "c014fff1db92eee75246164aea0fcbf2e6efddbdbda887eed06832b78b586e46"
+    },
+    {
+      "case": "08-real-setup-and-persistence-en-ru",
+      "receipt_sha256": "12e9c38ac06d8a949cd02ce90f36f86dc0c75278291c3027dd7381d8771bc069"
+    },
+    {
+      "case": "09-readonly-topic-diagnoses",
+      "receipt_sha256": "ff455bb621bb15b2e210f2ab7bac5bc2cb548d7ecfce1b483d6a4a9477c3a228"
+    },
+    {
+      "case": "10-artifact-mismatch-refusal",
+      "receipt_sha256": "7e4d089fb50d12b7db93b5106e7550762c6878d0f9749b1948c2e3e7acacb293"
+    },
+    {
+      "case": "11-actual-lan-helper-download",
+      "receipt_sha256": "2600c90ad0bebb55ff88231cb04290a00aa3aae0c2df6a4ba2b220ed3f5e5960"
+    },
+    {
+      "case": "12-helper-selftest",
+      "receipt_sha256": "4fe69bc0637e6bee75427e83d7d36e8aaea4e0155e9ef0465ce03dbe268ae46b"
+    }
+  ],
+  "variants": [
+    {
+      "id": "install-help",
+      "language": "en",
+      "sha256": "2a3a41a13785ea89c24bec6a5edf8df3798fbb1e534daa93a2119e3c19d2ac90",
+      "category": "installation",
+      "result": "PASS_VM_MONITOR_ONLY_RECIPE",
+      "recipe_evidence": [
+        "02-backup",
+        "03-transfer-and-preflight",
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "06-eight-component-recipes-en-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "10-artifact-mismatch-refusal"
+      ],
+      "limitations": [
+        "GL hardware/native Auto unsupported in x86 VM",
+        "browser/owner acceptance not performed",
+        "pair deferred: no real VPN credentials"
+      ]
+    },
+    {
+      "id": "lan-helper",
+      "language": "en",
+      "sha256": "23bd37fe732ce4f5e555b9055789d93cc663eb7d1229f44c29b5f545943e28b6",
+      "category": "lan",
+      "result": "PARTIAL_DOWNLOAD_SELFTEST",
+      "recipe_evidence": [
+        "11-actual-lan-helper-download",
+        "12-helper-selftest"
+      ],
+      "limitations": [
+        "Physical Windows LAN trial not run: no client bound to virtual router"
+      ]
+    },
+    {
+      "id": "repair-PYTHON-39-MINIMUM",
+      "language": "en",
+      "sha256": "0473d6475154dfa14757c1c0f1e008458852e35013471a4d35ad1edfc8257f4d",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UBUS",
+      "language": "en",
+      "sha256": "6cc4b1bdb369c013cd9cd9b466cb8236735794d1927de37d2d25e9602b4b6a1b",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UCI",
+      "language": "en",
+      "sha256": "bb64d8c569370c1d10cfb6220388db98d4b37847941c74f8bd51d52bbb6c9691",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-LUA",
+      "language": "en",
+      "sha256": "f150a2952b6aeb9cc6dc584fa8b25435849cf849128c884fac2746583d1e7270",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-IP",
+      "language": "en",
+      "sha256": "69b83459dec4d0848f6f9f7d6d31290a4cd65046ee6614d5f7c52381b770a013",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-RPC-PLUGIN",
+      "language": "en",
+      "sha256": "3fd7da29ed4e8e3321c4201d70d3309191bd161a3df5026332a36819649f3db7",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-CA-BUNDLE",
+      "language": "en",
+      "sha256": "d1d33d3e5bcd6aca124f411f79160f4f3e837155fb2ff47eb7c6cd0ae377461f",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-CONFIG-STORAGE-FREE",
+      "language": "en",
+      "sha256": "764a8140ef6d51d24fd244aad5db63223c36ce2c411e3b436c4d7271ed89333f",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "diagnose-all",
+      "language": "en",
+      "sha256": "c8cf7693b0052233ec5f1963d9e7d72dc3c2cb7f9ce2885392002da076cda6ee",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ai-prompt",
+      "language": "en",
+      "sha256": "c92119d7921016853dd96526bf298b042c20b7757d576d25562d377136c799af",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ai-lan-prompt",
+      "language": "en",
+      "sha256": "45a07da2ea3fce424cb142751ad53c018f3b35cafd993e036243a990e16380b4",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-no-internet",
+      "language": "en",
+      "sha256": "3ea0e32d18936e1a44b01b6c20c2551f4ce374405f0bc488e39c623c66ef75db",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ssh",
+      "language": "en",
+      "sha256": "653e149c0c5bbc42fb8de89d64e478593cf5963a21f4b692b247440bf6cda322",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-reserve",
+      "language": "en",
+      "sha256": "f380040c019812b1ba4bfb81a6107cc46bbe8a6f336e33b09d6643474ec1d4fe",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-auto-refuses",
+      "language": "en",
+      "sha256": "774201bf9b1b7f656341ec375376e7cdc8cf98f3a9e9a660a2fce1efae93d025",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-helper-what",
+      "language": "en",
+      "sha256": "a3ff615f9fa827e0a83a43a1af77693070a3868032ec7e790dbda4a31c3c121f",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-helper",
+      "language": "en",
+      "sha256": "bab87d1eb40ebff1bd507d58396f623a6f16c275b73d2e2213dd0cbd69c51d93",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-stale",
+      "language": "en",
+      "sha256": "d0849f278bb3b8f32e7a24f67fb23b6e54d4a24f66368374dd6e014d87110458",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-outside-change",
+      "language": "en",
+      "sha256": "3b2b0aa09ece8fd9e23331982f801018bb98a2cdefe077461525887645e964ba",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-telegram",
+      "language": "en",
+      "sha256": "243801248d1fd93636689e4c91b7eca1b1e110c490d62c329291e89ece0e87c6",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-clock",
+      "language": "en",
+      "sha256": "f52e5b928064d91b0dff2ee076717703cf7a11339e9ee8dd0b13e9ee0c066e7c",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-backup",
+      "language": "en",
+      "sha256": "8ccb4af15a80807f16e3e1becefe5540a9cf30191d3955c2ee5caf836ca7b436",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-remove",
+      "language": "en",
+      "sha256": "5226e8720ca21e5e06819e9beedae7234d47689b2e714e807a39020df4efc087",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-report",
+      "language": "en",
+      "sha256": "3a2e8fee6dbc173f8e5eaa75a202ab49e6ce7b13671d0b4e8e160fc57831f029",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-setup-guide",
+      "language": "en",
+      "sha256": "7f50de15bfde5887a04a99b79ad0f6cb3f14f2e9e0867b2961f9425c5d9cbb46",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-PYTHON-39-MINIMUM",
+      "language": "en",
+      "sha256": "ad731cf23fde21c7cd57a65821ef3def49d1df498eccbc91505b320deecbafc6",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UBUS",
+      "language": "en",
+      "sha256": "dafeef15606a0f955dccc79321d84cb7166cb40ba7d1315c3511b9fa6d213f0f",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UCI",
+      "language": "en",
+      "sha256": "e3f7a0192c2968836334c28c2ae9abfddf5d6d37cbca589402fec52ed53dce93",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-LUA",
+      "language": "en",
+      "sha256": "6c79d9846266075edad4e22ffe738552fd04d2a952658a98eaf022288a1b947a",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-IP",
+      "language": "en",
+      "sha256": "17de6dfc1f5245a71363a86f8201c011bbe4a666e32d322e7f66d5cff2eb644c",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-RPC-PLUGIN",
+      "language": "en",
+      "sha256": "719dbb6e05c9ad9c93a072c865c11a58af19f41919904f01fad31b881f6f58f0",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-CA-BUNDLE",
+      "language": "en",
+      "sha256": "d9ad8d4f29ebf7e179a24822034edd5491ccd739572735eb6c34c5707c667ce1",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-CONFIG-STORAGE-FREE",
+      "language": "en",
+      "sha256": "b5d5285a85e17f1534eaaf43de850a71f505bc91f7d1b51805b9eaf6ef51bf4d",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-router-preparation",
+      "language": "en",
+      "sha256": "6d413a8dae6dbd8fa57df6181a16287f80e6567a08ca62f8c63f35a13d2a764c",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-terms",
+      "language": "en",
+      "sha256": "fdde77481096521ab94c1d30088618d53ff4a2658b0f8d21af518134259aa442",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "install-help",
+      "language": "ru",
+      "sha256": "3fe0e495a7b6e1a20f85fe35c896f5c156cbb40cf60dfb1beefa3f7d99661efb",
+      "category": "installation",
+      "result": "PASS_VM_MONITOR_ONLY_RECIPE",
+      "recipe_evidence": [
+        "02-backup",
+        "03-transfer-and-preflight",
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "06-eight-component-recipes-en-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "10-artifact-mismatch-refusal"
+      ],
+      "limitations": [
+        "GL hardware/native Auto unsupported in x86 VM",
+        "browser/owner acceptance not performed",
+        "pair deferred: no real VPN credentials"
+      ]
+    },
+    {
+      "id": "lan-helper",
+      "language": "ru",
+      "sha256": "e8bd4f1612b5bec6fd422842a05a606166d092e1999edf06011b4d29e0d34559",
+      "category": "lan",
+      "result": "PARTIAL_DOWNLOAD_SELFTEST",
+      "recipe_evidence": [
+        "11-actual-lan-helper-download",
+        "12-helper-selftest"
+      ],
+      "limitations": [
+        "Physical Windows LAN trial not run: no client bound to virtual router"
+      ]
+    },
+    {
+      "id": "repair-PYTHON-39-MINIMUM",
+      "language": "ru",
+      "sha256": "0a48b49fea151a94c34b8502e084e12f151f9289b1eb710b4e9ccffc6b0f5658",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UBUS",
+      "language": "ru",
+      "sha256": "4e2b728f70d98dd48b7c7bbb99d9ad22bf4d18be5da046d75059a3b8602237e7",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UCI",
+      "language": "ru",
+      "sha256": "008e48c51bfad545e02f881fa0b91da8d1dc337510fe9ea2465cdf0813951f95",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-LUA",
+      "language": "ru",
+      "sha256": "972d2d97ac58d1ca3b8847865fd4cbb8da790dda83e41d50150cb984d093e7fa",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-IP",
+      "language": "ru",
+      "sha256": "ededa87b14bcd4592c05169ff35bdce2b734445262a56852cb4b2315246750a8",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-RPC-PLUGIN",
+      "language": "ru",
+      "sha256": "b11a658ccde59a5d42e54d40789fcf46f5fa2ad7318acaa4ee9f111d2348c024",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-CA-BUNDLE",
+      "language": "ru",
+      "sha256": "b9b0391981873353f64fb561e9fb1cb2a6eb0ac7da42ac87c074588e715f78ac",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "repair-CONFIG-STORAGE-FREE",
+      "language": "ru",
+      "sha256": "70c62c2c46fe08bee23e792c4c62b766c18160a4d8924c1771478bdd49550d39",
+      "category": "dependency-repair",
+      "result": "PASS_ACTUAL_COMPONENT_RECIPE",
+      "recipe_evidence": [
+        "06-eight-component-recipes-en-ru"
+      ],
+      "limitations": [
+        "Only lua-cjson was actually removed and repaired; other dependencies already installed"
+      ]
+    },
+    {
+      "id": "diagnose-all",
+      "language": "ru",
+      "sha256": "61343b09d8b29db9885ea8df2b98f44a1aa4134023fa9f425f40989db9667a63",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ai-prompt",
+      "language": "ru",
+      "sha256": "f537cf1178c1f59a8a8f4892c9f4d3f289308e223c35600988d27a9d97c4ebd8",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ai-lan-prompt",
+      "language": "ru",
+      "sha256": "10c538a220199a6a1a944d6d6d1ac48caab3785a7deeebdad87ca88db4c09d98",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-no-internet",
+      "language": "ru",
+      "sha256": "b4afd2f2fba881b86b83079ceadc7ea1827dac2f5d5a25024d8b8b18fe48768b",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-ssh",
+      "language": "ru",
+      "sha256": "353a083e268359322008cc0e867c5b192aaf4a9ab8695cecacf2b4d96f0e850b",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-reserve",
+      "language": "ru",
+      "sha256": "dbda2bcf01b99438b52592fccda0a9c49ee461cc08071390988bea96324e5c10",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-auto-refuses",
+      "language": "ru",
+      "sha256": "c8dd35a85172b796129229d5477b657aecff5ee911cc45a4c5bc313231c06fb6",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-helper-what",
+      "language": "ru",
+      "sha256": "c7d273aeb7caa368a531a93f4d4835e1413df5249aeac846f6e34ffb44446ee6",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-helper",
+      "language": "ru",
+      "sha256": "4f34331b365a8a71535a98fd5c201dae9331bd8d268449a8e2b99779991cc756",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-stale",
+      "language": "ru",
+      "sha256": "049401a93e0fcf27a0e521b5c45d9b4fed4ae28e0d373396118246ee0e04812b",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-outside-change",
+      "language": "ru",
+      "sha256": "674b68ddb2ee297490819fce79b51a5816b37ad2aaf2ea3c823263188e1d8846",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-telegram",
+      "language": "ru",
+      "sha256": "aa97332706579f5890e06fb01a95f2227ae7f712575c5a42744c09b186077ae4",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-clock",
+      "language": "ru",
+      "sha256": "f4956379a08bf24f64721fd4be440da14734ccf247c02b20f82e49542619904e",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-backup",
+      "language": "ru",
+      "sha256": "775ae97688a354444fb7151b8ab2aa3974f15ae71c2f1211094f67cd4cab96aa",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-remove",
+      "language": "ru",
+      "sha256": "4522da30670b2e4da6a0b26f41c859bf1cf860b0aee7957f596af78d2423ed73",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-report",
+      "language": "ru",
+      "sha256": "7441cbb1faa0c63bc7efd076c13826e9a670cacef015137349becadee61f6ce8",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-setup-guide",
+      "language": "ru",
+      "sha256": "195431cf37218e6ca8687ac51647b9123146fe2019c3a84a612097e9b4df0c14",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-PYTHON-39-MINIMUM",
+      "language": "ru",
+      "sha256": "040064237e62721d4ffcbf3ee8ab9aad6ab8c9d4a4b9aca3e1450991b5fa9345",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UBUS",
+      "language": "ru",
+      "sha256": "41f3dc3c3f44b83c5c90fcb65f17579b9b65c14703e2dade9f2478922214a5e6",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UCI",
+      "language": "ru",
+      "sha256": "a9096c68bb3e2a907191335def9e105344be828c3f803950f29b11a16b385ef7",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-LUA",
+      "language": "ru",
+      "sha256": "b0cea91b3bbe05952ddb8f5fb9a09e8bd88d4024dd34c4ac07825becddfb9d0f",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-IP",
+      "language": "ru",
+      "sha256": "310f5d61c2221d413e22f29479ab77994a7266b06bb52b2c39a3beb1635a6085",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-RPC-PLUGIN",
+      "language": "ru",
+      "sha256": "96ac56bcc01dfc872fb4cfe21f6957a68e620672c8cfd7ca0ca65cc64d2d751e",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-CA-BUNDLE",
+      "language": "ru",
+      "sha256": "138184c7202881d07c9639c993705a316f569499c4e5ab9a3b4f9d118e718bb9",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-dependency-CONFIG-STORAGE-FREE",
+      "language": "ru",
+      "sha256": "4b92daf96204fbb8f081e0e6b13aa6c71e5249a91252f6f5abba0476918660c7",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-router-preparation",
+      "language": "ru",
+      "sha256": "4e1b891995b77e925d80a06b3a4ea0d1f6d4669e9216d6416ad5e4b3ce4d5833",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "topic-terms",
+      "language": "ru",
+      "sha256": "37d55785cb25fc25ef93c142e4a3d1aa4c50151cce5b3ac92c2ac0f4ff7de946",
+      "category": "diagnosis",
+      "result": "PASS_READONLY_DIAGNOSTIC_PATH",
+      "recipe_evidence": [
+        "09-readonly-topic-diagnoses"
+      ],
+      "limitations": [
+        "Topic-specific failures not all reproduced",
+        "No third-party AI model interpretation/execution claim"
+      ]
+    },
+    {
+      "id": "install-document",
+      "language": "en",
+      "sha256": "d06d2d5b60ef0f5a30a3d097c2d77cb3f7afc2d005af47a50fd2f949c785d88e",
+      "category": "installation",
+      "result": "PASS_VM_MONITOR_ONLY_RECIPE",
+      "recipe_evidence": [
+        "02-backup",
+        "03-transfer-and-preflight",
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "06-eight-component-recipes-en-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "10-artifact-mismatch-refusal"
+      ],
+      "limitations": [
+        "GL hardware/native Auto unsupported in x86 VM",
+        "browser/owner acceptance not performed",
+        "pair deferred: no real VPN credentials"
+      ]
+    },
+    {
+      "id": "install-document",
+      "language": "ru",
+      "sha256": "9cd25c86e63de4a00774f78b0e4cbf796c35a215e943bd3b0a7372adae52f9f2",
+      "category": "installation",
+      "result": "PASS_VM_MONITOR_ONLY_RECIPE",
+      "recipe_evidence": [
+        "02-backup",
+        "03-transfer-and-preflight",
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "06-eight-component-recipes-en-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "10-artifact-mismatch-refusal"
+      ],
+      "limitations": [
+        "GL hardware/native Auto unsupported in x86 VM",
+        "browser/owner acceptance not performed",
+        "pair deferred: no real VPN credentials"
+      ]
+    }
+  ],
+  "browser": "UNAVAILABLE: configured CUA reported Browser is not available: iab",
+  "physical_router_changed": false,
+  "limits": [
+    "No physical GL/native Auto/LAN/IPv6/power-loss/24h certification",
+    "Actual browser layout and clipboard remain unverified"
+  ]
+}

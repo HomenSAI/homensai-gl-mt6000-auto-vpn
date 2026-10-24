@@ -74,14 +74,16 @@ console.log('monitor and guide tests OK');
   const ctx={bi:(en)=>en,E:(t,a,c)=>({t,a,c}),navigator:{},window:{},document:{}};vm.createContext(ctx);
   vm.runInContext('var HELP_TOPICS=[];'+fs.readFileSync('router/ai_prompt.inc.js','utf8'),ctx);
   const en=ctx.AI_PROMPT_EN,ru=ctx.AI_PROMPT_RU;
-  for(const section of ['=== 0.','=== 1.','=== 2.','=== 3.','=== 4.','=== 5.','=== 6.','=== 7.','=== 8.','=== 9.','=== 10.']){assert(en.includes(section),'EN section '+section);assert(ru.includes(section),'RU section '+section);}
+  for(const section of ['1.','2.','3.','4.','5.','6.','7.','8.']){assert(en.includes(section),'EN section '+section);assert(ru.includes(section),'RU section '+section);}
   for(const text of [en,ru]){
-    assert(/Auto/.test(text)&&/05-emergency\.sh/.test(text)&&/BotFather/.test(text)&&/sha256/i.test(text)&&/gl-mt6000/i.test(text));
+    assert(/Auto/.test(text)&&/03-verify\.sh/.test(text)&&/sha256/i.test(text)&&/gl-mt6000/i.test(text));
+    assert(text.includes('7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a'));
     assert(!/\d{8,12}:[A-Za-z0-9_-]{30,}/.test(text),'token-like text in the prompt');
-    assert(!/(password|token)\s*[:=]\s*[^\s=]/i.test(text.replace(/telegram_token=<hidden>|telegram_token=\.\*/g,'')),'secret assignment in the prompt');
     assert(!text.includes('${')&&!text.includes('`'));
   }
-  assert(/never enable Auto|NEVER enable Auto/i.test(en)&&/НИКОГДА не включайте Auto/.test(ru));
+  assert(en.includes('Default: monitor, Auto off.')&&ru.includes('По умолчанию — мониторинг, Auto выключен.'));
+  assert(en.includes('never call terms_accept')&&ru.includes('не вызывай terms_accept'));
+  assert(en.includes('actual device on that LAN')&&ru.includes('лишь с устройства этой LAN'));
   assert(ctx.renderAiPrompt());assert.equal(ctx.HELP_TOPICS[0].id,'ai-prompt');
   console.log('AI prompt tests OK ('+en.length+' / '+ru.length+' characters)');
 }

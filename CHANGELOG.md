@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-alpha10 — 2026-10-24
+
+- Batch owner UI corrections: compact disclosures, aligned controls, no nullable child text, readable server/channel/protocol and outcome tables.
+- Grouped live-state ranges, explicit operator/program/test attribution and transition-time HTTPS delay evidence.
+- Hourly failure episodes with retained 1–24h window; preparation before pair selection separated from applied transitions.
+- Dual-runtime offline checks pass; native-browser visual acceptance and physical installation remain pending.
+
 ## 0.9.0 — 2026-10-23
 
 - Numbered experimental release on main, incorporating the physically checked alpha45 behavior.

@@ -21,7 +21,7 @@ rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(2,9,'COMMITTED')]});ass
 rows=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(2,11,'APPLYING'),e(3,12,'ROLLED-BACK')]});assert.equal(rows.length,2);assert.equal(rows[0].outcome,'unknown');assert.equal(rows[1].outcome,'rolled_back');
 const samples=Array.from({length:20},(_,i)=>({start:i,end:i+1,target:'b',outcome:i<18?'committed':'rolled_back',duration:i+1}));
 s=c.recoverySummary(samples,0,100);assert.equal(s.median,10.5);assert.equal(s.p95,19);assert.equal(s.worst,20);assert.equal(s.max_consecutive_failures,2);assert.equal(s.success_ratio,.9);
-let groups=c.recoveryGroups(samples,[{id:'b',channel:'__proto__',protocol:'openvpn'}],0,100);assert.equal(groups.channel[0].name,'__proto__');assert.equal(groups.server[0].metrics.attempts,20);
+let groups=c.recoveryGroups(samples,[{id:'b',channel:'__proto__',protocol:'openvpn'}],0,100);assert.equal(groups.channel[0].name,'Current group: __proto__');assert.equal(groups.server[0].metrics.attempts,20);
 const epoch=Date.parse('2026-03-31T22:30:00Z')/1000;
 assert.equal(new Date(c.recoveryWindow('month',epoch,'UTC').start*1000).toISOString(),'2026-03-01T00:00:00.000Z');
 assert.equal(new Date(c.recoveryWindow('week',epoch,'UTC').start*1000).toISOString(),'2026-03-30T00:00:00.000Z');
@@ -41,3 +41,29 @@ assert.equal(c.retainedTransitions({events:[e(1,1e100,'APPLYING')]}).length,0);
 assert(c.analyticsCSV('transitions',c.analyticsExportRows('transitions',{},rows)).includes('"required_failures"'));
 assert.throws(()=>c.analyticsCSV('secrets',[]));
 console.log('PASS: cascade grouping, trustworthy selected path, gap-aware transition metrics, calendar windows, per-group failures and private formula-safe CSV');
+
+const ids=[{id:'openvpn:40354_2005',router_name:'de1552.nordvpn.com.tcp',protocol:'openvpn',channel:'default'}];
+const inv={settings:{plan_target:ids[0].id}};
+let identity=c.recoveryIdentity(ids[0].id,ids,inv);
+assert(identity.server.includes('de1552.nordvpn.com.tcp')&&identity.server.includes('OpenVPN'));
+assert.equal(identity.channel,'Reserve channel (current pair)');
+assert.equal(c.recoveryIdentity('wireguard:peer_5',[],{}).protocol,'WireGuard');
+assert.equal(c.recoveryIdentity('unknown',[],{}).server,'Server not recorded in event');
+assert(!c.recoveryIdentity('unknown',[],{}).server.includes('de1552'));
+assert.equal(c.recoveryIdentity(ids[0].id,[],{}).server.includes('Archived profile'),true);
+assert.equal(c.recoveryGroups(samples,[],100,200).server.length,0,'no empty outside-window unknown groups');
+console.log('PASS: concrete current configured server/protocol/role, honest archived or missing identities and selected-window grouping');
+
+const prepEvents=[e(1,10,'ARMED',{source:null,target:null,codes:['PAIR-CONNECTING']}),e(2,11,'ARMED',{source:null,target:null,codes:['PAIR-WAITING-PROBES']}),e(3,12,'APPLYING'),e(4,15,'STOPPED-ON-RESERVE')];
+const prepared=c.retainedTransitions({events:prepEvents});
+assert.equal(prepared.length,2,'repeated unidentified preparation is one record, separate from actual application');
+assert(c.recoveryPreparation(prepared[0]));assert(!c.recoveryPreparation(prepared[1]));
+assert.equal(c.recoveryOutcomeText(prepared[1]),'Reserve retained after Stop');
+assert.equal(c.recoveryOutcomeText(prepared[0]),'Preparation ended; a new attempt followed');
+let gap=c.retainedTransitions({events:[e(1,10,'APPLYING'),e(3,14,'COMMITTED')]})[0];
+assert.equal(c.recoveryOutcomeText(gap),'Result not recorded: missing history events');assert.equal(gap.outcome,'unknown','a UI label never fabricates success');
+const english=c.bi;c.bi=(_en,ru)=>ru;
+assert(c.recoveryChannelText({...prepared[1],target:'openvpn:40354_2005'},'target',ids,inv).includes('Резервный канал'));
+for(const r of prepared.concat(gap)){assert(!/unknown|held/.test(c.recoveryOutcomeText(r)));assert(!c.recoveryChannelText(r,'source',ids,inv).includes('unknown'));}
+c.bi=english;
+console.log('PASS: grouped preparation, actual final reserve state, explicit gap reasons, concrete channel labels and Russian results without fabricated completion');

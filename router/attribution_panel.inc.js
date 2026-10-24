@@ -1,4 +1,4 @@
-/* Owner attributes: product name, device, developer, version/package/page and style. Shown at the bottom of every page in every design; no design may hide it. */
+/* Owner attributes: product name, device, developer and application version. Shown at the bottom of every page in every design; no design may hide it. */
 var HV_STYLE_VERSION='HomenS.AI Style 1.14.3';
 function renderAttribution(status){
   return E('div',{'class':'hv-attribution','data-hv-attribution':'1','aria-label':bi('About this program','О программе')},[
@@ -6,7 +6,6 @@ function renderAttribution(status){
     E('span',{},routerModelLabel()),
     E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),
     E('span',{'class':'hv-attribution-version'},identityLine(status||{})),
-    E('span',{},HV_STYLE_VERSION),
     attributionVersionWarning(status)
   ].filter(Boolean));
 }

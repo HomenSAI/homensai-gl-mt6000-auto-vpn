@@ -61,6 +61,23 @@ def bind_policy_context(backend,record):
 
 def publish(value):
     value=dict(value,time=time.time())
+    # This is observation-only: missing/corrupt evidence cannot affect Stop or routing.
+    value.pop('latency',None)
+    from native_history import capture_transition_latency,transition_destination
+    role,identifier=transition_destination(value)
+    if identifier:
+        try:
+            journal=journal_read()
+            if journal.get('source')==value.get('source') and journal.get('target')==value.get('target'):
+                latency=capture_transition_latency(value,read_json(RUNTIME/'status.json',{}),(journal.get('vendor_profiles') or {}).get(role),value['time'])
+                if latency is not None:value['latency']=latency
+        except (Refused,OSError,ValueError,TypeError,KeyError,OverflowError):pass
+    from auto_control import action_context,manual_action_source
+    value.update(action_context(RUNTIME,PERSIST,value['time']))
+    if value.get('manual') is True or value.get('reason') in ('OPERATOR-MANUAL','OPERATOR-RETURN'):
+        if 'transition_source' not in value:value['transition_source']=manual_action_source(RUNTIME,value,value['time'])
+    elif value.get('trial') is True or value.get('reason') in ('OPERATOR-TRIAL','TRIAL-PASSED'):value.setdefault('transition_source','test')
+    elif value.get('reason') in ('SOURCE-FAILED','PRIMARY-STABLY-RECOVERED','RESERVE-FAILED-PRIMARY-VERIFIED'):value.setdefault('transition_source','automatic')
     value.setdefault('proof_scope',PROOF_SCOPE)
     if value['proof_scope']=='router-probed-ipv4':
         value.setdefault('mode','continuous-pair')
@@ -965,7 +982,7 @@ def transaction_expired(journal,wall=None,mono=None):
     return wall>=journal['deadline'] or (journal.get('monotonic_deadline') is not None and mono>=journal['monotonic_deadline'])
 
 
-def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=None,manual_request_id=None):
+def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=None,manual_request_id=None,request_source=None):
     global PROOF_SCOPE
     PROOF_SCOPE=selection.get('proof_scope','external-lan')
     if manual_request_id is not None and (trial or not isinstance(manual_request_id,str) or not re.fullmatch(r'[a-f0-9]{32}',manual_request_id)):
@@ -976,6 +993,10 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     bind_policy_context(backend,selection)
     require_control_revision(control_revision)
     assert_selection(backend,selection)
+    from auto_control import normalize_request_source
+    def publish_transition(value):
+        value=dict(value,transition_source=normalize_request_source(request_source) if manual_request_id is not None else 'test' if trial else 'automatic')
+        publish(value)
     cause='OPERATOR-TRIAL' if trial else 'SOURCE-FAILED' if probe_evidence and probe_evidence.get('source_streak_met') is True else 'SOURCE-HEALTH-UNKNOWN'
     if manual_request_id is not None:cause='OPERATOR-MANUAL'
 
@@ -1006,7 +1027,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
              'control_revision':control_revision,
              'vendor_profiles':{role:{key:selection[role].get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')} for role in ('source','target')}}
     if manual_request_id is not None:journal['manual_request_id']=manual_request_id
-    publish({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
+    publish_transition({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
     require_control_revision(control_revision)
     journal_write(journal)
     require_control_revision(control_revision)
@@ -1017,7 +1038,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     journal.update(pid=process.pid,phase='APPLYING')
     released=False
     try:
-        publish({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
+        publish_transition({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
         journal_write(journal);released=True
         process.wait(timeout=max(1,min(50,journal['monotonic_deadline']-time.monotonic())))
         if process.returncode:
@@ -1030,7 +1051,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         require_control_revision(control_revision)
         backend.guard(backend.devices(),control_revision=control_revision)
         journal.update(phase='WAIT-CLIENT',expected_exit=target_exit);journal_write(journal)
-        publish({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],'source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),
+        publish_transition({'state':'WAIT-CLIENT','tx':tx,'expected_exit':target_exit,'deadline':journal['deadline'],'source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),
                           'requires':'LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback'})
         while not transaction_expired(journal) and not STOP:
             require_control_revision(control_revision)
@@ -1063,7 +1084,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                     with control_lock(RUNTIME):
                         require_control_revision(control_revision)
                         journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL',reserve_healthy=True);journal_write(journal)
-                    publish({'state':'STOPPED-ON-RESERVE','reason':'OPERATOR-MANUAL','source':journal['source'],'target':journal['target'],
+                    publish_transition({'state':'STOPPED-ON-RESERVE','reason':'OPERATOR-MANUAL','source':journal['source'],'target':journal['target'],
                              'original_restored':False,'reserve_healthy':True,'trial':False,'tx':tx})
                     return
                 if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
@@ -1071,7 +1092,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                 atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
                                  'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),
                                  'vendor_identity':selection['vendor_identity'],'proof_scope':PROOF_SCOPE,'time':time.time(),'until':until})
-                publish({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
+                publish_transition({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
                                   'until':until,'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
             time.sleep(1)
@@ -1085,7 +1106,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         if not released and backend.order()==(before,selection['hash']):
             journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY');journal_write(journal)
         else:rollback_counted(backend,journal,'TRANSACTION-FAILED')
-        publish({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'blockers':[failure_code]})
+        publish_transition({'state':'ROLLED-BACK','reason':'TRANSACTION-FAILED','source':journal['source'],'target':journal['target'],'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'blockers':[failure_code]})
         raise
 
 

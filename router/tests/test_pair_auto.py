@@ -27,6 +27,13 @@ class Tests(unittest.TestCase):
             before_flags={'wgclient1':'1','ovpnclient1':'0'},network_identity='b'*64,
             protected={},process_bindings=None,order=['a','b'],policy_hash='c'*64,revision=self.revision)
 
+    def test_pair_start_source_is_preserved_and_duplicate_cannot_relabel(self):
+        self.assertTrue(pair.request(self.revision,request_source='test')['accepted'])
+        self.assertEqual(pair.intent()['request_source'],'test')
+        self.assertTrue(pair.request(self.revision,request_source='manual')['already_requested'])
+        self.assertEqual(pair.intent()['request_source'],'test')
+        self.assertEqual(auto_control.public_status()['activation_source'],'test')
+
     def test_retry_budget_is_rolling_and_survives_a_new_session(self):
         events=[100,200,300]
         kept,allowed=pair.budget(events,400)

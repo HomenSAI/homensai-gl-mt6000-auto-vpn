@@ -44,7 +44,7 @@ function updateConnectivityCheck(status){
   }
   if(connectivityControl.next){
     connectivityControl.next.hidden=!rows.length;
-    connectivityControl.next.textContent=working?bi('Step 2: turn on Auto with the button in “Automatic VPN failover” below.','Шаг 2: включите Auto кнопкой в блоке «Автоматическое переключение VPN» ниже.'):bi('No VPN works right now. Check the VPN profiles in GL.iNet, then press the button again.','Сейчас ни один VPN не работает. Проверьте VPN-профили в GL.iNet и нажмите кнопку ещё раз.');
+    connectivityControl.next.textContent=working?bi('Step 2: turn on Auto with the button in this card.','Шаг 2: включите Auto кнопкой в этом блоке.'):bi('No VPN works right now. Check the VPN profiles in GL.iNet, then press the button again.','Сейчас ни один VPN не работает. Проверьте VPN-профили в GL.iNet и нажмите кнопку ещё раз.');
   }
   connectivityControl.button.setAttribute('aria-busy',model.busy?'true':'false');
 }
