@@ -3,6 +3,10 @@
 
 # Work log
 
+## 2026-10-24 · owner70 alpha16 saved-history column layout
+
+State wider/Event narrower; M/R diagram block before unbroken code; saved-history scopedCSS only. Existingjournal/history regressions and exacte7609c9 dualCI771app/112QA/47UI PASS after isolating an unrelatedTTL-dependent Popen testfixture (failed01207a3retained). ActualMT3000AutoONreserve,87files/RPC/HTTP/HTTPS/layoutCSS/settings/terms/4speedrows/193-entrypre-postencryptedbackups verified. GitHub/Gitea actualprereleases,4assets each downloaded/hashchecked. Nativebrowserinventoryempty; no visualclaim. [Report](VERIFICATION-ALPHA16-2026-10-24.md).
+
 ## 2026-10-24 · owner69 speed launch/chart alpha15
 
 Disabled speed setting explained and reviewed manual enable/start implemented; connected preselection, guard feedback and measured history graph. Exacta60971e dualCI771app/112QA each/47UI PASS; canonical831752byteIPK. ActualMT3000updatedAutoONreserve,192/193encryptedbackuprestoreproof,4successfulspeedrows across pre/postmeasurement,settings/terms retained. GitHub/Gitea actualprereleases/4assets each downloaded/hashverified. Nativevisualblockedbeforecapture byComputerUseURLpolicy. [Report](VERIFICATION-ALPHA15-2026-10-24.md).

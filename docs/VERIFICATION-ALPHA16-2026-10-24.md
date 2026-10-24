@@ -21,4 +21,4 @@ Browser inventory exposed no available apps/tabs. CSS source and served bytes we
 
 ## Publication
 
-Pending actualGitHub/Gitea alpha16prereleases and featurebranch save; main/stable0.9.0/oldtags preserved.
+Published actual non-draft prereleases: [GitHub alpha16](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16) · [Gitea alpha16](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16). Four assets/server downloaded andSHA256verified. Canonicaltag/source`ea9685bbf22b98c43380d9c928d9467ac5aacd66`, publictag/source`7161e9f2180ba291ab2fd325eca09d0d1bfc076b`, identicaltree`98f5d61ee2ebf2aa6849e696ceca7d99229e5992`. Main/stable0.9.0/oldtags preserved. Documentation-only closure follows with product unchanged frome7609c9.

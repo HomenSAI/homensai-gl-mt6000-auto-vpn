@@ -3,7 +3,7 @@
 
 **0.9.1-alpha16 установлена наMT3000/4.11.0**: AutoON/резерв, обаVPNDNS+2HTTPS. «Состояние» шире, код под схемойM/R целиком, «Событие» уже.87файлов/прав/RPC/HTTP8080/pinnedHTTPS, настройки/условия,4speedзаписи и193/193encryptedbackups проверены. [Alpha16report](VERIFICATION-ALPHA16-2026-10-24.md) · [QA](../qa/EVENTS-ALPHA16-2026-10-24.json) · [Physical](../qa/MT3000-ALPHA16-2026-10-24.json).
 
-**Alpha16 is installed**, AutoON/confirmedreserve. State/code layout updated; four successful speed samples and manual speed settings retained. Exact-source dual-runtimeCI771app/112QA each/47UI passed after isolating a timing-dependent test fixture; product payload unchanged. Native-browser visual acceptance unavailable; installedCSS/servedbytes verified. Alpha16publication is recorded in its report. Main/stable0.9.0 unchanged.
+**Alpha16 is installed**, AutoON/confirmedreserve. State/code layout updated; four successful speed samples and manual speed settings retained. Exact-source dual-runtimeCI771app/112QA each/47UI passed after isolating a timing-dependent test fixture; product payload unchanged. Native-browser visual acceptance unavailable; installedCSS/servedbytes verified. Published/download-hash-verified: [GitHub alpha16](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16) · [Gitea alpha16](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16). Details are in the report. Main/stable0.9.0 unchanged.
 
 ## Previous alpha15 delivery / предыдущая доставка
 

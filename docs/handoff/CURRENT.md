@@ -1,3 +1,13 @@
+# COMPLETE: owner70 saved-history layout alpha16 delivered —24October2026
+
+[GitHub alpha16](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16) · [Gitea alpha16](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha16). Actualnon-draft prereleases,fourassets/server downloaded/hashverified. Canonicaltag/sourceea9685bbf22b98c43380d9c928d9467ac5aacd66 andpublictag/source7161e9f2180ba291ab2fd325eca09d0d1bfc076b,identicaltree98f5d61ee2ebf2aa6849e696ceca7d99229e5992. Main/stable0.9.0/oldtags unchanged. Exacte7609c981cb108a4fc79439d2b11368c1161e795 dualCI771app/112QA each/47UI PASS; canonical831904bytes SHA913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9.01207a3 cache-dependent testfixturefailure retained; test-onlyisolationfixed,5focusedcasesandfullCI passed, product/guardsunchanged.
+
+CSSonlyfeature: saved-historyDate15%,State27%,Event58%,min880px/existinghorizontal scroll. M/R diagramblockbeforeunbrokenstatecode; eventdata/search/sort/disclosure/livejournalunchanged. Nativebrowserinventoryexposednoapps/browsers, no visualclaim; sourceCSS/actualservedbytes verified.
+
+MT3000/4.11.0 alpha16/dashboard92/ui64,AutoON/confirmedreserve/bothVPNDNS+2HTTPS.87immutablefiles/modes,RPC,HTTP8080/pinnedHTTPS,CSSreadback,settings/terms1preserved.4successfulspeedrows,manualspeedON/auto-newOFF retained. NormalfirstStart64.672s,reserve41.281s; independentlydecrypted/read193before/193afterencryptedbackups. No new speedtest/fault/Windowsnetwork/mainMT6000changes. LeaveAutoONreserve/usergateway127.0.0.2:8080alive.
+
+Read docs/VERIFICATION-ALPHA16-2026-10-24.md,qa/EVENTS-ALPHA16-2026-10-24.json,qa/MT3000-ALPHA16-2026-10-24.json. Privateevidence private/events-alpha16-20261024,private/alpha16-install-20261024. Docs-onlyclosure follows. Do not rerun non-idempotentprepare/rewrite/install/publication scripts; preserve immutable receipts. UserrefreshCtrlF5/#events loadsnewmodule/style. No pendingappwriter. Record newdictationimmediately inownerTODO; newproductchangesrequire nextversion/CI. Earlier activeheadersbelow are history.
+
 # READY FOR PUBLICATION: alpha16 event layout verified on MT3000 —24October2026
 
 Exacte7609c9 CI771app/112QA each/47UI PASS. Canonical831904bytes SHA913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9; initial01207a3 cache-dependent fixturefailure retained/fixedtestonly. CSSfeature15/27/58widths, codeunderM/R/unbroken,min880/horizontal scroll. Existinghistory/terminal tests passed; nativebrowserinventoryempty, no visualclaim.

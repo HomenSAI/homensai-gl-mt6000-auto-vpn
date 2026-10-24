@@ -1,4 +1,4 @@
-70. [ ] Сохранённая история событий: расширить «Состояние», сузить «Событие», код состояния целиком отдельной строкой под схемой M/R без переноса внутри кода.
+70. [x] alpha16: «Состояние»27%, «Событие»58%, код целиком под схемойM/R, горизонтальнаяпрокруткаузкогоэкрана. Существующиеhistory/journalрегрессии и dualCI771app/112QA×2+47UI PASS.193/193encryptedbackups, фактическийMT3000AutoONreserve/87files/HTTP/HTTPS/settings/terms/4speedrows preserved. GitHub/Gitea prereleases/активыпроверены. Nativevisual unavailable;01207a3 testfixtureTTLfailure retained/fixedtestonly. Report docs/VERIFICATION-ALPHA16-2026-10-24.md.
 
 69. [x] alpha15: запуск скорости через понятный обзор/включение/очередь, выбранные подключённые серверы и причины отказа; под таблицей график скачивания/отдачи с сервером/периодом/разрывами. CI771app/112QA×2+47UI; фактическаяустановка MT3000AutoONreserve,4реальныхуспешныхизмерения,192/193-entryшифрованныекопии,GitHub/Gitea prereleasesиактивыпроверены. Nativevisual остановленComputerUseURLpolicy и не выданзаPASS. Отчёт docs/VERIFICATION-ALPHA15-2026-10-24.md.
 
