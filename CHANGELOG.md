@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.1-alpha14 — documentation and helper review / проверка документации и помощников
+
+Исправлены актуальные руководства установки, справка, четыре промпта RU/EN и мастер. Полная встроенная помощь и справочник кодов формируются из исходников; автоматическая проверка обнаруживает рассинхронизацию. Мастер шага 2 показывает лимит наблюдений и срок хранения. Обучение объясняет роли M/R, историю и конфликт одинаковых адресов роутеров. Условия версии 1 и существующие лицензии сохранены.
+
+LAN-помощник отказывает до отправки пароля/RPC, если маршрут управления ведёт не через выбранный интерфейс. Это проверка маршрута, а не закреплённый HTTP-сокет: последующая смена маршрута остаётся отдельным ограничением. Аварийные скрипты больше не сохраняют незавершённые правки приложения и не меняют сохранённый Auto при ошибке остановки службы. Проверены настоящие скрипты с подставными системными ответами; Telegram-рецепт проверен без отправки запросов.
+
+Current installation guides, Help, four RU/EN prompts and setup are aligned. Full built-in Help and code reference are generated from runtime sources, with drift checks. Setup step 2 exposes observation count and detail-retention controls. Training explains M/R roles, history and overlapping router addresses. Terms version1 and existing licences remain unchanged.
+
+The LAN helper refuses before credential/RPC submission when management uses another interface. It checks routing rather than pinning the HTTP socket; later route changes remain a limitation. Emergency scripts preserve pending app edits and do not change saved Auto after a failed service stop. Actual scripts were exercised with mocked system responses; the Telegram recipe was tested without API requests.
+
+Delivery and complete acceptance require the alpha14 verification report; source changes alone do not update a router or release.
+
+
 ## 0.9.1-alpha13 —2026-10-24
 
 ### Русский

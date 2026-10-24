@@ -33,12 +33,12 @@ var LEARN_LESSONS=[
     ],
     "body": [
       [
-        "Prepare two ways to reach the router: a laptop connected by a LAN cable, and a device on Wi-Fi (a phone or the same laptop). Keep both during the first tests.",
-        "Подготовьте два способа попасть на роутер: ноутбук, подключённый кабелем LAN, и устройство по Wi-Fi (телефон или тот же ноутбук). Держите оба на время первых тестов."
+        "Prepare two ways to reach the router: a laptop connected by a LAN cable, and a device on the same router’s Wi-Fi (preferably a separate phone). Verify both reach the intended device before the first tests.",
+        "Подготовьте два способа попасть на роутер: ноутбук, подключённый кабелем LAN, и устройство в Wi-Fi того же роутера (лучше отдельный телефон). Перед первыми тестами проверьте, что оба пути ведут к нужному устройству."
       ],
       [
-        "The cable is the reliable path for tests: it does not depend on Wi-Fi. Wi-Fi shows what your family devices will really experience. If the internet disappears, you can still open the router from the other path.",
-        "Кабель — надёжный путь для тестов: он не зависит от Wi-Fi. Wi-Fi показывает, что реально увидят устройства домашних. Если интернет пропадёт, вы всё равно сможете открыть роутер другим путём."
+        "The cable is the reliable path for tests: it does not depend on Wi-Fi. Wi-Fi shows what your family devices will really experience. A second local path can help if the first fails, but does not guarantee access if the router itself is unavailable. Two adapters with the same subnet can reach different routers; do not send credentials until the management path is verified.",
+        "Кабель — надёжный путь для тестов: он не зависит от Wi-Fi. Wi-Fi показывает, что реально увидят устройства домашних. Второй локальный путь помогает при отказе первого, но не гарантирует доступ при сбое самого роутера. Два адаптера с одинаковой подсетью могут вести к разным роутерам; до ввода пароля проверьте путь управления."
       ],
       [
         "Also keep mobile data on your phone: it works even when the router VPN is broken.",
@@ -100,8 +100,8 @@ var LEARN_LESSONS=[
       ]
     ],
     "example": [
-      "Example: primary 1 = Germany · WireGuard, reserve 2 = Netherlands · OpenVPN.",
-      "Пример: основной 1 = Германия · WireGuard, резерв 2 = Нидерланды · OpenVPN."
+      "Example: M (main) = Germany · WireGuard; R (reserve) = Netherlands · OpenVPN.",
+      "Пример: M (основной) = Германия · WireGuard; R (резервный) = Нидерланды · OpenVPN."
     ],
     "tip": [
       "The bot token is a secret. Never post it or send it to anyone.",
@@ -149,8 +149,8 @@ var LEARN_LESSONS=[
       ]
     ],
     "example": [
-      "Example: green Auto light and “2 of 2 VPNs work” means everything is fine.",
-      "Пример: зелёный светофор Auto и «работают 2 из 2 VPN» — всё в порядке."
+      "Example: “2 of 2 VPNs work” confirms router observations for both paths; it does not certify every LAN client.",
+      "Пример: «работают 2 из 2 VPN» подтверждает проверки обоих путей роутером, но не сертифицирует каждого клиента LAN."
     ],
     "tip": [
       "Do not turn Auto on when you cannot afford a short interruption (a call, a download).",
@@ -173,8 +173,8 @@ var LEARN_LESSONS=[
         "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, HTTPS-задержку и историю 1–24 ч. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
       ],
       [
-        "The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events holds retained history, search and sorting. Missing historical outcomes are explained, not invented.",
-        "Живой журнал объединяет повторы в диапазоны времени; часы обновляются раз в секунду, сетевые проверки сохраняют свой интервал. «События и ошибки» содержит историю, поиск и сортировку. Для потерянных итогов указана причина, результат не выдумывается."
+        "The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events shows the latest 20 rows, with expansion, search and sorting. Setup step 2 or Monitoring settings selects 1–2000 live observations and 1–7 days of detail. M/R identifies primary/reserve and who initiated a transition; missing historical outcomes are explained, not invented.",
+        "Живой журнал объединяет повторы в диапазоны времени; часы обновляются раз в секунду, сетевые проверки сохраняют свой интервал. «События и ошибки» показывает последние 20 строк, раскрытие, поиск и сортировку. В шаге 2 мастера или настройках мониторинга выбираются 1–2000 наблюдений и 1–7 дней подробностей. M/R обозначает основной/резервный и инициатора перехода; для потерянных итогов указана причина, результат не выдумывается."
       ]
     ],
     "example": [
@@ -182,8 +182,8 @@ var LEARN_LESSONS=[
       "Один отказ может содержать много неудачных проверок. График отказов считает эпизод один раз."
     ],
     "tip": [
-      "Speed tests are optional and use traffic; they live under Advanced → Tests.",
-      "Тесты скорости необязательны и расходуют трафик; они в «Расширенное» → «Тесты»."
+      "Speed tests are optional and use traffic; they live under Advanced settings → Tests.",
+      "Тесты скорости необязательны и расходуют трафик; они в «Расширенные настройки» → «Тесты»."
     ]
   },
   {
@@ -217,8 +217,8 @@ var LEARN_LESSONS=[
       [
         "homensai-vpn-emergency stop-auto",
         [
-          "Stops the program’s own services. Network settings are not changed.",
-          "Останавливает собственные службы программы. Сетевые настройки не меняются."
+          "Stops own services; managed restoration may change the selected policy or owned interface flags.",
+          "Останавливает собственные службы; управляемое восстановление может изменить выбранную политику и флаги собственных интерфейсов."
         ]
       ],
       [

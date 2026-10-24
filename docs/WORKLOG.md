@@ -1,7 +1,11 @@
-<!-- current-release-context:0.9.0 -->
-> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+<!-- documentation-context: archive -->
+> Historical or versioned reference. [Current delivered state and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
 
 # Work log
+
+## 2026-10-24 · comprehensive documentation/helper audit (source candidate alpha14)
+
+Owner68: stale mode/menu/restore promises and missing wizard retention fields corrected; wrong-adapter helper control requests and emergency pending/failed-stop commits prevented. Full Help/code/four prompts now source-generated with drift checks.46UI, native SelfTest,2PS,3Linux regressions PASS; unchanged normative terms/licences and privacy scan verified. Full CI/VM/delivery pending. [Audit](DOCUMENTATION-AUDIT-2026-10-24.md).
 
 All times are Europe/Berlin unless an entry explicitly states otherwise. Historical entries describe the evidence available at that time; later entries supersede readiness statements. Missing timestamps are explicitly marked rather than invented. Format: timestamp → error → confirmed cause → change → verification → remaining limits.
 

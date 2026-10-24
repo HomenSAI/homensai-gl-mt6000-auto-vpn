@@ -1,9 +1,12 @@
-# Branch, main and release publication — 24 October2026
+<!-- doc-role: current -->
+# Publication policy
 
-Current owner scope: publish the reviewed training/documentation candidate and preceding VM report to **feature/owner-ui-20261023** on GitHub and Gitea. This is not a main merge, new stable release or physical-router installation. Public stablev0.9.0 is unchanged. [RU](CURRENT-STATE.ru.md) · [EN](CURRENT-STATE.en.md).
+The owner's **latest applicable instruction** determines allowed delivery. Previously authorized operations do not need repeated permission; an old dated report is not new authorization. Feature-branch save, prerelease publication, main/stable changes and physical installation are distinct facts.
 
-Preserve canonical Gitea history. Public snapshots may use the verified public branch as parent while reusing the exact canonical tree, avoiding exposure of unrelated local history. Verify both remote refs and complete file-tree equality; record canonical/public SHAs and the exact tested source. Use fast-forward updates and reconcile concurrent remote changes. Never force, mirror, delete old refs, overwrite tags/assets or bypass protected branches.
+Canonical Gitea history is preserved. A public snapshot can parent the existing verified public branch while reusing the exact reviewed canonical tree, avoiding unrelated private history. Record canonical/public commits, complete tree equality and the tested product source. Fast-forward only: never force/mirror/delete old refs or replace published tags/assets. A docs-only closure can follow a tested product commit if the product fingerprint/code are unchanged and that distinction is recorded.
 
-A future main/release operation needs its own applicable owner scope, exact checks, matching IPK/checksum/verification, privacy scan and independent readback. Existing dated release reports retain their test facts. Same reviewed content may have different commit SHAs because history differs.
+For a release, use one immutable tag, matching canonical IPK/checksum/verification and same-tag kit. Privacy-scan the complete public tree and archives, publish draft/prerelease/stable flags deliberately, independently download every attachment and verify SHA256. A manifest tag or branch push alone is not a server Release. Stable/main remain unchanged unless the owner actually included them.
 
-Save recoverable source/evidence locally. Keys, passwords, tokens, raw device state and backups stay private. A successful branch push does not prove installation, native browser acceptance, external-model prompt execution or real LAN connectivity. Device work is separate; do not resume historical fault observers.
+Keep credentials, raw configuration, private transaction data and unencrypted backups out of Git/releases. A reviewed source save does not prove physical installation, browser rendering, external-model execution or LAN connectivity. Device work follows its own current identity/backup/lifecycle verification; never resume old observers automatically.
+
+[Versioning](VERSIONING.md) · [CI](CI-PRIMARY.md) · [Actual current delivery](CURRENT-STATUS.md).

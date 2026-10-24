@@ -1,5 +1,5 @@
-<!-- current-release-context:0.9.0 -->
-> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+<!-- documentation-context: archive -->
+> Historical or versioned reference. [Current delivered state and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
 
 # Cable correction and active primary — 2026-10-16T19:14:13.5975777+02:00
 

@@ -1,14 +1,12 @@
-> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](../docs/CURRENT-STATE.ru.md) · [Current guide](../docs/CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+<!-- doc-role: current -->
+# Router installation/test kit
 
-# Router test kit — 0.9.0
+This checkout's `02-install.sh` and `03-verify.sh` pin the candidate in [VERSION.json](../VERSION.json), not automatically stable0.9.0. Obtain the complete kit and IPK/checksum from **one chosen tag**. For stable0.9.0 use that tag's kit; never mix it with this branch's newer package.
 
-Use the matching `homensai-auto-vpn_0.9.0-1_all.ipk` and `.ipk.sha256` from [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0). `02-install.sh` pins the canonical SHA256/size/version; never copy an older kit for a newer package.
+1. Read [RU install](../docs/INSTALL.ru.md) / [EN install](../docs/INSTALL.en.md), actual platform scope and scripts. A model/architecture string does not prove native readiness.
+2. Keep independent management access and a verified private recovery export. Normal Stop/cleanup precedes an upgrade; queued ACK is insufficient.
+3. `01-preflight.sh` checks platform, dependencies and writable storage. Its report is local; it does not install/flash/enable Auto. Other `00-*` probes have their own stated scope.
+4. `02-install.sh /tmp/<matching-package>.ipk` verifies the pinned hash/size/version and lifecycle gates before normal opkg. `03-verify.sh wait` checks runtime/services; read its actual result.
+5. `04-uninstall.sh` and [emergency helper](EMERGENCY.md) are deliberate recovery operations. Never use force, arbitrary rule reordering or removal of vendor protection as an installation shortcut.
 
-Read [installation](../docs/INSTALL.en.md), [установка](../docs/INSTALL.ru.md) and [scope](../docs/CURRENT-STATUS.md). Keep independent management access and a verified PRIVATE backup. Stop Auto normally and verify cleanup before upgrade. Do not force installation, replace feeds, mass-upgrade packages or upload backups/secrets.
-
-1. `01-preflight.sh`: read-only model/firmware/dependency/storage checks.
-2. `02-install.sh /tmp/homensai-auto-vpn_0.9.0-1_all.ipk`: verify exact hash/size, refuse active/unverified native state, install normally.
-3. `03-verify.sh`: confirm installed version/services; read its actual result.
-4. `04-uninstall.sh` / `05-emergency.sh`: deliberate recovery tools; read before use and verify the result, not only the command exit.
-
-This is an application, not firmware. The kit alone does not authorize native preparation, Auto/fault trials or certify LAN traffic. The current continuous mode is qualified on the separately prepared MT3000/4.11.0; monitor-only installation and explicitly requested Auto startup are distinct steps. After router/application restart, Auto requires explicit Start.
+This is an application, not firmware. Setup does not accept terms or start Auto. Prepared continuous MT3000 mode and the optional client-confirmed trial have different prerequisites; restart requires explicit Auto Start.

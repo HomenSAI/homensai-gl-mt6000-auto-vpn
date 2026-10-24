@@ -1,25 +1,26 @@
-> Alpha13: verified MT3000 AutoON/reserve; stable0.9.0 instructions below remain version-pinned. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md) · [Verification](../qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
+<!-- doc-role: current -->
+# Installation and upgrade
 
-# Installation and upgrade0.9.0
+[Current source/delivered state](CURRENT-STATUS.md) · [Quick start](AUTO-QUICKSTART.en.md) · [Terms](../DISCLAIMER.md)
 
-[Current status](CURRENT-STATUS.md) · [Quick start](AUTO-QUICKSTART.en.md) · [Terms](../DISCLAIMER.md)
+Use the [full AI prompt](AI-INSTALL.en.md) with an agent that actually has terminal/router access, or follow the manual sequence. A normal chat cannot install software. Never include secrets in the prompt.
 
-## Install manually or use an AI agent
+## Select one immutable release
 
-For manual installation follow the steps below. To have ChatGPT/Codex or Claude Code(Sonnet/Opus) install, configure and verify the application, use the [complete ready-to-copy prompt](AI-INSTALL.en.md). The agent needs a local terminal and access to your router; a chat without tools can only explain the steps. The prompt covers device checks, recovery, dependencies, artifact verification, installation, setup and the final report. Never paste passwords or keys into it.
+Stable default: [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0), `homensai-auto-vpn_0.9.0-1_all.ipk`,769849bytes, SHA256 `7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a`. Obtain its checksum, verification JSON and **same-tag** router-test-kit.
 
-The agreement appears until the first acceptance of its current version. If already accepted on this router, the page may open the operating explanation directly; another acceptance is unnecessary.
+For an explicitly chosen prerelease, use its own version/name/size/hash/evidence and same-tag scripts. This checkout's kit follows VERSION.json and may be newer than stable. Do not mix the branch kit with stable0.9.0 or downgrade a newer installed version. A source-candidate tag in VERSION.json does not by itself prove a server Release exists.
 
-## Manual installation
+## Manual sequence
 
-1. Verify actual model/firmware. Continuous mode is tested on the prepared MT3000/4.11.0. Keep independent management access. Architecture:all does not mean universal compatibility.
-2. Download `homensai-auto-vpn_0.9.0-1_all.ipk` and its `.ipk.sha256` from the same [release](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0). Verify SHA256 with `sha256sum <file>` or PowerShell `Get-FileHash <file> -Algorithm SHA256`. Stop on a mismatch.
-3. Preserve a private, verified configuration/statistics backup. It may contain VPN keys, passwords and a Telegram token; never publish it.
-4. Before upgrading, use ordinary Stop and wait for confirmed completion. If Stop/rollback is unconfirmed, do not bypass installation refusal or use force flags.
-5. Install the application through LuCI → System → Software → Upload Package, or ordinary `opkg install /tmp/homensai-auto-vpn_0.9.0-1_all.ipk`. Never Flash Firmware. Use matching vendor dependencies:python3,lua,lua-cjson,libuci-lua,ip-full,ubus,rpcd,luci-base,ca-bundle. Do not replace feeds or mass-upgrade packages.
-6. Open Services → HomenS.AI Auto VPN and refresh Ctrl+F5. Verify version 0.9.0 and advancing monitor data. Resolve a monitor error before starting Auto.
-7. First entry: accept the agreement, read the illustrated explanation, press OK and review the eight setup steps. English/Russian preview is immediate. [Examples](FIRST-RUN-SETUP.md). Saving setup never starts Auto.
-8. MT3000 needs separately verified [preparation](ROUTER-PREPARATION.md). Do not blindly copy old acceleration/DNS commands. Actual platform checks remain authoritative; choosing a model is not preparation.
-9. In Overview check the saved pair, press Auto once and wait for actual readiness (about a minute on the tested router). Router/application restart requires explicit Start again. Read exact refusal codes; never reset budgets or change credentials to hide a failure.
+1. Verify the actual named router, firmware and management path/host key before credentials. A same-IP device through another adapter is not the target. Keep independent access; no silent host-network changes.
+2. Inspect installed/running versions, pending work, writable filesystem/space and dependencies. Prepared continuous mode is qualified on documented MT3000/4.11.0; architecture `all` and a model selector do not qualify another platform. The install preflight requires20MiB free writable storage; runtime storage checks have their own smaller threshold.
+3. Preserve a private supported configuration export plus necessary app data; encrypt it, protect the key separately, and verify archive/decrypt/read. No raw backups, tokens or VPN keys in Git/chat/releases.
+4. For an upgrade, normal Stop must finish managed recovery/cleanup before opkg. ACK is not completion. Keep refused/retained outcomes; never force installation, delete journals/guards or reset budgets to bypass lifecycle checks.
+5. Obtain and read `01-preflight.sh`, `02-install.sh`, `03-verify.sh` from the chosen tag. Verify package name/size/SHA256 locally and after transfer. `02-install.sh /tmp/<matching-package>.ipk` pins expected values; alternatively use the documented normal `opkg install` path. The package is an application, **not Flash Firmware**.
+6. Install missing dependencies only from that firmware's original vendor feeds: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle. Do not mass-upgrade or replace feeds; stop on ABI/signature/dependency conflicts.
+7. Run `03-verify.sh wait`. Check package/runtime versions, advancing timestamps, services and actual served module/CSS against the verified payload where possible. An opkg exit0, cached page or green lamp alone is insufficient. A stale RPC registration may need a deliberate documented reload/login.
+8. Open Services → HomenS.AI Auto VPN, refresh cache, and complete first-run terms/introduction/setup. The human accepts terms; existing acceptance of the same terms version is preserved. Saving setup never starts Auto or sends a Telegram test.
+9. Separate [platform preparation](ROUTER-PREPARATION.md) from installation. Start Auto only for the requested outcome and current readiness. During an authorized upgrade that preserves previous Auto/channel, restore and verify that state through normal controls; report safe refusal if it cannot be restored.
 
-The [router-test-kit](../router-test-kit/README.md) checks package/installation; that alone does not establish LAN connectivity. External client, IPv6, physical power and24-hour soak remain on the [roadmap](ROADMAP.md). Uninstall normally after confirmed Stop; preserve a private copy of needed settings/history.
+[LAN helper](LAN-HELPER.en.md) is optional for prepared router-probed Auto and mandatory for its separate client-confirmed trial. Read its mode boundaries. [Emergency/uninstall](../router-test-kit/EMERGENCY.md) are deliberate operations after verified recovery, not universal Internet repairs. A generic x86 VM may test monitor-only installation only in its explicitly marked isolated scope; never spoof hardware or bypass a real-device refusal.

@@ -1,17 +1,21 @@
-# План / Roadmap — 24.10.2026
+<!-- doc-role: current -->
+# Current roadmap / Текущие открытые задачи
 
-## Сделано / Completed
+[Фактическая версия и доказательства](CURRENT-STATUS.md) · [Последние изменения](LATEST-CHANGES.md)
 
-- Alpha10: compact UI, explicit roles/identities/outcomes, grouped logs/provenance, event latency and failure history.
-- Alpha10: actual isolated OpenWrt build/install/upgrade/rollback/reboot audit with explicit partial coverage.
-- Alpha11 candidate: interactive eight-lesson training, EN/RU quiz corrections and current documentation refresh.
+## Implemented baseline
 
-## Открыто / Open
+The prepared MT3000 two-client controller, guarded manual selection, router IPv4 evidence, grouped live/saved logs, event-time roles/latency, M/R diagrams, five-row server disclosures,20-row event history, configurable retention and interactive EN/RU training have versioned source/tests and stated acceptance. Current delivery must still be read from CURRENT-STATUS, not inferred from this list.
 
-1. Native browser visual acceptance of candidate; DOM tests are separate evidence.
-2. Real GL.iNet alpha11 device installation and controlled native/LAN acceptance; current installed baseline alpha9.
-3. Every dependency-missing combination, interrupted upgrade/power cut, full-day real-client soak.
-4. Physical IPv6/Kill Switch failover and MT6000 continuous-mode acceptance.
-5. Autonomous execution of prompts by named external AI models; recipe execution is not model acceptance.
+The comprehensive documentation/helper audit is tracked in the current handoff. Historical TODO files are dated plans, not a second live backlog or fresh permission.
 
-[Текущий статус RU](CURRENT-STATE.ru.md) · [Current EN](CURRENT-STATE.en.md) · [VM report](handoff/VM-AUDIT-2026-10-24.md)
+## Still separate / Отдельные области приёмки
+
+1. Native physical-browser visual acceptance, independent real-client LAN/DNS/exit and IPv6/KillSwitch failure acceptance.
+2. Real supported-device controlled faults in both directions, broad provider/firmware combinations and full-day client soak.
+3. Interrupted package/power/FS scenarios and all missing-dependency combinations, with actual recovery evidence rather than model-only proof.
+4. MT6000 continuous-mode qualification and matching-SDK provenance/build boundaries.
+5. Autonomous prompt execution by named external ChatGPT/Claude models; command recipes and simulations are different evidence.
+6. Restricted server-triggered Gitea CI activation; current local exact-SHA CI does not create a trusted server runner or required PR check automatically.
+
+Completed old alpha9/alpha10/alpha11/alpha12/alpha13 results remain in their dated reports. Never restart their old observers solely to continue reading documentation.

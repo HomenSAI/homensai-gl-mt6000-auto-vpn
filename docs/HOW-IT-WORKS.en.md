@@ -1,50 +1,28 @@
-# How Auto VPN works
+<!-- doc-role: current -->
+# How the system works
 
-Current full guide: [CURRENT-STATE.en.md](CURRENT-STATE.en.md).
+[Current version/evidence](CURRENT-STATUS.md) · [Full guide](CURRENT-STATE.en.md)
 
-## The VPN pair and eight setup steps
+## Roles, clients and traffic
 
-1. System: inspect the existing configuration.
-2. Monitoring: probe and persistence intervals.
-3. Existing VPNs: select two distinct configured clients and assign primary/reserve roles. Protocols and profiles are already bound in stock GL.iNet VPN. Two profiles belonging to one client are not independent channels. A configured stopped client may be listed; that does not prove health.
-4. Names/priorities: application metadata, not VPN keys. The old `default` metadata group is not a channel role.
-5. Recovery: thresholds, dwell/cooldown and return policy.
-6. Speed: optional tests consume traffic.
-7. Telegram: optional, keep tokens private.
-8. Review/save. Next only navigates; saving neither accepts terms nor starts Auto. The dashboard escape preserves existing settings and does not save a draft.
+Main and reserve are roles, not WireGuard/OpenVPN names. Stock firmware owns provider profiles, credentials and server selection within a tunnel. The application observes exact protocol/interface/profile generations and coordinates the saved pair of distinct clients. A country/display group such as `default` is metadata, not proof of channel membership.
 
-Configure servers, credentials and keys in stock VPN; refresh Auto VPN afterwards and wait for fresh checks. Saving the pair changes application metadata. Explicit Start may start prepared clients and select their traffic policies. Both tunnels can be connected while only one common traffic route is selected.
+The configured profile, connected tunnel, healthy router probe and selected common traffic route are different states. Both clients can be connected while one route is selected. Saving the pair edits application metadata; explicit prepared Auto Start can enable managed clients and select their policy. Normal Stop restores the managed baseline when verified, otherwise exposes the retained/unconfirmed outcome.
 
-## Overview and controls
+## Continuous Auto
 
-Automatic VPN switching comes first. Monitoring is at its upper right; Check VPN now is alongside the controls. Below are collapsed technical actions and switching statistics, then manual channel selection. Primary is always first/left, reserve second/right. Manual-selection explanations sit below the pictures. A queued request is not proof of completion.
+The qualified prepared MT3000/4.11.0 path uses fresh router IPv4 DNS/HTTPS evidence, stable identity, policy/worker/ownership checks and bounded recovery. Consecutive-failure/success thresholds, cooldown, dwell, budgets and operator hold prevent an immediate switch on every noisy sample. A low HTTPS delay is a recommendation, not permission to move traffic.
 
-Manual selection may operate with Auto on when readiness allows it. Auto continues observation and recovery on confirmed failure, respecting operator preference and return policy. Using reserve does not justify returning to a failed primary. Auto requires explicit Start after an application/router restart.
+Manual selection is an explicit command with a confirmed result, not an immediate lamp change on queue ACK. Automatic return follows saved policy and readiness; manual reserve hold does not promise return just because primary recovers. A deliberate bounded fault test is separately labelled and can test both directions without changing the saved preference.
 
-## Channels, latency and lists
+## Other proof modes
 
-Configured server names and protocols are explicit. Current peer IP:port requires fresh identity-bound observation. Missing historical names/IPs are not reconstructed from today's connection. Roles marked current pair describe today's settings.
+A client-confirmed trial uses the Windows helper; its DNS/HTTPS/exit evidence comes from that real client. Router-hosted namespace and router-probed evidence are not external-client proof. CheckOnly is prerequisite inspection; ProbeOnly sends bound data probes; a full trial can change router traffic. None changes PC routes/NIC/DNS automatically.
 
-Delay is HTTPS RTT, not ICMP ping. The lower-delay recommendation requires fresh comparable successful checks and never switches traffic itself. The graph and weighted mean/min/max/success-count table follow the1–24h window. Min/max describe observed minute means; gaps are not filled.
+## Display and history
 
-Your VPNs shows the selected pair, with other profiles collapsed. Current server checks shows five rows and speed ranking five entries before expansion. Search/sort operate across the full data. An inactive profile is not automatically a failure of an in-use channel.
+Role cards keep main left/top and reserve right/bottom. Current-check tables and pinned service rows put the working channel first. M/R direction and green/red in a confirmed transition describe route selection; a standalone red failure marks only its observed channel. Event-time roles cannot be rewritten using today's pair.
 
-## Failure chart and journals
+Only blue main/orange reserve failure episodes are charted. Legacy records without a saved role are disclosed outside those series. Consecutive equal log states share a time range; A→B→A remains three runs. Saved history begins with 20 rows, and the full downloaded retained snapshot supports search/sort.
 
-Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Primary/reserve/unrecorded roles are separate. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
-
-The live terminal pins monitor/Auto/primary/reserve status above its log. Its one-second clock does not increase network probe cadence. New rows appear first; consecutive equal states form a timestamp range. A→B→A remains distinct. Operator/program/test/controller provenance is shown when recorded, separating requests from confirmed effects.
-
-Events and errors shows10rows before expansion, search and time/state sorting. Detailed history lasts7days within the storage budget; monthly/lifetime counters persist. Outages, failed checks, attempts and confirmed switches differ. Preparation without a pair is separate; missing completion has an explicit reason. Transition delay is an immutable event-time measurement, not current RTT. Technical exports retain original identifiers.
-
-## LAN helper and readiness
-
-Prepared-MT3000 router-probed IPv4 Auto does not require the optional LAN helper. A client-confirmed trial does require its independent helper. Router checks do not establish client DNS/HTTPS/exit/IPv6/Kill Switch acceptance. Use readiness for the selected mode. Help includes manual instructions, short topic prompts and a general diagnostic prompt. An agent needs actual tools and protected access; a plain chat cannot install software by itself.
-
-## Installation and evidence
-
-For public stable installation use [the guide](INSTALL.en.md), pinned v0.9.0 tag and matching IPK/checksum/verification/install kit. Do not downgrade a newer installation. For a candidate use `releases/`, VERSION.json and checksum from the same exact branch commit; the stable kit is not the candidate kit. Verify model/firmware, private backup and readiness; do not bypass refusals or flash firmware to install this app.
-
-[Alpha10 VM audit](handoff/VM-AUDIT-2026-10-24.md): two in-OpenWrt builds matched the package; install/update/rollback/restart/reboot passed;86files/modes matched.76prompts were inventoried with explicit command-recipe coverage. This is not named external-model execution or exhaustive fault combinations. Real GL/LAN, native browser visual acceptance and several fault scenarios remain untested. [Matrix](../qa/OWNER-PROMPT-VM-ALPHA10-2026-10-24.json).
-
-Dated reports and old release notes retain their historical evidence. The [index](DOCUMENTATION-INDEX.md) distinguishes current instructions from history. Never publish keys, passwords, VPN files or unredacted backups in chat/Git.
+[Storage limits](HISTORY-RETENTION.md) · [Control/setup](CONTROL-AND-SETUP.md) · [Helper](LAN-HELPER.en.md) · [Recovery](../router-test-kit/EMERGENCY.md).

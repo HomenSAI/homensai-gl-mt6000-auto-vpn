@@ -1,6 +1,4 @@
-<!-- current-release-context:0.9.0 -->
-> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
-
+<!-- doc-role: current-technical -->
 # Firmware-owned server failover and application channel coordination
 
 Owner decision, 20 October 2026: observe how the router changes servers within a VPN tunnel; the application diagnoses those changes and coordinates the choice between distinct VPN tunnels, including OpenVPN and WireGuard. This supersedes the earlier proposal to implement a second independent server-selection loop.
@@ -31,6 +29,6 @@ An identity is pending until repeated consistent observations. A stable identity
 
 Within one observed tunnel, server selection belongs to the firmware. Application candidate selection considers distinct tunnels with current, fresh DNS/HTTPS evidence and operator priorities. Display-label changes do not change ownership or transition classification. A configured WAN link failure suppresses VPN reserve cycling; missing evidence remains unknown. Candidate readiness is a read-only recommendation and never an authorization to apply routes.
 
-The live controller retains its verified-adapter, worker-coordination, policy-generation, bounded-trial, LAN-witness, Kill Switch, IPv6, protected-rule and rollback checks. Binding changes invalidate relevant evidence/certification. Emergency Stop and recovery remain available while identity or planning is unknown. This work does not enable inactive-profile startup, arbitrary multi-hop, direct WAN fallback or an uncertified GL-MT3000 adapter.
+The live controller retains verified-adapter, worker, policy-generation, Kill Switch/IPv6, protected-rule and rollback checks. Proof is mode-specific: prepared continuous pair uses internal router evidence; a bounded external-LAN trial needs its own witness/certificate. Binding changes invalidate relevant evidence/certification. Emergency Stop and recovery remain available while identity or planning is unknown. The observation layer never starts clients. Explicit continuous Start on the qualified prepared MT3000 can manage the saved pair; it does not activate every inactive catalogue profile, arbitrary multi-hop, direct-WAN fallback or an unqualified adapter.
 
-The independent alpha12 endurance run keeps its original installed package and manifest. New code is validated with isolated fixtures and committed-source CI; it must not be installed into that running baseline merely to collect a new-version result.
+Dated endurance/install records retain their own versions and windows. No old observer is an active command or new installation approval. Read [current handoff](handoff/CURRENT.md) before device work.

@@ -1,7 +1,12 @@
-# Version and release identity — 24 October2026
+<!-- doc-role: current -->
+# Version, cache and artifact identity
 
-Текущая разработка / Current development: **0.9.1-alpha12**, package **0.9.1-alpha12-1**, selected **dashboard88/ui60.css**. Public stable release remains **0.9.0**. Last verified dedicated physical baseline isalpha11 (previous alpha9); VM report coversalpha10. [RU guide](CURRENT-STATE.ru.md) · [EN guide](CURRENT-STATE.en.md).
+[VERSION.json](../VERSION.json) is the source-candidate metadata. [CURRENT-STATUS](CURRENT-STATUS.md) separately records what was actually installed/published. A handoff version is not an application version.
 
-VERSION.json, runtime, package builder, LuCI controller/menu and candidate test-kit must agree. The source fingerprint covers payload/generators with version strings neutralised. Use scripts/bump-version.py --check before a commit; a changed product needs a fresh prerelease identity. Build the canonical IPK from the exact reviewed Git tree in Linux and record its SHA256/size in VERSION.json and the matching kit. Match reproducible bytes across runtimes. Native UI content changes use a new immutable dashboard/CSS path to avoid serving old cached assets.
+Runtime, package builder/Makefile, selected LuCI controller/menu, immutable module/CSS path, candidate install kit and artifact must agree. `scripts/bump-version.py --check` refuses changed product source with a stale fingerprint. Product/operator-text/helper changes require a new application candidate; a prose-only documentation closure does not require another router install.
 
-Documentation-only closure does not change the application version. Do not replace published stable tags/assets or edit installed version bytes in place. Release tags are separate from publishing a feature branch; a manifest release_tag is not proof that a GitHub/Gitea Release exists. Old handoff1.0.0 is documentation context, not application1.0.0.
+Advance selected module/CSS identities for new shipped UI content before generating the candidate. `scripts/bump-version.py` rebuilds the selected page and advances the prerelease when stale. Do not overwrite old released assets/tags or patch installed version bytes in place. `--fingerprint-only` is for reconciling an unreleased reviewed candidate, not hiding post-release changes.
+
+Build canonical artifacts from one committed archive in pinned Linux CI environments and require matching SHA256. Explicit gzip level alone does not make every host zlib implementation byte-identical; Windows Python3.15/zlib-ng can emit different compression for equivalent payloads. Use the verified canonical package, never silently relabel another package as passed.
+
+Record package bytes/hash in the manifest and matching install kit. Verify downloaded/installed/served content separately. [CI boundary](CI-PRIMARY.md) · [Publication](PUBLICATION.md).

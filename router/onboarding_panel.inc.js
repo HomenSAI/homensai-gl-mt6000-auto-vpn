@@ -72,7 +72,7 @@ function onboardingDraft(inventory){
   Object.keys(speedDefaults).forEach(function(k){speed[k]=value('speed_'+k,speedDefaults[k]);});
   return {
     appearance:{language:s.appearance_language||locale,theme:s.appearance_theme||storedTheme(),design:s.appearance_design||currentDesign(),router_model:s.router_model||'auto'},
-    monitor:{interval:value('interval',30),checkpoint:value('checkpoint',900),probe_limit:value('probe_limit',16),planning_enabled:!!s.plan_enabled},
+    monitor:{interval:value('interval',30),checkpoint:value('checkpoint',900),probe_limit:value('probe_limit',16),planning_enabled:!!s.plan_enabled,live_log_limit:value('live_log_limit',2000),history_days:value('history_days',7)},
     system:{defer_pair:!!s.onboarding_pair_deferred,source:s.plan_source||'',target:s.plan_target||'',duration:value('native_duration',10),session_loss:!!s.native_session_loss,
       servers:profiles.map(function(p){var row=servers.filter(function(r){return r.profile===p.id;})[0]||{};return {profile:p.id,name:row.name==null?p.name:row.name,channel:row.channel==null?'default':row.channel,priority:row.priority==null?100:row.priority,enabled:row.enabled!==false};})},
     recovery:recovery,speed:speed,
@@ -83,7 +83,7 @@ function onboardingPayload(draft){
   // Copy explicit allowlisted objects: neither secret drafts nor extra UI state become RPC fields.
   var system={defer_pair:draft.system.defer_pair,source:draft.system.defer_pair?'':draft.system.source,target:draft.system.defer_pair?'':draft.system.target,duration:Number(draft.system.duration),session_loss:draft.system.session_loss,
     servers:draft.system.servers.map(function(s){return {profile:s.profile,name:s.name,channel:s.channel,priority:Number(s.priority),enabled:s.enabled};})};
-  var monitor={interval:Number(draft.monitor.interval),checkpoint:Number(draft.monitor.checkpoint),probe_limit:Number(draft.monitor.probe_limit),planning_enabled:draft.monitor.planning_enabled};
+  var monitor={interval:Number(draft.monitor.interval),checkpoint:Number(draft.monitor.checkpoint),probe_limit:Number(draft.monitor.probe_limit),planning_enabled:draft.monitor.planning_enabled,live_log_limit:Number(draft.monitor.live_log_limit),history_days:Number(draft.monitor.history_days)};
   var recovery={},speed={},telegram={configure:false};
   ['failures','successes','cooldown','min_dwell','primary_successes','primary_stable'].forEach(function(k){recovery[k]=Number(draft.recovery[k]);});recovery.return_policy=draft.recovery.return_policy;
   ['enabled','auto_new'].forEach(function(k){speed[k]=draft.speed[k];});['budget_mib','duration','streams','daily_mib','busy_mbps'].forEach(function(k){speed[k]=Number(draft.speed[k]);});
@@ -201,6 +201,9 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
         number(bi('Probe interval, seconds','Интервал проверки, секунд'),draft.monitor,'interval','monitor.interval','monitor.interval');
         number(bi('Checkpoint interval, seconds','Интервал checkpoint, секунд'),draft.monitor,'checkpoint','monitor.checkpoint','monitor.checkpoint');
         number(bi('Profile limit per round','Лимит профилей за раунд'),draft.monitor,'probe_limit','monitor.probe_limit','onboarding.probe_limit');
+        number(bi('Live journal observations (1–2000)','Наблюдений в живом журнале (1–2000)'),draft.monitor,'live_log_limit','monitor.live_log_limit','monitor.live_log_limit');
+        number(bi('Detailed history, days (1–7)','Подробная история, дней (1–7)'),draft.monitor,'history_days','monitor.history_days','monitor.history_days');
+        note('Reducing retention removes old detail during normal cleanup. Increasing it cannot restore deleted observations; monthly and lifetime counters remain separate.','Уменьшение срока удаляет старые подробности при штатной очистке. Увеличение не возвращает удалённые наблюдения; месячные и общие счётчики хранятся отдельно.');
         toggle(bi('Enable read-only planning','Включить планирование без применения'),draft.monitor,'planning_enabled','monitor.planning_enabled');
       }else if(session.step===2){
         note('Choose the roles of two configured VPN client tunnels, not arbitrary saved server profiles. Primary is preferred; reserve is a different client. Saving this step changes only Auto VPN settings and does not switch traffic.','Выберите роли двух настроенных VPN-клиентов, а не произвольные профили из каталога серверов. Основной — предпочтительный, резервный — другой клиент. Сохранение этого шага меняет только настройки Auto VPN и не переключает трафик.');
@@ -267,7 +270,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
         function review(title,rows){card.appendChild(E('h3',{},title));card.appendChild(E('dl',{'style':'margin:0;overflow-wrap:anywhere'},rows.reduce(function(nodes,row){return nodes.concat([E('dt',{},row[0]),E('dd',{},String(row[1]))]);},[])));}
         function yes(v){return v?bi('Yes','Да'):bi('No','Нет');}
         review(headings[0],[[bi('Router model / detected','Модель роутера / обнаружено'),draft.appearance.router_model+' / '+(settings.detected_router_model||bi('Unknown','Не определён'))],[bi('Language / theme / design','Язык / тема / оформление'),draft.appearance.language+' / '+draft.appearance.theme+' / '+draft.appearance.design],[bi('Reporting timezone','Часовой пояс отчётов'),'Europe/Berlin']]);
-        review(headings[1],[[bi('Probe / checkpoint (seconds) / profiles per round','Проверка / checkpoint (секунд) / профилей за раунд'),draft.monitor.interval+' / '+draft.monitor.checkpoint+' / '+draft.monitor.probe_limit],[bi('Planning enabled','Планирование включено'),yes(draft.monitor.planning_enabled)]]);
+        review(headings[1],[[bi('Probe / checkpoint (seconds) / profiles per round','Проверка / checkpoint (секунд) / профилей за раунд'),draft.monitor.interval+' / '+draft.monitor.checkpoint+' / '+draft.monitor.probe_limit],[bi('Live observations / detail days','Наблюдений в журнале / дней истории'),draft.monitor.live_log_limit+' / '+draft.monitor.history_days],[bi('Planning enabled','Планирование включено'),yes(draft.monitor.planning_enabled)]]);
         review(headings[2],[[bi('Primary / reserve','Основной / резерв'),draft.system.defer_pair?bi('Deferred; planning off','Отложено; планирование выключено'):draft.system.source+' / '+draft.system.target],[bi('Trial minutes / sessions may reconnect','Тест, минут / сессии могут переподключаться'),draft.system.duration+' / '+yes(draft.system.session_loss)]]);
         review(headings[3],draft.system.servers.map(function(s){return [s.profile,s.name+' / '+s.channel+' / '+s.priority+' / '+yes(s.enabled)];}));
         review(headings[4],Object.keys(recoveryLabels).map(function(k){return [recoveryLabels[k],draft.recovery[k]];}).concat([[bi('Return policy','Политика возврата'),draft.recovery.return_policy==='healthy_primary'?bi('Return after stable primary health','Возврат после стабильной работы основного'):bi('Keep healthy reserve for operator review','Сохранять работающий резерв до решения оператора')]]));

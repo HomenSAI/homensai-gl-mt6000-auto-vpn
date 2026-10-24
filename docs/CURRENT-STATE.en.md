@@ -1,80 +1,46 @@
-# Current state and guide — 24 October 2026
+<!-- doc-role: current-canonical -->
+# Current behavior and user guide
 
-Current version: **0.9.1-alpha13**, branch `feature/owner-ui-20261023`. Alpha13 is installed on the dedicated MT3000/4.11.0: Auto on, reserve confirmed, both VPNs passed DNS/HTTPS. Verified87application files, HTTP/HTTPS and encrypted pre/post backups. Stable **0.9.0** is unchanged. Alpha12 previously remained off after guarded startup failures; alpha11/alpha9 are earlier physical baselines and alpha10 a separate historical VM audit. [Alpha13 matrix](../qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
+> Source version: **0.9.1-alpha14**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
-## First entry and training
+## Supported scope and three different modes
 
-Current-version terms appear until first acceptance on that router, followed by the introduction and setup. Training is available separately and can be reopened. All eight lessons have a vector interactive diagram with Play/Pause, Previous step, Next step and Reset. Playback stops at the final frame, on lesson navigation or when hidden. A text sequence accompanies every illustration. These are teaching examples: they perform no RPC and control no VPN. A quiz score is not Auto readiness certification.
+Prepared continuous Auto is qualified on the documented MT3000/GL.iNet4.11.0 setup. It manages two existing independent clients using router-originated IPv4 DNS/HTTPS evidence. Architecture `all`, the model selector, Connected and a green dependency row do not establish switching readiness. MT6000 continuous/arbitrary firmware and independent LAN/IPv6/KillSwitch acceptance remain separate.
 
-## The VPN pair and eight setup steps
+The optional **client-confirmed bounded trial** uses a real Windows witness and its own certificate/confirmation. A router-hosted namespace is another proof scope. Neither must be confused with normal router-probed Auto, which does not need a LAN certificate. See [mode details](CLIENT-TRIAL.md).
 
-1. System: inspect the existing configuration.
-2. Monitoring: probe and persistence intervals.
-3. Existing VPNs: select two distinct configured clients and assign primary/reserve roles. Protocols and profiles are already bound in stock GL.iNet VPN. Two profiles belonging to one client are not independent channels. A configured stopped client may be listed; that does not prove health.
-4. Names/priorities: application metadata, not VPN keys. The old `default` metadata group is not a channel role.
-5. Recovery: thresholds, dwell/cooldown and return policy.
-6. Speed: optional tests consume traffic.
-7. Telegram: optional, keep tokens private.
-8. Review/save. Next only navigates; saving neither accepts terms nor starts Auto. The dashboard escape preserves existing settings and does not save a draft.
+## Access, terms, training and setup
 
-Configure servers, credentials and keys in stock VPN; refresh Auto VPN afterwards and wait for fresh checks. Saving the pair changes application metadata. Explicit Start may start prepared clients and select their traffic policies. Both tunnels can be connected while only one common traffic route is selected.
+Use the intended device's verified address/path, not simply any router answering the same private IP. [Overlapping networks](LOCAL-ACCESS.md) can route a browser to another adapter. A temporary browser gateway does not become a LAN-witness address or remove authentication.
 
-## Overview and controls
+Current terms appear until the person accepts that terms version on this router. Acceptance is preserved; a new package version alone does not mean new terms. The unchanged versioned text and current qualification are distinct. AI agents never accept it for the owner. Training offers eight local SVG scenes with Play/Pause/step/reset and a quiz; they send no router-control RPC and do not certify readiness.
 
-Automatic VPN switching comes first. Monitoring is at its upper right; Check VPN now is alongside the controls. Below are collapsed technical actions and switching statistics, then manual channel selection. Primary is always first/left, reserve second/right. Manual-selection explanations sit below the pictures. A queued request is not proof of completion.
+[The eight-step wizard](FIRST-RUN-SETUP.md) covers appearance/model, monitoring, existing clients, names/priorities, recovery, speed, Telegram and review. Next edits a draft; only reviewed Save persists it. Cancel/reload/dashboard escape have different draft semantics. Saving never starts Auto or sends a Telegram test automatically.
 
-Manual selection may operate with Auto on when readiness allows it. Auto continues observation and recovery on confirmed failure, respecting operator preference and return policy. Using reserve does not justify returning to a failed primary. Auto requires explicit Start after an application/router restart.
+Choose roles for already assigned client profiles. Stock GL.iNet owns servers, protocol bindings and credentials. Two saved servers in one client are not independent channels. Change stock configuration only after managed recovery, then refresh and wait for current identity-bound evidence. Saving the pair itself is application metadata; explicit prepared Start can enable managed clients and select policy.
 
-## Channels, latency and lists
+## Overview and operation
 
-Configured server names and protocols are explicit. Current peer IP:port requires fresh identity-bound observation. Missing historical names/IPs are not reconstructed from today's connection. Roles marked current pair describe today's settings.
+Auto is the first block, monitoring at upper right and Check VPN now alongside. Check requests observations without selecting a channel. Start requires the current mode's readiness and waits for actual STARTING→RUNNING/selection/health; queued ACK is not completion. Monitoring is independent of Auto. The one-second log clock does not accelerate network probes, and startup can temporarily use a faster measurement cadence.
 
-Delay is HTTPS RTT, not ICMP ping. The lower-delay recommendation requires fresh comparable successful checks and never switches traffic itself. The graph and weighted mean/min/max/success-count table follow the1–24h window. Min/max describe observed minute means; gaps are not filled.
+Manual selection can work while Auto is on. It does not redefine which role is main. A working reserve is normal; return follows saved policy, fresh primary readiness and operator hold. Recommendation by lower comparable successful HTTPS RTT is a disclosure and never applies a route. HTTPS RTT is not ICMP ping; failed/gapped samples are not filled in as zeros.
 
-Your VPNs shows the selected pair, with other profiles collapsed. Current server checks shows five rows and speed ranking five entries before expansion. Search/sort operate across the full data. An inactive profile is not automatically a failure of an in-use channel.
+Normal Stop revokes pending startup and performs managed restoration. Confirm the actual outcome: retained reserve/unverified recovery is not restored original traffic. Continuous Auto requires explicit Start after restart. [Control effects](CONTROL-AND-SETUP.md) · [Recovery](../router-test-kit/EMERGENCY.md).
 
-## Failure chart and journals
+## Channels, history and symbols
 
-Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Only two series are plotted: blue primary and orange reserve. Legacy records without a saved role are excluded and disclosed in a separate archive note. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
+Role cards keep main left/top, reserve right/bottom. Current-check tables and pinned service rows put the working channel first. The pair is visible; other cards fold. Server checks and speed/ranking start with five rows, full search/sort and disclosure.
 
-The live terminal pins monitor/Auto above its log, followed by the working channel and then waiting/failed channel. Its one-second clock does not increase network probe cadence. New rows appear first; consecutive equal states form a timestamp range. A→B→A remains distinct. Operator/program/test/controller provenance is shown when recorded, separating requests from confirmed effects.
+The live log starts with monitor/Auto, then working/waiting or failed channels. Real new events appear at top; consecutive repeats share a time range/count. A→B→A stays distinct. Events/saved history starts with20recent rows and expands; search/sort use the complete downloaded retained snapshot, not just the visible rows.
 
-Events and errors shows20recent rows before expansion, search and time/state sorting. Choose1–7days of detail and1–2000live observations under Settings → Monitoring and history retention. Actual pruning retains monthly/lifetime counters separately. Outages, failed checks, attempts and confirmed switches differ. Preparation without a pair is separate; missing completion has an explicit reason. Transition delay is an immutable event-time measurement, not current RTT. Technical exports retain original identifiers.
+Main/reserve identity is retained at event time before server/protocol/code. Later pair changes do not relabel it. M and R circles show direction: yellow pending, confirmed green selected/other red. A standalone failure marks only its own role, without inventing a switch or other health. Chart blue main/orange reserve count outage episodes once; failed checks and attempts are separate counters. Legacy missing roles/results remain disclosed rather than guessed.
 
-## LAN helper and readiness
+[Retention](HISTORY-RETENTION.md): choose1–2000browser observations and1–7detail days in setup step2 or Monitoring and history retention. Pruning preserves separate monthly/lifetime counters; increasing the period cannot recover deleted detail. Route/latency charts stay within their1–24h view. First data can take longer with many timed-out profiles; there is no universal one-second network-freshness promise.
 
-Prepared-MT3000 router-probed IPv4 Auto does not require the optional LAN helper. A client-confirmed trial does require its independent helper. Router checks do not establish client DNS/HTTPS/exit/IPv6/Kill Switch acceptance. Use readiness for the selected mode. Help includes manual instructions, short topic prompts and a general diagnostic prompt. An agent needs actual tools and protected access; a plain chat cannot install software by itself.
+## Tests, help and reports
 
-## Installation and evidence
+The controlled fault test automatically chooses the current working channel, either role. It revalidates private pair/policy/health and consent, drops that tunnel's IPv4 traffic within its selected bound, and reports success only after fresh alternate-route confirmation. It does not stop the VPN service or isolate another profile by name. Early Stop removes the artificial block. Timeout/expiry alone is not success; normal thresholds, cooldown and budgets still matter.
 
-For public stable installation use [the guide](INSTALL.en.md), pinned v0.9.0 tag and matching IPK/checksum/verification/install kit. Do not downgrade a newer installation. For a candidate use `releases/`, VERSION.json and checksum from the same exact branch commit; the stable kit is not the candidate kit. Verify model/firmware, private backup and readiness; do not bypass refusals or flash firmware to install this app.
+[LAN helper](LAN-HELPER.en.md): SelfTest offline, CheckOnly prerequisites, ProbeOnly actual bound data, full mode a separately authorized router-changing trial. The control path is checked before credentials/RPC; no host network settings are automatically repaired. [Full built-in Help](BUILTIN-HELP.en.md), [codes](ERROR_CODES.md) and [AI installation prompt](AI-INSTALL.en.md) are synchronized with runtime sources.
 
-[Alpha10 VM audit](handoff/VM-AUDIT-2026-10-24.md): two in-OpenWrt builds matched the package; install/update/rollback/restart/reboot passed;86files/modes matched.76prompts were inventoried with explicit command-recipe coverage. This is not named external-model execution or exhaustive fault combinations. Real GL/LAN, native browser visual acceptance and several fault scenarios remain untested. [Matrix](../qa/OWNER-PROMPT-VM-ALPHA10-2026-10-24.json).
-
-Dated reports and old release notes retain their historical evidence. The [index](DOCUMENTATION-INDEX.md) distinguishes current instructions from history. Never publish keys, passwords, VPN files or unredacted backups in chat/Git.
-
-## Route diagram
-
-```mermaid
-flowchart LR
-  C["Client"] --> R["Router"]
-  R --> P["Primary VPN"]
-  R -.-> B["Reserve VPN"]
-  P --> I["Internet"]
-  B -.-> I
-```
-
-Dashed links represent standby in this example. Actual selection requires router evidence, not the illustration.
-
-Historical alpha11 acceptance: Auto on, reserve selected, both VPNs passed DNS/HTTPS. The first Start safely refused on vendor-worker quiet; a normal retry after busy0 passed. Native visual and external-LAN acceptance remain separate limitations.
-
-[MT3000 alpha11 evidence](../qa/MT3000-ALPHA11-2026-10-24.json).
-
-
-## Alpha13 transition test and symbols
-
-Events identify the event-time primary/reserve role before server/protocol/code. M means main and R reserve. An arrow shows direction; yellow is unconfirmed, confirmed green is selected and red not selected. A single failure marks only its channel without inventing a transition.
-
-Simulate traffic failure automatically targets the current working channel. Prepared continuous-pair mode uses its own private pair evidence without the legacy LAN certificate. It temporarily blocks that tunnel, waits for fresh alternate-route confirmation and removes the fault; early stop is available while active. Timeout without confirmation is not success. Independent client-LAN acceptance remains separate.
-
-[MT3000 alpha13 receipt](../qa/MT3000-ALPHA13-2026-10-24.json) · [History retention](HISTORY-RETENTION.md) · [Channel attribution](CHANNEL-ATTRIBUTION.md).
+[Install one chosen release](INSTALL.en.md) using matching immutable package/SHA256/evidence/kit; do not downgrade newer code. Preserve a verified private encrypted backup. Publication, unit/DOM/model tests, actual VM, actual device, native browser, client traffic and external AI-model execution are distinct evidence. [Tested environment](TESTED-ENVIRONMENT.en.md) · [verification meanings](VERIFICATION.md).

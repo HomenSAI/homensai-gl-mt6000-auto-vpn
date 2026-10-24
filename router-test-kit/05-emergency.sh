@@ -2,10 +2,10 @@
 # HomenSAI Auto VPN test kit: emergency helper. Use ONLY if LAN clients lost internet after a native
 # transaction (owned nft guard left closed) or the monitor misbehaves. Needs SSH/console to the router.
 #   sh 05-emergency.sh show            read-only: guard, journal, current policy order
-#   sh 05-emergency.sh stop-auto       stop own services, native_enabled=0 (no network changes)
+#   sh 05-emergency.sh stop-auto       stop own services, disable own Auto flag; managed rollback may restore policies/interfaces
 #   sh 05-emergency.sh remove-guard    delete ONLY the owned nft table, after printing state
 #   sh 05-emergency.sh start           start the own monitor and controller again
-# It never reorders VPN rules by itself. See EMERGENCY.md for restoring the original order.
+# Stop delegates managed restoration to the native controller. See EMERGENCY.md; verify the resulting route.
 TABLE=homensai_vpn_guard
 case "$1" in
 show)
@@ -17,11 +17,11 @@ show)
   uci show route_policy 2>/dev/null | grep -E "^route_policy\.[^.=]+=|\.via=|\.enabled=" | head -60
   ;;
 start)
-  /etc/init.d/homensai-vpn start && echo "own services started (monitor and controller)"
+  /etc/init.d/homensai-vpn start && echo "own services started; Auto and connectivity still require separate confirmation"
   ;;
 stop-auto)
-  /etc/init.d/homensai-vpn stop
-  if [ -n "$(uci -q changes homensai_vpn)" ]; then echo "WARN pending uci changes exist for homensai_vpn; not committing them"; fi
+  if ! /etc/init.d/homensai-vpn stop; then echo "STOP: service stop failed; saved Auto flag was not changed. Inspect managed recovery before retrying."; exit 1; fi
+  if [ -n "$(uci -q changes homensai_vpn)" ]; then echo "STOP: own services stopped; pending homensai_vpn changes remain uncommitted. Resolve them before changing the saved Auto flag."; exit 1; fi
   uci set homensai_vpn.main.native_enabled=0 && uci commit homensai_vpn && echo "native_enabled=0 committed"
   ;;
 close-journal)

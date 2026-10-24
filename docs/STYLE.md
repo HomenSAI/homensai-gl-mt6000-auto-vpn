@@ -1,14 +1,10 @@
-<!-- current-release-context:0.9.0 -->
-> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
-
+<!-- doc-role: current -->
 # HomenS.AI Style integration
 
-Pinned source: HomenSAI/homensai-style tag **v1.14.3**. The owner explicitly requested reuse of his logo, original TV robot and style core in this public router project. Only the selected CSS, brand renderer, robot and local fonts are embedded, not the private repository/history.
+Pinned upstream style source: HomenSAI Style v1.14.3. This is a LuCI application adapter with selected local CSS, brand renderer, original robot and IBM Plex fonts; not a new standalone website and not an imported private repository history. No runtime CDN is needed for these assets.
 
-This is a **LuCI application adapter**, not a new standalone website. LuCI retains its own navigation/authentication/settings form. The adapter uses the existing Nordic tokens, IBM Plex, original robot and brand-generated footer without changing the private style core. Assets are local and versioned; no runtime CDN requests. Animation honours the original reduced-motion behaviour.
+The current generator is `python router/build_sidebar_ui.py`, normally called during the reviewed version-bump flow. Older localize/integrate scripts are predecessor build stages, not a replacement for the final current generator. Preserve pinned vendor bytes; package text outside the pinned style directory is normalized to LF. The actual selected module/CSS is in VERSION.json.
 
-Regenerate application resources with `python3 router/localize_ui.py` then `python3 router/integrate_style.py`. The style files remain byte-identical to the pinned source. Font bytes are preserved by the ipk builder; text files are normalised to LF.
+The project-specific permission in [LICENSING.md](../LICENSING.md) grants MIT use of the HomenS.AI-owned style/logo/robot files included in this project. The preserved upstream `style/LICENSE` does not by itself describe that supplementary project grant and does not relicense other upstream versions/repositories. IBM Plex retains SIL OFL1.1 and NOTICE. Keep all required notices. This paragraph summarizes the existing grant; it does not change legal texts.
 
-Embedded HomenS.AI Style material remains copyright Serhii Khomenko, all rights reserved; see the included `style/LICENSE`. The owner's instruction to embed his resources does not give third parties an open licence. Unmodified IBM Plex fonts retain SIL OFL 1.1, `OFL.txt` and `NOTICE.txt`. Public visibility is not an MIT/GPL grant.
-
-Canonical repository naming: `homensai-<name>`. This project's exact name is **homensai-gl-mt6000-auto-vpn** in local Gitea and public GitHub. Develop/commit/tag locally before publishing the matching public snapshot.
+Animations use reduced-motion support. Main/reserve route badges distinguish selection from connection failure; chart series have separate color semantics. [Display contract](OVERVIEW-PATH-COLOURS.md).

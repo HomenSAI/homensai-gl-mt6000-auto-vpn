@@ -1,3 +1,5 @@
+68. [ ] Кандидат alpha14:46UI+SelfTest+2nativePS+3Linux PASS; полная CI/VM/доставка ещё предстоит. Полный аудит всей документации, встроенной помощи, промптов, мастеров и помощников. Сверить с текущим поведением alpha13, исправить RU/EN, проверить ссылки/команды/покрытие и сохранить пофайловый реестр.
+
 # COMPLETE — owner67 and reboot recovery delivered
 
 GitHub/Gitea alpha13 prereleases are published and four assets each independently downloaded/hash-verified. MT3000 AutoON/reserve and bothVPN health rechecked after publication;190-entry encrypted before/after backups verified. No pending delivery or active VM/browser/SSH job. Read NEXT-AI-2026-10-24.md first. Old batch-only instructions below are historical.

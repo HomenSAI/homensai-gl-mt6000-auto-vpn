@@ -1,6 +1,4 @@
-<!-- current-release-context:0.9.0 -->
-> Technical reference. Current release: **0.9.0**; [scope and status](CURRENT-STATUS.md). Dated examples and observations below retain their original scope.
-
+<!-- doc-role: current-technical -->
 # Primary-Gitea CI preparation
 
 `scripts/offline-ci.ps1` tests a **clean committed SHA**, never a changing checkout.
@@ -37,3 +35,5 @@ manual approval for untrusted/forked code; exact-SHA artefact validation. Config
 commit/PR triggers only after demonstrating a failing job blocks acceptance and a
 passing job returns the same receipts as the local launcher. A matching SDK job
 remains separately conditional on NEXT-10 provenance.
+
+Canonical release builds use these pinned Linux runtimes. Python3.15/zlib-ng host compression is not interchangeable with the recorded artifact hash. A docs-only closure can name the prior tested product source only after proving no product/code changes.

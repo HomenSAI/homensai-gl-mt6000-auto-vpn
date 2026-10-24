@@ -2,9 +2,7 @@
 
 [Русский](README.ru.md) · [English](README.md)
 
-Current version: **0.9.1-alpha13**, branch `feature/owner-ui-20261023`. Alpha13 is installed on the dedicated MT3000/4.11.0: Auto on, reserve confirmed, both VPNs passed DNS/HTTPS. Verified87application files, HTTP/HTTPS and encrypted pre/post backups. Stable **0.9.0** is unchanged. Alpha12 previously remained off after guarded startup failures; alpha11/alpha9 are earlier physical baselines and alpha10 a separate historical VM audit. [Alpha13 matrix](qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
-
-
+Current version **0.9.1-alpha14** is installed on dedicatedMT3000/4.11.0 with AutoON/reserve and bothVPN DNS+HTTPS verified. Full documentation/help/setup/helper audit, exact-source CI and new isolated VM acceptance are recorded in [verification](docs/VERIFICATION-ALPHA14-2026-10-24.md). Stable0.9.0 is unchanged. [Delivered state](docs/CURRENT-STATUS.md).
 
 Monitor an existing OpenVPN/WireGuard pair and switch a verified route. Eight lessons include interactive diagrams with playback, pause and step controls.
 

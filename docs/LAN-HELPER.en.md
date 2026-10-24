@@ -1,9 +1,27 @@
-> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+<!-- doc-role: current -->
+# Windows LAN helper
 
-# LAN helper and proof scopes
+[Mode contract](CLIENT-TRIAL.md) · [Actual qualification](CURRENT-STATUS.md)
 
-Current continuous Auto on the prepared MT3000 uses router-originated IPv4 DNS/HTTPS and does not create or require an external-LAN certificate. The separate bounded LAN-confirmed trial path uses an independent Windows witness. These are different modes; a successful router probe must never be called client proof.
+Use the helper from the **same selected release**. Download `client-test.ps1` and `start-lan-helper.ps1` to one folder. Optional `start-lan-helper.cmd` requires both files. PowerShell7 is separate from Windows PowerShell5.1; use `pwsh`.
 
-The shipped Windows helper is route-free: it observes explicitly selected client traffic and does not change the PC adapter, gateway, routes, DNS or firewall. Download the helper/launcher from the router's trial controls and read its arguments before use. SelfTest checks local behavior; a real trial needs an explicitly authorized window, the correct client/interface, router reachability and fresh transaction correlation. Monitor-only/default installation does not authorize a trial.
+| Mode | Operation | Does not prove |
+|---|---|---|
+| `-SelfTest` | Offline parser/provenance/control-route rejection tests | Real network or router traffic |
+| `-CheckOnly` | Client interface/route prerequisites, no login or router writes | Internet DNS/HTTPS or a passed switch |
+| `-ProbeOnly` | Actual interface-bound router DNS and two HTTPS/exit checks | Switching, every app or IPv6 |
+| Full trial | Private login, own trial settings, TEST confirmation, bounded switching and correlated witness | Unattended/day-long/all-device acceptance |
 
-Verify actual helper completion, correlated confirmation, route restoration or explicitly retained reserve. An ACK or partial output is not PASS. Keep private configurations/tokens/transaction data out of public reports. The current release has no independent LAN-client acceptance for its continuous mode. [Current status](CURRENT-STATUS.md) · [installation](INSTALL.en.md).
+```powershell
+pwsh -NoProfile -File .\start-lan-helper.ps1
+pwsh -NoProfile -File .\client-test.ps1 -Router http://192.168.8.1:8080/ -CableInterface 3 -CheckOnly
+pwsh -NoProfile -File .\client-test.ps1 -Router http://192.168.8.1:8080/ -CableInterface 3 -ProbeOnly
+```
+
+Replace the example address/index with the verified real router/interface. The helper does not modify PC routing/NIC/DNS/firewall or disable another VPN. In cable mode data sockets bind to the selected interface/address; management uses the OS route, checked before login and each RPC. A detected mismatch is refused before transmission; this is not a claim that every possible route race is eliminated. A browser loopback gateway is not a valid LAN-witness target.
+
+CheckOnly/ProbeOnly need no password. Full mode asks privately, requires session-loss consent, a distinct eligible pair and a bounded deadline (default from saved trial minutes, maximum4hours). Finish continuous Auto/managed recovery before configuring a separate client trial. Stop requests are verified, not treated as success from ACK alone. Exit0 means the selected mode completed; exit2 is refused/unverified/failure; exit3 is verified retained reserve rather than original-path restoration.
+
+HTTP management is not encrypted: use the intended trusted LAN or HTTPS with a properly trusted certificate. Do not disable TLS validation. Session/token/configuration/exit data stay private. [Recovery](../router-test-kit/EMERGENCY.md).
+
+[Microsoft PowerShell installation](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows).

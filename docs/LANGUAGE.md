@@ -1,7 +1,10 @@
-> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+<!-- doc-role: current -->
+# Язык и оформление / Language and appearance
 
-# Language and appearance
+Fresh-install default is English. Russian is available in the terms gate and application. Existing router defaults are used when the browser has no override; browser language/theme/design controls can override them locally.
 
-English is the fresh-install default; Russian is available. The first agreement has a language link. The explanation and wizard follow the selected language. Changing the wizard's language rerenders the current first page immediately, preserving other draft fields without a settings RPC or reload. The final reviewed save persists router defaults; normal browser controls can override language/theme/design for that browser.
+В общем мастере язык предварительно меняется сразу, остальные поля черновика сохраняются. Итоговое Save сохраняет параметры роутера; предварительный просмотр не означает сохранение. Тема системы и B Calm — запасные варианты при отсутствии корректного выбора. Коды, имена RPC, схемы CSV и технические идентификаторы остаются английскими.
 
-Свежая установка открывается на английском; доступен русский. В мастере язык меняется сразу, остальные введённые значения сохраняются. Тема системы и B Calm используются при отсутствии корректного выбора; A/C остаются доступны. Коды диагностики, технические идентификаторы и поля экспортов могут оставаться английскими.
+Navigation labels in this branch are «Расширенные настройки» / Advanced settings and «Мониторинг и хранение истории» / Monitoring and history retention. Do not infer behavior from an old screenshot or a cached module. [Setup](FIRST-RUN-SETUP.md) · [Current state](CURRENT-STATUS.md).
+
+Application language does not translate the stock LuCI login, firmware administration or command-line tools. / Язык приложения не переводит штатную страницу входа LuCI, панель прошивки или консольные команды.

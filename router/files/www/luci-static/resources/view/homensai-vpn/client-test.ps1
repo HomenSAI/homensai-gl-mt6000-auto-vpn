@@ -53,6 +53,18 @@ function Get-ClientBinding {
 function Assert-ClientBinding($Expected,$Observed) {
     if($Expected.Index -le 0 -or $Observed.Index -ne $Expected.Index -or $Observed.Address -ne $Expected.Address){throw 'CLIENT-BOUND-INTERFACE-CHANGED'}
 }
+function Assert-ControlRoute([object[]]$Routes,[int]$ExpectedIndex) {
+    if($ExpectedIndex -le 0 -or $Routes.Count -ne 1 -or [int]$Routes[0].InterfaceIndex -ne $ExpectedIndex){throw 'CLIENT-CONTROL-PATH-MISMATCH'}
+}
+function Assert-ControlPath {
+    # Data sockets are source-bound; Invoke-RestMethod uses the selected OS route.
+    # Refuse a conflicting management route before sending credentials/session.
+    $expected=$CableInterface
+    if($expected -le 0){$expected=(Get-ClientBinding).Index}
+    try {$routes=@(Find-NetRoute -RemoteIPAddress $Router.Host|Where-Object {$null -ne $_.PSObject.Properties['NextHop']})}
+    catch {throw 'CLIENT-CONTROL-PATH-MISMATCH'}
+    Assert-ControlRoute $routes $expected
+}
 function New-DnsQuery([int]$Id) {
     if($Id -lt 0 -or $Id -gt 65535){throw 'CLIENT-DNS-ID'}
     $bytes=[Collections.Generic.List[byte]]::new()
@@ -195,6 +207,7 @@ function Test-ClientInternet {
     return $exits[0]
 }
 function Invoke-Router([string]$Object,[string]$Method,[hashtable]$Arguments) {
+    Assert-ControlPath
     $body=@{jsonrpc='2.0';id=1;method='call';params=@($script:Session,$Object,$Method,$Arguments)}|ConvertTo-Json -Depth 10 -Compress
     $reply=Invoke-RestMethod $script:Api -Method Post -ContentType application/json -Body $body -NoProxy -MaximumRedirection 0 -TimeoutSec 15
     if($null -eq $reply.result -or $reply.result[0] -ne 0){throw 'ROUTER-RPC-FAILED'}
@@ -257,7 +270,12 @@ if($SelfTest) {
         $rejected=$false;try {$null=New-ClientConfirmation $native $now $stamp $binding $observed $exit $seen $dns $https}catch{$rejected=$true}
         if(-not $rejected){throw 'SELFTEST-PROOF-REJECT'}
     }
-    Write-Output 'PASS: input/DNS parsers, three sequential witnesses, replay/interface/exit/freshness/DNS/HTTPS refusals; no network calls or router changes.';exit 0
+    Assert-ControlRoute @([pscustomobject]@{InterfaceIndex=3;NextHop='0.0.0.0'}) 3
+    foreach($routes in @(@(),@([pscustomobject]@{InterfaceIndex=14;NextHop='0.0.0.0'}),@([pscustomobject]@{InterfaceIndex=3;NextHop='0.0.0.0'},[pscustomobject]@{InterfaceIndex=14;NextHop='0.0.0.0'}))){
+        $rejected=$false;try {Assert-ControlRoute $routes 3}catch{$rejected=$true}
+        if(-not $rejected){throw 'SELFTEST-CONTROL-ROUTE-REJECT'}
+    }
+    Write-Output 'PASS: input/DNS/control-route parsers, three sequential witnesses, replay/interface/exit/freshness/DNS/HTTPS refusals; no network calls or router changes.';exit 0
 }
 
 $script:Session=$null;$started=$false;$trialPassed=$false;$retainedReserve=$false;$stopRequested=$false
@@ -270,6 +288,7 @@ try {
         $script:CableAddress=$script:CableAddress[0].IPAddress
     }
     Assert-LanPath
+    if(-not $ProbeOnly -or $CheckOnly){Assert-ControlPath}
     if($CheckOnly){Write-Output 'Selected client path prerequisites verified; router unchanged. Cable mode preserves Wi-Fi default.';exit 0}
     if($ProbeOnly){$null=Test-ClientInternet;Write-Output 'PASS: physical LAN DNS and two bound HTTPS checks; no settings changed.';exit 0}
     if($Until -le [DateTimeOffset]::Now -or $Until -gt [DateTimeOffset]::Now.AddHours(4)){throw 'BOUNDED-DEADLINE-REQUIRED'}
@@ -281,6 +300,7 @@ try {
         $plain=[Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
         $body=@{jsonrpc='2.0';id=1;method='call';params=@('00000000000000000000000000000000','session','login',@{username='root';password=$plain;timeout=1200})}|ConvertTo-Json -Depth 8 -Compress
     } finally {[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer);Remove-Variable plain,secure -ErrorAction SilentlyContinue}
+    Assert-ControlPath
     $reply=Invoke-RestMethod $script:Api -Method Post -ContentType application/json -Body $body -NoProxy -MaximumRedirection 0 -TimeoutSec 15
     Remove-Variable body -ErrorAction SilentlyContinue
     if($null -eq $reply.result -or $reply.result[0] -ne 0){throw 'ROUTER-LOGIN-FAILED'}

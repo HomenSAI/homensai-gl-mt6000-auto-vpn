@@ -1,144 +1,740 @@
 /* Built-in help: what to do when something is wrong. Data are [English, Russian] pairs; commands are never translated. */
 var HELP_TOPICS=[
-  {id:'planner-wait',open:false,
-   title:['Why Auto waits before switching','Почему Auto ждёт перед переключением'],
-   when:['You want to understand why a single failed check does not immediately switch the channel.','Вы хотите понять, почему после одной неудачной проверки канал не переключается сразу.'],
-   steps:[
-    {t:['The planner compares consecutive failed checks of the channel in use with consecutive successful checks of the other channel. The configured thresholds help avoid switching because of a brief interruption.','Планировщик сравнивает последовательные неудачные проверки используемого канала и успешные проверки другого канала. Настроенные пороги помогают не переключать канал из-за краткого сбоя.']},
-    {t:['A green observation describes a successful check or an unmet failure threshold. It is not a separate confirmation that Auto is ready or that a route change is allowed.','Зелёный результат означает успешную проверку либо то, что порог сбоев ещё не достигнут. Это не отдельное подтверждение готовности Auto и не разрешение менять маршрут.']},
-    {t:['Auto also considers fresh observations, the selected VPN pair, controller state and the configured return policy. A recommendation alone does not switch traffic.','Auto также учитывает свежесть наблюдений, выбранную пару VPN, состояние контроллера и настроенную политику возврата. Сама рекомендация трафик не переключает.']},
-    {t:['See Overview for the current Auto state and selected channel. Use Live log for the sequence of decisions and their reasons. If observations are stale, use Check VPN now; it refreshes checks without choosing a channel for you.','Текущее состояние Auto и выбранный канал смотрите на «Обзоре». Последовательность решений и их причины — в «Живом журнале». Если наблюдения устарели, нажмите «Проверить VPN сейчас»: это обновляет проверки без выбора канала за вас.']}
-   ]},
-  {id:'no-internet',open:true,
-   title:["I have no internet","У меня пропал интернет"],
-   when:["Devices on your network cannot open sites after Auto ran or after you changed VPN settings.","Устройства в сети не открывают сайты после работы Auto или после смены настроек VPN."],
-   steps:[
-    {t:["Use another connection to read this page (a phone with mobile data), or open this Help page on a device that still reaches the router address.","Откройте эту страницу через другое подключение (телефон с мобильным интернетом) или с устройства, которое ещё открывает адрес роутера."]},
-    {t:["Open the router in the browser, go to Services → HomenS.AI Auto VPN → Overview. If the card says the router is still on the reserve, press “Return to primary”. The router checks the primary first and shows the result there.","Откройте роутер в браузере: «Службы» → HomenS.AI Auto VPN → «Обзор». Если в карточке написано, что роутер всё ещё на резерве, нажмите «Вернуться на основной». Роутер сначала проверит основной и покажет результат там же."]},
-    {t:["If that does not help, connect to the router by SSH (see “How to connect by SSH”) and show its state. This only reads:","Если не помогло, подключитесь к роутеру по SSH (см. «Как подключиться по SSH») и посмотрите состояние. Эта команда только читает:"],c:"homensai-vpn-emergency show"},
-    {t:["Stop the program’s own services (this changes no network settings):","Остановите собственные службы программы (сетевые настройки не меняются):"],c:"homensai-vpn-emergency stop-auto"},
-    {t:["Remove only the program’s own traffic block. It prints what it removes. VPN rules and the GL.iNet Kill Switch stay:","Снимите только собственную блокировку трафика программы. Команда сообщает, что удалила. Правила VPN и Kill Switch GL.iNet остаются:"],c:"homensai-vpn-emergency remove-guard"},
-    {t:["Test the internet on a computer. Then open the GL.iNet panel → VPN → VPN Dashboard and check that your primary VPN rule is first and the tunnels are connected.","Проверьте интернет на компьютере. Затем откройте панель GL.iNet → VPN → VPN Dashboard и убедитесь, что основной VPN стоит первым и туннели подключены."]},
-    {t:["Still nothing? Reboot the router from the GL.iNet panel (System → Reboot). The program’s traffic block is not kept after a reboot.","Всё равно нет? Перезагрузите роутер из панели GL.iNet («Система» → «Перезагрузка»). Блокировка трафика программы после перезагрузки не сохраняется."]},
-    {t:["After the internet is back, start the monitor again:","Когда интернет вернулся, снова запустите мониторинг:"],c:"homensai-vpn-emergency start"}
-   ]},
-  {id:"ssh",
-   title:["How to connect by SSH","Как подключиться по SSH"],
-   when:["You need a command line on the router for the steps in this Help.","Командная строка на роутере нужна для шагов в этой справке."],
-   steps:[
-    {t:["Make sure SSH is on. In the GL.iNet admin panel (usually http://192.168.8.1) open System → Security and check that SSH access from the local network is enabled. In LuCI it is System → Administration → SSH Access, interface lan. Menu names can differ slightly between firmware versions.","Убедитесь, что SSH включён. В панели GL.iNet (обычно http://192.168.8.1) откройте «Система» → «Безопасность» и проверьте, что SSH из локальной сети включён. В LuCI это «System» → «Administration» → «SSH Access», интерфейс lan. Названия пунктов могут немного отличаться в разных версиях прошивки."]},
-    {t:["Windows: press the Windows key, type PowerShell and press Enter. Linux or macOS: open Terminal.","Windows: нажмите клавишу Windows, введите PowerShell и нажмите Enter. Linux или macOS: откройте «Терминал»."]},
-    {t:["Type the command and press Enter (192.168.8.1 is the default router address; if yours differs, use the “Default gateway” from ipconfig on Windows or ip route on Linux):","Введите команду и нажмите Enter (192.168.8.1 — адрес роутера по умолчанию; если у вас другой, возьмите «Основной шлюз» из ipconfig в Windows или ip route в Linux):"],c:"ssh root@192.168.8.1"},
-    {t:["Windows says ssh is not recognised? Install “OpenSSH Client” (Settings → Apps → Optional features → Add a feature), or, if Git is installed, run it by its full path:","Windows пишет, что ssh не распознан? Установите «Клиент OpenSSH» («Параметры» → «Приложения» → «Дополнительные компоненты» → «Добавить»), либо, если установлен Git, запустите по полному пути:"],c:"& \"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" root@192.168.8.1"},
-    {t:["First time only: the program shows the router key and asks “Are you sure you want to continue connecting?”. Type yes and press Enter.","Только в первый раз: программа покажет ключ роутера и спросит «Are you sure you want to continue connecting?». Введите yes и нажмите Enter."]},
-    {t:["Enter the router root password (the same as for the GL.iNet panel). The characters are not shown while you type; this is normal. When you see root@GL-MT6000:~# you are on the router.","Введите пароль root роутера (тот же, что в панели GL.iNet). Символы при вводе не отображаются, это нормально. Когда появится root@GL-MT6000:~#, вы на роутере."]},
-    {t:["To leave, type:","Чтобы выйти, введите:"],c:"exit"},
-    {t:["Prefer a window program? In PuTTY set Host Name 192.168.8.1, Port 22, Connection type SSH, then log in as root.","Удобнее программа с окном? В PuTTY укажите Host Name 192.168.8.1, Port 22, Connection type SSH и войдите как root."]}
-   ]},
-  {id:"reserve",
-   title:["The router stays on the reserve VPN","Роутер остаётся на резервном VPN"],
-   when:["The Overview says Auto is stopped but the router is still on the reserve, or the reserve is failing.","На «Обзоре» написано, что Auto остановлен, но роутер всё ещё на резерве, или что резерв не работает."],
-   steps:[
-    {t:["Check the primary VPN: GL.iNet panel → VPN → VPN Dashboard. It must be connected. If not, connect it.","Проверьте основной VPN: панель GL.iNet → VPN → VPN Dashboard. Он должен быть подключён. Если нет, подключите."]},
-    {t:["On the Overview press “Return to primary”. If the answer is “the primary does not pass its check”, wait a minute and press again. The router only returns to a primary that works.","На «Обзоре» нажмите «Вернуться на основной». Если ответ «основной не проходит проверку», подождите минуту и нажмите снова. Роутер возвращается только на основной, который работает."]},
-    {t:["Auto may also return by itself when the primary has been healthy for a while (return policy “Return to the primary once it has been healthy for a while”, Settings → Recovery rules).","Auto может вернуться и сам, когда основной некоторое время исправен (политика «Вернуться на основной, когда он некоторое время исправен», «Настройки» → «Правила восстановления»)."]},
-    {t:["If the button is missing or does nothing, use the steps of “I have no internet”.","Если кнопки нет или она ничего не делает, выполните шаги раздела «У меня пропал интернет»."]}
-   ]},
-  {id:"auto-refuses",
-   title:["The Auto button refuses to start","Кнопка Auto не запускается"],
-   when:["Pressing Start shows a message with a code.","После нажатия «Старт» появляется сообщение с кодом."],
-   steps:[
-    {t:["Open the Overview and read “Before you can start Auto”. The first step that is not green is what to do next; every router condition has a plain explanation.","Откройте «Обзор» и прочитайте «Что нужно перед запуском Auto». Первый не зелёный шаг и есть то, что делать дальше; у каждого условия роутера есть понятное объяснение."]},
-    {t:["Hardware acceleration must be off: GL.iNet panel → Network → Network Acceleration, switch it off. Flow offloading in the firewall must be off as well.","Аппаратное ускорение должно быть выключено: панель GL.iNet → «Сеть» → «Сетевое ускорение», выключите. Flow offloading в firewall тоже должен быть выключен."]},
-    {t:["IPv6 must be off: GL.iNet panel → Network → IPv6, switch it off.","IPv6 должен быть выключен: панель GL.iNet → «Сеть» → IPv6, выключите."]},
-    {t:["The primary and the reserve must be two general (all-traffic) VPN rules with Kill Switch on and the direct-internet fallback off: GL.iNet panel → VPN → VPN Dashboard.","Основной и резервный должны быть двумя общими VPN-правилами (для всего трафика) с включённым Kill Switch и выключенным прямым выходом в интернет: панель GL.iNet → VPN → VPN Dashboard."]},
-    {t:["For a separate client-confirmed trial, run the LAN helper. Prepared-MT3000 router-probed IPv4 Auto does not require this LAN trial.","Для отдельного теста с подтверждением клиента запустите LAN-помощник. Для router-probed IPv4 Auto подготовленного MT3000 этот LAN-тест не обязателен."]}
-   ]},
-  {id:"helper-what",
-   title:["What is the LAN helper and how do I start it","Что такое LAN-помощник и как его запустить"],
-   when:["Auto asks for a passed LAN trial and you do not know what that is.","Auto требует пройденный LAN-тест, а вы не знаете, что это."],
-   steps:[
-    {t:["The LAN helper is a small script for Windows, written in PowerShell 7 (a plain text file, client-test.ps1, about 325 lines; you can open it in Notepad and read it). It runs on your computer, not on the router, and checks from the computer’s side that the internet really works through the router before and after a switch. It does not install anything and changes no network settings of the computer.","LAN-помощник — небольшой скрипт для Windows на PowerShell 7 (обычный текстовый файл client-test.ps1, около 325 строк; его можно открыть в Блокноте и прочитать). Он запускается на вашем компьютере, а не на роутере, и со стороны компьютера проверяет, что интернет действительно работает через роутер до и после переключения. Он ничего не устанавливает и не меняет сетевых настроек компьютера."]},
-    {t:["Install PowerShell 7 once (Windows 10/11):","Один раз установите PowerShell 7 (Windows 10/11):"],c:"winget install Microsoft.PowerShell"},
-    {t:["On the Overview press “Download LAN helper” and “Download launcher”. Put both files in one folder. The launcher only asks questions (router address, cable adapter, mode) and starts the helper.","На «Обзоре» нажмите «Скачать LAN-помощник» и «Скачать запуск». Положите оба файла в одну папку. Запуск лишь задаёт вопросы (адрес роутера, кабельный адаптер, режим) и запускает помощник."]},
-    {t:["Open PowerShell 7 in that folder (in Explorer type pwsh in the address bar) and start the launcher:","Откройте PowerShell 7 в этой папке (в Проводнике введите pwsh в адресной строке) и запустите:"],c:"pwsh -NoProfile -File .\\start-lan-helper.ps1"},
-    {t:["Choose mode 1 (check only) first: it only reads and changes nothing. If it passes, run it again with mode 3 (full trial): it asks for the router password (typed privately, never saved) and the word TEST, switches to the reserve for a few minutes, checks the internet from your computer and then confirms the result to the router. Use a LAN cable if you can.","Сначала выберите режим 1 (только проверка): он только читает и ничего не меняет. Если прошёл, запустите снова в режиме 3 (полный тест): он спросит пароль роутера (вводится скрыто, нигде не сохраняется) и слово TEST, на несколько минут переключится на резерв, проверит интернет с вашего компьютера и подтвердит результат роутеру. По возможности используйте кабель LAN."]},
-    {t:["If it stops with a code in capital letters, open Help → “The LAN helper fails”.","Если он остановился с кодом заглавными буквами, откройте «Помощь» → «LAN-помощник не работает»."]}
-   ]},
-  {id:"helper",
-   title:["The LAN helper fails","LAN-помощник не работает"],
-   when:["client-test.ps1 stops with a code before or during the trial.","client-test.ps1 останавливается с кодом до теста или во время него."],
-   steps:[
-    {t:["POWERSHELL-7-REQUIRED: install PowerShell 7 and start it with pwsh:","POWERSHELL-7-REQUIRED: установите PowerShell 7 и запускайте через pwsh:"],c:"winget install Microsoft.PowerShell"},
-    {t:["Run a read-only check first (it changes nothing). Replace 3 by the number of your cable adapter (Get-NetAdapter shows it):","Сначала запустите проверку только для чтения (ничего не меняет). Замените 3 на номер вашего кабельного адаптера (его показывает Get-NetAdapter):"],c:"pwsh -NoProfile -File .\\client-test.ps1 -Router http://192.168.8.1:8080/ -CableInterface 3 -CheckOnly"},
-    {t:["CLIENT-CABLE-ADDRESS-AMBIGUOUS or the cable has no address: plug the cable into a LAN port of the router and wait until the adapter has one 192.168.8.x address.","CLIENT-CABLE-ADDRESS-AMBIGUOUS или у кабеля нет адреса: вставьте кабель в LAN-порт роутера и дождитесь, пока у адаптера появится один адрес 192.168.8.x."]},
-    {t:["CLIENT-CABLE-HTTPS-FAILED or Windows error 10051 on the cable: allow default routes on that adapter (use your adapter number):","CLIENT-CABLE-HTTPS-FAILED или ошибка Windows 10051 на кабеле: разрешите маршруты по умолчанию на этом адаптере (подставьте номер адаптера):"],c:"Set-NetIPInterface -InterfaceIndex 3 -AddressFamily IPv4 -IgnoreDefaultRoutes Disabled"},
-    {t:["DNS fails while a VPN program is running on the computer (for example NordVPN DNS protection): stop that program for the minutes of the test and start it again afterwards.","DNS не отвечает, пока на компьютере работает программа VPN (например, защита DNS в NordVPN): остановите её на время теста и потом запустите снова."]},
-    {t:["CLIENT-PROBE-ROUTE-CONFLICT: a previous run left temporary routes. List them and remove the ones for 1.1.1.1 and 1.0.0.1 on the cable adapter:","CLIENT-PROBE-ROUTE-CONFLICT: прошлый запуск оставил временные маршруты. Посмотрите их и удалите маршруты для 1.1.1.1 и 1.0.0.1 на кабельном адаптере:"],c:"Get-NetRoute -DestinationPrefix 1.1.1.1/32,1.0.0.1/32"},
-    {t:["The helper asks for the router password and for the word TEST. A short interruption of calls and downloads is possible during the switch.","Помощник спрашивает пароль роутера и слово TEST. Во время переключения возможен короткий разрыв звонков и загрузок."]}
-   ]},
-  {id:"stale",
-   title:["The page is old, empty or says the monitor is not running","Страница старая, пустая или пишет, что мониторинг не работает"],
-   when:["After an update, the Overview looks old, shows errors, or the status is stale.","После обновления «Обзор» выглядит по-старому, показывает ошибки или статус устарел."],
-   steps:[
-    {t:["Press Ctrl+F5 to reload without cache, then sign out of LuCI and sign in again (new permissions after an update).","Нажмите Ctrl+F5 (обновление без кэша), затем выйдите из LuCI и войдите снова (после обновления права обновляются)."]},
-    {t:["Overview → the Monitoring block → “Start monitoring” (shown only when monitoring is not running). Or from SSH:","«Обзор» → блок «Мониторинг» → «Запустить мониторинг» (показан только когда мониторинг не работает). Или через SSH:"],c:"homensai-vpn-emergency start"},
-    {t:["If the page still says the status is unavailable, reload the router’s RPC service and sign in again:","Если страница всё ещё пишет, что статус недоступен, перезапустите RPC-службу роутера и войдите снова:"],c:"/etc/init.d/rpcd reload"},
-    {t:["Check that exactly one monitor is running:","Проверьте, что запущен ровно один монитор:"],c:"ps w | grep homensai-vpn"}
-   ]},
-  {id:"outside-change",
-   title:["I changed VPN rules in the GL.iNet panel and Auto stopped","Я изменил правила VPN в панели GL.iNet, и Auto остановился"],
-   when:["The Overview says the VPN rules were changed by someone else.","На «Обзоре» написано, что правила VPN изменил кто-то другой."],
-   steps:[
-    {t:["This is intended: Auto never fights your changes. It stopped and removed its own traffic block; your internet is not held.","Так задумано: Auto не спорит с вашими изменениями. Он остановился и снял свою блокировку трафика; интернет не удерживается."]},
-    {t:["Check GL.iNet panel → VPN → VPN Dashboard: the primary should be first, the reserve second, all with Kill Switch.","Проверьте панель GL.iNet → VPN → VPN Dashboard: основной должен быть первым, резервный вторым, у всех включён Kill Switch."]},
-    {t:["To use Auto again, run a new LAN trial (the earlier test belongs to the old rules).","Чтобы снова использовать Auto, пройдите новый LAN-тест (прежний тест относится к старым правилам)."]}
-   ]},
-  {id:"telegram",
-   title:["Telegram reports do not arrive","Отчёты в Telegram не приходят"],
-   when:["The Overview shows a Telegram error, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.","На «Обзоре» ошибка Telegram, тестовое сообщение не приходит или вы настраиваете Telegram впервые. Нужны три вещи: бот, его токен и ID чата."],
-   steps:[
-    {t:["Create the bot. In Telegram open https://t.me/BotFather (or search for @BotFather; the real one has a blue check mark). Send: /newbot","Создайте бота. В Telegram откройте https://t.me/BotFather (или найдите @BotFather; у настоящего есть синяя галочка). Отправьте: /newbot"],c:"/newbot"},
-    {t:["BotFather asks for a name (shown in the chat, any text, e.g. “My Router VPN”) and then a username that must end in “bot” (e.g. my_router_vpn_bot).","BotFather спросит имя (показывается в чате, любой текст, например «Мой VPN роутер») и затем username, который должен заканчиваться на «bot» (например my_router_vpn_bot)."]},
-    {t:["BotFather answers with “Use this token to access the HTTP API:” and a line like 123456789:AAH-secret-part-of-the-token. This line is the bot token (digits, a colon, then 30–100 letters, digits, - or _). Copy it. It is a secret: do not post it anywhere.","BotFather ответит «Use this token to access the HTTP API:» и строкой вида 123456789:AAH-secret-part-of-the-token. Эта строка и есть токен бота: цифры, двоеточие, затем 30–100 букв, цифр, - или _. Скопируйте её. Это секрет: не публикуйте его."]},
-    {t:["Open your new bot (the link at the end of BotFather’s message, https://t.me/<your_bot_username>) and press Start or send /start. A bot cannot write to you first.","Откройте нового бота (ссылка в конце сообщения BotFather, https://t.me/<username_вашего_бота>) и нажмите Start или отправьте /start. Бот не может написать вам первым."]},
-    {t:["Find your Chat ID. For reports to yourself: open https://t.me/userinfobot (@userinfobot), press Start and copy the number after “Id:”, e.g. 123456789. For a group: add your bot to the group, add @userinfobot or @getidsbot as well, and take the number that starts with a minus, e.g. -1001234567890. For a public channel: add your bot as an administrator and use the channel name with @, e.g. @my_channel.","Узнайте ID чата. Для отчётов себе: откройте https://t.me/userinfobot (@userinfobot), нажмите Start и скопируйте число после «Id:», например 123456789. Для группы: добавьте бота в группу, добавьте также @userinfobot или @getidsbot и возьмите число с минусом, например -1001234567890. Для публичного канала: добавьте бота администратором и укажите имя канала с @, например @my_channel."]},
-    {t:["On the router page: Settings → Setup → 2 · Telegram. Paste the token into “Bot token” and the number or @name into “Chat ID”, choose how often to send, review and save. After saving the token is never shown again; to change it, enter it again; to remove it, use the delete button.","На странице роутера: «Настройки» → «Настройка» → 2 · Telegram. Вставьте токен в «Токен бота», число или @имя в «ID чата», выберите частоту отправки, проверьте обзор и сохраните. После сохранения токен больше не показывается; чтобы изменить — введите заново; чтобы убрать — кнопка удаления."]},
-    {t:["Press “Test Telegram delivery”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.","Нажмите «Проверить доставку Telegram». Сообщение должно прийти за несколько секунд. Если показан код TELEGRAM-…: «401» или «Unauthorized» — неверный токен; «400», «chat not found» или «Forbidden» — неверный ID чата или вы не нажали Start; тайм-аут — у роутера нет интернета или неверные часы."]},
-    {t:["Still nothing? Create the token again in BotFather (/token or /revoke) and enter the new one. Never send the token to anyone, including in a support chat.","Всё равно нет? Создайте токен заново в BotFather (/token или /revoke) и введите новый. Никому не отправляйте токен, в том числе в чат поддержки."]}
-   ]},
-  {id:"clock",
-   title:["Dates are wrong, history or statistics are blocked","Неверные даты, история или статистика заблокированы"],
-   when:["Codes like CLOCK-001 or HISTORY-001, or events with impossible dates.","Коды вроде CLOCK-001 или HISTORY-001, либо события с невозможными датами."],
-   steps:[
-    {t:["The router clock must be correct. GL.iNet panel → System → Time: enable time synchronisation (NTP) and pick your time zone.","Часы роутера должны быть верными. Панель GL.iNet → «Система» → «Время»: включите синхронизацию времени (NTP) и выберите часовой пояс."]},
-    {t:["Check the clock over SSH:","Проверьте часы по SSH:"],c:"date"},
-    {t:["After the clock is right, statistics continue by themselves. Gaps are shown as unobserved time and are never filled with invented numbers.","После исправления часов статистика продолжится сама. Пропуски показываются как ненаблюдаемое время и никогда не заполняются выдуманными числами."]}
-   ]},
-  {id:"backup",
-   title:["Make a backup before changes","Резервная копия перед изменениями"],
-   when:["Before an update, a LAN trial or any manual repair.","Перед обновлением, LAN-тестом или любым ручным исправлением."],
-   steps:[
-    {t:["On Windows run this in PowerShell (cmd /c keeps the file binary). The file contains secrets, so keep it private and never upload it:","В Windows выполните в PowerShell (cmd /c сохраняет файл без искажений). В файле есть секреты: храните его приватно и никуда не загружайте:"],c:"cmd /c \"ssh root@192.168.8.1 \"\"tar czf - /etc/config /etc/homensai-vpn\"\" > router-backup.tgz\""},
-    {t:["On Linux or macOS:","В Linux или macOS:"],c:"ssh root@192.168.8.1 'tar czf - /etc/config /etc/homensai-vpn' > router-backup.tgz"}
-   ]},
-  {id:"remove",
-   title:["Remove or roll back the program","Удалить программу или откатить версию"],
-   when:["You want the router without this program, or you need an older version.","Нужен роутер без этой программы или более старая версия."],
-   steps:[
-    {t:["Stop Auto first and make sure the router is back on the primary (Overview). Then, by SSH:","Сначала остановите Auto и убедитесь, что роутер вернулся на основной («Обзор»). Затем по SSH:"],c:"opkg remove homensai-auto-vpn"},
-    {t:["Your settings and history stay in `/etc/config/homensai_vpn` and `/etc/homensai-vpn`. Installing again keeps them.","Ваши настройки и история остаются в `/etc/config/homensai_vpn` и `/etc/homensai-vpn`. При повторной установке они сохраняются."]},
-    {t:["If the removal is refused, the program tells why (for example a transaction is active). Do not force it: first use “I have no internet”.","Если удаление отклонено, программа объяснит причину (например, активна транзакция). Не форсируйте: сначала выполните раздел «У меня пропал интернет»."]}
-   ]},
-  {id:"report",
-   title:["What to send when asking for help","Что отправить, когда просите о помощи"],
-   when:["You report a problem and want it solved quickly.","Вы сообщаете о проблеме и хотите решить её быстро."],
-   steps:[
-    {t:["These commands print no passwords or keys. Send their output and the time of the problem:","Эти команды не печатают паролей и ключей. Отправьте их вывод и время проблемы:"],c:"homensai-vpn-emergency show"},
-    {t:["Installed version:","Установленная версия:"],c:"opkg status homensai-auto-vpn | grep Version"},
-    {t:["Latest system log lines about the program:","Последние строки системного журнала о программе:"],c:"logread | grep -i homensai | tail -30"},
-    {t:["Never send the router password, the Telegram token, VPN files or backups.","Никогда не отправляйте пароль роутера, токен Telegram, файлы VPN и резервные копии."]}
-   ]}
+  {
+    "id": "planner-wait",
+    "open": false,
+    "title": [
+      "Why Auto waits before switching",
+      "Почему Auto ждёт перед переключением"
+    ],
+    "when": [
+      "You want to understand why a single failed check does not immediately switch the channel.",
+      "Вы хотите понять, почему после одной неудачной проверки канал не переключается сразу."
+    ],
+    "steps": [
+      {
+        "t": [
+          "The planner compares consecutive failed checks of the channel in use with consecutive successful checks of the other channel. The configured thresholds help avoid switching because of a brief interruption.",
+          "Планировщик сравнивает последовательные неудачные проверки используемого канала и успешные проверки другого канала. Настроенные пороги помогают не переключать канал из-за краткого сбоя."
+        ]
+      },
+      {
+        "t": [
+          "A green observation describes a successful check or an unmet failure threshold. It is not a separate confirmation that Auto is ready or that a route change is allowed.",
+          "Зелёный результат означает успешную проверку либо то, что порог сбоев ещё не достигнут. Это не отдельное подтверждение готовности Auto и не разрешение менять маршрут."
+        ]
+      },
+      {
+        "t": [
+          "Auto also considers fresh observations, the selected VPN pair, controller state and the configured return policy. A recommendation alone does not switch traffic.",
+          "Auto также учитывает свежесть наблюдений, выбранную пару VPN, состояние контроллера и настроенную политику возврата. Сама рекомендация трафик не переключает."
+        ]
+      },
+      {
+        "t": [
+          "See Overview for the current Auto state and selected channel. Use Live log for the sequence of decisions and their reasons. If observations are stale, use Check VPN now; it refreshes checks without choosing a channel for you.",
+          "Текущее состояние Auto и выбранный канал смотрите на «Обзоре». Последовательность решений и их причины — в «Живом журнале». Если наблюдения устарели, нажмите «Проверить VPN сейчас»: это обновляет проверки без выбора канала за вас."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "no-internet",
+    "open": true,
+    "title": [
+      "I have no internet",
+      "У меня пропал интернет"
+    ],
+    "when": [
+      "Devices on your network cannot open sites after Auto ran or after you changed VPN settings.",
+      "Устройства в сети не открывают сайты после работы Auto или после смены настроек VPN."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Keep a working way to reach the router, such as the LAN cable and a phone with mobile data. Confirm that the page belongs to the intended router.",
+          "Сохраните рабочий доступ к роутеру: например, кабель LAN и телефон с мобильным интернетом. Убедитесь, что открыта страница нужного роутера."
+        ]
+      },
+      {
+        "t": [
+          "On Overview check the selected channel and fresh DNS/HTTPS results. A working reserve is a normal state. Select another channel only when its readiness is confirmed; do not return to a failed primary just because it is called primary.",
+          "На «Обзоре» проверьте выбранный канал и свежие DNS/HTTPS-результаты. Исправный резерв — нормальное состояние. Выбирайте другой канал только при подтверждённой готовности; не возвращайтесь на неисправный основной лишь из-за его названия."
+        ]
+      },
+      {
+        "t": [
+          "Read the local emergency summary over SSH. Keep it private until you remove addresses, policy identifiers and private transaction data.",
+          "Прочитайте аварийную сводку локально по SSH. Перед передачей кому-либо удалите адреса, идентификаторы политик и приватные данные транзакций."
+        ],
+        "c": "homensai-vpn-emergency show"
+      },
+      {
+        "t": [
+          "If managed recovery is stuck, stop the application services. This can restore the managed policy/interface baseline and disable the saved Auto flag; it is not a read-only command. Pending application edits must be resolved separately.",
+          "Если управляемое восстановление зависло, остановите службы приложения. Это может восстановить управляемые политики/интерфейсы и выключить сохранённый флаг Auto; команда не является чтением. Ожидающие правки приложения нужно разрешить отдельно."
+        ],
+        "c": "homensai-vpn-emergency stop-auto"
+      },
+      {
+        "t": [
+          "After services have stopped, remove only a verified application-owned traffic guard if it remains. Never delete vendor firewall tables or disable Kill Switch. Verify the resulting route and client Internet.",
+          "После остановки служб удалите только оставшуюся подтверждённую блокировку приложения. Не удаляйте таблицы прошивки и не выключайте Kill Switch. Проверьте итоговый маршрут и Интернет клиента."
+        ],
+        "c": "homensai-vpn-emergency remove-guard"
+      },
+      {
+        "t": [
+          "If needed, inspect the stock VPN Dashboard. Choose a known working configuration deliberately; do not reorder unrelated rules or import new keys as an emergency shortcut.",
+          "При необходимости проверьте штатную VPN Dashboard. Осознанно выберите заведомо рабочую конфигурацию; не переставляйте посторонние правила и не импортируйте новые ключи как аварийный обход."
+        ]
+      },
+      {
+        "t": [
+          "A router reboot is a last recovery step when you still control the device. It interrupts connectivity and does not repair a bad VPN configuration. Auto needs an explicit Start afterwards.",
+          "Перезагрузка — последний шаг восстановления, если управление устройством сохранено. Она прерывает связь и не исправляет неверную VPN-конфигурацию. После неё Auto требует явного запуска."
+        ]
+      },
+      {
+        "t": [
+          "Once connectivity is restored, start the application services and confirm fresh monitoring. This command alone does not confirm Internet or start continuous Auto.",
+          "После восстановления связи запустите службы приложения и дождитесь свежего мониторинга. Сама команда не подтверждает Интернет и не включает непрерывный Auto."
+        ],
+        "c": "homensai-vpn-emergency start"
+      }
+    ]
+  },
+  {
+    "id": "ssh",
+    "title": [
+      "How to connect by SSH",
+      "Как подключиться по SSH"
+    ],
+    "when": [
+      "You need a command line on the router for the steps in this Help.",
+      "Командная строка на роутере нужна для шагов в этой справке."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Use the real LAN address of the intended router. The address in the examples is a factory default, not an instruction to change your computer or router addresses.",
+          "Используйте реальный LAN-адрес нужного роутера. Адрес в примерах — заводской, а не указание менять адреса компьютера или роутера."
+        ]
+      },
+      {
+        "t": [
+          "Open a terminal. Windows may provide OpenSSH Client; otherwise use your installed SSH client. Replace the example address with the verified router address.",
+          "Откройте терминал. В Windows может быть установлен «Клиент OpenSSH»; иначе используйте свой SSH-клиент. Замените адрес примера проверенным адресом роутера."
+        ],
+        "c": "ssh root@192.168.8.1"
+      },
+      {
+        "t": [
+          "If Git for Windows supplies your SSH client, its usual executable path is shown below. Use the actual path installed on your computer.",
+          "Если SSH поставляется с Git for Windows, ниже показан обычный путь. Используйте фактически установленный на компьютере путь."
+        ],
+        "c": "& \"C:\\Program Files\\Git\\usr\\bin\\ssh.exe\" root@192.168.8.1"
+      },
+      {
+        "t": [
+          "At the first connection compare the host-key fingerprint with trusted router information before accepting it. If a saved key changes, stop and establish the device identity; do not disable host-key verification.",
+          "При первом подключении сравните отпечаток ключа со сведениями из доверенного источника о роутере. Если сохранённый ключ изменился, сначала установите причину и идентичность устройства; не отключайте проверку ключа."
+        ]
+      },
+      {
+        "t": [
+          "Enter the router root password only in the local hidden prompt, or use the already authorized SSH key. Do not paste credentials into chat or command text. The shell prompt can contain your router hostname.",
+          "Введите пароль root только в локальном скрытом поле либо используйте уже разрешённый SSH-ключ. Не вставляйте пароль в чат или текст команды. В приглашении оболочки может быть имя вашего роутера."
+        ]
+      },
+      {
+        "t": [
+          "If two adapters lead to different devices with the same private address, resolve which path reaches the target before logging in. The address-conflict topic explains this case.",
+          "Если два адаптера ведут к разным устройствам с одинаковым частным адресом, сначала определите путь к нужному устройству. Этот случай описан в теме конфликта адресов."
+        ]
+      },
+      {
+        "t": [
+          "Leave the SSH shell when finished.",
+          "После работы выйдите из SSH-оболочки."
+        ],
+        "c": "exit"
+      }
+    ]
+  },
+  {
+    "id": "reserve",
+    "title": [
+      "The router stays on the reserve VPN",
+      "Роутер остаётся на резервном VPN"
+    ],
+    "when": [
+      "The selected reserve is working, a return is requested, or Stop retained the reserve.",
+      "Выбран исправный резерв, нужен возврат либо после остановки остался резерв."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Check both channel measurements and the selected route on Overview. Being on reserve does not by itself mean an error.",
+          "Проверьте измерения обоих каналов и выбранный маршрут на «Обзоре». Работа на резерве сама по себе не означает ошибку."
+        ]
+      },
+      {
+        "t": [
+          "For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. If Stop retained the reserve, use the offered Return to primary action and verify its actual result.",
+          "Для осознанного возврата используйте «Ручное переключение канала», когда основной готов и действие доступно. Если Stop сохранил резерв, используйте предлагаемое действие возврата и проверьте фактический итог."
+        ]
+      },
+      {
+        "t": [
+          "Automatic return depends on the saved return policy, fresh primary health and operator hold. Hold-reserve preference does not promise automatic return merely because primary probes succeed.",
+          "Автоматический возврат зависит от сохранённой политики, свежих проверок основного и ручного удержания. Предпочтение оставаться на резерве не обещает автоматического возврата лишь после успешной проверки основного."
+        ]
+      },
+      {
+        "t": [
+          "If neither channel works or a recovery command is refused, read its code and use No internet. Do not change stock VPN profiles while Auto owns a transition.",
+          "Если не работает ни один канал либо восстановление отклонено, прочитайте код и тему «У меня пропал интернет». Не меняйте штатные профили, пока Auto управляет переходом."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "auto-refuses",
+    "title": [
+      "The Auto button refuses to start",
+      "Кнопка Auto не запускается"
+    ],
+    "when": [
+      "Pressing Start shows a message with a code.",
+      "После нажатия «Старт» появляется сообщение с кодом."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Open System readiness and the current Auto explanation on Overview. Use the exact refused condition; a green dry-run forecast is not a separate permission to start.",
+          "Откройте «Готовность системы» и текущее объяснение Auto на «Обзоре». Разбирайте конкретное условие отказа; зелёный прогноз не является отдельным разрешением запуска."
+        ]
+      },
+      {
+        "t": [
+          "Verify the actual model, firmware and saved pair. Model selection does not enable unsupported firmware or turn two profiles of one tunnel into two channels.",
+          "Проверьте фактические модель, прошивку и сохранённую пару. Выбор модели не включает неподдерживаемую прошивку и не превращает два профиля одного туннеля в два канала."
+        ]
+      },
+      {
+        "t": [
+          "Use the persistent-preparation help for acceleration, IPv6, stock workers and routing policy. Inspect before changing anything; one checkbox alone is not evidence that preparation is complete.",
+          "Для ускорения, IPv6, штатных служб и политик используйте помощь постоянной подготовки. Сначала проверяйте состояние; одна галочка не доказывает завершение подготовки."
+        ]
+      },
+      {
+        "t": [
+          "Prepared MT3000 router-probed IPv4 Auto uses fresh router evidence without a LAN certificate. A separate client-confirmed trial requires its own LAN helper and certificate. Keep these modes distinct.",
+          "Router-probed IPv4 Auto подготовленного MT3000 использует свежие проверки роутера без LAN-сертификата. Отдельному тесту с подтверждением клиента нужны собственные LAN-помощник и сертификат. Не смешивайте эти режимы."
+        ]
+      },
+      {
+        "t": [
+          "Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. Emergency Stop remains available.",
+          "После смены профилей дождитесь текущих наблюдений. Повторные нажатия Start не исправляют несовпадение идентичности, служб или политики. Аварийный Stop остаётся доступным."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "helper-what",
+    "title": [
+      "What is the LAN helper and how do I start it",
+      "Что такое LAN-помощник и как его запустить"
+    ],
+    "when": [
+      "You want independent client evidence or a separate bounded LAN-confirmed trial.",
+      "Нужны независимые проверки клиента либо отдельный ограниченный LAN-тест."
+    ],
+    "steps": [
+      {
+        "t": [
+          "The Windows PowerShell helper runs on a separate computer. SelfTest is offline; CheckOnly checks path prerequisites; ProbeOnly sends real bound DNS/HTTPS probes without starting Auto. The full trial changes application trial settings and may switch router traffic.",
+          "PowerShell-помощник работает на отдельном Windows-компьютере. SelfTest автономный; CheckOnly проверяет предпосылки пути; ProbeOnly выполняет реальные привязанные DNS/HTTPS-проверки без включения Auto. Полный тест меняет настройки тестового режима приложения и может переключать трафик роутера."
+        ]
+      },
+      {
+        "t": [
+          "PowerShell 7 is required. Install the stable Microsoft package if it is missing; this is a computer software installation, not a router command.",
+          "Нужен PowerShell 7. Если его нет, установите стабильный пакет Microsoft; это установка программы на компьютер, а не команда роутера."
+        ],
+        "c": "winget install --id Microsoft.PowerShell --exact"
+      },
+      {
+        "t": [
+          "In Settings, open the separate LAN-trial panel and download client-test.ps1 plus start-lan-helper.ps1 into one folder. The optional start-lan-helper.cmd shortcut needs both of those files.",
+          "В «Настройках» откройте отдельный LAN-тест и скачайте client-test.ps1 и start-lan-helper.ps1 в одну папку. Необязательный ярлык start-lan-helper.cmd требует наличия обоих файлов."
+        ]
+      },
+      {
+        "t": [
+          "Run the launcher from that folder and enter the real private router address and the verified cable adapter number. A loopback browser gateway is not a LAN-witness target.",
+          "Запустите помощник из этой папки и укажите реальный частный адрес роутера и проверенный номер кабельного адаптера. Локальный loopback-переход браузера не является целью LAN-проверки."
+        ],
+        "c": "pwsh -NoProfile -File .\\start-lan-helper.ps1"
+      },
+      {
+        "t": [
+          "Start with mode 1. It does not authenticate or change router/network settings and does not prove Internet health. For real DNS/HTTPS without a switching trial use ProbeOnly explicitly.",
+          "Начните с режима 1. Он не выполняет вход и не меняет настройки роутера/сети, но ещё не доказывает работоспособность Интернета. Для реальных DNS/HTTPS без теста переключения отдельно используйте ProbeOnly."
+        ]
+      },
+      {
+        "t": [
+          "Choose mode 3 only for an authorized bounded client-confirmed trial. Enter credentials privately and type TEST yourself. Read the final restoration result; queued Stop is not proof that the original client path returned. Finish any continuous Auto session and verify its normal Stop/recovery before starting this separate trial.",
+          "Режим 3 выбирайте только для разрешённого ограниченного теста с подтверждением клиента. Введите пароль приватно и сами напечатайте TEST. Прочитайте итог восстановления; Stop в очереди не доказывает возврат исходного пути клиента. Перед отдельным тестом завершите непрерывный Auto и проверьте штатный Stop/восстановление."
+        ]
+      },
+      {
+        "t": [
+          "The helper does not add/remove routes, change DNS/NIC settings or disable another VPN. A conflicting control route is refused before credentials or a session are sent.",
+          "Помощник не добавляет и не удаляет маршруты, не меняет DNS/адаптеры и не отключает другой VPN. Обнаруженное несовпадение пути управления отклоняется до отправки пароля или сессии."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "helper",
+    "title": [
+      "The LAN helper fails",
+      "LAN-помощник не работает"
+    ],
+    "when": [
+      "client-test.ps1 stops with a code before or during the trial.",
+      "client-test.ps1 останавливается с кодом до теста или во время него."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Use the real router address and your cable adapter number in this prerequisite check; the example values are not universal.",
+          "Подставьте реальный адрес роутера и номер своего кабельного адаптера; значения примера не универсальны."
+        ],
+        "c": "pwsh -NoProfile -File .\\client-test.ps1 -Router http://192.168.8.1:8080/ -CableInterface 3 -CheckOnly"
+      },
+      {
+        "t": [
+          "Inspect adapter names and addresses without changing them. The cable must reach the intended router rather than another device using the same private subnet.",
+          "Посмотрите имена и адреса адаптеров без изменений. Кабель должен вести к нужному роутеру, а не другому устройству с той же частной подсетью."
+        ],
+        "c": "Get-NetAdapter | Select-Object InterfaceIndex,Name,Status"
+      },
+      {
+        "t": [
+          "CLIENT-CONTROL-PATH-MISMATCH means the normal management route differs from the selected witness interface. Stop before logging in; establish an unambiguous management path. Do not change computer routing automatically.",
+          "CLIENT-CONTROL-PATH-MISMATCH означает, что обычный путь управления отличается от выбранного интерфейса проверки. Не выполняйте вход до выяснения; обеспечьте однозначный путь управления. Не меняйте маршруты компьютера автоматически."
+        ]
+      },
+      {
+        "t": [
+          "CLIENT-CABLE-HTTPS-FAILED or error 10051 can indicate a missing usable route on the selected cable. Inspect IPv4 interface properties; this read-only command does not repair them.",
+          "CLIENT-CABLE-HTTPS-FAILED или ошибка 10051 могут означать отсутствие подходящего маршрута выбранного кабеля. Изучите свойства IPv4-интерфейсов; команда чтения не исправляет их."
+        ],
+        "c": "Get-NetIPInterface -AddressFamily IPv4 | Select-Object InterfaceIndex,InterfaceAlias,ConnectionState,IgnoreDefaultRoutes"
+      },
+      {
+        "t": [
+          "The current helper never creates temporary probe routes. If an old version left routes, identify their owner and a specific approved cleanup; do not delete unrelated routes.",
+          "Текущий помощник не создаёт временных маршрутов проверки. Если они остались от старой версии, определите владельца и отдельный разрешённый способ очистки; не удаляйте посторонние маршруты."
+        ],
+        "c": "Get-NetRoute -DestinationPrefix 1.1.1.1/32,1.0.0.1/32"
+      },
+      {
+        "t": [
+          "A computer VPN or DNS protection can conflict with the selected client path. Diagnose ownership first; the helper does not stop those programs. CheckOnly, ProbeOnly and a full trial have different scopes.",
+          "VPN или защита DNS компьютера могут конфликтовать с выбранным путём клиента. Сначала установите владельца; помощник сам не останавливает эти программы. CheckOnly, ProbeOnly и полный тест имеют разный объём действий."
+        ]
+      },
+      {
+        "t": [
+          "Exit 0 is successful completion for the selected mode, not proof of all networks. Exit 2 is refusal/unverified/failure; exit 3 means a verified retained reserve rather than successful original-path restoration.",
+          "Код 0 означает успешное завершение выбранного режима, а не проверку всех сетей. Код 2 — отказ/нет подтверждения/ошибка; код 3 — подтверждённое сохранение резерва вместо успешного восстановления исходного пути."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "stale",
+    "title": [
+      "The page is old, empty or says the monitor is not running",
+      "Страница старая, пустая или пишет, что мониторинг не работает"
+    ],
+    "when": [
+      "After an update, the Overview looks old, shows errors, or the status is stale.",
+      "После обновления «Обзор» выглядит по-старому, показывает ошибки или статус устарел."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Press Ctrl+F5 to reload without cache, then sign out of LuCI and sign in again (new permissions after an update).",
+          "Нажмите Ctrl+F5 (обновление без кэша), затем выйдите из LuCI и войдите снова (после обновления права обновляются)."
+        ]
+      },
+      {
+        "t": [
+          "Check the Monitoring indicator on Overview. If the monitor services are stopped, start those services over SSH and wait for a fresh timestamp; this is separate from Auto Start.",
+          "Проверьте индикатор мониторинга на «Обзоре». Если службы остановлены, запустите их по SSH и дождитесь свежей даты; это отдельно от запуска Auto."
+        ],
+        "c": "homensai-vpn-emergency start"
+      },
+      {
+        "t": [
+          "If an update left RPC registration stale, reload rpcd deliberately and sign in again. This restarts the router RPC service and may interrupt management sessions; it is not a read-only inspection.",
+          "Если после обновления устарела регистрация RPC, осознанно перезагрузите rpcd и войдите снова. Это перезапуск RPC-службы роутера с возможным разрывом сеансов управления, а не команда чтения."
+        ],
+        "c": "/etc/init.d/rpcd reload"
+      },
+      {
+        "t": [
+          "Check that exactly one monitor is running:",
+          "Проверьте, что запущен ровно один монитор:"
+        ],
+        "c": "ps w | grep homensai-vpn"
+      }
+    ]
+  },
+  {
+    "id": "outside-change",
+    "title": [
+      "I changed VPN rules in the GL.iNet panel and Auto stopped",
+      "Я изменил правила VPN в панели GL.iNet, и Auto остановился"
+    ],
+    "when": [
+      "The Overview says the VPN rules were changed by someone else.",
+      "На «Обзоре» написано, что правила VPN изменил кто-то другой."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Auto refuses to compete with an external policy/profile edit. Read the actual controller phase and cleanup result; do not assume that every refused operation already restored Internet.",
+          "Auto не должен конкурировать с внешней правкой политики/профиля. Прочитайте фактический этап контроллера и результат очистки; не считайте любой отказ уже восстановленным Интернетом."
+        ]
+      },
+      {
+        "t": [
+          "Check the current selected pair and the stock VPN configuration. If you intend to edit stock profiles, finish managed Stop/recovery first.",
+          "Проверьте текущую пару и штатную VPN-конфигурацию. Если намерены менять штатные профили, сначала завершите управляемый Stop/восстановление."
+        ]
+      },
+      {
+        "t": [
+          "Wait for fresh consistent identities and readiness. Prepared continuous-pair mode can then be started explicitly; a legacy client-confirmed mode needs a new matching trial/certificate after a relevant edit.",
+          "Дождитесь свежих согласованных идентичностей и готовности. Подготовленный непрерывный режим затем запускается явно; прежнему клиентскому режиму после существенной правки нужен новый соответствующий тест/сертификат."
+        ]
+      },
+      {
+        "t": [
+          "Keep failed attempts and unrelated edits. Do not forge a confirmation, erase the journal or remove a foreign firewall table to make a status green.",
+          "Сохраните неудачные попытки и посторонние правки. Не подделывайте подтверждения, не стирайте журнал и не удаляйте чужую таблицу firewall ради зелёного статуса."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "telegram",
+    "title": [
+      "Telegram reports do not arrive",
+      "Отчёты в Telegram не приходят"
+    ],
+    "when": [
+      "The Overview shows a Telegram error, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.",
+      "На «Обзоре» ошибка Telegram, тестовое сообщение не приходит или вы настраиваете Telegram впервые. Нужны три вещи: бот, его токен и ID чата."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Open the official https://t.me/BotFather in Telegram and send /newbot there, not in a terminal. Follow its current instructions.",
+          "Откройте официальный https://t.me/BotFather в Telegram и отправьте /newbot именно в его чат, а не в терминал. Следуйте его текущим указаниям."
+        ],
+        "c": "/newbot"
+      },
+      {
+        "t": [
+          "BotFather asks for a name (shown in the chat, any text, e.g. “My Router VPN”) and then a username that must end in “bot” (e.g. my_router_vpn_bot).",
+          "BotFather спросит имя (показывается в чате, любой текст, например «Мой VPN роутер») и затем username, который должен заканчиваться на «bot» (например my_router_vpn_bot)."
+        ]
+      },
+      {
+        "t": [
+          "BotFather provides the bot token. Treat it as a password and paste it only into the dedicated private token field. Do not put it into a browser URL, chat, Git or diagnostic output.",
+          "BotFather выдаёт токен бота. Храните его как пароль и вставляйте только в специальное приватное поле токена. Не помещайте его в адрес браузера, чат, Git или диагностический вывод."
+        ]
+      },
+      {
+        "t": [
+          "Open your new bot (the link at the end of BotFather’s message, https://t.me/<your_bot_username>) and press Start or send /start. A bot cannot write to you first.",
+          "Откройте нового бота (ссылка в конце сообщения BotFather, https://t.me/<username_вашего_бота>) и нажмите Start или отправьте /start. Бот не может написать вам первым."
+        ]
+      },
+      {
+        "t": [
+          "To read chat.id without adding a third-party bot, send /start or a message to your own bot, then use this PowerShell recipe locally. It asks for the token privately and prints only IDs. Do not record a transcript or share raw updates. If another bot program consumes updates, stop and inspect that configuration rather than invent an ID.",
+          "Чтобы узнать chat.id без стороннего бота, отправьте /start или сообщение своему боту и выполните этот PowerShell-пример локально. Токен вводится скрыто, выводятся только ID. Не ведите transcript и не передавайте полный ответ. Если обновления забирает другая программа бота, сначала разберитесь с её настройкой, не придумывайте ID."
+        ],
+        "c": "$privateKey = Read-Host 'Bot token' -AsSecureString\n$botKey = [Net.NetworkCredential]::new('', $privateKey).Password\ntry {\n    $updates = Invoke-RestMethod -Uri ('https://api.telegram.org/bot' + $botKey + '/getUpdates') -TimeoutSec 15 -ErrorAction Stop\n    $ids = foreach ($item in $updates.result) {\n        foreach ($kind in @('message','channel_post','edited_message','my_chat_member')) {\n            if ($null -ne $item.$kind.chat.id) { [string]$item.$kind.chat.id }\n        }\n    }\n    $ids | Sort-Object -Unique\n} catch { Write-Output 'CHAT-ID-NOT-READ: check the bot token, a fresh /start and other update consumers.' }\nfinally { Remove-Variable privateKey,botKey,updates,ids -ErrorAction SilentlyContinue }"
+      },
+      {
+        "t": [
+          "On the router open Settings → All application settings → step 7 · Telegram, or the Telegram setup shortcut. Enter the token privately and the verified chat ID or channel username, review and save. Configure off preserves the existing Telegram settings.",
+          "На роутере откройте «Настройки» → «Все настройки приложения» → шаг 7 · Telegram либо отдельную настройку Telegram. Введите токен приватно и проверенный ID чата/имя канала, проверьте и сохраните. Выключенный Configure сохраняет прежние настройки Telegram."
+        ]
+      },
+      {
+        "t": [
+          "Press “Test Telegram delivery”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.",
+          "Нажмите «Проверить доставку Telegram». Сообщение должно прийти за несколько секунд. Если показан код TELEGRAM-…: «401» или «Unauthorized» — неверный токен; «400», «chat not found» или «Forbidden» — неверный ID чата или вы не нажали Start; тайм-аут — у роутера нет интернета или неверные часы."
+        ]
+      },
+      {
+        "t": [
+          "Still nothing? Create the token again in BotFather (/token or /revoke) and enter the new one. Never send the token to anyone, including in a support chat.",
+          "Всё равно нет? Создайте токен заново в BotFather (/token или /revoke) и введите новый. Никому не отправляйте токен, в том числе в чат поддержки."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "clock",
+    "title": [
+      "Dates are wrong, history or statistics are blocked",
+      "Неверные даты, история или статистика заблокированы"
+    ],
+    "when": [
+      "Codes like CLOCK-001 or HISTORY-001, or events with impossible dates.",
+      "Коды вроде CLOCK-001 или HISTORY-001, либо события с невозможными датами."
+    ],
+    "steps": [
+      {
+        "t": [
+          "The router clock must be correct. GL.iNet panel → System → Time: enable time synchronisation (NTP) and pick your time zone.",
+          "Часы роутера должны быть верными. Панель GL.iNet → «Система» → «Время»: включите синхронизацию времени (NTP) и выберите часовой пояс."
+        ]
+      },
+      {
+        "t": [
+          "Check the clock over SSH:",
+          "Проверьте часы по SSH:"
+        ],
+        "c": "date"
+      },
+      {
+        "t": [
+          "After the clock is right, statistics continue by themselves. Gaps are shown as unobserved time and are never filled with invented numbers.",
+          "После исправления часов статистика продолжится сама. Пропуски показываются как ненаблюдаемое время и никогда не заполняются выдуманными числами."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "backup",
+    "title": [
+      "Make a backup before changes",
+      "Резервная копия перед изменениями"
+    ],
+    "when": [
+      "Before an update, a LAN trial or any manual repair.",
+      "Перед обновлением, LAN-тестом или любым ручным исправлением."
+    ],
+    "steps": [
+      {
+        "t": [
+          "First verify the intended router and SSH host key. Replace the example address. On Windows use binary redirection through cmd so Windows PowerShell does not decode the compressed stream. sysupgrade -b exports a backup; it does not flash firmware.",
+          "Сначала проверьте нужный роутер и SSH-ключ. Замените адрес примера. В Windows используйте двоичное перенаправление через cmd, чтобы Windows PowerShell не перекодировал сжатый поток. sysupgrade -b экспортирует копию, а не прошивает устройство."
+        ],
+        "c": "cmd /c \"ssh root@192.168.8.1 sysupgrade -b - > router-backup.tar.gz\""
+      },
+      {
+        "t": [
+          "On Linux or macOS, redirect the binary export to a private local file. Check the SSH command result and read the archive before using it as recovery evidence.",
+          "В Linux/macOS сохраните двоичный экспорт в приватный локальный файл. Проверьте результат SSH-команды и чтение архива до того, как считать его средством восстановления."
+        ],
+        "c": "ssh root@192.168.8.1 'sysupgrade -b -' > router-backup.tar.gz"
+      },
+      {
+        "t": [
+          "The archive contains secrets and this export is not encrypted by itself. Store it in protected encrypted storage, outside Git, and verify your encryption key and recovery procedure independently. Never upload the raw export or its key.",
+          "Архив содержит секреты и сам по себе этим экспортом не шифруется. Храните его в защищённом зашифрованном хранилище вне Git, отдельно проверьте ключ шифрования и способ восстановления. Не загружайте исходный экспорт или ключ."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "remove",
+    "title": [
+      "Remove or roll back the program",
+      "Удалить программу или откатить версию"
+    ],
+    "when": [
+      "You want the router without this program, or you need an older version.",
+      "Нужен роутер без этой программы или более старая версия."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Complete normal Stop and verify the actual managed recovery and guard state before removing the package. If Stop retained a reserve or recovery is unconfirmed, resolve the recorded condition first; do not force a return to an unhealthy primary. Then remove normally over SSH.",
+          "Перед удалением завершите штатный Stop и проверьте фактическое управляемое восстановление и блокировки. Если остался резерв либо итог не подтверждён, сначала разберите записанное условие; не форсируйте возврат на неисправный основной. Затем удаляйте штатно по SSH."
+        ],
+        "c": "opkg remove homensai-auto-vpn"
+      },
+      {
+        "t": [
+          "Removal is not a complete data wipe. Preserve a private backup and check the actual conffile/history state before reinstalling; do not rely on unmodified defaults being retained by opkg.",
+          "Удаление пакета не является полной очисткой данных. Сохраните приватную копию и проверьте фактическое состояние конфигурации/истории перед переустановкой; не полагайтесь на сохранение неизменённых значений opkg."
+        ]
+      },
+      {
+        "t": [
+          "If the removal is refused, the program tells why (for example a transaction is active). Do not force it: first use “I have no internet”.",
+          "Если удаление отклонено, программа объяснит причину (например, активна транзакция). Не форсируйте: сначала выполните раздел «У меня пропал интернет»."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "report",
+    "title": [
+      "What to send when asking for help",
+      "Что отправить, когда просите о помощи"
+    ],
+    "when": [
+      "You report a problem and want it solved quickly.",
+      "Вы сообщаете о проблеме и хотите решить её быстро."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Record the time, installed/running version, selected channel and the exact code. Keep command output local until addresses, policy names, tokens, session values and private transaction data are removed.",
+          "Запишите время, установленную/работающую версию, выбранный канал и точный код. Храните вывод локально, пока не удалены адреса, имена политик, токены, сессии и приватные данные транзакций."
+        ],
+        "c": "homensai-vpn-emergency show"
+      },
+      {
+        "t": [
+          "Check the installed package version. It can differ from a cached browser page or running process after an interrupted update.",
+          "Проверьте версию установленного пакета. После прерванного обновления она может отличаться от кешированной страницы или работающего процесса."
+        ],
+        "c": "opkg status homensai-auto-vpn | grep Version"
+      },
+      {
+        "t": [
+          "Read the relevant recent log locally. Share only a reviewed redacted excerpt, not the complete configuration or archive.",
+          "Прочитайте относящийся к проблеме свежий журнал локально. Передавайте только проверенную обезличенную выборку, а не весь конфиг или архив."
+        ],
+        "c": "logread | grep -i homensai | tail -30"
+      },
+      {
+        "t": [
+          "Never send passwords, Telegram tokens, cookies, SSH/VPN keys, full backups or private certificate/transaction nonces. A screenshot can contain addresses and identifiers too.",
+          "Не отправляйте пароли, токены Telegram, cookies, ключи SSH/VPN, полные копии и приватные значения сертификатов/транзакций. Скриншоты тоже могут содержать адреса и идентификаторы."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "history-retention",
+    "title": [
+      "Journal size and retained history",
+      "Размер журнала и срок истории"
+    ],
+    "when": [
+      "You want less browser memory or fewer saved observation days.",
+      "Нужно уменьшить память браузера или срок сохранённых наблюдений."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Settings → Monitoring and history retention: choose an integer live buffer from 1 to 2000 and detail retention from 1 to 7 days. Save and verify the values.",
+          "«Настройки» → «Мониторинг и хранение истории»: выберите целый лимит от 1 до 2000 наблюдений и срок от 1 до 7 дней. Сохраните и проверьте значения."
+        ]
+      },
+      {
+        "t": [
+          "The buffer limits browser observations; the period prunes stored details during processing/checkpoints. Monthly/lifetime counters remain separate. Increasing the period cannot restore removed detail.",
+          "Буфер ограничивает наблюдения браузера; срок очищает сохранённые подробности при обработке/checkpoint. Месячные и общие счётчики остаются отдельно. Увеличение срока не возвращает удалённые подробности."
+        ]
+      },
+      {
+        "t": [
+          "Events and errors initially shows the latest 20 rows, with a triangle for more. Search and sorting use the downloaded retained snapshot, not just the visible rows.",
+          "«События и ошибки» сначала показывает 20 последних строк, остальные — под треугольником. Поиск и сортировка используют загруженную сохранённую историю, а не только видимые строки."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "controlled-fault",
+    "title": [
+      "Test a transition from the current channel",
+      "Проверить переход с текущего канала"
+    ],
+    "when": [
+      "You want a deliberate bounded traffic fault and a verified alternate route.",
+      "Нужен преднамеренный ограниченный сбой трафика с проверкой другого маршрута."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Open Advanced settings → Tests → Controlled VPN tunnel traffic fault. The current working channel is selected automatically; primary and reserve are both supported.",
+          "Откройте «Расширенные настройки» → «Тесты» → «Контролируемый сбой трафика VPN-туннеля». Текущий рабочий канал выбирается автоматически: поддержаны основной и резервный."
+        ]
+      },
+      {
+        "t": [
+          "The router rechecks running Auto, private current-pair identity/policy, both healthy paths and session-loss consent. A preparation explanation means the destructive action has not started. Do not bypass a refusal.",
+          "Роутер повторно проверяет работающий Auto, закрытые данные текущей пары/политики, исправность обоих путей и согласие на разрыв сессий. Экран подготовки означает, что сбой ещё не запущен. Не обходите отказ."
+        ]
+      },
+      {
+        "t": [
+          "The test temporarily drops IPv4 traffic on that tunnel device, not the VPN process or another server selected by name. It waits for failure thresholds and a fresh confirmed alternate route. Stop test and restore traffic removes the artificial fault early.",
+          "Тест временно блокирует IPv4-трафик устройства туннеля, а не VPN-процесс и не другой сервер по имени. Он ожидает пороги ошибок и свежий подтверждённый другой маршрут. «Остановить тест и снять сбой» досрочно снимает искусственную блокировку."
+        ]
+      },
+      {
+        "t": [
+          "Only a confirmed route with fresh successful observations is success. A timeout removes the artificial block but is not a passed transition; inspect the reason, cooldown, budget and both channels. Kernel expiry is a safety limit, not proof of Internet.",
+          "Успех — только подтверждённый маршрут со свежими успешными наблюдениями. Таймаут снимает блокировку, но не означает пройденный переход: изучите причину, паузу, бюджет и оба канала. Истечение правила ядром — ограничение сбоя, а не доказательство Интернета."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "address-conflict",
+    "title": [
+      "The router page opens the wrong device or refuses connection",
+      "Открывается другой роутер или отказано в подключении"
+    ],
+    "when": [
+      "Two networks use the same private address, or the browser chooses another adapter.",
+      "Две сети используют один частный адрес либо браузер выбирает другой адаптер."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Verify the intended model and the physical management connection first. The same IPv4 address can identify different devices on different adapters; a responding web page is not sufficient identity.",
+          "Сначала подтвердите модель и физический путь управления. Один IPv4-адрес может вести к разным устройствам через разные адаптеры; ответ веб-страницы ещё не доказывает идентичность."
+        ]
+      },
+      {
+        "t": [
+          "Inspect IPv4 addresses and interface indexes read-only. Do not silently change Wi-Fi, adapter addresses, routes or another router to fix a page.",
+          "Посмотрите IPv4-адреса и номера интерфейсов только чтением. Не меняйте незаметно Wi-Fi, адреса адаптеров, маршруты или другой роутер ради открытия страницы."
+        ],
+        "c": "Get-NetIPAddress -AddressFamily IPv4 | Select-Object InterfaceIndex,InterfaceAlias,IPAddress"
+      },
+      {
+        "t": [
+          "A separately verified fixed-target local gateway may provide browser access without network-setting changes. It is machine-local and temporary; it does not replace the real LAN router address for a client witness or remove router authentication.",
+          "Отдельно проверенный локальный переход к фиксированному роутеру может дать доступ браузеру без изменения сетевых настроек. Он локален для компьютера и временный: не заменяет реальный LAN-адрес для клиентской проверки и не отменяет вход на роутер."
+        ]
+      }
+    ]
+  }
 ];
 
 // Text with `inline code` pieces: the same dark monospace style everywhere.

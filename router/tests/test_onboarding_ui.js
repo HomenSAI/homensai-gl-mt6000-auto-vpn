@@ -107,6 +107,11 @@ function advance(f,target='review'){
   f.set('appearance.theme','dark');f.click('next');assert.equal(f.step(),'monitor');assert.equal(f.writes.length,0,'draft does not change browser preferences');
   f.set('monitor.interval','9');assert(f.button('next').disabled);f.click('next');assert.equal(f.step(),'monitor');
   assert.equal(f.field('monitor.interval').value,'9','never silently coerce input');
+  f.set('monitor.interval','30');
+  for(const [key,invalid,valid] of [['live_log_limit',[0,2001,1.5,'no'],1500],['history_days',[0,8,1.5,'no'],2]]){
+    for(const value of invalid){f.set('monitor.'+key,value);assert(f.button('next').disabled,key+' rejects '+value);f.click('next');assert.equal(f.step(),'monitor');}
+    f.set('monitor.'+key,valid);assert(!f.button('next').disabled,key+' accepts '+valid);
+  }
   f.set('monitor.interval','30');f.set('monitor.probe_limit','33');assert(f.button('next').disabled);f.set('monitor.probe_limit','32');assert(!f.button('next').disabled);
   f.click('back');assert.equal(f.field('appearance.theme').value,'dark');f.click('cancel');assert.equal(f.step(),'paused');assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);
   f.click('resume');assert.equal(f.field('appearance.theme').value,'dark');advance(f,'system');
@@ -144,7 +149,7 @@ function advance(f,target='review'){
   const stored=baseInventory();stored.settings.telegram_configured=true;stored.settings.telegram_destination='@stored_channel';stored.settings.telegram_enabled=true;f=fixture({inventory:stored});advance(f,'telegram');f.set('telegram.configure',true);assert.equal(f.field('telegram.token').value,'');assert(!f.button('next').disabled,'blank token retains valid stored token');advance(f);assert(text(f.root).includes('Stored token retained (hidden)'));
   // Change every section through its real controls, then verify the complete transaction independently.
   f=fixture();f.set('appearance.language','ru');f.set('appearance.theme','light');f.set('appearance.design','b');f.click('next');
-  f.set('monitor.interval',45);f.set('monitor.checkpoint',1200);f.set('monitor.probe_limit',24);f.set('monitor.planning_enabled',true);f.click('next');
+  f.set('monitor.interval',45);f.set('monitor.checkpoint',1200);f.set('monitor.probe_limit',24);f.set('monitor.planning_enabled',true);f.set('monitor.live_log_limit',1500);f.set('monitor.history_days',2);f.click('next');
   f.set('system.source','wireguard:peer_2');f.set('system.target','openvpn:1_1');f.set('system.duration',20);f.set('system.session_loss',true);f.click('next');
   f.set('servers.0.name','Main display');f.set('servers.0.channel','Group A');f.set('servers.0.priority',12);f.set('servers.1.name','Reserve display');f.set('servers.1.channel','Group B');f.set('servers.1.priority',34);f.click('next');
   const customRecovery={failures:5,successes:4,cooldown:360,min_dwell:240,primary_successes:5,primary_stable:120,return_policy:'hold_reserve'};
@@ -155,7 +160,7 @@ function advance(f,target='review'){
   assert.equal(f.calls.length,0);assert(!text(f.root).includes(token));await f.click('save');assert.equal(f.reloads,1);
   const full=f.calls[0].args;
   assert.deepEqual(full[0],{defer_pair:false,source:'wireguard:peer_2',target:'openvpn:1_1',duration:20,session_loss:true,servers:[{profile:'openvpn:1_1',name:'Main display',channel:'Group A',priority:12,enabled:true},{profile:'wireguard:peer_2',name:'Reserve display',channel:'Group B',priority:34,enabled:true}]});
-  assert.deepEqual(full[1],{interval:45,checkpoint:1200,probe_limit:24,planning_enabled:true});assert.deepEqual(full[2],customRecovery);assert.deepEqual(full[3],customSpeed);
+  assert.deepEqual(full[1],{interval:45,checkpoint:1200,probe_limit:24,planning_enabled:true,live_log_limit:1500,history_days:2});assert.deepEqual(full[2],customRecovery);assert.deepEqual(full[3],customSpeed);
   assert.deepEqual(full[4],{configure:true,token,chat:'-1001234567890',enabled:true,interval:120,schedule:'daily',hour:22,weekly:false,monthly:false,items:'servers,events,traffic,delta,controller,controller_events,controller_totals'});
   assert.deepEqual(full[5],{language:'ru',theme:'light',design:'b',router_model:'auto'});assert.equal(f.store['homensai-vpn-language'],'ru');assert.equal(f.store['homensai-vpn-theme'],'light');assert.equal(f.store['homensai-vpn-design'],'b');
   // Router defaults survive an empty browser, browser overrides win, and Settings reopens the same values/draft.

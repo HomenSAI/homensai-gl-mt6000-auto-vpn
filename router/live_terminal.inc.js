@@ -116,7 +116,7 @@ function renderLiveTerminal(status,inventory){
     state.root=E('div',{'class':'hv-live','data-live-terminal':'1'},[
       E('div',{'class':'hv-live-head'},[state.clock,state.followButton]),
       E('div',{'class':'hv-linux-terminal'},[state.pinned,state.body]),
-      E('small',{},[bi('Clock: 1 second; no timer messages. Consecutive identical events share a time range and repeat count. The buffer size is set in Monitoring preferences (1–2000 observations). Network checks retain their configured cadence; recorded events are in ','Часы: 1 секунда, без сообщений таймера. Подряд повторяющиеся события объединены: диапазон времени и число повторов. Размер буфера задаётся в параметрах мониторинга (1–2000 наблюдений). Интервал сетевых проверок не меняется; сохранённые события — в '),E('a',{'href':'#events'},bi('Events and errors','Событиях и ошибках'))])]);
+      E('small',{},[bi('Clock: 1 second; no timer messages. Consecutive identical events share a time range and repeat count. The buffer size is set in Monitoring and history retention (1–2000 observations). Network checks retain their configured cadence; recorded events are in ','Часы: 1 секунда, без сообщений таймера. Подряд повторяющиеся события объединены: диапазон времени и число повторов. Размер буфера задаётся в «Мониторинг и хранение истории» (1–2000 наблюдений). Интервал сетевых проверок не меняется; сохранённые события — в '),E('a',{'href':'#events'},bi('Events and errors','Событиях и ошибках'))])]);
     terminalRenderRuns();
   }
   var changed=oldCount!==state.entries.length;

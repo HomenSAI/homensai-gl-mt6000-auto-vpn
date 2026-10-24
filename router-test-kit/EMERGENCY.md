@@ -1,25 +1,36 @@
-<!-- current-release-context:0.9.0 -->
-> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+<!-- doc-role: current -->
+# Восстановление доступа / Emergency recovery
 
-# Emergency: LAN clients have no internet after the application ran
+Start with the intended router identity and a working management path. Identical private addresses on Wi-Fi/Ethernet can lead to different devices. Keep client traffic evidence separate from router reachability.
 
-Use another internet path (phone/second router) to reach this page. Router management (SSH/LuCI over LAN) is not blocked
-by the application's guard: it only drops **forwarded** traffic from `br-lan`.
+## Сначала чтение / Read first
 
-0. **First try the button.** Since alpha5, if the router is held on the reserve (state "still on the reserve"), open the Overview and press **Return to primary**. The router checks the primary first and reports the result there. If you changed the VPN rules yourself, Auto now releases its own block automatically; check the rule order in GL.iNet.
-1. `ssh root@ROUTER "sh /tmp/05-emergency.sh show"` (copy the kit scripts again if /tmp was cleared by a reboot).
-   Look at: owned guard table present? native phase? current VPN rule order vs the journal `before` list.
-2. `sh /tmp/05-emergency.sh stop-auto` (and later `sh /tmp/05-emergency.sh start` to start the monitor again) : stops the application's services and sets `native_enabled=0`. No network changes.
-3. If the current rule order equals `before` in the journal (or you only ran the monitor, which never reorders),
-   run `sh /tmp/05-emergency.sh remove-guard` and test a LAN client.
-4. If the order equals `after` (a switch is still applied and you want the original route):
-   the original order is the journal `before` list. Restore it through the GL.iNet VPN dashboard (router UI -> VPN ->
-   VPN Dashboard / policy order) or, if you know the section names, `uci reorder route_policy.<section>=<index>`
-   for each, `uci commit route_policy`, then `/usr/bin/rtp2.sh not_reload_network`. This is what the controller does itself;
-   do it by hand only if you understand the sections. Then `remove-guard`.
-5. Last resort: restore `/etc/config/route_policy` (and only the files you need) from your private backup, reboot the router.
-   The guard is a runtime nft table; a reboot clears it, but the supervisor will recreate it if a journal is still active
-   (so do step 2 first).
+Use the installed helper, or the matching-tag `05-emergency.sh` if needed:
 
-Never: factory reset, flash firmware, delete the VPN profiles, or disable the vendor Kill Switch to "fix" connectivity.
-Report: the output of `show` (it contains no keys) and what you did.
+```sh
+homensai-vpn-emergency show
+```
+
+Keep output local. Journal/policy/status data can include private addresses, identifiers and transaction data; redact before sharing. A working reserve is not a reason to force return to an unhealthy primary. On Overview use current readiness and normal manual/return controls when available.
+
+## Управляемая остановка / Managed stop
+
+```sh
+homensai-vpn-emergency stop-auto
+```
+
+This stops own services and attempts to disable the saved Auto flag. Stop can restore managed routing policy/interface flags; **it is not read-only and not a promise of no network effect**. Pending own UCI edits are not committed by the helper: it reports refusal after stopping services; resolve those edits deliberately before retrying. Verify the resulting phase, policy and client path.
+
+If only a verified owned guard remains after services stop:
+
+```sh
+homensai-vpn-emergency remove-guard
+```
+
+It removes only the application's identified table, not stock KillSwitch or foreign tables. Never flush the whole firewall. If policy restoration is unconfirmed, compare private journal/baseline and preserve evidence; do not guess `uci reorder` indexes or archive the journal just to make the warning disappear.
+
+`close-journal` is an administrator-only deliberate archive **after** independently restoring/verifying the required policy and stopping the supervisor, not an ordinary repair step. A retained reserve is not proof that the original route returned.
+
+After recovery, `homensai-vpn-emergency start` starts own services. Confirm fresh monitoring; continuous Auto still needs explicit Start and readiness. Reboot is a last deliberate recovery step and does not repair wrong VPN credentials. Do not factory-reset, flash firmware, delete VPN profiles or disable vendor protection as a shortcut.
+
+[Помощь и режимы](../docs/CURRENT-STATE.ru.md) · [English guide](../docs/CURRENT-STATE.en.md) · [LAN witness](../docs/CLIENT-TRIAL.md).

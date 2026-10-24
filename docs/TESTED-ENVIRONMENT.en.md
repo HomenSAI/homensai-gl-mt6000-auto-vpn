@@ -1,11 +1,16 @@
+<!-- doc-role: current -->
 # Tested environment and limits
 
-Current full guide: [CURRENT-STATE.en.md](CURRENT-STATE.en.md).
+The authoritative current delivered version is [CURRENT-STATUS](CURRENT-STATUS.md). Source-candidate documentation is not acceptance of a new package. Each versioned receipt retains its own scope.
 
-## Installation and evidence
+| Evidence | What it establishes | What it does not establish |
+|---|---|---|
+|Exact-source dual-runtime CI|The named committed code/tests and matching canonical artifact in the stated runtimes|Physical device, browser visuals or LAN|
+|Source/DOM and synthetic browser personas|Guarded UI/validation behavior against frozen fixtures|Real firmware/VPN routing, autonomous external models|
+|Actual isolated x86 OpenWrt VM|Its install/files/UCI/RPC/HTTP/kernel/lifecycle cases|A spoofed GL hardware pass or real external LAN|
+|Named MT3000/4.11.0 receipt|That package's actual installed/served bytes, controlled operation and measured router IPv4 state|Every provider, MT6000 continuous mode, IPv6/KillSwitch/day-long/power-cut acceptance|
+|LAN helper SelfTest/CheckOnly|The stated offline or prerequisite mode|A completed Internet/switching trial|
 
-For public stable installation use [the guide](INSTALL.en.md), pinned v0.9.0 tag and matching IPK/checksum/verification/install kit. Do not downgrade a newer installation. For a candidate use `releases/`, VERSION.json and checksum from the same exact branch commit; the stable kit is not the candidate kit. Verify model/firmware, private backup and readiness; do not bypass refusals or flash firmware to install this app.
+[Alpha13 delivery and preserved failures](VERIFICATION-ALPHA13-2026-10-24.md) is a versioned example. Its first60s VM reboot window failed; a longer bounded observation confirmed eventual fresh monitoring and preserved configuration. It is not a guaranteed startup SLA. [Alpha10 VM/prompt recipes](handoff/VM-AUDIT-2026-10-24.md) are historical, not the new source's acceptance.
 
-[Alpha10 VM audit](handoff/VM-AUDIT-2026-10-24.md): two in-OpenWrt builds matched the package; install/update/rollback/restart/reboot passed;86files/modes matched.76prompts were inventoried with explicit command-recipe coverage. This is not named external-model execution or exhaustive fault combinations. Real GL/LAN, native browser visual acceptance and several fault scenarios remain untested. [Matrix](../qa/OWNER-PROMPT-VM-ALPHA10-2026-10-24.json).
-
-Dated reports and old release notes retain their historical evidence. The [index](DOCUMENTATION-INDEX.md) distinguishes current instructions from history. Never publish keys, passwords, VPN files or unredacted backups in chat/Git.
+External-LAN/IPv6/KillSwitch/native physical-browser visual and autonomous ChatGPT/Claude execution remain separate unless explicitly evidenced in a newer receipt. No matrix proves every possible network/firmware/power combination. [Roadmap](ROADMAP.md).
