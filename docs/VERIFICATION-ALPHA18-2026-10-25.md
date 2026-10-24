@@ -22,3 +22,7 @@ New regressions cover EN/RU dictionary links for current controller states, chec
 Physical sequence: verified encrypted backup, normal Stop, install, files/modes/RPC/HTTP/HTTPS, normal Start and reserve restoration. Only expected lifecycle native_trial/native_until settings changed; unrelated options and terms version1 retained. Both VPN DNS/two HTTPS probes passed; no traffic-fault or speed test injected. Gateway127.0.0.2:8080 left running. Host networking and main MT6000 unchanged. Native visuals/external LAN/IPv6/Kill Switch/power-loss remain separate.
 
 Publication follows the verified feature branch; no product changes after exact CI. Main and stable release remain unchanged.
+
+## Published / Опубликовано
+
+[GitHub alpha18](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18) · [Gitea alpha18](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18). Actual non-draft prereleases; four assets per service downloaded and SHA256 verified. Canonical source `c6f03ff98ace29f844011929b38620d3ed636a29`, public snapshot `12b716ce8ae9fd4377ec05a1e6044711e9f4b5a3`, identical release tree `a2bdb8680ed1b751269a3fb8cdcaddb43b57d596`. Main and stable 0.9.0 unchanged. Product remains exactly as CI source `76498b5db82e8f5fa25f22d946b338c26b39c869`; this closure changes documentation only.
