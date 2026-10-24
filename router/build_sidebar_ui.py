@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard86'
+UI_MODULE='dashboard87'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -353,7 +353,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui58.css')
+source=source.replace('ui15.css','ui59.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -363,7 +363,7 @@ menu_source,menu_count=re.subn(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/'+U
 assert menu_count==1,'current dashboard menu path'
 menu.write_text(menu_source,encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
-must_replace('return view.extend({',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'learn_scenes.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
 must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','channels','statistics','settings','help','learn'].map(tabLink)")
 must_replace("  help:['What to do when something is wrong.'","  learn:['A short interactive training: what the system is, how to use it and what to do when something goes wrong.','Короткое интерактивное обучение: что это за система, как ею пользоваться и что делать, если что-то пошло не так.'],\n  help:['What to do when something is wrong.'")
@@ -496,6 +496,6 @@ source=source.replace('renderTransitionAnalytics(status)', 'renderTransitionAnal
 # covering every page/modal without modifying LuCI globals or meaningful text.
 must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_guard.inc.js').read_text(encoding='utf8'))
 
-(root/'ui58.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
+(root/'ui59.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

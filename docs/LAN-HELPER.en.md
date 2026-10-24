@@ -1,3 +1,5 @@
+> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+
 # LAN helper and proof scopes
 
 Current continuous Auto on the prepared MT3000 uses router-originated IPv4 DNS/HTTPS and does not create or require an external-LAN certificate. The separate bounded LAN-confirmed trial path uses an independent Windows witness. These are different modes; a successful router probe must never be called client proof.

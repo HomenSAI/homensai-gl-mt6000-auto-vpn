@@ -1,9 +1,11 @@
-# Tested environments —23 October 2026
+# Tested environment and limits
 
-Current continuous mode was tested on a dedicated GL.iNet GL-MT3000/Beryl AX, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, mediatek/mt7981, kernel 5.4.211. Evidence is router-originated IPv4 DNS/twoHTTPS probes and actual route-policy selection. [Exact release evidence](RELEASE-0.9.0.md).
+Current full guide: [CURRENT-STATE.en.md](CURRENT-STATE.en.md).
 
-Historical MT6000/Flint2:GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, kernel 5.4.238; the15October passport remains in tested-environment-2026-10-15.json. It is not a current primary-MT6000 query or current continuous-mode acceptance on that device.
+## Installation and evidence
 
-Isolated builds/checks use Python 3.11 and Python 3.9.15/Lua 5.1/CJSON. Generic x86/QEMU results are separate lab evidence. IPK Architecture:all describes interpreted files, not universal hardware compatibility; actual model/firmware/native-component checks still apply.
+For public stable installation use [the guide](INSTALL.en.md), pinned v0.9.0 tag and matching IPK/checksum/verification/install kit. Do not downgrade a newer installation. For a candidate use `releases/`, VERSION.json and checksum from the same exact branch commit; the stable kit is not the candidate kit. Verify model/firmware, private backup and readiness; do not bypass refusals or flash firmware to install this app.
 
-No independent LAN client, IPv6 failover,24-hour soak, physical power-cut or arbitrary other-firmware acceptance is claimed. [Current status](CURRENT-STATUS.md).
+[Alpha10 VM audit](handoff/VM-AUDIT-2026-10-24.md): two in-OpenWrt builds matched the package; install/update/rollback/restart/reboot passed;86files/modes matched.76prompts were inventoried with explicit command-recipe coverage. This is not named external-model execution or exhaustive fault combinations. Real GL/LAN, native browser visual acceptance and several fault scenarios remain untested. [Matrix](../qa/OWNER-PROMPT-VM-ALPHA10-2026-10-24.json).
+
+Dated reports and old release notes retain their historical evidence. The [index](DOCUMENTATION-INDEX.md) distinguishes current instructions from history. Never publish keys, passwords, VPN files or unredacted backups in chat/Git.

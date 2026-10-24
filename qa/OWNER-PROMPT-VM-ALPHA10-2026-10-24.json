@@ -1,0 +1,1117 @@
+{
+  "schema": 1,
+  "date": "2026-10-24",
+  "result": "PARTIAL_PLATFORM_AND_MODEL_COVERAGE",
+  "supported_vm_scenarios": "PASS",
+  "source_commit": "7d3f8acc803c899633a4ac5c8e9b3114d88c7097",
+  "version": "0.9.1-alpha10",
+  "package_sha256": "9a40e7ce48170bc76d2aada215764691edd60dd61d1f1f660e88afcad1b1896b",
+  "inside_vm_reproducible_builds": 2,
+  "installed_immutable_files_verified": 86,
+  "platform": "OpenWrt21.02.7 x86/64 Python3.9.16 TCG",
+  "isolation": {
+    "network": "none",
+    "mounts": 0,
+    "published_ports": 0,
+    "privileged": false,
+    "final_running": false,
+    "final_exit_code": 0
+  },
+  "method": "Explicit command recipes from current prompts, not external model execution",
+  "prompt_count": 76,
+  "variants": [
+    {
+      "id": "install-help",
+      "language": "en",
+      "category": "installation",
+      "sha256": "2a3a41a13785ea89c24bec6a5edf8df3798fbb1e534daa93a2119e3c19d2ac90",
+      "result": "PARTIAL",
+      "scope": "Actual monitor-only install, setup and upgrade; no native GL Auto",
+      "recipe_cases": [
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "13-alpha10-real-upgrade"
+      ]
+    },
+    {
+      "id": "lan-helper",
+      "language": "en",
+      "category": "lan",
+      "sha256": "23bd37fe732ce4f5e555b9055789d93cc663eb7d1229f44c29b5f545943e28b6",
+      "result": "PARTIAL",
+      "scope": "Actual HTTP download and PowerShell SelfTest; no physical LAN trial",
+      "recipe_cases": [
+        "11-actual-lan-helper-download",
+        "12-helper-selftest"
+      ]
+    },
+    {
+      "id": "repair-PYTHON-39-MINIMUM",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "0473d6475154dfa14757c1c0f1e008458852e35013471a4d35ad1edfc8257f4d",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UBUS",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "6cc4b1bdb369c013cd9cd9b466cb8236735794d1927de37d2d25e9602b4b6a1b",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UCI",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "bb64d8c569370c1d10cfb6220388db98d4b37847941c74f8bd51d52bbb6c9691",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-LUA",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "f150a2952b6aeb9cc6dc584fa8b25435849cf849128c884fac2746583d1e7270",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-IP",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "69b83459dec4d0848f6f9f7d6d31290a4cd65046ee6614d5f7c52381b770a013",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-RPC-PLUGIN",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "3fd7da29ed4e8e3321c4201d70d3309191bd161a3df5026332a36819649f3db7",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-CA-BUNDLE",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "d1d33d3e5bcd6aca124f411f79160f4f3e837155fb2ff47eb7c6cd0ae377461f",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-CONFIG-STORAGE-FREE",
+      "language": "en",
+      "category": "dependency-repair",
+      "sha256": "764a8140ef6d51d24fd244aad5db63223c36ce2c411e3b436c4d7271ed89333f",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "diagnose-all",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "c8cf7693b0052233ec5f1963d9e7d72dc3c2cb7f9ce2885392002da076cda6ee",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ai-prompt",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "c92119d7921016853dd96526bf298b042c20b7757d576d25562d377136c799af",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ai-lan-prompt",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "45a07da2ea3fce424cb142751ad53c018f3b35cafd993e036243a990e16380b4",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-no-internet",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "3ea0e32d18936e1a44b01b6c20c2551f4ce374405f0bc488e39c623c66ef75db",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ssh",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "653e149c0c5bbc42fb8de89d64e478593cf5963a21f4b692b247440bf6cda322",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-reserve",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "f380040c019812b1ba4bfb81a6107cc46bbe8a6f336e33b09d6643474ec1d4fe",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-auto-refuses",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "774201bf9b1b7f656341ec375376e7cdc8cf98f3a9e9a660a2fce1efae93d025",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-helper-what",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "a3ff615f9fa827e0a83a43a1af77693070a3868032ec7e790dbda4a31c3c121f",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-helper",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "bab87d1eb40ebff1bd507d58396f623a6f16c275b73d2e2213dd0cbd69c51d93",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-stale",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "d0849f278bb3b8f32e7a24f67fb23b6e54d4a24f66368374dd6e014d87110458",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-outside-change",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "3b2b0aa09ece8fd9e23331982f801018bb98a2cdefe077461525887645e964ba",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-telegram",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "243801248d1fd93636689e4c91b7eca1b1e110c490d62c329291e89ece0e87c6",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-clock",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "f52e5b928064d91b0dff2ee076717703cf7a11339e9ee8dd0b13e9ee0c066e7c",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-backup",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "8ccb4af15a80807f16e3e1becefe5540a9cf30191d3955c2ee5caf836ca7b436",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-remove",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "5226e8720ca21e5e06819e9beedae7234d47689b2e714e807a39020df4efc087",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-report",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "3a2e8fee6dbc173f8e5eaa75a202ab49e6ce7b13671d0b4e8e160fc57831f029",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-setup-guide",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "7f50de15bfde5887a04a99b79ad0f6cb3f14f2e9e0867b2961f9425c5d9cbb46",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-PYTHON-39-MINIMUM",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "ad731cf23fde21c7cd57a65821ef3def49d1df498eccbc91505b320deecbafc6",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UBUS",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "dafeef15606a0f955dccc79321d84cb7166cb40ba7d1315c3511b9fa6d213f0f",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UCI",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "e3f7a0192c2968836334c28c2ae9abfddf5d6d37cbca589402fec52ed53dce93",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-LUA",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "6c79d9846266075edad4e22ffe738552fd04d2a952658a98eaf022288a1b947a",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-IP",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "17de6dfc1f5245a71363a86f8201c011bbe4a666e32d322e7f66d5cff2eb644c",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-RPC-PLUGIN",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "719dbb6e05c9ad9c93a072c865c11a58af19f41919904f01fad31b881f6f58f0",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-CA-BUNDLE",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "d9ad8d4f29ebf7e179a24822034edd5491ccd739572735eb6c34c5707c667ce1",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-CONFIG-STORAGE-FREE",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "b5d5285a85e17f1534eaaf43de850a71f505bc91f7d1b51805b9eaf6ef51bf4d",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-router-preparation",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "6d413a8dae6dbd8fa57df6181a16287f80e6567a08ca62f8c63f35a13d2a764c",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-terms",
+      "language": "en",
+      "category": "diagnosis",
+      "sha256": "fdde77481096521ab94c1d30088618d53ff4a2658b0f8d21af518134259aa442",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "install-help",
+      "language": "ru",
+      "category": "installation",
+      "sha256": "3fe0e495a7b6e1a20f85fe35c896f5c156cbb40cf60dfb1beefa3f7d99661efb",
+      "result": "PARTIAL",
+      "scope": "Actual monitor-only install, setup and upgrade; no native GL Auto",
+      "recipe_cases": [
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "13-alpha10-real-upgrade"
+      ]
+    },
+    {
+      "id": "lan-helper",
+      "language": "ru",
+      "category": "lan",
+      "sha256": "e8bd4f1612b5bec6fd422842a05a606166d092e1999edf06011b4d29e0d34559",
+      "result": "PARTIAL",
+      "scope": "Actual HTTP download and PowerShell SelfTest; no physical LAN trial",
+      "recipe_cases": [
+        "11-actual-lan-helper-download",
+        "12-helper-selftest"
+      ]
+    },
+    {
+      "id": "repair-PYTHON-39-MINIMUM",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "0a48b49fea151a94c34b8502e084e12f151f9289b1eb710b4e9ccffc6b0f5658",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UBUS",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "4e2b728f70d98dd48b7c7bbb99d9ad22bf4d18be5da046d75059a3b8602237e7",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-UCI",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "008e48c51bfad545e02f881fa0b91da8d1dc337510fe9ea2465cdf0813951f95",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-LUA",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "972d2d97ac58d1ca3b8847865fd4cbb8da790dda83e41d50150cb984d093e7fa",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-DEPENDENCY-IP",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "ededa87b14bcd4592c05169ff35bdce2b734445262a56852cb4b2315246750a8",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-RPC-PLUGIN",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "b11a658ccde59a5d42e54d40789fcf46f5fa2ad7318acaa4ee9f111d2348c024",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-CA-BUNDLE",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "b9b0391981873353f64fb561e9fb1cb2a6eb0ac7da42ac87c074588e715f78ac",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "repair-CONFIG-STORAGE-FREE",
+      "language": "ru",
+      "category": "dependency-repair",
+      "sha256": "70c62c2c46fe08bee23e792c4c62b766c18160a4d8924c1771478bdd49550d39",
+      "result": "PARTIAL",
+      "scope": "All8 installed components verified; actual missing lua-cjson repaired; not every missing combination",
+      "recipe_cases": [
+        "06-eight-component-recipes-en-ru",
+        "07-real-missing-lua-dependency-repair"
+      ]
+    },
+    {
+      "id": "diagnose-all",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "61343b09d8b29db9885ea8df2b98f44a1aa4134023fa9f425f40989db9667a63",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ai-prompt",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "f537cf1178c1f59a8a8f4892c9f4d3f289308e223c35600988d27a9d97c4ebd8",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ai-lan-prompt",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "10c538a220199a6a1a944d6d6d1ac48caab3785a7deeebdad87ca88db4c09d98",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-no-internet",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "b4afd2f2fba881b86b83079ceadc7ea1827dac2f5d5a25024d8b8b18fe48768b",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-ssh",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "353a083e268359322008cc0e867c5b192aaf4a9ab8695cecacf2b4d96f0e850b",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-reserve",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "dbda2bcf01b99438b52592fccda0a9c49ee461cc08071390988bea96324e5c10",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-auto-refuses",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "c8dd35a85172b796129229d5477b657aecff5ee911cc45a4c5bc313231c06fb6",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-helper-what",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "c7d273aeb7caa368a531a93f4d4835e1413df5249aeac846f6e34ffb44446ee6",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-helper",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "4f34331b365a8a71535a98fd5c201dae9331bd8d268449a8e2b99779991cc756",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-stale",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "049401a93e0fcf27a0e521b5c45d9b4fed4ae28e0d373396118246ee0e04812b",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-outside-change",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "674b68ddb2ee297490819fce79b51a5816b37ad2aaf2ea3c823263188e1d8846",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-telegram",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "aa97332706579f5890e06fb01a95f2227ae7f712575c5a42744c09b186077ae4",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-clock",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "f4956379a08bf24f64721fd4be440da14734ccf247c02b20f82e49542619904e",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-backup",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "775ae97688a354444fb7151b8ab2aa3974f15ae71c2f1211094f67cd4cab96aa",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-remove",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "4522da30670b2e4da6a0b26f41c859bf1cf860b0aee7957f596af78d2423ed73",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-report",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "7441cbb1faa0c63bc7efd076c13826e9a670cacef015137349becadee61f6ce8",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-setup-guide",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "195431cf37218e6ca8687ac51647b9123146fe2019c3a84a612097e9b4df0c14",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-PYTHON-39-MINIMUM",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "040064237e62721d4ffcbf3ee8ab9aad6ab8c9d4a4b9aca3e1450991b5fa9345",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UBUS",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "41f3dc3c3f44b83c5c90fcb65f17579b9b65c14703e2dade9f2478922214a5e6",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-UCI",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "a9096c68bb3e2a907191335def9e105344be828c3f803950f29b11a16b385ef7",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-LUA",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "b0cea91b3bbe05952ddb8f5fb9a09e8bd88d4024dd34c4ac07825becddfb9d0f",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-DEPENDENCY-IP",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "310f5d61c2221d413e22f29479ab77994a7266b06bb52b2c39a3beb1635a6085",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-RPC-PLUGIN",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "96ac56bcc01dfc872fb4cfe21f6957a68e620672c8cfd7ca0ca65cc64d2d751e",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-CA-BUNDLE",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "138184c7202881d07c9639c993705a316f569499c4e5ab9a3b4f9d118e718bb9",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-dependency-CONFIG-STORAGE-FREE",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "4b92daf96204fbb8f081e0e6b13aa6c71e5249a91252f6f5abba0476918660c7",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-router-preparation",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "4e1b891995b77e925d80a06b3a4ea0d1f6d4669e9216d6416ad5e4b3ce4d5833",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "topic-terms",
+      "language": "ru",
+      "category": "diagnosis",
+      "sha256": "37d55785cb25fc25ef93c142e4a3d1aa4c50151cce5b3ac92c2ac0f4ff7de946",
+      "result": "PARTIAL",
+      "scope": "Actual read-only topic recipe; not reproduction of all topic-specific failures",
+      "recipe_cases": [
+        "09-readonly-topic-diagnoses"
+      ]
+    },
+    {
+      "id": "install-document",
+      "language": "en",
+      "category": "installation",
+      "sha256": "d06d2d5b60ef0f5a30a3d097c2d77cb3f7afc2d005af47a50fd2f949c785d88e",
+      "result": "PARTIAL",
+      "scope": "Actual monitor-only install, setup and upgrade; no native GL Auto",
+      "recipe_cases": [
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "13-alpha10-real-upgrade"
+      ]
+    },
+    {
+      "id": "install-document",
+      "language": "ru",
+      "category": "installation",
+      "sha256": "9cd25c86e63de4a00774f78b0e4cbf796c35a215e943bd3b0a7372adae52f9f2",
+      "result": "PARTIAL",
+      "scope": "Actual monitor-only install, setup and upgrade; no native GL Auto",
+      "recipe_cases": [
+        "04-real-opkg-install-en",
+        "05-runtime-verify-and-idempotent-ru",
+        "08-real-setup-and-persistence-en-ru",
+        "13-alpha10-real-upgrade"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "case": "01-baseline",
+      "result": "PASS",
+      "file": "01-baseline-attempt2.json",
+      "sha256": "68ed92b3403cd1293fbe6b7f42731d61adf50fe86046776ff8eb37740b0ff370"
+    },
+    {
+      "case": "01-baseline",
+      "result": "PASS",
+      "file": "01-baseline.json",
+      "sha256": "b474c51a03acb4916f6a9cb0fe8495fd36e3c3b28b1b2f4b3b10fe6a4c43964c"
+    },
+    {
+      "case": "02-backup",
+      "result": "PASS",
+      "file": "02-backup.json",
+      "sha256": "18b1a5a6fb8ae396b6c2f95c24f5c5ac252ea8f349208cd8a5ea8dbf4cc3b3be"
+    },
+    {
+      "case": "03-readonly-config-diagnosis",
+      "result": "PASS",
+      "file": "03-readonly-config-diagnosis.json",
+      "sha256": "d6428899993d1b6d4a02a244419f4f07c07cad40c6146c2644555d35b7a764ee"
+    },
+    {
+      "case": "03-repaired-writable-clone",
+      "result": "PASS",
+      "file": "03-repaired-writable-clone.json",
+      "sha256": "173d5fd22f68be805fefe75d8c6834ee9a69b7aea211b4b7de559996aa334a7d"
+    },
+    {
+      "case": "03-root-diagnosis",
+      "result": "PASS",
+      "file": "03-root-diagnosis.json",
+      "sha256": "964d93a4ed7d4f5f5779705d22e60e49d4a189181353280c46072b2e0a353cad"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "result": "FAIL",
+      "file": "03-transfer-and-preflight-attempt2.json",
+      "sha256": "898a1cb57028669c43c8bc3ee5c54969eb3e2ea576fe00fb514474264ff347cd"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "result": "FAIL",
+      "file": "03-transfer-and-preflight-attempt3.json",
+      "sha256": "33c486009f58ca4e7c4371210b9552c841299819674290d13ea093f7effe7aff"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "result": "PASS_WITH_EXPECTED_HARDWARE_REFUSAL",
+      "file": "03-transfer-and-preflight-attempt4.json",
+      "sha256": "93c7db503923442ad498772967e7802dbffe63ef0c3fb7313b2922cf8e006275"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "result": "FAIL",
+      "file": "03-transfer-and-preflight.json",
+      "sha256": "59a1840aa70b0baa228d492f68d530ea8d930cb57c5a0b7c96518869ee58645d"
+    },
+    {
+      "case": "03-vm-network-readiness",
+      "result": "PASS",
+      "file": "03-vm-network-readiness.json",
+      "sha256": "10cf21beae03cc1cfa8807bdf7eec8189a912b8ed49ccb180dc756d1802c7ec6"
+    },
+    {
+      "case": "04-real-opkg-install-en",
+      "result": "PASS",
+      "file": "04-real-opkg-install-en.json",
+      "sha256": "4e725e3a14fdb3fd7a233ee993ddd46e11cdc6a81b9f6913987663c4efc571ff"
+    },
+    {
+      "case": "05-runtime-verify-and-idempotent-ru",
+      "result": "PASS",
+      "file": "05-runtime-verify-and-idempotent-ru.json",
+      "sha256": "76bce14837256d2c1e21cd2876504135563b8b3f4e4424131f228be519987024"
+    },
+    {
+      "case": "06-eight-component-recipes-en-ru",
+      "result": "PASS",
+      "file": "06-eight-component-recipes-en-ru.json",
+      "sha256": "b1565dcb1307b5915318265f5abf6e14c952717ea0324eb61ce91bba5682b38c"
+    },
+    {
+      "case": "07-real-missing-lua-dependency-repair",
+      "result": "PASS",
+      "file": "07-real-missing-lua-dependency-repair.json",
+      "sha256": "6f599f25a49ac43201e6e9c358c7c43541cf7a3be8fd17a6c19eb177857ec798"
+    },
+    {
+      "case": "08-real-setup-and-persistence-en-ru",
+      "result": "PASS",
+      "file": "08-real-setup-and-persistence-en-ru.json",
+      "sha256": "c313d1bf21b86c3454dedc081c25bc156d18893debaf2bfb752a19a9e83cbcc8"
+    },
+    {
+      "case": "09-readonly-topic-diagnoses",
+      "result": "PASS",
+      "file": "09-readonly-topic-diagnoses.json",
+      "sha256": "26143d68c777590e02864582a30e22746d7b7db6d84cee153e51f9892c61a028"
+    },
+    {
+      "case": "10-artifact-mismatch-refusal",
+      "result": "PASS",
+      "file": "10-artifact-mismatch-refusal.json",
+      "sha256": "fe4e4103677cf45944448cbc22c6af6bd7748b973185853169b3e9462f23a4b7"
+    },
+    {
+      "case": "11-actual-lan-helper-download",
+      "result": "PASS",
+      "file": "11-actual-lan-helper-download.json",
+      "sha256": "c372ff83d68b31b092b3f1b90d71ecb06ba051f8fd9a15535ff2fbef8ba5a367"
+    },
+    {
+      "case": "12-helper-selftest",
+      "result": "PASS",
+      "file": "12-helper-selftest.json",
+      "sha256": "4fe69bc0637e6bee75427e83d7d36e8aaea4e0155e9ef0465ce03dbe268ae46b"
+    },
+    {
+      "case": "13-alpha10-real-upgrade",
+      "result": "PASS",
+      "file": "13-alpha10-real-upgrade.json",
+      "sha256": "450abc7390e4d1ffce8ed29bb4ee64e85af504ec3873d8d0ea381b3feadababa"
+    },
+    {
+      "case": "14-alpha10-actual-runtime-assets",
+      "result": "PASS",
+      "file": "14-alpha10-actual-runtime-assets.json",
+      "sha256": "03d11b7d047ffa70749f6f197db938f93047342d6f0c6a9671be63fa75105ee0"
+    },
+    {
+      "case": "15-installed-history-persistence-and-expiry",
+      "result": "PASS",
+      "file": "15-installed-history-persistence-and-expiry.json",
+      "sha256": "643347efddd6d0fe428625b98335246124f3f7c3af8c91ac372dcce5bc409133"
+    },
+    {
+      "case": "21-build-inside-openwrt",
+      "result": "PASS",
+      "file": "21-build-inside-openwrt.json",
+      "sha256": "f3c587dc13e6f34bd948fab9db78ef2633b9c795ffb6e7b3a42b8ed489f41d51"
+    },
+    {
+      "case": "22-invalid-rpc-and-generic-board-refusal",
+      "result": "PASS",
+      "file": "22-invalid-rpc-and-generic-board-refusal.json",
+      "sha256": "6ba2663261df371db52325b3f54ddbdb02ff47a471f2026dca4cd975fbd7f6fa"
+    },
+    {
+      "case": "23-monitor-service-restart",
+      "result": "PASS",
+      "file": "23-monitor-service-restart.json",
+      "sha256": "e57c1be4da9f7b008bab6f063c8278d06035c18d34bc439b4a5bc287562e1bc2"
+    },
+    {
+      "case": "24-reupgrade",
+      "result": "PASS",
+      "file": "24-reupgrade.json",
+      "sha256": "70c2c46cb49823afd1a4fa937303d7e3825749f254b2077d5f38655e7a714c42"
+    },
+    {
+      "case": "24-rollback",
+      "result": "PASS",
+      "file": "24-rollback.json",
+      "sha256": "f3505566b7be45e67bf884c7532496dab34c3c82e2377113b6abb72dae83ab86"
+    },
+    {
+      "case": "25-controlled-guest-reboot",
+      "result": "PASS",
+      "file": "25-controlled-guest-reboot.json",
+      "sha256": "8b4f92b3868a0b740333095c2f3eb6758c24d1f64173191a08679151cd556713"
+    },
+    {
+      "case": "26-cold-boot-persistence",
+      "result": "HARNESS_ERROR",
+      "file": "26-cold-boot-persistence-harness-error.json",
+      "sha256": "c61021a45e5a80ad446a7d404129063a837e3e5e0070e74d38ac5dd445b6a4f3"
+    },
+    {
+      "case": "26-cold-boot-persistence",
+      "result": "PASS",
+      "file": "26-cold-boot-persistence.json",
+      "sha256": "d3eb0e777d429eb3803c0d255c26bdf607f7adf8a919c0272fa2dc67d1c62ab5"
+    },
+    {
+      "case": "27-finish-and-poweroff",
+      "result": "PASS",
+      "file": "27-finish-and-poweroff.json",
+      "sha256": "71ab846b44ef493a9c3dc46c63748e8e3dd9baf9f8f51edc4411219f196c9318"
+    }
+  ],
+  "findings": [
+    {
+      "class": "harness",
+      "issue": "Python3.15/private crypto ABI mismatch",
+      "fix": "Pinned Python3.12 and compatible AES preloaded"
+    },
+    {
+      "class": "lab-image",
+      "issue": "Copied ext4 root had duplicate inode allocation; UCI triggered I/O error and remount ro",
+      "fix": "Offline e2fsck only on disposable root partition; copied-image creator updated; original base untouched"
+    },
+    {
+      "class": "harness",
+      "issue": "Asset transfer raced virtual DHCP",
+      "fix": "Confirmed VM interface/HTTP readiness before retry"
+    },
+    {
+      "class": "harness",
+      "issue": "Post-reboot serial awaited initial shell entry",
+      "fix": "Confirmed prompt; repeated readback passed; timeout retained"
+    }
+  ],
+  "new_confirmed_application_defects": [],
+  "not_run": [
+    "Real GL.iNet native Auto/VPN failover",
+    "Physical LAN DNS/HTTPS/exit/IPv6/Kill Switch",
+    "Every missing-dependency combination",
+    "Power-loss/opkg interruption and arbitrary firmware/network variants",
+    "Autonomous execution by named ChatGPT/Claude models",
+    "Native browser visual acceptance"
+  ],
+  "physical_router_access": false,
+  "product_files_modified": false
+}

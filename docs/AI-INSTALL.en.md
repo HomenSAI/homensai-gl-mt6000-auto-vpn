@@ -1,3 +1,5 @@
+> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+
 # Install with ChatGPT, Codex or Claude
 
 To have an agent install, configure and verify the application, copy the full prompt below into ChatGPT/Codex or Claude Code(Sonnet/Opus) with a local terminal and access to your router. A chat without tools can only explain the steps. Fill in the address and desired outcome; never put passwords/keys in the text.

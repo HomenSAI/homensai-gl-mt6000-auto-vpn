@@ -596,3 +596,10 @@
 .hv-app .hv-chart-card table.hv-recovery-table th{min-width:85px;font-size:12px}
 .hv-app .hv-chart-card table.hv-recovery-table th:first-child{min-width:160px}
 .hv-app .hv-chart-card table.hv-recovery-table .hv-recovery-identity{min-width:240px;max-width:520px;overflow-wrap:anywhere}
+
+.hv-app .hv-learn-scene{margin:20px 0;padding:18px;border:1px solid var(--line,#ddd);border-radius:14px;background:var(--surface,#fff)}
+.hv-app .hv-learn-drawing svg{display:block;width:100%;height:auto;max-height:310px;color:inherit}
+.hv-app .hv-learn-scene figcaption{font-weight:600;margin:10px 0;line-height:1.5}
+.hv-app .hv-scene-controls{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+.hv-app .hv-scene-outline{font-size:13px;line-height:1.7;padding-left:22px}
+@media(max-width:600px){.hv-app .hv-learn-scene{padding:10px}.hv-app .hv-scene-controls>button{flex:1 1 40%}}

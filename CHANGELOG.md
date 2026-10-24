@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1-alpha11 — 2026-10-24
+
+### Русский
+
+- Восемь интерактивных учебных схем: запуск/пауза/шаги/сброс; без команд роутеру.
+- Исправлены устаревшие требования LAN-теста и советы возврата на основной, пройдены все уроки и викторина RU/EN.
+- Обновлены текущие руководства, русский затем английский список изменений и полный индекс документации; опубликован отчёт VM alpha10 с явными ограничениями.
+
+### English
+
+- Eight interactive teaching scenes with playback/pause/steps/reset and no router commands.
+- Corrected stale LAN-test and primary-return advice; all lessons and quiz exercised in EN/RU.
+- Refreshed current guides, RU-then-EN change notes, complete documentation index and alpha10 VM report with explicit limits.
+
 ## 0.9.1-alpha10 — 2026-10-24
 
 - Batch owner UI corrections: compact disclosures, aligned controls, no nullable child text, readable server/channel/protocol and outcome tables.

@@ -1,3 +1,5 @@
+> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+
 # First-run setup / Первая настройка — 0.9.0
 
 Agreement → illustrated operating explanation → OK → eight steps. Соглашение с MIT/экспериментальным статусом и подтверждениями показывается до первого принятия; прежнее принятие сохраняется на роутере. Затем два абзаца и три схемы объясняют наблюдение, переход на резерв и возврат. OK открывает мастер, ничего не записывая и не включая Auto.
@@ -24,3 +26,9 @@ The green escape below Cancel/Next opens the dashboard with **existing settings 
 The pair selector lists unique configured protocol/interface bindings, not the full saved-profile catalog. Unassigned or ambiguous profiles are excluded; two profiles of one client are not two channels. Configuration does not require the tunnel to be running, and does not certify health. Saving the pair changes application metadata only. Starting Auto can enable/disable prepared client interfaces and reorder the selected traffic policies; normal Stop restores the managed baseline. It does not edit VPN server addresses, keys, credentials, WAN or Wi-Fi.
 
 В паре выбираются роли уже настроенных клиентов, а не любые серверы из каталога. Неназначенные и неоднозначные профили исключены; два профиля одного клиента не являются двумя каналами. Настроенный клиент может быть остановлен — это не подтверждение его исправности. Сохранение пары меняет только метаданные приложения. При запуске Auto управляет подготовленными интерфейсами и порядком выбранных политик трафика; штатная остановка восстанавливает управляемое исходное состояние. Адреса VPN-серверов, ключи, учётные данные, WAN и Wi-Fi не редактируются. Для смены сервера выберите профиль в штатном VPN-приложении, обновите страницу Auto VPN и дождитесь свежих проверок.
+
+## Обновлённое обучение / Updated training
+
+Восемь уроков и тест знаний доступны на RU/EN. В каждом уроке — учебная SVG-схема с запуском/паузой, шагом назад/вперёд и сбросом. Схема не подключается к роутеру. Вопросы различают router-probed Auto и отдельный клиентский тест; результат обучения не разрешает Auto. Учебные примеры не подменяют свежие измерения или готовность выбранной пары.
+
+All eight lessons include a native vector scene with Play/Pause, Previous/Next step and Reset. They operate only on local teaching state. The quiz distinguishes router-probed Auto from client-confirmed trials. Completion is not readiness certification. [Current RU](CURRENT-STATE.ru.md) · [Current EN](CURRENT-STATE.en.md).

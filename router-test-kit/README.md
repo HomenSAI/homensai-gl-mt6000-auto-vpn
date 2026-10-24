@@ -1,3 +1,5 @@
+> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](../docs/CURRENT-STATE.ru.md) · [Current guide](../docs/CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+
 # Router test kit — 0.9.0
 
 Use the matching `homensai-auto-vpn_0.9.0-1_all.ipk` and `.ipk.sha256` from [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0). `02-install.sh` pins the canonical SHA256/size/version; never copy an older kit for a newer package.

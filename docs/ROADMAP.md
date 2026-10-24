@@ -1,14 +1,17 @@
-# Remaining work / Оставшиеся работы
+# План / Roadmap — 24.10.2026
 
-Current version and completed behavior: [CURRENT-STATUS](CURRENT-STATUS.md). The working two-channel controller, manual override, UI changes, setup/help and persistent statistics are implemented; they must not remain described as merely planned.
+## Сделано / Completed
 
-Open acceptance/product work:
+- Alpha10: compact UI, explicit roles/identities/outcomes, grouped logs/provenance, event latency and failure history.
+- Alpha10: actual isolated OpenWrt build/install/upgrade/rollback/reboot audit with explicit partial coverage.
+- Alpha11 candidate: interactive eight-lesson training, EN/RU quiz corrections and current documentation refresh.
 
-1. Independent LAN-client DNS/HTTPS/traffic-path verification for the current continuous mode.
-2. A completed24-hour traffic soak, clearly separating real provider failures, planned simulations and unobserved gaps.
-3. Physical power-loss/recovery tests and a separately designed explicit boot-auto-resume policy; current Auto stays off after restart.
-4. Current continuous-mode hardware acceptance on MT6000 and any other firmware/model. Do not infer it from a model selector or Architecture:all.
-5. IPv6 policy/failover acceptance, broader multireserve hierarchy, captive/interception scenarios and the remaining protocol/stress lab scope.
-6. Diagnosis of intermittent OpenVPN AUTH_FAILED startup rejections without hiding them, changing unrelated credentials or bypassing readiness/attempt budgets.
+## Открыто / Open
 
-Exact vendor-SDK and hosted/server-CI work remain separate from successful interpreted-IPK/local-container checks. Historical numbered proposals remain available in archived task documents; they are not a new authorization to deploy, run faults or change the primary network.
+1. Native browser visual acceptance of candidate; DOM tests are separate evidence.
+2. Real GL.iNet alpha11 device installation and controlled native/LAN acceptance; current installed baseline alpha9.
+3. Every dependency-missing combination, interrupted upgrade/power cut, full-day real-client soak.
+4. Physical IPv6/Kill Switch failover and MT6000 continuous-mode acceptance.
+5. Autonomous execution of prompts by named external AI models; recipe execution is not model acceptance.
+
+[Текущий статус RU](CURRENT-STATE.ru.md) · [Current EN](CURRENT-STATE.en.md) · [VM report](handoff/VM-AUDIT-2026-10-24.md)

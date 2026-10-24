@@ -1,3 +1,5 @@
+> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+
 # LAN-помощник и область доказательства
 
 Текущий непрерывный Auto на подготовленном MT3000 использует IPv4 DNS/HTTPS самого роутера и не создаёт/не требует сертификат внешнего LAN-клиента. Отдельный ограниченный тест с LAN-подтверждением использует независимого Windows-свидетеля. Это разные режимы: проверка из роутера не равна доказательству для клиента.
