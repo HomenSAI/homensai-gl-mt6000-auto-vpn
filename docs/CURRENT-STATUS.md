@@ -5,6 +5,6 @@
 
 **0.9.1-alpha15 is installed onMT3000/4.11.0**, AutoON/confirmedreserve, bothVPN DNS+2HTTPS. Speed launch works through explicit review and a measured download/upload chart appears below servers. Exact-source two-runtimeCI771application/112QA each/47UI,87installedfiles/modes/servedHTTP+pinnedHTTPS,settings/terms and independently restored192/193entryencryptedbackups verified. Four actual goodput samples retained. Native-browser visuals were blocked byComputerUse URL identification and are not certified.
 
-[Alpha14 documentation audit](DOCUMENTATION-AUDIT-2026-10-24.md) and its actualx86VM results remain separate historical evidence. Stable0.9.0/main unchanged. Alpha15 publication status is recorded in its verification report.
+[Alpha14 documentation audit](DOCUMENTATION-AUDIT-2026-10-24.md) and its actualx86VM results remain separate historical evidence. Stable0.9.0/main unchanged. Published and downloaded/hash-verified: [GitHub alpha15](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15) · [Gitea alpha15](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15). Exact outcomes are in its verification report.
 
 [Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [ChangesRU→EN](LATEST-CHANGES.md) · [Local access](LOCAL-ACCESS.md)

@@ -21,4 +21,4 @@ Native-browser visual acceptance is NOT VERIFIED: ComputerUse stopped before cap
 
 ## Publication
 
-Pending verified combined GitHub/Gitea featurebranch and actualalpha15prerelease; stable0.9.0/main unchanged.
+Published actual non-draft prereleases: [GitHub alpha15](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15) · [Gitea alpha15](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15). Four assets/server downloaded andSHA256verified. Canonicaltag/source`7591d37f26a10d60df38c77e3f041fca8e54e012`,publictag/source`292eb5000933a17de9d0ed75ba9b8dd293ad529e`,identicaltree`bd3c50c139433fbf6e2cdb0e9b3aeebdb71429a2`. Bothmainrefs/stable0.9.0/oldtags/assets preserved. Product unchanged froma60971e; a documentation-only closure follows.

@@ -3,6 +3,10 @@
 
 # Work log
 
+## 2026-10-24 · owner69 speed launch/chart alpha15
+
+Disabled speed setting explained and reviewed manual enable/start implemented; connected preselection, guard feedback and measured history graph. Exacta60971e dualCI771app/112QA each/47UI PASS; canonical831752byteIPK. ActualMT3000updatedAutoONreserve,192/193encryptedbackuprestoreproof,4successfulspeedrows across pre/postmeasurement,settings/terms retained. GitHub/Gitea actualprereleases/4assets each downloaded/hashverified. Nativevisualblockedbeforecapture byComputerUseURLpolicy. [Report](VERIFICATION-ALPHA15-2026-10-24.md).
+
 ## 2026-10-24 · alpha14 delivered
 
 FullCI fe3b492771app/112QA per runtime/46UI, new actualOpenWrt VM acceptance and physicalMT3000AutoONreserve verified. Documentation/helper audit completed; actual GitHub/Gitea prereleases uploaded and four assets/server downloaded/hash-checked. Failed intermediate install-kit mismatch retained. Stable0.9.0/main unchanged; externalAI/LAN/nativevisual limitations remain explicit. [Final report](VERIFICATION-ALPHA14-2026-10-24.md).
