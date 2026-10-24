@@ -3,7 +3,7 @@
 
 **0.9.1-alpha17 установлена наMT3000/4.11.0**, AutoON/резерв, обаVPNDNS+2HTTPS. История задержек/ползунки поддерживают1–168часов/7суток по настройке1–7дней. Старые наблюдения/настройки/terms/4speedзаписи сохранены; удалённые дни не выдумываются. [Report17](VERIFICATION-ALPHA17-2026-10-24.md) · [QA](../qa/LATENCY-ALPHA17-2026-10-24.json) · [Physical](../qa/MT3000-ALPHA17-2026-10-24.json).
 
-Alpha17 exact-source dual-runtimeCI774app/112QA each/47UI and installedx86VM10081row weeklyfile/actualRPC test passed; VM poweredoff. Physical source/files/API/legacycheckpoint/settings/terms/backups and AutoONreserve verified. Publication is recorded in the report. Native visual/externalLAN/IPv6/KillSwitch scopes remain unverified. Main/stable0.9.0 unchanged.
+Alpha17 exact-source dual-runtimeCI774app/112QA each/47UI and installedx86VM10081row weeklyfile/actualRPC test passed; VM poweredoff. Physical source/files/API/legacycheckpoint/settings/terms/backups and AutoONreserve verified. Published and downloaded/hash-verified: [GitHub alpha17](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17) · [Gitea alpha17](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17). Details in the report. Native visual/externalLAN/IPv6/KillSwitch scopes remain unverified. Main/stable0.9.0 unchanged.
 
 ## Previous alpha16 delivery / предыдущая доставка
 

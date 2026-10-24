@@ -23,4 +23,4 @@ Old deleted observations cannot be reconstructed; a new seven-day window initial
 
 ## Publication
 
-Pending actualGitHub/Gitea alpha17prereleases and equal-tree featurebranch save; main/stable0.9.0/older releases unchanged.
+Published actual non-draft prereleases: [GitHub alpha17](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17) · [Gitea alpha17](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17). Four assets/server downloaded andSHA256verified. Canonicaltag/source`1b8296d8a1f09d1925299023d8cc1d63bee2ef43`,publictag/source`a4ed7b7cd582944e59b772606b745ec5f63eba58`,identicaltree`bde07c49a7760c4d83ff8e132211df5db426f3b0`. Main/stable0.9.0/older releases preserved. Docs-only closure follows; product unchanged from01b5740.

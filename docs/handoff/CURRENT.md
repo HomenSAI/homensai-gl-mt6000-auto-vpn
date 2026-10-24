@@ -1,3 +1,15 @@
+# COMPLETE: owner71 weekly latency alpha17 delivered —24October2026
+
+[GitHub alpha17](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17) · [Gitea alpha17](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha17). Actualnon-draft prereleases,fourassets/server downloaded/SHA256verified;canonicaltag/source1b8296d8a1f09d1925299023d8cc1d63bee2ef43 /publictag/sourcea4ed7b7cd582944e59b772606b745ec5f63eba58,identicaltreebde07c49a7760c4d83ff8e132211df5db426f3b0. Main/stable0.9.0/oldreleases unchanged. Exact01b5740d8a8771881d95b26f2922a80d76457581 dualCI774app/112QA each/47UI PASS. Canonical832683bytes SHA344c60ab5eaa9dc3f8cf1ddb1bddf19500c189dce3d2264d24f1ecff36425102. Productunchanged afterfinalCI; docs-onlyclosure follows.
+
+Feature: realconfigured1–7daylatency/MAX10081minute/2MiB,1–168hwindow/weekpan,label«Просмотрпоследних7суток»,datedwideaxes,720markers/channel,allretained-minute lines/stats,oldschema1checkpoint compatibility. Fullweekrows_json+rows_count andlegacy1441tail avoid largeRPCarrayfailure; frontend850kchar/shape/count guards. No fabricatedpastdays, no routing/probeRPC fromsliders. Olddeletedhistory cannotreturn.
+
+Newactualx86VM installed17/87files/RPC/HTTP; trackedfinalproofPASS10081rows/685748filebytes/707573compactRPCbytes,1dayprune/no-backfill,statusrestored/AutoOFF/workerfinished; VM e48ea670f9fc7f2039adeaafda10b3675cde8c44f2574fbbc3e8b4c94d710f16 offexit0. RawRPCtimeout7,unregisteredobject4,interactiveopkg/longserialtimeouts retained/resolved by compactfreshregistration/closedstdin/trackedjob. No GLidentityspoof or nativequalification claim.
+
+ActualMT3000/4.11.0alpha17/dashboard93/ui65,AutoON/confirmedreserve/bothVPNDNS+2HTTPS.87files/modes/RPC/actualHTTP8080+pinnedHTTPS/new7dayAPI/UIverified; encryptedprebackup compared824closedoldlatencyrows preserved (825oldfile→829newatcheck), currentobservationsonly/no syntheticweekdata. Settings/terms1/4speedrows retained,193before/193afterencryptedbackups independentlydecrypted/read. NormalStart59.359s,reserve41.14s. No Windowsnetwork/mainMT6000/physicalfault/newspeedtests.
+
+Read docs/VERIFICATION-ALPHA17-2026-10-24.md,qa/LATENCY-ALPHA17-2026-10-24.json,qa/MT3000-ALPHA17-2026-10-24.json. Privateevidence private/latency-alpha17-20261024 and private/alpha17-install-20261024. Nativebrowservisual/externalLAN/IPv6/KillSwitch/powerloss remainunverified. LeaveAutoONreserve/usergateway127.0.0.2:8080alive. UserCtrlF5/#channels loadsnew93module. Newdictationrecord immediately; neverrerun privateprepare/rewrites/completedinstall scripts blindly. Earlier activeheadersbelow superseded; no pendingVMobserver/appwriter.
+
 # READY FOR PUBLICATION: alpha17 weekly latency physically accepted —24October2026
 
 Exact01b5740d8a8771881d95b26f2922a80d76457581 dualCI774app/112QA each/47UI PASS. Canonical832683bytes SHA344c60ab5eaa9dc3f8cf1ddb1bddf19500c189dce3d2264d24f1ecff36425102. True1–7daylatency storage/MAX10081minute/2MiB,1–168hwindow/weekpan,datedaxes,720markers/channel,all-minute lines/statistics,oldschema1checkpoints,compactfullweekrows_json pluslegacy1441tail; no backfill or routing/probeRPC fromslider.

@@ -3,6 +3,10 @@
 
 # Work log
 
+## 2026-10-24 · owner71 alpha17 weekly latency
+
+True1–7daylatency storage/1–168h window/weekpan,legacycheckpoint preservation,compactfullweekRPC andboundedmarkers. Exact01b5740 CI774app/112QA perruntime/47UI,10latencyPythonregressions/extendedUI andinstalledx86VM10081row file/actualRPC passed; retainedrawRPC/harnessfailures resolved; VMoff0. ActualMT3000AutoONreserve/newAPI/824closedlegacyrows/settings/terms/4speedrows/193entrypre-postbackuprestoreproof verified. GitHub/Gitea actualprereleases/fourassets each downloaded/hashchecked. No physicalsyntheticdata or nativevisualclaim. [Report](VERIFICATION-ALPHA17-2026-10-24.md).
+
 ## 2026-10-24 · owner70 alpha16 saved-history column layout
 
 State wider/Event narrower; M/R diagram block before unbroken code; saved-history scopedCSS only. Existingjournal/history regressions and exacte7609c9 dualCI771app/112QA/47UI PASS after isolating an unrelatedTTL-dependent Popen testfixture (failed01207a3retained). ActualMT3000AutoONreserve,87files/RPC/HTTP/HTTPS/layoutCSS/settings/terms/4speedrows/193-entrypre-postencryptedbackups verified. GitHub/Gitea actualprereleases,4assets each downloaded/hashchecked. Nativebrowserinventoryempty; no visualclaim. [Report](VERIFICATION-ALPHA16-2026-10-24.md).
