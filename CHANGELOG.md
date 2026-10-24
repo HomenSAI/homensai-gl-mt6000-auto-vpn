@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.1-alpha13 —2026-10-24
+
+### Русский
+
+- Вся пачка владельца: компактные списки/меню/рекомендации,20строк истории, явные каналы в ошибках, M/R-схемы и сортировка рабочих каналов.
+- Настраиваемый живой буфер1–2000 и подробная история1–7дней с реальной очисткой и сохранением общих счётчиков.
+- Тест сбоя текущего основного или резерва с проверкой перехода и kernel timeout; legacy LAN-сертификат не требуется для prepared continuous-pair режима.
+- Исправлен выбор канонического IPK: закреплённая Linux CI, одинаковыйSHA в Python3.9/3.11, явный gzip level.
+- MT3000 установлен, AutoON/резерв и оба VPN подтверждены. Проверки/ограничения — в QA-матрице.
+
+### English
+
+- Complete owner batch: compact lists/navigation/recommendations,20-row history, event-time channel labels, M/R diagrams and working-first monitor rows.
+- Configurable live buffer1–2000 and detail retention1–7days with actual pruning and preserved lifetime/monthly counters.
+- Current-channel fault tests verify alternate selection and retain kernel timeout, private identity and Stop checks.
+- Canonical pinned-Linux package matches Python3.9/3.11 CI; gzip level is explicit.
+- Dedicated MT3000 updated; AutoON/reserve and both VPNs verified. See the QA matrix for coverage limits.
+
+## 0.9.1-alpha12 — 2026-10-24
+
+- Основной синий / резервный оранжевый: две серии отказов и явная легенда; старые записи без роли исключены с отдельным архивом.
+- Event-time roles from matching configured-pair snapshots rather than transient controller status. Fixed native-state overwrite of outage health; strictly repair the provable prior checkpoint signature.
+
 ## 0.9.1-alpha11 — 2026-10-24
 
 ### Русский

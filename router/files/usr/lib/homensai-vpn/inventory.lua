@@ -37,7 +37,7 @@ uci:foreach('homensai_vpn','server',function(s)
   channels[#channels+1]={id=s['.name'],profile=s.profile or '',name=s.name or '',channel=s.channel or 'default',
     priority=tonumber(s.priority) or 100,enabled=s.enabled~='0'}
 end)
-local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
+local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,live_log_limit=2000,history_days=7,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
   onboarding_version=0,onboarding_complete=false,onboarding_pair_deferred=false,
   appearance_language='',appearance_design='b',appearance_theme='',router_model='auto',monitor_only=false,deployment_mode='standard'}
 uci:foreach('homensai_vpn','main',function(s)
@@ -92,6 +92,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.interval=math.max(10,math.min(300,tonumber(s.interval) or 30))
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
+  main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))
+  main.history_days=math.max(1,math.min(7,math.floor(tonumber(s.history_days) or 7)))
 end)
 -- Model preference never replaces hardware detection or controller platform guards.
 local board_file=io.open('/tmp/sysinfo/board_name','r')

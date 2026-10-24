@@ -156,8 +156,13 @@ function recoveryOutcomeText(row){
 function recoveryChannelText(row,key,profiles,inventory){
   var id=row[key];if(!id||id==='unknown')return recoveryPreparation(row)?bi('Pair not selected during preparation','На этапе подготовки пара ещё не выбрана'):bi('Channel profile absent from event','Профиль канала не записан в событии');
   var identity=recoveryIdentity(id,profiles,inventory);
-  var channel=identity.channel===bi('Channel not recorded','Канал не записан')?(key==='source'?bi('Original channel','Исходный канал'):bi('Destination channel','Канал назначения')):identity.channel;
+  var channel=recoveryEventRole(row,key)||(identity.channel===bi('Channel not recorded','Канал не записан')?(key==='source'?bi('Original channel','Исходный канал'):bi('Destination channel','Канал назначения')):identity.channel);
   return channel+' · '+identity.server;
+}
+function recoveryEventRole(row,key){
+  var valid=function(id){return typeof id==='string'&&/^(openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$/.test(id);};
+  if(!valid(row.source)||!valid(row.target)||row.source===row.target)return null;
+  return key==='source'?bi('Primary channel','Основной канал'):key==='target'?bi('Reserve channel','Резервный канал'):null;
 }
 function recoveryIdentity(identifier,profiles,inventory){
   profiles=Array.isArray(profiles)?profiles:[];
@@ -176,6 +181,7 @@ function recoveryIdentity(identifier,profiles,inventory){
 function recoveryGroups(rows,profiles,start,end,inventory){
   var result={server:{},channel:{},protocol:{}};
   rows.filter(function(row){return row.start>=start&&row.start<end;}).forEach(function(row){var identity=recoveryIdentity(row.target,profiles,inventory);
+    var role=recoveryEventRole(row,'target');if(role){identity.server=role+' · '+identity.server;identity.channel=role;identity.protocol=role+' · '+identity.protocol;}
     [['server',identity.server],['channel',identity.channel],['protocol',identity.protocol]].forEach(function(pair){
       var key='group:'+pair[1];if(!result[pair[0]][key])result[pair[0]][key]={name:pair[1],rows:[]};result[pair[0]][key].rows.push(row);
     });
@@ -187,8 +193,8 @@ function recoveryTableWrap(table){return E('div',{'class':'hv-recovery-scroll'},
 var exportSchemas={
   ranking:['server','name','protocol','channel','latency_ms','state'],
   traffic:['month','rx_bytes','tx_bytes','scope'],
-  failures:['start_utc','source','target','outcome','codes','attempt_id','retry_episode_id'],
-  transitions:['start_utc','source','target','kind','outcome','duration_seconds','trial','attempt_id','retry_episode_id','source_streak_met','reserve_streak_met','required_failures','required_successes']
+  failures:['start_utc','source','target','source_role','target_role','outcome','codes','attempt_id','retry_episode_id'],
+  transitions:['start_utc','source','target','source_role','target_role','kind','outcome','duration_seconds','trial','attempt_id','retry_episode_id','source_streak_met','reserve_streak_met','required_failures','required_successes']
 };
 function analyticsCSV(kind,rows){
   var columns=exportSchemas[kind];if(!columns)throw new Error('EXPORT-KIND');
@@ -198,11 +204,12 @@ function analyticsCSV(kind,rows){
   return '\ufeff'+[columns.map(cell).join(',')].concat(rows.map(function(row){return columns.map(function(key){return cell(row[key]);}).join(',');})).join('\r\n')+'\r\n';
 }
 function analyticsExportRows(kind,status,transitions){
-  if(kind==='ranking')return (status.profiles||[]).map(function(p){return {server:p.id,name:p.name,protocol:p.protocol,channel:p.channel,
+  if(kind==='ranking')return (status.profiles||[]).map(function(p){return {server:p.id,name:p.name,protocol:p.protocol,channel:p.role==='source'?'primary':p.role==='target'?'reserve':p.channel,
     latency_ms:p.rtt_ms,state:status.rpc_error?'unknown':profileHealth(p,Date.now()/1000).state};});
   if(kind==='traffic')return Object.keys((status.accounting||{}).months||{}).sort().map(function(month){var r=status.accounting.months[month];return {month:month,rx_bytes:r.rx,tx_bytes:r.tx,scope:'Observed interface counters; partial collection; overhead included'};});
   var rows=kind==='failures'?transitions.filter(function(r){return ['rolled_back','held'].indexOf(r.outcome)>=0;}):transitions;
   return rows.map(function(r){return {start_utc:new Date(r.start*1000).toISOString(),source:r.source,target:r.target,kind:r.kind,
+    source_role:recoveryEventRole(r,'source')?'primary':null,target_role:recoveryEventRole(r,'target')?'reserve':null,
     outcome:r.outcome,duration_seconds:r.duration,trial:r.trial,codes:r.codes.join(' | '),attempt_id:r.id,retry_episode_id:r.retry_episode_id,
     source_streak_met:r.probe_evidence.source_streak_met,reserve_streak_met:r.probe_evidence.reserve_streak_met,
     required_failures:r.probe_evidence.required_failures,required_successes:r.probe_evidence.required_successes};});
@@ -222,6 +229,7 @@ function controllerTransitionMarks(events){
 }
 function renderTransitionBadge(event,marks){
   var mark=marks[event.sequence];if(!mark)return null;
+  if(typeof renderChannelBadge==='function')return renderChannelBadge({phase:mark.confirmed?'confirmed':'pending',from:mark.from===1?'source':'target',to:mark.to===1?'source':'target'});
   var label=(mark.confirmed?bi('Confirmed switch: ','Подтверждённый переход: '):bi('Switch attempt: ','Попытка перехода: '))+mark.from+' → '+mark.to;
   return E('span',{'class':'hv-transition-badge'+(mark.confirmed?'':' hv-transition-pending'),'aria-label':label,'title':label},[
     E('span',{'class':'hv-transition-from','aria-hidden':'true'},String(mark.from)),E('span',{'aria-hidden':'true'},'→'),E('span',{'class':'hv-transition-to','aria-hidden':'true'},String(mark.to))]);
@@ -233,7 +241,7 @@ function storedStatisticsRows(status){
     attempts:control.attempts,switches:control.committed,automatic:control.automatic_committed,manual:control.manual_committed,returns:control.returns,
     auto_seconds:checks.auto_observed_seconds};}
   return [row(bi('All recorded time','За всё время записи'),health.totals||{},history.totals||{}),
-    row(bi('Last 7 days','Последние 7 дней'),health.weekly||{},history.weekly||{})].concat(months.map(function(month){
+    row(bi('Retained detailed period','Сохранённый подробный период'),health.weekly||{},history.weekly||{})].concat(months.map(function(month){
       return row(month,(health.months||{})[month]||{},(history.months||{})[month]||{});
     }));
 }
@@ -276,7 +284,7 @@ function renderStoredStatistics(status){
     finally{button.disabled=false;}
   }},bi('Download weekly detail and monthly summaries (JSON)','Скачать подробности недели и сводки по месяцам (JSON)'));
   return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Saved outage and switching statistics','Сохранённая статистика сбоев и переключений')),
-    E('p',{},bi('Detailed incidents: last 7 days. Monthly and lifetime counters survive detail expiry and service restart. A repeated status of one transaction is counted once. Missing data is shown as —.','Подробные события: последние 7 дней. Месячные и общие счётчики сохраняются после удаления старых подробностей и перезапуска службы. Повторные статусы одной транзакции считаются один раз. Нет данных — прочерк.')),
+    E('p',{},bi('Detailed incidents: configured retention of 1–7 days. Monthly and lifetime counters survive detail expiry and service restart. A repeated status of one transaction is counted once. Missing data is shown as —.','Подробные события: выбранный срок хранения 1–7 дней. Месячные и общие счётчики сохраняются после удаления старых подробностей и перезапуска службы. Повторные статусы одной транзакции считаются один раз. Нет данных — прочерк.')),
     E('p',{},bi('Outages are observed failure episodes; several failed probes may belong to one outage. Auto time includes only observed intervals. Old missing events and outage durations are not reconstructed.','Сбой — наблюдаемый эпизод отказа; в нём может быть несколько неудачных проверок. Время Auto включает только наблюдавшиеся интервалы. Утраченные старые события и длительность сбоев не восстанавливаются.')),
     E('p',{},bi('Counter coverage: ','Покрытие счётчиков: ')+(history.counter_accuracy||bi('No saved controller counters','Нет сохранённых счётчиков контроллера'))),
     (health.details_dropped||history.detail_budget_dropped)?E('p',{'role':'status'},bi('Detail storage limit was reached; aggregate counters are retained.','Достигнут предел подробных событий; сводные счётчики сохранены.')):null,

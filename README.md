@@ -2,7 +2,7 @@
 
 [Русский](README.ru.md) · [English](README.md)
 
-Development: **0.9.1-alpha11**, branch `feature/owner-ui-20261023`, a candidate with refreshed training and documentation. The public stable release remains **0.9.0**. The last verified dedicated MT3000 installation is **alpha9**. Alpha10 passed a separate virtual audit; its results do not establish physical installation or acceptance of alpha11.
+Current version: **0.9.1-alpha13**, branch `feature/owner-ui-20261023`. Alpha13 is installed on the dedicated MT3000/4.11.0: Auto on, reserve confirmed, both VPNs passed DNS/HTTPS. Verified87application files, HTTP/HTTPS and encrypted pre/post backups. Stable **0.9.0** is unchanged. Alpha12 previously remained off after guarded startup failures; alpha11/alpha9 are earlier physical baselines and alpha10 a separate historical VM audit. [Alpha13 matrix](qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
 
 
 

@@ -140,9 +140,12 @@ def v_speed_cfg(a):
 
 
 def v_monitor_cfg(a):
-    return (isinstance(a, dict) and set(a) == {'interval', 'checkpoint', 'probe_limit', 'planning_enabled'}
+    required={'interval', 'checkpoint', 'probe_limit', 'planning_enabled'}
+    return (isinstance(a, dict) and required<=set(a) and not set(a)-required-{'live_log_limit','history_days'}
             and is_bool(a['planning_enabled']) and is_int(a['interval'], 10, 300)
-            and is_int(a['checkpoint'], 300, 3600) and is_int(a['probe_limit'], 1, 16))
+            and is_int(a['checkpoint'], 300, 3600) and is_int(a['probe_limit'], 1, 16)
+            and ('live_log_limit' not in a or is_int(a['live_log_limit'],1,2000))
+            and ('history_days' not in a or is_int(a['history_days'],1,7)))
 
 
 RECOVERY = {'failures': (3, 10), 'successes': (2, 10), 'cooldown': (60, 1800), 'min_dwell': (60, 3600),
@@ -225,7 +228,7 @@ SPECS = {
     'setup_system': (good_system, v_system),
     'setup_telegram': (good_telegram, v_telegram),
     'setup_speed': (lambda: {'enabled': True, 'auto_new': False, 'budget_mib': 8, 'duration': 5, 'streams': 2, 'daily_mib': 128, 'busy_mbps': 2}, v_speed_cfg),
-    'setup_monitor': (lambda: {'interval': 30, 'checkpoint': 600, 'probe_limit': 8, 'planning_enabled': True}, v_monitor_cfg),
+    'setup_monitor': (lambda: {'interval': 30, 'checkpoint': 600, 'probe_limit': 8, 'planning_enabled': True,'live_log_limit':100,'history_days':2}, v_monitor_cfg),
     'setup_recovery': (lambda: {'failures': 3, 'successes': 2, 'cooldown': 180, 'min_dwell': 180, 'return_policy': 'healthy_primary', 'primary_successes': 3, 'primary_stable': 60}, v_recovery),
     'terms_accept': (lambda: {'version': '1'}, v_terms),
     'telegram_forget': (dict, v_empty),

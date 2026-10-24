@@ -54,3 +54,25 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
  const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(builder.includes("element_guard.inc.js"));assert(builder.includes("must_replace(\"'require ui';\""),'guard follows dependency directives');
  console.log('PASS: module-local LuCI element guard, nested null/undefined cleanup, zero/attributes/callback preservation, reload safety and actual Getting started rendering in EN/RU');
 }
+
+// Current source fragment only: do not regenerate installed-version assets during a local batch.
+{
+ const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');
+ const start=builder.indexOf('var advancedOpen=false;');const end=builder.indexOf('var links=',start);
+ assert(start>=0&&end>start);const fragment=builder.slice(start,end);
+ class NavNode{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children);}setAttribute(k,v){this.attrs[k]=v;}}
+ for(const ru of [false,true]){
+  const saved={};const nav={E:(...a)=>new NavNode(...a),bi:(en,rus)=>ru?rus:en,ADVANCED_KEYS:['tests','events'],activeTab:'overview',tabLink:k=>new NavNode('a',{},k),localStorage:{getItem:k=>saved[k]||null,setItem:(k,v)=>saved[k]=v}};
+  vm.createContext(nav);vm.runInContext(fragment,nav);
+  assert(nav.advancedBox.hidden);assert.equal(nav.advancedToggle.attrs['aria-expanded'],'false');
+  assert.equal(nav.advancedToggle.children.length,1);assert.equal(nav.advancedToggle.children[0].children[0],ru?'Расширенные настройки':'Advanced settings');
+  assert.equal(nav.advancedToggle.attrs['aria-controls'],nav.advancedBox.attrs.id);
+  nav.advancedToggle.attrs.click();assert(!nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'1');
+  nav.advancedToggle.attrs.click();assert(nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'0');
+  const clause=builder.match(/if\(oldTab!==key&&advancedBox&&ADVANCED_KEYS[^\n]+?\}/)[0];
+  nav.oldTab='tests';nav.key='tests';vm.runInContext(clause,nav);assert(nav.advancedBox.hidden,'poll must not reopen collapsed active group');
+  nav.oldTab='overview';vm.runInContext(clause,nav);assert(!nav.advancedBox.hidden,'navigating to an advanced page reveals its menu');
+ }
+ const css=fs.readFileSync('router/design_layer.css','utf8');assert(!css.includes('.hv-advanced-toggle{display:none}'));assert(css.includes('.hv-advanced-links[hidden]{display:none!important}'));assert(css.includes('letter-spacing:0;text-transform:none;white-space:nowrap'));
+ console.log('PASS: single-line RU/EN Advanced settings, working toggle/ARIA/storage, no poll reopen and design C collapse respected');
+}

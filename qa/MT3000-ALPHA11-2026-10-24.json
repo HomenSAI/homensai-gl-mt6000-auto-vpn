@@ -1,0 +1,257 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_WITH_RETRY_AND_BROWSER_LIMIT",
+  "version": "0.9.1-alpha11",
+  "tested_product_source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+    "bytes": 806313,
+    "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6"
+  },
+  "ci": [
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 16,
+      "source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+      "ui_suites": 45,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 0,
+      "source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "files_modes_verified": 86,
+  "actual_http8080": {
+    "pass": true,
+    "assets": [
+      {
+        "asset": "dashboard87.js",
+        "http_status": 200,
+        "sha256": "b234761dea0da5099b3e41ba2f20d627f27ea64f266a0e73b14784aac67e31dc",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui59.css",
+        "http_status": 200,
+        "sha256": "02f090941545920d7a1cd1ae397466f0a04888f9480fb4d0c674301035b0ceb6",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "time": 1792846511.5240722,
+    "scope": "actual HTTP8080 user-facing static assets; bound cable interface3/source192.168.11.228"
+  },
+  "actual_https": {
+    "scope": "Actual HTTPS-served bytes over interface3/source192.168.11.228 with pinned certificate; no login/session/terms/wizard writes",
+    "assets": [
+      {
+        "asset": "dashboard87.js",
+        "http_status": 200,
+        "bytes": 971763,
+        "sha256": "b234761dea0da5099b3e41ba2f20d627f27ea64f266a0e73b14784aac67e31dc",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui59.css",
+        "http_status": 200,
+        "bytes": 126284,
+        "sha256": "02f090941545920d7a1cd1ae397466f0a04888f9480fb4d0c674301035b0ceb6",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "pass": true,
+    "time": 1792846511.9099329
+  },
+  "final": {
+    "result": "PASS",
+    "time": 1792847390.120425,
+    "version": "0.9.1-alpha11",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 5.479708909988403,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 37,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 35,
+      "channel_switches": 0,
+      "committed": 29,
+      "manual_attempts": 19,
+      "manual_committed": 18,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 6,
+      "rollbacks": 12,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 16901,
+      "failed_checks": 588,
+      "outages": 166,
+      "observed_down_seconds": 5904.423914909363,
+      "observed_up_seconds": 167699.2888867855,
+      "auto_observed_seconds": 85826.16814994812,
+      "recoveries": 141,
+      "unknown_intervals": 5
+    },
+    "external_lan_verified": false
+  },
+  "features": {
+    "event": "ALPHA11-FEATURES",
+    "result": "PASS",
+    "interactive_training_installed": true,
+    "grouped_terminal_installed": true,
+    "failure_chart_installed": true,
+    "concrete_transition_labels_installed": true,
+    "fresh_bound_peer_addresses": 2,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "settings": {
+    "scope": "After confirmed RUNNING on reserve: own UCI config compared with verified pre-Stop encrypted backup; only option names are reported, never values",
+    "byte_equal": false,
+    "semantic_equal": false,
+    "changed_options": [
+      "main.main/native_trial",
+      "main.main/native_until"
+    ],
+    "old_options": 29,
+    "new_options": 29,
+    "terms_preserved": true,
+    "expected_lifecycle_only": true,
+    "unrelated_options_preserved": true,
+    "before_sha256": "0b41c8b1bd446340e828cb95830df8a70579032ab4a2f7cdae16c2f4130430d4",
+    "after_sha256": "8304073735f976a496bde7a2781d3411af0fefd1b5e273decdf0f42c5f4fe7bd"
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "cf391cf42cdfa7841e3ce0fcfbb4bede0d490015ba327c7dc26168210c6fa7b9",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_backup": {
+    "step": "backup-after",
+    "result": "PASS",
+    "encrypted_sha256": "7d96ecd6618d3a5a36fc8c0e2944de517511c8fddb56d6cd9ff4a3f942bed81a",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 21.921,
+    "bytes": 847,
+    "sha256": "d26baf69b82c43f54251c618190d708c9e739ee62c7c4ebbadec54074cf90f87",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 65.438,
+    "bytes": 2024,
+    "sha256": "830d09f402783f361a6555248645a2281c95c3a85e6d28794ada82b139610bd4",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "reserve": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 39.828,
+    "bytes": 11016,
+    "sha256": "f9bb09c6fd211c3d1b9b3af17bb7c1db3542090a63101d6ebf3d65088f295031",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "initial_start": {
+    "result": "FAIL_SAFE_CLEANUP",
+    "observed_code": "VENDOR-WORKER-QUIET-UNVERIFIED",
+    "retained_private_log": "private/alpha11-install-20261024/start-failed.jsonl",
+    "retry_precondition": {
+      "time": 1792846904.4165697,
+      "busy": 0,
+      "verified": true
+    },
+    "retry_result": "PASS_NORMAL_START_NO_BYPASS"
+  },
+  "harness_notes": [
+    "Comparison inherited an Auto-OFF expectation although final state is Auto-ON; corrected to validate current lease and checksum-bound pair controller. Settings did not change during correction."
+  ],
+  "scope": {
+    "native_browser_visual": "NOT_VERIFIED",
+    "router_originated_ipv4": true,
+    "independent_LAN": false,
+    "host_network_changed": false,
+    "primary_MT6000_changed": false,
+    "fault_test_run": false,
+    "release_published": false
+  },
+  "recorded_utc": "2026-10-24T13:10:47.976506+00:00"
+}

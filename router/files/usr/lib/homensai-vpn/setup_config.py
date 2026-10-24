@@ -110,9 +110,13 @@ def speed_payload(arguments):
 
 
 def monitor_payload(arguments, probe_max=16):
-    if set(arguments)!={'interval','checkpoint','probe_limit','planning_enabled'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
-    return {'main':{'interval':integer(arguments['interval'],10,300),'checkpoint':integer(arguments['checkpoint'],300,3600),
-                    'probe_limit':integer(arguments['probe_limit'],1,probe_max),'plan_enabled':'1' if arguments['planning_enabled'] else '0'},'servers':[]}
+    required={'interval','checkpoint','probe_limit','planning_enabled'}
+    if not required<=set(arguments) or set(arguments)-required-{'live_log_limit','history_days'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
+    main={'interval':integer(arguments['interval'],10,300),'checkpoint':integer(arguments['checkpoint'],300,3600),
+          'probe_limit':integer(arguments['probe_limit'],1,probe_max),'plan_enabled':'1' if arguments['planning_enabled'] else '0'}
+    for key,high in (('live_log_limit',2000),('history_days',7)):
+        if key in arguments:main[key]=integer(arguments[key],1,high)
+    return {'main':main,'servers':[]}
 
 
 def onboarding_payload(arguments, profiles, existing=None):

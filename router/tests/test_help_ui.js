@@ -29,7 +29,11 @@ for(const command of ['show','start','stop-auto','remove-guard','close-journal']
 const page=context.renderHelp();
 const details=page.all().filter(n=>n.tag==='details');
 assert.equal(details.length,topics.length);
-assert.equal(details.filter(n=>n.attrs.open).length,1);assert(details[0].attrs.id==='help-no-internet');
+assert.equal(details.filter(n=>n.attrs.open).length,1);assert(details.find(n=>n.attrs.open).attrs.id==='help-no-internet');
+const planner=details.find(n=>n.attrs.id==='help-planner-wait');
+assert(planner&&!planner.attrs.open,'planner explanation is collapsed in Help');
+assert(planner.text().includes('not a separate confirmation'));
+assert(planner.all().some(n=>n.attrs['data-diagnostic-copy']==='planner-wait'));
 const commands=topics.reduce((n,t)=>n+t.steps.filter(s=>s.c).length,0);
 assert.equal(page.all().filter(n=>n.tag==='pre').length,commands);
 assert.equal(page.all().filter(n=>n.tag==='button').length,commands+topics.length,'each topic includes its diagnostic copy action');

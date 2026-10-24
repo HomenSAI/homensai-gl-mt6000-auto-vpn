@@ -67,3 +67,17 @@ assert(c.recoveryChannelText({...prepared[1],target:'openvpn:40354_2005'},'targe
 for(const r of prepared.concat(gap)){assert(!/unknown|held/.test(c.recoveryOutcomeText(r)));assert(!c.recoveryChannelText(r,'source',ids,inv).includes('unknown'));}
 c.bi=english;
 console.log('PASS: grouped preparation, actual final reserve state, explicit gap reasons, concrete channel labels and Russian results without fabricated completion');
+const historical={source:'wireguard:peer_1',target:'openvpn:40354_2005',start:10,outcome:'held',codes:['VPN-003'],probe_evidence:{}};
+c.bi=en=>en;
+const changedPair={settings:{plan_source:historical.target,plan_target:historical.source}};
+assert(c.recoveryChannelText(historical,'source',[],changedPair).startsWith('Primary channel ·'));
+assert(c.recoveryChannelText(historical,'target',[],changedPair).startsWith('Reserve channel ·'));
+const historicalGroups=c.recoveryGroups([historical],[],0,20,changedPair);
+assert.equal(historicalGroups.channel[0].name,'Reserve channel');assert(historicalGroups.server[0].name.startsWith('Reserve channel ·'));assert(historicalGroups.protocol[0].name.startsWith('Reserve channel ·'));
+const exported=c.analyticsExportRows('failures',{},[historical])[0];assert.equal(exported.source_role,'primary');assert.equal(exported.target_role,'reserve');assert(c.analyticsCSV('failures',[exported]).includes('"source_role"'));
+console.log('PASS: event-time roles across transaction cells/groups and CSV remain unchanged after current-pair swap');
+vm.runInContext(fs.readFileSync('router/journal_panel.inc.js','utf8'),c);
+c.E=(tag,attrs={},children=[])=>({tag,attrs,children});
+const visual=c.renderTransitionBadge({sequence:1},{1:{from:2,to:1,confirmed:true}});
+assert.equal(visual.children[0].children,'M');assert.equal(visual.children[2].children,'R');assert.equal(visual.children[1].children,'←');assert(visual.children[0].attrs.class.includes('working'));
+console.log('PASS: older controller-event table uses the same M/R renderer and confirmed reverse colours');

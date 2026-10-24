@@ -74,7 +74,10 @@ def atomic(path,value):
 
 class History:
     RETENTION_BYTES=2*1024*1024
-    def __init__(self,directory,limit=10000):
+    def __init__(self,directory,limit=10000,detail_days=None):
+        from retention_settings import configured_days
+        self.detail_days=configured_days() if detail_days is None else detail_days
+        if type(self.detail_days) is not int or not 1<=self.detail_days<=7:raise HistoryError("HISTORY-RETENTION")
         if type(limit) is not int or not 1<=limit<=10000:raise HistoryError('HISTORY-LIMIT')
         self.path=Path(directory)/'native-history.json'
         self.backup=self.path.with_name('native-history.backup.json')
@@ -199,9 +202,9 @@ class History:
                 if key in replay:data[key]=replay[key]
 
     def prune(self,data,now):
-        data['events']=[row for row in data['events'] if now-WEEK<=row['time']<=now]
+        data['events']=[row for row in data['events'] if now-self.detail_days*86400<=row['time']<=now]
         for retired in sorted(data['months'])[:-1200]:del data['months'][retired]
-        cutoff=time.strftime('%Y-%m-%d',time.localtime(max(0,now-WEEK)))
+        cutoff=time.strftime('%Y-%m-%d',time.localtime(max(0,now-self.detail_days*86400)))
         for retired in list(data.get('days',{})):
             if retired<cutoff:del data['days'][retired]
     def record(self,value,now=None):
@@ -255,8 +258,9 @@ class History:
         # A new RTT sample alone is not a controller transition or flash event.
         key=hashlib.sha256(encoded({k:v for k,v in item.items() if k!='latency'})).hexdigest()
         if key==data['last_key']:
-            original_count=len(data['events']);self.prune(data,now)
-            if legacy or len(data['events'])!=original_count:
+            original_count=(len(data['events']),len(data.get('days',{})));self.prune(data,now)
+            if legacy or (len(data['events']),len(data.get('days',{})))!=original_count:
+                atomic(self.backup,self.envelope(json.loads(encoded(data))))
                 atomic(self.path,self.envelope(data))
             if data.get('daily_since') is None:
                 old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
@@ -268,7 +272,7 @@ class History:
         item.update(time=now,sequence=data['sequence']+1)
         data['sequence']+=1;data['last_key']=key;data['last_time']=now
         retained=data['events']+[item]
-        data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+sum(row['time']>=now-WEEK for row in retained[:-self.limit])
+        data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+sum(row['time']>=now-self.detail_days*86400 for row in retained[:-self.limit])
         data['events']=retained[-self.limit:]
         month=time.strftime('%Y-%m',time.localtime(now));day=time.strftime('%Y-%m-%d',time.localtime(now))
         if data.get('daily_since') is None:data['daily_since']=now
@@ -295,7 +299,7 @@ class History:
                 'totals':data.get('totals',{}),'counter_accuracy':data.get('counter_accuracy'),
                 'returns_since':data.get('returns_since'),
                 'weekly':weekly,'weekly_detail_complete':not data['events'] or data['events'][-1]['sequence']-data['events'][0]['sequence']+1==len(data['events']),
-                'detail_days':7,'retained_events':len(data['events']),
+                'detail_days':self.detail_days,'retained_events':len(data['events']),
                 'detail_budget_dropped':data.get('detail_budget_dropped',0),
                 'months':data['months'],'days':data.get('days',{}),'daily_since':data.get('daily_since'),'event_history_truncated':data['sequence']>min(100,len(data['events'])),'scope':'controller transitions; not LAN availability or router power-loss proof'}
 

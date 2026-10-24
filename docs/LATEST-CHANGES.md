@@ -2,20 +2,28 @@
 
 ## Русский
 
-Разработка: **0.9.1-alpha11**, рабочая ветка `feature/owner-ui-20261023`. Это отдельный кандидат с обновлённым обучением и документацией. Публичный стабильный релиз остаётся **0.9.0**. Последняя подтверждённая установка на выделенном MT3000 — **alpha9**; alpha10 прошла отдельный виртуальный аудит. Результаты alpha10 не являются доказательством установки или приёмки alpha11 на физическом роутере.
+Кандидат **0.9.1-alpha13**, stable **0.9.0** без изменений.
 
-## Первый вход и обучение
+- Списки серверов: первые пять строк и раскрытие; работающий канал выше ожидающего в текущих проверках и мониторе.
+- Обзор, сворачиваемая рекомендация задержки, меню «Расширенные настройки» и пояснения стали компактнее.
+- Ошибки и восстановления сначала называют основной или резервный канал; роль хранится на момент события. Схема M/R показывает направление и подтверждение перехода.
+- Сохранённая история: последние20 строк, раскрытие остальных, поиск/сортировка; отдельная кнопка чтения удалена.
+- Настраиваются 1–2000 наблюдений живого журнала и 1–7 дней подробной истории. Реальная очистка сохраняет месячные/общие счётчики; удалённые подробности не восстанавливаются увеличением срока.
+- Ограниченный тест сбоя выбирает текущий канал, проверяет переход на другой и снимает искусственную блокировку после подтверждения либо таймаута. Поддерживается prepared continuous-pair Auto без устаревшего требования LAN-сертификата; проверки private state, Stop, identities, health и kernel timeout остаются.
+- Старая таблица dry-run условий заменена ссылкой на актуальную готовность; объяснение ожидания планировщика перенесено в помощь.
 
-- Alpha10: объединение повторов журнала, источник команды и направление перехода, сохранённая HTTPS-задержка, компактные списки/свёртывания, график отказов, понятные серверы/протоколы/роли/итоги, исправления null и геометрии.
-- Alpha11: восемь интерактивных схем и полная проверка учебного потока/викторины EN/RU; исправлено требование LAN-помощника для любого Auto и совет безусловно возвращаться на основной. Обновлены текущие руководства и классификация всех Markdown-документов.
-- VM-аудит относится к alpha10, а не к будущей физической установке alpha11.
-
-[Полное руководство RU](CURRENT-STATE.ru.md) · [VM-аудит](handoff/VM-AUDIT-2026-10-24.md)
+Проверки и приёмка этой версии фиксируются отдельно в матрице текущей пачки. Старые VM/физические результаты не считаются приёмкой alpha13.
 
 ## English
 
-- Alpha10: grouped live-state ranges, command provenance/direction, saved event-time HTTPS delay, compact lists/disclosures, failure chart, concrete server/protocol/role/outcome labels and null/layout corrections.
-- Alpha11: eight interactive teaching diagrams, complete EN/RU lesson/quiz flow tests; corrected universal-helper requirement and unconditional primary-return advice. Current guides and the complete Markdown classification were refreshed.
-- Alpha10 VM evidence does not establish future physical alpha11 acceptance. Stable0.9.0 remains unchanged.
+Candidate **0.9.1-alpha13**; stable **0.9.0** unchanged.
 
-[Full guide EN](CURRENT-STATE.en.md) · [Evidence](../qa/OWNER-PROMPT-VM-ALPHA10-2026-10-24.json)
+- Server lists show five rows with disclosure; working channels precede waiting ones in current checks and the service monitor.
+- Overview, collapsed latency recommendations, Advanced settings navigation and explanations are more compact.
+- Failures/recoveries identify the event-time primary/reserve role. M/R diagrams show transition direction and confirmation.
+- Saved history starts with20 recent rows, expands, searches and sorts; the separate read-history button is removed.
+- Configurable live buffer1–2000 and detailed retention1–7days enforce actual cleanup while keeping monthly/lifetime counters. Increasing retention cannot restore deleted detail.
+- Bounded fault tests target the actual selected channel and confirm the alternate route before reporting success. Prepared continuous-pair Auto no longer requires a legacy LAN certificate; private-state, identity, health, Stop and kernel-timeout checks remain.
+- The obsolete dry-run table links to authoritative readiness; planner-wait explanations live in Help.
+
+This candidate's verification and device acceptance are recorded separately. Earlier evidence does not establish alpha13 acceptance.

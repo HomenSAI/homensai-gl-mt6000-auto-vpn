@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha11'
+VERSION = '0.9.1-alpha13'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -189,7 +189,7 @@ class Accounting:
                 continue  # Never move a baseline backwards or double-count time.
             beginning = previous[0] if previous else profile.get('last_seen', now)
             interval_state = previous[1] if previous and 0 < now-beginning <= max_gap else 'unknown'
-            cursor = max(beginning, now-32*86400)
+            cursor = max(beginning, now-self.reliability.detail_days*86400)
             while cursor < now:
                 local = datetime.fromtimestamp(cursor)
                 tomorrow = local.date()+timedelta(days=1)
@@ -208,9 +208,9 @@ class Accounting:
                     bucket['failures'] += 1
             self.activity_previous[key] = (now, state, active)
             profile['last_seen'] = now
-            cutoff = datetime.fromtimestamp(now-32*86400).strftime('%Y-%m-%d')
+            cutoff = datetime.fromtimestamp(now-self.reliability.detail_days*86400).strftime('%Y-%m-%d')
             profile['days'] = {d:b for d,b in profile['days'].items() if d >= cutoff}
-        self.activity = {k:v for k,v in self.activity.items() if v.get('last_seen',0) >= now-32*86400}
+        self.activity = {k:v for k,v in self.activity.items() if v.get('last_seen',0) >= now-self.reliability.detail_days*86400}
         if len(self.activity)>400:
             keep=sorted(self.activity,key=lambda k:self.activity[k]['last_seen'],reverse=True)[:400]
             self.activity={k:self.activity[k] for k in keep}
@@ -291,6 +291,16 @@ class Accounting:
             for key,profile in days[:take]:del self.activity[profile]['days'][key]
             self.retention['activity_days_dropped']=self.retention.get('activity_days_dropped',0)+take
 
+    def apply_detail_retention(self,days,now):
+        self.reliability.detail_days=days;self.reliability.prune(now)
+        cutoff=now-days*86400;date_cutoff=datetime.fromtimestamp(cutoff).strftime('%Y-%m-%d')
+        self.days={key:row for key,row in self.days.items() if key>=date_cutoff}
+        self.quality={key:value for key,value in self.quality.items() if (value.get('last') or {}).get('time',0)>=cutoff}
+        for value in self.quality.values():value['buckets']={key:row for key,row in value.get('buckets',{}).items() if int(key)*3600>=cutoff}
+        for value in self.activity.values():value['days']={key:row for key,row in value.get('days',{}).items() if key>=date_cutoff}
+        self.activity={key:value for key,value in self.activity.items() if value.get('last_seen',0)>=cutoff}
+        if self.wan:self.wan.apply_detail_retention(days,now)
+
     def public_export(self):
         self.compact();data=dict(self.export())
         data['reliability']=self.reliability.public()
@@ -317,10 +327,10 @@ class Accounting:
             activity[identifier]={'name':value.get('name',identifier),'protocol':value.get('protocol','unknown'),'days':{},'periods':periods}
         data['activity']=activity;return data
 
-    def observe(self, result, max_gap=90, native=None):
-        self.reliability.observe(result,max_gap=max_gap,native=native)
+    def observe(self, result, max_gap=90, native=None, pair=None):
+        self.reliability.observe(result,max_gap=max_gap,native=native,pair=pair)
         identifier, stamp = result['id'], result['time']
-        self.quality = {key: value for key, value in self.quality.items() if (value.get('last') or {}).get('time', 0) >= stamp-7*86400}
+        self.quality = {key: value for key, value in self.quality.items() if (value.get('last') or {}).get('time', 0) >= stamp-self.reliability.detail_days*86400}
         bucket = str(int(stamp//3600))
         profile = self.quality.setdefault(identifier, {'buckets': {}, 'last': None})
         profile['last'] = {k: result.get(k) for k in ('time','code','rtt_ms')}
@@ -334,7 +344,7 @@ class Accounting:
                 row['success'] += 1
                 row['rtt_sum'] += result.get('rtt_ms') or 0
         for key in list(profile['buckets']):
-            if int(key)*3600 < stamp-7*86400:
+            if int(key)*3600 < stamp-self.reliability.detail_days*86400:
                 del profile['buckets'][key]
 
         if len(self.quality) > 400:
@@ -558,7 +568,11 @@ def checkpoint(accounting,latency=None):
         from checkpoint_schema import validate
         try:
             validate(old)
-            if old.get('sha256') == checksum(old.get('data')):atomic_json(PERSIST/'checkpoint.backup.json', old)
+            if old.get('sha256') == checksum(old.get('data')):
+                previous=Accounting(old['data']['accounting'])
+                previous.apply_detail_retention(accounting.reliability.detail_days,time.time())
+                old['data']['accounting']=previous.export();old['sha256']=checksum(old['data'])
+                atomic_json(PERSIST/'checkpoint.backup.json', old)
         except (ValueError,TypeError,KeyError,OverflowError):pass
     atomic_json(PERSIST/'checkpoint.json', {'data': payload, 'sha256': checksum(payload)})
     if latency is not None:
@@ -647,7 +661,7 @@ def serve():
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
-    speed_previous=None
+    speed_previous=None;speed_retention_check=0
     from vendor_observation import VendorObserver
     vendor_observer=VendorObserver()
     from scan_control import begin as begin_scan, finish as finish_scan
@@ -657,6 +671,8 @@ def serve():
         try:
             data = inventory()
             settings = data['settings']
+            from retention_settings import days as retention_days
+            accounting.apply_detail_retention(retention_days(settings),time.time())
             profiles = data['profiles']
             selected = {s['profile']: s for s in data.get('servers', []) if s.get('enabled')}
             observed = monitoring_profiles(data)[0]
@@ -685,24 +701,32 @@ def serve():
                 accounting.track_activity(rows, time.time(), settings['interval']*3)
             else:
                 storage_error = 'CLOCK-001'
+            from reliability import failure_pair_context
+            failure_pair=failure_pair_context(data,after_inventory)
+            for row in rows:
+                row['role']='source' if row['id']==failure_pair.get('source') else 'target' if row['id']==failure_pair.get('target') else 'unknown'
             failure_context=read_json(RUNTIME/'native-status.json', {})
             for row in measured:
-                accounting.observe(row,max_gap=settings['interval']*3,native=failure_context)
+                accounting.observe(row,max_gap=settings['interval']*3,native=failure_context,pair=failure_pair)
                 samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
                     'interface','vendor_tunnel_id','vendor_generation')})
-            samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*7][-10000:]
+            samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*retention_days(settings)][-10000:]
             try:
                 from speed_test import observe_traffic, automatic_new, active_job, cancel as cancel_speed, SpeedError
                 observe_traffic(wan_devices or measured,scope='wan' if wan_devices else 'vpn')
                 if active_job() and any(p.get('code') in ('VPN-001','VPN-003','DNS-001') for p in measured):cancel_speed()
                 speed_previous=automatic_new(rows,speed_previous)
+                if time.monotonic()-speed_retention_check>=60:
+                    from speed_test import prune_history
+                    prune_history();speed_retention_check=time.monotonic()
             except Exception:events.append({'time':time.time(),'code':'SPEED-MONITOR-UNAVAILABLE'})
             current = {p['id']: p.get('code') for p in rows}
             previous = read_json(RUNTIME/'status.json', {}).get('profiles', [])
             old = {p['id']: p.get('code') for p in previous}
             for key, code in current.items():
                 if key not in old or old[key] != code:
-                    events.append({'time': time.time(), 'profile': key, 'code': code or 'OK'})
+                    role='source' if key==failure_pair.get('source') else 'target' if key==failure_pair.get('target') else 'unknown'
+                    events.append({'time': time.time(), 'profile': key, 'role':role, 'code': code or 'OK'})
             if storage_error:
                 events.append({'time': time.time(), 'code': storage_error})
             status = {'version': VERSION, 'mode': 'monitor', 'time': time.time(), 'profiles': rows,
@@ -802,7 +826,7 @@ def rpc(method):
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
-                          'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False},
+                          'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},

@@ -77,7 +77,10 @@ def publish(value):
     if value.get('manual') is True or value.get('reason') in ('OPERATOR-MANUAL','OPERATOR-RETURN'):
         if 'transition_source' not in value:value['transition_source']=manual_action_source(RUNTIME,value,value['time'])
     elif value.get('trial') is True or value.get('reason') in ('OPERATOR-TRIAL','TRIAL-PASSED'):value.setdefault('transition_source','test')
-    elif value.get('reason') in ('SOURCE-FAILED','PRIMARY-STABLY-RECOVERED','RESERVE-FAILED-PRIMARY-VERIFIED'):value.setdefault('transition_source','automatic')
+    elif value.get('reason') in ('SOURCE-FAILED','PRIMARY-STABLY-RECOVERED','RESERVE-FAILED-PRIMARY-VERIFIED'):
+        from fault_control import testing_profile
+        tested=value.get('source') if value.get('reason')=='SOURCE-FAILED' else value.get('target')
+        value.setdefault('transition_source','test' if tested and testing_profile(tested) else 'automatic')
     value.setdefault('proof_scope',PROOF_SCOPE)
     if value['proof_scope']=='router-probed-ipv4':
         value.setdefault('mode','continuous-pair')
@@ -783,7 +786,9 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
             or expected is not None and profile_identity(target)!=expected):
         return {'action':'HOLD','reason':'RESERVE-IDENTITY-UNKNOWN','reserve_healthy':None}
     failed=streak(samples,target['id'],recovery['failures'],now,age,False,target)
-    if recovery['return_policy']=='healthy_primary':
+    from fault_control import testing_profile
+    fault_test=failed and testing_profile(journal['target'])
+    if recovery['return_policy']=='healthy_primary' or fault_test:
         dwell=now-journal.get('confirmed',journal.get('started',now))
         if (failed or dwell>=recovery['min_dwell']) and backend.recovery_ready(journal['source'],settings) is True:
             return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}

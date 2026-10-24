@@ -142,8 +142,8 @@
 .hv-workspace[data-hv-design="c"] .hv-page .hv-server{padding:14px;border-radius:10px}
 .hv-workspace[data-hv-design="c"] .hv-page table{font-family:"IBM Plex Mono",monospace;font-size:12.5px}
 .hv-workspace[data-hv-design="c"] .hv-page table td,.hv-workspace[data-hv-design="c"] .hv-page table th{padding:5px 8px}
-.hv-workspace[data-hv-design="c"] .hv-advanced-toggle{display:none}
-.hv-workspace[data-hv-design="c"] .hv-advanced-links[hidden]{display:flex!important}
+.hv-workspace[data-hv-design="c"] .hv-advanced-toggle{display:flex}
+.hv-workspace[data-hv-design="c"] .hv-advanced-links[hidden]{display:none!important}
 .hv-workspace[data-hv-design="c"] .hv-advanced-links{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
 .hv-workspace[data-hv-design="c"] .hv-sidebar{--cosmos-bg:#171c24;--pv-term-dot:#2f3846}
 .hv-workspace[data-hv-design="c"] .hv-workspace,.hv-app.hv-workspace[data-hv-design="c"]{background:var(--bg)}
@@ -603,3 +603,36 @@
 .hv-app .hv-scene-controls{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
 .hv-app .hv-scene-outline{font-size:13px;line-height:1.7;padding-left:22px}
 @media(max-width:600px){.hv-app .hv-learn-scene{padding:10px}.hv-app .hv-scene-controls>button{flex:1 1 40%}}
+
+.hv-app .hv-failure-legend{display:flex;gap:20px;flex-wrap:wrap;margin:12px 0;font-weight:600}
+.hv-app .hv-failure-key{display:inline-flex;align-items:center;gap:8px}
+.hv-app .hv-failure-key>span{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid rgba(0,0,0,.18)}
+.hv-app .hv-failure-archive{margin:12px 0;font-size:13px}
+
+.hv-app details.hv-latency-recommendation>summary{display:list-item;cursor:pointer;font-weight:600;list-style:disclosure-closed;margin:0}
+.hv-app details.hv-latency-recommendation[open]>summary{list-style:disclosure-open}
+.hv-app .hv-recommendation-body{margin-top:12px}
+.hv-app .hv-recommendation-body .hv-recommendation-line{display:block;margin:8px 0;line-height:1.5;overflow-wrap:anywhere}
+
+.hv-app .hv-latency-notes{font-size:13px;line-height:1.5;margin:12px 0}
+.hv-app .hv-latency-notes>p{display:block;margin:6px 0}
+
+.hv-app .hv-advanced-toggle{display:flex;align-items:center;gap:8px;min-width:0;box-sizing:border-box;padding:10px 12px;font-size:13px;line-height:1.4;letter-spacing:0;text-transform:none;white-space:nowrap}
+.hv-app .hv-advanced-toggle>span{white-space:nowrap;min-width:0}
+.hv-app .hv-advanced-toggle:after{content:"▸";flex:0 0 auto;margin-left:auto}
+.hv-app .hv-advanced-toggle[aria-expanded="true"]:after{transform:rotate(90deg)}
+/* Main/Reserve event diagrams: route selection and observed connection states. */
+.hv-app .hv-channel-badge{display:inline-flex;align-items:center;gap:5px;vertical-align:middle;white-space:nowrap;margin:2px 9px 2px 0;font:700 12px/1.2 system-ui,sans-serif}
+.hv-app .hv-channel-dot{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;width:27px;height:27px;border:2px solid currentColor;border-radius:50%}
+.hv-app .hv-channel-working{color:#065f46;background:#d1fae5;border-color:#059669}
+.hv-app .hv-channel-failed{color:#991b1b;background:#fee2e2;border-color:#dc2626}
+.hv-app .hv-channel-pending{color:#854d0e;background:#fef3c7;border-color:#ca8a04}
+.hv-app .hv-channel-neutral{color:#475569;background:#e2e8f0;border-color:#94a3b8}
+.hv-app .hv-channel-arrow{display:inline-block;width:22px;text-align:center;color:inherit;font-size:19px}
+.hv-app .hv-channel-moving .hv-channel-arrow{color:#d39a16;animation:hv-channel-forward 1.1s ease-in-out infinite}
+.hv-app .hv-channel-moving.hv-channel-reverse .hv-channel-arrow{animation-name:hv-channel-backward}
+.hv-app .hv-terminal-line:not(:first-child) .hv-channel-arrow{animation:none}
+@keyframes hv-channel-forward{0%,100%{transform:translateX(-3px);opacity:.5}55%{transform:translateX(3px);opacity:1}}
+@keyframes hv-channel-backward{0%,100%{transform:translateX(3px);opacity:.5}55%{transform:translateX(-3px);opacity:1}}
+@media(prefers-reduced-motion:reduce){.hv-app .hv-channel-moving .hv-channel-arrow{animation:none}}
+@media print{.hv-app .hv-channel-moving .hv-channel-arrow{animation:none}}

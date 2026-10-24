@@ -1,5 +1,36 @@
 /* Shared real-event vocabulary for the live terminal and persisted history. */
 var EVENT_VIEW={query:'',sort:'time',desc:true,expanded:false,page:0,stored:null,busy:false,error:null,request:0};
+function journalHistoryDays(status){
+  var values=[((status.accounting||{}).reliability||{}).detail_days,(status.native_history||{}).detail_days].filter(function(n){return Number.isInteger(n)&&n>=1&&n<=7;});
+  return values.length?Math.min.apply(Math,values):7;
+}
+function renderChannelBadge(model){
+  if(!model)return null;
+  var main=bi('Main channel','Основной канал'),reserve=bi('Reserve channel','Резервный канал');
+  var label=model.phase==='confirmed'?bi('Confirmed transition: ','Подтверждённый переход: '):model.phase==='pending'?bi('Transition stage, awaiting confirmation: ','Этап перехода, ожидается подтверждение: '):model.phase==='failed'?bi('Connection failed: ','Ошибка соединения: '):bi('Connection recovered: ','Соединение восстановлено: ');
+  label+=model.from?(model.from==='source'?main:reserve)+' → '+(model.to==='source'?main:reserve):(model.to==='source'?main:reserve);
+  var colors={source:'neutral',target:'neutral'};
+  if(model.phase==='pending'){colors.source='pending';colors.target='pending';}
+  else if(model.phase==='confirmed'){colors[model.from]='failed';colors[model.to]='working';}
+  else colors[model.to]=model.phase==='failed'?'failed':'working';
+  function circle(role,letter,title){return E('span',{'class':'hv-channel-dot hv-channel-'+colors[role],'data-channel-role':role,'aria-hidden':'true','title':title},letter);}
+  var reverse=model.from==='target',moving=model.phase==='pending';
+  return E('span',{'class':'hv-channel-badge'+(moving?' hv-channel-moving':'')+(reverse?' hv-channel-reverse':''),'data-channel-phase':model.phase,'role':'img','aria-label':label,'title':label},[
+    circle('source','M',main),E('span',{'class':'hv-channel-arrow','aria-hidden':'true'},model.from?(reverse?'←':'→'):'·'),circle('target','R',reserve)]);
+}
+function journalChannelModel(entry){
+  var pair=entry.source&&entry.target&&entry.source!==entry.target;
+  if(pair&&['APPLYING','WAIT-CLIENT','ARMED'].indexOf(entry.state)>=0)return {phase:'pending',from:'source',to:'target'};
+  if(pair&&entry.state==='RESTORING')return {phase:'pending',from:'target',to:'source'};
+  if(pair&&['COMMITTED','STOPPED-ON-RESERVE'].indexOf(entry.state)>=0)return {phase:'confirmed',from:'source',to:'target'};
+  if(pair&&(entry.return_primary===true||entry.state==='ROLLED-BACK'&&entry.original_restored===true))return {phase:'confirmed',from:'target',to:'source'};
+  if(['source','target'].indexOf(entry.role)>=0){
+    if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')return {phase:'recovered',to:entry.role};
+    if(entry.state==='FAILURE'||entry.kind==='FAILURE'||entry.level==='error')return {phase:'failed',to:entry.role};
+  }
+  return null;
+}
+function renderJournalChannelBadge(entry){return renderChannelBadge(journalChannelModel(entry));}
 function journalSourceLabel(source){
   return source==='manual'?bi('operator command','оператор — вручную'):source==='automatic'?bi('automatic controller','контроллер — автоматически'):source==='test'?bi('programmatic test','тестовая программа — автоматически'):source==='programmatic'?bi('programmatic command','программа — программная команда'):bi('source not recorded','источник не указан');
 }
@@ -21,6 +52,8 @@ function journalMessage(entry,status){
   var names={COMMITTED:['Reserve selected','Выбран резерв'],OBSERVING:['Primary selected','Выбран основной'],'ROLLED-BACK':['Returned to primary','Возврат на основной'],FAILURE:['Connection failed','Ошибка соединения'],RECOVERY:['Connection recovered','Соединение восстановлено'],GAP:['Observation gap','Пропуск наблюдений'],STARTING:['Auto starting','Auto запускается'],STOPPED:['Auto stopped','Auto остановлен']};
   var label=names[entry.state]||names[entry.kind],text=label?bi(label[0],label[1]):entry.state;
   var profiles=Array.isArray(status.profiles)?status.profiles:[],p=profiles.find(function(p){return p.id===entry.profile;});
+  if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')text=entry.role==='source'?bi('Connection restored on the primary channel','Соединение восстановлено на основном канале'):entry.role==='target'?bi('Connection restored on the reserve channel','Соединение восстановлено на резервном канале'):bi('Connection restored · channel was not saved in this record','Соединение восстановлено · канал не сохранён в этой записи');
+  else if(entry.profile)text=(entry.role==='source'?bi('Primary channel','Основной канал'):entry.role==='target'?bi('Reserve channel','Резервный канал'):bi('Channel not saved in this record','Канал не сохранён в этой записи'))+' — '+text;
   if(entry.state==='AUTO-START-REQUESTED')text=bi('Auto: activation requested','Auto: запрошено включение');
   if(entry.state==='AUTO-STOP-REQUESTED')text=bi('Auto: deactivation requested','Auto: запрошено выключение');
   if(entry.state==='APPLYING')text=bi('Switch: primary → reserve','Переход: основной → резервный');
@@ -31,15 +64,16 @@ function journalMessage(entry,status){
   return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+(entry.code?' · '+entry.code:'');
 }
 function journalRows(status,stored,now){
+  var retainedSeconds=journalHistoryDays(status)*86400;
   var groups=[['controller',stored?stored.controller.events:(status.native_history||{}).events||[]],['failures',stored?stored.failures.events:((status.accounting||{}).reliability||{}).events||[]],['monitor',stored?[]:status.events||[]]],result=[],seen=Object.create(null);
   function control(action,stamp,source){
-    if(['start','stop'].indexOf(action)<0||!Number.isFinite(stamp)||stamp<=0||stamp<now-7*86400||stamp>now+5)return;
+    if(['start','stop'].indexOf(action)<0||!Number.isFinite(stamp)||stamp<=0||stamp<now-retainedSeconds||stamp>now+5)return;
     var key='control:'+action+':'+stamp;if(seen[key])return;seen[key]=true;
     result.push({key:key,time:stamp,state:action==='start'?'AUTO-START-REQUESTED':'AUTO-STOP-REQUESTED',kind:'CONTROL',profile:null,code:null,level:'ok',origin:'control',action_source:['manual','automatic','test','programmatic'].indexOf(source)>=0?source:'unknown'});
   }
   groups.forEach(function(group){if(!Array.isArray(group[1]))return;
     group[1].slice(-10000).forEach(function(e){
-      if(!e||!Number.isFinite(e.time)||e.time<now-7*86400||e.time>now+5)return;
+      if(!e||!Number.isFinite(e.time)||e.time<now-retainedSeconds||e.time>now+5)return;
       control(e.control_action,e.control_time,e.control_source);
       var state=journalToken(e.state||e.kind||e.code,'OBSERVATION'),code=typeof e.code==='string'&&safeCode(e.code)?e.code:Array.isArray(e.codes)?e.codes.find(safeCode)||null:null;
       var profile=typeof(e.profile||e.id)==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e.profile||e.id)?e.profile||e.id:null;
@@ -56,7 +90,9 @@ function journalRows(status,stored,now){
       if(!actionSource&&state==='STOPPED'&&e.control_action==='stop')actionSource=['manual','test','programmatic'].indexOf(e.control_source)>=0?e.control_source:'unknown';
       var returnPrimary=state==='STOPPED'&&Array.isArray(e.codes)&&e.codes.indexOf('OPERATOR-RETURN')>=0;
       var delayProfile=(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
-      result.push({key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,source:pair.source,target:pair.target,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0]});
+      var role=['source','target'].indexOf(e.role)>=0?e.role:null;
+      if(!role&&profile&&pair.source&&pair.target&&pair.source!==pair.target)role=profile===pair.source?'source':profile===pair.target?'target':null;
+      result.push({key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0]});
     });
   });
   var request=status.auto_control||{};
@@ -76,7 +112,6 @@ function renderEventHistory(status){
   var order=E('select',{'aria-label':bi('Sort event history','Сортировка истории'),'change':function(ev){EVENT_VIEW.sort=ev.target.value==='state'?'state':'time';EVENT_VIEW.page=0;draw();}},[E('option',{value:'time'},bi('Date and time','Дата и время')),E('option',{value:'state'},bi('State','Состояние'))]);order.value=EVENT_VIEW.sort;
   var direction=E('button',{'type':'button','class':'cbi-button','click':function(){EVENT_VIEW.desc=!EVENT_VIEW.desc;draw();}});
   var more=E('button',{'type':'button','class':'cbi-button','aria-expanded':EVENT_VIEW.expanded?'true':'false','click':function(){EVENT_VIEW.expanded=!EVENT_VIEW.expanded;EVENT_VIEW.page=0;if(EVENT_VIEW.expanded&&!EVENT_VIEW.stored)load();draw();}});
-  var refresh=E('button',{'type':'button','class':'cbi-button','click':load},bi('Read saved week','Прочитать сохранённую неделю'));
   async function load(){
     if(EVENT_VIEW.busy)return;EVENT_VIEW.busy=true;EVENT_VIEW.error=null;var request=++EVENT_VIEW.request;draw();
     try{
@@ -89,11 +124,11 @@ function renderEventHistory(status){
   function draw(){
     var status=EVENT_VIEW.status,now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
     while(tableHost.firstChild)tableHost.removeChild(tableHost.firstChild);
-    var rows=filteredJournalRows(journalRows(status,EVENT_VIEW.stored,now),status,EVENT_VIEW.query,EVENT_VIEW.sort,EVENT_VIEW.desc),size=EVENT_VIEW.expanded?500:10;
+    var rows=filteredJournalRows(journalRows(status,EVENT_VIEW.stored,now),status,EVENT_VIEW.query,EVENT_VIEW.sort,EVENT_VIEW.desc),size=EVENT_VIEW.expanded?500:20;
     EVENT_VIEW.page=Math.max(0,Math.min(EVENT_VIEW.page,Math.max(0,Math.ceil(rows.length/size)-1)));
     var selected=rows.slice(EVENT_VIEW.page*size,(EVENT_VIEW.page+1)*size),table=E('table',{'class':'table hv-event-history','data-hv-no-sort':'1'},[
       E('thead',{},E('tr',{},[bi('Date and time','Дата и время'),bi('State','Состояние'),bi('Event','Событие')].map(function(label){return E('th',{},label);}))),
-      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},row.state),E('td',{},journalMessage(row,status))]);}))]);
+      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},[renderJournalChannelBadge(row),row.state].filter(Boolean)),E('td',{},journalMessage(row,status))]);}))]);
     tableHost.appendChild(E('div',{'class':'hv-dv-tablewrap'},table));
     if(EVENT_VIEW.expanded&&rows.length>size){
       tableHost.appendChild(E('div',{'class':'hv-native-actions'},[
@@ -102,14 +137,14 @@ function renderEventHistory(status){
         E('button',{'type':'button','class':'cbi-button','disabled':(EVENT_VIEW.page+1)*size>=rows.length?'':null,'click':function(){EVENT_VIEW.page++;draw();}},bi('Next','Далее'))]));
     }
     direction.textContent=EVENT_VIEW.desc?bi('Descending ↓','По убыванию ↓'):bi('Ascending ↑','По возрастанию ↑');
-    more.textContent=(EVENT_VIEW.expanded?'▾ ':'▸ ')+(EVENT_VIEW.expanded?bi('Show 10 rows','Свернуть до 10 строк'):bi('More history','Остальная история'))+' · '+rows.length;more.setAttribute('aria-expanded',EVENT_VIEW.expanded?'true':'false');
-    more.disabled=EVENT_VIEW.busy;refresh.disabled=EVENT_VIEW.busy;
-    note.textContent=EVENT_VIEW.busy?bi('Reading the saved weekly snapshot…','Чтение сохранённого снимка недели…'):EVENT_VIEW.error||(!EVENT_VIEW.stored?bi('Showing the latest status snapshot. More/search reads all retained weekly records; it does not create missing history.','Показан последний снимок событий. Раскрытие/поиск прочитает всю сохранённую неделю; отсутствующие записи не создаются.'):bi('Search and sorting cover the full downloaded 7-day snapshot. Storage/count limits and unobserved gaps remain explicit; refresh to include newer records.','Поиск и сортировка охватывают весь загруженный снимок за 7 дней. Ограничения хранения и пропуски сохраняются; для новых записей обновите снимок.'));
+    more.textContent=(EVENT_VIEW.expanded?'▾ ':'▸ ')+(EVENT_VIEW.expanded?bi('Show 20 rows','Свернуть до 20 строк'):bi('More history','Остальная история'))+' · '+rows.length;more.setAttribute('aria-expanded',EVENT_VIEW.expanded?'true':'false');
+    more.disabled=EVENT_VIEW.busy;
+    note.textContent=EVENT_VIEW.busy?bi('Reading saved history…','Чтение сохранённой истории…'):EVENT_VIEW.error||(!EVENT_VIEW.stored?bi('Showing the latest status snapshot. More/search reads all retained records; it does not create missing history.','Показан последний снимок событий. Раскрытие/поиск прочитает всю сохранённую историю; отсутствующие записи не создаются.'):bi('Search and sorting cover the full downloaded retained snapshot. Storage/count limits and unobserved gaps remain explicit.','Поиск и сортировка охватывают весь загруженный снимок за выбранный срок. Ограничения хранения и пропуски сохраняются.'));
     if(EVENT_VIEW.stored){
       var records=[EVENT_VIEW.stored.controller,EVENT_VIEW.stored.failures],limited=records.some(function(r){var s=r.summary||{};return r.storage_notice||s.details_dropped>0||s.detail_budget_dropped>0||s.weekly_detail_complete===false;});
       if(limited)note.textContent+=' '+bi('Some saved details are unavailable or were dropped by the storage limit. This is not a complete record of every event.','Часть сохранённых подробностей недоступна или удалена по лимиту хранилища. Это не полный список всех произошедших событий.');
     }
   }
-  host.appendChild(E('h3',{},bi('Events and errors: saved history','События и ошибки: сохранённая история')));host.appendChild(E('div',{'class':'hv-native-actions'},[query,order,direction,refresh]));host.appendChild(note);host.appendChild(tableHost);host.appendChild(more);
-  host.appendChild(E('small',{},bi('The live terminal shows these real observations as they arrive. Its one-second screen heartbeat is not a persisted router event. Detailed controller/failure records are retained for 7 days within the existing bounded stores.','Живой терминал показывает эти реальные наблюдения по мере получения. Секундный heartbeat экрана не является сохранённым событием роутера. Подробности контроллера/сбоев хранятся 7 дней в существующих ограниченных журналах.')));EVENT_VIEW.root=host;EVENT_VIEW.draw=draw;draw();return host;
+  host.appendChild(E('h3',{},bi('Events and errors: saved history','События и ошибки: сохранённая история')));host.appendChild(E('div',{'class':'hv-native-actions'},[query,order,direction]));host.appendChild(note);host.appendChild(tableHost);host.appendChild(more);
+  host.appendChild(E('small',{},bi('The live terminal shows these real observations as they arrive. Its one-second screen heartbeat is not a persisted router event. Detailed controller/failure records are retained for the configured 1–7 days within bounded stores.','Живой терминал показывает эти реальные наблюдения по мере получения. Секундный heartbeat экрана не является сохранённым событием роутера. Подробности контроллера/сбоев хранятся выбранные 1–7 дней в ограниченных журналах.')));EVENT_VIEW.root=host;EVENT_VIEW.draw=draw;draw();return host;
 }

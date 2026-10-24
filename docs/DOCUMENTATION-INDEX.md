@@ -2,7 +2,7 @@
 
 [Русский: текущее руководство](CURRENT-STATE.ru.md) · [English: current guide](CURRENT-STATE.en.md) · [Последние изменения RU→EN](LATEST-CHANGES.md) · [VM audit alpha10](handoff/VM-AUDIT-2026-10-24.md)
 
-Development alpha11; stable release0.9.0; physical baselinealpha9; VM evidencealpha10. RU and EN current guides distinguish these states. Historical facts, legal terms and release assets retain their original scope. The table inventories every tracked Markdown document plus the new current guides. Technical references are not independent evidence of device acceptance.
+Current alpha13 installed on MT3000 AutoON/reserve; stable release0.9.0 unchanged. Alpha9/alpha11 are older physical baselines and alpha10 historical VM evidence. RU and EN current guides distinguish these states. Historical facts, legal terms and release assets retain their original scope. The table inventories every tracked Markdown document plus the new current guides. Technical references are not independent evidence of device acceptance.
 
 |Документ / Document|Назначение / Scope|
 |---|---|
@@ -185,3 +185,7 @@ Development alpha11; stable release0.9.0; physical baselinealpha9; VM evidenceal
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|Technical contract or historical reference / context reviewed|
 |[scripts/recovery/README.md](../scripts/recovery/README.md)|Technical contract or historical reference / context reviewed|
 |[docs/TRAINING-AND-DOCS-AUDIT-2026-10-24.md](TRAINING-AND-DOCS-AUDIT-2026-10-24.md)|Current training/doc review and explicit limits|
+
+## Alpha13 current references
+
+[Retention](HISTORY-RETENTION.md) · [Channel attribution](CHANNEL-ATTRIBUTION.md) · [Batch matrix](../qa/OWNER-BATCH-ALPHA13-2026-10-24.json) · [Physical receipt](../qa/MT3000-ALPHA13-2026-10-24.json)

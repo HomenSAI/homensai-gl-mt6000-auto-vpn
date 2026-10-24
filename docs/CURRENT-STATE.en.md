@@ -1,6 +1,6 @@
 # Current state and guide — 24 October 2026
 
-Development: **0.9.1-alpha11**, branch `feature/owner-ui-20261023`, a candidate with refreshed training and documentation. The public stable release remains **0.9.0**. The last verified dedicated MT3000 installation is **alpha9**. Alpha10 passed a separate virtual audit; its results do not establish physical installation or acceptance of alpha11.
+Current version: **0.9.1-alpha13**, branch `feature/owner-ui-20261023`. Alpha13 is installed on the dedicated MT3000/4.11.0: Auto on, reserve confirmed, both VPNs passed DNS/HTTPS. Verified87application files, HTTP/HTTPS and encrypted pre/post backups. Stable **0.9.0** is unchanged. Alpha12 previously remained off after guarded startup failures; alpha11/alpha9 are earlier physical baselines and alpha10 a separate historical VM audit. [Alpha13 matrix](../qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
 
 ## First entry and training
 
@@ -35,11 +35,11 @@ Your VPNs shows the selected pair, with other profiles collapsed. Current server
 
 ## Failure chart and journals
 
-Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Primary/reserve/unrecorded roles are separate. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
+Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Only two series are plotted: blue primary and orange reserve. Legacy records without a saved role are excluded and disclosed in a separate archive note. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
 
-The live terminal pins monitor/Auto/primary/reserve status above its log. Its one-second clock does not increase network probe cadence. New rows appear first; consecutive equal states form a timestamp range. A→B→A remains distinct. Operator/program/test/controller provenance is shown when recorded, separating requests from confirmed effects.
+The live terminal pins monitor/Auto above its log, followed by the working channel and then waiting/failed channel. Its one-second clock does not increase network probe cadence. New rows appear first; consecutive equal states form a timestamp range. A→B→A remains distinct. Operator/program/test/controller provenance is shown when recorded, separating requests from confirmed effects.
 
-Events and errors shows10rows before expansion, search and time/state sorting. Detailed history lasts7days within the storage budget; monthly/lifetime counters persist. Outages, failed checks, attempts and confirmed switches differ. Preparation without a pair is separate; missing completion has an explicit reason. Transition delay is an immutable event-time measurement, not current RTT. Technical exports retain original identifiers.
+Events and errors shows20recent rows before expansion, search and time/state sorting. Choose1–7days of detail and1–2000live observations under Settings → Monitoring and history retention. Actual pruning retains monthly/lifetime counters separately. Outages, failed checks, attempts and confirmed switches differ. Preparation without a pair is separate; missing completion has an explicit reason. Transition delay is an immutable event-time measurement, not current RTT. Technical exports retain original identifiers.
 
 ## LAN helper and readiness
 
@@ -65,3 +65,16 @@ flowchart LR
 ```
 
 Dashed links represent standby in this example. Actual selection requires router evidence, not the illustration.
+
+Historical alpha11 acceptance: Auto on, reserve selected, both VPNs passed DNS/HTTPS. The first Start safely refused on vendor-worker quiet; a normal retry after busy0 passed. Native visual and external-LAN acceptance remain separate limitations.
+
+[MT3000 alpha11 evidence](../qa/MT3000-ALPHA11-2026-10-24.json).
+
+
+## Alpha13 transition test and symbols
+
+Events identify the event-time primary/reserve role before server/protocol/code. M means main and R reserve. An arrow shows direction; yellow is unconfirmed, confirmed green is selected and red not selected. A single failure marks only its channel without inventing a transition.
+
+Simulate traffic failure automatically targets the current working channel. Prepared continuous-pair mode uses its own private pair evidence without the legacy LAN certificate. It temporarily blocks that tunnel, waits for fresh alternate-route confirmation and removes the fault; early stop is available while active. Timeout without confirmation is not success. Independent client-LAN acceptance remains separate.
+
+[MT3000 alpha13 receipt](../qa/MT3000-ALPHA13-2026-10-24.json) · [History retention](HISTORY-RETENTION.md) · [Channel attribution](CHANNEL-ATTRIBUTION.md).

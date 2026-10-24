@@ -84,7 +84,8 @@ delete inventory.settings.plan_source_tunnel;inventory.settings.plan_source='ope
 // Selected anchors remain visible even behind many other tunnel groups.
 ({status,inventory}=fixture());status.vendor_observation.groups=Array.from({length:39},(_,i)=>({id:'openvpn:spare'+i,protocol:'openvpn',profiles:[],active_profiles:[],state:'UNKNOWN',time:1000})).concat(status.vendor_observation.groups);
 const bounded=walk(c.renderVendorChannels(status,inventory)).filter(n=>n.attrs['data-vendor-tunnel']);assert.equal(bounded.length,32);assert.equal(bounded[0].attrs['data-vendor-tunnel'],inventory.settings.plan_source_tunnel);assert.equal(bounded[1].attrs['data-vendor-tunnel'],inventory.settings.plan_target_tunnel);
-const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');for(const anchor of ['vendor_diagnostics.inc.js',"put('channels',renderVendorChannels(status,inventory));","put('events',renderVendorEvents(status,inventory));","renderDecisionExplanation(status,inventory)"])assert(builder.includes(anchor),anchor);
+const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');for(const anchor of ['vendor_diagnostics.inc.js',"put('channels',renderVendorChannels(status,inventory));","put('events',renderVendorEvents(status,inventory));"])assert(builder.includes(anchor),anchor);
+assert(builder.includes('must_replace("put(\'tests\',renderDecisionExplanation(status));","")'));
 console.log('PASS: immutable vendor-tunnel identity vs labels/provider groups, current-generation health/freshness/unknown, bounded observed-change events, known read-only coordination vs unobserved cause, EN/RU and truthful held-reserve/return-policy/quorum decision explanation');
 
 assert(!builder.includes("put('overview',renderVendorOverview"));

@@ -27,7 +27,7 @@ const source=fs.readFileSync('router/files/www/luci-static/resources/view/homens
 const start=source.indexOf("var table=E('table',{'class':'table hv-check-table'}");
 assert(start>=0);
 const end=source.indexOf("limitTableRows(table,5,'current-checks-other'));",start)+"limitTableRows(table,5,'current-checks-other'));".length;
-vm.runInContext(source.slice(start,end),c);
+vm.runInContext(source.slice(start,end).replace('roleOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild','currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild'),c);
 const table=output.children[0],button=output.children[1];
 const data=()=>table.querySelectorAll('tr').filter(row=>row.querySelector('td'));
 const visible=()=>data().filter(row=>!row.hidden&&!row.attrs['data-over-limit']);
@@ -40,3 +40,19 @@ button.attrs.click();assert.equal(visible().length,11);button.attrs.click();asse
 data().forEach((row,i)=>row.hidden=i!==10);observed();assert.equal(visible().length,1);assert(button.hidden);
 data().forEach(row=>row.hidden=false);table.children=[table.children[0],...data().reverse()];observed();assert.equal(visible().length,5);
 console.log('PASS: generated current-checks table shows five rows, explicit roles, bound live IPs, expand/collapse and full-list filtering/reordering');
+
+for(const name of ['ui_logic','design_views'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);
+const clock=Date.now()/1000;c.statusNow=()=>clock;
+c.vendorDisplayMember=(_s,_i,role)=>role==='source'?primary:reserve;
+let selected=reserve.id;c.vendorDisplaySelected=()=>selected;
+for(const row of [primary,reserve])Object.assign(row,{time:clock,code:null,dns_ok:true,https_success:2});
+status.time=clock;status.native_failover={state:'COMMITTED',time:clock};
+let ordered=c.currentCheckOrderedRows(c.rows,status,inventory,clock);
+assert.equal(ordered[0].id,reserve.id,'working reserve is above waiting primary');assert.equal(ordered[1].id,primary.id);
+assert.equal(c.roleOrderedRows(c.rows,status,inventory,clock)[0].id,primary.id,'card role ordering unchanged');
+selected=primary.id;status.native_failover.state='OBSERVING';
+ordered=c.currentCheckOrderedRows(c.rows,status,inventory,clock);assert.equal(ordered[0].id,primary.id);assert.equal(ordered[1].id,reserve.id);
+primary.code='DNS-001';ordered=c.currentCheckOrderedRows(c.rows,status,inventory,clock);assert.equal(ordered[0].id,reserve.id,'failed selected profile must not be called working');primary.code=null;
+status.time=clock-100;assert.equal(c.currentCheckOrderedRows(c.rows,status,inventory,clock)[0].id,primary.id,'stale route cannot override truthful displayed states');
+const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(builder.includes('currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild'));
+console.log('PASS: current-checks working then waiting from real shared display model, primary/reserve swaps, failure/stale fences and unchanged card ordering');

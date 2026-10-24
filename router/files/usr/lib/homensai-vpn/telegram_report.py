@@ -32,8 +32,9 @@ def format_report(status, minutes, now=None, items=None):
         lines.append('Currently connected servers:')
         active = [p for p in status.get('profiles', []) if p.get('interface')]
         for p in active:
-            lines.append('%s · %s · %s · HTTPS %s ms' %
-                         (p['name'], p['protocol'], p.get('code') or 'OK', p.get('rtt_ms', '—')))
+            role='Primary channel' if p.get('role')=='source' else 'Reserve channel' if p.get('role')=='target' else 'Profile outside the confirmed pair'
+            lines.append('%s · %s · %s · %s · HTTPS %s ms' %
+                         (role,p['name'], p['protocol'], p.get('code') or 'OK', p.get('rtt_ms', '—')))
         if not active:
             lines.append('No connected profiles found.')
     cutoff = now-minutes*60
@@ -41,8 +42,9 @@ def format_report(status, minutes, now=None, items=None):
         events = [e for e in status.get('events', []) if e.get('time', 0) >= cutoff]
         lines.append('State changes during the interval: %s' % len(events))
         for event in events[-20:]:
-            lines.append('%s · %s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),
-                                          event.get('profile', 'service'), event.get('code', 'OK')))
+            role='Primary channel' if event.get('role')=='source' else 'Reserve channel' if event.get('role')=='target' else 'Channel not saved in event' if event.get('profile') else 'Service'
+            lines.append('%s · %s · %s · %s' % (datetime.fromtimestamp(event['time']).strftime('%H:%M:%S'),
+                                          role,event.get('profile', 'service'), event.get('code', 'OK')))
     accounting = status.get('accounting', {})
     month = datetime.fromtimestamp(now).strftime('%Y-%m')
     if 'traffic' in items:

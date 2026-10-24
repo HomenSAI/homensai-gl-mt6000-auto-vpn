@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard87'
+UI_MODULE='dashboard89'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -155,7 +155,7 @@ old="return m.render().then(function(formNode){"
 assert old in source
 source=source.replace(old,"return Promise.resolve(E('p',{},bi('Use the setup wizards below. Settings are validated before saving; stored tokens are never loaded into this page.','Используйте мастера ниже. Настройки проверяются до сохранения; сохранённые токены не загружаются на эту страницу.'))).then(function(formNode){")
 source=source.replace('return view.extend({','return view.extend({\n  handleSave:null,handleSaveApply:null,handleReset:null,',1)
-source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring preferences','Параметры мониторинга')));\n      settingsHost.appendChild(speedSettings(inventory));")
+source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring and history retention','Мониторинг и хранение истории')));\n      settingsHost.appendChild(speedSettings(inventory));")
 start=source.index("    var inventory=data[0],m=new form.Map")
 end=source.index("    var panel=E('div',{'class':'hv-panel'})",start)
 source=source[:start]+"    var inventory=data[0];\n"+source[end:]
@@ -248,7 +248,7 @@ reorganizer = """      (function(){
             launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery,false,null,'telegram-test')
           ])].filter(function(node){return node!=null;})));
         settingsHost.appendChild(E('details',{'class':'hv-chart-card hv-admin-settings'},[
-          E('summary',{},bi('Advanced settings (for administrators)','Расширенные настройки (для администратора)')),
+          E('summary',{},bi('Advanced settings','Расширенные настройки')),
           E('p',{},bi('Fine-tuning of the switching rules and of the checks. The defaults are safe; change them only if you know why. Open the guide under each step for examples.','Тонкая настройка правил переключения и проверок. Значения по умолчанию безопасны; меняйте их, только если понимаете зачем. Под каждым шагом есть руководство с примерами.')),
           E('div',{'class':'hv-setup-grid'},[
             launcher(bi('Recovery rules','Правила восстановления'),bi('Failures before switching, reserve checks, cooldown and return policy.','Сколько сбоев до переключения, проверки резерва, пауза и политика возврата.'),function(){recoveryWizard(inventory);},false,'recovery'),
@@ -290,12 +290,12 @@ must_replace("var appRoot=null,settingsHost=null,heading=null,","var subtitle=nu
 must_replace("heading,E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одком месте.'))".replace('одком','одном'),"heading,(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))")
 must_replace("if(heading)heading.textContent=key==='overview'?bi('Your internet under control','Ваш интернет под контролем'):tabs.filter(function(t){return t[0]===key;})[0][2];","""if(heading)heading.textContent=key==='overview'?bi('Your internet under control','Ваш интернет под контролем'):tabs.filter(function(t){return t[0]===key;})[0][2];
       if(subtitle&&PAGE_SUBTITLES[key])subtitle.textContent=bi(PAGE_SUBTITLES[key][0],PAGE_SUBTITLES[key][1]);
-      if(advancedBox&&ADVANCED_KEYS.indexOf(key)>=0&&advancedBox.hidden){advancedBox.hidden=false;if(advancedToggle)advancedToggle.setAttribute('aria-expanded','true');}""")
+      if(oldTab!==key&&advancedBox&&ADVANCED_KEYS.indexOf(key)>=0&&advancedBox.hidden){advancedBox.hidden=false;if(advancedToggle)advancedToggle.setAttribute('aria-expanded','true');}""")
 must_replace("var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);});","""function tabLink(key){var tab=tabs.filter(function(t){return t[0]===key;})[0];return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);}
       var advancedOpen=false;try{advancedOpen=localStorage.getItem('homensai-vpn-advanced')==='1';}catch(e){}
       if(ADVANCED_KEYS.indexOf(activeTab)>=0)advancedOpen=true;
-      advancedBox=E('div',{'class':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
-      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced','Расширенное')),E('small',{},bi('for administrators','для администраторов'))]);
+      advancedBox=E('div',{'class':'hv-advanced-links','id':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
+      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced settings','Расширенные настройки'))]);
       var links=['overview','channels','statistics','settings','help'].map(tabLink).concat([advancedToggle,advancedBox]);""")
 # Ranking: number of checks and a confidence label; sparse servers never lead.
 must_replace('tr("Успех проверок"),tr("Средняя HTTPS-задержка")].map(','tr("Успех проверок"),tr("Средняя HTTPS-задержка"),bi("Checks","Проверок")].map(')
@@ -317,7 +317,10 @@ must_replace("put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connec
 must_replace('return view.extend({',(Path(__file__).parent/'vendor_diagnostics.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("put('channels',renderServerSummary(status,inventory,rows));","put('channels',renderServerSummary(status,inventory,rows));put('channels',renderVendorChannels(status,inventory));")
 must_replace("put('events',renderTransitionAnalytics(status));","put('events',renderTransitionAnalytics(status));put('events',renderVendorEvents(status,inventory));")
-must_replace("put('tests',renderDecisionExplanation(status));","put('tests',renderDecisionExplanation(status,inventory));")
+# Technical threshold explanation lives in Help, away from the current controls.
+must_replace("put('tests',renderDecisionExplanation(status));","")
+# The old dry-run table is not a live certification display. Reuse the real
+# readiness page and the current test's own prerequisites instead.
 # Current display selection follows a trusted saved tunnel when firmware changes its member.
 source=source.replace('selectedProfile(status,Date.now()/1000)','vendorDisplaySelected(status,inventory,Date.now()/1000)')
 # Idle/active check control moves to the left of the page header, under the subtitle.
@@ -353,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui59.css')
+source=source.replace('ui15.css','ui61.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -379,6 +382,7 @@ must_replace("""metric(tr("Проверки сейчас"),healthy.length+tr(" �
 must_replace("""metric(tr("Трафик месяца"),month?bytes(month.rx+month.tx):tr("Нет данных"),tr("Неполный период · с начала наблюдения")),""","""metricInfo(bi('Traffic this month','Трафик за месяц'),month?bytes(month.rx+month.tx):bi('No data','Нет данных'),bi('Tap for details','Нажмите, чтобы узнать больше'),bi('Data that went through your VPNs since the monitor was started. It is counted from the first measurement, so the month may be incomplete.','Данные, прошедшие через ваши VPN с запуска мониторинга. Считаются с первого измерения, поэтому месяц может быть неполным.')),""")
 must_replace("+(p.channel||'default')+' · '+(p.interface||bi('Not connected'","+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected'")
 must_replace("planning.appendChild(E('code',{},(fp.blockers||[]).join(' · ')));","planning.appendChild(renderPlanBlockers(fp.blockers||[],status));")
+must_replace("planning.appendChild(renderPlanBlockers(fp.blockers||[],status));","planning.appendChild(E('p',{},[E('a',{'href':'#readiness'},bi('Current system readiness','Текущая готовность системы')),bi('. Each test below checks its own current prerequisites before starting.','. Каждый тест ниже проверяет свои текущие условия перед запуском.')]));")
 must_replace('return view.extend({',(Path(__file__).parent/'error_rows_extra.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace('return view.extend({',(Path(__file__).parent/'error_table.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("      sortableTables();showPage(activeTab);","      put('statistics',renderMonitorInfo(status,inventory));put('events',errorTable||(errorTable=renderErrorTable()));\n      sortableTables();showPage(activeTab);")
@@ -444,7 +448,7 @@ must_replace('initSidebarLayout(appRoot);','initSidebarLayout(appRoot);installVi
 must_replace("panel.querySelectorAll('table').forEach(function(table,index){","panel.querySelectorAll('table').forEach(function(table,index){if(table.closest('.hv-errtable'))return;")
 must_replace("(nh.events||[]).slice().reverse().forEach(function(event)","var transitionMarks=controllerTransitionMarks(nh.events||[]);\n      (nh.events||[]).slice().reverse().forEach(function(event)")
 must_replace("cell(event.state+(event.trial?' · '+'trial':''))","E('td',{},[renderTransitionBadge(event,transitionMarks),event.state+(event.trial?' · '+'trial':'')].filter(Boolean))")
-must_replace("if(nh.error)historyPanel.appendChild(badge(nh.error));","historyPanel.appendChild(E('p',{},bi('1 = primary, 2 = reserve. Yellow is the previous channel; green is the confirmed selected channel. Two yellow ends mark an unconfirmed attempt.','1 — основной, 2 — резерв. Жёлтый — прежний канал, зелёный — подтверждённый выбранный. Два жёлтых конца обозначают неподтверждённую попытку.')));if(nh.error)historyPanel.appendChild(badge(nh.error));")
+must_replace("if(nh.error)historyPanel.appendChild(badge(nh.error));","historyPanel.appendChild(E('p',{},bi('M = main, R = reserve. The arrow shows the direction. Yellow marks an unconfirmed transition; after confirmation green is selected and red is not selected.','M — основной, R — резервный. Стрелка показывает направление. Жёлтый — переход без подтверждения; после подтверждения зелёный — выбран, красный — не выбран.')));if(nh.error)historyPanel.appendChild(badge(nh.error));")
 must_replace(".forEach(function(p){cards.appendChild(",".forEach(function(p){var channelUse=channelDisplayUse(p,status,inventory);cards.appendChild(")
 source,_channel_headers=_r.subn(r"E\('div',\{'class':'hv-server-top'\},\[.*?\]\),\n        E\('h4'", "renderChannelHeader(p,status,inventory),\n        E('h4'",source,count=1)
 assert _channel_headers==1,'channel role/status header'
@@ -467,7 +471,8 @@ must_replace("var cards=E('div',{'class':'hv-server-grid'});","var cards=E('div'
 must_replace("sortServerCards(rows,vendorDisplaySelected(status,inventory,Date.now()/1000),Date.now()/1000).forEach(function(p){var channelUse=channelDisplayUse(p,status,inventory);cards.appendChild(","roleOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){var channelUse=channelDisplayUse(p,status,inventory);cardHosts.get(p).appendChild(")
 must_replace("put('channels',cards);","cardHosts.finish();put('channels',cards);put('channels',renderLatencyPanel(status,inventory));")
 must_replace("addSearch('channels',table);put('channels',table)","addSearch('channels',table);put('channels',limitTableRows(table,5,'current-checks-other'))")
-must_replace("sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach(function(p){table.appendChild", "roleOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild")
+must_replace("addSearch('ranking',ranking);put('ranking',ranking);","addSearch('ranking',ranking);put('ranking',limitTableRows(ranking,5,'server-ranking-other'));")
+must_replace("sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach(function(p){table.appendChild", "currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild")
 must_replace("cell(serverTitle(p)),cell(p.channel),cell(protocolLabel(p))", "cell(serverTitle(p)),cell(roleDescription(p,status,inventory)),cell(protocolLabel(p))")
 must_replace("checkLampCell(p,status,inventory),cell(serverTitle(p)),cell(roleDescription(p,status,inventory))", "checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000),cell(roleDescription(p,status,inventory))")
 must_replace("E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён')))","E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{'class':'hv-server-address'},endpointText(p,Date.now()/1000)),E('p',{},roleDescription(p,status,inventory))")
@@ -496,6 +501,6 @@ source=source.replace('renderTransitionAnalytics(status)', 'renderTransitionAnal
 # covering every page/modal without modifying LuCI globals or meaningful text.
 must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_guard.inc.js').read_text(encoding='utf8'))
 
-(root/'ui59.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
+(root/'ui61.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css,encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(source,encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

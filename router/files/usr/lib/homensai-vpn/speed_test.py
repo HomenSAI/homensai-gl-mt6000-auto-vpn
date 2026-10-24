@@ -69,14 +69,18 @@ def load_history():
             if item.get('schema')!=1 or item.get('sha256')!=checksum(data):continue
             if not isinstance(data.get('results'),list) or len(data['results'])>500:continue
             if any(not isinstance(row,dict) or not isinstance(row.get('time'),(int,float)) or not math.isfinite(row['time']) for row in data['results']):continue
+            from retention_settings import configured_days
+            period=configured_days();data['results']=[row for row in data['results'] if row['time']>=time.time()-period*86400]
+            data['retention_days']=period
             return data
         except (OSError,ValueError,KeyError,TypeError):found=True
     if found:raise SpeedError('SPEED-HISTORY-CORRUPT')
-    return {'results':[],'retention_days':32}
+    from retention_settings import configured_days
+    return {'results':[],'retention_days':configured_days()}
 
 
 def append_history(rows):
-    data=load_history();cutoff=time.time()-32*86400
+    data=load_history();cutoff=time.time()-data['retention_days']*86400
     kept=[row for row in data['results']+rows if row.get('time',0)>=cutoff]
     data['history_truncated']=data.get('history_truncated',0)+max(0,len(kept)-500)
     data['results']=kept[-500:]
@@ -84,6 +88,17 @@ def append_history(rows):
     if old and old.get('sha256')==checksum(old.get('data')):
         atomic_json(HISTORY.with_name('speed-history.backup.json'),old)
     atomic_json(HISTORY,{'schema':1,'data':data,'sha256':checksum(data)})
+
+
+def prune_history():
+    """Age cleanup also runs without a new speed test; never spends test quota."""
+    if not HISTORY.exists() and not HISTORY.with_name('speed-history.backup.json').exists():return
+    with control_lock():
+        data=load_history();current=read_json(HISTORY,{})
+        if current.get('data')==data:return
+        envelope={'schema':1,'data':data,'sha256':checksum(data)}
+        atomic_json(HISTORY.with_name('speed-history.backup.json'),envelope)
+        atomic_json(HISTORY,envelope)
 
 
 def reserve_quota(amount,daily_limit,now):

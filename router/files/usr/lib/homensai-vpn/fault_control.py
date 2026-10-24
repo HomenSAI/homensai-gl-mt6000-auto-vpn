@@ -1,6 +1,7 @@
 """Bounded operator fault injection. Kernel set timeout is the independent safety net.
 
-Only a certified observing native trial can request a fault. VPN services, keys,
+An active private continuous pair or certified native trial can request a fault.
+Only the actual selected channel is interrupted. VPN services, keys,
 Kill Switch, INPUT and management routes are not changed. Private RAM nonce
 binds the watchdog and table ownership; it is never returned by public status.
 """
@@ -121,13 +122,18 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
             or not finite(native.get('time')) or not finite(status.get('time'))):raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     if set(arguments)!={'profile','scope','duration'} or not isinstance(arguments['profile'],str) or arguments['scope'] not in ('profile','channel') or type(arguments['duration']) is not int or not 30<=arguments['duration']<=180:raise FaultError('FAULT-FIELDS')
     if blockers:raise FaultError('FAULT-NATIVE-PREREQUISITES')
-    if native.get('state')!='OBSERVING' or native.get('certified') is not True or not 0<=now-native.get('time',0)<=30 or not 0<=now-status.get('time',0)<=90:raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
+    pair_mode=settings.get('pair_auto_mode')=='router-probed-ipv4'
+    if (native.get('state') not in (('OBSERVING','COMMITTED') if pair_mode else ('OBSERVING',))
+            or not pair_mode and native.get('certified') is not True
+            or not 0<=now-native.get('time',0)<=30 or not 0<=now-status.get('time',0)<=90):raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
     if settings.get('native_session_loss')!='1':raise FaultError('FAULT-SESSION-CONSENT-REQUIRED')
     from native_switch import deadline,Refused
-    try:until=deadline(settings.get('native_until'))
+    try:until=now+arguments['duration']+90 if pair_mode else deadline(settings.get('native_until'))
     except Refused:raise FaultError('FAULT-WINDOW-TOO-SHORT') from None
     if until<now+arguments['duration']+90:raise FaultError('FAULT-WINDOW-TOO-SHORT')
-    if not selection or arguments['profile']!=selection['source']['id']:raise FaultError('FAULT-NOT-CURRENT-SOURCE')
+    if not selection:raise FaultError('FAULT-NOT-CURRENT-SOURCE')
+    selected_role=pair_fault_role(native,selection,now) if pair_mode else 'source'
+    if arguments['profile']!=selection[selected_role]['id']:raise FaultError('FAULT-NOT-CURRENT-SOURCE')
     from failure_diagnosis import resolve_pair,profile_identity,finite
     from vendor_observation import current_bindings,tunnel_identity
     try:interval=int(settings.get('interval',30))
@@ -142,11 +148,13 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
                 or not tunnel or tunnel not in bindings or bindings[tunnel]['id']!=measured['id']):
             raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     if (native.get('source')!=selection['source']['id'] or native.get('target')!=selection['target']['id']
-            or native.get('vendor_identity')!=selection.get('vendor_identity')):
+            or not pair_mode and native.get('vendor_identity')!=selection.get('vendor_identity')):
         raise FaultError('FAULT-CERTIFICATE-STALE')
     identity=selection.get('vendor_identity')
     from native_proof import matches
-    if (not isinstance(identity,str) or not re.fullmatch(r'[a-f0-9]{64}',identity) or not isinstance(certificate,dict)
+    if (not isinstance(identity,str) or not re.fullmatch(r'[a-f0-9]{64}',identity)):
+        raise FaultError('FAULT-IDENTITY-UNVERIFIED')
+    if not pair_mode and (not isinstance(certificate,dict)
             or not matches(certificate,selection) or not matches(native,selection)
             or certificate.get('vendor_identity')!=identity
             or any(certificate.get(key)!=selection.get(key) for key in ('hash','direction','settings_hash'))
@@ -154,7 +162,7 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
             or not finite(certificate.get('until')) or certificate['until']<until):
         raise FaultError('FAULT-CERTIFICATE-STALE')
     profiles={p['id']:p for p in status.get('profiles',[])}
-    source=profiles.get(arguments['profile']);target=profiles.get(selection['target']['id'])
+    source=profiles.get(arguments['profile']);target=profiles.get(selection['target' if selected_role=='source' else 'source']['id'])
     def healthy(p):return (isinstance(p,dict) and p.get('interface') and p.get('code') is None
         and p.get('dns_ok') is True and type(p.get('https_success')) is int and p['https_success']>=2
         and finite(p.get('time')) and 0<=now-p['time']<=90)
@@ -166,6 +174,79 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
     return rows
 
 
+def pair_fault_role(native,selection,now):
+    """Private pair intent and actual policy, never a UI-selected profile."""
+    import pair_auto as pair,native_switch as n
+    from pair_manual import active,read as manual_read
+    from auto_control import current_revision
+    from failure_diagnosis import profile_identity
+    state=pair.read_state();revision=current_revision(RUNTIME)
+    if not active(state,pair.intent(),revision):raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
+    pending=manual_read()
+    if pending and pending.get('state') in ('QUEUED','CLAIMED'):raise FaultError('FAULT-NATIVE-PREREQUISITES')
+    backend=n.Linux();backend.use_process_bindings(state.get('process_bindings'))
+    configs=pair.configs()
+    if (pair.normalized_network(pair.network())!=state['network_identity']
+            or any(configs.get(k)!=v for k,v in state['protected'].items() if k!='route_policy')):
+        raise FaultError('FAULT-IDENTITY-UNVERIFIED')
+    journal=n.journal_read()
+    if native.get('state')=='COMMITTED':
+        if (journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE') or not journal.get('confirmed')
+                or journal.get('control_revision')!=revision or backend.order()!=(journal.get('after'),journal.get('hash'))
+                or any(journal.get(k)!=selection[k]['id'] for k in ('source','target'))
+                or any(journal.get('vendor_profiles',{}).get(k)!=profile_identity(selection[k]) for k in ('source','target'))):
+            raise FaultError('FAULT-IDENTITY-UNVERIFIED')
+        return 'target'
+    if (native.get('state')!='OBSERVING' or native.get('readiness_verified') is not True
+            or journal.get('phase') not in (None,'ROLLED-BACK')
+            or backend.order()!=(state['order'],state['policy_hash'])):
+        raise FaultError('FAULT-IDENTITY-UNVERIFIED')
+    return 'source'
+
+
+def testing_profile(identifier):
+    """Only the active bounded, revision-fenced test can relax return preference."""
+    try:
+        value=load()
+        if not value or value.get('phase')!='ACTIVE' or value.get('pair_mode') is not True:return False
+        require_revision(value.get('control_revision'));require_auto_on(value.get('control_settings',{}))
+        return (time.monotonic()<value['monotonic_until'] and identifier in value.get('profiles',[])
+                and read_json(RUNTIME/'fault-result.json',{}).get('nonce')!=value['nonce']
+                and read_json(RUNTIME/'fault-cancel.json',{}).get('nonce')!=value['nonce'])
+    except (FaultError,OSError,ValueError,KeyError,TypeError):return False
+
+
+def transition_confirmed(value,now):
+    import native_switch as n
+    try:return _transition_confirmed(value,now)
+    except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):return False
+
+
+def _transition_confirmed(value,now):
+    """A fresh successful opposite path plus private policy confirmation."""
+    if value.get('pair_mode') is not True or value.get('phase')!='ACTIVE':return False
+    import pair_auto as pair,native_switch as n
+    native=read_json(RUNTIME/'native-status.json',{});status=read_json(RUNTIME/'status.json',{})
+    stamp=native.get('time')
+    if type(stamp) not in (int,float) or not value['started']<=stamp<=now or now-stamp>30:return False
+    roles=value['vendor_profiles'];destination='target' if value['fault_role']=='source' else 'source'
+    if any(native.get(k)!=roles[k]['id'] for k in ('source','target')):return False
+    from pair_manual import healthy
+    row=next((p for p in status.get('profiles',[]) if p.get('id')==roles[destination]['id']),{})
+    from failure_diagnosis import profile_identity
+    if (profile_identity(row)!=roles[destination] or row.get('time',0)<value['started']
+            or not healthy(status,roles[destination]['id'],now)):return False
+    state=pair.read_state();backend=n.Linux();backend.use_process_bindings(state.get('process_bindings'))
+    journal=n.journal_read()
+    if destination=='target':
+        return (native.get('state')=='COMMITTED' and journal.get('phase') in ('COMMITTED','HELD-ON-RESERVE')
+                and bool(journal.get('confirmed')) and journal.get('control_revision')==value['control_revision']
+                and all(journal.get('vendor_profiles',{}).get(k)==roles[k] for k in ('source','target'))
+                and backend.order()==(journal.get('after'),journal.get('hash')))
+    return (native.get('state') in ('OBSERVING','ROLLED-BACK') and journal.get('phase')=='ROLLED-BACK'
+            and backend.order()==(state['order'],state['policy_hash']))
+
+
 def require_revision(expected):
     value=read_json(RUNTIME/'auto-control-revision.json',{})
     if (not isinstance(expected,str) or not re.fullmatch(r'[a-f0-9]{32}',expected) or not isinstance(value,dict)
@@ -173,6 +254,12 @@ def require_revision(expected):
 
 
 def require_auto_on(settings):
+    if settings.get('pair_auto_mode')=='router-probed-ipv4':
+        import pair_auto as pair
+        from pair_manual import active
+        from auto_control import current_revision
+        if not active(pair.read_state(),pair.intent(),current_revision(RUNTIME)):raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
+        return
     from auto_control import effective_intent
     active,stopped=effective_intent(settings,read_json(PERSIST/'native-stop.json',{}),
                                     read_json(RUNTIME/'auto-control.json',{}),time.time())
@@ -247,7 +334,11 @@ def start(arguments):
     try:
         if old and not old_cleaned:engine.cleanup(old['nonce'],claim_nonce=nonce)
         data=inventory();status=read_json(RUNTIME/'status.json',{});native=read_json(RUNTIME/'native-status.json',{})
-        backend=Linux();blockers,selection=backend.diagnostic();settings=backend.policy()['settings']
+        backend=Linux();settings=backend.policy()['settings']
+        if settings.get('pair_auto_mode')=='router-probed-ipv4':
+            import pair_auto
+            backend.use_process_bindings(pair_auto.read_state().get('process_bindings'))
+        blockers,selection=backend.diagnostic()
         require_auto_on(settings)
         rows=eligibility(arguments,data,status,native,settings,selection,blockers,time.time(),
                          read_json(PERSIST/'native-certificate.json',{}))
@@ -259,13 +350,15 @@ def start(arguments):
                 raise FaultError('FAULT-PATH-UNVERIFIED')
             kernels[role]={key:bound.get(key) for key in ('device','mark','table','ifindex')}
         if kernels['source']['device']==kernels['target']['device']:raise FaultError('FAULT-WOULD-REMOVE-RESERVE')
+        fault_role='source' if rows[0]['id']==selection['source']['id'] else 'target'
         duration=arguments['duration'];now=time.time();mono=time.monotonic()
         with control_lock():
             claim_locked(nonce,revision)
             intent.update(phase='ARMED',started=now,until=now+duration,monotonic_until=mono+duration,
-                profiles=[p['id'] for p in rows],devices=[kernels['source']['device']],scope=arguments['scope'],duration=duration,
+                profiles=[p['id'] for p in rows],devices=[kernels[fault_role]['device']],scope=arguments['scope'],duration=duration,
+                pair_mode=settings.get('pair_auto_mode')=='router-probed-ipv4',fault_role=fault_role,
                 vendor_identity=selection['vendor_identity'],vendor_profiles={role:profile_identity(selection[role]) for role in ('source','target')},
-                kernel_bindings=kernels,control_settings={key:settings.get(key) for key in ('native_enabled','native_trial','native_until')})
+                kernel_bindings=kernels,control_settings={key:settings.get(key) for key in ('native_enabled','native_trial','native_until','pair_auto_mode')})
             store(intent)
         worker=subprocess.Popen([sys.executable,__file__,'worker',nonce],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
         ready=False;end=time.monotonic()+5
@@ -323,9 +416,9 @@ def public_status():
         value=load()
         if not value:return dict(base,state='IDLE')
         result=read_json(RUNTIME/'fault-result.json',{})
-        if result.get('nonce')==value['nonce']:return dict(base,**{k:result[k] for k in ('cleaned','code','time') if k in result})
+        if result.get('nonce')==value['nonce']:return dict(base,**{k:result[k] for k in ('cleaned','code','time','transition_confirmed') if k in result})
         remaining=max(0,int(value['monotonic_until']-time.monotonic()))
-        return dict(base,state=value['phase'] if remaining else 'TIMEOUT-ELAPSED',until=value['until'],remaining_seconds=remaining,profiles=value['profiles'],scope=value['scope'],kernel_timeout=True)
+        return dict(base,state=value['phase'] if remaining else 'TIMEOUT-ELAPSED',until=value['until'],remaining_seconds=remaining,profiles=value['profiles'],scope=value['scope'],kernel_timeout=True,fault_role=value.get('fault_role'))
     except (FaultError,OSError,ValueError):return {'state':'UNKNOWN','code':'FAULT-STATE-UNVERIFIED'}
 
 
@@ -334,13 +427,17 @@ def worker(nonce):
     value=load()
     if not value or value['nonce']!=nonce:raise FaultError('FAULT-WORKER-STALE')
     atomic_json(RUNTIME/'fault-ready.json',{'nonce':nonce,'pid':os.getpid()})
-    reason='FAULT-CLEANED';next_identity=0
+    reason='FAULT-CLEANED';next_identity=0;confirmed=False
     while time.monotonic()<value['monotonic_until']:
         if read_json(RUNTIME/'fault-cancel.json',{}).get('nonce')==nonce:break
         try:
             require_revision(value.get('control_revision'))
             if time.monotonic()>=next_identity:
                 verify_bindings(value);next_identity=time.monotonic()+2
+                # Worker starts before nft is applied: only ACTIVE can succeed.
+                current=load()
+                if current and current.get('nonce')==nonce and transition_confirmed(current,time.time()):
+                    confirmed=True;reason='FAULT-TRANSITION-CONFIRMED';break
         except FaultError as error:
             reason=str(error);break
         except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):
@@ -348,7 +445,8 @@ def worker(nonce):
         time.sleep(.25)
     # Queries/identity reads and the post-delete verification never hold Stop's
     # lock. Nft.cleanup fences just its bounded mutation against new claims.
-    try:Nft().cleanup(nonce);result={'cleaned':True,'code':reason}
+    if value.get('pair_mode') and reason=='FAULT-CLEANED':reason='FAULT-TRANSITION-NOT-CONFIRMED'
+    try:Nft().cleanup(nonce);result={'cleaned':True,'code':reason,'transition_confirmed':confirmed}
     except (FaultError,OSError,subprocess.SubprocessError):result={'cleaned':False,'code':'FAULT-CLEANUP-UNCONFIRMED'}
     with control_lock():
         current=load()

@@ -101,34 +101,40 @@ function autoDaySegments(history,now,hours){
   });return rows;
 }
 function autoDayFailures(history,now,hours){
-  var from=now-autoDayWindow(hours)*3600,bins=[],totals={source:0,target:0,unknown:0};
-  for(var i=0;i<autoDayWindow(hours);i++)bins.push({start:from+i*3600,source:0,target:0,unknown:0,selected:{source:0,target:0,off:0,unknown:0}});
+  var from=now-autoDayWindow(hours)*3600,bins=[],totals={source:0,target:0},excluded=0;
+  function routes(){return {source:0,target:0,off:0,unrecorded:0};}
+  for(var i=0;i<autoDayWindow(hours);i++)bins.push({start:from+i*3600,source:0,target:0,selected:routes(),routes:{source:routes(),target:routes()}});
   ((history||{}).events||[]).forEach(function(row){
-    if(!Array.isArray(row)||!Number.isFinite(row[0])||row[0]<from||row[0]>now||['source','target','unknown'].indexOf(row[1])<0)return;
-    var bin=bins[Math.min(bins.length-1,Math.floor((row[0]-from)/3600))],selected=['source','target','off','unknown'].indexOf(row[2])>=0?row[2]:'unknown';
-    bin[row[1]]++;totals[row[1]]++;bin.selected[selected]++;
-  });return {bins:bins,totals:totals};
+    if(!Array.isArray(row)||!Number.isFinite(row[0])||row[0]<from||row[0]>now)return;
+    if(['source','target'].indexOf(row[1])<0){excluded++;return;}
+    var bin=bins[Math.min(bins.length-1,Math.floor((row[0]-from)/3600))],selected=['source','target','off'].indexOf(row[2])>=0?row[2]:'unrecorded';
+    bin[row[1]]++;totals[row[1]]++;bin.selected[selected]++;bin.routes[row[1]][selected]++;
+  });return {bins:bins,totals:totals,excluded:excluded};
 }
 function drawAutoFailures(plot,history,now,hours,width,left,right){
   while(plot.firstChild)plot.removeChild(plot.firstChild);
-  var data=autoDayFailures(history,now,hours),max=Math.max(1,...data.bins.map(function(b){return Math.max(b.source,b.target,b.unknown);}));
-  var labels={source:bi('Primary','Основной'),target:bi('Reserve','Резерв'),unknown:bi('Channel unknown','Канал не определён')},colors={source:'#2563eb',target:'#a16207',unknown:'#64748b'};
+  var data=autoDayFailures(history,now,hours),max=Math.max(1,...data.bins.map(function(b){return Math.max(b.source,b.target);}));
+  var labels={source:bi('Primary','Основной'),target:bi('Reserve','Резервный')},colors={source:'#2563eb',target:'#e07816'};
+  var routeLabels={source:bi('primary','основной'),target:bi('reserve','резерв'),off:bi('Auto off','Auto выключен'),unrecorded:bi('route not recorded','маршрут не записан')};
   plot.appendChild(E('h3',{},bi('Failure episodes · last '+hours+' h','Отказы каналов · последние '+hours+' ч')));
-  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 175',width:'100%',height:175,role:'img','aria-label':bi('Number of failure episodes per hour','Количество отказов каналов по часам')});
+  plot.appendChild(E('div',{'class':'hv-failure-legend'},['source','target'].map(function(role){return E('span',{'class':'hv-failure-key','data-failure-role':role},[E('span',{'aria-hidden':'true','style':'background:'+colors[role]}),labels[role]+': '+data.totals[role]]);})));
+  var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 175',width:'100%',height:175,role:'img','aria-label':bi('Primary failures in blue; reserve failures in orange; episodes per hour','Отказы основного — синим, резервного — оранжевым; эпизоды по часам')});
   [0,max].forEach(function(n){var y=135-n/max*100;svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y,y2:y,stroke:'#cbd5e1'}));svg.appendChild(autoLiveSvg('text',{x:left-8,y:y+4,'text-anchor':'end',fill:'currentColor','font-size':11},String(n)));});
   var step=(right-left)/hours;
   data.bins.forEach(function(bin,index){
-    ['source','target','unknown'].forEach(function(role,j){
+    ['source','target'].forEach(function(role,j){
       if(!bin[role])return;
-      var bar=autoLiveSvg('rect',{x:left+index*step+j*step/3,y:135-bin[role]/max*100,width:Math.max(.5,step/3-1),height:bin[role]/max*100,fill:colors[role]});
-      bar.appendChild(autoLiveSvg('title',{},new Date(bin.start*1000).toLocaleString()+' — '+new Date((bin.start+3600)*1000).toLocaleTimeString()+' · '+labels[role]+': '+bin[role]+' · '+bi('Selected route during failures (all channels): ','Выбранный маршрут при отказах (все каналы): ')+['source','target','off','unknown'].map(function(k){return (labels[k]||bi('Off','Выключено'))+' '+bin.selected[k];}).join(', ')));svg.appendChild(bar);
+      var bar=autoLiveSvg('rect',{x:left+index*step+j*step/2,y:135-bin[role]/max*100,width:Math.max(.5,step/2-1),height:bin[role]/max*100,fill:colors[role],'data-failure-role':role});
+      var routes=Object.keys(routeLabels).filter(function(k){return bin.routes[role][k]>0;}).map(function(k){return routeLabels[k]+': '+bin.routes[role][k];}).join(', ');
+      bar.appendChild(autoLiveSvg('title',{},new Date(bin.start*1000).toLocaleString()+' — '+new Date((bin.start+3600)*1000).toLocaleTimeString()+' · '+labels[role]+': '+bin[role]+' · '+bi('Traffic route during these failures: ','Маршрут при этих отказах: ')+routes));svg.appendChild(bar);
     });
   });
   [0,.5,1].forEach(function(f){svg.appendChild(autoLiveSvg('text',{x:left+(right-left)*f,y:160,'text-anchor':f===0?'start':f===1?'end':'middle',fill:'currentColor','font-size':10},new Date((now-hours*3600+f*hours*3600)*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'})));});
   plot.appendChild(svg);
-  plot.appendChild(E('p',{},Object.keys(labels).map(function(k){return labels[k]+': '+data.totals[k];}).join(' · ')));
-  plot.appendChild(E('p',{'class':'hv-muted'},bi('One outage is counted once until recovery. Hover over a bar for the selected route. Missing observations are not proof of availability.','Один отказ считается один раз до восстановления. Наведите на столбец, чтобы увидеть выбранный маршрут. Отсутствие наблюдений не подтверждает исправность.')));
-  if(!history||history.details_dropped||!Number.isFinite(history.since)||history.since>now-hours*3600)plot.appendChild(E('p',{'class':'hv-muted'},bi('Incomplete history: counts cover saved observations only.','История неполная: количество указано только по сохранённым наблюдениям.')));
+  if(!data.totals.source&&!data.totals.target)plot.appendChild(E('p',{'class':'hv-muted'},bi('No failure episodes with saved channel roles in this window.','В этом окне пока нет отказов с сохранённой ролью.')));
+  plot.appendChild(E('p',{'class':'hv-muted'},bi('One outage is counted once until recovery. Blue: primary. Orange: reserve. Hover over a bar for the recorded traffic route.','Один отказ считается один раз до восстановления. Синий — основной, оранжевый — резервный. Наведите на столбец, чтобы увидеть записанный маршрут.')));
+  if(data.excluded){var archive=E('details',{'class':'hv-failure-archive'},[E('summary',{},bi('Archive without saved role: ','Архив без сохранённой роли: ')+data.excluded),E('p',{},bi('Excluded from both series. These records have no event-time role; today’s pair cannot be used to rewrite them.','Не включён в две серии. В этих записях роль не сохранялась; сегодняшняя пара не используется для переписывания истории.'))]);if(typeof rememberDisclosure==='function')rememberDisclosure(archive,'failure-archive');plot.appendChild(archive);}
+  if(!history||history.details_dropped||!Number.isFinite(history.since)||history.since>now-hours*3600)plot.appendChild(E('p',{'class':'hv-muted'},bi('Incomplete history: counts cover saved observations only; no observations is not proof of availability.','История неполная: учитываются только сохранённые наблюдения; их отсутствие не доказывает исправность.')));
 }
 function renderAutoDay(status){
   var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'});

@@ -10,6 +10,15 @@ import telegram_report as report
 
 
 class TelegramTests(unittest.TestCase):
+    def test_error_report_keeps_event_time_channel_role_before_profile_and_code(self):
+        now=report.time.time()
+        status={'profiles':[{'id':'wireguard:peer_1','name':'Germany','protocol':'wireguard','interface':'wgclient1','role':'target','code':'VPN-003'}],
+                'events':[{'time':now,'profile':'wireguard:peer_1','role':'source','code':'VPN-003'},
+                          {'time':now,'profile':'openvpn:1_1','role':'target','code':'DNS-001'}]}
+        text=report.format_report(status,60,now,items=['events','servers'])
+        self.assertIn('Primary channel · wireguard:peer_1 · VPN-003',text)
+        self.assertIn('Reserve channel · openvpn:1_1 · DNS-001',text)
+        self.assertIn('Reserve channel · Germany · wireguard · VPN-003',text)
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         patcher=patch.object(agent,'RUNTIME',Path(self.tmp.name));patcher.start();self.addCleanup(patcher.stop)

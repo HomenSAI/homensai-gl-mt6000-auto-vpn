@@ -1,4 +1,4 @@
-> Состояние на24.10.2026 / Status24Oct2026: разработка alpha11; public stable0.9.0; physical baseline alpha9; VM evidence alpha10. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md). Pinned release instructions below apply to their stated version; dated evidence is not current hardware certification.
+> Alpha13: verified MT3000 AutoON/reserve; stable0.9.0 instructions below remain version-pinned. [Текущее руководство](CURRENT-STATE.ru.md) · [Current guide](CURRENT-STATE.en.md) · [Verification](../qa/OWNER-BATCH-ALPHA13-2026-10-24.json).
 
 # Install with ChatGPT, Codex or Claude
 

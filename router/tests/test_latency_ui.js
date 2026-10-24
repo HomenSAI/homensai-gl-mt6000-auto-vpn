@@ -38,3 +38,22 @@ s.rpc_error='RPC-UNAVAILABLE';assert.equal(c.latencyRecommendation(s,inventory,n
 assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('Current traffic channel is not confirmed.'),'RPC error cannot reuse cached selection');
 assert(!JSON.stringify(c.renderLatencyStatistics([],now-60,now)).includes('NaN'));
 console.log('PASS: weighted window statistics, empty history, route-helper refusal and cached RPC-error fences');
+
+const originalBi=c.bi,originalProtocol=c.protocolLabel;
+c.bi=(_en,ru)=>ru;c.countryName=()=> 'Германия';c.protocolLabel=()=> 'WireGuard';
+s=status();s.time=now;s.profiles[0].router_name='de678.nordvpn.com';s.profiles[0].name='Германия · WireGuard';
+let recommendation=c.renderLatencyRecommendation(s,inventory,'manual');
+assert.equal(recommendation.tag,'details');assert(!Object.hasOwn(recommendation.attrs,'open'));
+assert.equal(recommendation.children[0].tag,'summary');
+function textOf(n){return n instanceof N?n.children.map(textOf).join(''):String(n);}
+let text=textOf(recommendation);assert.equal((text.match(/WireGuard/g)||[]).length,1);
+assert(text.includes('de678.nordvpn.com'));assert(!text.includes('Ручное переключение')&&!text.includes('не ICMP'));
+const lines=recommendation.all().filter(n=>n.attrs.class==='hv-recommendation-line');
+assert.deepEqual(lines.slice(0,2).map(textOf),['Для текущей работы рекомендую: Основной канал','Его задержка: 20.0 мс HTTPS']);
+assert(lines.some(n=>textOf(n)==='Страна: Германия'));assert(lines.some(n=>textOf(n)==='Протокол: WireGuard'));
+recommendation.open=true;recommendation.listeners.toggle();
+assert(c.renderLatencyRecommendation(s,inventory,'manual').attrs.open,'poll preserves expansion');
+assert(!c.renderLatencyRecommendation(s,inventory,'channels').attrs.open,'separate view has independent disclosure');
+s.profiles[0].time=now-100;text=textOf(c.renderLatencyRecommendation(s,inventory,'manual'));assert(!text.includes('de678.nordvpn.com'),'stale comparisons cannot recommend a server');
+c.bi=originalBi;c.protocolLabel=originalProtocol;delete c.countryName;
+console.log('PASS: collapsed structured RU recommendation, independent remembered disclosures, exact server name, single protocol and no manual-navigation footer');

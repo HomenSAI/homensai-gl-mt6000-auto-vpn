@@ -4,7 +4,7 @@
 
 # Current state and guide — 24 October 2026
 
-Development: **0.9.1-alpha11**, branch `feature/owner-ui-20261023`, a candidate with refreshed training and documentation. The public stable release remains **0.9.0**. The last verified dedicated MT3000 installation is **alpha9**. Alpha10 passed a separate virtual audit; its results do not establish physical installation or acceptance of alpha11.
+Development: **0.9.1-alpha12**, branch `feature/owner-ui-20261023`, a candidate with refreshed training and documentation. The public stable release remains **0.9.0**. The last verified dedicated MT3000 installation is **alpha11** (previous baseline alpha9). Alpha10 passed a separate virtual audit; its results do not establish physical installation or acceptance of alpha11.
 
 ## First entry and training
 
@@ -39,7 +39,7 @@ Your VPNs shows the selected pair, with other profiles collapsed. Current server
 
 ## Failure chart and journals
 
-Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Primary/reserve/unrecorded roles are separate. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
+Collapsed Overview statistics contains route switching and hourly failure-episode counts sharing the1–24h window. Only two series are plotted: blue primary and orange reserve. Legacy records without a saved role are excluded and disclosed in a separate archive note. FAILURE until recovery is one episode despite repeated failed checks. Bar tooltips describe the selected route during that hour; incomplete coverage is explicit.
 
 The live terminal pins monitor/Auto/primary/reserve status above its log. Its one-second clock does not increase network probe cadence. New rows appear first; consecutive equal states form a timestamp range. A→B→A remains distinct. Operator/program/test/controller provenance is shown when recorded, separating requests from confirmed effects.
 

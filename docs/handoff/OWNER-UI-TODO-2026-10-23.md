@@ -1,3 +1,157 @@
+# Alpha13 delivery: physical complete, publication next —24October2026
+
+Owner67 and latest reboot-resume instruction supersede historical batch-only rules. Items51–66 are now delivered: exact2e8f549 CI/canonical815967-byte IPK, 87files/modes, HTTP8080+pinnedHTTPS, AutoON reserve, bothVPN DNS+HTTPS, preserved settings/terms, independent190entry encrypted pre/post backups. Read qa/OWNER-BATCH-ALPHA13-2026-10-24.json and qa/MT3000-ALPHA13-2026-10-24.json. VM60s initial cold-boot failure retained; bounded longer retry passed. Final publication to both feature branches and prerelease follows; main/stable0.9.0 unchanged.
+
+# Пункт67: владелец завершил пачку — разрешена общая проверка, сборка и доставка
+
+24October: выполнить все задания, матрицу действий неопытного пользователя/ошибок и тесты; затем обновить выделенный MT3000 и опубликовать в Gitea/GitHub. Новое разрешение заменяет batch-only для этого общего этапа. Stable0.9.0 остаётся неизменным. Учесть незавершённые51 (alpha12 Start vendor quiet) и56 (grey table proposal).
+
+## Пункт66 готов локально — кнопка чтения сохранённой истории удалена
+
+Из renderEventHistory удалены отдельная Read saved history/«Прочитать сохранённую историю» кнопка (раньше «неделю»), её busy-state и устаревший совет refresh. Чтение полной истории при первом раскрытии/поиске сохранено. Начальные20строк, сортировка и треугольник прежние. PASS: journal_terminal_ui EN/RU actual history DOM имеет только2кнопки (направление сортировки/раскрытие), expand-collapse20/35/20; statistics_ui, diff --check. Никаких generated assets/версии/сборки/commit/push/роутера; batch-only. Last physical alpha12 AutoOFF прежнее.
+
+66. [x] Remove Read saved week/history button from saved event history; keep loading on expansion/search. Local batch only.
+
+## Пункт65 готов локально — 20 последних строк сохранённой истории
+
+renderEventHistory collapsed page size изменён10→20, текст раскрытия «▸ Остальная история», сворачивания «▾ Свернуть до20строк». По умолчанию date desc сохраняет последние20. Полный поиск/явная сортировка/expanded pagination500/срок1–7дней сохранены. PASS: actual history renderer EN/RU с35событиями показывает35..16 (20последних), triangle раскрывает35 и возвращает20; остальные journal_terminal/statistics_ui regression PASS, diff --check PASS. Без generated assets/версии/сборки/commit/push/роутера, batch-only. Физическое alpha12 AutoOFF прежнее.
+
+65. [x] Events and errors saved history: show latest20 rows initially; remaining retained history under triangle expand/collapse. Preserve full search/sorting/pagination and configured retention. Local batch only.
+
+## Пункт64 готов локально — настраиваемые лимит живого журнала и срок истории
+
+«Настройки» → «Мониторинг и хранение истории»: live_log_limit целое1–2000 (default2000), history_days целое1–7 (default7). UI fool/range gate+Python whitelist validation+Lua own-config whitelist+inventory typed metadata+RPC setup_monitor signature/default config. Старые monitor/onboarding payload без новых ключей сохраняют текущие значения, не сбрасывают их. Повторное открытие показывает сохранённые100/1500 и1/2/7. Сохранение не запускает Auto/сеть.
+
+Live terminalLimit реально ограничивает raw entries и DOM runs, seen-key set ограничен 2×лимитом, при уменьшении очищается старый буфер; фильтрация событий использует metadata configured detail_days. Дни применяются к Reliability/prune/profiles/public metadata, native History event/day cleanup и exports, agent raw samples, hourly quality/daily activity/traffic details (включая WAN), speed results. Новый retention_settings.py читает собственный UCI с5s cache для отдельных процессов; monitor применяет inventory setting. Native history dedup cleanup переписывает primary+backup при истечении event/day подробностей; checkpoint backup тоже очищается по текущему сроку. Speed age cleanup раз в60s без нового теста/расхода квоты, чистит primary+backup. Существующие byte/count caps и quota ledger сохранены. Monthly/lifetime counters отдельно не удаляются. Суточные route/latency графики сохраняют свой предел24h. Подробности за более длинный период после сокращения отсутствуют и не восстанавливаются увеличением срока.
+
+UI удалены обещания фиксированной полной недели: выбранный retained period, динамическая фильтрация и metadata1–7. Help step2 и docs/HISTORY-RETENTION.md RU/EN описывают параметры/очистку/checkpoint/необратимость удаления деталей. Новая py file попадёт в future IPK по build_ipk source.rglob; build не выполнялся.
+
+PASS:134 Python3.9 tests (retention settings/cache/ranges/old payloads/actual store+backup prune/no resurrection/preserved aggregates, setup, priority, onboarding, statistics retention/boundaries, native history, accounting/agent integration, speed). Node journal_terminal (limit100/1 actual entries+DOM, day filtering), fool_ui exact RPC100/2 + reopened1500/1 and invalid ranges, help, onboarding, statistics, analytics/recovery PASS; diff --check PASS. Полной новой CI, настоящей установки/VM acceptance/native visual нет. Generated assets/VERSION/build/commit/push/router не менялись. Batch-only; последнее физическое состояние alpha12 AutoOFF прежнее, issue51 открыт.
+
+64. [x] System settings: configurable live observations limit 1..2000 (e.g.100/1500) and detailed statistics retention days (1/2/7 etc). Persist/validate settings; enforce actual memory/store pruning; keep monthly/lifetime aggregates distinct. Local batch only.
+
+## Пункт63 готов локально — M/R схема в событиях и живом журнале
+
+Общий renderChannelBadge/journalChannelModel: M/Main основной всегда слева, R/Reserve резерв справа. APPLYING/WAIT-CLIENT/ARMED с сохранённой парой — M→R, RESTORING — R→M; оба круга жёлтые, стрелка направленно анимируется. COMMITTED/STOPPED-ON-RESERVE — R зелёный/M красный, подтверждённый ROLLED-BACK original_restored либо явный operator-return — M зелёный/R красный. Красный после перехода = не выбран (не отдельное доказательство ошибки). Отдельный FAILURE с event-time role красит только соответствующий круг красным, без стрелки и без выдуманного успеха другого; RECOVERY — только его зелёным, без утверждения о маршруте. Legacy без роли/пары не получает выдуманную схему.
+
+Диаграмма включена в shared event-history state cells, реальный live terminal message container и прежнюю controller-event table через единый renderer. Текст статуса/код/дата и группировка сохранены; signature дополнена original_restored/return_primary, поэтому разные результаты не сливаются. CSS reverse-animation, reduced motion и print disable; старые live строки статичны, анимация только в верхней строке для снижения шума/нагрузки. Обновлена легенда M/R вместо 1/2. ARIA/title RU/EN объясняют состояние и направление. Правило дополнено в docs/CHANNEL-ATTRIBUTION.md.
+
+PASS: journal_terminal_ui (обе стороны/направления, actual live line и actual history table, pending/confirmed/failure/recovery, отсутствие ложного green, EN/RU accessibility/reduced motion), analytics_ui (старый controller table вызывает общий renderer), design_views A/B/C. diff --check PASS. Тестовый fixture без time сначала дал Invalid time value, дополнен временем; итоговые прогоны PASS. Нативная визуальная браузерная приёмка не выполнена. Только source/CSS/tests/docs; generated assets/VERSION/build/commit/push/router не менялись, batch-only. Физическое alpha12 AutoOFF прежнее.
+
+63. [x] Visual Main/Reserve M/R circles with directional arrow in error events and live journal. Animate pending transition, confirmed selected channel green/other red; reverse for R→M. Do not invent switching/success for plain per-channel failure. Accessible labels/reduced motion. Local batch only.
+
+## Пункт62 готов локально — канал первым в ошибках/статистике
+
+Общий journalMessage для событий конкретного profile (кроме отдельно оформленного RECOVERY) начинает строку «Основной канал — Ошибка соединения» / «Резервный канал — Ошибка соединения», затем сервер/протокол/код. Это общий renderer живого журнала, сохранённых событий и поиска. Agent сохраняет role в текущих profile rows и change events по согласованной before/after pair; ошибки вне конкретного profile остаются служебными.
+
+Таблицы переходов используют source=основной/target=резервный из исходной пары самой записи (при валидных различных canonical IDs), не из текущих настроек. Группы сервер/канал/протокол также показывают роль; CSV failures/transitions добавляет source_role/target_role, ranking CSV использует роль текущей строки вместо default для пары. Форматирование Telegram server rows/state changes ставит роль перед сервером/кодом; ничего не отправлялось. Агрегаты без сохранённого разделения не выдаются за поканальные. Старые события без доказательств роли не размечаются по сегодняшней паре. Правило RU/EN в docs/CHANNEL-ATTRIBUTION.md.
+
+PASS:46 Python3.9 retention/boundaries/telegram/items/agent-speed-integration tests в readonly/no-network Linux; journal_terminal_ui EN/RU failure prefix, analytics_ui event-time transaction role/groups/CSV after pair swap, statistics_ui, channel_guidance_ui, speed_collapse_ui; diff --check PASS. Реальные браузер/роутер/Telegram отправка не выполнялись. Generated assets/VERSION/сборка/commit/push/роутер не менялись; batch-only. Физическое alpha12 AutoOFF остаётся последним подтверждённым состоянием.
+
+62. [x] Global error/statistics channel attribution: show Primary/Reserve channel first for failure/error rows and statistics, followed by server/protocol/code. Reuse event-time role, preserve truthful missing legacy evidence. Audit all error/statistics surfaces; local batch only.
+
+## Пункт61 готов локально — роль канала в сообщении восстановления
+
+Reliability теперь сохраняет event-time role/selected для RECOVERY так же, как FAILURE; общий event_context не меняет счётчики/пороговую логику. Роль берётся из согласованной пары вокруг именно этой пробы, не из предыдущего отказа. При смене ролей между отказом и восстановлением каждое событие хранит свою роль. Journal сохраняет role в модели; сообщение начинается «Соединение восстановлено на основном канале» / «…на резервном канале», затем прежние сервер/страна/протокол. Это восстановление доступности указанного VPN, не отдельное доказательство выбора маршрута. Применяется к живому терминалу и сохранённой истории/поиску. terminalSignature включает role: разные роли не объединяются в один повтор.
+
+Старые записи без role можно уточнить только из собственной явной source/target пары записи; текущие настройки/протокол не используются для угадывания. Если доказательств нет — «канал не сохранён в этой записи», старые данные не подделываются. Новые события с подтверждённой парой однозначные. PASS:32 Python3.9 retention/boundaries tests в readonly/no-network Linux (включая RECOVERY role after pair change/restart/missing evidence), journal_terminal_ui EN/RU роль перед сервером/поиск/неизменность при current pair change/grouping, statistics_ui. Без generated assets/версии/сборки/commit/push/роутера. Batch-only; физическое состояние alpha12 AutoOFF прежнее.
+
+61. [x] Service monitor recovery messages: explicitly say restored on primary/reserve first, then server/country/protocol. Preserve event-time role provenance; never relabel historical recovery using today's selection. Local batch only.
+
+## Пункт60 готов локально — рабочий канал выше в мониторе служб
+
+terminalPinned оставляет Monitor и Auto первыми двумя строками. Две строки каналов сортируются по фактически отображаемому цвету shared channelDisplayUse: зелёный → жёлтый → неподтверждённый серый → красный. Исходная роль хранится отдельно от позиции, поэтому рабочий резерв становится третьим с подписью «Резервный канал», основной ниже; при равных состояниях стабильный основной/резервный порядок. Пересчёт при каждом обновлении pinned/tick; настройки/инвентарь и порядок карточек каналов не меняются. PASS: journal_terminal_ui EN/RU, оба работающих канала, отказ второго/равные неизвестные/неизменность исходных профилей, прежние scrollback/grouping/time/provenance/latency regression; channel_guidance_ui PASS; diff --check PASS. Без generated assets/версии/сборки/commit/push/роутера, batch-only. Last physical state alpha12 AutoOFF прежнее.
+
+60. [x] Service monitor pinned channel rows: keep Monitor and Auto first; working/current channel third, waiting/failed below. Working reserve must precede failed primary. Preserve explicit role labels and truthful states. Local batch only.
+
+## Пункт59 готов локально — первые пять серверов в обеих таблицах скорости/рейтинга
+
+В активной таблице speed_table limit5 уже был. Найден соседний ranking по агрегатам без ограничения: generator теперь оборачивает его тем же limitTableRows(...,5) с отдельным ключом server-ranking-other. Первые пять сохраняют текущий порядок; остальные раскрываются/сворачиваются кнопкой. Поиск работает по всей таблице, сортировка снова ограничивает первые пять, состояния двух таблиц независимы. PASS: новый speed_collapse_ui EN/RU исполняет реальный renderer рейтинга в памяти с новой wrapper-заменой и активный speedTable source; legacy_actions_ui PASS, diff --check PASS. Generated assets/версия/сборка/публикация/роутер не менялись; batch-only. Последний физический alpha12 AutoOFF остаётся прежним.
+
+59. [x] Speed tests and server ranking: show first five servers by current ordering, remaining rows under expand/collapse button. Check both tables in the section; preserve full search/sort and actions. Local batch only.
+
+## Пункт58 готов локально — сбой только текущего канала и проверка перехода
+
+В простое одна кнопка «Имитировать сбой трафика» и длительность; выбор основной/области убран. Кнопка доступна для открытия проверки даже при отсутствии условий: показывает подготовку/конкретные причины и обновление данных без разрушительного RPC. При подтверждённой готовности — обзор точного туннеля/ID/длительности и запуск. Во время активного/неподтверждённого сбоя доступна «Остановить тест и снять сбой»; в простое её нет. Сам запуск не выдаётся за завершённый переход.
+
+Backend поддерживает действующий continuous-pair router-probed режим без старого LAN-сертификата: проверяет private pair intent/revision/RUNNING, отсутствие pending manual request, штатные network/config fingerprints, текущий порядок policy, подтверждённый journal для резерва, точные обе текущие identity/generation/kernel bindings и свежие DNS+2HTTPS. Основной/резерв выбирает из реального private policy/journal, запрос другого ID отклоняется. nft затрагивает только фактическое выбранное устройство, таймаут/nonce/watchdog/Stop fence/проверки перед dispatch сохранены. Старый bounded LAN-certified режим сохраняет прежние сертификат/окно.
+
+Проверка резерв→основной во время явного активного теста может преодолеть только предпочтение hold_reserve; по-прежнему нужны серия отрицательных проб резерва и recovery_ready основного. Настройки не меняются. После отмены/таймаута тестовое исключение не действует. Автоматический переход, вызванный таким сбоем, маркируется test. Worker снимает блокировку досрочно при свежем подтверждённом другом маршруте; таймаут без доказательства — FAULT-TRANSITION-NOT-CONFIRMED, не PASS. UI даёт понятные состояния, новые RU/EN коды внесены в source error tables. Обычные failure thresholds/cooldown/rate budget сохраняются; при слишком коротком выбранном времени переход может не подтвердиться, это честный результат.
+
+PASS:117 Python3.9 unit/platform-model tests в readonly/no-network Linux container (fault_control, committed_recovery, pair_auto, pair_manual, native_switch, native_history). Проверены оба selected устройства, wrong ID, stale/generation/policy/Stop/health, pre-test samples не доказывают переход, bounded active marker/expiry/cancel, hold override без обхода failure/health. Node legacy_actions/recovery/monitor и source syntax PASS; diff --check PASS. Первоначальный native Windows запуск не поддержал fcntl; Linux прогон обнаружил shadowed role в новом eligibility, исправлено и все тесты повторены. Реальные kernel nft/fault переходы на VM/MT3000, browser visual и полная CI новой пачки НЕ выполнены. Generated assets/VERSION/сборка/commit/push/роутер не менялись. Last physical state alpha12 AutoOFF прежнее; issue51 открыт.
+58. [x] Controlled traffic fault: one start button, automatically fault only the currently selected working channel (primary or reserve), test transition to the other, readable progress. Hide idle cancel; active cancellation removes artificial block early. Investigate backend certificate/current-primary restriction rather than merely enabling UI. Local batch only.
+
+## Пункт57 готов локально — объяснение планировщика перенесено в помощь
+
+Из Tests удалён вызов renderDecisionExplanation; рабочая логика Auto не менялась. В Help добавлен закрытый по умолчанию раздел «Почему Auto ждёт перед переключением»: последовательные проверки/пороги, смысл зелёного результата, свежесть/пара/политика возврата, где смотреть текущее состояние. Статический текст не выдаётся за свежую диагностику; штатный короткий диагностический промпт добавляется автоматически. Helper оставлен для внутренних регрессионных проверок. PASS: help_ui EN/RU, vendor_diagnostics_ui, monitor_ui; git diff --check. Новый промпт проверен структурно, исполнение ИИ в VM не проверялось. Без generated assets/версии/сборки/commit/push/роутера. Batch-only; физическое alpha12 Auto OFF остаётся последним подтверждённым состоянием.
+57. [x] **Planner explanation to Help (owner24October).** Explain the technical threshold/wait block; remove it from Tests and move useful plain-language information into a collapsed Help topic. Green observations are not independent Auto readiness certification. Keep control logic unchanged. Local batch only.
+
+56. [x] **Replace legacy grey planning table in Tests — proposal (owner24October).** User asks recommendation: current8-row all-unverified table is confusing, needs current status/actions or removal. Source renderPlanBlockers shows failover_plan dry-run blockers as certification, and stale LAN-required prose. Proposed: remove this legacy presentation; compact «Текущая готовность к проверкам» using real fresh mode-specific evidence, columns check/current status+timestamp/action, explicit refresh/check-current-VPN (no switching), optional client/LAN/IPv6/KillSwitch checks separated under disclosure with proper distinct-test actions. Do not equate absence of blocker with verification. Prefer linking existing authoritative readiness details instead of duplicating its semantics. Auto-start/fault/speed tests must not run from Refresh. Await design steering or implement within next local batch; nothing changed in UI yet. Local only, no router/Git delivery.
+
+## Пункт55 готов локально — «Расширенные настройки» одной строкой
+
+Глобальная sidebar-кнопка переименована RU/EN, второй small «для администратора» удалён. Кнопка остаётся native button с aria-expanded/aria-controls, треугольник направо/вниз; меню ниже переключает hidden и сохраняет выбор в localStorage. Шрифт13px без uppercase/letter-spacing, nowrap и отдельное место стрелке. Внутренний заголовок настроек также лишён скобок про администратора. В C-дизайне удалён старый обход: toggle больше не скрыт и hidden links не принудительно раскрыты. При polling на уже открытой advanced-странице меню не развернётся против выбора пользователя; реальная навигация внутрь advanced по-прежнему раскрывает его.
+
+sidebar_ui PASS дляRU/EN: текст/один child/кнопка/ARIA/open-close/storage, сохранение collapse наpoll и раскрытие при переходе, C-style hidden. Source-фрагмент исполнялся в памяти теста, generated assets не менялись. Без новой версии/сборки/commit/push/команд роутеру. Нативная визуальная проверка не выполнена; batch-only. Физическое состояние ранее alpha12 AutoOFF/безguard; отдельная задача51 остаётся открытой.
+
+55. [x] **Single-line Advanced settings disclosure (owner24October).** Rename global sidebar group to «Расширенные настройки» / Advanced settings, remove administrator subtitle, fit one line and toggle menu below in every design. Preserve keyboard/expanded state and do not reopen a manually collapsed active group on status polls. Local batch only.
+
+## Пункт54 готов локально — работающий сервер над ожидающим в текущих проверках
+
+Добавлен currentCheckOrderedRows: использует тот же channelDisplayUse, что формирует видимый статус/лампу. Приоритеты таблицы: green selected «Работает» → standby «Ожидает» → проверка/переход → отсутствие подтверждения → off/ошибка. Равные состояния упорядочены стабильно с ролью основной/резервный как tie-break. Generator применяет helper только к current-checks table. Карточки сохраняют основной слева/сверху и резерв справа/снизу; пять начальных строк/раскрытие/поиск/явная сортировка пользователем сохранены. Исходные данные/профили не меняются.
+
+channel_guidance_ui PASS: новая логика вставлена в генерируемую table-функцию только в памяти теста (реальные generated assets не перезаписывались), лимит5/поиск/раскрытие сохраняются. Дополнительно реальный shared display model проверен при рабочем резерве и рабочем основном, при ошибке выбранного профиля и stale status; карточки остаются в прежнем role order. В будущем installer feature-assert для таблицы должен ожидать currentCheckOrderedRows вместо прежнего roleOrderedRows; исторические install receipts/scripts не переписывались. Никаких версии/сборки/commit/push/роутера — batch-only. Физическое состояние по последнему чтению прежнее: alpha12 AutoOFF без своей guard-таблицы; пункт51 открыт.
+
+54. [x] **Current checks ordered by displayed state (owner24October).** In this table only: Working first, Waiting next, other states below; retain five-row collapse, full search/sort. Keep fixed primary-left/reserve-right order of channel cards unchanged. Local batch only.
+
+## Пункт53 готов локально — текст блока задержек «Каналы и серверы»
+
+Удалено предложение «Текущие значения — реальные проверки HTTPS, не ICMP-пинг» и EN-вариант из latency panel. Подписи основного/резерва и каждого цвета — отдельные p-строки. Каждое оставшееся предложение о статистике/минутных средних/пропусках/записи истории — отдельный абзац с нормальными отступами. Единая рекомендация из52 уже применяется на обеих страницах, с одной строкой протокола и исходным именем сервера. Название раздела навигации сохранено: запрос истолкован как удаление пояснения внутри страницы.
+
+Существующий latency_ui PASS, включая52. Изменения только в исходниках/CSS/передаче, без generated assets, версии, сборки, commit/push или каких-либо команд роутеру. Действует batch-only.
+
+53. [x] **Channels/servers latency copy cleanup (owner24October).** Remove HTTPS-not-ICMP disclaimer from the Channels and servers delay panel too. Use separate lines/paragraphs for legend and remaining history/statistics sentences; item52 shared recommendation already structures both views. Local batch only.
+
+## Пункт52 готов локально — свёрнутая рекомендация задержки
+
+renderLatencyRecommendation теперь details/summary, закрыт по умолчанию. При раскрытии отдельные p-строки: рекомендуемый канал для текущей работы; его HTTPS-задержка; задержка другого; разница; страна; протокол один раз; исходное router_name сервера (не страна+протокол из serverTitle); свежий endpoint с прежними проверками привязки. Текущий подтверждённый маршрут — отдельный абзац. Весь старый footer HTTPS/ICMP + переход к «Ручному переключению» удалён. При недостаточных/устаревших данных сохранено объяснение вместо рекомендации. Алгоритм выбора/отказа/RPC не менялся. Раскрытие сохраняется отдельно для manual и channels через rememberDisclosure. Предложение protocolLabel удалено из старого summary text, где serverTitle уже включал протокол.
+
+PASS: latency_ui (структура RU, строки, исходный de678.nordvpn.com, единственный WireGuard, отсутствие footer, сохранение раскрытия/независимые страницы/stale gate), manual_ui, design_views A/B/C. Generated assets и VERSION не менялись, полной CI/сборки/commit/push/роутера нет — действует batch-only. Физическое состояние остаётся записанным ранее: alpha12, AutoOFF, без собственной guard-таблицы; пункт51 восстановления Start не закрыт. Все последующие правки выполнять локально.
+
+52. [x] **Collapsed structured latency recommendation (owner24October).** Remove navigation sentence about Manual switch (and verbose HTTPS footer); use collapsed triangle recommendation. Separate lines: recommended current-use role, delay, comparison, country, protocol once, configured server name and fresh endpoint; keep no-control semantics/freshness checks. Local batch only: no bump/build/commit/push/device changes.
+
+# ВАЖНО: новая политика пачки; MT3000 alpha12, Auto OFF —24October2026
+
+Владелец дважды подтвердил: выполнять все текущие/новые правки и проверки локально; общую версию/сборку/роутер/Gitea/GitHub делать только после конца списка. Сохранять каждую диктовку сразу. Никаких новых доставок/перезапусков на роутере до разрешённого общего этапа.
+
+Установка alpha12 уже выполнялась при поступлении правила: opkg/86files+modes/RPC/HTTP8080/pinnedHTTPS PASS. Две попытки восстановить прежний AutoONreserve остановились на штатных vendor worker quiet/busy gates, обе выполнили cleanup. Последнее строго read-only подтверждение: установлен0.9.1-alpha12, pair STOPPED, intentoff, оба owned-интерфейса отсутствуют, собственная guard-таблица отсутствует. НЕ считать Auto восстановленным. Прежняя полностью рабочая база —alpha11 AutoONreserve. Дальнейшие попытки/откат/установка остановлены по правилу владельца, защиты не обходились. [Частичный физический отчёт](../../qa/MT3000-ALPHA12-PARTIAL-2026-10-24.json).
+
+Пункт50 локально готов: две серииblue primary/orange reserve с легендой; текущие роли из одинаковых до/после inventory, legacy без роли только в архиве. Исправлен native-state overwrite состояния отказа и строго восстанавливаемая старая сигнатура checkpoint;36focused Python и полная dual-runtime CI PASS на07040b7. Физическая проверка роли на работающей паре NOT RUN: Auto не восстановлен. Новый график доставлен по байтам, но полный device acceptance остаётся PARTIAL. Никаких push после обновлённого правила, новые отчёты/передача — local WIP.
+
+Следующая локальная задача: исследовать повторяемый VENDOR-WORKER-QUIET-UNVERIFIED/BUSY после первого ifup при Start. Не превращать её в новый deployment до конца пачки. Перечитать private/ACTIVE-EXECUTOR.local.json и живое состояние перед любым будущим разрешённым действием.
+
+51. [x] **Local investigation: Auto startup vendor quiet.** Alpha12 two normal starts fail safe after ifup/quiet; preserve both traces, reproduce/model locally, do not weaken guards or change device before batch end.
+
+## Owner repeated batch-only rule24October
+
+Process all current/new dictated corrections and local checks first. Save each request immediately. Only after the entire owner list is finished perform one shared version/build, router installation and Gitea/GitHub upload. No delivery per individual correction. Already-started alpha12 recovery is the only inflight exception needed to restore the prior working Auto reserve; no other physical work.
+
+## Owner batch policy renewed24October
+
+Owner: complete all forthcoming tasks locally, then publish GitHub/Gitea and install once after the list is finished. Do not version/build/deploy each new correction. Alpha12 installation had already begun when this instruction arrived; finish only its safe restoration to AutoONreserve, then no further delivery until owner closes the batch. Save every new dictation immediately.
+
+# Item50 alpha12 failure-chart correction candidate —24October2026
+
+Only primary blue/reserve orange series; explicit colour legend. Old records without event-time role remain archived/excluded, never assigned from today’s pair. Roles for new episodes use two matching configured snapshots around the actual probe, including controller startup/error states. Fixed accidental native-state overwrite of probe state and strictly repair only the provable legacy failure-row signature. Focused36Python3.9 statistics tests and UI regression PASS; complete CI and dedicated MT3000 update follow within standing owner scope. Installed baseline stillalpha11 AutoONreserve until update. No fault injection or host/MT6000 changes.
+
+50. [ ] **Two explicit coloured failure series (owner24October).** Remove synthetic unknown-channel series; fix event-time primary/reserve attribution from the actual stable configured pair, independent of transient controller state; preserve unmapped legacy records in an explicitly excluded archive note. Blue primary/orange reserve with visual legend; meaningful persistence/freshness/regression checks. Found additional failure-state variable overwrite to fix. Standing MT3000 app-update scope remains applicable.
+
+# Alpha11 installed on dedicated MT3000 — 24 October2026
+
+Owner49 «Роутер обнови» completed. Actual model glinet,mt3000-snand/firmware4.11.0 verified before write; previousalpha9 AutoONreserve. Fresh190-entry encrypted pre-backup independently decrypted/read. Normal Stop→opkg alpha11→86immutable files/modes+own/protected settings/terms→freshRPC→actualHTTP8080 and pinnedHTTPS dashboard87/ui59 allPASS. First Auto Start hit VENDOR-WORKER-QUIET-UNVERIFIED and safely cleaned up; failure retained. After independently observed workers busy0, one normal retry reached RUNNING. Programmatic reserve restoration confirmed; final fresh RPC: AutoONreserve, manual_hold target, both VPN DNS+2HTTPS healthy,2fresh bound endpoints. Only expected lease nonce/deadline changed; unrelated settings/terms preserved. Final190-entry encrypted backup independently decrypted/read. [Receipt](../../qa/MT3000-ALPHA11-2026-10-24.json). No host/MT6000/fault changes; no native-browser visual or external-LAN claim. No active device job remains; leave Auto on reserve. Product/Git branch alpha11 already published before this device task; new physical receipt/docs are local, no new release or Git push performed here.
+
+49. [x] **Update dedicated router.** Alpha11 installed; AutoONreserve restored; see newest receipt/scope below.
+
 # Owner48 completed: alpha11 training/docs published — 24 October2026
 
 Published feature/owner-ui-20261023 to both GitHub and Gitea. Canonical tested99eab5956c3f0af63e380d1ff336750a2d6e8549 and public497649b1d0100cf5b644b5e7450ee5c5b9c449f8 have identical tree13b11b0d51d97575a53831bcd63b2d139ced4fe9. Exact final source passed dual-runtime750app/108QA each and45UI primary; package806313bytes SHA8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6. A documentation-only closure records publication and will be saved to these same branches; no product files change.8interactive vector lessons and full quiz EN/RU checked;179Markdown files inventoried/classified/local targets PASS. Current guides/changes RU→EN refreshed; legal/dates/pinned stable assets preserved. Alpha10 VM report included with explicit PARTIAL GL/LAN/model scopes. No new release/tag/main merge or physical install. Native browser visual acceptance and physicalalpha11 remain pending. Last verified physicalbaselinealpha9. No active device writer; no further upload/install is implicit. Final remote proof: private/docs-training-20261024/publication.json.
@@ -10,7 +164,7 @@ Published feature/owner-ui-20261023 to both GitHub and Gitea. Canonical tested99
 
 Owner48: eight interactive native-vector lesson scenes, Play/Pause/Back/Next/Reset, hidden/dispose cleanup and no router RPC. Complete8lesson/quiz flow EN/RU passed; stale helper/return/client-start/step-number/monitoring statements corrected. Current RU→EN guides/changes and179-file Markdown index reviewed; all local link targets and version scopes checked. Alpha10 VM audit is included with PARTIAL external platform/model coverage. Candidate alpha11/dashboard87/ui59 has not been installed on hardware or accepted in a native browser. Exact-source CI/canonical package and authorized GitHub/Gitea branch publication follow. Stable0.9.0 and last verified installedalpha9 stay distinct.
 
-48. [ ] **Training and complete documentation refresh (owner24October).** Walk all lessons/quiz, add native vector interactive teaching diagrams with Play/Pause/previous/next/reset, align all active RU then EN docs with alpha10/VM evidence, classify dated historical records, validate links and publish current branch to GitHub/Gitea. No physical-router deployment.
+48. [x] **Training and complete documentation refresh (owner24October).** Walk all lessons/quiz, add native vector interactive teaching diagrams with Play/Pause/previous/next/reset, align all active RU then EN docs with alpha10/VM evidence, classify dated historical records, validate links and publish current branch to GitHub/Gitea. No physical-router deployment.
 
 # Item47 VM audit completed within explicit scope — 24 October2026
 
@@ -34,7 +188,7 @@ Items32–46 and the onboarding Stop actor marker are included in0.9.1-alpha10/d
 
 Проверки PASS: analytics_ui (повторная подготовка→реальная попытка, STOPPED-ON-RESERVE, gap не превращается вsuccess, RU без raw held/unknown); statistics_ui; incident_ui (allowlist, redaction, CSP/XSS). Dry-run полного генератора без записи файлов PASS, собранный в памяти модуль разобран new Function в Node PASS; diff-check PASS. Нативной визуальной проверки нет. Нет версии/generated writes/commit/push/install. Снимок private/batch-local-20261024/item46/manifest.json.
 
-46. [ ] **Clear transition channels/outcomes, no raw unknown (owner24October).** Rename From/To to source/destination channel, show role+concrete profile; explain held/unknown results from actual phases, distinguish preparation without a selected pair from an applied switch. Investigate ARMED unknown pseudo-attempts; never invent successful outcome or current-pair historical identity. Local batch only.
+46. [x] **Clear transition channels/outcomes, no raw unknown (owner24October).** Rename From/To to source/destination channel, show role+concrete profile; explain held/unknown results from actual phases, distinguish preparation without a selected pair from an applied switch. Investigate ARMED unknown pseudo-attempts; never invent successful outcome or current-pair historical identity. Local batch only.
 
 ## Пункт45 готов локально — имена/протоколы/каналы и читаемые таблицы событий
 
@@ -44,43 +198,43 @@ Items32–46 and the onboarding Stop actor marker are included in0.9.1-alpha10/d
 
 Проверки PASS: analytics_ui (endpoint имя, protocol изID, текущая роль, archived/missing, empty window); statistics_ui; design_views A/B/C. Полный dry-run generator с подавленными Path.write_text PASS: inventory в events wired, новые CSS включены. Нативный screenshot не выполнен, геометрия в реальном браузере остаётся частью финальной проверки. Нет версии/generated writes/commit/push/install. Снимок private/batch-local-20261024/item45/manifest.json.
 
-45. [ ] **Concrete identities and readable event statistics tables (owner24October).** Replace raw unknown/default/profile IDs in server/channel/protocol summaries with real recorded/resolved endpoint names, protocols and primary/reserve roles where supported; explicitly distinguish unrecorded old data without guessing current identity. Fix cramped/broken headers, full-width tables and responsive horizontal overflow. Local batch only.
+45. [x] **Concrete identities and readable event statistics tables (owner24October).** Replace raw unknown/default/profile IDs in server/channel/protocol summaries with real recorded/resolved endpoint names, protocols and primary/reserve roles where supported; explicitly distinguish unrecorded old data without guessing current identity. Fix cramped/broken headers, full-width tables and responsive horizontal overflow. Local batch only.
 
 ## Пункт44 готов локально — удалён лишний вводный абзац журнала
 
 Из services удалён абзац «Живой журнал проверок роутера. Одного подключено мало…» и его EN вариант. Теперь порядок: заголовок «Монитор служб» → терминал → свёрнутое пояснение из43. Dry-run полного генератора с подавленными записями PASS: текст отсутствует EN/RU, порядок подтверждён. Generated assets не менялись, нет версии/commit/push/install. Снимок private/batch-local-20261024/item44/manifest.json.
 
-44. [ ] **Remove redundant live journal intro (owner24October).** Remove «Живой журнал проверок роутера. Одного подключено мало…» and EN equivalent. Local batch only.
+44. [x] **Remove redundant live journal intro (owner24October).** Remove «Живой журнал проверок роутера. Одного подключено мало…» and EN equivalent. Local batch only.
 
 ## Пункт43 готов локально — монитор выше, пояснение свёрнуто
 
 Из начала services удалён развернутый warning-абзац о router observations/необязательном LAN-тесте. Секция теперь начинается с «Монитор служб», затем описание/терминал. Полный прежний текст перенесён под терминал в закрытый details «О наблюдениях роутера и LAN-тесте» с сохранением раскрытия rememberDisclosure. Логика терминала, часы, группировка, RPC и сетевые проверки не менялись. Проверки: полный dry-run генератора с подавленными Path.write_text PASS (порядок put services: heading первым, terminal перед explanation; default closed; retention wired); journal_terminal_ui PASS. Generated assets не записывались, нет версии/commit/push/install. Снимок private/batch-local-20261024/item43/manifest.json.
 
-43. [ ] **Collapse terminal explanation and raise monitor (owner24October).** Move router-observation/optional LAN-test paragraph into collapsed disclosure below the live terminal; keep monitor heading/content first. Preserve terminal behaviour. Local batch only.
+43. [x] **Collapse terminal explanation and raise monitor (owner24October).** Move router-observation/optional LAN-test paragraph into collapsed disclosure below the live terminal; keep monitor heading/content first. Preserve terminal behaviour. Local batch only.
 
 ## Пункт42 готов локально — null после подзаголовка живого журнала
 
 Общая шапка теперь явно фильтрует nullable slot renderConnectivityCheck перед созданием hv-header-main, дополнительно к общей защите E из37. Добавлена проверка точной подписи живого журнала EN/RU с отсутствующим виджетом: null/undefined не выводятся. sidebar_ui PASS; весь build_sidebar_ui.py выполнен с подавленными Path.write_text (все must_replace anchors PASS, generated файлы не записывались). Первый dry-run требовал добавления router в sys.path, исправленный прошёл. Роутер остаётся на старой установленной версии; локальная защита37/42 ещё не доставлена по batch-политике владельца. Нет версии/commit/push/install. Снимок: private/batch-local-20261024/item42/manifest.json.
 
-42. [ ] **Live journal subtitle null (owner24October).** Remove null after «Живой журнал того, что видит роутер.»; check shared header nullable connectivity slot, keep no-publication batch policy.
+42. [x] **Live journal subtitle null (owner24October).** Remove null after «Живой журнал того, что видит роутер.»; check shared header nullable connectivity slot, keep no-publication batch policy.
 
 ## Пункт41 готов локально — подписи под ползунками задержки
 
 latency_panel: каждый range находится в отдельном label с подписью span под ним. Контейнер hv-latency-controls задаёт две равные растягиваемые колонки и отдельную кнопку «Сейчас», без смешивания текста и range в одной строке. CSS: подписи по центру, range на полную ширину своей колонки, одинаковые отступы, min-width0, перенос длинного текста; при ширине до640px элементы идут вертикально, кнопка по центру. Существующие handlers, выбранный период/сдвиг и сохранение вида не менялись. test_latency_ui.js PASS. Нативная визуальная проверка не выполнена; оценка по исходнику и приложенному скриншоту. Без версии/generated assets/commit/push/install. Снимок: private/batch-local-20261024/item41/manifest.json.
 
-41. [ ] **Align latency sliders and captions (owner24October).** Put each caption centred below its corresponding slider; align both controls and Live button, stack on narrow screens. Preserve range/pan state and events. Local batch only.
+41. [x] **Align latency sliders and captions (owner24October).** Put each caption centred below its corresponding slider; align both controls and Live button, stack on narrow screens. Preserve range/pan state and events. Local batch only.
 
 ## Пункт40 готов локально — удалена карточка «Два уровня восстановления VPN»
 
 Удалены renderer renderVendorOverview и вставка этой карточки в Overview в build_sidebar_ui.py. Вместе с карточкой убраны её координация/кандидат для проверки, стабильность конфигурации и завершение попыток прошивки. Backend, готовность Auto и управление каналами не менялись. Прочие существующие раскрываемые диагностические разделы сохранены. Проверки vendor_diagnostics_ui и design_views A/B/C PASS, исходник/генератор проверены на отсутствие удалённой карточки. Generated assets не переписывались; нет bump/build/commit/push/install. Снимок: private/batch-local-20261024/item40/manifest.json.
 
-40. [ ] **Remove two recovery levels block (owner24October).** Remove the whole overview card «Два уровня восстановления VPN», including app-coordination candidate and firmware-attempt wording. Local batch only; routing/readiness unchanged.
+40. [x] **Remove two recovery levels block (owner24October).** Remove the whole overview card «Два уровня восстановления VPN», including app-coordination candidate and firmware-attempt wording. Local batch only; routing/readiness unchanged.
 
 ## Пункт39 готов локально — пояснение ручного выбора под картинками
 
 Полный абзац «Выбирайте канал и при включённом Auto…» и его legacy/EN варианты перенесены сразу под hv-manual-channel-grid, то есть под обе кнопки-картинки. Заголовок и рекомендация по задержке сохранены перед выбором. Текст, индикаторы, обработчики и RPC не менялись. Существующий test_manual_ui.js PASS, порядок элементов проверен по исходнику. Изменение локальное: без версии/генерации assets/commit/push/установки. Снимок всей текущей пачки: private/batch-local-20261024/item39/manifest.json.
 
-39. [ ] **Manual explanation below pictures (owner24October).** Move the full choose-channel/colour/Auto-observation explanation below the two channel pictures/buttons. Keep controls, recommendation, wording and RPC behaviour unchanged. Local batch only.
+39. [x] **Manual explanation below pictures (owner24October).** Move the full choose-channel/colour/Auto-observation explanation below the two channel pictures/buttons. Keep controls, recommendation, wording and RPC behaviour unchanged. Local batch only.
 
 ## Пункт38 готов локально — график числа отказов за 1–24 часа
 
@@ -90,7 +244,7 @@ Reliability сохраняет role/selected непосредственно пр
 
 Проверки PASS: Node auto_live (2 графика/один сохранённый slider, границы окна, роли, маршрут, отсутствие heartbeat подсчёта), design_views A/B/C; Python3.9 в изолированном Docker:32 теста statistics_retention/statistics_boundaries/route_history, включая повторные проверки одного отказа, сохранение роли через restart/смену пары и unknown legacy/stale context. Первый запуск без TZ выявил ожидаемую DST-проверку; повтор с TZ=Europe/Berlin прошёл. Тестовые SVG assertions обновлены для второго графика/строковых атрибутов. Нативного screenshot нет. Нет bump/build/fullCI/commit/push/install, generated assets не менялись.
 
-38. [ ] **24h failures chart beside daily channel switching (owner24October).** Add last-day failure counts/history separated primary/reserve, indicating selected traffic channel at event time where known. Count real failure episodes rather than repeated failed probes, preserve unknown/gaps/pair identity, follow selected1–24h window and keep chart inside collapsed statistics block. Inspect existing persisted incident/route history; batch local only.
+38. [x] **24h failures chart beside daily channel switching (owner24October).** Add last-day failure counts/history separated primary/reserve, indicating selected traffic channel at event time where known. Count real failure episodes rather than repeated failed probes, preserve unknown/gaps/pair identity, follow selected1–24h window and keep chart inside collapsed statistics block. Inspect existing persisted incident/route history; batch local only.
 
 ## Пункт37 готов локально — null/undefined не выводятся как пустые элементы
 
@@ -100,7 +254,7 @@ Reliability сохраняет role/selected непосредственно пр
 
 Локальные проверки PASS: sidebar (LuCI-like factory, function-scoped production delegation, nested nil, actual Getting started EN/RU/missing optional text, zeroes/callbacks/attributes/JSON, reload), onboarding с включённым guard во всех сценариях, A/B/C views с guard (а source auto_panel наложен для36). Diff-check PASS. Нативного браузерного screenshot нет; пункт19 не закрыт. Нет новой версии, generated artifacts, полной CI, commit/push/установки. Новый element_guard.inc.js пока untracked: обязательно включить его в финальный общий снимок/commit после конца пакета.
 
-37. [ ] **Remove visible null across pages (owner24October).** Getting started page shows literal null after first-steps intro; remove it and audit all UI E children/optional values for null/undefined text leakage. Preserve real unknown/no-data labels. Local batch only; no version/commit/push/device update.
+37. [x] **Remove visible null across pages (owner24October).** Getting started page shows literal null after first-steps intro; remove it and audit all UI E children/optional values for null/undefined text leakage. Preserve real unknown/no-data labels. Local batch only; no version/commit/push/device update.
 
 ## Пункт36 готов локально — компактная статистика между Auto и ручным выбором
 
@@ -108,7 +262,7 @@ Reliability сохраняет role/selected непосредственно пр
 
 Локальные UI PASS: design_views (актуальный source auto_panel поверх собранного префикса, порядок и отдельные карточки в A/B/C, default collapsed, expand/collapse и polling), auto_live (live/day/window retention), auto_button, legacy_actions (Emergency Stop), interface_state (viewport/scroll/keyed disclosure при перестановке соседей). git diff --check PASS. Первая попытка текстовой правки остановилась assert до записи, затем исправлена; перечисленные проверки выполнены после успешного изменения. Generated dashboard/CSS не переписывались, новая версия/полная CI/commit/push/установка не выполнялись; на роутере остаётся alpha9 до общей доставки.
 
-36. [ ] **Collapse real-time switching and raise manual controls (owner24October).** Put real-time switching chart/statistics in a distinct collapsed triangle block between Auto and Manual controls. Keep technical actions compact/collapsed there too. Manual channel switching must follow near the top without expanded graphs consuming the intervening screen. Preserve all statistics, chart viewport and disclosure state across polls; batch local only.
+36. [x] **Collapse real-time switching and raise manual controls (owner24October).** Put real-time switching chart/statistics in a distinct collapsed triangle block between Auto and Manual controls. Keep technical actions compact/collapsed there too. Manual channel switching must follow near the top without expanded graphs consuming the intervening screen. Preserve all statistics, chart viewport and disclosure state across polls; batch local only.
 
 ## Пункт35 готов локально — задержка канала в записи перехода
 
@@ -118,7 +272,7 @@ Snapshot сохраняется в существующей недельной H
 
 Проверки PASS:165Python3.9 тестов в11затронутых наборах; UI журнал/история. Новые проверки: соответствие target/generation/time, stale/failure/RPC/invalid values, return-primary, snapshot через actual publish, отсутствие события только из-за нового RTT, неизменность старого измерения, отсутствие подстановки сегодняшних999мс, свежий pinned RTT без новых RPC. git diff --check PASS. Только локальные исходники; версия/установка остаётся alpha9, generated assets не пересобирались; никаких commit/push/новой версии/установки до конца пакета владельца.
 
-35. [ ] **Switch event latency (owner24October).** Show target channel latency immediately on switch/activation journal entries, using a fresh measured value tied to that exact profile/tunnel. Distinguish in-progress/no fresh value; never attach current ping to an unrelated historical transition. Preserve measured metric HTTPS vs ICMP, source/direction and batch-local-only delivery policy.
+35. [x] **Switch event latency (owner24October).** Show target channel latency immediately on switch/activation journal entries, using a fresh measured value tied to that exact profile/tunnel. Distinguish in-progress/no fresh value; never attach current ping to an unrelated historical transition. Preserve measured metric HTTPS vs ICMP, source/direction and batch-local-only delivery policy.
 
 ## Пункт34 готов локально — действие, оператор/программа и направление
 
@@ -128,7 +282,7 @@ Snapshot сохраняется в существующей недельной H
 
 Проверки PASS: итоговые162Python3.9 теста в11затронутых наборах, UI manual/journal/Auto/event-history и diff-check. Проверены программный тест через ручную очередь, неизменность Auto при one-shot запросе, источник промежуточного/финального перехода, защита от чужой пары/устаревшего запроса, legacy unknown, направления, раздельные запрос/STOPPED. Файлы в исходниках, версия остаётся alpha9; generated resources не пересобирались, полной CI/новой версии/commit/push/роутерной установки нет.
 
-34. [ ] **Clarify actor/action/direction in journal (owner follow-up24October).** Each entry must distinguish operator/human command versus test/programmatic/controller action, Auto enable versus disable, and primary→reserve versus reserve→primary. Reflect explicit origin markers; programmatic/manual requests and confirmed effects remain separate. For manual channel RPCs carry explicit request_source, so a test calling a manual endpoint is not mislabelled as a human. Local batch only.
+34. [x] **Clarify actor/action/direction in journal (owner follow-up24October).** Each entry must distinguish operator/human command versus test/programmatic/controller action, Auto enable versus disable, and primary→reserve versus reserve→primary. Reflect explicit origin markers; programmatic/manual requests and confirmed effects remain separate. For manual channel RPCs carry explicit request_source, so a test calling a manual endpoint is not mislabelled as a human. Local batch only.
 
 ## Пункт33 готов локально — источник действий Auto/переключений
 
@@ -138,7 +292,7 @@ Snapshot сохраняется в существующей недельной H
 
 Для будущего общего установочного сценария: штатный Start/Stop от установщика маркировать request_source=programmatic; тестовый запуск — test; не менять исторические сценарии/квитанции задним числом. В lab/virtual_package_acceptance.py будущий тестовый native_start помечен test.
 
-33. [ ] **Live journal action provenance (owner dictation24October).** Show whether Auto activation/deactivation was manual, programmatic/test-driven, and whether each channel transition was manual or automatic. Include target channel/action with truthful evidence; do not infer source from timing or fabricate provenance. Inspect actual controller/manual/test records, add durable source fields if missing, preserve grouping distinctions. Batch local only: no version/commit/push/device updates until owner finishes messages.
+33. [x] **Live journal action provenance (owner dictation24October).** Show whether Auto activation/deactivation was manual, programmatic/test-driven, and whether each channel transition was manual or automatic. Include target channel/action with truthful evidence; do not infer source from timing or fabricate provenance. Inspect actual controller/manual/test records, add durable source fields if missing, preserve grouping distinctions. Batch local only: no version/commit/push/device updates until owner finishes messages.
 
 ## Пункт32 готов локально — журнал без повторяющихся строк
 
@@ -154,7 +308,7 @@ Snapshot сохраняется в существующей недельной H
 
 0.9.1-alpha9/dashboard85/ui57 installed on dedicated MT3000. Auto works/power group raised to match right Step1 content with common12px top inset; old20px margin/22px padding removed. Literal null removed from page header. Previously saved item30 work completed: current lower-delay recommendation with rationale/bound endpoint/actual selected role before manual controls, weighted mean/minute min/max/success count table follows graph window. RPC errors and route-helper refusal fenced; no automatic route/pair change. Focused existing suites and new meaningful aggregation/refusal regressions PASS; exact-source dual-runtime full CI and86files/modes/actualHTTP8080/HTTPS verified. Final AutoONreserve, both VPN DNS+twoHTTPS healthy; encrypted final backup independently verified. [Evidence](../../qa/MT3000-ALPHA9-2026-10-24.json). Item30 broader audit remains open for item15 VM coverage limits/item19 native browser review. No new native visual proof: browser automation was stopped by URL-confidence policy.
 
-32. [ ] **Live terminal repeated states (24October screenshot11:47).** Show consecutive identical messages/states once with first–last time range and repeat count; avoid per-second heartbeat spam. Preserve chronological transitions (A→B→A remains distinct), real event identity/profile/code distinctions, reading anchor, newest-first and pinned status/clock. Save before implementation; finish in-flight alpha9 Auto/reserve restoration first, then new tested package/install under standing authorization.
+32. [x] **Live terminal repeated states (24October screenshot11:47).** Show consecutive identical messages/states once with first–last time range and repeat count; avoid per-second heartbeat spam. Preserve chronological transitions (A→B→A remains distinct), real event identity/profile/code distinctions, reading anchor, newest-first and pinned status/clock. Save before implementation; finish in-flight alpha9 Auto/reserve restoration first, then new tested package/install under standing authorization.
 
 31. [x] **Align Overview Auto controls (24October screenshot alpha8).** Raise Auto works badge/power group to align with the right Step1 VPN-check block; remove asymmetric margins/padding/centering. Preserve responsive layout, Auto controls and monitor placement. Also remove literal null text visible above the card. Standing MT3000 update authorization applies.
 

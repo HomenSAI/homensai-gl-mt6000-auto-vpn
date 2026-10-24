@@ -16,6 +16,13 @@ function roleOrderedRows(rows,status,inventory,now){
   var ids=rolePairIds(status,inventory,now);
   return rows.map(function(p,i){var role=ids.indexOf(p.id);return {p:p,i:i,rank:role<0?2:role};}).sort(function(a,b){return a.rank-b.rank||a.i-b.i;}).map(function(row){return row.p;});
 }
+function currentCheckOrderedRows(rows,status,inventory,now){
+  return roleOrderedRows(rows,status,inventory,now).map(function(p,i){
+    var use=typeof channelDisplayUse==='function'?channelDisplayUse(p,status,inventory):{state:'unknown',kind:'grey'};
+    var rank=use.state==='selected'&&use.kind==='green'?0:use.state==='standby'?1:['checking','switching'].indexOf(use.state)>=0?2:use.state==='unknown'?3:4;
+    return {p:p,index:i,rank:rank};
+  }).sort(function(a,b){return a.rank-b.rank||a.index-b.index;}).map(function(row){return row.p;});
+}
 function splitRoleRows(rows,status,inventory,now){
   var ids=rolePairIds(status,inventory,now),ordered=roleOrderedRows(rows,status,inventory,now),pair=ordered.filter(function(p){return ids.indexOf(p.id)>=0;});
   if(!pair.length)pair=ordered.slice(0,2);

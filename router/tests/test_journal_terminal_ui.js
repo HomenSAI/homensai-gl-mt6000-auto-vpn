@@ -11,6 +11,23 @@ const status={time:now,profiles:[{id:'wireguard:peer_1',name:'Primary'},{id:'ope
 const rows=c.journalRows(status,null,now);assert.equal(rows.length,2);assert.equal(c.filteredJournalRows(rows,status,'dns-001','time',true).length,1);assert.equal(c.filteredJournalRows(rows,status,'primary','time',true).length,1);
 assert(c.filteredJournalRows(rows,status,'','time',false)[0].time<rows[0].time,'date sorting covers all rows');
 const root=c.renderLiveTerminal(status,{});assert.equal(intervals,1);assert(root.all().some(n=>n.attrs['data-terminal-pinned']==='1'));assert.equal(c.LIVE_TERMINAL.body.children.length,2,'no inactive profile inventory is dumped into the journal');
+const savedDisplay=c.channelDisplayUse;
+for(const language of ['en','ru']){
+ c.bi=(en,ru)=>language==='ru'?ru:en;
+ for(const working of ['wireguard:peer_1','openvpn:1_1']){
+  c.channelDisplayUse=p=>({kind:p.id===working?'green':'red',label:p.id===working?'Working':'Failed'});
+  c.terminalPinned(now);
+  const pinned=c.LIVE_TERMINAL.pinned.children;
+  assert(pinned[0].text().includes('HomenS.AI monitor'));assert(pinned[1].text().includes('Auto VPN'));
+  assert(pinned[2].children[0].attrs.class.includes('green'));assert(pinned[3].children[0].attrs.class.includes('red'));
+  const title=working==='openvpn:1_1'?(language==='ru'?'Резервный канал':'Reserve channel'):(language==='ru'?'Основной канал':'Primary channel');
+  assert.equal(pinned[2].children[1].children[0],title,'role label follows its channel after reordering');
+ }
+ c.channelDisplayUse=()=>({kind:'grey',label:'No fresh data'});c.terminalPinned(now);
+ assert.equal(c.LIVE_TERMINAL.pinned.children[2].children[1].children[0],language==='ru'?'Основной канал':'Primary channel','equal states retain stable role order');
+}
+c.channelDisplayUse=savedDisplay;c.bi=en=>en;c.terminalPinned(now);
+assert.equal(status.profiles[0].id,'wireguard:peer_1','display sorting never reorders profile inventory');
 assert.equal(c.LIVE_TERMINAL.entries[0].state,'COMMITTED','latest real observation starts at the top');
 for(let i=0;i<30;i++){now++;tick();}
 assert.equal(c.LIVE_TERMINAL.body.scrollTop,0);assert.equal(c.LIVE_TERMINAL.entries[0].time,status.time-10,'clock does not manufacture fresh router events');
@@ -111,3 +128,95 @@ c.renderLiveTerminal(Object.assign({},status,{time:now,profiles:[currentProfile]
 assert(c.LIVE_TERMINAL.pinned.text().includes('12.3 ms HTTPS'));
 assert.equal(rpcs,0);
 console.log('PASS: immutable event-time delay, no backfill from live RTT, target/return direction validation and fresh pinned delay without additional probes');
+const recoveryStatus={time:now,profiles:[{id:'wireguard:peer_1',name:'Germany · WireGuard'}],accounting:{reliability:{events:[{sequence:100,time:now,kind:'RECOVERY',profile:'wireguard:peer_1',role:'target'}]}}};
+for(const language of ['en','ru']){
+ c.bi=(en,ru)=>language==='ru'?ru:en;
+ const entry=c.journalRows(recoveryStatus,null,now)[0];
+ const message=c.journalMessage(entry,recoveryStatus);
+ assert(message.startsWith(language==='ru'?'Соединение восстановлено на резервном канале':'Connection restored on the reserve channel'));
+ assert(message.endsWith('Germany · WireGuard'));
+ recoveryStatus.native_failover={source:'wireguard:peer_1',target:'openvpn:1_1'};
+ assert.equal(c.journalMessage(entry,recoveryStatus),message,'today\'s configured role cannot relabel saved recovery');
+ assert.equal(c.filteredJournalRows([entry],recoveryStatus,language==='ru'?'резервном':'reserve','time',true).length,1);
+ const primary=Object.assign({},entry,{role:'source'});
+ assert(c.journalMessage(primary,recoveryStatus).startsWith(language==='ru'?'Соединение восстановлено на основном канале':'Connection restored on the primary channel'));
+ const legacy=Object.assign({},entry,{role:null});
+ assert(c.journalMessage(legacy,recoveryStatus).includes(language==='ru'?'канал не сохранён':'channel was not saved'),'missing historical evidence must not be fabricated');
+ assert.equal(c.terminalGroups([Object.assign({},entry,{time:20}),Object.assign({},primary,{time:10})]).length,2,'different saved roles cannot be merged');
+}
+c.bi=en=>en;
+console.log('PASS: saved recovery roles precede server name in EN/RU, search, pair changes, legacy evidence and grouping');
+for(const language of ['en','ru']){
+ c.bi=(en,ru)=>language==='ru'?ru:en;
+ for(const role of ['source','target']){
+  const raw={time:now,kind:'FAILURE',profile:'wireguard:peer_1',role,code:'VPN-003',sequence:101};
+  const s={profiles:[{id:raw.profile,name:'Germany · WireGuard'}],accounting:{reliability:{events:[raw]}}};
+  const entry=c.journalRows(s,null,now)[0],message=c.journalMessage(entry,s);
+  const expected=role==='source'?(language==='ru'?'Основной канал':'Primary channel'):(language==='ru'?'Резервный канал':'Reserve channel');
+  assert(message.startsWith(expected+' — '+(language==='ru'?'Ошибка соединения':'Connection failed')));assert(message.includes('Germany · WireGuard'));assert(message.endsWith('VPN-003'));
+ }
+}
+c.bi=en=>en;
+console.log('PASS: failure messages start with the saved primary/reserve role before state/server/code in EN/RU');
+for(const language of ['en','ru']){
+ c.bi=(en,ru)=>language==='ru'?ru:en;
+ const pair={source:'wireguard:peer_1',target:'openvpn:1_1'};
+ for(const [state,extra,from,to,phase] of [
+  ['APPLYING',{},'source','target','pending'],['WAIT-CLIENT',{},'source','target','pending'],
+  ['COMMITTED',{},'source','target','confirmed'],['RESTORING',{},'target','source','pending'],
+  ['ROLLED-BACK',{original_restored:true},'target','source','confirmed']
+ ]){
+  const entry=Object.assign({state},pair,extra),model=c.journalChannelModel(entry);
+  assert.equal(model.from,from);assert.equal(model.to,to);assert.equal(model.phase,phase);
+  const badge=c.renderJournalChannelBadge(entry);assert.equal(badge.attrs.role,'img');assert(badge.attrs['aria-label'].length>20);
+  assert.equal(badge.children[0].children[0],'M');assert.equal(badge.children[2].children[0],'R');
+  assert.equal(badge.children[1].children[0],from==='source'?'→':'←');
+  if(phase==='confirmed'){
+   assert(badge.children[to==='source'?0:2].attrs.class.includes('working'));
+   assert(badge.children[from==='source'?0:2].attrs.class.includes('failed'));
+   assert(!badge.attrs.class.includes('moving'));
+  }else assert(badge.attrs.class.includes('moving'));
+ }
+ for(const role of ['source','target']){
+  const entry={time:now,state:'FAILURE',kind:'FAILURE',role,profile:'wireguard:peer_1'},badge=c.renderJournalChannelBadge(entry);
+  assert.equal(badge.children[1].children[0],'·','an isolated failure does not claim a switch');
+  assert(badge.children[role==='source'?0:2].attrs.class.includes('failed'));
+  assert(badge.children[role==='source'?2:0].attrs.class.includes('neutral'),'other channel health is not invented');
+  const line=c.terminalLine(entry,status);assert(line.children[1].all().some(n=>n.attrs.class&&n.attrs.class.includes('hv-channel-badge')),'live line actually contains diagram');
+ }
+ assert.equal(c.renderJournalChannelBadge({state:'ROLLED-BACK',...pair}),null,'return without confirmation is not green');
+ assert.equal(c.renderJournalChannelBadge({state:'FAILURE',role:null}),null,'legacy unknown role cannot invent M/R');
+}
+c.bi=en=>en;
+const channelCSS=fs.readFileSync('router/design_layer.css','utf8');assert(channelCSS.includes('prefers-reduced-motion:reduce'));assert(channelCSS.includes('hv-channel-backward'));
+assert(fs.readFileSync('router/journal_panel.inc.js','utf8').includes('renderJournalChannelBadge(row),row.state'));
+console.log('PASS: M/R diagrams in live/history, both directions, pending animation, confirmed colours, failure-only semantics, EN/RU accessibility and reduced motion');
+const diagramHistory=c.renderEventHistory({time:now,accounting:{reliability:{events:[{time:now,sequence:400,kind:'FAILURE',profile:'wireguard:peer_1',role:'source',code:'VPN-003'}]}}});
+assert(diagramHistory.all().some(n=>n.attrs['data-channel-phase']==='failed'),'saved events actually render the shared diagram');
+console.log('PASS: saved-history table renders M/R badge alongside failure state');
+// Operator-selected capacity is enforced in raw observations and rendered runs.
+c.LIVE_TERMINAL.inventory={settings:{live_log_limit:100}};c.LIVE_TERMINAL.entries=[];c.LIVE_TERMINAL.following=true;
+for(let i=0;i<150;i++)c.terminalAppend({key:'capacity:'+i,time:now+i,state:i%2?'OBSERVING':'COMMITTED'});
+assert.equal(c.LIVE_TERMINAL.entries.length,100);assert.equal(c.LIVE_TERMINAL.body.children.length,100);
+assert.equal(c.LIVE_TERMINAL.entries[0].key,'capacity:149');
+c.LIVE_TERMINAL.inventory={settings:{live_log_limit:1}};c.terminalAppend({key:'capacity:new',time:now+151,state:'OBSERVING'});assert.equal(c.LIVE_TERMINAL.entries.length,1);
+const bounded={accounting:{reliability:{detail_days:1,events:[{time:now-2*86400,sequence:1,kind:'FAILURE'},{time:now-1,sequence:2,kind:'RECOVERY'}]}}};
+assert.equal(c.journalRows(bounded,null,now).length,1);assert.equal(c.journalHistoryDays(bounded),1);
+console.log('PASS: live limits 100/1 trim real entries/DOM, and selected day retention filters journal rows');
+// Saved history starts with the latest twenty, and its triangle reveals the rest.
+for(const language of ['en','ru']){
+ c.locale=language;c.bi=(en,ru)=>language==='ru'?ru:en;
+ const events=Array.from({length:35},(_,i)=>({sequence:i+1,time:now-35+i,kind:i%2?'RECOVERY':'FAILURE',profile:'wireguard:peer_1',role:'source'}));
+ c.EVENT_VIEW={query:'',sort:'time',desc:true,expanded:false,page:0,stored:null,busy:false,error:null,request:0};
+ const host=c.renderEventHistory({time:now,accounting:{reliability:{events}}});
+ const rendered=()=>host.all().filter(n=>n.attrs['data-event-key']);
+ assert.equal(host.all().filter(n=>n.tag==='button').length,2,'only sort direction and history disclosure; no read-saved button');
+ assert.equal(rendered().length,20);assert.equal(rendered()[0].attrs['data-event-key'],'failures:35');assert.equal(rendered()[19].attrs['data-event-key'],'failures:16');
+ const triangle=host.all().find(n=>n.tag==='button'&&n.attrs['aria-expanded']==='false');assert(triangle.text().startsWith('▸'));
+ c.EVENT_VIEW.stored={controller:{events:[]},failures:{events}};
+ triangle.attrs.click();assert.equal(rendered().length,35);assert.equal(triangle.attrs['aria-expanded'],'true');
+ assert(triangle.text().includes(language==='ru'?'20 строк':'20 rows'));
+ triangle.attrs.click();assert.equal(rendered().length,20);assert.equal(triangle.attrs['aria-expanded'],'false');
+}
+c.locale='en';c.bi=en=>en;
+console.log('PASS: actual saved-history table shows latest 20, triangle expands 35 and collapses to 20, EN/RU');

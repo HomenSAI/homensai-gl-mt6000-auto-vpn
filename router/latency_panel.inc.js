@@ -10,18 +10,39 @@ function latencyRecommendation(status,inventory,now){
   if(rows.some(function(p){return !p;}))return {index:null,text:bi('A comparison needs fresh successful measurements for both channels.','Для сравнения нужны свежие успешные проверки обоих каналов.')};
   if(Math.abs(rows[0].rtt_ms-rows[1].rtt_ms)<.1)return {index:null,text:bi('The current measured delays are equal.','Сейчас измеренные задержки одинаковы.')};
   var index=rows[0].rtt_ms<rows[1].rtt_ms?0:1;
-  return {index:index,text:bi('For current use, recommend ','Для текущей работы рекомендую ')+(index===0?bi('the primary channel','основной канал'):bi('the reserve channel','резервный канал'))+': '+rows[index].rtt_ms.toFixed(1)+' '+bi('ms versus ','мс против ')+rows[1-index].rtt_ms.toFixed(1)+' '+bi('ms. Its measured delay is lower by ','мс. Его задержка меньше на ')+(rows[1-index].rtt_ms-rows[index].rtt_ms).toFixed(1)+' '+bi('ms.','мс.')+' · '+serverTitle(rows[index])+' · '+protocolLabel(rows[index])};
+  return {index:index,text:bi('For current use, recommend ','Для текущей работы рекомендую ')+(index===0?bi('the primary channel','основной канал'):bi('the reserve channel','резервный канал'))+': '+rows[index].rtt_ms.toFixed(1)+' '+bi('ms versus ','мс против ')+rows[1-index].rtt_ms.toFixed(1)+' '+bi('ms. Its measured delay is lower by ','мс. Его задержка меньше на ')+(rows[1-index].rtt_ms-rows[index].rtt_ms).toFixed(1)+' '+bi('ms.','мс.')+' · '+serverTitle(rows[index])};
 }
-function renderLatencyRecommendation(status,inventory){
+function renderLatencyRecommendation(status,inventory,context){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,recommend=latencyRecommendation(status,inventory,now),current=latencyCurrent(status,inventory,now),ids=rolePairIds(status,inventory,now);
   var selected=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):null,path=status.channel_path||{};
   if(typeof vendorDisplaySelected!=='function'&&!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&path.confirmed===true&&Number.isFinite(path.time)&&now-path.time>=-5&&now-path.time<=30)selected=path.active_profile_id;
   var role=selected===ids[0]?bi('primary','основной'):selected===ids[1]?bi('reserve','резервный'):null;
-  return E('aside',{'class':'hv-latency-recommendation','data-latency-recommendation':'1','role':'status'},[
-    E('strong',{},bi('Recommendation by current delay','Рекомендация по текущей задержке')),E('p',{},recommend.text),
-    recommend.index===null?null:E('small',{},endpointText(current[recommend.index],now)),
-    E('small',{},role?bi('Traffic currently uses the ','Сейчас трафик использует ')+role+bi(' channel.',' канал.'):bi('Current traffic channel is not confirmed.','Текущий канал трафика не подтверждён.')),
-    E('small',{},bi('HTTPS measurements, not ICMP ping. Recommendation only; select a channel in the Manual channel switch block on Overview.','Измерения HTTPS, не ICMP-пинг. Это рекомендация; выбрать канал можно в блоке «Ручное переключение канала» на «Обзоре».'))].filter(Boolean));
+  var body=[];
+  function line(label,value){return E('p',{'class':'hv-recommendation-line'},[E('strong',{},label),String(value)]);}
+  if(recommend.index===null)body.push(E('p',{},recommend.text));
+  else{
+    var chosen=current[recommend.index],other=current[1-recommend.index];
+    var country=typeof countryName==='function'?countryName(chosen):typeof chosen.country==='string'?chosen.country:'';
+    var name=chosen.router_name||chosen.name||chosen.id;
+    var endpoint=endpointText(chosen,now);
+    if(endpoint===bi('Server address: not observed','Адрес сервера: не получен'))endpoint=bi('No fresh address observation','Нет свежих данных об адресе');
+    else endpoint=endpoint.replace(/^(?:Server: |Сервер: )/,'');
+    body.push(line(bi('Recommended for current use: ','Для текущей работы рекомендую: '),recommend.index===0?bi('Primary channel','Основной канал'):bi('Reserve channel','Резервный канал')));
+    body.push(line(bi('Its delay: ','Его задержка: '),chosen.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')));
+    body.push(line(bi('Other channel delay: ','Задержка другого канала: '),other.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')));
+    body.push(line(bi('Lower by: ','Меньше на: '),(other.rtt_ms-chosen.rtt_ms).toFixed(1)+' '+bi('ms','мс')));
+    body.push(line(bi('Country: ','Страна: '),country||bi('Not recorded','Не указана')));
+    body.push(line(bi('Protocol: ','Протокол: '),protocolLabel(chosen)));
+    body.push(line(bi('Server: ','Сервер: '),name));
+    body.push(line(bi('Connection address: ','Адрес подключения: '),endpoint));
+  }
+  body.push(E('p',{},role?bi('Traffic currently uses the ','Сейчас трафик использует ')+role+bi(' channel.',' канал.'):bi('Current traffic channel is not confirmed.','Текущий канал трафика не подтверждён.')));
+  var key='latency-recommendation-'+(context||'default');
+  var node=E('details',{'class':'hv-latency-recommendation','data-latency-recommendation':'1','data-latency-disclosure':key},[
+    E('summary',{},bi('Recommendation by current delay','Рекомендация по текущей задержке')),
+    E('div',{'class':'hv-recommendation-body'},body)]);
+  return typeof rememberDisclosure==='function'?rememberDisclosure(node,key):node;
+
 }
 function latencyStatistics(rows,start,end){
   return [0,1].map(function(index){
@@ -86,13 +107,23 @@ function renderLatencyPanel(status,inventory){
   }
   draw();
   return E('section',{'class':'hv-chart-card','data-latency-panel':'1'},[
-    E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),renderLatencyRecommendation(status,inventory),
+    E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),renderLatencyRecommendation(status,inventory,'channels'),
     E('div',{'class':'hv-latency-values'},[0,1].map(function(i){return E('p',{},[E('strong',{},i===0?bi('Primary: ','Основной: '):bi('Reserve: ','Резервный: ')),current[i]?current[i].rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS'):bi('No fresh measurement','Нет свежего измерения')]);})),
-    E('p',{},bi('Solid line: primary. Dashed line: reserve. Green: selected route; yellow: standby; grey: route unconfirmed.','Сплошная линия — основной, пунктир — резервный. Зелёный — выбранный маршрут, жёлтый — ожидание, серый — маршрут не подтверждён.')),
+    E('div',{'class':'hv-latency-notes'},[
+      E('p',{},bi('Primary: solid line.','Основной: сплошная линия.')),
+      E('p',{},bi('Reserve: dashed line.','Резервный: пунктирная линия.')),
+      E('p',{},bi('Green: selected route.','Зелёный: выбранный маршрут.')),
+      E('p',{},bi('Yellow: standby.','Жёлтый: ожидание.')),
+      E('p',{},bi('Grey: route unconfirmed.','Серый: маршрут не подтверждён.'))]),
     plot,caption,E('div',{'class':'hv-latency-controls'},[
       E('label',{'class':'hv-latency-slider'},[hours,E('span',{},bi('Window: 1–24 hours','Период: 1–24 часа'))]),
       E('label',{'class':'hv-latency-slider'},[pan,E('span',{},bi('View earlier in the last day','Просмотр прошедших суток'))]),live]),statistics,
-    E('small',{},bi('Statistics follow the selected graph window. Mean is weighted by successful checks; minimum and maximum describe observed minute means. Missing periods are not filled.','Статистика соответствует выбранному периоду графика. Средняя учитывает число успешных проверок; минимум и максимум относятся к наблюдённым минутным средним. Пропуски не заполняются.')),
-    E('small',{},bi('Current values are real HTTPS checks, not ICMP ping. History contains observed minute means, with gaps for failures or missing samples; it starts when recording starts and is checkpointed at the configured interval.','Текущие значения — реальные проверки HTTPS, не ICMP-пинг. История содержит наблюдённые минутные средние; ошибки и пропуски не дорисовываются. Запись начинается с её включения и сохраняется с настроенным интервалом checkpoint.')),
+    E('div',{'class':'hv-latency-notes'},[
+      E('p',{},bi('Statistics follow the selected graph window.','Статистика соответствует выбранному периоду графика.')),
+      E('p',{},bi('Mean is weighted by successful checks.','Средняя учитывает число успешных проверок.')),
+      E('p',{},bi('Minimum and maximum describe observed minute means.','Минимум и максимум относятся к наблюдённым минутным средним.')),
+      E('p',{},bi('Missing periods and failed measurements are not filled.','Пропуски и неудачные измерения не дорисовываются.')),
+      E('p',{},bi('History starts when recording is enabled.','История начинается с включения записи.')),
+      E('p',{},bi('History is saved at the configured checkpoint interval.','История сохраняется с настроенным интервалом checkpoint.'))]),
     (status.latency_history||{}).notice?E('p',{'role':'status'},status.latency_history.notice):null].filter(Boolean));
 }

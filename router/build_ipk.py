@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '0.9.1-alpha11-1'
+VERSION = '0.9.1-alpha13-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 
@@ -38,7 +38,9 @@ def archive(items):
             info.uid = info.gid = 0
             info.uname = info.gname = 'root'
             tar.addfile(info, io.BytesIO(payload))
-    compressed=bytearray(gzip.compress(raw.getvalue(), mtime=0))
+    # Python 3.14+ changed gzip.compress's default level from 9 to 6.
+    # Pin it so the Windows builder and the OpenWrt/CI runtimes emit one IPK.
+    compressed=bytearray(gzip.compress(raw.getvalue(), compresslevel=9, mtime=0))
     # Python 3.11 may expose zlib's host OS byte; 3.9 writes unknown (255).
     # Normalize all nested gzip headers for cross-runtime reproducibility.
     compressed[9]=255

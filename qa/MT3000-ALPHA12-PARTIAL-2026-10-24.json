@@ -1,0 +1,128 @@
+{
+  "schema": 1,
+  "result": "PARTIAL_INSTALLED_AUTO_OFF_OWNER_BATCH",
+  "version": "0.9.1-alpha12",
+  "source": "07040b70e7610145f9970e7112b8bd6afc997557",
+  "ci": [
+    {
+      "application_tests": 754,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha12-1_all.ipk",
+      "bytes": 807642,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "75dffec61c0fe6fdffd2a8dabe6c7b37b95d5cb99fb91ae58272aa7abf15ebc3",
+      "skipped_tests": 16,
+      "source": "07040b70e7610145f9970e7112b8bd6afc997557",
+      "ui_suites": 45,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 754,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha12-1_all.ipk",
+      "bytes": 807642,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "75dffec61c0fe6fdffd2a8dabe6c7b37b95d5cb99fb91ae58272aa7abf15ebc3",
+      "skipped_tests": 0,
+      "source": "07040b70e7610145f9970e7112b8bd6afc997557",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "installed_files_verified": 86,
+  "package_sha256": "75dffec61c0fe6fdffd2a8dabe6c7b37b95d5cb99fb91ae58272aa7abf15ebc3",
+  "http8080": {
+    "pass": true,
+    "assets": [
+      {
+        "asset": "dashboard88.js",
+        "http_status": 200,
+        "sha256": "8e6ec2e66ef561a7891bd5c7a6a3f52ed7b4e2b28a446c93387d77471de772bb",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui60.css",
+        "http_status": 200,
+        "sha256": "ce3f14c108df165838d2f88c15360c7d9549c0299477d70b0ba97838c9f91e91",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "time": 1792849115.3392708,
+    "scope": "actual HTTP8080 user-facing static assets; bound cable interface3/source192.168.11.228"
+  },
+  "https": {
+    "scope": "Actual HTTPS-served bytes over interface3/source192.168.11.228 with pinned certificate; no login/session/terms/wizard writes",
+    "assets": [
+      {
+        "asset": "dashboard88.js",
+        "http_status": 200,
+        "bytes": 973270,
+        "sha256": "8e6ec2e66ef561a7891bd5c7a6a3f52ed7b4e2b28a446c93387d77471de772bb",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui60.css",
+        "http_status": 200,
+        "bytes": 126635,
+        "sha256": "ce3f14c108df165838d2f88c15360c7d9549c0299477d70b0ba97838c9f91e91",
+        "matches_canonical_ipk": true
+      }
+    ],
+    "pass": true,
+    "time": 1792849116.4482274
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "14c71972ee123e1266c92ec00c264caee93a7d3dd93bff86ebdd6079e937ddc8",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_state": {
+    "version": "0.9.1-alpha12",
+    "phase": "STOPPED",
+    "intent": "off",
+    "guard_present": false,
+    "links": {
+      "wgclient1": false,
+      "ovpnclient1": false
+    },
+    "native": {
+      "state": "STOPPED",
+      "reason": "CLIENT-STOP",
+      "blockers": [
+        "PROFILE-IDENTITY-CHANGED"
+      ]
+    },
+    "time": 1792849595.3225894,
+    "observed_utc": "2026-10-24T13:46:31.137646+00:00"
+  },
+  "start_attempts": [
+    {
+      "result": "FAIL_SAFE_CLEANUP",
+      "file": "start-failed.jsonl",
+      "sha256": "0f503cd940cef0723bdf9a01d782721a71a320a038f618776adb2b59a184de98"
+    },
+    {
+      "result": "FAIL_SAFE_CLEANUP",
+      "file": "start-attempt2-failed.jsonl",
+      "sha256": "06a83a04929586612dc22fc57f1486a39ceefe41fd10569ecb3c5ddca19244b5"
+    }
+  ],
+  "scope": "Install had already begun before owner renewed batch-only rule. Two ordinary recovery starts failed vendor quiet, both cleaned up. Stop further device actions as owner now requests; no bypass, rollback, new install, GitHub/Gitea upload or fault injection. Auto/reserve restoration remains pending.",
+  "live_failure_role_classification": "NOT_RUN",
+  "native_visual": "NOT_RUN"
+}

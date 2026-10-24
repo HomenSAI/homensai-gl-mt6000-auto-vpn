@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "result": "PASS_WITH_DOCUMENTED_VM_STARTUP_AND_VISUAL_LIMITS",
+  "version": "0.9.1-alpha13",
+  "tested_product_source": "2e8f5499e4245321c3611e95981d68f539e14e86",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha13-1_all.ipk",
+    "bytes": 815967,
+    "sha256": "f570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8"
+  },
+  "ci": [
+    {
+      "application_tests": 768,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha13-1_all.ipk",
+      "bytes": 815967,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "f570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8",
+      "skipped_tests": 16,
+      "source": "2e8f5499e4245321c3611e95981d68f539e14e86",
+      "ui_suites": 46,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 768,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha13-1_all.ipk",
+      "bytes": 815967,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "f570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8",
+      "skipped_tests": 0,
+      "source": "2e8f5499e4245321c3611e95981d68f539e14e86",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "backend_personas": {
+    "personas": 50,
+    "accepted": 2361,
+    "rejected": 16394,
+    "total": 18755,
+    "bad": 0
+  },
+  "failure_matrix": {
+    "modeled_cases": 33,
+    "scope": "mocked platform/rollback/settings/button faults; complemented by dedicated new feature tests"
+  },
+  "synthetic_browser": {
+    "unique_personas": 50,
+    "passed": 50,
+    "recovery": "49 original completed + persona49 separately rerun against identical frozen assets; interrupted attempt retained",
+    "steps": 5419,
+    "clicks": 15726,
+    "typed": 3268,
+    "rpc_calls": 1370,
+    "scope": "isolated synthetic loopback; no router calls",
+    "canonical_assets": "CSS byte-identical; JS identical after declared CRLF-to-LF package normalization"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha13-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "policy_selection_confirmed": true,
+    "fault_tables_absent": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "start_first_attempt_seconds": 58.797,
+    "reserve_restore_seconds": 38.375,
+    "fault_readiness_current_reserve": "PASS_READ_ONLY_NO_FAULT_STARTED",
+    "live_log_limit": 2000,
+    "history_days": 7,
+    "encrypted_backup_before_entries": 190,
+    "encrypted_backup_after_entries": 190,
+    "backups_independently_decrypted_read": true
+  },
+  "vm": {
+    "actual_install_and_upgrade": true,
+    "files_rpc_http": true,
+    "retention_rpc_uci": true,
+    "invalid_retention_refused": true,
+    "real_nft_expiry_without_watchdog": true,
+    "invalid_start_and_unsupported_board_refused": true,
+    "service_restart": true,
+    "cold_boot": "PASS_ON_RETRY_WITH_LONGER_BOUNDED_OBSERVATION",
+    "initial_cold_boot_60s": "FAIL_RETAINED",
+    "cold_boot_retry": {
+      "result": "PASS",
+      "budget_seconds": 360,
+      "host_elapsed_seconds": 246.04,
+      "observations": [
+        {
+          "transport_not_ready": true,
+          "attempt": 1
+        },
+        {
+          "age": null,
+          "auto_off": true,
+          "configs_preserved": true,
+          "stamp": null,
+          "uptime": 174.97,
+          "version": null
+        },
+        {
+          "age": 22.01108193397522,
+          "auto_off": true,
+          "configs_preserved": true,
+          "stamp": 1792860658.10335,
+          "uptime": 198.61,
+          "version": "0.9.1-alpha13"
+        }
+      ],
+      "prior_60s_budget_failure_retained": true,
+      "scope": "actual isolated x86 TCG reboot; longer startup observation budget, no product or physical-router change; elapsed includes interrupted harness/recovery observation, not a guaranteed router startup time"
+    },
+    "cleanup": {
+      "result": "PASS",
+      "container": "homensai-vpn-qemu-owner-batch-20261024",
+      "running": false,
+      "exit_code": 0,
+      "controlled_poweroff": true
+    }
+  },
+  "limitations": [
+    "No independent external LAN/IPv6/KillSwitch certification",
+    "No real traffic fault injected on physical MT3000",
+    "No physical native-browser visual acceptance",
+    "No exhaustive guarantee for all firmware, VPN providers, power-loss combinations or autonomous external AI models"
+  ],
+  "recorded_utc": "2026-10-24T16:54:00.047784+00:00"
+}
