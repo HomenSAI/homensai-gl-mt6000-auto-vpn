@@ -5,7 +5,7 @@
 
 ## Scope and limits
 
-Live observations1–2000 limits the browser buffer; it is not a promise that server incident files also contain only that many rows. Detailed retention1–7days applies to persisted failure/recovery/controller events, probe/quality/activity detail and speed results during normal processing/checkpoints. Route/latency charts retain their separate1–24h view. Deleted detail cannot be restored by increasing retention.
+Live observations1–2000 limits the browser buffer; it is not a promise that server incident files also contain only that many rows. Detailed retention1–7days applies to persisted failure/recovery/controller events, probe/quality/activity detail and speed results during normal processing/checkpoints. Route charts retain their1–24h view. Latency charts have1–168h windows and a7day pan horizon within configured1–7day detail retention. Deleted detail cannot be restored by increasing retention.
 
 Failure detail also has a1MiB/10000event ceiling and controller detail a2MiB/10000event ceiling. Public status gives a bounded tail, not all retained events. Dropped/truncated flags are explicit. Calendar-day/hour buckets are aggregates, not exact continuous uptime. Monthly/lifetime counters remain separately retained; month maps are bounded to1200months. Speed quota ledgers are not cleared to create new test budget.
 

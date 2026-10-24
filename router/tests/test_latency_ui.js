@@ -57,3 +57,34 @@ assert(!c.renderLatencyRecommendation(s,inventory,'channels').attrs.open,'separa
 s.profiles[0].time=now-100;text=textOf(c.renderLatencyRecommendation(s,inventory,'manual'));assert(!text.includes('de678.nordvpn.com'),'stale comparisons cannot recommend a server');
 c.bi=originalBi;c.protocolLabel=originalProtocol;delete c.countryName;
 console.log('PASS: collapsed structured RU recommendation, independent remembered disclosures, exact server name, single protocol and no manual-navigation footer');
+// Weekly browsing keeps the inspected offset and restores live mode, without RPC.
+c.bi=(_en,ru)=>ru;c.statusNow=()=>900000;
+const weekStatus=status();weekStatus.profiles.forEach(p=>p.time=900000);
+weekStatus.latency_history.rows=[[900000-6*86400,25,55,1,1,'source'],[900000,30,60,1,1,'target']];
+c.LATENCY_VIEW.hours=1;c.LATENCY_VIEW.end=null;
+let weekPanel=c.renderLatencyPanel(weekStatus,inventory),weekInputs=weekPanel.all().filter(n=>n.tag==='input');
+assert.equal(weekInputs[0].attrs.max,'168');assert.equal(weekInputs[1].max,String(167*60));
+assert(textOf(weekPanel).includes('Просмотр последних 7 суток'));
+weekInputs[1].attrs.input({target:{value:String(6*24*60)}});assert.equal(c.LATENCY_VIEW.end,900000-6*86400);
+weekPanel=c.renderLatencyPanel(weekStatus,inventory);assert.equal(c.LATENCY_VIEW.end,900000-6*86400);
+weekInputs=weekPanel.all().filter(n=>n.tag==='input');weekInputs[0].attrs.input({target:{value:'168'}});
+assert.equal(c.LATENCY_VIEW.hours,168);assert.equal(c.LATENCY_VIEW.end,null);assert.equal(weekInputs[1].max,'0');
+assert.equal(c.latencyHistoryRows(weekStatus,inventory,900000).length,2,'six-day sample survives filtering');
+const bulk=Array.from({length:10081},(_,i)=>[900000-7*86400+i*60,20+i%30,40+i%40,1,1,'source']);
+const weeklyGraph=c.renderLatencyGraph(bulk,900000-7*86400,900000);
+assert(weeklyGraph.all().filter(n=>n.tag==='circle').length<=1440,'weekly marker budget stays bounded');
+assert.equal(weeklyGraph.all().filter(n=>n.tag==='polyline').length,2,'minute lines remain continuous without filling gaps');
+assert.equal(c.latencyStatistics(bulk,900000-7*86400,900000)[0].count,10081,'stats use every retained minute');
+const weeklyStatus={...weekStatus,latency_history:{...weekStatus.latency_history,rows:bulk}};
+assert.equal(c.latencyHistoryRows(weeklyStatus,inventory,900000).length,10081);
+weeklyStatus.latency_history.rows=[...bulk,bulk.at(-1)];assert.equal(c.latencyHistoryRows(weeklyStatus,inventory,900000).length,0,'oversize payload refused');
+weekPanel.all().find(n=>n.tag==='button'&&textOf(n)==='Сейчас').attrs.click();assert.equal(c.LATENCY_VIEW.end,null);
+c.bi=originalBi;
+console.log('PASS: RU seven-day label,1–168h window, six-day pan and polling preservation/live reset,10081-minute filtering/statistics and bounded markers, no routing RPC');
+
+const encodedWeek={...weekStatus,latency_history:{...weekStatus.latency_history,rows:bulk.slice(-1441),rows_count:10081,rows_json:JSON.stringify(bulk)}};
+assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,10081,'complete encoded week wins over legacy daily tail');
+encodedWeek.latency_history.rows_json='broken';assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0);
+encodedWeek.latency_history.rows_json=' '.repeat(850001);assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0);
+encodedWeek.latency_history.rows_json=JSON.stringify(bulk);encodedWeek.latency_history.rows_count=2;assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0,'count mismatch is not a successful truncated week');
+console.log('PASS: bounded weekly transport decoding, legacy daily compatibility, malformed/oversize/count mismatch refusals');

@@ -1,5 +1,7 @@
 /* HTTPS latency is a measurement, never permission to reorder or switch VPNs. */
 var LATENCY_VIEW={hours:1,end:null};
+var LATENCY_HISTORY_HOURS=168;
+var LATENCY_HISTORY_SECONDS=7*86400;
 function latencyCurrent(status,inventory,now){
   if(status.rpc_error||status.error)return [null,null];
   var ids=rolePairIds(status,inventory,now),rows=Array.isArray(status.profiles)?status.profiles:[];
@@ -62,8 +64,14 @@ function renderLatencyStatistics(rows,start,end){
 }
 function latencyHistoryRows(status,inventory,now){
   var h=status.latency_history||{},ids=rolePairIds(status,inventory,now);
-  if(h.version!==1||h.metric!=='https-rtt-ms'||!Array.isArray(h.pair)||h.pair.length!==2||h.pair[0]!==ids[0]||h.pair[1]!==ids[1]||!Array.isArray(h.rows)||h.rows.length>1441)return [];
-  return h.rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-86400&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isFinite(r[i])&&r[i]>=0&&r[i]<=600000);})&&['source','target','unknown','off','switching'].indexOf(r[5])>=0;}).slice().sort(function(a,b){return a[0]-b[0];});
+  if(h.version!==1||h.metric!=='https-rtt-ms'||!Array.isArray(h.pair)||h.pair.length!==2||h.pair[0]!==ids[0]||h.pair[1]!==ids[1])return [];
+  var rows=h.rows;
+  if(h.rows_json!==undefined){
+    if(typeof h.rows_json!=='string'||h.rows_json.length>850000)return [];
+    try{rows=JSON.parse(h.rows_json);}catch(error){return [];}
+  }
+  if(!Array.isArray(rows)||rows.length>10081||h.rows_count!==undefined&&(!Number.isInteger(h.rows_count)||h.rows_count!==rows.length))return [];
+  return rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-LATENCY_HISTORY_SECONDS&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isFinite(r[i])&&r[i]>=0&&r[i]<=600000);})&&['source','target','unknown','off','switching'].indexOf(r[5])>=0;}).slice().sort(function(a,b){return a[0]-b[0];});
 }
 function latencySegments(rows,index,start,end,maxY){
   var segments=[],points=[],color=null,last=null;
@@ -81,29 +89,30 @@ function latencySegments(rows,index,start,end,maxY){
 function latencySvg(tag,attributes){var node=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attributes||{}).forEach(function(k){node.setAttribute(k,String(attributes[k]));});return node;}
 function renderLatencyGraph(rows,start,end){
   var values=[];rows.forEach(function(r){if(r[0]>=start&&r[0]<=end)[r[1],r[2]].forEach(function(v){if(v!==null)values.push(v);});});
+  var markerStride=Math.max(1,Math.ceil(rows.filter(function(r){return r[0]>=start&&r[0]<=end;}).length/720));
   var maxY=Math.max(1,...values)*1.15,svg=latencySvg('svg',{viewBox:'0 0 1000 270',role:'img','aria-label':bi('Primary and reserve HTTPS delay history in milliseconds','История HTTPS-задержки основного и резервного каналов в миллисекундах'),style:'width:100%;height:auto;min-height:180px;display:block'});
   for(var i=0;i<=4;i++){
     var y=220-i/4*185,line=latencySvg('line',{x1:52,x2:956,y1:y,y2:y,stroke:'#d8d9d8','stroke-width':1});svg.appendChild(line);
     var label=latencySvg('text',{x:45,y:y+4,'text-anchor':'end','font-size':12,fill:'currentColor'});label.textContent=String(Math.round(maxY*i/4));svg.appendChild(label);
-    var stamp=start+(end-start)*i/4,tick=latencySvg('text',{x:52+904*i/4,y:246,'text-anchor':i===0?'start':i===4?'end':'middle','font-size':12,fill:'currentColor'});tick.textContent=new Date(stamp*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit'});svg.appendChild(tick);
+    var stamp=start+(end-start)*i/4,tick=latencySvg('text',{x:52+904*i/4,y:246,'text-anchor':i===0?'start':i===4?'end':'middle','font-size':12,fill:'currentColor'});tick.textContent=new Date(stamp*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',end-start>86400?{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}:{hour:'2-digit',minute:'2-digit'});svg.appendChild(tick);
   }
-  [0,1].forEach(function(index){latencySegments(rows,index,start,end,maxY).forEach(function(segment){
-    var path=latencySvg('polyline',{points:segment.points.map(function(p){return p[0].toFixed(2)+','+p[1].toFixed(2);}).join(' '),fill:'none',stroke:segment.color,'stroke-width':index===0?3:2,'stroke-dasharray':index===0?'none':'5 3'});svg.appendChild(path);
-    segment.points.forEach(function(p){var dot=latencySvg('circle',{cx:p[0],cy:p[1],r:2,fill:segment.color}),title=latencySvg('title');title.textContent=(index===0?bi('Primary','Основной'):bi('Reserve','Резервный'))+' · '+new Date(p[2]*1000).toLocaleString()+' · '+p[3].toFixed(1)+' ms';dot.appendChild(title);svg.appendChild(dot);});
+  [0,1].forEach(function(index){var pointIndex=0,markers=0;latencySegments(rows,index,start,end,maxY).forEach(function(segment){
+    var path=latencySvg('polyline',{points:segment.points.map(function(p){return p[0].toFixed(2)+','+p[1].toFixed(2);}).join(' '),fill:'none',stroke:segment.color,'stroke-width':index===0?3:2,'stroke-dasharray':index===0?'none':'5 3'});if(segment.points.length>1)svg.appendChild(path);
+    segment.points.forEach(function(p){if(pointIndex++%markerStride!==0||markers>=720)return;markers++;var dot=latencySvg('circle',{cx:p[0],cy:p[1],r:2,fill:segment.color}),title=latencySvg('title');title.textContent=(index===0?bi('Primary','Основной'):bi('Reserve','Резервный'))+' · '+new Date(p[2]*1000).toLocaleString()+' · '+p[3].toFixed(1)+' ms';dot.appendChild(title);svg.appendChild(dot);});
   });});return svg;
 }
 function renderLatencyPanel(status,inventory){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,history=latencyHistoryRows(status,inventory,now),current=latencyCurrent(status,inventory,now),plot=E('div',{'class':'hv-latency-history'}),statistics=E('div',{'class':'hv-latency-statistics-wrap'}),caption=E('p',{'role':'status'});
-  var hours=E('input',{'type':'range',min:'1',max:'24',step:'1','aria-label':bi('Delay history window, hours','Период истории задержек, часов'),'input':function(ev){LATENCY_VIEW.hours=Math.max(1,Math.min(24,Math.round(Number(ev.target.value)||1)));draw();}});hours.value=String(LATENCY_VIEW.hours);
-  var pan=E('input',{'type':'range',min:'0',max:String((24-LATENCY_VIEW.hours)*60),step:'1','aria-label':bi('Minutes back from live','Минут назад от текущего времени'),'input':function(ev){var offset=Math.max(0,Math.min((24-LATENCY_VIEW.hours)*60,Number(ev.target.value)||0));LATENCY_VIEW.end=offset?now-offset*60:null;draw();}});
+  var hours=E('input',{'type':'range',min:'1',max:String(LATENCY_HISTORY_HOURS),step:'1','aria-label':bi('Delay history window, hours','Период истории задержек, часов'),'input':function(ev){LATENCY_VIEW.hours=Math.max(1,Math.min(LATENCY_HISTORY_HOURS,Math.round(Number(ev.target.value)||1)));draw();}});hours.value=String(LATENCY_VIEW.hours);
+  var pan=E('input',{'type':'range',min:'0',max:String((LATENCY_HISTORY_HOURS-LATENCY_VIEW.hours)*60),step:'1','aria-label':bi('Browse the last seven days, minutes back','Просмотр последних 7 суток, минут назад'),'input':function(ev){var offset=Math.max(0,Math.min((LATENCY_HISTORY_HOURS-LATENCY_VIEW.hours)*60,Number(ev.target.value)||0));LATENCY_VIEW.end=offset?now-offset*60:null;draw();}});
   var live=E('button',{'type':'button','class':'cbi-button','click':function(){LATENCY_VIEW.end=null;draw();}},bi('Live','Сейчас'));
   function draw(){
     var end=LATENCY_VIEW.end===null?now:Math.min(now,LATENCY_VIEW.end),start=end-LATENCY_VIEW.hours*3600;
-    if(start<now-86400){start=now-86400;end=start+LATENCY_VIEW.hours*3600;LATENCY_VIEW.end=end>=now?null:end;}
+    if(start<now-LATENCY_HISTORY_SECONDS){start=now-LATENCY_HISTORY_SECONDS;end=start+LATENCY_VIEW.hours*3600;LATENCY_VIEW.end=end>=now?null:end;}
     while(plot.firstChild)plot.removeChild(plot.firstChild);
-    plot.appendChild(renderLatencyGraph(history,start,end));caption.textContent=LATENCY_VIEW.hours+' '+bi('hour(s)','ч')+' · '+new Date(start*1000).toLocaleString()+' — '+new Date(end*1000).toLocaleString();
+    plot.appendChild(renderLatencyGraph(history,start,end));var windowLabel=LATENCY_VIEW.hours>=24&&LATENCY_VIEW.hours%24===0?(LATENCY_VIEW.hours/24)+' '+bi('day(s)','сут'):LATENCY_VIEW.hours+' '+bi('hour(s)','ч');caption.textContent=windowLabel+' · '+new Date(start*1000).toLocaleString()+' — '+new Date(end*1000).toLocaleString();
     while(statistics.firstChild)statistics.removeChild(statistics.firstChild);statistics.appendChild(renderLatencyStatistics(history,start,end));
-    pan.max=String((24-LATENCY_VIEW.hours)*60);pan.value=String(Math.max(0,Math.round((now-end)/60)));
+    pan.max=String((LATENCY_HISTORY_HOURS-LATENCY_VIEW.hours)*60);pan.disabled=Number(pan.max)===0;pan.value=String(Math.max(0,Math.round((now-end)/60)));
   }
   draw();
   return E('section',{'class':'hv-chart-card','data-latency-panel':'1'},[
@@ -116,13 +125,15 @@ function renderLatencyPanel(status,inventory){
       E('p',{},bi('Yellow: standby.','Жёлтый: ожидание.')),
       E('p',{},bi('Grey: route unconfirmed.','Серый: маршрут не подтверждён.'))]),
     plot,caption,E('div',{'class':'hv-latency-controls'},[
-      E('label',{'class':'hv-latency-slider'},[hours,E('span',{},bi('Window: 1–24 hours','Период: 1–24 часа'))]),
-      E('label',{'class':'hv-latency-slider'},[pan,E('span',{},bi('View earlier in the last day','Просмотр прошедших суток'))]),live]),statistics,
+      E('label',{'class':'hv-latency-slider'},[hours,E('span',{},bi('Window: 1 hour–7 days','Период: 1 час–7 суток'))]),
+      E('label',{'class':'hv-latency-slider'},[pan,E('span',{},bi('Browse the last 7 days','Просмотр последних 7 суток'))]),live]),statistics,
     E('div',{'class':'hv-latency-notes'},[
       E('p',{},bi('Statistics follow the selected graph window.','Статистика соответствует выбранному периоду графика.')),
       E('p',{},bi('Mean is weighted by successful checks.','Средняя учитывает число успешных проверок.')),
       E('p',{},bi('Minimum and maximum describe observed minute means.','Минимум и максимум относятся к наблюдённым минутным средним.')),
       E('p',{},bi('Missing periods and failed measurements are not filled.','Пропуски и неудачные измерения не дорисовываются.')),
+      E('p',{},bi('Storage follows the configured 1–7 days. Deleted older measurements cannot be restored.','Хранение соответствует настройке 1–7 дней. Уже удалённые старые замеры не восстанавливаются.')),
+      E('p',{},bi('In wide views markers are sampled; lines and statistics use retained measurements.','В широком периоде метки показаны выборочно; линии и статистика используют сохранённые измерения.')),
       E('p',{},bi('History starts when recording is enabled.','История начинается с включения записи.')),
       E('p',{},bi('History is saved at the configured checkpoint interval.','История сохраняется с настроенным интервалом checkpoint.'))]),
     (status.latency_history||{}).notice?E('p',{'role':'status'},status.latency_history.notice):null].filter(Boolean));

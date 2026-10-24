@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-alpha17 — семь суток задержек / seven-day latency history
+
+История задержек расширена до7дней по настройке1–7дней; окно1–168часов, правый ползунок «Просмотр последних7суток» перемещает выбранное окно по неделе. Сохраняется прежняя история формата1, без выдуманных старых замеров. Даты видны на широких шкалах, число маркеров ограничено; линии/статистика используют сохранённые минутные данные. Для большого пакета неделя передаётся компактно, прежний суточный хвост оставлен совместимым клиентам.
+
+Latency supports1–168hour windows and panning across the last7days, within configured1–7day storage. Existing format1checkpoints remain valid; deleted days are never reconstructed. Wide axes show dates, markers are bounded and statistics use retained minute samples. Large weeks use compact transport with a legacy daily tail.
+
+
 ## 0.9.1-alpha16 — ширина столбцов истории / saved-history columns
 
 В сохранённой истории «Состояние» расширено до27%, «Событие» сужено до58%, дата занимает15%. Код состояния находится под схемойM/R и не разрывается по дефисам. На узком экране таблица прокручивается горизонтально. Данные, поиск, сортировка, раскрытие и журнал не меняются.

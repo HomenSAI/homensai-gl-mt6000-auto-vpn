@@ -2,7 +2,7 @@ import copy,json
 from pathlib import Path
 import tempfile,unittest,sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
-from latency_history import LatencyHistory,MAX_ROWS,MAX_BYTES
+from latency_history import LatencyHistory,MAX_ROWS,MAX_BYTES,DAY,WEEK
 
 def snapshot(now=120,source=20,target=40,**changes):
     rows=[{'id':'wireguard:peer_1','time':now,'code':None,'dns_ok':True,'https_success':2,'vendor_state':'SETTLED','rtt_ms':source},
@@ -27,7 +27,7 @@ class LatencyHistoryTests(unittest.TestCase):
         h=LatencyHistory()
         for stamp in range(120,100000,60):h.observe(snapshot(stamp),{},stamp)
         self.assertLessEqual(len(h.data['rows']),MAX_ROWS)
-        self.assertTrue(all(r[0]>=99960-86400 for r in h.data['rows']))
+        self.assertTrue(all(r[0]>=99960-WEEK for r in h.data['rows']))
         prior=copy.deepcopy(h.data);h.observe(snapshot(30),{},30);self.assertEqual(h.data,prior)
         self.assertLess(len(json.dumps(h.data).encode()),MAX_BYTES)
 
@@ -52,6 +52,45 @@ class LatencyHistoryTests(unittest.TestCase):
             path.write_text('{broken');bad=LatencyHistory.load(path);self.assertEqual(bad.notice,'LATENCY-HISTORY-UNAVAILABLE')
             with self.assertRaises(ValueError):bad.save(path,lambda p,d:p.write_text(json.dumps(d)),140)
             self.assertEqual(path.read_text(),'{broken')
+
+    def week_fixture(self,now=900000):
+        h=LatencyHistory();h.observe(snapshot(now),{'history_days':7},now)
+        key=h.data['current']
+        h.data['rows']=[[stamp,599999.9,599999.8,120,120,'unknown',key] for stamp in range(now-WEEK,now+1,60)]
+        return LatencyHistory(h.data)
+
+    def test_seven_days_boundary_save_load_and_public_reply_budget(self):
+        h=self.week_fixture();self.assertEqual(len(h.data['rows']),10081)
+        h.observe(snapshot(900060),{'history_days':7},900060)
+        self.assertEqual(h.data['rows'][0][0],900060-WEEK)
+        self.assertEqual(h.public()['rows_count'],10081)
+        self.assertEqual(len(h.public()['rows']),1441)
+        self.assertEqual(len(json.loads(h.public()['rows_json'])),10081)
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'week.json';h.save(path,lambda p,d:p.write_text(json.dumps(d,separators=(',',':'))),900060)
+            self.assertLess(path.stat().st_size,MAX_BYTES)
+            restored=LatencyHistory.load(path);self.assertIsNone(restored.notice)
+            self.assertEqual(restored.public(),h.public())
+        from agent import trim_status_reply
+        status={'latency_history':h.public(),'samples':[{'value':'x'*800} for _ in range(1000)],'events':[{'value':'y'*300} for _ in range(1000)]}
+        trimmed=trim_status_reply(status)
+        self.assertLessEqual(len(json.dumps(trimmed,ensure_ascii=True).encode()),900000)
+        self.assertEqual(len(json.loads(trimmed['latency_history']['rows_json'])),10081)
+        self.assertLess(len(trimmed['latency_history']['rows_json']),850000)
+
+    def test_configured_day_limit_prunes_and_expansion_does_not_backfill(self):
+        h=self.week_fixture();h.observe(snapshot(900060),{'history_days':1},900060)
+        self.assertEqual(h.public()['retention_seconds'],DAY)
+        self.assertLessEqual(len(h.data['rows']),1441)
+        earliest=h.data['rows'][0][0]
+        h.observe(snapshot(900120),{'history_days':7},900120)
+        self.assertEqual(h.public()['retention_seconds'],WEEK)
+        self.assertEqual(h.data['rows'][0][0],earliest,'deleted older rows are not reconstructed')
+
+    def test_retention_prunes_even_without_a_valid_pair(self):
+        h=self.week_fixture();h.observe({'profiles':[]},{'history_days':1},900000+2*DAY)
+        self.assertEqual(h.data['rows'],[]);self.assertIsNone(h.data['current'])
+        self.assertEqual(LatencyHistory(h.data).public()['rows'],[])
 
     def test_storage_error_is_reported_not_silently_successful(self):
         h=LatencyHistory();h.observe(snapshot(),{},120)

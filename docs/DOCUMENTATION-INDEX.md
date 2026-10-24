@@ -139,6 +139,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA14-2026-10-24.md](VERIFICATION-ALPHA14-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA15-2026-10-24.md](VERIFICATION-ALPHA15-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA16-2026-10-24.md](VERIFICATION-ALPHA16-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA17-2026-10-24.md](VERIFICATION-ALPHA17-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -202,6 +203,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha14.md](../releases/v0.9.1-alpha14.md)|versioned-evidence|
 |[releases/v0.9.1-alpha15.md](../releases/v0.9.1-alpha15.md)|versioned-evidence|
 |[releases/v0.9.1-alpha16.md](../releases/v0.9.1-alpha16.md)|versioned-evidence|
+|[releases/v0.9.1-alpha17.md](../releases/v0.9.1-alpha17.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|

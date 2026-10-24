@@ -1,4 +1,4 @@
-"""Bounded one-minute HTTPS-latency aggregates for the last observed day.
+"""Bounded one-minute HTTPS-latency aggregates for the configured 1–7 observed days.
 
 No endpoints/secrets, invented samples, zero-valued failures or backwards fill.
 Persistence follows the existing application checkpoint cadence.
@@ -11,8 +11,9 @@ from pathlib import Path
 import re
 
 DAY=86400
-MAX_ROWS=1441
-MAX_BYTES=262144
+WEEK=7*DAY
+MAX_ROWS=7*1440+1
+MAX_BYTES=2*1024*1024
 IDENTIFIER=re.compile(r'^(?:openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$')
 KINDS={'source','target','unknown','off','switching'}
 
@@ -23,6 +24,7 @@ class LatencyHistory:
     def __init__(self,data=None,notice=None):
         self.data=copy.deepcopy(data) if data is not None else {'version':1,'rows':[],'pairs':{},'current':None,'seen':{},'saved':None}
         self.notice=notice
+        self.retention_seconds=WEEK
         d=self.data
         if (not isinstance(d,dict) or set(d)!={'version','rows','pairs','current','seen','saved'} or d['version']!=1
                 or not isinstance(d['rows'],list) or len(d['rows'])>MAX_ROWS or not isinstance(d['pairs'],dict) or len(d['pairs'])>32
@@ -55,19 +57,25 @@ class LatencyHistory:
 
     def observe(self,status,settings,now):
         if not number(now) or now<0:return
+        from retention_settings import days
+        self.retention_seconds=days(settings)*DAY
         d=self.data
         if d['rows'] and now<d['rows'][-1][0]:return
         native=status.get('native_failover',{})
         if not isinstance(native,dict):native={}
         trusted=(native.get('certified') is True or native.get('mode')=='continuous-pair' and native.get('proof_scope')=='router-probed-ipv4' and native.get('readiness_verified') is True)
         native_current=trusted and number(native.get('time')) and -5<=now-native['time']<=30 and native.get('state') in ('OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE')
+        # Retention also applies while the saved pair is unavailable.
+        d['rows']=[row for row in d['rows'] if row[0]>=now-self.retention_seconds]
+        used={row[6] for row in d['rows']}
+        d['pairs']={k:v for k,v in d['pairs'].items() if k in used}
+        if d['current'] not in d['pairs']:d['current']=None
+        valid_ids={v for pair in d['pairs'].values() for v in pair}
+        d['seen']={k:v for k,v in d['seen'].items() if k in valid_ids}
         ids=[native.get('source') if native_current else settings.get('plan_source'),native.get('target') if native_current else settings.get('plan_target')]
         if ids[0]==ids[1] or any(not isinstance(v,str) or not IDENTIFIER.fullmatch(v) for v in ids):return
         key=hashlib.sha256('\0'.join(ids).encode()).hexdigest()[:16]
         minute=int(now//60)*60
-        d['rows']=[row for row in d['rows'] if row[0]>=now-DAY]
-        used={row[6] for row in d['rows']}
-        d['pairs']={k:v for k,v in d['pairs'].items() if k in used}
         if key not in d['pairs'] and len(d['pairs'])>=32:
             self.notice='LATENCY-PAIR-LIMIT';return
         d['pairs'][key]=ids;d['current']=key
@@ -93,10 +101,14 @@ class LatencyHistory:
 
     def public(self):
         d=self.data
-        return {'version':1,'metric':'https-rtt-ms','resolution_seconds':60,'retention_seconds':DAY,
-                'pair':list(d['pairs'].get(d['current'],[])),
-                'rows':[[r[0],None if r[1] is None else round(r[1],1),None if r[2] is None else round(r[2],1),r[3],r[4],r[5]] for r in d['rows'] if r[6]==d['current']],
+        rows=[[r[0],None if r[1] is None else round(r[1],1),None if r[2] is None else round(r[2],1),r[3],r[4],r[5]] for r in d['rows'] if r[6]==d['current']]
+        result={'version':1,'metric':'https-rtt-ms','resolution_seconds':60,'retention_seconds':self.retention_seconds,
+                'pair':list(d['pairs'].get(d['current'],[])),'rows':rows[-1441:],'rows_count':len(rows),
                 'saved':d['saved'],'notice':self.notice,'scope':'observed minute means; gaps are unobserved; not ICMP or LAN proof'}
+        # Large nested arrays exceed rpcd/ubus transport bounds. Keep the old
+        # daily tail for old clients and carry the complete week as one string.
+        if len(rows)>1441:result['rows_json']=json.dumps(rows,separators=(',',':'),allow_nan=False)
+        return result
 
     def save(self,path,writer,now):
         if not number(now) or now<0:raise ValueError('LATENCY-HISTORY-TIME')

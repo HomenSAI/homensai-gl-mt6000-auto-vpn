@@ -169,8 +169,8 @@ var LEARN_LESSONS=[
         "«Обзор» начинается с Auto и проверки VPN. Далее идут свёрнутые технические действия/статистика переключений и ручной выбор основного/резерва. Команда в очереди ожидает подтверждения роутера."
       ],
       [
-        "Channels and servers shows primary first and reserve second, server names/IP where observed, HTTPS delay and a 1–24h history. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.",
-        "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, HTTPS-задержку и историю 1–24 ч. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
+        "Channels and servers shows primary first and reserve second, server names/IP where observed, HTTPS delay and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.",
+        "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, HTTPS-задержку и историю 1–168 ч в пределах настроенного хранения 1–7 дней. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
       ],
       [
         "The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events shows the latest 20 rows, with expansion, search and sorting. Setup step 2 or Monitoring settings selects 1–2000 live observations and 1–7 days of detail. M/R identifies primary/reserve and who initiated a transition; missing historical outcomes are explained, not invented.",

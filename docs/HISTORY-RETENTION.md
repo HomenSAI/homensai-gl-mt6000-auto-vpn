@@ -10,7 +10,7 @@
 
 Сокращение срока очищает старые подробности при очередной обработке и сохранении статистики. Очистка результатов скорости проверяется раз в минуту, даже без нового теста. Контрольные точки сохраняются с настроенным интервалом checkpoint. Ограничения числа записей и размера файлов остаются дополнительными пределами: выбранный срок не обещает непрерывную полную историю при любых условиях.
 
-Месячные и общие счётчики сохраняются отдельно. История графиков за сутки остаётся ограничена сутками. Суточные квоты тестов скорости не сбрасываются настройкой истории. Увеличение срока не восстанавливает уже удалённые подробности. Отчёт по более длинному периоду может содержать только доступные подробные наблюдения.
+Месячные и общие счётчики сохраняются отдельно. История переключений за сутки остаётся ограничена сутками. История задержек хранит до7суток по настройке1–7дней, окно1–168часов и ползунок просмотра недели. Суточные квоты тестов скорости не сбрасываются настройкой истории. Увеличение срока не восстанавливает уже удалённые подробности. Отчёт по более длинному периоду может содержать только доступные подробные наблюдения.
 
 ## English
 
@@ -18,4 +18,4 @@ Use **Setup step 2 → Monitoring** or **Settings → Monitoring and history ret
 
 The count limits the actual browser buffer. The period limits incident/controller events, probe samples, detailed daily/hourly observations and speed-test results. Cleanup occurs during normal processing/checkpointing; speed-history age cleanup runs once per minute without starting a test. Independent count/byte caps remain in force.
 
-Monthly/lifetime counters remain separate. Day charts stay bounded to 24 hours, and speed-test quota ledgers are not reset by this preference. Increasing retention cannot restore deleted details. Reports covering longer periods may have only partial detail.
+Monthly/lifetime counters remain separate. Route charts stay bounded to24hours; latency history supports1–168hours within configured1–7days, and speed-test quota ledgers are not reset by this preference. Increasing retention cannot restore deleted details. Reports covering longer periods may have only partial detail.

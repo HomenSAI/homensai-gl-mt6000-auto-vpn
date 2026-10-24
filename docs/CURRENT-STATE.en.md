@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha16**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha17**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -35,7 +35,7 @@ The live log starts with monitor/Auto, then working/waiting or failed channels. 
 
 Main/reserve identity is retained at event time before server/protocol/code. Later pair changes do not relabel it. M and R circles show direction: yellow pending, confirmed green selected/other red. A standalone failure marks only its own role, without inventing a switch or other health. Chart blue main/orange reserve count outage episodes once; failed checks and attempts are separate counters. Legacy missing roles/results remain disclosed rather than guessed.
 
-[Retention](HISTORY-RETENTION.md): choose1–2000browser observations and1–7detail days in setup step2 or Monitoring and history retention. Pruning preserves separate monthly/lifetime counters; increasing the period cannot recover deleted detail. Route/latency charts stay within their1–24h view. First data can take longer with many timed-out profiles; there is no universal one-second network-freshness promise.
+[Retention](HISTORY-RETENTION.md): choose1–2000browser observations and1–7detail days in setup step2 or Monitoring and history retention. Pruning preserves separate monthly/lifetime counters; increasing the period cannot recover deleted detail. Route charts stay within1–24h; latency supports1–168h with a7day pan horizon within configured1–7days. First data can take longer with many timed-out profiles; there is no universal one-second network-freshness promise.
 
 ## Tests, help and reports
 
