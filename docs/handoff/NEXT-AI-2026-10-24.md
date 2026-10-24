@@ -1,3 +1,18 @@
+# COMPLETE: alpha13 deployed and published —24October2026
+
+All owner items51–67 delivered. Latest read-only MT3000 check: AutoON, confirmed reserve, both VPN DNS/HTTPS healthy; installed0.9.1-alpha13-1/dashboard89/ui61, settings/terms retained,190-entry encrypted pre/post backups independently verified. No physical fault injected; host network/main MT6000 unchanged. Own VM powered off exit0; no test browser/observer job to resume.
+
+Published actual non-draft prereleases, four assets each downloaded and SHA256-verified:
+
+- [GitHub alpha13](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha13)
+- [Gitea alpha13](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha13)
+
+Both feature branches saved with equal trees and preserved separate histories; main/stable0.9.0 unchanged. Release canonical sourcea2c39ac / public8cf690f; tested product2e8f549 (full dual-runtime CI768app/108QA,46UI). Package815967bytes SHA256f570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8. Documentation-only closure follows publication; no product changes after CI.
+
+[Full report](../VERIFICATION-ALPHA13-2026-10-24.md) · [Batch matrix](../../qa/OWNER-BATCH-ALPHA13-2026-10-24.json) · [Physical receipt](../../qa/MT3000-ALPHA13-2026-10-24.json). Fifty synthetic personas combine49pre-crash+1rerun with matching frozen assets. First60s VM cold-boot timeout retained; bounded longer observation confirmed reboot/config preservation/fresh monitor. Native physical-browser visual and independent externalLAN/IPv6/KillSwitch remain outside acceptance.
+
+Private receipts: `private/owner-batch-validation-20261024/publication.json`, `private/alpha13-install-20261024/`, exact CI receipt in `.git/handoff/`. Older ACTIVE/batch-only/alpha12OFF text below is historical and superseded by this completion. Do not restart Auto or old observers merely to resume reading this handoff.
+
 # Alpha13 verified on MT3000 —24October2026
 
 Product source2e8f5499e4245321c3611e95981d68f539e14e86 passed full dual-runtime CI:768app/108QA,46UI; canonical IPK815967bytes SHAf570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8. On actual MT3000/4.11.0:87immutable files/modes, HTTP8080+pinnedHTTPS, freshRPC, first Start54.8s (transport58.8s), normal reserve restoration37.2s (transport38.4s), AutoON/reserve/bothVPN DNS+HTTPS confirmed, settings/terms preserved, encrypted190entry pre/post backups independently decrypted/read. New fault readiness on current reserve PASS read-only, no physical fault injected. Native browser/externalLAN/IPv6 remain unverified.

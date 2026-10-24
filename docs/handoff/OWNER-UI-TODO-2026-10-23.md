@@ -1,3 +1,9 @@
+# COMPLETE — owner67 and reboot recovery delivered
+
+GitHub/Gitea alpha13 prereleases are published and four assets each independently downloaded/hash-verified. MT3000 AutoON/reserve and bothVPN health rechecked after publication;190-entry encrypted before/after backups verified. No pending delivery or active VM/browser/SSH job. Read NEXT-AI-2026-10-24.md first. Old batch-only instructions below are historical.
+
+67. [x] Full validation, bounded persona/failure matrix, physical update, GitHub/Gitea save and real prereleases completed. Product2e8f549; release sourcea2c39ac/public8cf690f; packageSHAf5706340; docs-only closure does not change product. Initial VM startup timeout preserved; externalLAN/native visual outside scope.
+
 # Alpha13 delivery: physical complete, publication next —24October2026
 
 Owner67 and latest reboot-resume instruction supersede historical batch-only rules. Items51–66 are now delivered: exact2e8f549 CI/canonical815967-byte IPK, 87files/modes, HTTP8080+pinnedHTTPS, AutoON reserve, bothVPN DNS+HTTPS, preserved settings/terms, independent190entry encrypted pre/post backups. Read qa/OWNER-BATCH-ALPHA13-2026-10-24.json and qa/MT3000-ALPHA13-2026-10-24.json. VM60s initial cold-boot failure retained; bounded longer retry passed. Final publication to both feature branches and prerelease follows; main/stable0.9.0 unchanged.
