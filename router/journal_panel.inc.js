@@ -1,3 +1,448 @@
+var JOURNAL_TYPES={
+  "OK": {
+    "code": "EVENT-CHECK-OK",
+    "label": [
+      "Check passed",
+      "Проверка прошла"
+    ],
+    "message": [
+      "Channel check completed without an error",
+      "Проверка канала завершена без ошибки"
+    ],
+    "meaning": [
+      "The monitor received a result without a diagnostic error. This records channel availability at that observation; it does not mean traffic switched or that Auto was activated.",
+      "Монитор получил результат без диагностической ошибки. Это наблюдение доступности канала в тот момент; оно не означает переключение трафика или включение Auto."
+    ],
+    "level": "ok"
+  },
+  "FAILURE": {
+    "code": "EVENT-CHECK-FAILED",
+    "label": [
+      "Check failed",
+      "Ошибка проверки"
+    ],
+    "message": [
+      "Connection check failed",
+      "Ошибка проверки соединения"
+    ],
+    "meaning": [
+      "A failed channel check was recorded. Open the saved diagnostic code for the observed failure. It does not by itself prove a route switch.",
+      "Зафиксирована неудачная проверка канала. Причину наблюдаемого отказа смотрите в сохранённом диагностическом коде. Сама запись не доказывает смену маршрута."
+    ],
+    "level": "error"
+  },
+  "RECOVERY": {
+    "code": "EVENT-CONNECTION-RECOVERED",
+    "label": [
+      "Availability restored",
+      "Доступность восстановлена"
+    ],
+    "message": [
+      "Connection availability recovered",
+      "Доступность соединения восстановлена"
+    ],
+    "meaning": [
+      "A previously failed channel became available again in observations. This is recovery of availability, not proof that it became the traffic route.",
+      "Ранее отказавший канал снова стал доступен по наблюдениям. Это восстановление доступности, а не доказательство, что через него уже идёт трафик."
+    ],
+    "level": "ok"
+  },
+  "DISABLED": {
+    "code": "EVENT-PROFILE-DISABLED",
+    "label": [
+      "Profile disabled",
+      "Профиль отключён"
+    ],
+    "message": [
+      "VPN profile was disabled",
+      "VPN-профиль отключён"
+    ],
+    "meaning": [
+      "The profile is administratively disabled or inactive. This is distinct from a failed Internet check.",
+      "Профиль административно отключён или неактивен. Это отличается от ошибки проверки Интернета."
+    ],
+    "level": "warning"
+  },
+  "GAP": {
+    "code": "EVENT-OBSERVATION-GAP",
+    "label": [
+      "No observation interval",
+      "Перерыв наблюдений"
+    ],
+    "message": [
+      "A gap in observations was recorded",
+      "Зафиксирован перерыв наблюдений"
+    ],
+    "meaning": [
+      "There were no trusted measurements for an interval. Neither successful connectivity nor failure is invented for the missing period.",
+      "За интервал нет достоверных измерений. Пропуск не превращается ни в исправность, ни в выдуманный отказ."
+    ],
+    "level": "warning"
+  },
+  "OBSERVING": {
+    "code": "EVENT-MONITORING",
+    "label": [
+      "Observing channels",
+      "Наблюдение за каналами"
+    ],
+    "message": [
+      "The controller is observing the VPN channels",
+      "Контроллер наблюдает за VPN-каналами"
+    ],
+    "meaning": [
+      "The controller is checking the channels. This state alone does not describe a newly completed traffic switch; channel selection has separate confirmation.",
+      "Контроллер проверяет каналы. Само это состояние не означает только что выполненное переключение трафика; выбор маршрута подтверждается отдельно."
+    ],
+    "level": "ok"
+  },
+  "STARTING": {
+    "code": "EVENT-AUTO-STARTING",
+    "label": [
+      "Auto starting",
+      "Запуск Auto"
+    ],
+    "message": [
+      "Auto startup is in progress",
+      "Выполняется запуск Auto"
+    ],
+    "meaning": [
+      "Startup was accepted and is still being prepared. Wait for its actual completion or a specific refusal; a request is not a running session.",
+      "Запуск принят и ещё подготавливается. Дождитесь фактического завершения или конкретного отказа; запрос не равен работающему сеансу."
+    ],
+    "level": "warning"
+  },
+  "ARMED": {
+    "code": "EVENT-CHANNEL-PREPARATION",
+    "label": [
+      "Preparing channels",
+      "Подготовка каналов"
+    ],
+    "message": [
+      "Channel prerequisites are being prepared and checked",
+      "Подготавливаются и проверяются условия работы каналов"
+    ],
+    "meaning": [
+      "A preparation stage was recorded. Connectivity and routing may still be checked; this is not a completed switch.",
+      "Зафиксирован подготовительный этап. Связность и маршрут ещё могут проверяться; это не завершённое переключение."
+    ],
+    "level": "warning"
+  },
+  "APPLYING": {
+    "code": "EVENT-ROUTE-APPLYING",
+    "label": [
+      "Selecting route",
+      "Выбор маршрута"
+    ],
+    "message": [
+      "A route-selection command is being applied",
+      "Выполняется команда выбора маршрута"
+    ],
+    "meaning": [
+      "The operation is applying the planned traffic selection. Its final outcome must be confirmed by a later event.",
+      "Операция применяет запланированный выбор трафика. Итог должен быть подтверждён следующим событием."
+    ],
+    "level": "warning"
+  },
+  "WAIT-CLIENT": {
+    "code": "EVENT-PATH-CONFIRMATION",
+    "label": [
+      "Verifying path",
+      "Подтверждение пути"
+    ],
+    "message": [
+      "The selected path is awaiting verification",
+      "Ожидается подтверждение выбранного пути"
+    ],
+    "meaning": [
+      "The change is not yet accepted as a confirmed route. The required evidence depends on the recorded operating mode: router observations or a separate client witness.",
+      "Изменение ещё не принято как подтверждённый маршрут. Требуемое доказательство зависит от сохранённого режима: наблюдения роутера либо отдельный клиентский тест."
+    ],
+    "level": "warning"
+  },
+  "COMMITTED": {
+    "code": "EVENT-RESERVE-SELECTED",
+    "label": [
+      "Reserve selected",
+      "Резерв выбран"
+    ],
+    "message": [
+      "Reserve traffic selection was confirmed",
+      "Выбор резервного маршрута подтверждён"
+    ],
+    "meaning": [
+      "The recorded operation confirmed reserve selection. This does not imply that the primary is broken; its health is a separate observation.",
+      "Операция подтвердила выбор резерва. Это не означает неисправность основного: его состояние проверяется отдельно."
+    ],
+    "level": "ok"
+  },
+  "STOPPED-ON-RESERVE": {
+    "code": "EVENT-RESERVE-HELD",
+    "label": [
+      "Reserve retained",
+      "Резерв удержан"
+    ],
+    "message": [
+      "The operation ended while retaining the reserve",
+      "Операция завершилась с сохранением резерва"
+    ],
+    "meaning": [
+      "The operation retained reserve routing. In a continuous session Auto may remain on; this transaction state is not proof of a global Auto shutdown.",
+      "Операция сохранила резервный маршрут. В непрерывном сеансе Auto может продолжать работать; это состояние транзакции не доказывает глобальное выключение Auto."
+    ],
+    "level": "ok"
+  },
+  "RESTORING": {
+    "code": "EVENT-RETURN-IN-PROGRESS",
+    "label": [
+      "Returning route",
+      "Возврат маршрута"
+    ],
+    "message": [
+      "The original route is being restored",
+      "Восстанавливается исходный маршрут"
+    ],
+    "meaning": [
+      "Restoration is in progress. A later verified outcome is required before describing the original route as restored.",
+      "Восстановление выполняется. Прежде чем считать исходный маршрут восстановленным, требуется последующее подтверждение."
+    ],
+    "level": "warning"
+  },
+  "ROLLED-BACK": {
+    "code": "EVENT-ROLLBACK-RECORDED",
+    "label": [
+      "Rollback recorded",
+      "Записан откат"
+    ],
+    "message": [
+      "A rollback stage was recorded",
+      "Зафиксирован этап отката"
+    ],
+    "meaning": [
+      "This old record names a rollback. If it lacks an original_restored confirmation, successful restoration must not be invented.",
+      "Старая запись содержит этап отката. Если подтверждение original_restored в ней отсутствует, успешное восстановление не приписывается."
+    ],
+    "level": "warning"
+  },
+  "RETURNED": {
+    "code": "EVENT-ORIGINAL-RESTORED",
+    "label": [
+      "Original route restored",
+      "Исходный маршрут восстановлен"
+    ],
+    "message": [
+      "Restoration of the original route was confirmed",
+      "Восстановление исходного маршрута подтверждено"
+    ],
+    "meaning": [
+      "The event includes explicit verified restoration evidence. This is separate from a request to return or a restoration-in-progress stage.",
+      "В событии есть явное подтверждение восстановления. Это отличается от запроса возврата или незавершённого восстановления."
+    ],
+    "level": "ok"
+  },
+  "STOPPED": {
+    "code": "EVENT-OPERATION-STOPPED",
+    "label": [
+      "Operation stopped",
+      "Операция остановлена"
+    ],
+    "message": [
+      "The controller operation was stopped",
+      "Управляющая операция остановлена"
+    ],
+    "meaning": [
+      "The operation ended. A global Auto state and the resulting route must be read from their own recorded confirmations, not inferred from this word alone.",
+      "Операция завершена. Общее состояние Auto и итоговый маршрут определяются по собственным подтверждениям, а не выводятся только из этого слова."
+    ],
+    "level": "warning"
+  },
+  "RUNNING": {
+    "code": "EVENT-AUTO-RUNNING",
+    "label": [
+      "Auto running",
+      "Auto работает"
+    ],
+    "message": [
+      "The Auto session is running",
+      "Сеанс Auto работает"
+    ],
+    "meaning": [
+      "A running controller session was recorded. Each channel still needs fresh connectivity checks; it is not a guarantee of every client path.",
+      "Зафиксирован работающий сеанс контроллера. Каналам по-прежнему нужны свежие проверки; это не гарантия каждого клиентского пути."
+    ],
+    "level": "ok"
+  },
+  "AUTO-START-REQUESTED": {
+    "code": "EVENT-AUTO-START-REQUESTED",
+    "label": [
+      "Start requested",
+      "Запрошен запуск"
+    ],
+    "message": [
+      "Auto activation requested",
+      "Запрошено включение Auto"
+    ],
+    "meaning": [
+      "This is the request, including its recorded initiator. Startup is not confirmed until a later completed state.",
+      "Это запрос с сохранённым инициатором. Запуск не подтверждён до последующего завершённого состояния."
+    ],
+    "level": "warning"
+  },
+  "AUTO-STOP-REQUESTED": {
+    "code": "EVENT-AUTO-STOP-REQUESTED",
+    "label": [
+      "Stop requested",
+      "Запрошена остановка"
+    ],
+    "message": [
+      "Auto deactivation requested",
+      "Запрошено выключение Auto"
+    ],
+    "meaning": [
+      "This is a stop request, not proof that routing was restored or the controller finished stopping.",
+      "Это запрос остановки, а не доказательство восстановления маршрута или завершения остановки контроллера."
+    ],
+    "level": "warning"
+  },
+  "BLOCKED": {
+    "code": "EVENT-OPERATION-BLOCKED",
+    "label": [
+      "Action refused",
+      "Действие отклонено"
+    ],
+    "message": [
+      "A required prerequisite blocked the action",
+      "Действие отклонено из-за невыполненного условия"
+    ],
+    "meaning": [
+      "No success is inferred. Read the saved reason code; do not bypass the gate or treat a queued request as applied routing.",
+      "Успех не предполагается. Прочитайте сохранённый код причины; не обходите условие и не считайте очередь выполненным выбором маршрута."
+    ],
+    "level": "error"
+  },
+  "FAILED": {
+    "code": "EVENT-OPERATION-FAILED",
+    "label": [
+      "Operation failed",
+      "Операция не выполнена"
+    ],
+    "message": [
+      "The operation ended with an error",
+      "Операция завершилась ошибкой"
+    ],
+    "meaning": [
+      "Read the specific recorded reason and recovery outcome. Failed application or rollback is not reported as successful switching.",
+      "Прочитайте конкретную сохранённую причину и итог восстановления. Неудачное применение или откат не выдаётся за успешное переключение."
+    ],
+    "level": "error"
+  },
+  "EXPIRED": {
+    "code": "EVENT-WINDOW-EXPIRED",
+    "label": [
+      "Test window ended",
+      "Окно теста завершено"
+    ],
+    "message": [
+      "The bounded operation window expired",
+      "Закончилось ограниченное окно операции"
+    ],
+    "meaning": [
+      "A configured time boundary ended. The final routing/recovery outcome is a separate confirmation.",
+      "Истёк заданный предел времени. Итог маршрутизации или восстановления подтверждается отдельно."
+    ],
+    "level": "warning"
+  },
+  "RELEASE-PENDING": {
+    "code": "EVENT-RECOVERY-PENDING",
+    "label": [
+      "Recovery pending",
+      "Восстановление ожидается"
+    ],
+    "message": [
+      "Traffic-block release is awaiting confirmation",
+      "Ожидается подтверждение снятия блокировки"
+    ],
+    "meaning": [
+      "Recovery has not yet been verified complete. Read the saved recovery code; an attempted cleanup is not the final result.",
+      "Завершение восстановления ещё не проверено. Смотрите сохранённый код; попытка очистки не равна итоговому результату."
+    ],
+    "level": "warning"
+  },
+  "DEGRADED-ON-RESERVE": {
+    "code": "EVENT-RESERVE-DEGRADED",
+    "label": [
+      "Reserve check failed",
+      "Проблема на резерве"
+    ],
+    "message": [
+      "The selected reserve also has a connectivity problem",
+      "На выбранном резерве тоже выявлена проблема связи"
+    ],
+    "meaning": [
+      "A problem was observed on the reserve. Returning to primary still requires current evidence and the applicable policy.",
+      "На резерве наблюдается проблема. Возврат на основной по-прежнему требует актуальных доказательств и применимой политики."
+    ],
+    "level": "error"
+  },
+  "TRIAL-REQUIRED": {
+    "code": "EVENT-TRIAL-PREREQUISITE",
+    "label": [
+      "Mode prerequisite missing",
+      "Не выполнено условие режима"
+    ],
+    "message": [
+      "The chosen mode needs an additional prerequisite",
+      "Для выбранного режима нужно дополнительное условие"
+    ],
+    "meaning": [
+      "The saved reason describes the mode-specific prerequisite. A legacy LAN trial refusal does not imply every prepared router-probed session needs a client certificate.",
+      "Сохранённая причина описывает условие конкретного режима. Отказ прежнего LAN-теста не означает, что любой подготовленный router-probed сеанс требует клиентский сертификат."
+    ],
+    "level": "warning"
+  },
+  "LEGACY": {
+    "code": "EVENT-DETAILS-NOT-SAVED",
+    "label": [
+      "Record lacks detail",
+      "Подробности не сохранены"
+    ],
+    "message": [
+      "An older record did not retain a full event description",
+      "В старой записи не сохранено полное описание события"
+    ],
+    "meaning": [
+      "Only the saved fields can be explained. A missing initiator, role or final outcome is not replaced with today's route or an invented successful switch.",
+      "Объясняются только сохранённые поля. Отсутствующие инициатор, роль или итог не заменяются сегодняшним маршрутом или выдуманным успешным переключением."
+    ],
+    "level": "warning"
+  }
+};
+JOURNAL_TYPES.CONFLICT={code:'EVENT-RECORD-CONFLICT',label:['Record data conflict','Ошибка данных записи'],message:['The saved event contains conflicting results','В сохранённом событии противоречивые результаты'],meaning:['Success and failure were both recorded. Do not treat this as a successful channel or confirmed switch; inspect the saved diagnostic data.','Одновременно записаны успех и ошибка. Это не считается успешной проверкой или подтверждённым переходом; проверьте сохранённые диагностические данные.'],level:'error'};
+Object.assign(JOURNAL_TYPES,{"CANCELLED": {"code": "EVENT-COMMAND-CANCELLED", "label": ["Command cancelled", "Команда отменена"], "message": ["The requested operation was cancelled", "Запрошенная операция отменена"], "meaning": ["Cancellation was recorded. The resulting route or cleanup still requires its own confirmation.", "Зафиксирована отмена. Итоговый маршрут или завершение очистки подтверждаются отдельно."], "level": "warning"}, "CLAIMED": {"code": "EVENT-COMMAND-ACCEPTED", "label": ["Command accepted", "Команда принята"], "message": ["The controller accepted the command for processing", "Контроллер принял команду в обработку"], "meaning": ["The worker accepted this command. It has not yet proved that the routing action completed.", "Исполнитель принял команду. Это ещё не доказывает завершение действия с маршрутом."], "level": "warning"}, "QUEUED": {"code": "EVENT-COMMAND-QUEUED", "label": ["Command queued", "Команда в очереди"], "message": ["The command is waiting in the queue", "Команда ожидает выполнения в очереди"], "meaning": ["Queue acceptance is separate from execution and verified completion.", "Принятие в очередь отличается от выполнения и подтверждённого завершения."], "level": "warning"}, "IDLE": {"code": "EVENT-CONTROLLER-IDLE", "label": ["Waiting for a command", "Ожидание команды"], "message": ["The operation handler is idle", "Исполнитель операций ожидает команду"], "meaning": ["This handler has no active operation. It does not alone prove that global Auto is off or either channel is unhealthy.", "У этого исполнителя нет активной операции. Это само по себе не доказывает выключение общего Auto или неисправность канала."], "level": "ok"}, "UNCONFIRMED": {"code": "EVENT-RESULT-NEEDS-VERIFICATION", "label": ["Verify the result", "Нужна проверка результата"], "message": ["The operation result has not been verified", "Фактический результат операции ещё не проверен"], "meaning": ["The saved data does not confirm actual completion. Inspect current state before repeating the action; do not invent successful routing.", "Сохранённые данные не подтверждают фактическое выполнение. Перед повтором сверьте текущее состояние; успешная маршрутизация не предполагается."], "level": "warning"}});
+JOURNAL_TYPES["HELD-ON-RESERVE"]=JOURNAL_TYPES["STOPPED-ON-RESERVE"];
+function journalCodeRow(code){
+  if(typeof ERROR_ROWS==='undefined'||typeof code!=='string')return null;
+  return ERROR_ROWS.find(function(r){return r[0]===code;})||ERROR_ROWS.find(function(r){return r[0].endsWith('*')&&code.indexOf(r[0].slice(0,-1))===0;})||null;
+}
+function journalDefinition(entry){
+  if((entry.state==='OK'||entry.code==='OK')&&(entry.state==='FAILURE'||entry.kind==='FAILURE'||entry.state==='OK'&&entry.code&&entry.code!=='OK'&&entry.level==='error'))return JOURNAL_TYPES.CONFLICT;
+  if(entry.return_primary===true||entry.state==='ROLLED-BACK'&&entry.original_restored===true)return JOURNAL_TYPES.RETURNED;
+  if(JOURNAL_TYPES[entry.state])return JOURNAL_TYPES[entry.state];
+  if(JOURNAL_TYPES[entry.kind])return JOURNAL_TYPES[entry.kind];
+  if(entry.code==='OK')return JOURNAL_TYPES.OK;
+  var r=journalCodeRow(entry.code||entry.state);
+  return r?{code:r[0],label:[r[2],r[3]],message:[r[2],r[3]],meaning:[r[4],r[5]],level:entry.level}:JOURNAL_TYPES.LEGACY;
+}
+function journalStateText(entry){var t=journalDefinition(entry);return bi(t.label[0],t.label[1]);}
+function ensureJournalDictionary(){
+  if(typeof ERROR_ROWS==='undefined'||typeof ERROR_GROUPS==='undefined'||typeof ERROR_GROUP_OF==='undefined')return;
+  if(!ERROR_GROUPS.some(function(g){return g[0]==='journal';}))ERROR_GROUPS.unshift(['journal',['Events and states','События и состояния']]);
+  Object.keys(JOURNAL_TYPES).forEach(function(key){var t=JOURNAL_TYPES[key];if(!ERROR_ROWS.some(function(r){return r[0]===t.code;}))ERROR_ROWS.push([t.code,'journal',t.label[0],t.label[1],t.meaning[0],t.meaning[1],t.message[0]+'. Read the separate saved reason code if present; observation and a confirmed route change are different.',t.message[1]+'. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.']);ERROR_GROUP_OF[t.code]='journal';});
+  ['OPERATOR-MANUAL','OPERATOR-RETURN'].forEach(function(code){var r=ERROR_ROWS.find(function(r){return r[0]===code;});if(r){r[2]=code==='OPERATOR-MANUAL'?'Manual-channel control command':'Return-control command';r[3]=code==='OPERATOR-MANUAL'?'Команда ручного выбора канала':'Команда возврата маршрута';r[4]='This is the manual-control command family, not proof that a human clicked. The recorded initiator distinguishes operator, automation, test or programmatic access.';r[5]='Это семейство команд ручного управления, а не доказательство нажатия человеком. Сохранённый инициатор различает оператора, автоматику, тест или программный доступ.';}});
+}
+function journalDescriptionLink(entry,status,stateOnly,extra){
+  var t=journalDefinition(entry),code=t.code;
+  return E('a',{'href':'#events','class':'hv-journal-description','data-journal-description':code,'data-original-state':entry.state,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(code);}},(stateOnly?journalStateText(entry):journalMessage(entry,status,true))+(extra||''));
+}
 /* Shared real-event vocabulary for the live terminal and persisted history. */
 var EVENT_VIEW={query:'',sort:'time',desc:true,expanded:false,page:0,stored:null,busy:false,error:null,request:0};
 function journalHistoryDays(status){
@@ -22,8 +467,8 @@ function journalChannelModel(entry){
   var pair=entry.source&&entry.target&&entry.source!==entry.target;
   if(pair&&['APPLYING','WAIT-CLIENT','ARMED'].indexOf(entry.state)>=0)return {phase:'pending',from:'source',to:'target'};
   if(pair&&entry.state==='RESTORING')return {phase:'pending',from:'target',to:'source'};
-  if(pair&&['COMMITTED','STOPPED-ON-RESERVE'].indexOf(entry.state)>=0)return {phase:'confirmed',from:'source',to:'target'};
   if(pair&&(entry.return_primary===true||entry.state==='ROLLED-BACK'&&entry.original_restored===true))return {phase:'confirmed',from:'target',to:'source'};
+  if(pair&&['COMMITTED','STOPPED-ON-RESERVE'].indexOf(entry.state)>=0)return {phase:'confirmed',from:'source',to:'target'};
   if(['source','target'].indexOf(entry.role)>=0){
     if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')return {phase:'recovered',to:entry.role};
     if(entry.state==='FAILURE'||entry.kind==='FAILURE'||entry.level==='error')return {phase:'failed',to:entry.role};
@@ -32,7 +477,7 @@ function journalChannelModel(entry){
 }
 function renderJournalChannelBadge(entry){return renderChannelBadge(journalChannelModel(entry));}
 function journalSourceLabel(source){
-  return source==='manual'?bi('operator command','оператор — вручную'):source==='automatic'?bi('automatic controller','контроллер — автоматически'):source==='test'?bi('programmatic test','тестовая программа — автоматически'):source==='programmatic'?bi('programmatic command','программа — программная команда'):bi('source not recorded','источник не указан');
+  return source==='manual'?bi('operator command','оператор — вручную'):source==='automatic'?bi('automatic controller','контроллер — автоматически'):source==='test'?bi('programmatic test','тестовая программа — автоматически'):source==='programmatic'?bi('programmatic command','программная команда'):bi('source not recorded','источник не указан');
 }
 function journalToken(value,fallback){return typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,95}$/.test(value)?value.toUpperCase():fallback;}
 function journalLatencySample(raw,profile,eventTime){
@@ -48,20 +493,26 @@ function journalCurrentLatency(p,status,now){
   if(!p||status.rpc_error||status.error||!Number.isFinite(status.time)||status.time<now-90||status.time>now+5||p.vendor_state!=='SETTLED'||p.vendor_tunnel_id!==p.protocol+':'+p.interface||p.code!=null||p.dns_ok!==true||!Number.isInteger(p.https_success)||p.https_success<2)return null;
   return journalLatencySample({profile:p.id,metric:'https-rtt-ms',time:p.time,rtt_ms:p.rtt_ms,interface:p.interface,generation:p.vendor_generation},p.id,now);
 }
-function journalMessage(entry,status){
-  var names={COMMITTED:['Reserve selected','Выбран резерв'],OBSERVING:['Primary selected','Выбран основной'],'ROLLED-BACK':['Returned to primary','Возврат на основной'],FAILURE:['Connection failed','Ошибка соединения'],RECOVERY:['Connection recovered','Соединение восстановлено'],GAP:['Observation gap','Пропуск наблюдений'],STARTING:['Auto starting','Auto запускается'],STOPPED:['Auto stopped','Auto остановлен']};
-  var label=names[entry.state]||names[entry.kind],text=label?bi(label[0],label[1]):entry.state;
+function journalMessage(entry,status,hideCode){
+  var t=journalDefinition(entry),text=bi(t.message[0],t.message[1]);
   var profiles=Array.isArray(status.profiles)?status.profiles:[],p=profiles.find(function(p){return p.id===entry.profile;});
   if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')text=entry.role==='source'?bi('Connection restored on the primary channel','Соединение восстановлено на основном канале'):entry.role==='target'?bi('Connection restored on the reserve channel','Соединение восстановлено на резервном канале'):bi('Connection restored · channel was not saved in this record','Соединение восстановлено · канал не сохранён в этой записи');
-  else if(entry.profile)text=(entry.role==='source'?bi('Primary channel','Основной канал'):entry.role==='target'?bi('Reserve channel','Резервный канал'):bi('Channel not saved in this record','Канал не сохранён в этой записи'))+' — '+text;
-  if(entry.state==='AUTO-START-REQUESTED')text=bi('Auto: activation requested','Auto: запрошено включение');
-  if(entry.state==='AUTO-STOP-REQUESTED')text=bi('Auto: deactivation requested','Auto: запрошено выключение');
+  else if(entry.profile)text=(entry.role==='source'?bi('Primary channel','Основной канал'):entry.role==='target'?bi('Reserve channel','Резервный канал'):bi('VPN profile','VPN-профиль'))+' — '+text;
   if(entry.state==='APPLYING')text=bi('Switch: primary → reserve','Переход: основной → резервный');
   if(entry.state==='RESTORING')text=bi('Switch: reserve → primary','Переход: резервный → основной');
   if(entry.return_primary)text=bi('Returned: reserve → primary','Возврат: резервный → основной');
   var sourced=entry.origin==='control'||entry.action_source||['APPLYING','RESTORING','COMMITTED','ROLLED-BACK','STOPPED'].indexOf(entry.state)>=0;
   var switching=entry.return_primary===true||['APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE','RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0;
-  return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+(entry.code?' · '+entry.code:'');
+  var code=!hideCode&&entry.code&&entry.code!=='OK'&&entry.code!==entry.state?' · '+entry.code:'';
+  return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+code;
+}
+function journalDescriptionContent(entry,status,extra){
+  var nodes=[journalDescriptionLink(entry,status,false,extra)];
+  if(entry.code&&entry.code!=='OK'){
+    var known=journalCodeRow(entry.code),target=known?known[0]:journalDefinition(entry).code;
+    nodes.push(' · ',E('a',{'href':'#events','class':'hv-errlink','data-journal-cause':target,'title':bi('Explain the recorded diagnostic code','Расшифровать сохранённый диагностический код'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(target);}},entry.code));
+  }
+  return E('span',{'class':'hv-journal-description-content'},nodes);
 }
 function journalRows(status,stored,now){
   var retainedSeconds=journalHistoryDays(status)*86400;
@@ -69,7 +520,7 @@ function journalRows(status,stored,now){
   function control(action,stamp,source){
     if(['start','stop'].indexOf(action)<0||!Number.isFinite(stamp)||stamp<=0||stamp<now-retainedSeconds||stamp>now+5)return;
     var key='control:'+action+':'+stamp;if(seen[key])return;seen[key]=true;
-    result.push({key:key,time:stamp,state:action==='start'?'AUTO-START-REQUESTED':'AUTO-STOP-REQUESTED',kind:'CONTROL',profile:null,code:null,level:'ok',origin:'control',action_source:['manual','automatic','test','programmatic'].indexOf(source)>=0?source:'unknown'});
+    result.push({key:key,time:stamp,state:action==='start'?'AUTO-START-REQUESTED':'AUTO-STOP-REQUESTED',kind:'CONTROL',profile:null,code:null,level:'warning',origin:'control',action_source:['manual','automatic','test','programmatic'].indexOf(source)>=0?source:'unknown'});
   }
   groups.forEach(function(group){if(!Array.isArray(group[1]))return;
     group[1].slice(-10000).forEach(function(e){
@@ -79,7 +530,7 @@ function journalRows(status,stored,now){
       var profile=typeof(e.profile||e.id)==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e.profile||e.id)?e.profile||e.id:null;
       var key=group[0]+':'+(Number.isSafeInteger(e.sequence)?e.sequence:[e.time,profile,state,code].join(':'));
       if(seen[key])return;seen[key]=true;
-      var failed=/FAIL|REFUS|ERROR|DEGRADED/.test(state)||!!code&&/^(DNS-|VPN-|SYSTEM-|CHECK-)|FAILED|ERROR|REFUSED/.test(code),level=failed?'error':/GAP|UNKNOWN|UNCONFIRMED|CANCEL|INACTIVE/.test(state)?'warning':'ok';
+      var failed=/FAIL|REFUS|ERROR|DEGRADED/.test(state)||!!code&&/^(DNS-|VPN-|SYSTEM-|CHECK-)|FAILED|ERROR|REFUSED/.test(code),level=failed?'error':/GAP|UNKNOWN|UNCONFIRMED|UNAVAILABLE|UNVERIFIED|CANCEL|INACTIVE/.test(state+' '+(code||''))?'warning':'ok';
       var pair={};['source','target'].forEach(function(k){pair[k]=typeof e[k]==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e[k])?e[k]:null;});
       var actionSource=['manual','automatic','test','programmatic','unknown'].indexOf(e.transition_source)>=0?e.transition_source:e.manual===true?'unknown':e.trial===true?'test':null;
       if(!actionSource&&Array.isArray(e.codes)){
@@ -92,7 +543,8 @@ function journalRows(status,stored,now){
       var delayProfile=(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
       var role=['source','target'].indexOf(e.role)>=0?e.role:null;
       if(!role&&profile&&pair.source&&pair.target&&pair.source!==pair.target)role=profile===pair.source?'source':profile===pair.target?'target':null;
-      result.push({key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0]});
+      var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0]};
+      var definition=journalDefinition(record);if(!(definition.code==='EVENT-DETAILS-NOT-SAVED'&&record.level==='error'))record.level=definition.level||record.level;result.push(record);
     });
   });
   var request=status.auto_control||{};
@@ -101,7 +553,7 @@ function journalRows(status,stored,now){
 }
 function filteredJournalRows(rows,status,query,sort,desc){
   var needle=String(query||'').trim().toLocaleLowerCase();
-  return rows.filter(function(row){return !needle||[row.state,row.kind,row.code,row.profile,row.origin,journalMessage(row,status),new Date(row.time*1000).toLocaleString()].join(' ').toLocaleLowerCase().includes(needle);}).sort(function(a,b){var compared=sort==='state'?a.state.localeCompare(b.state):a.time-b.time;return (desc?-compared:compared)||b.time-a.time||a.key.localeCompare(b.key);});
+  return rows.filter(function(row){return !needle||[row.state,journalStateText(row),row.kind,row.code,row.profile,row.origin,journalMessage(row,status),new Date(row.time*1000).toLocaleString()].join(' ').toLocaleLowerCase().includes(needle);}).sort(function(a,b){var compared=sort==='state'?journalStateText(a).localeCompare(journalStateText(b)):a.time-b.time;return (desc?-compared:compared)||b.time-a.time||a.key.localeCompare(b.key);});
 }
 function renderEventHistory(status){
   EVENT_VIEW.status=status;
@@ -128,7 +580,7 @@ function renderEventHistory(status){
     EVENT_VIEW.page=Math.max(0,Math.min(EVENT_VIEW.page,Math.max(0,Math.ceil(rows.length/size)-1)));
     var selected=rows.slice(EVENT_VIEW.page*size,(EVENT_VIEW.page+1)*size),table=E('table',{'class':'table hv-event-history','data-hv-no-sort':'1'},[
       E('thead',{},E('tr',{},[bi('Date and time','Дата и время'),bi('State','Состояние'),bi('Event','Событие')].map(function(label){return E('th',{},label);}))),
-      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},[renderJournalChannelBadge(row),row.state].filter(Boolean)),E('td',{},journalMessage(row,status))]);}))]);
+      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},[renderJournalChannelBadge(row),journalDescriptionLink(row,status,true)].filter(Boolean)),E('td',{},journalDescriptionContent(row,status))]);}))]);
     tableHost.appendChild(E('div',{'class':'hv-dv-tablewrap'},table));
     if(EVENT_VIEW.expanded&&rows.length>size){
       tableHost.appendChild(E('div',{'class':'hv-native-actions'},[

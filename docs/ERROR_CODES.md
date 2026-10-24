@@ -1,5 +1,5 @@
 <!-- doc-role: current-generated-codes -->
-# Коды диагностики / Diagnostic reference
+# События, состояния и диагностика / Events, states and diagnostics
 
 Generated from the merged active error catalogue, including prefix families. / Сформировано из объединённого справочника приложения, включая семейства кодов.
 
@@ -1401,11 +1401,11 @@ VPN не подключён / VPN not connected
 
 ## OPERATOR-MANUAL
 
-Оператор запросил ручное переключение / Operator requested a manual switch
+Команда ручного выбора канала / Manual-channel control command
 
-**RU:** Это событие относится к одному явному ручному переключению. Оно не означает отказ основного или включение Auto.
+**RU:** Это семейство команд ручного управления, а не доказательство нажатия человеком. Сохранённый инициатор различает оператора, автоматику, тест или программный доступ.
 
-**EN:** This event belongs to one explicit manual switch. It does not imply primary failure or that Auto was enabled.
+**EN:** This is the manual-control command family, not proof that a human clicked. The recorded initiator distinguishes operator, automation, test or programmatic access.
 
 **Что делать:** Посмотрите последующий итог транзакции и текущий подтверждённый путь, чтобы узнать результат.
 
@@ -5419,11 +5419,11 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 ## OPERATOR-RETURN
 
-Возврат по запросу / Returned on request
+Команда возврата маршрута / Return-control command
 
-**RU:** Возврат на основной выполнен по вашему запросу.
+**RU:** Это семейство команд ручного управления, а не доказательство нажатия человеком. Сохранённый инициатор различает оператора, автоматику, тест или программный доступ.
 
-**EN:** Returned to the primary on your request.
+**EN:** This is the manual-control command family, not proof that a human clicked. The recorded initiator distinguishes operator, automation, test or programmatic access.
 
 **Что делать:** Возврат на основной выполнен по вашему запросу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
@@ -5536,3 +5536,387 @@ Kill Switch / Kill Switch
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
 **Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+
+## EVENT-CHECK-OK
+
+Проверка прошла / Check passed
+
+**RU:** Монитор получил результат без диагностической ошибки. Это наблюдение доступности канала в тот момент; оно не означает переключение трафика или включение Auto.
+
+**EN:** The monitor received a result without a diagnostic error. This records channel availability at that observation; it does not mean traffic switched or that Auto was activated.
+
+**Что делать:** Проверка канала завершена без ошибки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Channel check completed without an error. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-CHECK-FAILED
+
+Ошибка проверки / Check failed
+
+**RU:** Зафиксирована неудачная проверка канала. Причину наблюдаемого отказа смотрите в сохранённом диагностическом коде. Сама запись не доказывает смену маршрута.
+
+**EN:** A failed channel check was recorded. Open the saved diagnostic code for the observed failure. It does not by itself prove a route switch.
+
+**Что делать:** Ошибка проверки соединения. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Connection check failed. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-CONNECTION-RECOVERED
+
+Доступность восстановлена / Availability restored
+
+**RU:** Ранее отказавший канал снова стал доступен по наблюдениям. Это восстановление доступности, а не доказательство, что через него уже идёт трафик.
+
+**EN:** A previously failed channel became available again in observations. This is recovery of availability, not proof that it became the traffic route.
+
+**Что делать:** Доступность соединения восстановлена. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Connection availability recovered. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-PROFILE-DISABLED
+
+Профиль отключён / Profile disabled
+
+**RU:** Профиль административно отключён или неактивен. Это отличается от ошибки проверки Интернета.
+
+**EN:** The profile is administratively disabled or inactive. This is distinct from a failed Internet check.
+
+**Что делать:** VPN-профиль отключён. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** VPN profile was disabled. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-OBSERVATION-GAP
+
+Перерыв наблюдений / No observation interval
+
+**RU:** За интервал нет достоверных измерений. Пропуск не превращается ни в исправность, ни в выдуманный отказ.
+
+**EN:** There were no trusted measurements for an interval. Neither successful connectivity nor failure is invented for the missing period.
+
+**Что делать:** Зафиксирован перерыв наблюдений. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** A gap in observations was recorded. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-MONITORING
+
+Наблюдение за каналами / Observing channels
+
+**RU:** Контроллер проверяет каналы. Само это состояние не означает только что выполненное переключение трафика; выбор маршрута подтверждается отдельно.
+
+**EN:** The controller is checking the channels. This state alone does not describe a newly completed traffic switch; channel selection has separate confirmation.
+
+**Что делать:** Контроллер наблюдает за VPN-каналами. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The controller is observing the VPN channels. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-AUTO-STARTING
+
+Запуск Auto / Auto starting
+
+**RU:** Запуск принят и ещё подготавливается. Дождитесь фактического завершения или конкретного отказа; запрос не равен работающему сеансу.
+
+**EN:** Startup was accepted and is still being prepared. Wait for its actual completion or a specific refusal; a request is not a running session.
+
+**Что делать:** Выполняется запуск Auto. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Auto startup is in progress. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-CHANNEL-PREPARATION
+
+Подготовка каналов / Preparing channels
+
+**RU:** Зафиксирован подготовительный этап. Связность и маршрут ещё могут проверяться; это не завершённое переключение.
+
+**EN:** A preparation stage was recorded. Connectivity and routing may still be checked; this is not a completed switch.
+
+**Что делать:** Подготавливаются и проверяются условия работы каналов. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Channel prerequisites are being prepared and checked. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-ROUTE-APPLYING
+
+Выбор маршрута / Selecting route
+
+**RU:** Операция применяет запланированный выбор трафика. Итог должен быть подтверждён следующим событием.
+
+**EN:** The operation is applying the planned traffic selection. Its final outcome must be confirmed by a later event.
+
+**Что делать:** Выполняется команда выбора маршрута. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** A route-selection command is being applied. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-PATH-CONFIRMATION
+
+Подтверждение пути / Verifying path
+
+**RU:** Изменение ещё не принято как подтверждённый маршрут. Требуемое доказательство зависит от сохранённого режима: наблюдения роутера либо отдельный клиентский тест.
+
+**EN:** The change is not yet accepted as a confirmed route. The required evidence depends on the recorded operating mode: router observations or a separate client witness.
+
+**Что делать:** Ожидается подтверждение выбранного пути. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The selected path is awaiting verification. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RESERVE-SELECTED
+
+Резерв выбран / Reserve selected
+
+**RU:** Операция подтвердила выбор резерва. Это не означает неисправность основного: его состояние проверяется отдельно.
+
+**EN:** The recorded operation confirmed reserve selection. This does not imply that the primary is broken; its health is a separate observation.
+
+**Что делать:** Выбор резервного маршрута подтверждён. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Reserve traffic selection was confirmed. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RESERVE-HELD
+
+Резерв удержан / Reserve retained
+
+**RU:** Операция сохранила резервный маршрут. В непрерывном сеансе Auto может продолжать работать; это состояние транзакции не доказывает глобальное выключение Auto.
+
+**EN:** The operation retained reserve routing. In a continuous session Auto may remain on; this transaction state is not proof of a global Auto shutdown.
+
+**Что делать:** Операция завершилась с сохранением резерва. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The operation ended while retaining the reserve. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RETURN-IN-PROGRESS
+
+Возврат маршрута / Returning route
+
+**RU:** Восстановление выполняется. Прежде чем считать исходный маршрут восстановленным, требуется последующее подтверждение.
+
+**EN:** Restoration is in progress. A later verified outcome is required before describing the original route as restored.
+
+**Что делать:** Восстанавливается исходный маршрут. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The original route is being restored. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-ROLLBACK-RECORDED
+
+Записан откат / Rollback recorded
+
+**RU:** Старая запись содержит этап отката. Если подтверждение original_restored в ней отсутствует, успешное восстановление не приписывается.
+
+**EN:** This old record names a rollback. If it lacks an original_restored confirmation, successful restoration must not be invented.
+
+**Что делать:** Зафиксирован этап отката. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** A rollback stage was recorded. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-ORIGINAL-RESTORED
+
+Исходный маршрут восстановлен / Original route restored
+
+**RU:** В событии есть явное подтверждение восстановления. Это отличается от запроса возврата или незавершённого восстановления.
+
+**EN:** The event includes explicit verified restoration evidence. This is separate from a request to return or a restoration-in-progress stage.
+
+**Что делать:** Восстановление исходного маршрута подтверждено. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Restoration of the original route was confirmed. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-OPERATION-STOPPED
+
+Операция остановлена / Operation stopped
+
+**RU:** Операция завершена. Общее состояние Auto и итоговый маршрут определяются по собственным подтверждениям, а не выводятся только из этого слова.
+
+**EN:** The operation ended. A global Auto state and the resulting route must be read from their own recorded confirmations, not inferred from this word alone.
+
+**Что делать:** Управляющая операция остановлена. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The controller operation was stopped. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-AUTO-RUNNING
+
+Auto работает / Auto running
+
+**RU:** Зафиксирован работающий сеанс контроллера. Каналам по-прежнему нужны свежие проверки; это не гарантия каждого клиентского пути.
+
+**EN:** A running controller session was recorded. Each channel still needs fresh connectivity checks; it is not a guarantee of every client path.
+
+**Что делать:** Сеанс Auto работает. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The Auto session is running. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-AUTO-START-REQUESTED
+
+Запрошен запуск / Start requested
+
+**RU:** Это запрос с сохранённым инициатором. Запуск не подтверждён до последующего завершённого состояния.
+
+**EN:** This is the request, including its recorded initiator. Startup is not confirmed until a later completed state.
+
+**Что делать:** Запрошено включение Auto. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Auto activation requested. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-AUTO-STOP-REQUESTED
+
+Запрошена остановка / Stop requested
+
+**RU:** Это запрос остановки, а не доказательство восстановления маршрута или завершения остановки контроллера.
+
+**EN:** This is a stop request, not proof that routing was restored or the controller finished stopping.
+
+**Что делать:** Запрошено выключение Auto. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Auto deactivation requested. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-OPERATION-BLOCKED
+
+Действие отклонено / Action refused
+
+**RU:** Успех не предполагается. Прочитайте сохранённый код причины; не обходите условие и не считайте очередь выполненным выбором маршрута.
+
+**EN:** No success is inferred. Read the saved reason code; do not bypass the gate or treat a queued request as applied routing.
+
+**Что делать:** Действие отклонено из-за невыполненного условия. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** A required prerequisite blocked the action. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-OPERATION-FAILED
+
+Операция не выполнена / Operation failed
+
+**RU:** Прочитайте конкретную сохранённую причину и итог восстановления. Неудачное применение или откат не выдаётся за успешное переключение.
+
+**EN:** Read the specific recorded reason and recovery outcome. Failed application or rollback is not reported as successful switching.
+
+**Что делать:** Операция завершилась ошибкой. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The operation ended with an error. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-WINDOW-EXPIRED
+
+Окно теста завершено / Test window ended
+
+**RU:** Истёк заданный предел времени. Итог маршрутизации или восстановления подтверждается отдельно.
+
+**EN:** A configured time boundary ended. The final routing/recovery outcome is a separate confirmation.
+
+**Что делать:** Закончилось ограниченное окно операции. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The bounded operation window expired. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RECOVERY-PENDING
+
+Восстановление ожидается / Recovery pending
+
+**RU:** Завершение восстановления ещё не проверено. Смотрите сохранённый код; попытка очистки не равна итоговому результату.
+
+**EN:** Recovery has not yet been verified complete. Read the saved recovery code; an attempted cleanup is not the final result.
+
+**Что делать:** Ожидается подтверждение снятия блокировки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Traffic-block release is awaiting confirmation. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RESERVE-DEGRADED
+
+Проблема на резерве / Reserve check failed
+
+**RU:** На резерве наблюдается проблема. Возврат на основной по-прежнему требует актуальных доказательств и применимой политики.
+
+**EN:** A problem was observed on the reserve. Returning to primary still requires current evidence and the applicable policy.
+
+**Что делать:** На выбранном резерве тоже выявлена проблема связи. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The selected reserve also has a connectivity problem. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-TRIAL-PREREQUISITE
+
+Не выполнено условие режима / Mode prerequisite missing
+
+**RU:** Сохранённая причина описывает условие конкретного режима. Отказ прежнего LAN-теста не означает, что любой подготовленный router-probed сеанс требует клиентский сертификат.
+
+**EN:** The saved reason describes the mode-specific prerequisite. A legacy LAN trial refusal does not imply every prepared router-probed session needs a client certificate.
+
+**Что делать:** Для выбранного режима нужно дополнительное условие. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The chosen mode needs an additional prerequisite. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-DETAILS-NOT-SAVED
+
+Подробности не сохранены / Record lacks detail
+
+**RU:** Объясняются только сохранённые поля. Отсутствующие инициатор, роль или итог не заменяются сегодняшним маршрутом или выдуманным успешным переключением.
+
+**EN:** Only the saved fields can be explained. A missing initiator, role or final outcome is not replaced with today's route or an invented successful switch.
+
+**Что делать:** В старой записи не сохранено полное описание события. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** An older record did not retain a full event description. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RECORD-CONFLICT
+
+Ошибка данных записи / Record data conflict
+
+**RU:** Одновременно записаны успех и ошибка. Это не считается успешной проверкой или подтверждённым переходом; проверьте сохранённые диагностические данные.
+
+**EN:** Success and failure were both recorded. Do not treat this as a successful channel or confirmed switch; inspect the saved diagnostic data.
+
+**Что делать:** В сохранённом событии противоречивые результаты. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The saved event contains conflicting results. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-COMMAND-CANCELLED
+
+Команда отменена / Command cancelled
+
+**RU:** Зафиксирована отмена. Итоговый маршрут или завершение очистки подтверждаются отдельно.
+
+**EN:** Cancellation was recorded. The resulting route or cleanup still requires its own confirmation.
+
+**Что делать:** Запрошенная операция отменена. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The requested operation was cancelled. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-COMMAND-ACCEPTED
+
+Команда принята / Command accepted
+
+**RU:** Исполнитель принял команду. Это ещё не доказывает завершение действия с маршрутом.
+
+**EN:** The worker accepted this command. It has not yet proved that the routing action completed.
+
+**Что делать:** Контроллер принял команду в обработку. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The controller accepted the command for processing. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-COMMAND-QUEUED
+
+Команда в очереди / Command queued
+
+**RU:** Принятие в очередь отличается от выполнения и подтверждённого завершения.
+
+**EN:** Queue acceptance is separate from execution and verified completion.
+
+**Что делать:** Команда ожидает выполнения в очереди. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The command is waiting in the queue. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-CONTROLLER-IDLE
+
+Ожидание команды / Waiting for a command
+
+**RU:** У этого исполнителя нет активной операции. Это само по себе не доказывает выключение общего Auto или неисправность канала.
+
+**EN:** This handler has no active operation. It does not alone prove that global Auto is off or either channel is unhealthy.
+
+**Что делать:** Исполнитель операций ожидает команду. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The operation handler is idle. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-RESULT-NEEDS-VERIFICATION
+
+Нужна проверка результата / Verify the result
+
+**RU:** Сохранённые данные не подтверждают фактическое выполнение. Перед повтором сверьте текущее состояние; успешная маршрутизация не предполагается.
+
+**EN:** The saved data does not confirm actual completion. Inspect current state before repeating the action; do not invent successful routing.
+
+**Что делать:** Фактический результат операции ещё не проверен. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The operation result has not been verified. Read the separate saved reason code if present; observation and a confirmed route change are different.

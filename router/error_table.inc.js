@@ -172,6 +172,7 @@ function persistErrorTableState(){try{sessionStorage.setItem('homensai-vpn-error
   ERROR_ROWS.forEach(function(r){ERROR_GROUP_OF[r[0]]=r[1];});
 })();
 function renderErrorTable(){
+  if(typeof ensureJournalDictionary==='function')ensureJournalDictionary();
   var search=E('input',{'type':'search','class':'hv-search','placeholder':bi('Search a code or a word','Поиск по коду или слову'),'aria-label':bi('Search error codes','Поиск по кодам ошибок')});
   var host=E('div',{'class':'hv-errtable'});
   search.value=ERROR_TABLE_STATE.query;
@@ -189,7 +190,7 @@ function renderErrorTable(){
       rows.forEach(function(r){
         var fixRow=null;
         var expanded=ERROR_TABLE_STATE.open[r[0]]===true;
-        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;persistErrorTableState();button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):bi('How to fix','Как исправить');}},expanded?bi('Hide','Скрыть'):bi('How to fix','Как исправить')):null;
+        var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;persistErrorTableState();button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):(r[1]==='journal'?bi('Explanation','Расшифровка'):bi('How to fix','Как исправить'));}},expanded?bi('Hide','Скрыть'):(r[1]==='journal'?bi('Explanation','Расшифровка'):bi('How to fix','Как исправить'))):null;
         table.appendChild(E('tr',{'data-error-code':r[0],'class':ERROR_TABLE_STATE.selected===r[0]?'hv-err-selected':null},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
         if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
       });
@@ -198,5 +199,5 @@ function renderErrorTable(){
     if(!host.firstChild)host.appendChild(E('p',{},bi('No code matches. Try a shorter word.','Ничего не найдено. Попробуйте более короткое слово.')));
   }
   search.addEventListener('input',draw);draw();
-  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Error code table','Таблица кодов ошибок')),E('p',{},bi('Every code the program can show: its name, what it means and, under the button, how to fix it. A code tells what was observed; the cause may stay unknown.','Все коды, которые может показать программа: название, что означает и, под кнопкой, как исправить. Код говорит о том, что наблюдалось; причина может остаться неизвестной.')),(typeof errorExamples==='function'?errorExamples():null),search,host].filter(Boolean));
+  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Events, states and diagnostic codes','События, состояния и диагностические коды')),E('p',{},bi('Every code the program can show: its name, what it means and, under the button, how to fix it. A code tells what was observed; the cause may stay unknown.','Все коды, которые может показать программа: название, что означает и, под кнопкой, как исправить. Код говорит о том, что наблюдалось; причина может остаться неизвестной.')),(typeof errorExamples==='function'?errorExamples():null),search,host].filter(Boolean));
 }

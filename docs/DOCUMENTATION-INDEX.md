@@ -58,6 +58,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/handoff/FIRST-RUN-FLOW-2026-10-23.md](handoff/FIRST-RUN-FLOW-2026-10-23.md)|historical-reference|
 |[docs/handoff/LIMIT-CHECKPOINT-2026-10-21.md](handoff/LIMIT-CHECKPOINT-2026-10-21.md)|historical-reference|
 |[docs/handoff/NEXT-AI-2026-10-24.md](handoff/NEXT-AI-2026-10-24.md)|recovery-record|
+|[docs/handoff/NEXT-AI-2026-10-25.md](handoff/NEXT-AI-2026-10-25.md)|recovery-record|
 |[docs/handoff/OV-QUEUE-ANALYSIS-2026-10-22.md](handoff/OV-QUEUE-ANALYSIS-2026-10-22.md)|historical-reference|
 |[docs/handoff/OV-SETTLING-DESIGN-2026-10-22.md](handoff/OV-SETTLING-DESIGN-2026-10-22.md)|historical-reference|
 |[docs/handoff/OWNER-IDEAS-2026-10-23.md](handoff/OWNER-IDEAS-2026-10-23.md)|historical-reference|
@@ -130,6 +131,8 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/TODO-VIRTUAL-HARDENING.md](TODO-VIRTUAL-HARDENING.md)|historical-reference|
 |[docs/TODO-WORKING-SYSTEM.md](TODO-WORKING-SYSTEM.md)|historical-reference|
 |[docs/TRAINING-AND-DOCS-AUDIT-2026-10-24.md](TRAINING-AND-DOCS-AUDIT-2026-10-24.md)|versioned-evidence|
+|[docs/TRAINING.en.md](TRAINING.en.md)|current-generated-training|
+|[docs/TRAINING.ru.md](TRAINING.ru.md)|current-generated-training|
 |[docs/TUNNEL-COORDINATION.md](TUNNEL-COORDINATION.md)|current-technical|
 |[docs/UCI-FIX-RESULTS-2026-10-16.md](UCI-FIX-RESULTS-2026-10-16.md)|historical-reference|
 |[docs/UCI-PENDING-CHANGES.md](UCI-PENDING-CHANGES.md)|historical-reference|
@@ -140,6 +143,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA15-2026-10-24.md](VERIFICATION-ALPHA15-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA16-2026-10-24.md](VERIFICATION-ALPHA16-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA17-2026-10-24.md](VERIFICATION-ALPHA17-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA18-2026-10-25.md](VERIFICATION-ALPHA18-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -204,6 +208,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha15.md](../releases/v0.9.1-alpha15.md)|versioned-evidence|
 |[releases/v0.9.1-alpha16.md](../releases/v0.9.1-alpha16.md)|versioned-evidence|
 |[releases/v0.9.1-alpha17.md](../releases/v0.9.1-alpha17.md)|versioned-evidence|
+|[releases/v0.9.1-alpha18.md](../releases/v0.9.1-alpha18.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|

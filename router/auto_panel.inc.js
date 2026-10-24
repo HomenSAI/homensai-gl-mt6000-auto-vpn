@@ -169,7 +169,7 @@ function autoReadiness(status,inventory,now){
 var AUTO_LIGHTS=[
   {lamp:'green',key:'ok',icon:'✓',legend:['Green: Auto is on and watching the primary','Зелёный: Auto включён и следит за основным']},
   {lamp:'yellow',key:'switching',icon:'⟳',legend:['Yellow: starting, stopping or switching the route','Жёлтый: запускается, останавливается или переключает маршрут']},
-  {lamp:'orange',key:'reserve',icon:'⇄',legend:['Orange: working on the reserve, the primary is out','Оранжевый: работаю на резерве, основной не работает']},
+  {lamp:'orange',key:'reserve',icon:'⇄',legend:['Orange: the reserve route is selected; primary health is separate','Оранжевый: выбран резерв; исправность основного показана отдельно']},
   {lamp:'red',key:'problem',icon:'!',legend:['Red: needs your attention','Красный: нужно ваше внимание']}
 ];
 function autoLightModel(status,inventory,now){

@@ -128,8 +128,8 @@ var LEARN_LESSONS=[
         "Что такое LAN-помощник? Небольшой скрипт PowerShell 7 (обычный текст, его можно прочитать), который запускается на вашем компьютере с Windows, а не на роутере. Один раз установите PowerShell 7, положите два скачанных файла в одну папку и запустите, сначала выберите режим 1 (только проверка):"
       ],
       [
-        "The Auto light: green — watching the primary; yellow — switching; orange — working on the reserve; red — needs your attention; grey — off.",
-        "Светофор Auto: зелёный — следит за основным; жёлтый — переключается; оранжевый — работает на резерве; красный — нужно ваше внимание; серый — выключен."
+        "The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green in manual control means selected, not independent proof of Internet. Pending commands are yellow; inspect fresh channel checks for availability.",
+        "Большая кнопка показывает включение/выключение Auto. Заголовок маршрута и схема M/R показывают выбранный канал. Зелёный в ручном управлении означает выбор, а не отдельное доказательство Интернета. Ожидающая команда жёлтая; доступность смотрите в свежих проверках канала."
       ]
     ],
     "cmds": [
@@ -273,10 +273,33 @@ var LEARN_QUIZ=[
   {q:['Which ways to connect should you prepare for the first tests? (several answers)','Какие способы подключения нужно подготовить для первых тестов? (несколько ответов)'],o:[['A laptop on a LAN cable','Ноутбук на кабеле LAN',true],['A device on Wi-Fi','Устройство по Wi-Fi',true],['Only one device that you cannot lose','Только одно устройство, которое нельзя потерять',false],['Mobile data on the phone','Мобильный интернет на телефоне',true]]},
   {q:['What is the right order to start working?','Каков правильный порядок начала работы?'],o:[['Accept the terms, start the monitor, check the VPNs, then turn on Auto','Принять условия, запустить мониторинг, проверить VPN, затем включить Auto',true],['Turn on Auto first, check later','Сначала включить Auto, проверить потом',false],['Skip the terms and start Auto','Пропустить условия и сразу запустить Auto',false]]},
   {q:['What must pass before Auto can be started?','Что должно пройти перед запуском Auto?'],o:[['The readiness checks for the selected mode; the helper is mandatory only for a client-confirmed trial','Проверки готовности выбранного режима; помощник обязателен только для теста с подтверждением клиента',true],['A speed test','Тест скорости',false],['A Telegram message','Сообщение в Telegram',false]]},
-  {q:['The Auto light is orange. What does it mean?','Светофор Auto оранжевый. Что это значит?'],o:[['Traffic works on the reserve','Трафик идёт через резерв',true],['Everything is on the primary','Всё идёт через основной',false],['Auto is off','Auto выключен',false]]},
+  {q:['What does Working on the reserve confirm?','Что подтверждает статус «Работаю на резерве»?'],o:[['The reserve route is selected; primary health is checked separately','Выбран резервный маршрут; исправность основного проверяется отдельно',true],['Everything is on the primary','Всё идёт через основной',false],['Auto is off','Auto выключен',false]]},
   {q:['Which of these is a secret that you never send to anyone? (several answers)','Что из этого — секрет, который никому нельзя отправлять? (несколько ответов)'],o:[['The Telegram bot token','Токен Telegram-бота',true],['The router password','Пароль роутера',true],['The country of a VPN server','Страна VPN-сервера',false]]},
   {q:['The internet is gone. What do you do first?','Интернета нет. Что делаете сначала?'],o:[['Open the router page, inspect fresh checks and follow No internet Help','Открываете страницу роутера, проверяете свежие данные и справку «Нет интернета»',true],['Flash the router firmware','Прошиваете роутер',false],['Delete all VPN profiles','Удаляете все VPN-профили',false]]},
   {q:['Which command only reads the state and is always safe?','Какая команда только читает состояние и всегда безопасна?'],o:[['homensai-vpn-emergency show','homensai-vpn-emergency show',true],['homensai-vpn-emergency stop-auto','homensai-vpn-emergency stop-auto',false],['homensai-vpn-emergency remove-guard','homensai-vpn-emergency remove-guard',false]]}
+];
+LEARN_LESSONS[4].body.push(
+ ['To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. Yellow or a queued request is not completion. Continuous Auto may stay on and continue observing.','Для ручного выбора откройте «Обзор» → «Ручное переключение канала». Выберите «Основной» или «Резервный», когда управление доступно, затем дождитесь подтверждённого выбора. Жёлтый цвет или очередь не означают завершение. Непрерывный Auto может оставаться включённым и продолжать наблюдение.'],
+ ['Use the large Auto button to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. A retained-reserve outcome requires its separately offered recovery action.','Большая кнопка Auto запрашивает запуск или остановку. Дождитесь фактического итогового состояния. Выключение Auto не прекращает мониторинг; управляемая остановка может восстановить исходные правила и флаги интерфейсов. Если резерв удержан, используйте отдельно предложенное действие восстановления.']
+);
+LEARN_QUIZ.push(
+ {q:['Can you select a channel while Auto is on?','Можно ли выбрать канал при включённом Auto?'],o:[['Yes, when the manual control is available and the target passes its checks; Auto continues observing','Да, если ручное управление доступно и целевой канал прошёл проверки; Auto продолжает наблюдать',true],['Always stop Auto before any channel selection','Всегда выключать Auto перед любым выбором канала',false],['Channel selection deletes VPN profiles','Выбор канала удаляет VPN-профили',false]]},
+ {q:['Does a successful channel check prove that traffic switched?','Означает ли успешная проверка канала, что трафик переключился?'],o:[['No. A check and a confirmed route change are separate events','Нет. Проверка и подтверждённая смена маршрута — разные события',true],['Yes, every successful check is a switch','Да, каждая успешная проверка — переключение',false],['A successful check means Auto was enabled by the operator','Успешная проверка означает, что оператор включил Auto',false]]},
+ {q:['Does the VPN protocol decide which channel is primary?','Определяет ли протокол VPN, какой канал основной?'],o:[['No. Primary and reserve are saved roles of the selected pair; configure server credentials in the stock VPN app','Нет. Основной и резервный — сохранённые роли выбранной пары; серверы и ключи настраиваются в штатном VPN-приложении',true],['WireGuard must always be primary','WireGuard всегда должен быть основным',false],['OpenVPN must always be primary','OpenVPN всегда должен быть основным',false]]}
+);
+var LEARN_QUESTION_LESSONS=[0,1,2,4,4,7,6,6,4,5,3];
+var LEARN_QUESTION_GUIDANCE=[
+ ['With Auto off, the monitor still checks VPNs and records observations. It does not automatically choose another route.','При выключенном Auto монитор продолжает проверки и запись наблюдений. Автоматически другой маршрут он не выбирает.'],
+ ['Keep a verified cable path and a second way to reach the intended router, plus mobile Internet for recovery. Two equal private IPs can identify different routers.','Подготовьте проверенный кабельный путь и второй способ попасть именно на нужный роутер, а также мобильный интернет для восстановления. Один частный IP может вести к разным роутерам.'],
+ ['Read and accept the terms yourself, follow the explanation/setup, choose an existing pair and inspect fresh readiness before explicitly starting Auto.','Сами прочитайте и примите условия, пройдите объяснение/настройку, выберите существующую пару и проверьте свежую готовность перед явным запуском Auto.'],
+ ['Readiness is mode-specific. Prepared router-probed Auto and a separate client-confirmed LAN trial require different evidence.','Готовность зависит от режима. Подготовленный router-probed Auto и отдельный LAN-тест с подтверждением клиента требуют разных доказательств.'],
+ ['Orange in the Auto status means the reserve route is selected. It does not by itself prove the primary is broken; health is shown separately.','Оранжевый статус Auto означает выбранный резервный маршрут. Это само по себе не доказывает неисправность основного: его проверки показаны отдельно.'],
+ ['Passwords, bot tokens, VPN keys and complete backups are secrets. Server country is a display label, not an authentication secret.','Пароли, токены бота, VPN-ключи и полные резервные копии — секреты. Страна сервера является подписью, а не секретом доступа.'],
+ ['First inspect the router and fresh checks, then use the No internet help. Reflashing and deleting profiles are not first diagnostic steps.','Сначала откройте роутер и свежие проверки, затем помощь «Нет интернета». Прошивка и удаление профилей не являются первым шагом диагностики.'],
+ ['The show command reads the state. Stop-auto can change managed routing during recovery; remove-guard changes the owned traffic block.','Команда show читает состояние. Stop-auto при восстановлении может менять управляемый маршрут; remove-guard изменяет собственную блокировку трафика.'],
+ ['Available manual controls can choose a verified channel while continuous Auto stays on. A queued command is not yet confirmed traffic selection.','Доступное ручное управление позволяет выбрать проверенный канал при работающем Auto. Поставленная в очередь команда ещё не означает подтверждённого выбора трафика.'],
+ ['A successful check is an observation of a channel. Route changes have their own requested, pending and confirmed events.','Успешная проверка — наблюдение за каналом. Для смены маршрута есть отдельные события запроса, выполнения и подтверждения.'],
+ ['Primary and reserve are roles, not protocol names. The application uses an existing pair and does not invent or import VPN credentials.','Основной и резервный — роли, а не названия протоколов. Приложение использует существующую пару и не создаёт или импортирует VPN-ключи.']
 ];
 // A question is correct only when the chosen set equals the set of right options.
 function learnGrade(question,chosen){
@@ -303,7 +326,7 @@ function learnMarkSeen(){try{window.localStorage.setItem('homensai-vpn-learn-see
 function renderLearn(){
   var host=E('section',{'class':'hv-chart-card hv-learn'});
   var scene=null;
-  var mode=learnSeen()?'toc':'flow',visited=[],step=0,answers=[],checked=false,generation=0,total=LEARN_LESSONS.length+LEARN_QUIZ.length+1;
+  var mode=learnSeen()?'toc':'flow',visited=[],step=0,answers=[],graded=[],firstGrades=[],attempts=[],reviewQueue=null,reviewIndex=0,checked=false,generation=0,total=LEARN_LESSONS.length+LEARN_QUIZ.length+1;
   function clear(){if(scene&&scene.hvDispose)scene.hvDispose();scene=null;while(host.firstChild)host.removeChild(host.firstChild);}
   function inline(text){return richText(text);}
   function progress(){return E('div',{'class':'hv-learn-progress','role':'progressbar','aria-valuemin':'0','aria-valuemax':String(total),'aria-valuenow':String(step+1)},[E('span',{'style':'width:'+Math.round((step+1)*100/total)+'%'}),E('small',{},bi('Step ','Шаг ')+(step+1)+' / '+total)]);}
@@ -312,17 +335,24 @@ function renderLearn(){
     function action(fn,disabled){return function(){if(disabled||used||generation!==shown)return;used=true;return fn();};}
     return E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','click':action(back,false)},bi('Back','Назад')):E('span'),next?E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':nextDisabled?'disabled':null,'click':action(next,nextDisabled)},nextLabel):E('span')]);
   }
-  function go(index){if(!Number.isInteger(index)||index<0||index>=total)return;mode='flow';step=index;checked=false;draw();}
+  function go(index,keepReview){if(!Number.isInteger(index)||index<0||index>=total)return;if(!keepReview)reviewQueue=null;mode='flow';step=index;checked=false;draw();}
+  function once(fn){var shown=generation,used=false;return function(){if(used||generation!==shown)return;used=true;return fn();};}
+  function reset(){visited=[];answers=[];graded=[];firstGrades=[];attempts=[];reviewQueue=null;reviewIndex=0;checked=false;}
+  function missed(){return LEARN_QUIZ.map(function(q,i){return i;}).filter(function(i){return !graded[i]||!learnGrade(LEARN_QUIZ[i],answers[i]||[]).ok;});}
+  function retryWrong(){var queue=missed();if(!queue.length)return;queue.forEach(function(i){answers[i]=[];graded[i]=false;});reviewQueue=queue;reviewIndex=0;go(LEARN_LESSONS.length+queue[0],true);}
   function chips(){
-    var items=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-chip'+(step===i?' hv-chip-current':'')+(visited[i]?' hv-chip-visited':''),'title':bi(l.title[0],l.title[1]),'aria-label':bi(l.title[0],l.title[1]),'click':function(){go(i);}},String(i+1));});
-    items.push(E('button',{'type':'button','class':'hv-chip hv-chip-quiz'+(step>=LEARN_LESSONS.length?' hv-chip-current':''),'title':bi('Questions','Вопросы'),'click':function(){go(LEARN_LESSONS.length);}},'?'));
-    return E('div',{'class':'hv-chips'},[E('button',{'type':'button','class':'cbi-button hv-chip-contents','click':function(){mode='toc';draw();}},bi('☰ Contents','☰ Оглавление'))].concat(items));
+    var items=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-chip'+(step===i?' hv-chip-current':'')+(visited[i]?' hv-chip-visited':''),'title':bi(l.title[0],l.title[1]),'aria-label':bi(l.title[0],l.title[1]),'click':once(function(){go(i);})},String(i+1));});
+    items.push(E('button',{'type':'button','class':'hv-chip hv-chip-quiz'+(step>=LEARN_LESSONS.length?' hv-chip-current':''),'title':bi('Questions','Вопросы'),'click':once(function(){go(LEARN_LESSONS.length);})},'?'));
+    LEARN_QUIZ.forEach(function(q,i){items.push(E('button',{'type':'button','class':'hv-chip hv-chip-question'+(step===LEARN_LESSONS.length+i?' hv-chip-current':''),'data-learn-question':String(i),'aria-label':bi('Question ','Вопрос ')+(i+1)+': '+bi(q.q[0],q.q[1]),'click':once(function(){go(LEARN_LESSONS.length+i);})},bi('Q','В')+(i+1)));});
+    items.push(E('button',{'type':'button','class':'hv-chip','click':once(function(){go(total-1);})},bi('Results','Результаты')));
+    return E('div',{'class':'hv-chips'},[E('button',{'type':'button','class':'cbi-button hv-chip-contents','click':once(function(){mode='toc';draw();})},bi('☰ Contents','☰ Оглавление'))].concat(items));
   }
   function toc(){
-    var rows=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-toc-item'+(visited[i]?' hv-toc-visited':''),'click':function(){go(i);}},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},String(i+1)),E('span',{'class':'hv-toc-text'},[E('strong',{},bi(l.title[0],l.title[1])),E('small',{},bi(l.body[0][0].split('. ')[0]+'.',l.body[0][1].split('. ')[0]+'.'))])]);});
-    rows.push(E('button',{'type':'button','class':'hv-toc-item hv-toc-quiz','click':function(){answers=[];go(LEARN_LESSONS.length);}},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},'?'),E('span',{'class':'hv-toc-text'},[E('strong',{},bi('Questions and your score','Вопросы и ваша оценка')),E('small',{},bi('Check what you remember.','Проверьте, что вы запомнили.'))])]));
-    host.appendChild(E('div',{'class':'hv-learn-card'},[E('h2',{},bi('Contents','Оглавление')),E('p',{'class':'hv-learn-intro'},learnSeen()?bi('You have finished the training once. Open any topic you need, in any order.','Вы уже прошли обучение один раз. Открывайте любую тему, в любом порядке.'):bi('Open any topic, or read them one after another starting with 1. The first full pass takes about 5 minutes.','Откройте любую тему или читайте по порядку, начиная с 1. Первый полный проход занимает около 5 минут.')),E('div',{'class':'hv-toc'},rows)]));
-    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){visited=[];answers=[];go(0);}},bi('Start from the beginning','Начать с самого начала')),E('span')]));
+    host.appendChild(chips());
+    var rows=LEARN_LESSONS.map(function(l,i){return E('button',{'type':'button','class':'hv-toc-item'+(visited[i]?' hv-toc-visited':''),'click':once(function(){go(i);})},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},String(i+1)),E('span',{'class':'hv-toc-text'},[E('strong',{},bi(l.title[0],l.title[1])),E('small',{},bi(l.body[0][0].split('. ')[0]+'.',l.body[0][1].split('. ')[0]+'.'))])]);});
+    rows.push(E('button',{'type':'button','class':'hv-toc-item hv-toc-quiz','click':once(function(){go(LEARN_LESSONS.length);})},[E('span',{'class':'hv-toc-num','aria-hidden':'true'},'?'),E('span',{'class':'hv-toc-text'},[E('strong',{},bi('Questions and your score','Вопросы и ваша оценка')),E('small',{},bi('Check what you remember.','Проверьте, что вы запомнили.'))])]));
+    host.appendChild(E('div',{'class':'hv-learn-card'},[E('h2',{},bi('Contents','Оглавление')),E('p',{'class':'hv-learn-intro'},learnSeen()?bi('You can reopen any topic or question in any order.','Можно открыть любую тему или вопрос, в любом порядке.'):bi('Open any topic, or read them one after another starting with 1. The first full pass takes about 5 minutes.','Откройте любую тему или читайте по порядку, начиная с 1. Первый полный проход занимает около 5 минут.')),E('div',{'class':'hv-toc'},rows)]));
+    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':once(function(){reset();go(0);})},bi('Start from the beginning','Начать с самого начала')),E('span')]));
   }
   function lesson(){
     var l=LEARN_LESSONS[step];visited[step]=true;
@@ -340,6 +370,9 @@ function renderLearn(){
     var index=step-LEARN_LESSONS.length,q=LEARN_QUIZ[index],chosen=answers[index]||(answers[index]=[]),shown=generation;
     var grade=checked?learnGrade(q,chosen):null;
     host.appendChild(chips());host.appendChild(progress());
+    var lessonIndex=Array.isArray(LEARN_QUESTION_LESSONS)?LEARN_QUESTION_LESSONS[index]:Math.min(index,LEARN_LESSONS.length-1),context=LEARN_LESSONS[lessonIndex]||LEARN_LESSONS[0];
+    host.appendChild(E('section',{'class':'hv-learn-question-context'},[E('h3',{},bi('Before the question','Перед вопросом')),E('p',{},inline(LEARN_QUESTION_GUIDANCE[index]?bi(LEARN_QUESTION_GUIDANCE[index][0],LEARN_QUESTION_GUIDANCE[index][1]):bi(context.body[0][0],context.body[0][1]))),E('p',{},inline(bi(context.example[0],context.example[1])))]));
+    if(reviewQueue)host.appendChild(E('p',{'role':'status'},bi('Review missed questions: ','Повтор ошибок: ')+(reviewIndex+1)+' / '+reviewQueue.length));
     var options=q.o.map(function(option,i){
       var mark=grade?grade.marks[i]:'none';
       var box=E('input',{'type':'checkbox','disabled':checked?'disabled':null,'change':function(){if(checked||generation!==shown)return;var at=chosen.indexOf(i);if(box.checked&&at<0)chosen.push(i);if(!box.checked&&at>=0)chosen.splice(at,1);draw();}});
@@ -350,19 +383,21 @@ function renderLearn(){
     host.appendChild(E('div',{'class':'hv-learn-card'},[E('div',{'class':'hv-learn-icon','aria-hidden':'true'},'?'),E('h2',{},bi('Question ','Вопрос ')+(index+1)+' / '+LEARN_QUIZ.length),E('p',{'class':'hv-quiz-question'},bi(q.q[0],q.q[1])),E('div',{'class':'hv-quiz-options'},options),
       grade?E('p',{'class':'hv-quiz-result hv-quiz-result-'+(grade.ok?'ok':'bad'),'role':'status'},grade.ok?bi('Correct!','Верно!'):bi('Not quite. Red is your wrong choice, green is the right answer.','Не совсем. Красным отмечен ваш неверный выбор, зелёным — правильный ответ.')):null].filter(Boolean)));
     var last=index===LEARN_QUIZ.length-1;
-    host.appendChild(nav(null,function(){if(!checked){checked=true;draw();}else{checked=false;step++;draw();}},checked?(last?bi('See my result','Узнать результат'):bi('Next question','Следующий вопрос')):bi('Check the answer','Проверить ответ'),!checked&&chosen.length===0));
+    host.appendChild(nav(index>0?function(){go(LEARN_LESSONS.length+index-1);}:null,function(){if(!checked){graded[index]=true;attempts[index]=(attempts[index]||0)+1;if(firstGrades[index]===undefined)firstGrades[index]=learnGrade(q,chosen).ok;checked=true;draw();}else if(reviewQueue){reviewIndex++;if(reviewIndex<reviewQueue.length)go(LEARN_LESSONS.length+reviewQueue[reviewIndex],true);else{reviewQueue=null;go(total-1);}}else{checked=false;step++;draw();}},checked?((reviewQueue?reviewIndex===reviewQueue.length-1:last)?bi('See my result','Узнать результат'):bi('Next question','Следующий вопрос')):bi('Check the answer','Проверить ответ'),!checked&&chosen.length===0));
   }
   function result(){
-    var s=learnScore(LEARN_QUIZ,answers);learnMarkSeen();
-    if(s.percent>=80){try{window.localStorage.setItem('homensai-vpn-learn-done','1');}catch(e){}}
-    host.appendChild(progress());
+    var s=learnScore(LEARN_QUIZ,answers.map(function(a,i){return graded[i]?a:[];})),wrong=missed(),answered=graded.filter(Boolean).length,firstCorrect=firstGrades.filter(function(v){return v===true;}).length;learnMarkSeen();
+    if(answered===LEARN_QUIZ.length&&s.percent>=80){try{window.localStorage.setItem('homensai-vpn-learn-done','1');}catch(e){}}
+    host.appendChild(chips());host.appendChild(progress());
     host.appendChild(E('div',{'class':'hv-learn-card hv-learn-final'},[E('div',{'class':'hv-learn-score hv-learn-score-'+(s.percent>=80?'good':s.percent>=50?'mid':'low'),'aria-hidden':'true'},s.percent+'%'),
       E('h2',{},bi('Your knowledge: ','Ваши знания: ')+s.percent+bi(' out of 100',' из 100')),
       E('p',{},bi(s.correct+' of '+s.total+' answers were fully correct.',s.correct+' из '+s.total+' ответов полностью верны.')),
-      E('p',{'class':'hv-learn-verdict'},learnVerdict(s.percent))]));
-    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){visited=[];step=0;answers=[];checked=false;mode='flow';draw();}},bi('Take the training again','Пройти обучение заново')),E('button',{'type':'button','class':'cbi-button','click':function(){mode='toc';draw();}},bi('☰ Contents','☰ Оглавление')),E('a',{'class':'cbi-button','href':'#help'},bi('Open Help','Открыть помощь'))]));
+      E('p',{},bi('Correct on first attempt: ','Верно с первой попытки: ')+firstCorrect+' / '+s.total),E('p',{},bi('Checked questions: ','Проверено вопросов: ')+answered+' / '+s.total),E('p',{},bi('Total answer checks: ','Всего проверок ответов: ')+attempts.reduce(function(a,n){return a+(n||0);},0)),E('p',{'class':'hv-learn-verdict'},answered<s.total?bi('Some questions are still unanswered. Review the remaining questions below.','На часть вопросов вы ещё не ответили. Пройдите оставшиеся вопросы ниже.'):learnVerdict(s.percent))]));
+    host.appendChild(E('div',{'class':'hv-dv-tablewrap'},E('table',{'class':'table hv-learn-results','data-hv-no-sort':'1'},[E('thead',{},E('tr',{},[bi('Question','Вопрос'),bi('Result','Результат'),bi('Attempts','Попытки')].map(function(t){return E('th',{},t);}))),E('tbody',{},LEARN_QUIZ.map(function(q,i){var ok=graded[i]&&learnGrade(q,answers[i]||[]).ok;return E('tr',{},[E('td',{},E('button',{'type':'button','class':'cbi-button','data-result-question':String(i),'click':once(function(){go(LEARN_LESSONS.length+i);})},String(i+1)+'. '+bi(q.q[0],q.q[1]))),E('td',{},!graded[i]?bi('Not checked','Не проверено'):ok?bi('Correct','Верно'):bi('Review needed','Нужно повторить')),E('td',{},String(attempts[i]||0))]);}))])));
+    if(wrong.length)host.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action','data-learn-retry-wrong':'1','click':once(retryWrong)},(answered<s.total?bi('Answer remaining questions','Пройти оставшиеся вопросы'):bi('Review missed questions','Повторить ошибки'))+' ('+wrong.length+')'));
+    host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':once(function(){reset();step=0;mode='flow';draw();})},bi('Take the training again','Пройти обучение заново')),E('button',{'type':'button','class':'cbi-button','click':once(function(){mode='toc';draw();})},bi('☰ Contents','☰ Оглавление')),E('a',{'class':'cbi-button','href':'#help'},bi('Open Help','Открыть помощь'))]));
   }
-  function draw(){generation++;if(!Number.isInteger(step)||step<0||step>=total){step=0;mode='toc';checked=false;}clear();if(mode==='toc')toc();else if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
+  function draw(){generation++;if(!Number.isInteger(step)||step<0||step>=total){step=0;mode='toc';checked=false;}clear();if(mode==='flow'&&step>=LEARN_LESSONS.length&&step<LEARN_LESSONS.length+LEARN_QUIZ.length)checked=graded[step-LEARN_LESSONS.length]===true;if(mode==='toc')toc();else if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
   draw();
   return host;
 }

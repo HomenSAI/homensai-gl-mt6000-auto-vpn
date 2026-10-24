@@ -766,6 +766,16 @@ function renderDiagnosticPrompt(topic,all){
   }},bi('Copy diagnostic prompt','Скопировать промпт диагностики'));
   return E('div',{'class':'hv-help-diagnostic','data-diagnostic-topic':all?'all':topic.id},[E('h4',{},bi('Ask ChatGPT/Codex or Claude to diagnose','Проверить с помощью ChatGPT/Codex или Claude')),E('p',{},bi('The agent needs tools on your computer and router access. Copying runs no commands. Diagnosis does not authorize repairs.','Агенту нужны инструменты на компьютере и доступ к роутеру. Копирование не запускает команды. Диагностика не разрешает исправления.')),button,field]);
 }
+function renderHelpTraining(){
+  var course=null,container=E('div',{'class':'hv-help-course','hidden':'hidden'}),open=false;
+  var button=E('button',{'type':'button','class':'cbi-button cbi-button-action','aria-expanded':'false','click':function(){
+    open=!open;container.hidden=!open;button.setAttribute('aria-expanded',String(open));
+    button.textContent=open?bi('Hide training','Свернуть обучение'):bi('Start or continue training','Начать или продолжить обучение');
+    if(open&&!course){course=typeof renderLearn==='function'?renderLearn():E('a',{'href':'#learn'},bi('Open training','Открыть обучение'));container.appendChild(course);}
+  }},bi('Start or continue training','Начать или продолжить обучение'));
+  container.hidden=true;
+  return E('section',{'class':'hv-help-training','data-help-training':'1'},[E('h3',{},bi('Learn to use Auto VPN','Как пользоваться Auto VPN')),E('p',{},bi('Explanation, interactive diagrams and questions. Jump to any question, see your score and repeat only the answers you missed. Training never switches the router.','Объяснения, интерактивные схемы и вопросы. Можно перейти к любому вопросу, увидеть баллы и повторить только ошибки. Обучение не переключает роутер.')),button,container]);
+}
 function renderHelp(){
   var setupGuide=false;try{setupGuide=new URL(window.location.href).searchParams.get('setup_help')==='1';}catch(e){}
   var topics=(setupGuide?HELP_TOPICS.filter(function(topic){return topic.id==='setup-guide';}):HELP_TOPICS).map(function(topic){
@@ -778,8 +788,9 @@ function renderHelp(){
   });
   return E('section',{'class':'hv-chart-card hv-help'},[
     E('h2',{},setupGuide?bi('First setup: steps 1–8','Первая настройка: шаги 1–8'):bi('Help and recovery','Помощь и восстановление')),
+    !setupGuide?renderHelpTraining():null,
     E('p',{},setupGuide?bi('Return to the setup tab after reading. This guide changes no settings and keeps your draft. Examples are starting points; keep suitable existing values.','После чтения вернитесь во вкладку мастера. Помощь ничего не меняет и сохраняет ваш черновик. Примеры — отправная точка; подходящие текущие значения можно оставить.'):bi('Pick the situation that matches. Commands are typed on the router over SSH (see “How to connect by SSH”); the Copy button copies a command so you can paste it.','Выберите подходящую ситуацию. Команды вводятся на роутере по SSH (см. «Как подключиться по SSH»); кнопка «Копировать» копирует команду, чтобы вставить её в терминал.'))
-  ].concat(topics));
+  ].concat(topics).filter(Boolean));
 }
 
 var helpNode=null;

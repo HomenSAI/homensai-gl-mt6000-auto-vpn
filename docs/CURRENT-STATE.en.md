@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha17**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha18**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -48,3 +48,9 @@ The controlled fault test automatically chooses the current working channel, eit
 ## Speed tests
 
 The Test speed button opens a review with selected connected servers and payload quota. If tests are off, Enable and run test saves the current limits with manual tests enabled and auto-new OFF, then queues the test only after confirmed saving. Failed enable never starts a test. CPU, traffic, cooldown, quota and route checks remain enforced. Download/upload sample history appears below the server table, with server/period selection and gaps for failures; no live throughput is invented.
+
+## Help learning and event explanations
+
+[Help](TRAINING.en.md) is visible immediately after Settings in all layouts, including Calm. Its lazy embedded course has8illustrated lessons and11questions, direct lesson/question jumps and a result table. Only checked answers earn credit; first-attempt/current scores and check counts are separate. Review repeats only wrong/unanswered questions, retaining correct answers. Training never invokes router controls.
+
+Saved/live events use human state labels and clickable dictionary entries. Successful checks, recovery, requests, preparation, application, confirmation and retained-reserve transaction states are different; a successful check is not a switch and a retained reserve does not imply global AutoOFF. Separate recorded causes link to their own explanations. Missing legacy detail and contradictory records are explained without inventing historical routing or actors.

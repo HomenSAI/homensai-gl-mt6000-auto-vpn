@@ -94,7 +94,7 @@
 .hv-workspace[data-hv-design="b"] .hv-page-header p{font-size:15.5px;line-height:1.6}
 .hv-workspace[data-hv-design="b"] .hv-page>p{font-size:14.5px;line-height:1.75}
 .hv-workspace[data-hv-design="b"] .hv-sidebar>nav a{font-size:15px;min-height:46px}
-.hv-workspace[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="statistics"],.hv-workspace[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="help"],.hv-workspace[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="learn"]{display:none}
+.hv-workspace[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="statistics"],.hv-workspace[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="learn"]{display:none}
 .hv-workspace[data-hv-design="b"] .hv-advanced-toggle{opacity:.8}
 .hv-dv-b{max-width:880px;gap:20px}
 .hv-dv-b .hv-dv-hero{display:flex;align-items:center;gap:22px;padding:26px 28px;border-radius:24px;background:var(--surface);border:1px solid var(--line)}
@@ -646,3 +646,7 @@
 .hv-app table.hv-event-history td:nth-child(2) .hv-channel-badge{display:flex;width:max-content;margin:0 0 6px}
 .hv-app table.hv-event-history td:nth-child(2) .hv-errlink{display:inline-block;max-width:none;white-space:nowrap;word-break:normal;overflow-wrap:normal}
 .hv-app table.hv-event-history td:nth-child(3){white-space:normal;word-break:normal;overflow-wrap:anywhere;vertical-align:top}
+
+.hv-app .hv-learn-question-context{padding:14px;border-left:3px solid var(--accent,#2563eb);background:var(--bg);margin:12px 0}.hv-app table.hv-learn-results{width:100%;min-width:560px}.hv-app .hv-learn-results button{white-space:normal;text-align:left;max-width:100%}.hv-app .hv-chips{flex-wrap:wrap}
+
+.hv-app .hv-journal-description{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}.hv-app .hv-journal-description:hover{color:var(--accent,#2563eb)}.hv-app .hv-live-terminal .hv-journal-description{color:inherit}

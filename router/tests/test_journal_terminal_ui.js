@@ -153,7 +153,7 @@ for(const language of ['en','ru']){
   const s={profiles:[{id:raw.profile,name:'Germany · WireGuard'}],accounting:{reliability:{events:[raw]}}};
   const entry=c.journalRows(s,null,now)[0],message=c.journalMessage(entry,s);
   const expected=role==='source'?(language==='ru'?'Основной канал':'Primary channel'):(language==='ru'?'Резервный канал':'Reserve channel');
-  assert(message.startsWith(expected+' — '+(language==='ru'?'Ошибка соединения':'Connection failed')));assert(message.includes('Germany · WireGuard'));assert(message.endsWith('VPN-003'));
+  assert(message.startsWith(expected+' — '+(language==='ru'?'Ошибка проверки соединения':'Connection check failed')));assert(message.includes('Germany · WireGuard'));assert(message.endsWith('VPN-003'));
  }
 }
 c.bi=en=>en;
@@ -189,7 +189,6 @@ for(const language of ['en','ru']){
 }
 c.bi=en=>en;
 const channelCSS=fs.readFileSync('router/design_layer.css','utf8');assert(channelCSS.includes('prefers-reduced-motion:reduce'));assert(channelCSS.includes('hv-channel-backward'));
-assert(fs.readFileSync('router/journal_panel.inc.js','utf8').includes('renderJournalChannelBadge(row),row.state'));
 console.log('PASS: M/R diagrams in live/history, both directions, pending animation, confirmed colours, failure-only semantics, EN/RU accessibility and reduced motion');
 const diagramHistory=c.renderEventHistory({time:now,accounting:{reliability:{events:[{time:now,sequence:400,kind:'FAILURE',profile:'wireguard:peer_1',role:'source',code:'VPN-003'}]}}});
 assert(diagramHistory.all().some(n=>n.attrs['data-channel-phase']==='failed'),'saved events actually render the shared diagram');

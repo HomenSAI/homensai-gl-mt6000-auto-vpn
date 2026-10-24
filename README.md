@@ -2,7 +2,7 @@
 
 [Русский](README.ru.md) · [English](README.md)
 
-Current version **0.9.1-alpha17** is installed on dedicatedMT3000/4.11.0 with AutoON/reserve and bothVPN DNS+HTTPS verified. Weekly latency history/sliders, exact-source CI and VM/physical acceptance are recorded in [verification](docs/VERIFICATION-ALPHA17-2026-10-24.md). Stable0.9.0 is unchanged. [Delivered state](docs/CURRENT-STATUS.md).
+Current version **0.9.1-alpha18** is installed on dedicated MT3000 with Auto ON and confirmed reserve. Help after Settings includes 8 interactive lessons and 11 questions, scores and wrong-answer retry; event descriptions link to explanations. [Verification](docs/VERIFICATION-ALPHA18-2026-10-25.md). Stable 0.9.0 is unchanged. [Delivered state](docs/CURRENT-STATUS.md).
 
 Monitor an existing OpenVPN/WireGuard pair and switch a verified route. Eight lessons include interactive diagrams with playback, pause and step controls.
 

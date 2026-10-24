@@ -36,7 +36,8 @@ assert(planner.text().includes('not a separate confirmation'));
 assert(planner.all().some(n=>n.attrs['data-diagnostic-copy']==='planner-wait'));
 const commands=topics.reduce((n,t)=>n+t.steps.filter(s=>s.c).length,0);
 assert.equal(page.all().filter(n=>n.tag==='pre').length,commands);
-assert.equal(page.all().filter(n=>n.tag==='button').length,commands+topics.length,'each topic includes its diagnostic copy action');
+assert.equal(details.reduce((n,t)=>n+t.all().filter(x=>x.tag==='button').length,0),commands+topics.length,'each topic retains command and diagnostic copy actions independently of training controls');
+assert(page.all().some(n=>n.attrs['data-help-training']==='1'),'Help exposes the learning entry');
 // The page is wired into the generated dashboard.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');

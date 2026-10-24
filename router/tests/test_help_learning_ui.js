@@ -1,0 +1,9 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+class N{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children).flat().filter(v=>v!=null);this.hidden=attrs.hidden!=null;}appendChild(n){this.children.push(n);return n;}removeChild(n){this.children.splice(this.children.indexOf(n),1);}get firstChild(){return this.children[0];}setAttribute(k,v){this.attrs[k]=v;}addEventListener(k,f){this.attrs[k]=f;}all(){return [this,...this.children.flatMap(n=>n instanceof N?n.all():[])];}text(){return this.children.map(n=>n instanceof N?n.text():String(n)).join('');}}
+for(const language of ['en','ru']){
+ const c={E:(...a)=>new N(...a),locale:language,bi:(en,ru)=>language==='ru'?ru:en,richText:t=>t,URL,window:{location:{href:'http://router/#help'},localStorage:{getItem:()=>null,setItem(){}}},navigator:{},rpc:{declare(){throw Error('Help/training must not change router');}}};vm.createContext(c);for(const n of ['help_panel','learn_panel'])vm.runInContext(fs.readFileSync('router/'+n+'.inc.js','utf8'),c);
+ const help=c.renderHelp(),card=help.all().find(n=>n.attrs['data-help-training']==='1'),button=card.all().find(n=>n.tag==='button'),container=card.children.at(-1);assert(card&&container.hidden);assert(!container.children.length,'course is lazy, not a hidden background scene');
+ button.attrs.click();assert(!container.hidden);const root=container.children[0];assert(root.all().some(n=>n.attrs['data-learn-question']==='10'),'Help contains all eleven question jumps');
+ button.attrs.click();assert(container.hidden);button.attrs.click();assert.strictEqual(container.children[0],root,'collapsing Help course does not lose its answers');
+}
+console.log('PASS: Help landing has lazy embedded learning, all question navigation, EN/RU and collapse/reopen preserves the course, no router RPC');

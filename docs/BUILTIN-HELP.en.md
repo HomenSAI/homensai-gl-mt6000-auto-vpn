@@ -1,9 +1,9 @@
 <!-- doc-role: current-generated-help -->
-# Built-in Help: complete reference
+# Built-in Help: topics and diagnostic prompts
 
 Generated from runtime topics, including readiness recipes, setup guide and diagnostic prompts. / Сформировано из тем приложения, рецептов готовности, помощи мастера и промптов.
 
-[Current state](CURRENT-STATUS.md) · [Installation prompt](AI-INSTALL.en.md)
+[Current state](CURRENT-STATUS.md) · [Installation prompt](AI-INSTALL.en.md) · [Training](TRAINING.en.md)
 
 <a id="ai-prompt"></a>
 ## Prompt for your AI agent

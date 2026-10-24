@@ -9,7 +9,7 @@ async function main(){
  const search=root.all().find(n=>n.attrs.type==='search');search.attrs.input({target:{value:'SPECIAL-OLD-EVENT'}});
  await new Promise(resolve=>setImmediate(resolve));
  assert(c.EVENT_VIEW.stored&&c.EVENT_VIEW.stored.controller.events.length===130,'all pages are loaded for searching, not only the visible twenty');
- assert.equal(root.all().find(n=>n.tag==='tbody').children.length,1);assert(root.text().includes('SPECIAL-OLD-EVENT'));
+ assert.equal(root.all().find(n=>n.tag==='tbody').children.length,1);assert(root.text().includes('An older record did not retain'));assert(root.all().some(n=>n.attrs['data-original-state']==='SPECIAL-OLD-EVENT'),'search retains the original event identity while explaining missing legacy detail');
  assert.strictEqual(c.renderEventHistory(status),root,'polling retains search input/focus/reading DOM');assert.equal(c.EVENT_VIEW.query,'SPECIAL-OLD-EVENT');
  search.attrs.input({target:{value:''}});assert.equal(root.all().find(n=>n.tag==='tbody').children.length,20);
  const more=root.all().find(n=>n.tag==='button'&&n.attrs['aria-expanded']);more.attrs.click();assert.equal(root.all().find(n=>n.tag==='tbody').children.length,130);more.attrs.click();assert.equal(root.all().find(n=>n.tag==='tbody').children.length,20);

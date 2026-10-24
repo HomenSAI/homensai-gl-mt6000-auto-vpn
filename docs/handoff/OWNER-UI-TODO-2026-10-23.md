@@ -1,3 +1,6 @@
+72. [ ] События/состояния: понятные точные названия вместо OK/дублей, каждаястрока/состояние открываетрасшифровку и связано с таблицейописаний; старые недостающиеданные объяснять, невыдумыватьпереходы.
+73. [ ] Помощь сразу послеНастройки: интерактивныеуроки/вопросы/переходклюбомувопросу,баллы/статистика,повтормимоошибочныхответов иобучениепониманиюсостояний/ручногорежима. Обе задачи однимследующимкандидатом.
+
 71. [x] alpha17: «Просмотр последних7суток»,1–168ч/недельныйpan, реальное1–7днейхранение/MAX10081минут/2МиБ/компактныйRPC/старыйschema1. CI774app/112QA×2+47UI; VMinstalled17/реальныйнедельныйфайл/RPC10081PASS,VMoff0. MT3000AutoONreserve/7dayAPI/824closedoldrows/193pre-postbackups/settings/terms/4speedrows verified; GitHub/Gitea actualprereleasesиактивыпроверены. Старые удалённые данные не выдумываются; nativevisual unverified. Report docs/VERIFICATION-ALPHA17-2026-10-24.md.
 
 70. [x] alpha16: «Состояние»27%, «Событие»58%, код целиком под схемойM/R, горизонтальнаяпрокруткаузкогоэкрана. Существующиеhistory/journalрегрессии и dualCI771app/112QA×2+47UI PASS.193/193encryptedbackups, фактическийMT3000AutoONreserve/87files/HTTP/HTTPS/settings/terms/4speedrows preserved. GitHub/Gitea prereleases/активыпроверены. Nativevisual unavailable;01207a3 testfixtureTTLfailure retained/fixedtestonly. Report docs/VERIFICATION-ALPHA16-2026-10-24.md.

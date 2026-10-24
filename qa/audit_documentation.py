@@ -53,7 +53,8 @@ def audit():
  manifest=json.loads((ROOT/'qa/documentation-generated.json').read_text(encoding='utf-8'))
  for group in ('inputs','outputs'):
   for name,digest in manifest[group].items():assert normalized_hash(ROOT/name)==digest,'GENERATED-DOC-STALE:'+name
- assert len(manifest['outputs'])==7,'GENERATED-REFERENCE-COVERAGE'
+ required={'docs/'+name for name in ('AI-INSTALL.en.md','AI-INSTALL.ru.md','AI-LAN.en.md','AI-LAN.ru.md','BUILTIN-HELP.en.md','BUILTIN-HELP.ru.md','ERROR_CODES.md','TRAINING.en.md','TRAINING.ru.md')}
+ assert required<=set(manifest['outputs']),'GENERATED-REFERENCE-COVERAGE'
  for lang in ('en','ru'):
   lan=(ROOT/('docs/AI-LAN.'+lang+'.md')).read_text(encoding='utf-8')
   assert '.\\client-test.ps1' in lan and '.\\start-lan-helper.ps1' in lan,'WINDOWS-PROMPT-PATH'

@@ -12,7 +12,7 @@ function terminalUpdateLine(node,entry,status){
   node.children[0].textContent=terminalTime(first)+(first===entry.time?'':' — '+terminalTime(entry.time));
   var content=node.children[1];content.textContent='';
   var badge=renderJournalChannelBadge(entry);if(badge)content.appendChild(badge);
-  content.appendChild(E('span',{},journalMessage(entry,status)+(count>1?' · '+bi('repeated ','повторено ')+count+' '+bi('times','раз'):'')));
+  content.appendChild(journalDescriptionContent(entry,status,count>1?' · '+bi('repeated ','повторено ')+count+' '+bi('times','раз'):''));
   node.setAttribute('data-repeat-count',String(count));
 }
 function terminalSignature(entry){
