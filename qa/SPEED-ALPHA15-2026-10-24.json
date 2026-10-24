@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "candidate": "0.9.1-alpha15",
+  "result": "PASS_UI_REGRESSION_AND_REAL_ROUTER_WITH_VISUAL_LIMIT",
+  "scope": "New UI launch/chart regressions plus actual unchanged speed engine measured on prior installed alpha14; no new native-browser acceptance",
+  "ui": {
+    "launch_regression": "PASS",
+    "collapse_regression": "PASS",
+    "automatic_new_after_enable": false,
+    "failed_enable_prevents_start": true,
+    "backend_guards_unchanged": true,
+    "chart": "stored download/upload Mbps per selected server and period, failures split lines"
+  },
+  "real_engine": {
+    "installed_version": "0.9.1-alpha14",
+    "profiles_tested": 2,
+    "completed": true,
+    "automatic": false,
+    "payload_reserved_bytes": 16777216,
+    "auto_continued_running": true,
+    "selected_channel_confirmed": true,
+    "samples": [
+      {
+        "protocol": "wireguard",
+        "download_mbps": 28.845,
+        "upload_mbps": 17.455,
+        "latency_ms": 258.1,
+        "code": null
+      },
+      {
+        "protocol": "openvpn",
+        "download_mbps": 17.409,
+        "upload_mbps": 9.039,
+        "latency_ms": 417.5,
+        "code": null
+      }
+    ]
+  },
+  "visual": "Computer Use stopped before state capture: browser URL could not be confidently determined; no further UI input issued",
+  "recorded_utc": "2026-10-24T19:13:14.618262+00:00",
+  "version": "0.9.1-alpha15",
+  "tested_product_source": "a60971e61cecb5a870aa2dc500c96d260f203f5f",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha15-1_all.ipk",
+    "bytes": 831752,
+    "sha256": "98e8ff51ab77e895a693ef08f519d51062e3d6fab41afa78ba7c10ed6c78dab0"
+  },
+  "ci": {
+    "runtimes": 2,
+    "application_each": 771,
+    "qa_each": 112,
+    "ui_suites": 47,
+    "scope": "complementary skips explicit in exact-source receipts"
+  },
+  "installed_ui": {
+    "result": "PASS",
+    "version": "0.9.1-alpha15",
+    "new_launch_and_chart_installed": true,
+    "stored_speed_results": 2,
+    "manual_speed_enabled": true,
+    "auto_new_off": true,
+    "auto_running_on_reserve": true,
+    "native_browser_visual": "NOT_VERIFIED_URL_POLICY_STOP",
+    "time": 1792869560.7416399,
+    "observed_utc": "2026-10-24T19:19:14.585809+00:00"
+  },
+  "actual_alpha15": {
+    "state": "DONE",
+    "completed_profiles": 2,
+    "saved_history_rows": 4,
+    "old_samples_preserved": true,
+    "payload_reserved_bytes": 16777216,
+    "daily_reserved_bytes": 33554432,
+    "auto_running_on_reserve": true,
+    "latest_samples": [
+      {
+        "protocol": "wireguard",
+        "download_mbps": 30.463,
+        "upload_mbps": 17.93,
+        "latency_ms": 231.2,
+        "code": null
+      },
+      {
+        "protocol": "openvpn",
+        "download_mbps": 14.57,
+        "upload_mbps": 10.378,
+        "latency_ms": 540.8,
+        "code": null
+      }
+    ]
+  }
+}

@@ -1,3 +1,19 @@
+# READY FOR PUBLICATION: owner69 speed fix alpha15 installed —24October2026
+
+Exacta60971e CI771app/112QA each/47UI PASS; canonical831752bytes SHA98e8ff51ab77e895a693ef08f519d51062e3d6fab41afa78ba7c10ed6c78dab0. Source fixes disabled-test review/save/start, preserves limits/auto-newOFF, preselectsconnectedVPNs, displays refusals/busy and realdownload/uploadchart belowtable with server/period/errorgaps. Backendguards unchanged. NativeComputerUse stopped before capture due unknownbrowserURL; no furtherUIinput, visualNOTVERIFIED.
+
+MT3000alpha15/dashboard91/ui63 physicallyverified87files/modes,RPC,HTTP8080/pinnedHTTPS,settings/terms1,encrypted192before/193after independentlydecrypted/read. FirstnormalStart67.125s, reserve41.203s. AutoON/confirmedreserve/bothVPNDNS+2HTTPS.2prior speedrows preserved+2actualnew rows:WireGuard30.463/17.930,OpenVPN14.570/10.378Mbps. Manualspeedenabled,auto-newOFF,32MiBtotalreservedacrossbothbatches,noquotareset. No hostnetwork/mainMT6000/fault changes.
+
+Read docs/VERIFICATION-ALPHA15-2026-10-24.md,qa/SPEED-ALPHA15-2026-10-24.json,qa/MT3000-ALPHA15-2026-10-24.json. Private evidence private/speed-alpha15-20261024 and private/alpha15-install-20261024. Next: owner-authorized combinedGitHub/Giteafeature/tag/actualprerelease and source-onlyclosure; stable0.9.0/main untouched. LeaveAutoONreserve/usergateway127.0.0.2:8080 alive. Earlier active/alpha14 headings below are history.
+
+# ACTIVE: owner69 speed launch/chart alpha15 —24October2026
+
+Owner asks working Test speed and graph below server descriptions. Source0.9.1-alpha15/dashboard91/ui63: disabled manual testing can be explicitly enabled/launched in review without bypassing backend guards; preserve limits, auto-newOFF, connected profiles preselected, failure feedback/busy states; real stored download/upload chart with server/period selection and error gaps. New launch/chart UI regression plus existing speed-collapse test PASS. FullCI/canonical build/deployment pending; source not yet delivered.
+
+ActualMT3000 alpha14 backend tested through existing normalsetup_speed→speed_start: manual enabled/auto-newOFF,2already-connected profiles,16MiB reserved. Bothsuccess: WireGuard28.845/17.455Mbps,OpenVPN17.409/9.039Mbps,AutoRUNNING/confirmedreserve. No route/hostnetwork/VPN changes. These are engine measurements onalpha14, not yet newUI acceptance. Evidence private/speed-alpha15-20261024/actual-speed-start.json and actual-speed-results.json. New code does not weaken disabled/quota/CPU/traffic/route guards; first explicit action saves enabled settings. Last physical full delivery remainsalpha14, published on both services.
+
+Next: full exact-source CI and package; install dedicatedMT3000, restoreAutoONreserve, verify servedchart and retained actualsamples, then combined GitHub/Gitea delivery within standing owner authorization. Keep userloopbackgateway127.0.0.2:8080 alive. Do not rerun previous rewrite scripts blindly.
+
 # COMPLETE: alpha14 documentation/helper audit delivered —24October2026
 
 Owner68 complete within recorded test scopes. [GitHub alpha14](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14) · [Gitea alpha14](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14). Actual non-draft prereleases, four assets each downloaded/hash-verified. Gitea canonical tag/source388879bd1ef28a7bb0eb385cf10754bc97c84437 / GitHub tag/source17740c6e83cfd89a45b0f7947b81ace6f9eaa83a, identical treeb61b99e60c9eda6d0034d8ddf589f43749b594ed. Both feature histories retained, main/stable0.9.0 unchanged. Product exactfe3b492 CI771app/112QA each,46UI; canonical829928byteIPK SHA49ffb3e57b288f899c84e77546e7b1a0e26243300765bf5927ef8270ae214342. Failed intermediate8984120 install-kit mismatch retained and corrected. Publication-only documentation closure follows without product changes.

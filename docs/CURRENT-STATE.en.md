@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha14**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha15**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -44,3 +44,7 @@ The controlled fault test automatically chooses the current working channel, eit
 [LAN helper](LAN-HELPER.en.md): SelfTest offline, CheckOnly prerequisites, ProbeOnly actual bound data, full mode a separately authorized router-changing trial. The control path is checked before credentials/RPC; no host network settings are automatically repaired. [Full built-in Help](BUILTIN-HELP.en.md), [codes](ERROR_CODES.md) and [AI installation prompt](AI-INSTALL.en.md) are synchronized with runtime sources.
 
 [Install one chosen release](INSTALL.en.md) using matching immutable package/SHA256/evidence/kit; do not downgrade newer code. Preserve a verified private encrypted backup. Publication, unit/DOM/model tests, actual VM, actual device, native browser, client traffic and external AI-model execution are distinct evidence. [Tested environment](TESTED-ENVIRONMENT.en.md) · [verification meanings](VERIFICATION.md).
+
+## Speed tests
+
+The Test speed button opens a review with selected connected servers and payload quota. If tests are off, Enable and run test saves the current limits with manual tests enabled and auto-new OFF, then queues the test only after confirmed saving. Failed enable never starts a test. CPU, traffic, cooldown, quota and route checks remain enforced. Download/upload sample history appears below the server table, with server/period selection and gaps for failures; no live throughput is invented.

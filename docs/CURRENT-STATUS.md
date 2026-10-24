@@ -1,12 +1,10 @@
 <!-- doc-role: current-delivery-record -->
 # Current status / Текущее состояние —24.10.2026
 
-На выделенном **MT3000/4.11.0 установлена0.9.1-alpha14**: Auto включён, подтверждён резерв, оба VPN прошли DNS+двеHTTPS. Проверены87неизменяемых файлов и права, фактическиеHTTP8080/HTTPS, сохранность настроек/условий и шифрованные190-entry копии до/после с независимым восстановлением в памяти. [Физический отчёт](../qa/MT3000-ALPHA14-2026-10-24.json).
+**0.9.1-alpha15 установлена наMT3000/4.11.0**: AutoВКЛ/подтверждёнрезерв, обаVPNDNS+2HTTPS. Исправлена кнопка теста скорости и добавлен график скачивания/отдачи под серверами. Четыре реальные успешные записи, включаядве после установки. [Отчётalpha15](VERIFICATION-ALPHA15-2026-10-24.md) · [QA](../qa/SPEED-ALPHA15-2026-10-24.json) · [MT3000](../qa/MT3000-ALPHA15-2026-10-24.json).
 
-**0.9.1-alpha14 is installed on the dedicated MT3000/4.11.0**: AutoON, confirmed reserve, bothVPN DNS+2HTTPS healthy.87immutable files/modes, servedHTTP8080/HTTPS, settings/terms and independently decrypted/read190-entry pre/post backups verified. [Physical receipt](../qa/MT3000-ALPHA14-2026-10-24.json).
+**0.9.1-alpha15 is installed onMT3000/4.11.0**, AutoON/confirmedreserve, bothVPN DNS+2HTTPS. Speed launch works through explicit review and a measured download/upload chart appears below servers. Exact-source two-runtimeCI771application/112QA each/47UI,87installedfiles/modes/servedHTTP+pinnedHTTPS,settings/terms and independently restored192/193entryencryptedbackups verified. Four actual goodput samples retained. Native-browser visuals were blocked byComputerUse URL identification and are not certified.
 
-Exact-source dual-runtime CI771application/112QA per runtime and46UI; canonical829928byteIPK SHA256`49ffb3e57b288f899c84e77546e7b1a0e26243300765bf5927ef8270ae214342`. [Audit/report scopes](DOCUMENTATION-AUDIT-2026-10-24.md) · [82prompt recipe matrix](../qa/OWNER-DOCS-ALPHA14-2026-10-24.json). New isolated x86VM install/reinstall/upgrade/RPC/HTTP/setup/retention/emergency tests passed; VM poweredoff exit0. ExternalAI autonomy, physicalLAN/IPv6/KillSwitch and native-browser visuals remain separate.
+[Alpha14 documentation audit](DOCUMENTATION-AUDIT-2026-10-24.md) and its actualx86VM results remain separate historical evidence. Stable0.9.0/main unchanged. Alpha15 publication status is recorded in its verification report.
 
-Published actual prereleases: [GitHub alpha14](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14) · [Gitea alpha14](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14). Four assets per server downloaded and SHA256-verified; see [alpha14 verification](VERIFICATION-ALPHA14-2026-10-24.md). Stable0.9.0 and main histories are preserved; alpha13 is the previous installed/public baseline. Historical reports retain their own versions and are not current instructions.
-
-[Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [Изменения RU→EN](LATEST-CHANGES.md) · [Хранение истории](HISTORY-RETENTION.md) · [Локальный доступ](LOCAL-ACCESS.md)
+[Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [ChangesRU→EN](LATEST-CHANGES.md) · [Local access](LOCAL-ACCESS.md)

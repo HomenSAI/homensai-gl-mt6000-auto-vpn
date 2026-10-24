@@ -9,6 +9,7 @@ class N{
 for(const lang of ['en','ru']){
  const observers=[],c={E:(...a)=>new N(...a),bi:(en,ru)=>lang==='ru'?ru:en,locale:lang,Date,Intl,serverTitle:p=>p.name,
   MutationObserver:class{constructor(fn){this.fn=fn;}observe(){observers.push(this.fn);}}};
+ c.document={createElementNS:(_ns,tag)=>new N(tag,{})};
  vm.createContext(c);for(const file of ['channel_guidance','speed_table'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);
  const now=Date.now()/1000,profiles=Array.from({length:8},(_,i)=>({id:'vpn'+i,name:'Server '+i,interface:'wg'+i}));
  const results=profiles.map((p,i)=>({id:p.id,name:p.name,time:now-i,download:{mbps:100-i},upload:{mbps:50-i}}));
