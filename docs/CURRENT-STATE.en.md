@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha15**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha16**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 

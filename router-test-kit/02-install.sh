@@ -1,11 +1,11 @@
 #!/bin/sh
 # HomenSAI Auto VPN test kit, step 2: install/upgrade the audited package. Monitor only; Auto stays OFF.
-# Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.1-alpha15-1_all.ipk
+# Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.1-alpha16-1_all.ipk
 # Requires step 1 and verified Auto OFF/recovery. No firmware replacement.
 # Package lifecycle may stop own services; never force past its guards.
-EXPECTED_SHA=98e8ff51ab77e895a693ef08f519d51062e3d6fab41afa78ba7c10ed6c78dab0
-EXPECTED_SIZE=831752
-EXPECTED_VERSION=0.9.1-alpha15-1
+EXPECTED_SHA=913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9
+EXPECTED_SIZE=831904
+EXPECTED_VERSION=0.9.1-alpha16-1
 KIT=/tmp/homensai-kit
 IPK="$1"
 die() { echo "STOP: $*" >&2; exit 1; }

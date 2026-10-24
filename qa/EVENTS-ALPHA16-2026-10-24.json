@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "result": "PASS_SOURCE_AND_PHYSICAL_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha16",
+  "tested_product_source": "e7609c981cb108a4fc79439d2b11368c1161e795",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha16-1_all.ipk",
+    "bytes": 831904,
+    "sha256": "913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9"
+  },
+  "change": {
+    "scope": "CSS only feature; version/cache literals and independent test-fixture isolation also updated",
+    "date_column_percent": 15,
+    "state_column_percent": 27,
+    "event_column_percent": 58,
+    "diagram_on_own_line": true,
+    "state_code_no_internal_breaks": true,
+    "table_min_width_px": 880,
+    "existing_horizontal_scroll": true,
+    "event_data_rendering_unchanged": true
+  },
+  "ci": {
+    "runtimes": 2,
+    "application_each": 771,
+    "qa_each": 112,
+    "ui_suites": 47,
+    "skips": "complementary runtime skips recorded in exact-source receipts"
+  },
+  "focused_regressions": [
+    "existing event_history_ui PASS",
+    "existing journal_terminal_ui PASS",
+    "existing manual_native_boundary5cases PASS after test isolation"
+  ],
+  "retained_ci_failure": {
+    "result": "FAIL_RETAINED_THEN_FIXTURE_CORRECTED",
+    "source": "01207a3",
+    "application_tests": 771,
+    "failures": 2,
+    "errors": 2,
+    "affected": "test_manual_native_boundary",
+    "cause": "global subprocess.Popen fake also intercepted retention_settings UCI read when the five-second cache expired; routing fake rotated the synthetic backend for an unrelated read",
+    "correction": "e7609c9 scopes configured_days=7 in the existing native boundary fixture, preserving production code and case assertions",
+    "product_payload_unchanged": true,
+    "new_full_ci": "PASS e7609c981cb108a4fc79439d2b11368c1161e795, both runtimes"
+  },
+  "installed_layout": {
+    "result": "PASS",
+    "version": "0.9.1-alpha16",
+    "state_width_percent": 27,
+    "event_width_percent": 58,
+    "code_below_diagram": true,
+    "state_code_no_wrap": true,
+    "retained_successful_speed_rows": 4,
+    "speed_settings_preserved": true,
+    "auto_on_reserve": true,
+    "native_browser_visual": "NOT_VERIFIED_NO_BROWSER_SURFACE",
+    "time": 1792871068.9232292,
+    "observed_utc": "2026-10-24T19:44:22.800250+00:00"
+  },
+  "visual": "NOT_VERIFIED: native browser inventory exposed no apps/browsers; no UI input",
+  "recorded_utc": "2026-10-24T19:45:55.939816+00:00"
+}

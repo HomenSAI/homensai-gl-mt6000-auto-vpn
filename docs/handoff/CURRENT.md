@@ -1,3 +1,25 @@
+# READY FOR PUBLICATION: alpha16 event layout verified on MT3000 —24October2026
+
+Exacte7609c9 CI771app/112QA each/47UI PASS. Canonical831904bytes SHA913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9; initial01207a3 cache-dependent fixturefailure retained/fixedtestonly. CSSfeature15/27/58widths, codeunderM/R/unbroken,min880/horizontal scroll. Existinghistory/terminal tests passed; nativebrowserinventoryempty, no visualclaim.
+
+MT3000alpha16/dashboard92/ui64 installed87files/modes,RPC,actualHTTP8080+pinnedHTTPS,CSSrulesreadback;AutoONreserve/bothVPNDNS+2HTTPS. NormalStart64.672s,reserve41.281s. Four speedrows/manualspeedON/auto-newOFF/terms1/settingspreserved.193before/193afterencryptedbackups independentlydecrypted/read. No new speedtest/fault/hostnetwork/mainMT6000change. Read docs/VERIFICATION-ALPHA16-2026-10-24.md,qa/EVENTS-ALPHA16-2026-10-24.json,qa/MT3000-ALPHA16-2026-10-24.json. Next owner-authorized combinedGitHub/Gitea actualprerelease/featurebranch and source-onlyclosure; stablemain0.9.0 unchanged. Keep usergateway127.0.0.2:8080alive. Earlier active headings below are superseded.
+
+# INSTALLING: alpha16 full CI PASS, MT3000 update in progress —24October2026
+
+Exacte7609c981cb108a4fc79439d2b11368c1161e795 full dual-runtimeCI PASS,771app/112QA each/47UI. Same canonical831904byteIPK SHA913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9.01207a3 TTL-dependent fixture failure retained; test-onlyrepair passedfocused5andfullmatrix; product/guardsunchanged. Owner70 CSS15/27/58widths,codeunderM/R,nointernalbreaks.
+
+DedicatedMT3000 update started via private/alpha16-install-20261024/run.py:193entryfreshencryptedbackup independentlydecrypted/read. Stop/install/RPC/HTTP/HTTPS/Start/reserve sequence in progress. Read immutable per-step receipts/transport logs before resuming; never repeat completed steps or bypass failed guards. Required finalAutoONreserve,4speedrows,manualspeedON/auto-newOFF/settings/terms1preserved. No new speedtest/fault/hostnetwork changes. Publication still pending, feature/main/stable15baseline tracked in priorheaders. Usergatewaykeepalive127.0.0.2:8080.
+
+# VALIDATING: alpha16 test isolation corrected —24October2026
+
+Initialcf165e fullCI passed, package913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9/831904bytes. Metadata-source01207a3 failed4manual-native-boundary cases: global Popen fake intercepted retention UCI read only after5s cache expiry. Test-onlye7609c9 fixes fixtureconfigured_days=7; productionpayload unchanged, no guards weakened. Focused5case/fullCI rerun in progress; new fullPASS required before install. Physicalstillalpha15AutoONreserve/manualspeedON/auto-newOFF,4speedrows. Source16notdelivered. Keep previousfailure private/events-alpha16-20261024/retained-ci-failure.json; never label01207a3PASS.
+
+# ACTIVE: owner70 saved-history column layout alpha16 —24October2026
+
+Owner70 asks widerState/narrowerEvent and code belowM/R diagram without splitting. CSS-only feature:15/27/58percent columns, min880px/horizontal scrolling, diagram block before unbroken code, Event normal wrapping. No event data/rendering/controller changes. Existing event_history/journal_terminal regressions PASS. Candidate0.9.1-alpha16/dashboard92/ui64; fullCI/canonical artifact/install/publication pending. Last verified device/publicbaselinealpha15 AutoONreserve with4successful speed samples, manualspeedON/auto-newOFF. Do not lose these settings/history.
+
+Nativebrowser inventory via cua_repl reports no available apps/browsers; priorWindowsComputerUse URL-policy stop remains historical. No visualacceptance claim or UI fallback. Keep userloopbackgateway alive. Scope delivery standingownerpermission: new version/canonicalCI, dedicatedMT3000 backup→Stop/install/Start→reserve, GitHub/Giteafeature/prerelease. Main/stable0.9.0 unchanged. Store evidence under private/events-alpha16-20261024 and fresh private/alpha16-install-20261024. Newdictation goes immediately to ownerTODO.
+
 # COMPLETE: owner69 speed launch/chart alpha15 delivered —24October2026
 
 [GitHub alpha15](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15) · [Gitea alpha15](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha15). Actualnon-draft prereleases,fourassets/server downloaded/SHA256verified. Canonicaltag/source7591d37f26a10d60df38c77e3f041fca8e54e012 andpublictag/source292eb5000933a17de9d0ed75ba9b8dd293ad529e,identicaltreebd3c50c139433fbf6e2cdb0e9b3aeebdb71429a2. Stable0.9.0/main/oldtags unchanged. Exactproducta60971e61cecb5a870aa2dc500c96d260f203f5f CI771app/112QA each/47UI PASS. Canonical831752bytes SHA98e8ff51ab77e895a693ef08f519d51062e3d6fab41afa78ba7c10ed6c78dab0. Docs-only closure follows without product changes.

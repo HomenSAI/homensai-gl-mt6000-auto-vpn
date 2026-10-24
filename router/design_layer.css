@@ -636,3 +636,13 @@
 @keyframes hv-channel-backward{0%,100%{transform:translateX(3px);opacity:.5}55%{transform:translateX(-3px);opacity:1}}
 @media(prefers-reduced-motion:reduce){.hv-app .hv-channel-moving .hv-channel-arrow{animation:none}}
 @media print{.hv-app .hv-channel-moving .hv-channel-arrow{animation:none}}
+
+/* Saved events: the route diagram and state code occupy separate lines. */
+.hv-app table.hv-event-history{width:100%;min-width:880px;table-layout:fixed}
+.hv-app table.hv-event-history th:nth-child(1),.hv-app table.hv-event-history td:nth-child(1){width:15%}
+.hv-app table.hv-event-history th:nth-child(2),.hv-app table.hv-event-history td:nth-child(2){width:27%}
+.hv-app table.hv-event-history th:nth-child(3),.hv-app table.hv-event-history td:nth-child(3){width:58%}
+.hv-app table.hv-event-history td:nth-child(2){white-space:nowrap;word-break:normal;overflow-wrap:normal;vertical-align:top}
+.hv-app table.hv-event-history td:nth-child(2) .hv-channel-badge{display:flex;width:max-content;margin:0 0 6px}
+.hv-app table.hv-event-history td:nth-child(2) .hv-errlink{display:inline-block;max-width:none;white-space:nowrap;word-break:normal;overflow-wrap:normal}
+.hv-app table.hv-event-history td:nth-child(3){white-space:normal;word-break:normal;overflow-wrap:anywhere;vertical-align:top}

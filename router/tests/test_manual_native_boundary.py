@@ -25,6 +25,9 @@ class ManualNativeBoundaryTests(unittest.TestCase):
         self.stack.enter_context(patch.object(native,'STOP',False))
         self.stack.enter_context(patch.object(native.os,'killpg'))
         self.stack.enter_context(patch.object(native,'clear_native_options',return_value=True))
+        # This fixture's shared Popen fake models a route apply, not a UCI read.
+        # History must not enter it when the five-second retention cache expires.
+        self.stack.enter_context(patch('retention_settings.configured_days',return_value=7))
         self.stack.enter_context(patch.object(native.uuid,'uuid4',return_value=MagicMock(hex='e'*32)))
         self.backend=Backend();self.before=self.backend.current[:]
         self.process=MagicMock(pid=123,returncode=0)

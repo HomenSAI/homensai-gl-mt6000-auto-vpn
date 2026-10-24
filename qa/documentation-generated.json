@@ -20,7 +20,7 @@
     "router/error_rows_extra.inc.js": "6e5d9b50b7d2c3da646bddafac321a7948532594f67c882670bf5fc02b23ad7c",
     "router/error_table.inc.js": "23b04f1db44f9a1912ea9e26e425f9eadb0330e5cd6068d6272a8f32acdd1fab",
     "router/fault_panel.inc.js": "cc58415ff4d2b820a1a17ac32c15dfa9c8601d39ee61d6c95898cfc915abfe81",
-    "router/files/usr/lib/homensai-vpn/agent.py": "3fa2a56b1cc0ad2005d229e77b7c0e297eaa24c820f42468eed1b7393d2ebda7",
+    "router/files/usr/lib/homensai-vpn/agent.py": "e1a26a490a1c7595ab91e554bf6404e2484541d4628522018824b6f0037f7ace",
     "router/fool_guard.inc.js": "ee54f83e3cc860daa136cb9c75ca9305d9f93dbe5bb0bf6758c8ea7e52758586",
     "router/help_panel.inc.js": "f7d476d0a71d83ac1e03aff88ab36ec94d92afdfc760384066c7fc0d6e6fdcc0",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
