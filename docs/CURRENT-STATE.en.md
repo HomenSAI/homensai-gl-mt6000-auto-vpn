@@ -4,7 +4,7 @@ Development: **0.9.1-alpha11**, branch `feature/owner-ui-20261023`, a candidate 
 
 ## First entry and training
 
-Current-version terms appear until first acceptance on that router, followed by the introduction, training and setup. Training can be reopened. All eight lessons have a vector interactive diagram with Play/Pause, Previous step, Next step and Reset. Playback stops at the final frame, on lesson navigation or when hidden. A text sequence accompanies every illustration. These are teaching examples: they perform no RPC and control no VPN. A quiz score is not Auto readiness certification.
+Current-version terms appear until first acceptance on that router, followed by the introduction and setup. Training is available separately and can be reopened. All eight lessons have a vector interactive diagram with Play/Pause, Previous step, Next step and Reset. Playback stops at the final frame, on lesson navigation or when hidden. A text sequence accompanies every illustration. These are teaching examples: they perform no RPC and control no VPN. A quiz score is not Auto readiness certification.
 
 ## The VPN pair and eight setup steps
 
