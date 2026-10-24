@@ -1,4 +1,4 @@
-68. [ ] Кандидат alpha14:46UI+SelfTest+2nativePS+3Linux PASS; полная CI/VM/доставка ещё предстоит. Полный аудит всей документации, встроенной помощи, промптов, мастеров и помощников. Сверить с текущим поведением alpha13, исправить RU/EN, проверить ссылки/команды/покрытие и сохранить пофайловый реестр.
+68. [x] Полный аудит документации/помощи/промптов/мастера/помощников выполнен и доставлен в alpha14.199prose/notice+60source реестр;31тема/язык,458кодов,82prompt recipes; CI771app/112QA×2+46UI, новаяVM, фактическийMT3000AutoONreserve, реальныеGitHub/Gitea prereleases с проверенными активами. ВнешниеAI/LAN/nativevisual области отмечены PARTIAL, не выданы за PASS. Отчёт: docs/VERIFICATION-ALPHA14-2026-10-24.md.
 
 # COMPLETE — owner67 and reboot recovery delivered
 

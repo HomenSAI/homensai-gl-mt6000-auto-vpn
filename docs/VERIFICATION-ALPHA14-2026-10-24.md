@@ -19,4 +19,4 @@ The82-prompt matrix validates actual recipes and native/mock helper paths, not a
 
 ## Publication
 
-Publication pending verified GitHub/Gitea branch/tag/release delivery. Stable0.9.0 and bothmain refs remain unchanged.
+Actual non-draft prereleases published: [GitHub alpha14](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14) · [Gitea alpha14](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha14). Four assets each downloaded back and SHA256-verified. Canonical tag/source`388879bd1ef28a7bb0eb385cf10754bc97c84437`; public tag/source`17740c6e83cfd89a45b0f7947b81ace6f9eaa83a`; identical reviewed tree`b61b99e60c9eda6d0034d8ddf589f43749b594ed`. Both feature histories preserved; stable0.9.0 and main refs unchanged. A documentation-only closure follows; product bytes remain those tested atfe3b492.

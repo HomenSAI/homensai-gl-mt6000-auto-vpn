@@ -3,6 +3,10 @@
 
 # Work log
 
+## 2026-10-24 · alpha14 delivered
+
+FullCI fe3b492771app/112QA per runtime/46UI, new actualOpenWrt VM acceptance and physicalMT3000AutoONreserve verified. Documentation/helper audit completed; actual GitHub/Gitea prereleases uploaded and four assets/server downloaded/hash-checked. Failed intermediate install-kit mismatch retained. Stable0.9.0/main unchanged; externalAI/LAN/nativevisual limitations remain explicit. [Final report](VERIFICATION-ALPHA14-2026-10-24.md).
+
 ## 2026-10-24 · comprehensive documentation/helper audit (source candidate alpha14)
 
 Owner68: stale mode/menu/restore promises and missing wizard retention fields corrected; wrong-adapter helper control requests and emergency pending/failed-stop commits prevented. Full Help/code/four prompts now source-generated with drift checks.46UI, native SelfTest,2PS,3Linux regressions PASS; unchanged normative terms/licences and privacy scan verified. Full CI/VM/delivery pending. [Audit](DOCUMENTATION-AUDIT-2026-10-24.md).
