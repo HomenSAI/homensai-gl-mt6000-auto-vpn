@@ -332,8 +332,11 @@ function renderLearn(){
   function progress(){return E('div',{'class':'hv-learn-progress','role':'progressbar','aria-valuemin':'0','aria-valuemax':String(total),'aria-valuenow':String(step+1)},[E('span',{'style':'width:'+Math.round((step+1)*100/total)+'%'}),E('small',{},bi('Step ','Шаг ')+(step+1)+' / '+total)]);}
   function nav(back,next,nextLabel,nextDisabled){
     var shown=generation,used=false;
-    function action(fn,disabled){return function(){if(disabled||used||generation!==shown)return;used=true;return fn();};}
-    return E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','click':action(back,false)},bi('Back','Назад')):E('span'),next?E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':nextDisabled?'disabled':null,'click':action(next,nextDisabled)},nextLabel):E('span')]);
+    function isDisabled(value){return typeof value==='function'?value():value;}
+    function action(fn,disabled){return function(){if(isDisabled(disabled)||used||generation!==shown)return;used=true;return fn();};}
+    var nextButton=next?E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':isDisabled(nextDisabled)?'disabled':null,'click':action(next,nextDisabled)},nextLabel):E('span');
+    var controls=E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','click':action(back,false)},bi('Back','Назад')):E('span'),nextButton]);
+    controls.hvLearnNext=nextButton;return controls;
   }
   function go(index,keepReview){if(!Number.isInteger(index)||index<0||index>=total)return;if(!keepReview)reviewQueue=null;mode='flow';step=index;checked=false;draw();}
   function once(fn){var shown=generation,used=false;return function(){if(used||generation!==shown)return;used=true;return fn();};}
@@ -368,14 +371,14 @@ function renderLearn(){
   }
   function question(){
     var index=step-LEARN_LESSONS.length,q=LEARN_QUIZ[index],chosen=answers[index]||(answers[index]=[]),shown=generation;
-    var grade=checked?learnGrade(q,chosen):null;
+    var grade=checked?learnGrade(q,chosen):null,answerButton=null;
     host.appendChild(chips());host.appendChild(progress());
     var lessonIndex=Array.isArray(LEARN_QUESTION_LESSONS)?LEARN_QUESTION_LESSONS[index]:Math.min(index,LEARN_LESSONS.length-1),context=LEARN_LESSONS[lessonIndex]||LEARN_LESSONS[0];
     host.appendChild(E('section',{'class':'hv-learn-question-context'},[E('h3',{},bi('Before the question','Перед вопросом')),E('p',{},inline(LEARN_QUESTION_GUIDANCE[index]?bi(LEARN_QUESTION_GUIDANCE[index][0],LEARN_QUESTION_GUIDANCE[index][1]):bi(context.body[0][0],context.body[0][1]))),E('p',{},inline(bi(context.example[0],context.example[1])))]));
     if(reviewQueue)host.appendChild(E('p',{'role':'status'},bi('Review missed questions: ','Повтор ошибок: ')+(reviewIndex+1)+' / '+reviewQueue.length));
     var options=q.o.map(function(option,i){
       var mark=grade?grade.marks[i]:'none';
-      var box=E('input',{'type':'checkbox','disabled':checked?'disabled':null,'change':function(){if(checked||generation!==shown)return;var at=chosen.indexOf(i);if(box.checked&&at<0)chosen.push(i);if(!box.checked&&at>=0)chosen.splice(at,1);draw();}});
+      var box=E('input',{'type':'checkbox','disabled':checked?'disabled':null,'change':function(){if(checked||generation!==shown)return;var at=chosen.indexOf(i);if(box.checked&&at<0)chosen.push(i);if(!box.checked&&at>=0)chosen.splice(at,1);if(answerButton)answerButton.disabled=chosen.length===0;}});
       box.checked=chosen.indexOf(i)>=0;
       var note=mark==='right'?bi('Correct','Верно'):mark==='wrong'?bi('Wrong choice','Неверный выбор'):mark==='missed'?bi('This was a correct answer','Это был правильный ответ'):'';
       return E('label',{'class':'hv-quiz-option hv-quiz-'+mark},[box,(/^homensai-vpn-emergency /.test(option[0])?E('code',{'class':'hv-code'},option[0]):E('span',{},bi(option[0],option[1]))),note?E('small',{},note):null].filter(Boolean));
@@ -383,7 +386,8 @@ function renderLearn(){
     host.appendChild(E('div',{'class':'hv-learn-card'},[E('div',{'class':'hv-learn-icon','aria-hidden':'true'},'?'),E('h2',{},bi('Question ','Вопрос ')+(index+1)+' / '+LEARN_QUIZ.length),E('p',{'class':'hv-quiz-question'},bi(q.q[0],q.q[1])),E('div',{'class':'hv-quiz-options'},options),
       grade?E('p',{'class':'hv-quiz-result hv-quiz-result-'+(grade.ok?'ok':'bad'),'role':'status'},grade.ok?bi('Correct!','Верно!'):bi('Not quite. Red is your wrong choice, green is the right answer.','Не совсем. Красным отмечен ваш неверный выбор, зелёным — правильный ответ.')):null].filter(Boolean)));
     var last=index===LEARN_QUIZ.length-1;
-    host.appendChild(nav(index>0?function(){go(LEARN_LESSONS.length+index-1);}:null,function(){if(!checked){graded[index]=true;attempts[index]=(attempts[index]||0)+1;if(firstGrades[index]===undefined)firstGrades[index]=learnGrade(q,chosen).ok;checked=true;draw();}else if(reviewQueue){reviewIndex++;if(reviewIndex<reviewQueue.length)go(LEARN_LESSONS.length+reviewQueue[reviewIndex],true);else{reviewQueue=null;go(total-1);}}else{checked=false;step++;draw();}},checked?((reviewQueue?reviewIndex===reviewQueue.length-1:last)?bi('See my result','Узнать результат'):bi('Next question','Следующий вопрос')):bi('Check the answer','Проверить ответ'),!checked&&chosen.length===0));
+    var controls=nav(index>0?function(){go(LEARN_LESSONS.length+index-1);}:null,function(){if(!checked){graded[index]=true;attempts[index]=(attempts[index]||0)+1;if(firstGrades[index]===undefined)firstGrades[index]=learnGrade(q,chosen).ok;checked=true;draw();}else if(reviewQueue){reviewIndex++;if(reviewIndex<reviewQueue.length)go(LEARN_LESSONS.length+reviewQueue[reviewIndex],true);else{reviewQueue=null;go(total-1);}}else{checked=false;step++;draw();}},checked?((reviewQueue?reviewIndex===reviewQueue.length-1:last)?bi('See my result','Узнать результат'):bi('Next question','Следующий вопрос')):bi('Check the answer','Проверить ответ'),function(){return !checked&&chosen.length===0;});
+    answerButton=controls.hvLearnNext;host.appendChild(controls);
   }
   function result(){
     var s=learnScore(LEARN_QUIZ,answers.map(function(a,i){return graded[i]?a:[];})),wrong=missed(),answered=graded.filter(Boolean).length,firstCorrect=firstGrades.filter(function(v){return v===true;}).length;learnMarkSeen();

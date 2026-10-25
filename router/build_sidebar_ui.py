@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard99'
+UI_MODULE='dashboard100'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -356,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui71.css')
+source=source.replace('ui15.css','ui72.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -458,6 +458,8 @@ must_replace('function checkLampCell(p){','function checkLampCell(p,status,inven
 must_replace('checkLampCell(p),cell(serverTitle(p))','checkLampCell(p,status,inventory),cell(serverTitle(p))')
 must_replace("var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';\n  return E('td',{'class':'hv-check-status'", "var use=channelDisplayUse(p,status,inventory),kind=use.kind;h.label=use.label;\n  return E('td',{'class':'hv-check-status'")
 source=source.replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select')
+must_replace("?{page:(document.activeElement.closest", "?{node:document.activeElement,page:(document.activeElement.closest")
+must_replace("if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],input[type=range],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}","restorePageControlFocus(pages,controlFocus);")
 source=source.replace('renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})','renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory)')
 # Owner follow-up: fixed roles and bounded disclosures, without routing writes.
 must_replace('Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.','The terminal shows real router observations. A separate optional LAN-helper test checks what a client sees; it is not required for prepared router-probed Auto mode.')
@@ -504,6 +506,6 @@ must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_
 
 from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
-(root/'ui71.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui72.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

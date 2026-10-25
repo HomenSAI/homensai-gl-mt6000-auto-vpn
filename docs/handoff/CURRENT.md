@@ -1,3 +1,15 @@
+# ALPHA24 INSTALLED — publication next
+
+Owner checkbox-position fix implemented: no course redraw on selection, same question/DOM/hash/scroll/focus retained; dynamic Check button availability and stale-action guard, exact retained-control focus on polling. Exactsource87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54, dualCI778app/112QA each/56UI PASS. Canonical856098bytes SHA9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20. All11questions EN/RU regression repeated on canonical Linux module100 matching installed HTTP/HTTPS bytes; Windows CRLF working copy is not mistaken for canonical bytes. Native browser clicks NOT_VERIFIED.
+
+MT3000alpha24/dashboard100/ui72/87files+modes/RPC/HTTP/pinnedHTTPS passed. AutoONconfirmedreserve,bothVPNhealthy;2001closedoldlatencyrows,all6speedresults,35ownoptions/terms preserved except expected native_trial/native_until lifecycle.193pre/postencrypted backups independently read. No new speed/fault test, mainMT6000/hostnetwork/firmware changes. ActualOFF/ON home access still correct with incomplete flags untouched.
+
+Next evidence commit, publish_refs.py/publish_releases.py with LEARN-POSITION-ALPHA24 QA, verify4assets/server and docs-only closure. Private learn-position-alpha24-20261025;driver alpha24-install-20261025. Do not rerun completed device steps. See docs/handoff/LEARN-POSITION-TASK-2026-10-25.md;docs/VERIFICATION-ALPHA24-2026-10-25.md. Keep gateways.
+
+# ACTIVE alpha24 checkbox position
+
+Owner reports Help training checkboxes scroll to top. Removed whole-course redraw from change handler; update only chosen answers and Check answer enabled state in place. Navigation disabled guard evaluates current selection, stale/double-action guards retained. Next regression/CI/new100+72build/MT3000/GitHub+Gitea. Baseline physical/public23 complete. Private learn-position-alpha24-20261025; LEARN-POSITION-TASK-2026-10-25.md.
+
 # COMPLETE alpha23 — actual live speed graphs / 25October2026
 
 [GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23)

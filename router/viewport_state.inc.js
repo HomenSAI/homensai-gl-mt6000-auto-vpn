@@ -34,6 +34,14 @@ function restorePageViewport(root,saved){
 }
 function rememberPageViewport(root,page){var saved=capturePageViewport(root,page);if(saved)pageViewportStates[page]=saved;return saved;}
 function revisitPageViewport(root,page){restorePageViewport(root,pageViewportStates[page]||{page:page,x:0,y:0,details:[]});}
+function restorePageControlFocus(pages,saved){
+  if(!saved||!pages[saved.page])return;
+  var page=pages[saved.page],node=saved.node;
+  // Cached Help/training nodes are moved, not rebuilt. Restore the exact control,
+  // rather than the first checkbox with the same empty text/aria-label.
+  if(!node||!page.contains(node))node=Array.from(page.querySelectorAll('button,input[type=checkbox],input[type=range],select')).find(function(el){return el.tagName===saved.tag&&el.getAttribute('aria-label')===saved.label&&el.textContent===saved.text;});
+  if(node)node.focus({preventScroll:true});
+}
 function installViewportPersistence(root,getPage){
   window.addEventListener('pagehide',function(){
     try{rememberPageViewport(root,getPage());sessionStorage.setItem('homensai-vpn-viewports',JSON.stringify({path:window.location.pathname,time:Date.now(),pages:pageViewportStates}));}catch(error){}

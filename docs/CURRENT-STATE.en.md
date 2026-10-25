@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha23**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha24**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -76,3 +76,5 @@ Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirm
 See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current thirteen interface corrections.
 
 See [live speed panels](LIVE-SPEED-ALPHA23-2026-10-25.md) for current measured download/upload behavior.
+
+Training answer selection preserves the current question, scroll and exact focused checkbox; checking an answer still grades only on explicit action. Выбор ответов сохраняет текущий вопрос, прокрутку и фокус; оценка выставляется только по явному нажатию проверки.

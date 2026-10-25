@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-alpha24 —25 October2026 / 25 октября2026
+
+Training checkbox changes now update selection and Check-answer availability in place, preserving the question, DOM, scroll and focus. Polling restores the exact retained control instead of the first checkbox with identical empty accessibility text. Dynamic disabled guards, scoring, wrong-only retries and stale-action protections remain.
+
+Чекбоксы обучения меняют только выбранные ответы и доступность проверки, без пересоздания вопроса и потери прокрутки/фокуса. При обновлении данных восстанавливается тот же элемент. Проверка ответов, баллы и защита от старых действий сохранены.
+
+
 ## 0.9.1-alpha23 —25 October2026 / 25 октября2026
 
 Real measured speed-test progress now drives two primary/reserve panels with separate download/upload series, one-second lightweight updates, explicit sequential waiting/cancellation/errors, bounded RAM traces and isolated completed history. Route/TLS/quota guards retained.

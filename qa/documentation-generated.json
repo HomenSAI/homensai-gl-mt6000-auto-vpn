@@ -20,7 +20,7 @@
     "router/error_rows_extra.inc.js": "d3d73147fcd24882d5d813fd0d7a56b6e8df4efb111f7d6636befa2deab40fdd",
     "router/error_table.inc.js": "220efb067eee7d3544bbedc6dc4fb248520459b6d30d0985ca9237758d6bc5fc",
     "router/fault_panel.inc.js": "cc58415ff4d2b820a1a17ac32c15dfa9c8601d39ee61d6c95898cfc915abfe81",
-    "router/files/usr/lib/homensai-vpn/agent.py": "f082202054f5c69998053b529788679049839e4efc6780f5c78cc33b2e2d9a64",
+    "router/files/usr/lib/homensai-vpn/agent.py": "b618aa086a356dd9720d04581ba8c6adc2b3d485d7a4cba8f78bf1e0e06c9de0",
     "router/fool_guard.inc.js": "ee54f83e3cc860daa136cb9c75ca9305d9f93dbe5bb0bf6758c8ea7e52758586",
     "router/help_panel.inc.js": "a6dad2c556af7b81f95d0c9da9bf8c61c0fbebf995ce8aeefe214e32bb2e9d3b",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -29,7 +29,7 @@
     "router/journal_panel.inc.js": "4e2dfb84b164def5c9966cf2350767e267ad85bf5d90eec70d122a249bea78b8",
     "router/latency_chart.inc.js": "4a2e1ce95f404a4aac44512b99806d032c31bec08356233af71eb3a6cd3596d7",
     "router/latency_panel.inc.js": "0124735d81c57e35dc133dcec42abf2f56c4446f636ae0bfc053ead4a5a17b14",
-    "router/learn_panel.inc.js": "30b7d9bf7f0483f3d4eb605e41292ce5cb043868c81c348ec401320698745930",
+    "router/learn_panel.inc.js": "0fbad2fd5098a3c6b94f02e118d2ce61f11909034fe682c76b41f393f7cad735",
     "router/learn_scenes.inc.js": "2c3f905330e46f2e617e72e1c691ae44fedf1d2bc60ed8fa439f622e4bfa6c7f",
     "router/live_log.inc.js": "59e64610464df61faabb1fd4a793fdf4899e639077239577794d3c0fde65c676",
     "router/live_terminal.inc.js": "c95587fed51db86c90c9b8ea46d6da7b8b6be4d55cbfec8881d7a12057596bf6",
@@ -57,7 +57,7 @@
     "router/traffic_panel.inc.js": "9ac9f703b63b504278b8fe2c58c501fcc4cc4afb78e89f38e2413c0fb493d4e6",
     "router/ui_logic.inc.js": "dacf5448022ad3c08adfdfb19e10bdbefaf6ceb50c1a2b3048262550bbc61935",
     "router/vendor_diagnostics.inc.js": "8d9e7e7fb329dba6a6c05d6be59a376b738cb7e1f696ba0a6a452db092ce9257",
-    "router/viewport_state.inc.js": "765e66f05c2a3eeffa5e983551e8037d1fa1de872cdf9670d17eee0a0360103b",
+    "router/viewport_state.inc.js": "f22e0cf59cd626b97cf1c7f43c2b721e10eac1e97ed9f997aed6892bc682287e",
     "scripts/sync-documentation.py": "94740b403ba7bd1ba0c5f737a8418e5157fa9a586d3f742f8d2b755e5ec2c700"
   },
   "outputs": {
