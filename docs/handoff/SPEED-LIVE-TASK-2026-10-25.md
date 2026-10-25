@@ -6,4 +6,4 @@ Implement measured transfer progress (no simulated samples), bounded RAM storage
 
 Next: backend/transport/UI tests, canonical new alpha23/modules99/css71, exact dual-runtime CI, dedicated MT3000 normal backup/Stop/update/Start/reserve, actual bounded speed test/progress capture, GitHub/Gitea publication. Preserve operator settings/history and stable0.9.0. Baseline alpha22 complete. Private continuation: private/speed-live-alpha23-20261025. Native visual remains separate from automated/device proof.
 
-Status: implementing.
+Status: delivered in0.9.1-alpha23 on MT3000 and published GitHub/Gitea.55UI suites and778app/112QA tests each runtime passed. Actual two-VPN test produced6RPCframes/4RUNNINGframes with points; primary4download/2upload, reserve7download/3upload. Four prior results retained, six after test;8MiB/channel reserved. AutoONreserve, bothVPNhealthy. Native visual remains unverified. See ../VERIFICATION-ALPHA23-2026-10-25.md; final private receipt speed-live-alpha23-20261025/FINAL.json.

@@ -1,6 +1,6 @@
 ## Alpha23 live speed / Текущая скорость
 
-Measured download/upload graphs for primary and reserve,1s lightweight updates. Installed and verified with an actual bounded two-VPN test on MT3000; AutoONconfirmedreserve. Publication pending evidence commit. [Verification](VERIFICATION-ALPHA23-2026-10-25.md). Native browser visual unverified.
+Measured download/upload graphs for primary and reserve,1s lightweight updates. Installed and verified with an actual bounded two-VPN test on MT3000; AutoONconfirmedreserve. [GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) — published; four assets each downloaded and SHA256verified. [Verification](VERIFICATION-ALPHA23-2026-10-25.md). Native browser visual unverified.
 
 ## Alpha22 combined owner batch / Общая партия
 

@@ -1,3 +1,5 @@
+79. [x] Живые графики теста скорости: основной/резервный отдельно, скачивание/отдача по реальным промежуточным данным,1s read-only обновление, очередь/ошибки/отмена явно, старые средние свёрнуты. Alpha23 установлен и опубликован GitHub/Gitea; фактический тест обоих VPN,6RPCframes/4RUNNINGframes, все4серии подтверждены. Nativevisual не проверено. См. [задачу](SPEED-LIVE-TASK-2026-10-25.md).
+
 ## Delivered combined batch alpha22 / 25October2026
 
 All13tasks in [BATCH-TASKS-2026-10-25.md](BATCH-TASKS-2026-10-25.md) implemented, exact-source CI and MT3000 acceptance passed, GitHub/Gitea actual prereleases/assets verified. Native visual acceptance remains unverified; historical partial scopes below are not re-certified.

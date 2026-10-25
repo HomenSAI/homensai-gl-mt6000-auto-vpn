@@ -19,3 +19,7 @@ Speed tests now stream measured interval payload rates into separate primary/res
 Exact dual-runtime CI778application/112QA each and55UI suites passed; complementary skips and the initial stale allowlist-test failure are retained in QA. Actual MT3000 normal upgrade and bounded two-channel speed test passed with real intermediate RPC frames rendered in the actual UI model. Auto remains ON/confirmedreserve; old history/settings/terms preserved. Native browser visuals remain unverified. Canonical855870bytes, SHA256 `5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324`.
 
 [QA](../qa/LIVE-SPEED-ALPHA23-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA23-2026-10-25.json)
+
+## Published / Опубликовано
+
+[GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23). Actual non-draft prereleases, four assets each downloaded and SHA256verified. Canonical release/tag `7c91703929d343df3a825e24368fa7e712b42de6`, public release/tag `402c42683f56f736cbe2c0704d78d6e56691d5ff`, equal release tree `409d1872ba9327e36811f95e838defa613bb1845`. Stable/main unchanged; documentation-only closure follows.
