@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha18**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha19**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -54,3 +54,9 @@ The Test speed button opens a review with selected connected servers and payload
 [Help](TRAINING.en.md) is visible immediately after Settings in all layouts, including Calm. Its lazy embedded course has8illustrated lessons and11questions, direct lesson/question jumps and a result table. Only checked answers earn credit; first-attempt/current scores and check counts are separate. Review repeats only wrong/unanswered questions, retaining correct answers. Training never invokes router controls.
 
 Saved/live events use human state labels and clickable dictionary entries. Successful checks, recovery, requests, preparation, application, confirmation and retained-reserve transaction states are different; a successful check is not a switch and a retained reserve does not imply global AutoOFF. Separate recorded causes link to their own explanations. Missing legacy detail and contradictory records are explained without inventing historical routing or actors.
+
+## Startup card / Стартовая карточка
+
+The selected card opens only after accepted current terms, completed first setup, verified current-pair preparation and fresh confirmed running Auto/healthy selected route. Incomplete setup and deferred recovery links never qualify; explicit full-menu/deep links remain available. The original Auto button forwards to the existing controller action. Primary is above reserve, red is softened 50%, and stale data returns to full management. Physical installation acceptance is recorded separately.
+
+Выбранная карточка появляется только после условий, завершённого мастера, подтверждённых проверок текущей пары и свежего подтверждения работающего Auto/маршрута. Исходная кнопка использует существующее управление. Основной выше резерва; красный ослаблен50%. Неполная настройка/устаревшие данные не допускают стартовую карточку. [Подробности](SIMPLE-HOME-2026-10-25.md).

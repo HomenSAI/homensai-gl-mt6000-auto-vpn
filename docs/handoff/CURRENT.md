@@ -1,3 +1,19 @@
+# ALPHA19 INSTALLED / PUBLICATION PENDING —25 October2026
+
+Explicit owner requested build, physical installation and tests of the selected startup card. Implemented actual model/render/router-entry integration, existing power control forwarding, required terms/setup/current-pair/fresh Auto gate and stale-home watchdog. Source tests cover primary/reserve, incomplete/wrong/stale/pending evidence and generated deep-link/full-menu routing. Exact3d759a889c71e771afd1b2747facd8c7539b00af dualCI774app/112QA each/52UI passed. Canonical848531bytes SHA d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd.
+
+MT3000/4.11.0 alpha19/dashboard95/ui67 installed;87files/modes/RPC/HTTP8080/pinnedHTTPS verified. NormalStop16.093s/Start58.265s/reserve47.672s. AutoON confirmedreserve/bothVPNDNS+2HTTPS.1545closedoldlatencyrows/4speedresults/settings/terms1 retained,193-entry encrypted pre/post backups independently decrypted/read. No hostnetwork/mainMT6000 changes. Fresh source/data proof passed using actual current vendor/path/health models: saved setup_complete/onboarding_complete remainFALSE, so correct actual first entry is the existing wizard. In-memory-only completed flags render the ready card with actual bound profiles/addresses; NEVER saved to router. Do not claim completed master or native visual acceptance. Native browser inventory empty, visuals NOT_VERIFIED.
+
+Read docs/VERIFICATION-ALPHA19-2026-10-25.md,qa/SIMPLE-HOME-ALPHA19-2026-10-25.json,qa/MT3000-ALPHA19-2026-10-25.json. Private proof simple-home-alpha19-20261025; driver alpha19-install-20261025. Never rerun completed install steps. Keep AutoONreserve, router gateway127.0.0.2:8080 and designpreview64171 running. Next commit evidence, run prepared publish_refs.py then publish_releases.py, verify both actual prereleases/assets, docs-only closure/publish_closure.py. Main/stable0.9.0 unchanged. OwnerTODO74 closes after delivery; no automatic setup acceptance.
+
+# BUILDING alpha19 — selected startup card
+
+Explicit owner authorized build/install/test. Source integrated actual models/routes/original controller button and fresh-state watchdog. All52UI initially passed; added generated-routing test passed after fixture bi injection. Current physical18AutoON but setup/onboarding markers false, preserve them: new entry must show wizard. No browser surfaces available. Next exact committed archive/build/CI, fresh verified backup/Stop/install/Start/restore reserve, actual served95/ui67/gate/frame/settings/history checks. Do not claim master completed or fabricate tests. Private simple-home-alpha19-20261025, ownerTODO74.
+
+# ACTIVE DESIGN CANDIDATE: selected startup card —25 October2026
+
+Owner approved Карточка, original project button under Auto status, red50%. New startup policy and prototype gates are implemented/tested locally: terms → complete setup/current pair → required pair-specific tests → fresh confirmed Auto/current path → home. Stop/stale/incomplete never show ready card; working reserve is accepted. Read docs/SIMPLE-HOME-2026-10-25.md and ownerTODO74. Production integration with actual RPC/entry routing/card and full acceptance is still pending; alpha18 installed/published baseline unchanged. New router/simple_home_policy.inc.js and test_simple_home_policy_ui.js are uncommitted candidate source; do not claim delivered or rebuild/retag18. Keep preview64171 and router gateway running.
+
 # COMPLETE: alpha18 Help training and meaningful events —25 October2026
 
 [GitHub alpha18](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18) · [Gitea alpha18](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18)

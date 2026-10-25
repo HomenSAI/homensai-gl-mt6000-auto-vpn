@@ -1,6 +1,15 @@
 <!-- doc-role: current-delivery-record -->
 # Current status / Текущее состояние —25.10.2026
 
+**Alpha19 installed on MT3000, Auto ON / confirmed reserve, both VPN DNS/HTTPS healthy.** Selected startup card is integrated with actual settings, current-pair evidence and freshness. The owner's unfinished setup flags are preserved: first entry is the existing wizard until explicitly completed. Completed-setup card was verified with real data and temporary in-memory flags only. Native-browser visuals NOT_VERIFIED.
+
+**Alpha19 установлена, Auto включён на резерве.** Карточка подключена к реальному состоянию и появляется только после завершённых настройки/проверок. На текущем роутере первым открывается незавершённый мастер. [Отчёт / report](VERIFICATION-ALPHA19-2026-10-25.md) · [QA](../qa/SIMPLE-HOME-ALPHA19-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA19-2026-10-25.json). Publication pending final evidence commit. Stable0.9.0 unchanged.
+
+## Previous alpha18 delivery
+
+<!-- doc-role: current-delivery-record -->
+# Current status / Текущее состояние —25.10.2026
+
 **Alpha18 installed on MT3000, Auto ON / confirmed reserve.** Help after Settings: 8 lessons, 11 questions, direct navigation, scores and wrong-only retry. Meaningful event/state labels open explanations; causes remain separate. Weekly latency and existing data retained. Full dual-runtime CI: 774 app /112 QA each, 50 UI suites. Native-browser visuals not verified.
 
 **Alpha18 установлена, Auto включён / резерв подтверждён.** «Помощь» после «Настроек»: уроки, вопросы, баллы и повтор ошибок. События и состояния открывают расшифровку. [Отчёт / report](VERIFICATION-ALPHA18-2026-10-25.md) · [QA](../qa/EVENTS-HELP-ALPHA18-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA18-2026-10-25.json). [GitHub alpha18](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18) · [Gitea alpha18](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha18) — published, assets downloaded and verified. Stable 0.9.0 unchanged.

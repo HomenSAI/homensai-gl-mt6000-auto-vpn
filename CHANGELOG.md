@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-alpha19 —25 October2026 / 25 октября2026
+
+Selected compact startup card with the original Auto button, primary/reserve identities, measured endpoints/delay and full-menu entry. Current terms, completed setup, current-pair tests and fresh confirmed running Auto are required. Incomplete setup/stale data never become a ready home screen. Explicit deep links and full management remain available. Red is softened50%, green unchanged; button is directly under Auto works.
+
+Выбранная стартовая карточка с исходной кнопкой Auto под состоянием, адресами/задержкой каналов и переходом в полное меню. Допуск только после условий, полного мастера, проверок текущей пары и свежего подтверждения Auto. Красный ослаблен50%, зелёный сохранён. Обновление не отмечает незавершённый мастер выполненным.
+
+
 ## 0.9.1-alpha18 — события и обучение / event explanations and Help learning
 
 «OK» в журнале заменён точным описанием успешной проверки, отдельно от восстановления и переключения. Состояние и событие открывают расшифровку; диагностическая причина имеет отдельную ссылку. Все текущие статические состояния контроллеров покрыты справочником; старые недостающие/противоречивые сведения не превращаются в выдуманный успех. Удержание резерва не выдаётся за остановку общегоAuto, программная команда — за нажатие оператором.

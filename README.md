@@ -2,7 +2,7 @@
 
 [Русский](README.ru.md) · [English](README.md)
 
-Current version **0.9.1-alpha18** is installed on dedicated MT3000 with Auto ON and confirmed reserve. Help after Settings includes 8 interactive lessons and 11 questions, scores and wrong-answer retry; event descriptions link to explanations. [Verification](docs/VERIFICATION-ALPHA18-2026-10-25.md). Stable 0.9.0 is unchanged. [Delivered state](docs/CURRENT-STATUS.md).
+Current version **0.9.1-alpha19** is installed on MT3000, Auto ON / confirmed reserve. The startup card requires completed setup and current tests; this router correctly shows its unfinished wizard first. [Verification](docs/VERIFICATION-ALPHA19-2026-10-25.md) · [Delivered state](docs/CURRENT-STATUS.md). Stable0.9.0 unchanged.
 
 Monitor an existing OpenVPN/WireGuard pair and switch a verified route. Eight lessons include interactive diagrams with playback, pause and step controls.
 

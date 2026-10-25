@@ -120,6 +120,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/SDK-ACCEPTANCE.md](SDK-ACCEPTANCE.md)|historical-reference|
 |[docs/SECURITY-RETEST-2026-10-16.md](SECURITY-RETEST-2026-10-16.md)|historical-reference|
 |[docs/SIDEBAR-RESPONSIVE-ALPHA10.md](SIDEBAR-RESPONSIVE-ALPHA10.md)|historical-reference|
+|[docs/SIMPLE-HOME-2026-10-25.md](SIMPLE-HOME-2026-10-25.md)|versioned-evidence|
 |[docs/STATE.md](STATE.md)|current|
 |[docs/STATISTICS-RETENTION.md](STATISTICS-RETENTION.md)|current|
 |[docs/STYLE.md](STYLE.md)|current|
@@ -144,6 +145,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA16-2026-10-24.md](VERIFICATION-ALPHA16-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA17-2026-10-24.md](VERIFICATION-ALPHA17-2026-10-24.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA18-2026-10-25.md](VERIFICATION-ALPHA18-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA19-2026-10-25.md](VERIFICATION-ALPHA19-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -209,6 +211,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha16.md](../releases/v0.9.1-alpha16.md)|versioned-evidence|
 |[releases/v0.9.1-alpha17.md](../releases/v0.9.1-alpha17.md)|versioned-evidence|
 |[releases/v0.9.1-alpha18.md](../releases/v0.9.1-alpha18.md)|versioned-evidence|
+|[releases/v0.9.1-alpha19.md](../releases/v0.9.1-alpha19.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|
