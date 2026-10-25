@@ -57,6 +57,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/handoff/CONTINUE-PROMPT.md](handoff/CONTINUE-PROMPT.md)|recovery-record|
 |[docs/handoff/CURRENT.md](handoff/CURRENT.md)|recovery-record|
 |[docs/handoff/FIRST-RUN-FLOW-2026-10-23.md](handoff/FIRST-RUN-FLOW-2026-10-23.md)|historical-reference|
+|[docs/handoff/LEARN-ACTIONS-TASK-2026-10-25.md](handoff/LEARN-ACTIONS-TASK-2026-10-25.md)|recovery-record|
 |[docs/handoff/LEARN-POSITION-TASK-2026-10-25.md](handoff/LEARN-POSITION-TASK-2026-10-25.md)|recovery-record|
 |[docs/handoff/LIMIT-CHECKPOINT-2026-10-21.md](handoff/LIMIT-CHECKPOINT-2026-10-21.md)|historical-reference|
 |[docs/handoff/NEXT-AI-2026-10-24.md](handoff/NEXT-AI-2026-10-24.md)|recovery-record|
@@ -156,6 +157,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA22-2026-10-25.md](VERIFICATION-ALPHA22-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA23-2026-10-25.md](VERIFICATION-ALPHA23-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA24-2026-10-25.md](VERIFICATION-ALPHA24-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA25-2026-10-25.md](VERIFICATION-ALPHA25-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -227,6 +229,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha22.md](../releases/v0.9.1-alpha22.md)|versioned-evidence|
 |[releases/v0.9.1-alpha23.md](../releases/v0.9.1-alpha23.md)|versioned-evidence|
 |[releases/v0.9.1-alpha24.md](../releases/v0.9.1-alpha24.md)|versioned-evidence|
+|[releases/v0.9.1-alpha25.md](../releases/v0.9.1-alpha25.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|

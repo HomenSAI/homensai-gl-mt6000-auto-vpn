@@ -1,3 +1,15 @@
+# ALPHA25 INSTALLED — publication next
+
+Owner all-training-actions viewport fix implemented: shared learnKeepViewport covers grade/navigation/contents/results/retry/restart/scenes/embedded toggles. Existing checkbox behavior: no course redraw on selection, same question/DOM/hash/scroll/focus retained; dynamic Check button availability and stale-action guard, exact retained-control focus on polling. Exactsource4811e3c7e7ee0070fee913bf7d6d783f7780d86b, dualCI778app/112QA each/57UI PASS. Canonical856917bytes SHA38b377ad2e3522405450942e5f918f565b90ac2f6abdc825302b4c03022f8d3a. All11questions/8lessons EN/RU action-position matrix repeated on canonical Linux module101 matching installed HTTP/HTTPS bytes; Windows CRLF working copy is not mistaken for canonical bytes. Native browser clicks NOT_VERIFIED.
+
+MT3000alpha25/dashboard101/ui72/87files+modes/RPC/HTTP/pinnedHTTPS passed. AutoONconfirmedreserve,bothVPNhealthy;2046closedoldlatencyrows,all6speedresults,35ownoptions/terms preserved except expected native_trial/native_until lifecycle.193pre/postencrypted backups independently read. No new speed/fault test, mainMT6000/hostnetwork/firmware changes. ActualOFF/ON home access still correct with incomplete flags untouched.
+
+Next evidence commit, publish_refs.py/publish_releases.py with LEARN-ACTIONS-ALPHA25 QA, verify4assets/server and docs-only closure. Private learn-actions-alpha25-20261025;driver alpha25-install-20261025. Do not rerun completed device steps. See docs/handoff/LEARN-POSITION-TASK-2026-10-25.md;docs/VERIFICATION-ALPHA25-2026-10-25.md. Keep gateways.
+
+# ACTIVE alpha25 all training buttons
+
+Owner extends checkbox-only fix to Check answer and all internal buttons. Shared learnKeepViewport now protects every course redraw, grading/navigation/results/retry/restart, Help expansion/collapse and scene frame updates. Saves viewport and semantic focus; prevents height collapse and retains only required space if a shorter document would clip saved scroll. Dynamic action/score guards unchanged. Focused EN/RU action matrix and prior tests passed. Next57UI/dualCI/new101+73build/MT3000/verified GitHub+Gitea delivery. Baseline physical/public24 complete. Private learn-actions-alpha25-20261025; LEARN-ACTIONS-TASK-2026-10-25.md. Native GUI unverified.
+
 # COMPLETE alpha24 — quiz checkbox position / 25October2026
 
 [GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24)

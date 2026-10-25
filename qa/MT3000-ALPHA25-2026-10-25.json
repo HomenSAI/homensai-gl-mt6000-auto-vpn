@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "result": "PASS_DEVICE_AND_GENERATED_MODEL_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha25",
+  "tested_product_source": "4811e3c7e7ee0070fee913bf7d6d783f7780d86b",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha25-1_all.ipk",
+    "bytes": 856917,
+    "sha256": "38b377ad2e3522405450942e5f918f565b90ac2f6abdc825302b4c03022f8d3a"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha25-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "own_options": 35,
+    "closed_prior_latency_rows_preserved": 2046,
+    "prior_speed_results_preserved": 6,
+    "speed_results_after": 6,
+    "new_bandwidth_test_run": false,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "generated_learning_regression": {
+    "result": "PASS_ALL_ACTIONS_CANONICAL_MODULE",
+    "version": "0.9.1-alpha25",
+    "module": "dashboard101",
+    "sha256": "553f27d86b42be92c4384577b73366c8f07366d878cf03180d6ca23107fea4ec",
+    "matches_installed_payload_manifest": true,
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "questions": 11,
+    "lessons": 8,
+    "cases": [
+      "check_answer",
+      "next_back",
+      "lesson_question_chips",
+      "contents",
+      "results",
+      "result_table_question",
+      "retry_wrong",
+      "restart",
+      "shorter_document_bottom",
+      "scene_controls",
+      "embedded_expand_collapse"
+    ],
+    "viewport_and_meaningful_focus_preserved": true,
+    "scores_stale_actions_and_no_rpc_passed": true,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_on_access": {
+    "result": "PASS_ACTUAL_ON_ACCESS",
+    "version": "0.9.1-alpha25",
+    "stage": "on",
+    "show_card": true,
+    "shortcut_aria_disabled": "false",
+    "tooltip_text": "",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_off_access": {
+    "result": "PASS_ACTUAL_OFF_ACCESS",
+    "version": "0.9.1-alpha25",
+    "stage": "off",
+    "show_card": false,
+    "shortcut_aria_disabled": "true",
+    "tooltip_text": "Чтобы воспользоваться упрощённым интерфейсом, необходимо настроить систему и включить Auto.",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "gateway": {
+    "result": "PASS",
+    "origin": "http://127.0.0.2:8080",
+    "login": {
+      "status": 403,
+      "mt3000_title": true,
+      "login_form": true
+    },
+    "served_dashboard": "dashboard101",
+    "sha256": "553f27d86b42be92c4384577b73366c8f07366d878cf03180d6ca23107fea4ec",
+    "time": 1792949280.6061428,
+    "gateway_left_running": true,
+    "scope": "user loopback browser gateway HTTP/login/static bytes; not a native browser visual or LAN-witness test"
+  },
+  "limitations": [
+    "All training action DOM/scroll/focus regression uses the exact canonical module matching installed bytes; native browser clicks/layout remain unverified",
+    "No main MT6000/host-network/firmware changes or new fault/LAN/power-loss acceptance claimed"
+  ],
+  "recorded_utc": "2026-10-25T17:30:40.827581+00:00"
+}

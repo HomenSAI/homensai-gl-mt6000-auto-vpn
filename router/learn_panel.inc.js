@@ -323,6 +323,38 @@ function learnVerdict(percent){
 }
 function learnSeen(){try{return window.localStorage.getItem('homensai-vpn-learn-seen')==='1';}catch(e){return false;}}
 function learnMarkSeen(){try{window.localStorage.setItem('homensai-vpn-learn-seen','1');}catch(e){}}
+function learnKeepViewport(root,update){
+  if(!root||!root.isConnected||!root.style||typeof root.getBoundingClientRect!=='function'||typeof window.scrollTo!=='function')return update();
+  var doc=typeof document==='undefined'?null:document,x=window.scrollX||0,y=window.scrollY||window.pageYOffset||0,active=doc&&doc.activeElement;
+  function key(node){
+    if(!node)return null;
+    var names=['data-learn-action','data-learn-question','data-result-question','data-learn-retry-wrong','data-scene-action','aria-label'];
+    for(var i=0;i<names.length;i++){var value=node.getAttribute&&node.getAttribute(names[i]);if(value!==null&&value!==undefined)return names[i]+':'+value;}
+    return node.tagName+':'+node.textContent;
+  }
+  var focused=active&&root.contains(active)?{node:active,key:key(active)}:null;
+  var state=root.hvLearnViewportStyle;
+  if(!state||root.style.minHeight!==state.last)state={base:root.style.minHeight||'',last:root.style.minHeight||''};
+  root.hvLearnViewportStyle=state;
+  var height=root.getBoundingClientRect().height;
+  if(Number.isFinite(height)&&height>0)root.style.minHeight=Math.ceil(height)+'px';
+  try{return update();}finally{
+    root.style.minHeight=state.base;
+    var scrolling=doc&&doc.scrollingElement;
+    if(scrolling&&Number.isFinite(scrolling.scrollHeight)&&Number.isFinite(window.innerHeight)){
+      var maximum=Math.max(0,scrolling.scrollHeight-window.innerHeight);
+      if(y>maximum)root.style.minHeight=Math.ceil(root.getBoundingClientRect().height+y-maximum)+'px';
+    }
+    state.last=root.style.minHeight;
+    if(focused&&(!root.contains(focused.node)||focused.node.disabled)){
+      var replacement=Array.from(root.querySelectorAll('button,a,input,select,textarea')).find(function(node){return key(node)===focused.key;});
+      if(replacement&&replacement.disabled)replacement=null;
+      if(!replacement&&root.querySelector){replacement=root.querySelector('h2,h3');if(replacement)replacement.setAttribute('tabindex','-1');}
+      if(replacement&&replacement.focus)replacement.focus({preventScroll:true});
+    }
+    window.scrollTo({left:x,top:y,behavior:'instant'});
+  }
+}
 function renderLearn(){
   var host=E('section',{'class':'hv-chart-card hv-learn'});
   var scene=null;
@@ -334,8 +366,8 @@ function renderLearn(){
     var shown=generation,used=false;
     function isDisabled(value){return typeof value==='function'?value():value;}
     function action(fn,disabled){return function(){if(isDisabled(disabled)||used||generation!==shown)return;used=true;return fn();};}
-    var nextButton=next?E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':isDisabled(nextDisabled)?'disabled':null,'click':action(next,nextDisabled)},nextLabel):E('span');
-    var controls=E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','click':action(back,false)},bi('Back','Назад')):E('span'),nextButton]);
+    var nextButton=next?E('button',{'type':'button','class':'cbi-button cbi-button-action','data-learn-action':'forward','disabled':isDisabled(nextDisabled)?'disabled':null,'click':action(next,nextDisabled)},nextLabel):E('span');
+    var controls=E('div',{'class':'hv-learn-nav'},[back?E('button',{'type':'button','class':'cbi-button','data-learn-action':'back','click':action(back,false)},bi('Back','Назад')):E('span'),nextButton]);
     controls.hvLearnNext=nextButton;return controls;
   }
   function go(index,keepReview){if(!Number.isInteger(index)||index<0||index>=total)return;if(!keepReview)reviewQueue=null;mode='flow';step=index;checked=false;draw();}
@@ -401,7 +433,8 @@ function renderLearn(){
     if(wrong.length)host.appendChild(E('button',{'type':'button','class':'cbi-button cbi-button-action','data-learn-retry-wrong':'1','click':once(retryWrong)},(answered<s.total?bi('Answer remaining questions','Пройти оставшиеся вопросы'):bi('Review missed questions','Повторить ошибки'))+' ('+wrong.length+')'));
     host.appendChild(E('div',{'class':'hv-learn-nav'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':once(function(){reset();step=0;mode='flow';draw();})},bi('Take the training again','Пройти обучение заново')),E('button',{'type':'button','class':'cbi-button','click':once(function(){mode='toc';draw();})},bi('☰ Contents','☰ Оглавление')),E('a',{'class':'cbi-button','href':'#help'},bi('Open Help','Открыть помощь'))]));
   }
-  function draw(){generation++;if(!Number.isInteger(step)||step<0||step>=total){step=0;mode='toc';checked=false;}clear();if(mode==='flow'&&step>=LEARN_LESSONS.length&&step<LEARN_LESSONS.length+LEARN_QUIZ.length)checked=graded[step-LEARN_LESSONS.length]===true;if(mode==='toc')toc();else if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
+  function renderStep(){generation++;if(!Number.isInteger(step)||step<0||step>=total){step=0;mode='toc';checked=false;}clear();if(mode==='flow'&&step>=LEARN_LESSONS.length&&step<LEARN_LESSONS.length+LEARN_QUIZ.length)checked=graded[step-LEARN_LESSONS.length]===true;if(mode==='toc')toc();else if(step<LEARN_LESSONS.length)lesson();else if(step<LEARN_LESSONS.length+LEARN_QUIZ.length)question();else result();}
+  function draw(){return learnKeepViewport(host,renderStep);}
   draw();
   return host;
 }

@@ -21,7 +21,7 @@ function renderLearnScene(lesson){
  var play=action('play',bi('Play','Запустить'),function(){if(timer!==null){pause();return;}if(index===frames.length-1){index=0;draw();}play.textContent=bi('Pause','Пауза');play.setAttribute('aria-pressed','true');schedule();});play.setAttribute('aria-pressed','false');
  var next=action('next',bi('Next step','Шаг вперёд'),function(){pause();index=Math.min(frames.length-1,index+1);draw();});
  var reset=action('reset',bi('Reset scene','Сначала'),function(){pause();index=0;draw();});
- function draw(){
+ function renderFrame(){
   while(drawing.firstChild)drawing.removeChild(drawing.firstChild);
   var reserve=(lesson===0&&index===3)||(lesson===6&&index>0),failed=(lesson===0&&index>0)||(lesson===6&&index>0);
   var image=svg('svg',{viewBox:'0 0 640 270',role:'img','aria-label':bi(frames[index][0],frames[index][1])});
@@ -50,6 +50,7 @@ function renderLearnScene(lesson){
   back.disabled=index===0;next.disabled=index===frames.length-1;
   root.setAttribute('data-scene-step',String(index));
  }
+ function draw(){return typeof learnKeepViewport==='function'?learnKeepViewport(root,renderFrame):renderFrame();}
  root.hvDispose=function(){disposed=true;pause();};
  root.appendChild(E('p',{'class':'hv-muted'},bi('Interactive illustration — changes only this example, never the router.','Интерактивная схема — меняется только пример, настройки роутера не затрагиваются.')));
  root.appendChild(drawing);root.appendChild(caption);root.appendChild(E('div',{'class':'hv-scene-controls'},[back,play,next,reset]));

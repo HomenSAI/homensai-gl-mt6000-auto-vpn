@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Текущее поведение и руководство
 
-> Исходный кандидат: **0.9.1-alpha24**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
+> Исходный кандидат: **0.9.1-alpha25**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
 
 ## Поддержка и три разных режима
 
@@ -78,3 +78,5 @@ See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current th
 See [live speed panels](LIVE-SPEED-ALPHA23-2026-10-25.md) for current measured download/upload behavior.
 
 Training answer selection preserves the current question, scroll and exact focused checkbox; checking an answer still grades only on explicit action. Выбор ответов сохраняет текущий вопрос, прокрутку и фокус; оценка выставляется только по явному нажатию проверки.
+
+All internal learning buttons preserve viewport through grading, question navigation, contents/results/retries and scene updates. Все внутренние кнопки обучения сохраняют положение страницы, включая проверку ответа, переходы, результаты и схемы.

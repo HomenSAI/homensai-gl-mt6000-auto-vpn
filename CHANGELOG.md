@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.1-alpha25 —25 October2026 / 25 октября2026
+
+All internal training redraws preserve page position: Check answer, Next/Back, lesson/question jumps, contents, results, retry/restart, embedded course toggle and interactive scene controls. A short-lived height floor prevents removal collapse, with only the extra space required to keep a deep viewport when content becomes shorter. Meaningful focus is restored without scrolling; dynamic action guards and scoring remain. Checkbox-only alpha24 behavior retained.
+
+Сохранение позиции распространяется на все внутренние кнопки обучения: проверку ответа, переходы, оглавление, результаты, повтор/перезапуск, сворачивание и интерактивные схемы. Перерисовка сохраняет прокрутку и подходящий фокус; короткий новый блок не обрушает высоту страницы. Проверка ответов и защита от повторных действий сохранены.
+
+
 ## 0.9.1-alpha24 —25 October2026 / 25 октября2026
 
 Training checkbox changes now update selection and Check-answer availability in place, preserving the question, DOM, scroll and focus. Polling restores the exact retained control instead of the first checkbox with identical empty accessibility text. Dynamic disabled guards, scoring, wrong-only retries and stale-action protections remain.
