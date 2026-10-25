@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Текущее поведение и руководство
 
-> Исходный кандидат: **0.9.1-alpha21**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
+> Исходный кандидат: **0.9.1-alpha22**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
 
 ## Поддержка и три разных режима
 
@@ -72,3 +72,5 @@ The page title now has a Simplified interface button on its right. It uses the s
 Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirmed status shows a red shortcut with a setup/enable tooltip on hover, keyboard focus or tap; Escape dismisses it. Clicking an unavailable shortcut never starts Auto. Channel failures/transitions are displayed honestly inside the card rather than denying access. The existing controller start requirements and terms acceptance are unchanged.
 
 При включённом Auto доступ открыт независимо от завершённости настройки. При выключенном/неподтверждённом режиме кнопка красная; наведение, фокус и тап показывают подсказку о настройке и включении Auto, Escape скрывает её. Нажатие не запускает Auto автоматически.
+
+See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current thirteen interface corrections.

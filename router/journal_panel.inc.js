@@ -441,7 +441,8 @@ function ensureJournalDictionary(){
 }
 function journalDescriptionLink(entry,status,stateOnly,extra){
   var t=journalDefinition(entry),code=t.code;
-  return E('a',{'href':'#events','class':'hv-journal-description','data-journal-description':code,'data-original-state':entry.state,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(code);}},(stateOnly?journalStateText(entry):journalMessage(entry,status,true))+(extra||''));
+  if(!stateOnly)return E('span',{'class':'hv-journal-description'},journalMessage(entry,status,true)+(extra||''));
+  return E('a',{'href':'#events','class':'hv-errlink hv-journal-state','data-journal-description':code,'data-original-state':entry.state,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(code);}},(stateOnly?journalStateText(entry):journalMessage(entry,status,true))+(extra||''));
 }
 /* Shared real-event vocabulary for the live terminal and persisted history. */
 var EVENT_VIEW={query:'',sort:'time',desc:true,expanded:false,page:0,stored:null,busy:false,error:null,request:0};
@@ -507,8 +508,8 @@ function journalMessage(entry,status,hideCode){
   return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+code;
 }
 function journalDescriptionContent(entry,status,extra){
-  var nodes=[journalDescriptionLink(entry,status,false,extra)];
-  if(entry.code&&entry.code!=='OK'){
+  var nodes=[journalDescriptionLink(entry,status,false,extra),' · ',E('a',{'href':'#events','class':'hv-errlink','data-journal-code':journalDefinition(entry).code,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(journalDefinition(entry).code);}},journalDefinition(entry).code)];
+  if(entry.code&&entry.code!=='OK'&&entry.code!==journalDefinition(entry).code){
     var known=journalCodeRow(entry.code),target=known?known[0]:journalDefinition(entry).code;
     nodes.push(' · ',E('a',{'href':'#events','class':'hv-errlink','data-journal-cause':target,'title':bi('Explain the recorded diagnostic code','Расшифровать сохранённый диагностический код'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(target);}},entry.code));
   }

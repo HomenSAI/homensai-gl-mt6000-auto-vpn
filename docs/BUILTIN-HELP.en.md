@@ -216,7 +216,7 @@ Use the persistent-preparation help for acceleration, IPv6, stock workers and ro
 
 Prepared MT3000 router-probed IPv4 Auto uses fresh router evidence without a LAN certificate. A separate client-confirmed trial requires its own LAN helper and certificate. Keep these modes distinct.
 
-Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. Emergency Stop remains available.
+Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. The Auto power button remains available to stop or cancel startup.
 
 ### Diagnostic prompt
 

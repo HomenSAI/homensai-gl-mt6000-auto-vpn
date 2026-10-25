@@ -115,19 +115,21 @@ function renderLatencyPanel(status,inventory){
     pan.max=String((LATENCY_HISTORY_HOURS-LATENCY_VIEW.hours)*60);pan.disabled=Number(pan.max)===0;pan.value=String(Math.max(0,Math.round((now-end)/60)));
   }
   draw();
+  var notes=E('details',{'class':'hv-latency-notes','data-auto-disclosure':'latency-statistics'},[E('summary',{},bi('How statistics are calculated','Как считается статистика'))]);
+  if(typeof rememberDisclosure==='function')rememberDisclosure(notes,'latency-statistics');
+  var selectedId=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):null,roleIds=rolePairIds(status,inventory,now);
+  var selected=selectedId&&selectedId===roleIds[0]?'source':selectedId&&selectedId===roleIds[1]?'target':null;
   return E('section',{'class':'hv-chart-card','data-latency-panel':'1'},[
     E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),renderLatencyRecommendation(status,inventory,'channels'),
     E('div',{'class':'hv-latency-values'},[0,1].map(function(i){return E('p',{},[E('strong',{},i===0?bi('Primary: ','Основной: '):bi('Reserve: ','Резервный: ')),current[i]?current[i].rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS'):bi('No fresh measurement','Нет свежего измерения')]);})),
-    E('div',{'class':'hv-latency-notes'},[
-      E('p',{},bi('Primary: solid line.','Основной: сплошная линия.')),
-      E('p',{},bi('Reserve: dashed line.','Резервный: пунктирная линия.')),
-      E('p',{},bi('Green: selected route.','Зелёный: выбранный маршрут.')),
-      E('p',{},bi('Yellow: standby.','Жёлтый: ожидание.')),
-      E('p',{},bi('Grey: route unconfirmed.','Серый: маршрут не подтверждён.'))]),
+    E('div',{'class':'hv-latency-series'},[
+      E('span',{},[E('i',{'class':'hv-latency-sample','aria-hidden':'true'}),bi('Primary · solid line','Основной · сплошная линия')]),
+      E('span',{},[E('i',{'class':'hv-latency-sample hv-latency-dashed','aria-hidden':'true'}),bi('Reserve · dashed line','Резервный · пунктирная линия')])]),
+    E('p',{'class':'hv-latency-current-route'},selected==='source'?bi('Currently in use: primary channel','Сейчас задействован основной канал'):selected==='target'?bi('Currently in use: reserve channel','Сейчас задействован резервный канал'):bi('Current channel: awaiting fresh router confirmation','Текущий канал: ожидается свежее подтверждение роутера')),
     plot,caption,E('div',{'class':'hv-latency-controls'},[
       E('label',{'class':'hv-latency-slider'},[hours,E('span',{},bi('Window: 1 hour–7 days','Период: 1 час–7 суток'))]),
       E('label',{'class':'hv-latency-slider'},[pan,E('span',{},bi('Browse the last 7 days','Просмотр последних 7 суток'))]),live]),statistics,
-    E('div',{'class':'hv-latency-notes'},[
+    (function(){[
       E('p',{},bi('Statistics follow the selected graph window.','Статистика соответствует выбранному периоду графика.')),
       E('p',{},bi('Mean is weighted by successful checks.','Средняя учитывает число успешных проверок.')),
       E('p',{},bi('Minimum and maximum describe observed minute means.','Минимум и максимум относятся к наблюдённым минутным средним.')),
@@ -135,6 +137,6 @@ function renderLatencyPanel(status,inventory){
       E('p',{},bi('Storage follows the configured 1–7 days. Deleted older measurements cannot be restored.','Хранение соответствует настройке 1–7 дней. Уже удалённые старые замеры не восстанавливаются.')),
       E('p',{},bi('In wide views markers are sampled; lines and statistics use retained measurements.','В широком периоде метки показаны выборочно; линии и статистика используют сохранённые измерения.')),
       E('p',{},bi('History starts when recording is enabled.','История начинается с включения записи.')),
-      E('p',{},bi('History is saved at the configured checkpoint interval.','История сохраняется с настроенным интервалом checkpoint.'))]),
+      E('p',{},bi('History is saved at the configured checkpoint interval.','История сохраняется с настроенным интервалом checkpoint.'))].forEach(function(node){notes.appendChild(node);});return notes;})(),
     (status.latency_history||{}).notice?E('p',{'role':'status'},status.latency_history.notice):null].filter(Boolean));
 }

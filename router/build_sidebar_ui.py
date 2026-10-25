@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard97'
+UI_MODULE='dashboard98'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -356,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui69.css')
+source=source.replace('ui15.css','ui70.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -432,6 +432,7 @@ assert _stops==1,'settings stop button'
 must_replace("if(identityNotice)pages.overview.insertBefore(identityNotice,pages.overview.firstChild);try{","try{")
 must_replace("controlCard:controlCard}),identityNotice?identityNotice.nextSibling:pages.overview.firstChild);","controlCard:controlCard}),pages.overview.firstChild);")
 must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',readinessIntro());put('readiness',renderReadiness(status,inventory));")
+must_replace("put('tests',planning);","/* Forecast presentation removed; controller checks remain independent. */")
 import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
@@ -503,6 +504,6 @@ must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_
 
 from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
-(root/'ui69.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui70.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

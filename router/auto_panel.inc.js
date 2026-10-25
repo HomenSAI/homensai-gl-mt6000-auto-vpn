@@ -239,21 +239,22 @@ function autoCommandOperation(status,now){
   if(model.awaiting||model.transitioning)return intent.requested==='off'?'stopping':'starting';
   return null;
 }
-function renderAutoControl(status,inventory,refresh){
+function renderAutoPowerControl(status,inventory){
   var ns=status.native_failover||{},intent=status.auto_control||{},model=autoControlModel(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   var light=autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),controlRevision=intent.control_revision;
   var monitorReady=typeof monitorLightModel!=='function'||monitorLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),false).key==='ok';
   var actionLabel=E('span',{'class':'hv-auto-action'},'');
   function syncButton(){
-    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending;
-    button.disabled=!!(operation||autoRequestBusy||autoStopBusy||inventory.error||!model.fresh||!stop&&!monitorReady);
-    if(emergencyButton)emergencyButton.disabled=autoStopBusy||operation==='stopping';
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;
+    button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
+    if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');}
+    button.setAttribute('data-auto-operation',operation||'idle');
     var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
     actionLabel.textContent=operation?label:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
-    var stop=model.stop||autoStartPending;if(autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))||autoRequestBusy||autoStopBusy||!stop&&!monitorReady)return;
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
     autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};
     if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
@@ -265,19 +266,14 @@ function renderAutoControl(status,inventory,refresh){
       else if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+autoBlockerText(code));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
-    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
+    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop){if(stop)autoCommandPending=null;else autoCommandPending.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
   }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
-  var emergencyButton=E('button',{'type':'button','class':'cbi-button cbi-button-negative hv-danger-action','click':function(){
-    if(autoStopBusy||autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000))==='stopping')return;
-    autoCommandPending={stop:true,baseline:intent.requested_at||0,acknowledged:false};autoStopBusy=true;autoControlRefresh();
-    return rpc.declare({object:'homensai-vpn',method:'native_stop',params:['request_source'],expect:{}})('manual').then(function(result){
-      if(autoCommandPending&&autoCommandPending.stop){if(autoRequestAcknowledged(result,true))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
-      ui.addNotification(null,autoRequestAcknowledged(result,true)?E('p',{},bi('Stop requested. Monitoring continues.','Остановка запрошена. Мониторинг продолжается.')):autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
-    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop)autoCommandPending.acknowledged=true;ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoStopBusy=false;autoControlRefresh();});
-  }},bi('Emergency Stop','Аварийный стоп'));
-  var emergencyControl=E('details',{'class':'hv-auto-emergency hv-auto-technical-actions hv-auto-details','data-auto-disclosure':'technical'},[E('summary',{},bi('Technical actions','Технические действия')),emergencyButton,E('small',{},bi('Cancels Auto and pending starts. Monitoring continues.','Отменяет Auto и ожидающие запросы запуска. Мониторинг продолжается.'))]);
-  if(typeof rememberDisclosure==='function')rememberDisclosure(emergencyControl,'auto-technical-actions');
   autoControlRefresh=syncButton;syncButton();
+  return {button:button,actionLabel:actionLabel,model:model,light:light};
+}
+function renderAutoControl(status,inventory,refresh){
+  var power=renderAutoPowerControl(status,inventory),button=power.button,actionLabel=power.actionLabel,model=power.model,light=power.light;
+  var ns=status.native_failover||{},intent=status.auto_control||{};
   var rows=status.profiles||[],settings=inventory.settings||{};
   function profile(id){return rows.filter(function(p){return p.id===id;})[0];}
   var source=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'source',(typeof statusNow==='function'?statusNow(status):Date.now()/1000),ns.source):profile(ns.source||settings.plan_source),target=typeof vendorDisplayMember==='function'?vendorDisplayMember(status,inventory,'target',(typeof statusNow==='function'?statusNow(status):Date.now()/1000),ns.target):profile(ns.target||settings.plan_target);
@@ -327,5 +323,5 @@ function renderAutoControl(status,inventory,refresh){
   if(statistics&&typeof rememberDisclosure==='function')rememberDisclosure(statistics,'auto-live-statistics');
   var header=E('div',{'class':'hv-auto-header'},[E('h2',{},bi('Automatic VPN failover','Автоматическое переключение VPN')),typeof renderMonitorBlock==='function'?renderMonitorBlock(status,inventory):null].filter(Boolean));
   var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?renderConnectivityCheck(status,refresh,inventory):null].filter(Boolean)),holdReturn,checklist,E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. Each switch is checked by the router. External LAN remains unverified.','Два выбранных VPN-канала. Каждый переход проверяет роутер. Внешний LAN остаётся непроверенным.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
-  return E('div',{'class':'hv-auto-sections'},[automatic,emergencyControl,statistics,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null].filter(Boolean));
+  return E('div',{'class':'hv-auto-sections'},[automatic,statistics,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null].filter(Boolean));
 }

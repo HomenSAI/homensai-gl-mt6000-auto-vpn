@@ -133,7 +133,6 @@ function drawAutoFailures(plot,history,now,hours,width,left,right){
   plot.appendChild(svg);
   if(!data.totals.source&&!data.totals.target)plot.appendChild(E('p',{'class':'hv-muted'},bi('No failure episodes with saved channel roles in this window.','В этом окне пока нет отказов с сохранённой ролью.')));
   plot.appendChild(E('p',{'class':'hv-muted'},bi('One outage is counted once until recovery. Blue: primary. Orange: reserve. Hover over a bar for the recorded traffic route.','Один отказ считается один раз до восстановления. Синий — основной, оранжевый — резервный. Наведите на столбец, чтобы увидеть записанный маршрут.')));
-  if(data.excluded){var archive=E('details',{'class':'hv-failure-archive'},[E('summary',{},bi('Archive without saved role: ','Архив без сохранённой роли: ')+data.excluded),E('p',{},bi('Excluded from both series. These records have no event-time role; today’s pair cannot be used to rewrite them.','Не включён в две серии. В этих записях роль не сохранялась; сегодняшняя пара не используется для переписывания истории.'))]);if(typeof rememberDisclosure==='function')rememberDisclosure(archive,'failure-archive');plot.appendChild(archive);}
   if(!history||history.details_dropped||!Number.isFinite(history.since)||history.since>now-hours*3600)plot.appendChild(E('p',{'class':'hv-muted'},bi('Incomplete history: counts cover saved observations only; no observations is not proof of availability.','История неполная: учитываются только сохранённые наблюдения; их отсутствие не доказывает исправность.')));
 }
 function renderAutoDay(status){

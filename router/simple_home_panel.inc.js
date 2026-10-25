@@ -59,7 +59,7 @@ function renderSimpleHome(status,inventory,model,controlCard,openMenu){
       E('h2',{'class':'hv-simple-state'},model.activeHealthy&&!model.moving?bi('Auto works','Auto работает'):bi('Auto is on','Auto включён')),E('div',{'class':'hv-simple-power'},power),
       E('p',{'class':'hv-simple-route'},model.selectedRole==='source'?bi('Primary channel is in use','Задействован основной канал'):model.selectedRole==='target'?bi('Reserve is in use','Задействован резерв'):model.moving?bi('Switching the channel','Переключение канала'):bi('Confirming the active channel','Рабочий канал уточняется')),
       E('div',{'class':'hv-simple-pair'},[member(model.source,'source'),member(model.target,'target')]),
-      E('button',{'type':'button','class':'cbi-button hv-simple-open-menu','data-simple-open-menu':'1','click':openMenu},bi('Open current menu','Открыть текущее меню'))
+      E('button',{'type':'button','class':'cbi-button hv-simple-open-menu','data-simple-open-menu':'1','click':openMenu},bi('Advanced menu','Расширенное меню'))
     ])
   ]);
 }

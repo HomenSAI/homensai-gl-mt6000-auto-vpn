@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+let top=650;const section={querySelector:()=>null,querySelectorAll:()=>[]};
+const root={isConnected:true,querySelector:()=>section};
+const c={Number,Array,Object,Date,window:{scrollX:0,get scrollY(){return top},scrollTo:args=>{top=args.top}}};vm.createContext(c);
+vm.runInContext(fs.readFileSync('router/viewport_state.inc.js','utf8'),c);
+c.pageViewportStates.home={page:'home',x:0,y:900,details:[]};
+c.resetPageViewport(root,'home');assert.equal(top,0,'explicit shortcut ignores both current and saved Home scroll');
+top=350;const reading=c.rememberPageViewport(root,'home');top=700;c.restorePageViewport(root,reading);assert.equal(top,350,'ordinary redraw retains reading position');
+c.resetPageViewport(root,'home');assert.equal(top,0,'repeated explicit entry returns to top');
+console.log('PASS: explicit Home entry resets saved scroll; subsequent polling restores user reading position');

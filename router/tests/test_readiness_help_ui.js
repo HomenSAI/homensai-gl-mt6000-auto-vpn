@@ -21,7 +21,7 @@ async function main(){
     }
     const codes=Object.keys(c.PREPARATION_CHECKS),status={time:100,system_readiness:{time:100,preparation:{scope:'persistent-mt3000-preparation',state:'pass',checks:codes.map((code,i)=>({code,state:i===0?'fail':'pass'}))}}};
     const table=c.renderPreparation(status,101).all().find(n=>n.tag==='table');assert(table);
-    assert.equal(table.all().filter(n=>n.tag==='th').length,5);
+    assert.equal(table.all().filter(n=>n.tag==='th').length,4);
     assert.equal(table.all().filter(n=>n.attrs['data-preparation-code']).length,7);
     assert.equal(c.preparationModel(status,191).state,'unknown','table does not promote stale preparation');
   }

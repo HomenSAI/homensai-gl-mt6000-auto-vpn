@@ -51,6 +51,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md](handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md)|historical-reference|
 |[docs/handoff/APPEARANCE-2026-10-23.md](handoff/APPEARANCE-2026-10-23.md)|historical-reference|
 |[docs/handoff/AUTO-MATRIX-2026-10-23.md](handoff/AUTO-MATRIX-2026-10-23.md)|historical-reference|
+|[docs/handoff/BATCH-TASKS-2026-10-25.md](handoff/BATCH-TASKS-2026-10-25.md)|recovery-record|
 |[docs/handoff/CONTINUATION-2026-10-20.md](handoff/CONTINUATION-2026-10-20.md)|historical-reference|
 |[docs/handoff/CONTINUATION-2026-10-21.md](handoff/CONTINUATION-2026-10-21.md)|historical-reference|
 |[docs/handoff/CONTINUE-PROMPT.md](handoff/CONTINUE-PROMPT.md)|recovery-record|
@@ -101,6 +102,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/OFFLINE-HARDENING-2026-10-20.md](OFFLINE-HARDENING-2026-10-20.md)|historical-reference|
 |[docs/OVERNIGHT-TEST-REPORT-2026-10-17.md](OVERNIGHT-TEST-REPORT-2026-10-17.md)|historical-reference|
 |[docs/OVERVIEW-PATH-COLOURS.md](OVERVIEW-PATH-COLOURS.md)|current|
+|[docs/OWNER-BATCH-ALPHA22-2026-10-25.md](OWNER-BATCH-ALPHA22-2026-10-25.md)|versioned-evidence|
 |[docs/OWNER-UI-ALPHA2.md](OWNER-UI-ALPHA2.md)|versioned-evidence|
 |[docs/PAIR-AUTO-OPERATIONS-2026-10-22.md](PAIR-AUTO-OPERATIONS-2026-10-22.md)|historical-reference|
 |[docs/PHYSICAL-MT3000-2026-10-20.md](PHYSICAL-MT3000-2026-10-20.md)|historical-reference|
@@ -148,6 +150,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA19-2026-10-25.md](VERIFICATION-ALPHA19-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA20-2026-10-25.md](VERIFICATION-ALPHA20-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA21-2026-10-25.md](VERIFICATION-ALPHA21-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA22-2026-10-25.md](VERIFICATION-ALPHA22-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -216,6 +219,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha19.md](../releases/v0.9.1-alpha19.md)|versioned-evidence|
 |[releases/v0.9.1-alpha20.md](../releases/v0.9.1-alpha20.md)|versioned-evidence|
 |[releases/v0.9.1-alpha21.md](../releases/v0.9.1-alpha21.md)|versioned-evidence|
+|[releases/v0.9.1-alpha22.md](../releases/v0.9.1-alpha22.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|

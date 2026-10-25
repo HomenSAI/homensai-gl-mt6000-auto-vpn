@@ -1,3 +1,7 @@
+## Alpha22 combined owner batch / Общая партия
+
+All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. Publication pending evidence commit. [Verification](docs/VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
+
 # HomenS.AI Auto VPN
 
 [Русский](README.ru.md) · [English](README.md)

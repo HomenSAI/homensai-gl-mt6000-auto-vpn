@@ -26,25 +26,11 @@ function onboardingEntryDeferred(){
     ONBOARDING_DEFER_USED=true;return true;
   }catch(e){return false;}
 }
-// Stop is independent of draft navigation and the configuration writer. Only its own
-// pending RPC disables it; a recreated step must unlock when that same request settles.
-var ONBOARDING_STOP={pending:false,button:null};
-function onboardingEmergencyControl(){
-  var button=E('button',{'type':'button','class':'cbi-button cbi-button-negative hv-danger-action','data-onboarding-action':'emergency-stop','click':function(){
-    if(ONBOARDING_STOP.pending)return;
-    ONBOARDING_STOP.pending=true;button.disabled=true;
-    if(ONBOARDING_STOP.button)ONBOARDING_STOP.button.disabled=true;
-    var request;
-    try{request=rpc.declare({object:'homensai-vpn',method:'native_stop',params:['request_source'],expect:{}})('manual');}catch(e){request=Promise.reject(e);}
-    return Promise.resolve(request).then(function(result){
-      ui.addNotification(null,autoRequestAcknowledged(result,true)?E('p',{},bi('Stop requested. Monitoring continues.','Остановка запрошена. Мониторинг продолжается.')):autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
-    }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){
-      ONBOARDING_STOP.pending=false;button.disabled=false;
-      if(ONBOARDING_STOP.button)ONBOARDING_STOP.button.disabled=false;
-    });
-  }},bi('Emergency Stop Auto','Аварийный стоп Auto'));
-  ONBOARDING_STOP.button=button;button.disabled=ONBOARDING_STOP.pending;
-  return E('div',{'class':'hv-auto-emergency'},[button,E('small',{},bi('Cancels Auto and pending starts. Monitoring continues. Available on every setup step, including while saving.','Отменяет Auto и ожидающие запросы запуска. Мониторинг продолжается. Доступен на каждом шаге, в том числе при сохранении.'))]);
+// The wizard exposes the same Auto power button, independent of its save lock.
+function onboardingAutoControl(status,inventory){
+  var power=renderAutoPowerControl(status||{},inventory).button;
+  power.setAttribute('data-onboarding-action','auto-power');
+  return E('div',{'class':'hv-onboarding-auto'},[power,E('span',{},bi('Auto · press to stop or cancel startup','Auto · нажмите для остановки или отмены запуска'))]);
 }
 var ONBOARDING_STEPS=['appearance','monitor','system','servers','recovery','speed','telegram','review'];
 // The aggregate editor preserves the monitor's existing 1–32 profile capacity.
@@ -168,7 +154,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
       }else checks.push(row.check);
       card.appendChild(row.row);return n;
     }
-    function toggle(title,obj,key,path,after){var n=E('input',{'type':'checkbox','data-onboarding-field':path,'aria-label':title});n.checked=obj[key]===true;captures.push(function(){obj[key]=n.checked;});n.addEventListener('change',function(){obj[key]=n.checked;if(after)after(n.checked);gate();});card.appendChild(field(title,n));return n;}
+    function toggle(title,obj,key,path,after){var n=E('input',{'type':'checkbox','data-onboarding-field':path,'aria-label':title});n.checked=obj[key]===true;captures.push(function(){obj[key]=n.checked;});n.addEventListener('change',function(){obj[key]=n.checked;if(after)after(n.checked);gate();});card.appendChild(E('label',{'class':'hv-wizard-field hv-wizard-toggle'},[n,E('span',{},title)]));return n;}
     function select(title,obj,key,path,options){var n=E('select',{'data-onboarding-field':path,'aria-label':title,'style':'max-width:100%'});options.forEach(function(o){n.appendChild(E('option',{value:o[0]},o[1]));});if(!options.some(function(o){return o[0]===obj[key];}))n.appendChild(E('option',{value:obj[key]},bi('Saved value needs review: ','Сохранённое значение требует проверки: ')+obj[key]));n.value=obj[key];captures.push(function(){obj[key]=n.value;});n.addEventListener('change',gate);checks.push(function(){return options.some(function(o){return o[0]===n.value;});});card.appendChild(field(title,n));return n;}
     function note(en,ru){card.appendChild(E('p',{},bi(en,ru)));}
     function action(key,label,fn){return E('button',{'type':'button','class':'cbi-button'+(key==='next'||key==='save'?' cbi-button-action':''),'data-onboarding-action':key,'click':fn},label);}
@@ -177,7 +163,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
     card.appendChild(E('h1',{},session.paused?bi('Setup paused — draft kept','Настройка приостановлена — черновик сохранён'):headings[session.step]));
     var helpUrl=new URL(window.location.href);helpUrl.searchParams.set('onboarding','defer');helpUrl.searchParams.set('lang',locale);helpUrl.searchParams.set('setup_help','1');helpUrl.hash='help';
     card.appendChild(E('p',{},E('a',{'href':helpUrl.toString(),'target':'_blank','rel':'noopener noreferrer','data-onboarding-action':'setup-help','class':'cbi-button'},bi('Setup help: steps 1–8 with examples','Помощь по настройке: шаги 1–8 с примерами'))));
-    if(session.paused||session.step!==0)card.appendChild(onboardingEmergencyControl());
+    if(session.paused||session.step!==0)card.appendChild(onboardingAutoControl(status,inventory));
     if(session.paused){
       note('Nothing was saved. This draft stays in this page only; closing or reloading the page discards it. Setup will open again until a complete reviewed save succeeds.','Ничего не сохранено. Черновик остаётся только на этой странице; закрытие или обновление страницы удалит его. Мастер откроется снова до успешного сохранения всех настроек.');
       card.appendChild(action('resume',bi('Resume setup','Продолжить настройку'),function(){session.paused=false;show();}));

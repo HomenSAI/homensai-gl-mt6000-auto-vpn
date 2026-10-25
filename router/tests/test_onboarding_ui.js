@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Node {
-  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[];this.listeners={};this.value=attrs.value||'';this.checked=false;this.disabled=false;this.textContent='';this.classList={add(){},remove(){}};(Array.isArray(children)?children:[children]).forEach(c=>this.appendChild(c));}
+  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[];this.listeners={};this.value=attrs.value||'';this.checked=false;this.disabled=false;this.textContent='';this.classList={add(){},remove(){},toggle(){}};(Array.isArray(children)?children:[children]).forEach(c=>this.appendChild(c));}
   appendChild(child){if(child!=null){if(child instanceof Node){if(child.parentNode)child.parentNode.removeChild(child);child.parentNode=this;}this.children.push(child);}return child;}
   removeChild(child){this.children.splice(this.children.indexOf(child),1);if(child instanceof Node)child.parentNode=null;return child;}
   get firstChild(){return this.children[0]||null;}
@@ -100,7 +100,7 @@ function advance(f,target='review'){
   assert.equal(f.calls.length,0,'render must not add a status/readiness RPC');
   assert.equal(f.step(),'appearance');assert.equal(f.field('appearance.language').value,'en');
   assert.equal(f.c.currentDesign(),'b');assert.equal(f.field('appearance.design').value,'b','fresh wizard starts Calm without persisting a browser override');assert.equal(f.writes.length,0);
-  assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'));assert(f.button('open-dashboard').attrs.class.includes('hv-onboarding-recovery-link'));
+  assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='auto-power'));assert(f.button('open-dashboard').attrs.class.includes('hv-onboarding-recovery-link'));
   f.set('appearance.theme','dark');f.set('appearance.language','ru');assert.equal(f.c.locale,'ru');assert(text(f.root).includes('Язык и оформление'));assert(text(f.root).includes('Далее'));assert.equal(new URL(f.button('open-dashboard').attrs.href).searchParams.get('lang'),'ru');assert(text(f.root).includes('Открыть панель и средства восстановления'));assert(!text(f.root).includes('Language and appearance'));assert.equal(f.field('appearance.theme').value,'dark');assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);assert.equal(f.reloads,0);
   const skip=walk(f.root).find(n=>n.attrs['data-onboarding-skip']==='1'),nav=f.button('next').parentNode;assert.equal(skip.parentNode,nav.parentNode);assert(skip.parentNode.children.indexOf(skip)>skip.parentNode.children.indexOf(nav),'skip is below Cancel/Next');assert(text(skip).includes('ничего не сбрасывает'));const guideUrl=new URL(f.button('setup-help').attrs.href);assert.equal(guideUrl.hash,'#help');assert.equal(guideUrl.searchParams.get('setup_help'),'1');assert.equal(guideUrl.searchParams.get('onboarding'),'defer');assert.equal(f.button('setup-help').attrs.target,'_blank');
   f.set('appearance.language','en');assert(text(f.root).includes('Language and appearance'));assert(text(f.root).includes('Next'));assert(!text(f.root).includes('Язык и оформление'));
@@ -169,28 +169,20 @@ function advance(f,target='review'){
   f=fixture({inventory:saved,store:{'homensai-vpn-language':'en','homensai-vpn-theme':'system','homensai-vpn-design':'b'}});assert.equal(f.c.locale,'en');assert.equal(f.c.storedTheme(),'system');assert.equal(f.c.currentDesign(),'b');
   f.c.window.localStorage.getItem=()=>{throw Error('storage unavailable');};f.c.onboardingDisplayDefaults(saved);assert.equal(f.c.locale,'ru');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.currentDesign(),'c','router defaults work when browser persistence is unavailable');
   f=fixture({inventory:saved});f.c.requestedLanguage='en';f.c.locale='en';f.c.onboardingDisplayDefaults(saved);assert.equal(f.c.locale,'en','explicit language URL wins over router default');
-  // An accepted, configured legacy installation can still have Auto ON before the new marker exists.
-  // Stop must be an explicit zero-argument RPC, usable with active/stale/unknown status and pending controls.
+  // One canonical power control, independent of the wizard save lock.
   for(const legacyStatus of [{native_failover:{state:'OBSERVING',certified:true},auto_control:{requested:'on'}},{rpc_error:'RPC-UNAVAILABLE'},{}]){
-    const legacy=baseInventory();Object.assign(legacy.settings,{setup_complete:true,native_enabled:true});
-    f=fixture({inventory:legacy,status:legacyStatus});assert(!f.c.onboardingComplete(legacy));assert.equal(f.calls.length,0,'render never automatically stops or starts Auto');
-    assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'),'appearance has no Stop');f.click('next');
-    f.c.autoStartPending=true;f.c.autoRequestBusy=true;f.c.autoStopBusy=true;
-    assert(!f.button('emergency-stop').disabled,'independent of status and other controls');
-    f.stopPending={};let stopping=f.click('emergency-stop');assert.equal(f.calls.length,1);assert.equal(f.calls[0].spec.method,'native_stop');assert.deepEqual(f.calls[0].args,['manual']);assert.deepEqual(f.calls[0].spec.params,['request_source']);
-    await f.click('emergency-stop');assert.equal(f.calls.length,1,'only its own pending Stop is deduped');
-    f.click('next');assert.equal(f.step(),'system');assert(f.button('emergency-stop').disabled,'recreated control shares its pending Stop');
-    f.stopPending.resolve({queued:true,accepted:true});await stopping;assert(!f.button('emergency-stop').disabled,'current recreated control unlocks when request settles');
-    f.stopPending=null;await f.click('emergency-stop');assert.equal(f.calls.length,2,'no Stop cooldown after settlement');assert.equal(f.reloads,0,'Stop preserves the wizard draft');
-    f.stopResponse={queued:false,accepted:false};await f.click('emergency-stop');assert(!f.button('emergency-stop').disabled);assert(f.notes.some(n=>text(n).includes('AUTO-CONTROL-UNVERIFIED')));
-    f.stopFail=true;await f.click('emergency-stop');assert(!f.button('emergency-stop').disabled);assert(f.notes.some(n=>text(n).includes('AUTO-CONTROL-FAILED')));assert(!f.notes.some(n=>text(n).includes('never-display-stop-secret')));
+    f=fixture({status:legacyStatus});assert.equal(f.calls.length,0);f.click('next');
+    assert(!f.button('auto-power').disabled,'unknown or running status permits safe Stop');
+    f.stopPending={};const stopping=f.click('auto-power');await f.click('auto-power');
+    assert.equal(f.calls.length,1);assert.equal(f.calls[0].spec.method,'native_stop');assert.deepEqual(f.calls[0].args,['manual']);
+    f.click('next');assert(f.button('auto-power').disabled,'pending Stop survives navigation');
+    f.stopPending.resolve({queued:true,accepted:true});await stopping;assert(f.button('auto-power').disabled,'ACK is not confirmed Stop');
+    assert(!text(f.root).includes('Emergency Stop'));
   }
-  f=fixture();advance(f);f.pending={};let saving=f.click('save');assert(f.button('save').disabled);assert(!f.button('emergency-stop').disabled,'writer lock must never delay Stop dispatch');
-  f.stopPending={};let stopping=f.click('emergency-stop');assert.deepEqual(f.calls.map(c=>c.spec.method),['setup_onboarding','native_stop']);
-  await f.click('emergency-stop');await f.click('save');await f.click('back');assert.equal(f.calls.length,2);assert.equal(f.step(),'review');
-  f.stopPending.resolve({queued:true,accepted:true});await stopping;assert(!f.button('emergency-stop').disabled);assert(f.button('save').disabled,'Stop settling does not falsely unlock pending configuration save');
-  f.pending.resolve({saved:false,code:'CONFIG-STOP-AUTO-FIRST'});await saving;assert.equal(f.step(),'review');assert(!f.button('emergency-stop').disabled);assert(!f.button('save').disabled);assert.equal(f.reloads,0);
-  f.click('cancel');assert.equal(f.step(),'paused');assert(!f.button('emergency-stop').disabled);f.stopPending=null;await f.click('emergency-stop');assert.equal(f.calls.at(-1).spec.method,'native_stop','paused wizard keeps emergency Stop');
+  f=fixture();advance(f);f.pending={};let saving=f.click('save');assert(f.button('save').disabled);assert(!f.button('auto-power').disabled,'save lock never blocks Stop');
+  f.stopPending={};const stopping=f.click('auto-power');assert.deepEqual(f.calls.map(c=>c.spec.method),['setup_onboarding','native_stop']);
+  f.stopPending.resolve({queued:true});await stopping;f.pending.resolve({saved:false,code:'CONFIG-STOP-AUTO-FIRST'});await saving;
+  assert.equal(f.step(),'review');assert.equal(f.reloads,0,'Stop retains draft');
   // Held reserve recovery needs the existing dashboard's explicit return control as well as Stop.
   for(const held of ['HELD-ON-RESERVE','STOPPED-ON-RESERVE']){
     f=fixture({status:{native_failover:{state:held},auto_control:{requested:'off'}}});
@@ -215,9 +207,9 @@ function advance(f,target='review'){
   // Every step/pause in every design and locale retains complete owner identity; full-page styles load once.
   for(const language of ['en','ru'])for(const design of ['a','b','c']){
     f=fixture({language,design});assert.equal(walk(f.root).filter(n=>n.tag==='link').length,4);
-    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert.equal(walk(f.root).some(n=>n.attrs['data-onboarding-action']==='emergency-stop'),f.step()!=='appearance','Stop removed only from appearance');assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],design);if(f.step()==='review')break;f.click('next');}
+    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert.equal(walk(f.root).some(n=>n.attrs['data-onboarding-action']==='auto-power'),f.step()!=='appearance','Stop removed only from appearance');assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],design);if(f.step()==='review')break;f.click('next');}
     if(language==='ru'){assert(text(f.root).includes('Пауза, секунд'));assert(!text(f.root).includes('budget_mib'));assert(!text(f.root).includes('primary_successes'));}
-    f.click('cancel');assert.equal(f.step(),'paused');assert(!f.button('emergency-stop').disabled);assert(walk(f.root).some(n=>n.attrs['data-hv-attribution']==='1'));assert.equal(f.calls.length,0);
+    f.click('cancel');assert.equal(f.step(),'paused');assert(!f.button('auto-power').disabled);assert(walk(f.root).some(n=>n.attrs['data-hv-attribution']==='1'));assert.equal(f.calls.length,0);
   }
   const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');
   assert(builder.includes("onboarding_panel.inc.js"));assert(builder.includes("if(!inventory.error&&!onboardingComplete(inventory)&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);"));assert(builder.includes("openOnboardingSettings(inventory,lastGoodStatus||data[1]);"));assert(builder.includes("!onboardingComplete(inventory)?E('p',{'class':'alert-message warning','data-onboarding-incomplete':'1'}"));

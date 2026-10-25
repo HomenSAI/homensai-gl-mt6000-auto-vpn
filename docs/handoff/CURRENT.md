@@ -1,3 +1,17 @@
+# ALPHA22 INSTALLED — publication next
+
+All13 owner tasks implemented together. Exact-source 27a0280267d0a7d07ecb0e5092a5fc58d1c18cff, canonical850115bytes SHAfaf4ee1e218dbc70d2810784404727b640510ae9803f9ccd84a2a98fee3307ca; dualCI774app/112QA each/54UI PASS. MT3000alpha22/dashboard98/ui70/87files+modes/RPC/HTTP/pinnedHTTPS verified; AutoONconfirmedreserve and bothVPNhealthy. 1881closedoldlatencyrows/settings/terms retained;193entrypre/postbackups independentlyread. Native browser visual NOT_VERIFIED. No mainMT6000/host-network changes.
+
+Next commit evidence, publish_refs.py/publish_releases.py, verify4assets/server, docs-only closure. Do not rerun completed device steps. Private continuation: private/batch-alpha22-20261025; driver private/alpha22-install-20261025. Handoff docs/handoff/BATCH-TASKS-2026-10-25.md; reports qa/OWNER-BATCH-ALPHA22-2026-10-25.json,qa/MT3000-ALPHA22-2026-10-25.json. Keep gateway127.0.0.2:8080 alive.
+
+# ACTIVE: combined owner batch alpha22 / 25 October2026
+
+All13 tasks accepted; implementation and joint verification in progress. No intermediate publication or router update. Tasks01–13 source edits present; next: regression tests, bilingual generated documentation, one canonical build/exact dual CI, dedicated MT3000 backup/normal Stop/update/Start/reserve, GitHub and Gitea prereleases. Physical/published baseline remains alpha21 until verified delivery. Private continuation: private/batch-alpha22-20261025. No new GUI visual proof yet.
+
+# COLLECTING OWNER BATCH —25 October2026
+
+Latest owner directs about15 sequential tasks, immediate persistent list/rephrasing and response ready for next. Do not build/publish/install interim changes. One combined delivery after owner finishes the list. Primary list: docs/handoff/BATCH-TASKS-2026-10-25.md. Task01: language switch preserves actual section/full-simple mode, local implementation and two targeted Node suites passed, no full CI/build/install yet. Current physical/public alpha21 remains baseline; private gateways keep running. Local uncommitted source/WIP includes temporary regenerated dashboard97, so create proper new module/version before final combined build; never overwrite published21 payload. No device/package writer active. Receive and save next task now.
+
 # COMPLETE alpha21 / owner77 —25 October2026
 
 [GitHub alpha21](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21) · [Gitea alpha21](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21)

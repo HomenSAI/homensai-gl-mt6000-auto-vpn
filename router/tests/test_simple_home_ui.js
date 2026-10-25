@@ -39,18 +39,18 @@ console.log('PASS: real Auto/path/health models gate source and reserve, stale/m
  const module=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
  const source=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+module+'.js','utf8');
  const begin=source.indexOf('    var homeLatest=data[1],homeMenuRequested=false;'),end=source.indexOf('    function showPage(key){',begin);assert(begin>0&&end>begin);
- const entry=new Function('setup','window','validTab','startLanding','simpleHomeModel','data','inventory','statusNow','tabs','showPage','var bi=function(en){return en;};'+source.slice(begin,end)+';return {active:activeTab,fullMenu:()=>homeMenuRequested,open:openHomeMenu,simple:goSimpleHome};');
+ const entry=new Function('setup','window','validTab','startLanding','simpleHomeModel','data','inventory','statusNow','tabs','showPage',"var appRoot={},panel={},resetPageViewport=function(root,page){window.resetPage=page;};var bi=function(en){return en;};"+fs.readFileSync('router/navigation_context.inc.js','utf8')+source.slice(begin,end)+';return {active:activeTab,fullMenu:()=>homeMenuRequested,open:openHomeMenu,simple:goSimpleHome};');
  for(const [hash,ready,setup,expected] of [['',true,false,'home'],['#overview',true,false,'home'],['#home',true,false,'home'],['',false,false,'start'],['#home',false,false,'start'],['#tests',true,false,'tests'],['',true,true,'settings']]){
-  const w={location:{hash}},tabs=[],opened=[];const result=entry(setup,w,k=>['overview','home','tests'].includes(k),()=> 'start',()=>({showCard:ready}),[{},{}],{},()=>1000,tabs,k=>opened.push(k));assert.equal(result.active,expected);
+  const w={location:{hash}},tabs=[],opened=[];const result=entry(setup,w,k=>['overview','home','tests','start','settings'].includes(k),()=> 'start',()=>({showCard:ready}),[{},{}],{},()=>1000,tabs,k=>opened.push(k));assert.equal(result.active,expected);
   if(expected==='tests')assert(result.fullMenu(),'A direct tests link stays in full management');
   result.open();assert(result.fullMenu());assert.equal(w.location.hash,'overview');assert.deepEqual(opened,['overview']);
-  assert.equal(result.simple(),ready);assert.equal(w.location.hash,ready?'home':'overview');if(ready)assert(!result.fullMenu());
+  assert.equal(result.simple(),ready);assert.equal(w.location.hash,ready?'home':'overview');if(ready){assert(!result.fullMenu());assert.equal(w.resetPage,'home');}
  }
  assert(source.indexOf('if(!inventory.error&&!termsAccepted(inventory))return renderTermsGate')<source.indexOf('if(!inventory.error&&!onboardingComplete(inventory)'));
  assert(source.includes("if(activeTab==='home'&&!simpleHomeModel(homeLatest,inventory,statusNow(homeLatest)).showCard)"),'Home must expire even while no new RPC frame arrives');
  assert(source.includes("E('div',{'class':'hv-heading-row'},[heading,(homeShortcut=renderSimpleHomeShortcut"),'Shortcut must sit beside the actual page title');
  assert(source.includes('if(homeShortcut)homeShortcut.update(homeModel);'));
- assert(source.includes('!simpleHomeAutoEnabled(data[1],statusNow(data[1]))&&!onboardingEntryDeferred()'),'Enabled Auto must bypass only the unfinished wizard display gate');
+ assert(source.includes("!simpleHomeAutoEnabled(data[1],statusNow(data[1]))&&languageViewContext(window.location.href)!=='full'&&!onboardingEntryDeferred()"),'Enabled Auto and an explicit language reload preserve the existing display context');
  const css=fs.readFileSync('router/design_layer.css','utf8');assert(css.includes('.hv-app .hv-skip:not(:focus)'));assert(css.includes('clip-path:inset(50%)'));assert(css.includes('.hv-workspace[data-hv-design] .hv-start-done{opacity:1}'));
  console.log('PASS: generated startup routing, explicit setup/tests links, full-menu request and stale-home watchdog.');
 }

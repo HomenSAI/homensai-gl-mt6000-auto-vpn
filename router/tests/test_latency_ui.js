@@ -88,3 +88,8 @@ encodedWeek.latency_history.rows_json='broken';assert.equal(c.latencyHistoryRows
 encodedWeek.latency_history.rows_json=' '.repeat(850001);assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0);
 encodedWeek.latency_history.rows_json=JSON.stringify(bulk);encodedWeek.latency_history.rows_count=2;assert.equal(c.latencyHistoryRows(encodedWeek,inventory,900000).length,0,'count mismatch is not a successful truncated week');
 console.log('PASS: bounded weekly transport decoding, legacy daily compatibility, malformed/oversize/count mismatch refusals');
+
+const compact=c.renderLatencyPanel(weekStatus,inventory),notes=compact.all().find(n=>n.tag==='details'&&n.attrs['data-auto-disclosure']==='latency-statistics');
+assert(notes&&!notes.attrs.open);assert(notes.all().filter(n=>n.tag==='p').length===8);
+assert(!textOf(compact).includes('Зелёный: выбранный маршрут.'));assert(!textOf(compact).includes('Grey: route unconfirmed.'));
+console.log('PASS: compact statistic explanation has eight retained paragraphs and no confusing permanent route-color prose');

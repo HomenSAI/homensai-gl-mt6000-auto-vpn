@@ -74,8 +74,8 @@ function readinessInfo(icon,label,value,waiting){
 }
 var PREPARATION_CHECKS={
   'PREP-HNAT-CONFIG':['Hardware acceleration stays disabled','Аппаратное ускорение остаётся выключенным'],
-  'PREP-WGCLIENT1-AUTOSTART':['WireGuard automatic startup is disabled','Автозапуск WireGuard выключен'],
-  'PREP-OVPNCLIENT1-AUTOSTART':['OpenVPN automatic startup is disabled','Автозапуск OpenVPN выключен'],
+  'PREP-WGCLIENT1-AUTOSTART':['WireGuard startup control','Управление запуском WireGuard'],
+  'PREP-OVPNCLIENT1-AUTOSTART':['OpenVPN startup control','Управление запуском OpenVPN'],
   'PREP-STOCK-VPN-BOOT':['Stock VPN startup does not compete','Штатный автозапуск VPN не конкурирует'],
   'PREP-SFE-BOOT':['SFE startup is disabled','Автозапуск SFE выключен'],
   'PREP-SFE-AUTOLOAD':['SFE autoload is preserved outside startup','Автозагрузка SFE сохранена вне запуска'],
@@ -97,8 +97,8 @@ function renderPreparation(status,now){
     bi('These settings keep the tested MT3000 preparation across reboot. A passing check does not start a VPN or authorize Auto.','Эти настройки сохраняют проверенную подготовку MT3000 после перезагрузки. Успешная проверка не запускает VPN и не разрешает Auto.');
   var meaning={
     'PREP-HNAT-CONFIG':['Keeps hardware acceleration from bypassing the checked path.','Не даёт аппаратному ускорению обходить проверяемый путь.'],
-    'PREP-WGCLIENT1-AUTOSTART':['Auto coordinates the selected WireGuard client startup.','Запуск выбранного WireGuard координирует Auto.'],
-    'PREP-OVPNCLIENT1-AUTOSTART':['Auto coordinates the selected OpenVPN client startup.','Запуск выбранного OpenVPN координирует Auto.'],
+    'PREP-WGCLIENT1-AUTOSTART':['Auto starts the selected WireGuard VPN. Independent startup at router boot is disabled so the two mechanisms do not compete.','Выбранный WireGuard VPN запускает Auto. Отдельный запуск при загрузке роутера отключён, чтобы два механизма не мешали друг другу.'],
+    'PREP-OVPNCLIENT1-AUTOSTART':['Auto starts the selected OpenVPN VPN. Independent startup at router boot is disabled so the two mechanisms do not compete.','Выбранный OpenVPN VPN запускает Auto. Отдельный запуск при загрузке роутера отключён, чтобы два механизма не мешали друг другу.'],
     'PREP-STOCK-VPN-BOOT':['Avoids two competing VPN startup controllers.','Предотвращает конкуренцию двух механизмов запуска VPN.'],
     'PREP-SFE-BOOT':['Prevents software acceleration restarting at boot.','Не позволяет программному ускорению вернуться при загрузке.'],
     'PREP-SFE-AUTOLOAD':['Keeps original autoload bytes available for deliberate recovery.','Сохраняет исходный файл автозагрузки для осознанного восстановления.'],
@@ -110,11 +110,10 @@ function renderPreparation(status,now){
       E('td',{},[E('strong',{},bi(label[0],label[1])),E('small',{'style':'display:block;overflow-wrap:anywhere'},row.code)]),
       E('td',{},[E('span',{'class':'hv-check-lamp hv-check-'+(pass?'green':row.state==='fail'?'red':'grey'),'aria-hidden':'true'}),' '+(pass?bi('Ready','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено'))]),
       E('td',{},bi(detail[0],detail[1])),
-      E('td',{},pass?bi('Keep the verified setting.','Сохранить проверенное значение.'):bi('Inspect the actual state and reviewed undo procedure before changing anything.','Проверить фактическое состояние и инструкцию отмены до изменений.')),
       E('td',{},typeof helpLink==='function'?helpLink('router-preparation',bi('Help','Помощь')):bi('See router preparation instructions.','См. инструкцию подготовки роутера.'))]);
   });
   var table=E('div',{'class':'hv-dv-tablewrap','style':'overflow-x:auto'},E('table',{'class':'table hv-preparation-table','data-preparation-table':'1'},[
-    E('thead',{},E('tr',{},[bi('Check','Проверка'),bi('State','Состояние'),bi('Meaning','Что означает'),bi('Next action','Что делать'),bi('Help','Помощь')].map(function(label){return E('th',{'scope':'col'},label);}))),E('tbody',{},rows)]));
+    E('thead',{},E('tr',{},[bi('Check','Проверка'),bi('State','Состояние'),bi('Meaning','Что означает'),bi('Help','Помощь')].map(function(label){return E('th',{'scope':'col'},label);}))),E('tbody',{},rows)]));
   return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),table,E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
 }
 function renderReadiness(status,inventory){

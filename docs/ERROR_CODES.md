@@ -1277,7 +1277,7 @@ VPN не подключён / VPN not connected
 
 **Что делать:** Нажмите аварийную остановку и проверьте получившийся путь перед ручным переключением.
 
-**Action:** Press Emergency Stop and review the resulting path before trying manual switching.
+**Action:** Press the Auto power button to stop and review the resulting path before trying manual switching.
 
 ## MANUAL-SELECTION-UNVERIFIED
 
@@ -1301,7 +1301,7 @@ VPN не подключён / VPN not connected
 
 **Что делать:** Дождитесь результата либо используйте аварийную остановку; не отправляйте дубликаты.
 
-**Action:** Wait for its result or use Emergency Stop; do not submit duplicates.
+**Action:** Wait for its result or press the Auto power button to stop; do not submit duplicates.
 
 ## MANUAL-REQUEST-UNCONFIRMED
 

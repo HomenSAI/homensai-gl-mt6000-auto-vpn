@@ -653,3 +653,20 @@
 .hv-app .hv-learn-question-context{padding:14px;border-left:3px solid var(--accent,#2563eb);background:var(--bg);margin:12px 0}.hv-app table.hv-learn-results{width:100%;min-width:560px}.hv-app .hv-learn-results button{white-space:normal;text-align:left;max-width:100%}.hv-app .hv-chips{flex-wrap:wrap}
 
 .hv-app .hv-journal-description{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}.hv-app .hv-journal-description:hover{color:var(--accent,#2563eb)}.hv-app .hv-live-terminal .hv-journal-description{color:inherit}
+
+/* Owner batch: readable wizard and short diagnostic links. */
+.hv-app .hv-journal-description{color:inherit;text-decoration:none;border-bottom:0;cursor:text}
+.hv-app a.hv-errlink,.hv-app a.hv-errlink-inline,.hv-app a.hv-journal-state{color:var(--accent,#2563eb);text-decoration:none;border-bottom:0}
+.hv-app a.hv-errlink:hover,.hv-app a.hv-errlink:focus-visible,.hv-app a.hv-journal-state:hover,.hv-app a.hv-journal-state:focus-visible{text-decoration:underline;text-underline-offset:3px}
+.hv-app .hv-preparation-table{width:100%;table-layout:auto}
+.hv-app .hv-preparation-table th,.hv-app .hv-preparation-table td{word-break:normal;overflow-wrap:break-word}
+.hv-app .hv-preparation-table th:nth-child(1){width:27%}.hv-app .hv-preparation-table th:nth-child(2){width:15%}.hv-app .hv-preparation-table th:nth-child(3){width:49%}
+.hv-app .hv-latency-series{display:flex;flex-wrap:wrap;gap:.65rem 1.5rem;margin:1rem 0}.hv-latency-series>span{display:inline-flex;align-items:center;gap:.5rem}.hv-latency-sample{display:inline-block;width:2rem;border-top:3px solid currentColor}.hv-latency-dashed{border-top-style:dashed}
+.hv-app.hv-onboarding,.hv-app.hv-onboarding p,.hv-app.hv-onboarding label,.hv-app.hv-onboarding input,.hv-app.hv-onboarding select,.hv-app.hv-onboarding button,.hv-app.hv-onboarding small{font-family:var(--font-body,system-ui,sans-serif);line-height:1.5}
+.hv-app.hv-onboarding p,.hv-app.hv-onboarding label,.hv-app.hv-onboarding input,.hv-app.hv-onboarding select,.hv-app.hv-onboarding button{font-size:1rem}
+.hv-app.hv-onboarding .hv-wizard-field{display:flex;flex-direction:column;gap:.5rem;margin:1rem 0;max-width:100%;min-width:0}.hv-app.hv-onboarding .hv-wizard-toggle{flex-direction:row;align-items:flex-start;gap:.75rem}
+.hv-app.hv-onboarding input[type=checkbox]{appearance:auto!important;-webkit-appearance:checkbox!important;display:inline-block!important;position:static!important;opacity:1!important;width:1.15rem!important;height:1.15rem!important;min-width:1.15rem;flex:0 0 1.15rem;margin:.2rem 0 0!important;box-shadow:none!important;transform:none!important;accent-color:var(--accent,#2563eb)}
+.hv-app.hv-onboarding .hv-wizard-toggle:before,.hv-app.hv-onboarding .hv-wizard-toggle:after,.hv-app.hv-onboarding input[type=checkbox]:before,.hv-app.hv-onboarding input[type=checkbox]:after{content:none!important;display:none!important}
+.hv-app.hv-onboarding button,.hv-app.hv-onboarding .cbi-button{max-width:100%;white-space:normal;height:auto;min-height:2.75rem;margin:0;box-sizing:border-box}
+.hv-app.hv-onboarding p{margin:.85rem 0}.hv-app .hv-onboarding-auto{display:flex;align-items:center;gap:1rem;margin:1rem 0}.hv-app .hv-onboarding-auto .hv-auto-power{flex:0 0 4rem;width:4rem;height:4rem;min-height:4rem}
+.hv-app button.hv-auto-power.hv-auto-stop-requested{background:#ef7485!important;border-color:#bd2139!important;box-shadow:0 0 0 7px #ef748533!important}

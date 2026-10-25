@@ -50,3 +50,9 @@ function installViewportPersistence(root,getPage){
     requestAnimationFrame(function(){revisitPageViewport(root,getPage());});
   }catch(error){}
 }
+
+// An explicit shortcut entry starts at the card top; polling preserves reading position.
+function resetPageViewport(root,page){
+  pageViewportStates[page]={page:page,x:0,y:0,details:[]};
+  revisitPageViewport(root,page);
+}

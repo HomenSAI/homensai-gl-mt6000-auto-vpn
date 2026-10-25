@@ -236,8 +236,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. Emergency Stop remains available.",
-          "После смены профилей дождитесь текущих наблюдений. Повторные нажатия Start не исправляют несовпадение идентичности, служб или политики. Аварийный Stop остаётся доступным."
+          "Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. The Auto power button remains available to stop or cancel startup.",
+          "После смены профилей дождитесь текущих наблюдений. Повторные нажатия Start не исправляют несовпадение идентичности, служб или политики. Кнопка Auto остаётся доступной для остановки или отмены запуска."
         ]
       }
     ]

@@ -1,5 +1,12 @@
 # Последние изменения / Latest changes — 24.10.2026
 
+## 0.9.1-alpha22 —25 October2026 / 25 октября2026
+
+Combined13 owner corrections: one cancellable Auto power button, stable language/page navigation, simplified-view top entry/Advanced menu, compact preparation/chart panels, native wizard checkboxes and short diagnostic links.
+
+Общая партия13 правок: единая кнопка Auto с отменой запуска, сохранение страницы при смене языка, вход на верх упрощённой страницы/«Расширенное меню», компактные таблицы и графики, чекбоксы мастера и короткие ссылки журнала.
+
+
 ## 0.9.1-alpha21 —25 October2026 / 25 октября2026
 
 Simplified access now follows confirmed enabled Auto alone, regardless of setup/test markers. Off/unconfirmed Auto has a red shortcut and setup tooltip on hover/focus/tap, dismissible with Escape. A running Auto bypasses the unfinished-wizard entry screen without marking it complete. Missing channel data and handovers render honest card states. Existing Auto start protections unchanged.

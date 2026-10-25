@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "result": "PASS_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha22",
+  "tested_product_source": "27a0280267d0a7d07ecb0e5092a5fc58d1c18cff",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha22-1_all.ipk",
+    "bytes": 850115,
+    "sha256": "faf4ee1e218dbc70d2810784404727b640510ae9803f9ccd84a2a98fee3307ca"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha22-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "own_settings_options": 35,
+    "closed_legacy_latency_rows_preserved": 1881,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true,
+    "setup_flags_unchanged": true
+  },
+  "actual_off_access": {
+    "result": "PASS_ACTUAL_OFF_ACCESS",
+    "version": "0.9.1-alpha22",
+    "stage": "off",
+    "show_card": false,
+    "shortcut_aria_disabled": "true",
+    "tooltip_text": "Чтобы воспользоваться упрощённым интерфейсом, необходимо настроить систему и включить Auto.",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_on_access": {
+    "result": "PASS_ACTUAL_ON_ACCESS",
+    "version": "0.9.1-alpha22",
+    "stage": "on",
+    "show_card": true,
+    "shortcut_aria_disabled": "false",
+    "tooltip_text": "",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "gateway": {
+    "result": "PASS",
+    "origin": "http://127.0.0.2:8080",
+    "login": {
+      "status": 403,
+      "mt3000_title": true,
+      "login_form": true
+    },
+    "served_dashboard": "dashboard98",
+    "sha256": "f3d623f882ad77a0908de6aa83c81ca7a3ab00d6e8b976e781e663ad48b9d4e8",
+    "time": 1792939171.153424,
+    "gateway_left_running": true,
+    "scope": "user loopback browser gateway HTTP/login/static bytes; not a native browser visual or LAN-witness test"
+  },
+  "limitations": [
+    "Native browser visual/layout/hover/click acceptance not performed; source/Node/device/HTTP checks are separate",
+    "No new fault injection, LAN-witness, power-loss or main-MT6000 acceptance claimed"
+  ],
+  "recorded_utc": "2026-10-25T14:41:32.015273+00:00"
+}

@@ -55,7 +55,7 @@ console.log('PASS: failure episodes by original role, unknown history, selected 
 const two=c.renderAutoDay({accounting:{reliability:{failure_history:{since:0,details_dropped:0,events:[[9999,'source','source'],[9998,'target','source'],[9997,'unknown','target']]}}}});
 const bars=two.all().filter(n=>n.tag==='rect');assert.equal(bars.length,2);
 assert.deepEqual(new Set(bars.map(n=>n.attrs.fill)),new Set(['#2563eb','#e07816']));
-assert(two.all().some(n=>n.tag==='summary'&&n.children.join('').includes('Archive without saved role: 1')));
+assert(!two.all().some(n=>n.tag==='summary'&&n.children.join('').includes('Archive without saved role: 1')));
 assert(!two.all().some(n=>String(n.textContent||'').includes('Channel unknown')));
 assert(two.all().filter(n=>n.attrs['data-failure-role']==='source').length>=2,'legend and bar share role');
 console.log('PASS: exactly two coloured series and matching legend; legacy unassigned rows excluded without fabricated attribution');

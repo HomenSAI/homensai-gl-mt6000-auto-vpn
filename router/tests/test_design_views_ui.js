@@ -127,18 +127,17 @@ console.log('PASS: A/B/C overviews from real status, tones, hostile names, Russi
  assert(!source.includes("E('div',{'class':'hv-tools-row'},[renderConnectivityCheck"),'no duplicate controls in page header');
  const live=nodes.findIndex(n=>n.attrs.id==='hv-auto-live-chart'),day=nodes.findIndex(n=>n.attrs.id==='hv-auto-day-chart');
  assert(live>=0&&day>live,'Overview includes daily graph directly after live graph');
- const technical=card.children[1],statistics=card.children[2];
- assert.equal(technical.attrs['data-auto-disclosure'],'technical');assert.equal(statistics.attrs['data-auto-disclosure'],'live-statistics');
- assert.equal(technical.tag,'details');assert.equal(statistics.tag,'details');assert(!technical.attrs.open&&!statistics.attrs.open,'both intermediate blocks start collapsed');
+ const statistics=card.children[1];
+ assert.equal(statistics.attrs['data-auto-disclosure'],'live-statistics');assert.equal(statistics.tag,'details');assert(!statistics.attrs.open);assert(!card.all().some(n=>n.attrs['data-auto-disclosure']==='technical'));
  assert(!automatic.all().some(n=>n.attrs.id==='hv-auto-live-chart'||n.attrs.id==='hv-auto-day-chart'),'expanded charts no longer push down manual controls inside Auto');
  assert(statistics.all().some(n=>n.attrs.id==='hv-auto-live-chart')&&statistics.all().some(n=>n.attrs.id==='hv-auto-day-chart'),'both graphs remain available together');
  const manual=nodes.find(n=>n.attrs['data-manual-controls']==='1');assert(manual&&card.children.includes(manual),'manual panel is a separate sibling');
  const choices=manual.all().filter(n=>n.tag==='button'&&n.attrs['data-manual-direction']!=='resume'&&n.attrs['data-manual-direction']);
  assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-red'));assert(!choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
- assert.strictEqual(card.children[3],manual,'manual selection immediately follows compact disclosure headers');
- statistics.open=true;statistics.listeners.toggle();technical.open=true;technical.listeners.toggle();
- let redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert.equal(redrawn.children[2].attrs.open,'open');assert.equal(redrawn.children[1].attrs.open,'open','ordinary redraw preserves expansion');
- redrawn.children[2].open=false;redrawn.children[2].listeners.toggle();redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert(!redrawn.children[2].attrs.open,'collapse is remembered independently');
+ assert.strictEqual(card.children[2],manual,'manual selection immediately follows compact disclosure headers');
+ statistics.open=true;statistics.listeners.toggle();
+ let redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert.equal(redrawn.children[1].attrs.open,'open');assert.equal(redrawn.children[1].attrs.open,'open','ordinary redraw preserves expansion');
+ redrawn.children[1].open=false;redrawn.children[1].listeners.toggle();redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert(!redrawn.children[1].attrs.open,'collapse is remembered independently');
  assert(!manual.text().includes('default')&&!manual.text().includes('Нет свежего подтверждения пути'));
  for(const design of ['a','b','c']){
   const page=actual.renderDesignOverview(design,{status:st,inventory:inv,rows:st.profiles,month:{},controlCard:card});
