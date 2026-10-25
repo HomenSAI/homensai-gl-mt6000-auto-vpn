@@ -22,4 +22,4 @@ Long journal/history messages are plain text. Only short blue event/state/cause 
 
 ## Verification boundary / Проверка
 
-All13 changes implemented. Final exact-source dual-runtime CI,54Node UI suites, canonical build and dedicated MT3000 update/readback passed. Publication follows this evidence commit. Native browser layout/hover proof must be reported separately from Node/HTTP/device data checks.
+All13 changes implemented. Final exact-source dual-runtime CI,54Node UI suites, canonical build and dedicated MT3000 update/readback passed. Published and downloaded/SHA256verified: [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22). Native browser layout/hover proof must be reported separately from Node/HTTP/device data checks.

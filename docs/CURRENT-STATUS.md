@@ -1,6 +1,6 @@
 ## Alpha22 combined owner batch / Общая партия
 
-All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. Publication pending evidence commit. [Verification](VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
+All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) — published; four assets per service downloaded and SHA256verified. [Verification](VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
 
 <!-- doc-role: current-delivery-record -->
 # Current status / Текущее состояние —25.10.2026

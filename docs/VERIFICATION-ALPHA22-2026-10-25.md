@@ -17,3 +17,7 @@ Native browser layout/hover/click acceptance remains unverified. Automated DOM/s
 Общая CI и установка на выделенный MT3000 прошли. Auto включён, резерв выбран и подтверждён, оба VPN прошли DNS/HTTPS. Настройки, соглашение и история сохранены. Нативная визуальная проверка браузера не выполнена; это отдельно от автоматических проверок и реального чтения роутера. Основной MT6000 и стабильный0.9.0 не изменены.
 
 [Batch QA](../qa/OWNER-BATCH-ALPHA22-2026-10-25.json) · [Device receipt](../qa/MT3000-ALPHA22-2026-10-25.json)
+
+## Published / Опубликовано
+
+[GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22). Actual non-draft prereleases, four assets each downloaded and SHA256verified. Canonical release/tag `7881db0ca2ba3412bd2db838278ec53056694d5d`, GitHub release/tag `4db626152874d9e6d36e507dc7c5e15908bbd842`, identical tree `5c547ea4c3a11c0220e3069c7b037dd5c46d93b6`. Stable/main unchanged.
