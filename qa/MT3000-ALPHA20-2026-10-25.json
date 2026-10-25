@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha20",
+  "tested_product_source": "2ce089091eb6851af8741b604154979a71905eb9",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha20-1_all.ipk",
+    "bytes": 849731,
+    "sha256": "8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha20-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "retention_seconds": 604800,
+    "closed_legacy_latency_rows_preserved": 1644,
+    "retained_speed_rows": 4,
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "current_shortcut_enabled": false,
+    "current_shortcut_reason": "Сначала завершите первичную настройку",
+    "start_seconds": 63.844,
+    "reserve_restore_seconds": 43.141,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true,
+    "synthetic_physical_data": false
+  },
+  "limitations": [
+    "Native-browser visual acceptance not performed",
+    "Ready shortcut was also checked using actual data with completed setup flags only in memory; no flags written to router",
+    "ExternalLAN/IPv6/KillSwitch/power-loss scope unchanged"
+  ],
+  "recorded_utc": "2026-10-25T10:44:52.489669+00:00"
+}

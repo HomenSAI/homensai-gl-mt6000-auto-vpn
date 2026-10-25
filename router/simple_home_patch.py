@@ -7,13 +7,21 @@ def apply(source):
         assert source.count(old)==1,old[:100]
         source=source.replace(old,new,1)
     replace('return view.extend({',(base/'simple_home_policy.inc.js').read_text(encoding='utf8')+'\n'+(base/'simple_home_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+    replace("heading,(subtitle=E('p',{},bi(","E('div',{'class':'hv-heading-row'},[heading,(homeShortcut=renderSimpleHomeShortcut(function(){return simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));},goSimpleHome))]),(subtitle=E('p',{},bi(")
     replace("    var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);", """    var homeLatest=data[1],homeMenuRequested=false;
+    var homeShortcut=null;
     tabs.push(['home','',bi('Home','Главная')]);
     var requestedTab=window.location.hash.slice(1);
     if(setup||validTab(requestedTab)&&['overview','home'].indexOf(requestedTab)<0)homeMenuRequested=true;
     var activeTab=setup?'settings':requestedTab;
     if(!setup&&(!validTab(activeTab)||activeTab==='overview'||activeTab==='home'))activeTab=simpleHomeModel(data[1],inventory,statusNow(data[1])).showCard?'home':startLanding(data[1],inventory);
     function openHomeMenu(){homeMenuRequested=true;window.location.hash='overview';showPage('overview');}
+    function goSimpleHome(){
+      var model=simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));
+      if(homeShortcut)homeShortcut.update(model);
+      if(!model.showCard)return false;
+      homeMenuRequested=false;window.location.hash='home';showPage('home');return true;
+    }
 """)
     replace('    function showPage(key){', """    function showPage(key){
       if(key==='home'&&!simpleHomeModel(homeLatest,inventory,statusNow(homeLatest)).showCard)key=startLanding(homeLatest,inventory);
@@ -21,11 +29,14 @@ def apply(source):
     replace('    function draw(status){', '    function draw(status){\n      homeLatest=status;')
     replace('      showPage(activeTab);window.addEventListener',"""      var homeFreshTimer=window.setInterval(function(){
         if(!appRoot||!appRoot.isConnected){window.clearInterval(homeFreshTimer);return;}
+        if(homeShortcut)homeShortcut.update();
         if(activeTab==='home'&&!simpleHomeModel(homeLatest,inventory,statusNow(homeLatest)).showCard)showPage(startLanding(homeLatest,inventory));
       },1000);
+      if(homeShortcut)homeShortcut.update();
       showPage(activeTab);window.addEventListener""")
     anchor='      installErrorLinks(appRoot);sortableTables();showPage(activeTab);'
     replace(anchor,"""      var homeModel=simpleHomeModel(status,inventory,statusNow(status));
+      if(homeShortcut)homeShortcut.update(homeModel);
       var homeControl=pages.overview&&pages.overview.querySelector('.hv-auto-control');
       if(homeModel.showCard){
         put('home',renderSimpleHome(status,inventory,homeModel,homeControl,openHomeMenu));

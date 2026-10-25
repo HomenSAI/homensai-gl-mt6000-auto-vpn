@@ -1,3 +1,31 @@
+# ALPHA20 INSTALLED / PUBLICATION NEXT —25 October2026
+
+Owner76 implemented: guarded shortcut beside actual heading, clear reason if unavailable, current model and click-time recheck, lost-RPC copy; clipped skip link fixed without losing keyboard focus, done-step opacity1. Exact2ce089091eb6851af8741b604154979a71905eb9 dualCI774app/112QA each/52UI PASS. Canonical849731bytes SHA 8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf.
+
+MT3000alpha20/dashboard96/ui68/87files/modes/RPC/HTTP/pinnedHTTPS verified. AutoONreserve/bothVPNDNS+2HTTPS;1644closedoldlatencyrows/4speedrows/settings/terms retained,193-entry pre/post encrypted backups independently read. Stored setup/onboarding stillFALSE; header disabled reason is correct, completed projection in memory only. No native visual claim. No hostnetwork/mainMT6000 changes. Keep both local gateways. Read docs/VERIFICATION-ALPHA20-2026-10-25.md and qa/HEADER-ALPHA20-2026-10-25.json,qa/MT3000-ALPHA20-2026-10-25.json.
+
+Next commit evidence and run prepared private/header-alpha20-20261025/publish_refs.py then publish_releases.py, verify both downloads, close owner76 and docs-only publish_closure.py. Do not rerun completed device steps. Alpha19 actual GitHub/Gitea releases already verified; old quota blockers below superseded. Source guards must remain unchanged after2ce0890. Native Computer Use not attempted this turn.
+
+# ACTIVE alpha20 header/shortcut candidate —25 October2026
+
+Owner76 recorded: clipped blue skip-link at upper-left and readable completed steps; guarded Simplified interface button beside actual heading. Source helper updates on draw/1s freshness and revalidates click; navigation only, no Auto/config writes. Original strict terms/setup/current-pair/running gate retained. alpha20/dashboard96/ui68; tests/build/CI/physical update next. Current physical19AutoONreserve, unfinished setup preserved. Alpha19 GitHub and Gitea releases now both published and four assets downloaded/hash verified; old API-blocker instructions below superseded. Private header-alpha20-20261025. No Computer Use actions this turn, previous visual limit remains. Keep router/design gateways running.
+
+# ACTIVE owner76 / alpha20 header correction
+
+Alpha19 GitHub release now published and all assets downloaded/hash verified; Gitea reverified. New owner76 recorded in TODO: clipped skip link and guarded top-right simplified-interface shortcut. Source in progress, not installed20. Current device19AutoONreserve/setup incomplete. Keep both gateways; no native Computer Use attempted this turn.
+
+# ALPHA19 INSTALLED AND TESTED — GitHub release pending
+
+Owner74 implementation/install/tests are complete with native visual limit. AutoON/confirmedreserve/bothVPN healthy;193-entry before/after backups,1545closedlegacy latency rows/4speed rows/settings/terms retained. Setup/onboarding completion FALSE preserved: correct first entry is the existing wizard. Do not mark it complete automatically. Projected ready-card test used actual data with completed flags in memory only.
+
+ExactCI source3d759a889c71e771afd1b2747facd8c7539b00af,774app/112QA each/52UI;848531byteIPK SHA d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd. ActualHTTP/HTTPS/87files/RPC/current-data semantics passed. Native browser visual NOT_VERIFIED: connected-browser inventory empty; alternate Computer Use could list Edge but stopped before any app input because current URL could not be confidently determined. Do not bypass/reset to evade that stop in the same turn.
+
+Canonical/Gitea source/tag0d82f73da20eb1112da05c73ea8fb0de3150d75a,GitHub source/tag1332d3158b5fe40c3dbd88d57d2b09a1e3c378c0,equalTreead9ddfb6ddd42392c844aa40acf48665d8aeb151; both feature refs/tag verified through standard Git transport; main/stable unchanged. Actual Gitea non-draft prerelease with four downloaded/hash-checked assets: http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha19.
+
+GitHub RELEASE WITH ASSETS IS NOT CREATED. RESTcore quota0,reset1792920908=2026-10-25 09:35:08UTC/10:35:08Berlin. Do not repeatedly poll limited endpoints. After reset, run private/simple-home-alpha19-20261025/publish_releases.py (idempotent existing Gitea assets) and verify downloads. DO NOT rerun publish_refs.py after docs closure because ledger source is fixed to0d82f73; feature code and tags already saved. Then record actual GitHub release link, close ownerTODO75, commit docs-only closure and run prepared publish_closure.py; it uses REST so wait until available. New local docs closure may be ahead of release refs, product must stay unchanged from3d759a8. Current ledger private/simple-home-alpha19-20261025/publication.json and FINAL.json.
+
+Read docs/VERIFICATION-ALPHA19-2026-10-25.md and qa/SIMPLE-HOME-ALPHA19-2026-10-25.json,qa/MT3000-ALPHA19-2026-10-25.json. Keep actual router gateway127.0.0.2:8080 and preview64171 running. No old installation/VM observer remains. No hostnetwork/mainMT6000 changes. Restore tasks from this checkpoint; never rerun completed device steps blindly.
+
 # ALPHA19 INSTALLED / PUBLICATION PENDING —25 October2026
 
 Explicit owner requested build, physical installation and tests of the selected startup card. Implemented actual model/render/router-entry integration, existing power control forwarding, required terms/setup/current-pair/fresh Auto gate and stale-home watchdog. Source tests cover primary/reserve, incomplete/wrong/stale/pending evidence and generated deep-link/full-menu routing. Exact3d759a889c71e771afd1b2747facd8c7539b00af dualCI774app/112QA each/52UI passed. Canonical848531bytes SHA d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd.

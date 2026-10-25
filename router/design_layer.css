@@ -427,9 +427,12 @@
 .hv-app a:focus-visible,.hv-app button:focus-visible,.hv-app input:focus-visible,.hv-app select:focus-visible,.hv-app summary:focus-visible,.hv-app [tabindex]:focus-visible,.hv-app textarea:focus-visible{outline:3px solid var(--focus);outline-offset:3px;border-radius:6px}
 .hv-app .hv-sidebar a:focus-visible,.hv-app .hv-sidebar button:focus-visible{outline-color:#ffd24a}
 .hv-app h1:focus,.hv-app main:focus{outline:none}
-.hv-app .hv-skip{position:absolute;left:12px;top:-60px;z-index:100;padding:10px 16px;border-radius:8px;background:var(--accent);color:var(--accent-text);font-weight:700;text-decoration:none;transition:top .12s}
-.hv-app .hv-skip:focus{top:8px}
+.hv-app .hv-skip{position:fixed;left:12px;top:12px;z-index:10001;padding:10px 16px;border-radius:8px;background:var(--accent);color:var(--accent-text);font-weight:700;text-decoration:none}
+.hv-app .hv-skip:not(:focus){width:1px;height:1px;padding:0;clip:rect(0,0,0,0);clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.hv-app .hv-skip:focus{width:auto;height:auto;clip:auto;clip-path:none;overflow:visible;white-space:normal;max-width:calc(100vw - 24px);box-sizing:border-box}
 @media(prefers-reduced-motion:reduce){.hv-app .hv-skip{transition:none}}
+.hv-workspace[data-hv-design] .hv-start-done{opacity:1}
+.hv-workspace[data-hv-design] .hv-start-step strong{color:var(--text)}
 
 /* ---- Brighter lamps: pure vivid green and red with a strong glow; live-log lamps sit between the time and the name ---- */
 .hv-app{--hvl-green:radial-gradient(circle at 34% 28%,#eafff1 0,#3dff7e 20%,#00e04f 55%,#009636 100%);--hvl-red:radial-gradient(circle at 34% 28%,#fff0f1 0,#ff5468 20%,#ff0a2a 55%,#c40018 100%)}

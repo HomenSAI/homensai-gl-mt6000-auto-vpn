@@ -1,4 +1,30 @@
 /* Startup view consumes current router evidence; the existing Auto control owns RPC. */
+function simpleHomeShortcutReason(model){
+  if(model&&model.dataUnavailable)return bi('Wait for fresh router data before opening the simplified view','Дождитесь свежих данных роутера для перехода');
+  var reasons={
+    'TERMS-NOT-ACCEPTED':['Accept the current terms first','Сначала примите условия использования'],
+    'SETUP-INCOMPLETE':['Complete the initial setup first','Сначала завершите первичную настройку'],
+    'CURRENT-PAIR-TESTS-REQUIRED':['Complete the required checks for this VPN pair','Пройдите обязательные проверки этой пары VPN'],
+    'CURRENT-STATUS-REQUIRED':['Wait for fresh router data','Дождитесь свежих данных роутера'],
+    'AUTO-NOT-CONFIRMED-RUNNING':['Start Auto and wait for confirmation','Включите Auto и дождитесь подтверждения'],
+    'ACTIVE-CHANNEL-NOT-CONFIRMED':['Wait for the active channel to be confirmed','Дождитесь подтверждения рабочего канала']
+  },row=reasons[model&&model.reason]||['The simplified view is not ready yet','Упрощённый интерфейс пока не готов'];
+  return bi(row[0],row[1]);
+}
+function renderSimpleHomeShortcut(getModel,goHome){
+  var reason=E('small',{'id':'hv-simple-shortcut-reason','class':'hv-simple-shortcut-reason'});
+  var button=E('button',{'type':'button','class':'cbi-button cbi-button-action hv-simple-shortcut-button','data-simple-shortcut':'1','aria-describedby':'hv-simple-shortcut-reason','click':function(){
+    var model=getModel();update(model);if(model.showCard===true)goHome();
+  }},bi('Simplified interface','Упрощённый интерфейс'));
+  var host=E('div',{'class':'hv-simple-shortcut-group'},[button,reason]);
+  function update(model){
+    model=model||getModel();var available=model.showCard===true;
+    button.disabled=!available;button.setAttribute('aria-disabled',available?'false':'true');
+    host.setAttribute('data-simple-home-available',available?'true':'false');
+    reason.hidden=available;reason.textContent=available?'':simpleHomeShortcutReason(model);
+  }
+  host.update=update;update();return host;
+}
 function simpleHomeModel(status,inventory,now){
   status=status||{};inventory=inventory||{};
   var settings=inventory.settings||{},ns=status.native_failover||{},control=autoControlModel(status,now);
@@ -12,7 +38,7 @@ function simpleHomeModel(status,inventory,now){
   var decision=simpleHomeEntry({termsAccepted:termsAccepted(inventory),onboardingComplete:onboardingComplete(inventory),setupComplete:settings.setup_complete===true&&settings.native_session_loss===true,pairValid:bound,pairDeferred:settings.onboarding_pair_deferred===true,
     testsPassed:prepared,testsMatchCurrentPair:bound,statusFresh:!inventory.error&&!status.error&&!status.rpc_error&&settings.enabled===true&&manualFresh(status.time,now,90),controllerFresh:control.fresh,
     autoRunning:control.on,commandPending:control.awaiting||!!autoCommandOperation(status,now),transitioning:control.transitioning||path.moving,activePathConfirmed:!!active&&profileHealth(active,now).state==='healthy'&&(route?routeBound:!!path.selected),selectedRole:path.selected});
-  decision.source=source;decision.target=target;decision.selectedRole=path.selected;return decision;
+  decision.source=source;decision.target=target;decision.selectedRole=path.selected;decision.dataUnavailable=!!inventory.error||!!status.error||!!status.rpc_error||!manualFresh(status.time,now,90)||!control.fresh;return decision;
 }
 function renderSimpleHome(status,inventory,model,controlCard,openMenu){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;

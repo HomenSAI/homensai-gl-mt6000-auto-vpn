@@ -22,3 +22,11 @@ Only expected native_trial/native_until lifecycle settings changed; all35 own op
 Native-browser visuals were unavailable (empty connected browser inventory). Installed exact bytes, RPC, HTTP8080/pinnedHTTPS and actual-frame model/render proof are verified independently; they are not visual acceptance. ExternalLAN/IPv6/KillSwitch/powerloss remain separate. Current first page is intentionally the existing wizard. Do not report a completed setup or active-card screenshot on the physical device.
 
 Publication follows the verified feature branch; product unchanged after CI. Stable release and main are preserved.
+
+## Publication status
+
+[Gitea alpha19](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha19) is published with four assets downloaded/hash-verified. GitHub feature source/tag is saved (`1332d3158b5fe40c3dbd88d57d2b09a1e3c378c0`), but its release/assets remain pending due to coreAPI quota exhaustion; reset announced10:35Berlin25October2026. Both release trees `ad9ddfb6ddd42392c844aa40acf48665d8aeb151` match. Source/main/stable preserved. Later native Computer Use attempt stopped before app input because browserURL could not be verified; no native visual acceptance claimed.
+
+## GitHub publication completed
+
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha19 — actual non-draft prerelease, four assets downloaded and SHA256 verified. Gitea published files reverified through their normal release/download URLs. Earlier quota blocker resolved; product/tags unchanged. Native visual limit remains.

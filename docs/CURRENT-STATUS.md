@@ -1,9 +1,18 @@
 <!-- doc-role: current-delivery-record -->
 # Current status / Текущее состояние —25.10.2026
 
+**Alpha20 installed on MT3000, AutoON/confirmedreserve/bothVPN healthy.** Guarded Simplified interface button beside heading, visible unavailable reason, click-time/freshness validation, clipped skip-link fix and readable completed steps. Current setup remains incomplete, so the shortcut explains the missing setup rather than bypassing it. Settings/history/terms retained. Native-browser visual NOT_VERIFIED.
+
+**Alpha20 установлена, Auto включён на резерве.** «Упрощённый интерфейс» расположен справа от заголовка, недостающий шаг указан под кнопкой. Исправлена читаемость. [Отчёт](VERIFICATION-ALPHA20-2026-10-25.md) · [QA](../qa/HEADER-ALPHA20-2026-10-25.json) · [Роутер](../qa/MT3000-ALPHA20-2026-10-25.json). Publication pending evidence commit. Stable0.9.0 unchanged.
+
+## Previous alpha19 delivery
+
+<!-- doc-role: current-delivery-record -->
+# Current status / Текущее состояние —25.10.2026
+
 **Alpha19 installed on MT3000, Auto ON / confirmed reserve, both VPN DNS/HTTPS healthy.** Selected startup card is integrated with actual settings, current-pair evidence and freshness. The owner's unfinished setup flags are preserved: first entry is the existing wizard until explicitly completed. Completed-setup card was verified with real data and temporary in-memory flags only. Native-browser visuals NOT_VERIFIED.
 
-**Alpha19 установлена, Auto включён на резерве.** Карточка подключена к реальному состоянию и появляется только после завершённых настройки/проверок. На текущем роутере первым открывается незавершённый мастер. [Отчёт / report](VERIFICATION-ALPHA19-2026-10-25.md) · [QA](../qa/SIMPLE-HOME-ALPHA19-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA19-2026-10-25.json). Publication pending final evidence commit. Stable0.9.0 unchanged.
+**Alpha19 установлена, Auto включён на резерве.** Карточка подключена к реальному состоянию и появляется только после завершённых настройки/проверок. На текущем роутере первым открывается незавершённый мастер. [Отчёт / report](VERIFICATION-ALPHA19-2026-10-25.md) · [QA](../qa/SIMPLE-HOME-ALPHA19-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA19-2026-10-25.json). Alpha19 actual GitHub/Gitea releases and all downloaded assets verified; previous API blocker resolved. Stable0.9.0 unchanged.
 
 ## Previous alpha18 delivery
 

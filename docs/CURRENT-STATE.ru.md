@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Текущее поведение и руководство
 
-> Исходный кандидат: **0.9.1-alpha19**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
+> Исходный кандидат: **0.9.1-alpha20**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
 
 ## Поддержка и три разных режима
 
@@ -60,3 +60,9 @@
 The selected card opens only after accepted current terms, completed first setup, verified current-pair preparation and fresh confirmed running Auto/healthy selected route. Incomplete setup and deferred recovery links never qualify; explicit full-menu/deep links remain available. The original Auto button forwards to the existing controller action. Primary is above reserve, red is softened 50%, and stale data returns to full management. Physical installation acceptance is recorded separately.
 
 Выбранная карточка появляется только после условий, завершённого мастера, подтверждённых проверок текущей пары и свежего подтверждения работающего Auto/маршрута. Исходная кнопка использует существующее управление. Основной выше резерва; красный ослаблен50%. Неполная настройка/устаревшие данные не допускают стартовую карточку. [Подробности](SIMPLE-HOME-2026-10-25.md).
+
+## Full-menu shortcut / Переход из полного меню
+
+The page title now has a Simplified interface button on its right. It uses the same current readiness gate as the home screen, updates with status and rechecks at click time. If unavailable, a readable explanation states the missing step. No configuration or Auto command is issued by this navigation. The skip link is fully clipped until keyboard focus, then fully visible above the fixed router navigation. Completed-step text stays opaque.
+
+Справа от заголовка доступна кнопка «Упрощённый интерфейс». Она использует прежний строгий допуск и проверяет его заново перед переходом. Если подготовка не завершена, видна конкретная причина. Кнопка не запускает Auto и не сохраняет настройки. Обрезанная ссылка вверху слева исправлена; выполненные шаги читаемы.

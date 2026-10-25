@@ -1,5 +1,12 @@
 # Последние изменения / Latest changes — 24.10.2026
 
+## 0.9.1-alpha20 —25 October2026 / 25 октября2026
+
+Added a guarded Simplified interface button beside the page title, with an explicit unavailable reason and click-time revalidation. Fixed the clipped upper-left skip link while retaining keyboard access; completed setup steps keep readable foreground/opacity. No configuration or Auto-mode changes from navigation.
+
+Справа от заголовка добавлена кнопка «Упрощённый интерфейс»: переход только при текущем допуске, иначе показана причина. Исправлена обрезанная ссылка вверху слева; сохранён доступ с клавиатуры и повышена читаемость выполненных шагов. Навигация не меняет Auto или настройки.
+
+
 ## 0.9.1-alpha19 —25 October2026 / 25 октября2026
 
 Selected compact startup card with the original Auto button, primary/reserve identities, measured endpoints/delay and full-menu entry. Current terms, completed setup, current-pair tests and fresh confirmed running Auto are required. Incomplete setup/stale data never become a ready home screen. Explicit deep links and full management remain available. Red is softened50%, green unchanged; button is directly under Auto works.
