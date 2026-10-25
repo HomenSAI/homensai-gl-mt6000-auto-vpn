@@ -171,7 +171,7 @@ class Budget:
             amount=min(maximum,self.remaining);self.remaining-=amount;return amount
 
 
-def request(binding,address,direction,amount,deadline,cancelled):
+def request(binding,address,direction,amount,deadline,cancelled,progress=None):
     with connect(binding,address,HOST,deadline) as sock:
         path='/__up' if direction=='upload' else '/__down?bytes='+str(amount)
         method='POST' if direction=='upload' else 'GET'
@@ -182,6 +182,7 @@ def request(binding,address,direction,amount,deadline,cancelled):
         while direction=='upload' and sent<amount:
             if cancelled() or time.monotonic()>=deadline:raise SpeedError('SPEED-CANCELLED')
             block=b'\0'*min(65536,amount-sent);sock.sendall(block);sent+=len(block)
+            if progress:progress(len(block))
         response=http.client.HTTPResponse(sock);response.begin()
         if response.status!=200:raise SpeedError('SPEED-HTTP')
         received=0
@@ -193,18 +194,28 @@ def request(binding,address,direction,amount,deadline,cancelled):
             block=response.read(min(65536,amount-received))
             if not block:raise SpeedError('SPEED-SHORT-RESPONSE')
             received+=len(block)
+            if progress:progress(len(block))
         return received
 
 
-def stage(binding,address,direction,budget,duration,streams,cancelled,transport=request):
+def stage(binding,address,direction,budget,duration,streams,cancelled,transport=None,progress=None):
+    transport=transport or request
     quota=Budget(budget);started=time.monotonic();deadline=started+duration
+    sample_lock=threading.Lock();observed=0;last_bytes=0;last_at=started
+    def report(amount=0,final=False):
+        nonlocal observed,last_bytes,last_at
+        with sample_lock:
+            observed+=amount;now=time.monotonic();elapsed=now-last_at
+            if progress and observed>last_bytes and elapsed>0 and (final or elapsed>=.5):
+                progress((observed-last_bytes)*8/elapsed/1e6,observed,now-started)
+                last_bytes=observed;last_at=now
 
     def stream():
         total=0
         while time.monotonic()<deadline and not cancelled():
             amount=quota.take(MIB)
             if not amount:break
-            total+=transport(binding,address,direction,amount,deadline,cancelled)
+            total+=transport(binding,address,direction,amount,deadline,cancelled,progress=report) if progress else transport(binding,address,direction,amount,deadline,cancelled)
         return total
     with ThreadPoolExecutor(max_workers=streams) as pool:
         futures=[pool.submit(stream) for _ in range(streams)]
@@ -212,28 +223,40 @@ def stage(binding,address,direction,budget,duration,streams,cancelled,transport=
     elapsed=time.monotonic()-started
     if cancelled():raise SpeedError('SPEED-CANCELLED')
     if total<=0 or elapsed<=0:raise SpeedError('SPEED-NO-SAMPLE')
+    report(final=True)
     return {'payload_bytes':total,'seconds':round(elapsed,3),'mbps':round(total*8/elapsed/1e6,3)}
 
 
-def measure(profile,options,cancelled):
+def measure(profile,options,cancelled,live=None):
     row={'id':profile['id'],'name':profile['name'],'protocol':profile['protocol'],'channel':profile.get('channel','default'),'time':time.time(),
          'endpoint':HOST,'method':'bounded-HTTPS-payload-goodput','scope':'router-originated-IPv4',
          'payload_budget_bytes':options['budget_mib']*MIB,'overhead_in_budget':False}
-    if not profile.get('interface'):return dict(row,code='SPEED-PROFILE-INACTIVE')
+    if live:live.phase(profile['id'],'resolving')
+    if not profile.get('interface'):
+        if live:live.finish(profile['id'],'SPEED-PROFILE-INACTIVE')
+        return dict(row,code='SPEED-PROFILE-INACTIVE')
     try:
         binding=route_binding(profile['interface'])
-        if binding.get('code'):return dict(row,code='SPEED-ROUTE-UNVERIFIED')
+        if binding.get('code'):raise SpeedError('SPEED-ROUTE-UNVERIFIED')
         address=resolve_endpoint(binding,time.monotonic()+6)
+        if live:live.phase(profile['id'],'latency')
         latencies=[]
         for _ in range(3):
             start=time.monotonic();request(binding,address,'download',0,start+3,cancelled);latencies.append((time.monotonic()-start)*1000)
         row['latency_ms']=round(sorted(latencies)[1],1)
         budget=options['budget_mib']*MIB;down=budget*3//4
-        row['download']=stage(binding,address,'download',down,options['duration'],options['streams'],cancelled)
-        row['upload']=stage(binding,address,'upload',budget-down,options['duration'],options['streams'],cancelled)
+        for direction,amount in (('download',down),('upload',budget-down)):
+            if live:live.phase(profile['id'],direction)
+            callback=(lambda mbps,total,elapsed:live.sample(profile['id'],direction,mbps,total)) if live else None
+            row[direction]=stage(binding,address,direction,amount,options['duration'],options['streams'],cancelled,progress=callback)
+        if live:live.finish(profile['id'])
         return dict(row,code=None)
-    except SpeedError as error:return dict(row,code=error.code)
-    except (OSError,ValueError,KeyError,http.client.HTTPException,subprocess.SubprocessError):return dict(row,code='SPEED-NETWORK')
+    except SpeedError as error:
+        if live:live.finish(profile['id'],error.code)
+        return dict(row,code=error.code)
+    except (OSError,ValueError,KeyError,http.client.HTTPException,subprocess.SubprocessError):
+        if live:live.finish(profile['id'],'SPEED-NETWORK')
+        return dict(row,code='SPEED-NETWORK')
 
 
 def worker_alive(job):
@@ -312,7 +335,7 @@ def start(arguments,automatic=False):
                 stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
             # Child progress uses the same lock; parent PID publication cannot overwrite it.
             job['pid']=process.pid;atomic_json(JOB,job)
-            return {'accepted':True,'queued':True,'payload_budget_bytes':quota}
+            return {'accepted':True,'queued':True,'run_id':tx,'payload_budget_bytes':quota}
         except (OSError,subprocess.SubprocessError):
             atomic_json(JOB,dict(job,state='FAILED',code='SPEED-WORKER-START'))
             return {'accepted':False,'code':'SPEED-WORKER-START'}
@@ -362,11 +385,69 @@ def automatic_new(rows,previous):
     return active
 
 
+class LiveProgress:
+    """Measured payload rates in RAM only, bounded and bound to one job/profile."""
+    def __init__(self,job):
+        self.job=job;self.lock=threading.Lock();self.starts={}
+        job['live']=[{'id':identifier,'phase':'waiting','samples':[]} for identifier in job['profiles']]
+
+    def phase(self,identifier,phase):
+        with self.lock:
+            row=next(r for r in self.job['live'] if r['id']==identifier)
+            self.starts.setdefault(identifier,time.monotonic())
+            row.update(phase=phase,updated=time.time());self.job['current_profile']=identifier
+            publish_job(self.job)
+
+    def sample(self,identifier,direction,mbps,total):
+        with self.lock:
+            if not math.isfinite(mbps) or not 0<=mbps<=10000000:return
+            row=next(r for r in self.job['live'] if r['id']==identifier)
+            elapsed=round(time.monotonic()-self.starts[identifier],3)
+            row['samples']=(row['samples']+[[elapsed,round(mbps,3) if direction=='download' else None,round(mbps,3) if direction=='upload' else None]])[-128:]
+            row.update(updated=time.time());row[direction+'_mbps']=round(mbps,3);row[direction+'_bytes']=total
+            publish_job(self.job)
+
+    def finish(self,identifier,code=None):
+        with self.lock:
+            row=next(r for r in self.job['live'] if r['id']==identifier)
+            row.update(phase='cancelled' if code=='SPEED-CANCELLED' else 'failed' if code else 'done',code=code,updated=time.time())
+            publish_job(self.job)
+
+
+def public_live(job=None):
+    """Read-only lightweight snapshot; never probes, reserves quota or loads flash history."""
+    job=read_json(JOB,{}) if job is None else job
+    if not isinstance(job,dict):return {'state':'IDLE','profiles':[],'server_time':time.time()}
+    tx=job.get('tx');ids=job.get('profiles',[])
+    if not isinstance(tx,str) or not re.fullmatch(r'[a-f0-9]{32}',tx) or not isinstance(ids,list) or not 1<=len(ids)<=8 or len(set(i for i in ids if isinstance(i,str)))!=len(ids) or any(not isinstance(i,str) or not re.fullmatch(r'[A-Za-z0-9_.:-]{1,96}',i) for i in ids):return {'state':'IDLE','profiles':[],'server_time':time.time()}
+    result={'run_id':tx,'state':job.get('state') if job.get('state') in ('QUEUED','RUNNING','DONE','FAILED','CANCELLED') else 'FAILED','profiles':[],'server_time':time.time()}
+    if result['state']=='RUNNING' and not worker_alive(job):result.update(state='FAILED',code='SPEED-WORKER-LOST')
+    if result['state']=='QUEUED' and not worker_alive(job) and (type(job.get('started')) not in (int,float) or not math.isfinite(job['started']) or time.time()-job['started']>=10):result.update(state='FAILED',code='SPEED-WORKER-LOST')
+    def number(v,limit):return type(v) in (int,float) and math.isfinite(v) and 0<=v<=limit
+    for raw in (job.get('live',[]) if isinstance(job.get('live'),list) else [])[:8]:
+        if not isinstance(raw,dict) or raw.get('id') not in ids or any(r['id']==raw['id'] for r in result['profiles']):continue
+        row={'id':raw['id'],'phase':raw.get('phase') if raw.get('phase') in ('waiting','resolving','latency','download','upload','done','failed','cancelled') else 'failed','samples':[]}
+        samples=raw.get('samples',[])
+        if isinstance(samples,list) and len(samples)<=128:
+            previous=-1
+            for point in samples:
+                if not isinstance(point,list) or len(point)!=3 or not number(point[0],300) or point[0]<previous or any(v is not None and not number(v,10000000) for v in point[1:]) or sum(v is not None for v in point[1:])!=1:continue
+                row['samples'].append(point);previous=point[0]
+        for key in ('download_mbps','upload_mbps'):
+            if number(raw.get(key),10000000):row[key]=raw[key]
+        if number(raw.get('updated'),4102444800):row['updated']=raw['updated']
+        if isinstance(raw.get('code'),str) and re.fullmatch(r'SPEED-[A-Z0-9-]{1,64}',raw['code']):row['code']=raw['code']
+        result['profiles'].append(row)
+    if isinstance(job.get('code'),str) and re.fullmatch(r'SPEED-[A-Z0-9-]{1,64}',job['code']):result['code']=job['code']
+    return result
+
+
 def public_status():
     expire_worker()
     job=read_json(JOB,{})
     result={key:job[key] for key in ('state','started','finished','code','profiles','payload_budget_bytes','quota_reserved_bytes','daily_reserved_bytes','completed','automatic') if key in job}
     if job.get('state') in ('QUEUED','RUNNING') and not active_job():result.update(state='FAILED',code='SPEED-WORKER-LOST')
+    result['live']=public_live(job)
     try:result.update(load_history())
     except SpeedError as error:result.update(results=[],history_error=error.code)
     return result
@@ -383,7 +464,8 @@ def run(tx):
         return (read_json(CANCEL,{}).get('tx')==tx or time.monotonic()>=job['monotonic_deadline'] or read_json(JOB,{}).get('tx')!=tx)
     job.update(state='RUNNING',pid=os.getpid(),completed=0)
     if not publish_job(job):return
-    rows=[]
+    rows=[];live=LiveProgress(job)
+    publish_job(job)
     try:
         for identifier in job['profiles']:
             if cancelled():break
@@ -391,7 +473,7 @@ def run(tx):
             custom=next((s for s in data.get('servers',[]) if s.get('profile')==identifier),{})
             if profile:profile=dict(profile,name=custom.get('name') or profile['name'],channel=custom.get('channel') or 'default')
             if not profile:raise SpeedError('SPEED-PROFILES-CHANGED')
-            rows.append(measure(profile,job,cancelled));job['completed']=len(rows);publish_job(job)
+            rows.append(measure(profile,job,cancelled,live));job['completed']=len(rows);publish_job(job)
         if rows:
             with control_lock():append_history(rows)
         job.update(state='CANCELLED' if cancelled() else 'DONE',finished=time.time(),

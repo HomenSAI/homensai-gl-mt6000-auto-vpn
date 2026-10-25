@@ -11,7 +11,7 @@ def apply(source):
     source = source.replace('return view.extend({', prompt + '\nreturn view.extend({', 1)
     chart_inc = (Path(__file__).parent / 'latency_chart.inc.js').read_text(encoding='utf8')
     source = source.replace('return view.extend({', chart_inc + '\nreturn view.extend({', 1)
-    for name in ('speed_table.inc.js', 'traffic_chart.inc.js'):
+    for name in ('speed_live.inc.js', 'speed_table.inc.js', 'traffic_chart.inc.js'):
         extra = (Path(__file__).parent / name).read_text(encoding='utf8')
         source = source.replace('return view.extend({', extra + '\nreturn view.extend({', 1)
     live = (Path(__file__).parent / 'live_log.inc.js').read_text(encoding='utf8')

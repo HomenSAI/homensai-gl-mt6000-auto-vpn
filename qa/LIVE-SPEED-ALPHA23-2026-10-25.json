@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "result": "PASS_MEASURED_LIVE_SPEED_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha23",
+  "tested_product_source": "20ebcfd68f2dba279b96840248f6f579f5e9dfca",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha23-1_all.ipk",
+    "bytes": 855870,
+    "sha256": "5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324"
+  },
+  "ci": [
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha23-1_all.ipk",
+      "bytes": 855870,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324",
+      "skipped_tests": 16,
+      "source": "20ebcfd68f2dba279b96840248f6f579f5e9dfca",
+      "ui_suites": 55,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha23-1_all.ipk",
+      "bytes": 855870,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324",
+      "skipped_tests": 0,
+      "source": "20ebcfd68f2dba279b96840248f6f579f5e9dfca",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "focused_linux_speed_tests": 19,
+  "actual_live_speed": {
+    "real_router_rpc_test": "PASS",
+    "real_rpc_frames": 6,
+    "running_frames_with_rendered_points": 4,
+    "role_order": [
+      "source",
+      "target"
+    ],
+    "points_each": {
+      "source": {
+        "download": 4,
+        "upload": 2
+      },
+      "target": {
+        "download": 7,
+        "upload": 3
+      }
+    },
+    "prior_results_preserved": 4,
+    "results_after_test": 6,
+    "payload_budget_each_mib": 8,
+    "payload_reserved_total_bytes": 16777216,
+    "settings_and_network_unchanged_by_test": true,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "features": {
+    "two_primary_reserve_panels": true,
+    "four_measured_direction_series": true,
+    "sequential_waiting_explicit": true,
+    "lightweight_read_rpc": "speed_live",
+    "single_flight_poll_interval_seconds": 1,
+    "poll_only_active_test_section": true,
+    "bounded_ram_points_each_profile": 128,
+    "maximum_profiles": 8,
+    "no_interval_flash_writes": true,
+    "job_profile_isolation": true,
+    "invalid_missing_errors_not_zero": true,
+    "history_separate_collapsed": true,
+    "quotas_tls_route_binding_preserved": true
+  },
+  "initial_ci_failure": {
+    "source": "ee4f63b4625389a1dee19c33024b6541842a6ad8",
+    "state": "FAIL_NO_SUCCESS_RECEIPT",
+    "reason": "Explicit read-only RPC allowlist test had not yet included the new speed_live method; registered-method union and actual ACL were aligned. Test expectation updated, production payload unchanged."
+  },
+  "physical_receipt": "qa/MT3000-ALPHA23-2026-10-25.json",
+  "native_browser_visual": "NOT_VERIFIED"
+}

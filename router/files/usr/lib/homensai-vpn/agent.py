@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha22'
+VERSION = '0.9.1-alpha23'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -822,7 +822,7 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -951,6 +951,9 @@ def rpc(method):
             try:result['fault_cleanup']=cancel().get('cleaned',False)
             except (FaultError,OSError,ValueError,subprocess.SubprocessError):result['fault_cleanup']=False
         print(json.dumps(result));return
+    elif method=='speed_live':
+        from speed_test import public_live
+        print(json.dumps(public_live()))
     elif method=='auto_live':
         from auto_live import snapshot
         print(json.dumps(snapshot()))

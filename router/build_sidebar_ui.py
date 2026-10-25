@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard98'
+UI_MODULE='dashboard99'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -356,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui70.css')
+source=source.replace('ui15.css','ui71.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -445,7 +445,7 @@ must_replace('if(oldTab!==key){try{window.scrollTo(0,0);if(document.scrollingEle
              'if(oldTab!==key)revisitPageViewport(appRoot||panel,key);')
 must_replace('function draw(status){','function draw(status){\n      var refreshViewport=rememberPageViewport(appRoot||panel,activeTab);\n      try {')
 must_replace('    }\n    draw(data[1]);','      } finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport(appRoot||panel,refreshViewport);}\n    }\n    draw(data[1]);')
-must_replace('initSidebarLayout(appRoot);','initSidebarLayout(appRoot);installViewportPersistence(appRoot,function(){return activeTab;});')
+must_replace('initSidebarLayout(appRoot);','initSidebarLayout(appRoot);installViewportPersistence(appRoot,function(){return activeTab;});installSpeedLive(appRoot,function(){return activeTab;});')
 must_replace("panel.querySelectorAll('table').forEach(function(table,index){","panel.querySelectorAll('table').forEach(function(table,index){if(table.closest('.hv-errtable'))return;")
 must_replace("(nh.events||[]).slice().reverse().forEach(function(event)","var transitionMarks=controllerTransitionMarks(nh.events||[]);\n      (nh.events||[]).slice().reverse().forEach(function(event)")
 must_replace("cell(event.state+(event.trial?' · '+'trial':''))","E('td',{},[renderTransitionBadge(event,transitionMarks),event.state+(event.trial?' · '+'trial':'')].filter(Boolean))")
@@ -504,6 +504,6 @@ must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_
 
 from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
-(root/'ui70.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui71.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

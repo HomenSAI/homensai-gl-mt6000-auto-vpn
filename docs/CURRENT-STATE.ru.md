@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Текущее поведение и руководство
 
-> Исходный кандидат: **0.9.1-alpha22**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
+> Исходный кандидат: **0.9.1-alpha23**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
 
 ## Поддержка и три разных режима
 
@@ -74,3 +74,5 @@ Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirm
 При включённом Auto доступ открыт независимо от завершённости настройки. При выключенном/неподтверждённом режиме кнопка красная; наведение, фокус и тап показывают подсказку о настройке и включении Auto, Escape скрывает её. Нажатие не запускает Auto автоматически.
 
 See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current thirteen interface corrections.
+
+See [live speed panels](LIVE-SPEED-ALPHA23-2026-10-25.md) for current measured download/upload behavior.

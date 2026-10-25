@@ -1,5 +1,12 @@
 # Последние изменения / Latest changes — 24.10.2026
 
+## 0.9.1-alpha23 —25 October2026 / 25 октября2026
+
+Real measured speed-test progress now drives two primary/reserve panels with separate download/upload series, one-second lightweight updates, explicit sequential waiting/cancellation/errors, bounded RAM traces and isolated completed history. Route/TLS/quota guards retained.
+
+Графики текущего теста показывают реальные скачивание и отдачу обоих VPN по отдельности, обновляются каждую секунду, явно обозначают ожидание/отмену/ошибку. Старые средние результаты вынесены в отдельную свёрнутую историю. Квоты, проверка маршрутов и TLS сохранены.
+
+
 ## 0.9.1-alpha22 —25 October2026 / 25 октября2026
 
 Combined13 owner corrections: one cancellable Auto power button, stable language/page navigation, simplified-view top entry/Advanced menu, compact preparation/chart panels, native wizard checkboxes and short diagnostic links.

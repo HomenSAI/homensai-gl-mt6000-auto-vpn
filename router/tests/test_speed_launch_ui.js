@@ -8,7 +8,7 @@ function walk(n){return n instanceof N?[n,...n.children.flatMap(walk)]:[];}
 function text(n){return n instanceof N?(n.textContent||'')+n.children.map(text).join(' '):String(n||'');}
 function fixture(lang,enabled=false,save=true,accepted=true){
  const calls=[],notes=[],f={modal:null},c={Date,Intl,Number,locale:lang,bi:(en,ru)=>lang==='ru'?ru:en,E:(...a)=>new N(...a),document:{createElementNS:(_ns,tag)=>new N(tag)},serverTitle:p=>p.name,safeCode:s=>typeof s==='string',foolCheckNumber:()=>({ok:true}),guardResume:n=>n,guardedAction:(_n,fn)=>fn(),rpc:{declare:spec=>(...args)=>{calls.push({method:spec.method,args});return Promise.resolve(spec.method==='setup_speed'?{saved:save,code:save?null:'UCI-PENDING-CHANGES'}:{accepted,code:accepted?null:'SPEED-CPU-BUSY'});}},ui:{showModal:(_t,n)=>f.modal=n,hideModal:()=>f.modal=null,addNotification:(_x,n)=>notes.push(text(n))}};
- vm.createContext(c);vm.runInContext(fs.readFileSync('router/speed_table.inc.js','utf8'),c);
+ vm.createContext(c);vm.runInContext(fs.readFileSync('router/speed_live.inc.js','utf8')+'\n'+fs.readFileSync('router/speed_table.inc.js','utf8'),c);
  const profiles=[{id:'wg',name:'Main WG',interface:'wg1'},{id:'ovpn',name:'Reserve OVPN',interface:'tun1'},{id:'off',name:'Offline'}];
  const inventory={settings:{speed_enabled:enabled,speed_auto_new:true,speed_budget_mib:8,speed_duration:5,speed_streams:2,speed_daily_mib:64,speed_busy_mbps:3}};
  const status={profiles,speed_tests:{results:[],state:'IDLE'}},panel=c.speedPanel(status,inventory,'week',()=>{});

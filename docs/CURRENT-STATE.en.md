@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Current behavior and user guide
 
-> Source version: **0.9.1-alpha22**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+> Source version: **0.9.1-alpha23**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
 
 ## Supported scope and three different modes
 
@@ -74,3 +74,5 @@ Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirm
 При включённом Auto доступ открыт независимо от завершённости настройки. При выключенном/неподтверждённом режиме кнопка красная; наведение, фокус и тап показывают подсказку о настройке и включении Auto, Escape скрывает её. Нажатие не запускает Auto автоматически.
 
 See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current thirteen interface corrections.
+
+See [live speed panels](LIVE-SPEED-ALPHA23-2026-10-25.md) for current measured download/upload behavior.

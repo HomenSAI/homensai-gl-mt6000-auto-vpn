@@ -642,7 +642,7 @@ Avoid switching after a single failed check. Example: 3 primary failures, 2 succ
 
 Optional speed tests
 
-Speed tests consume traffic and are not required for initial Auto setup. You can leave them disabled at first. An example for later is 8 MiB per test, 5 seconds, 2 streams and a 128 MiB daily budget. Review your traffic allowance before enabling automatic tests for new profiles. Actual usage is limited by the configured budgets.
+Speed tests consume traffic and are not required for initial Auto setup. Below the table two live charts show primary/reserve download (green) and upload (blue), refreshed every second. Channels are tested in sequence and waiting is explicit. The horizontal axis is elapsed seconds; missing data/errors are not zero speed. Completed averages are separate collapsed history. You can leave them disabled at first. An example for later is 8 MiB per test, 5 seconds, 2 streams and a 128 MiB daily budget. Review your traffic allowance before enabling automatic tests for new profiles. Actual usage is limited by the configured budgets.
 
 
 

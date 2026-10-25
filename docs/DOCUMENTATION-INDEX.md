@@ -72,6 +72,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/handoff/RECOVERY-TODO-2026-10-20.md](handoff/RECOVERY-TODO-2026-10-20.md)|historical-reference|
 |[docs/handoff/RESUME-TODO.md](handoff/RESUME-TODO.md)|historical-reference|
 |[docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md](handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md)|historical-reference|
+|[docs/handoff/SPEED-LIVE-TASK-2026-10-25.md](handoff/SPEED-LIVE-TASK-2026-10-25.md)|recovery-record|
 |[docs/handoff/STATUS.md](handoff/STATUS.md)|recovery-record|
 |[docs/handoff/STOP-2026-10-21.md](handoff/STOP-2026-10-21.md)|historical-reference|
 |[docs/handoff/TEST-RESULTS.md](handoff/TEST-RESULTS.md)|historical-reference|
@@ -92,6 +93,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/LANGUAGE.md](LANGUAGE.md)|current|
 |[docs/LATEST-CHANGES.md](LATEST-CHANGES.md)|technical-reference|
 |[docs/LICENSING-AND-TERMS.md](LICENSING-AND-TERMS.md)|preserved-legal|
+|[docs/LIVE-SPEED-ALPHA23-2026-10-25.md](LIVE-SPEED-ALPHA23-2026-10-25.md)|versioned-evidence|
 |[docs/LOCAL-ACCESS.md](LOCAL-ACCESS.md)|current|
 |[docs/MT3000-AUTO-TEST-REPORT-2026-10-23.md](MT3000-AUTO-TEST-REPORT-2026-10-23.md)|historical-reference|
 |[docs/MT3000-OPERATIONS-2026-10-22.md](MT3000-OPERATIONS-2026-10-22.md)|historical-reference|
@@ -151,6 +153,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/VERIFICATION-ALPHA20-2026-10-25.md](VERIFICATION-ALPHA20-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA21-2026-10-25.md](VERIFICATION-ALPHA21-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION-ALPHA22-2026-10-25.md](VERIFICATION-ALPHA22-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA23-2026-10-25.md](VERIFICATION-ALPHA23-2026-10-25.md)|versioned-evidence|
 |[docs/VERIFICATION.md](VERIFICATION.md)|current|
 |[docs/VERSIONING.md](VERSIONING.md)|current|
 |[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
@@ -220,6 +223,7 @@ Current instructions describe source behavior. Installed state requires a separa
 |[releases/v0.9.1-alpha20.md](../releases/v0.9.1-alpha20.md)|versioned-evidence|
 |[releases/v0.9.1-alpha21.md](../releases/v0.9.1-alpha21.md)|versioned-evidence|
 |[releases/v0.9.1-alpha22.md](../releases/v0.9.1-alpha22.md)|versioned-evidence|
+|[releases/v0.9.1-alpha23.md](../releases/v0.9.1-alpha23.md)|versioned-evidence|
 |[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
 |[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|

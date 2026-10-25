@@ -1,3 +1,15 @@
+# ALPHA23 INSTALLED — publication next
+
+Owner live speed request implemented: measured download/upload progress, two primary/reserve graphs, explicit sequential waiting, bounded128point/profile RAM traces, read-only speed_live1s single-flight polling; old averages collapsed. Exactsource20ebcfd68f2dba279b96840248f6f579f5e9dfca, dualCI778app/112QA each/55UI PASS;19focusedLinuxspeedtestsPASS. Initial stale ACL allowlist expectation updated test-only; production package unchanged. Canonical855870bytes SHA5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324.
+
+MT3000alpha23/dashboard99/ui71/87files+modes/RPC/HTTP/pinnedHTTPS/AutoONreserve/bothVPNhealthy. Actual bounded test passed:6RPCframes/4RUNNINGframeswithpoints; primary4down/2up,reserve7down/3up. Four prior speed results retained, six aftertest;8MiB/channel reserved, no speed-setting/network changes.1974closedoldlatencyrows preserved;193pre/postencryptedbackups independentlyread. Nativevisual NOT_VERIFIED; actual frames rendered via real UI model, no fake samples written to device. No mainMT6000/hostnetwork changes.
+
+Next commit evidence, publish_refs.py/publish_releases.py with LIVE-SPEED-ALPHA23 QA, verify4assets/server, docs-only closure. Private speed-live-alpha23-20261025;driver alpha23-install-20261025. Do not rerun completed install or live test; it spent quota legitimately. Keep gateways. See docs/VERIFICATION-ALPHA23-2026-10-25.md and qa/LIVE-SPEED-ALPHA23-2026-10-25.json.
+
+# ACTIVE alpha23 live speed graphs
+
+Owner wants real-time download/upload for both channels. See SPEED-LIVE-TASK-2026-10-25.md, private/speed-live-alpha23-20261025. Alpha22 remains physical/public baseline until delivery.
+
 # COMPLETE alpha22 — combined13 owner tasks / 25October2026
 
 [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22)
