@@ -3,7 +3,7 @@
 
 **Alpha21 installed, AutoON/confirmedreserve/bothVPN healthy.** Enabled Auto grants simplified access even with unfinished setup/test markers. OFF/unconfirmed shortcut is red with hover/focus/tap setup tooltip; Escape dismisses it. Actual OFF/ON data cases passed; markers remainfalse and are no longer an access blocker. Native-browser visual NOT_VERIFIED.
 
-**Alpha21 установлена.** Доступ при включённом Auto открыт независимо от мастера. Выключенный режим: красная кнопка и подсказка. Проверены реальные OFF/ON состояния без подмены отметок. [Отчёт](VERIFICATION-ALPHA21-2026-10-25.md) · [QA](../qa/AUTO-ACCESS-ALPHA21-2026-10-25.json) · [Роутер](../qa/MT3000-ALPHA21-2026-10-25.json). Publication pending evidence commit. Stable0.9.0 unchanged.
+**Alpha21 установлена.** Доступ при включённом Auto открыт независимо от мастера. Выключенный режим: красная кнопка и подсказка. Проверены реальные OFF/ON состояния без подмены отметок. [Отчёт](VERIFICATION-ALPHA21-2026-10-25.md) · [QA](../qa/AUTO-ACCESS-ALPHA21-2026-10-25.json) · [Роутер](../qa/MT3000-ALPHA21-2026-10-25.json). [GitHub alpha21](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21) · [Gitea alpha21](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21) — published and downloads verified. Stable0.9.0 unchanged.
 
 ## Previous alpha20 delivery — earlier stricter access rule superseded
 

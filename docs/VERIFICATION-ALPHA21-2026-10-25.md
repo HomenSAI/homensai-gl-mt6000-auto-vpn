@@ -24,3 +24,7 @@ Preserved1729closedlegacy latency rows, open minute excluded; four speed results
 Initialf004055CI failed inPython3.9 when global Popen mock intercepted expired UCI configured_days lookup. The first fixture patchf9589fb targeted a nonexistent native_history attribute (configured_days is imported locally), causing28setup errors. Final4ae7000 patch targets retention_settings.configured_days; actual History/rollback/certificate assertions remain. Production payload unchanged; all failures and final proof are separate.
 
 Publication next, product unchanged after final CI.
+
+## Published
+
+[GitHub alpha21](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21) · [Gitea alpha21](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha21). Actual non-draft prereleases, four assets/server downloaded/SHA256verified. Canonical source/tag `c54ccd42efbf95f41f1609e448bde333a9e856ed`, GitHub source/tag `7ab8fb6a85812ecb4ea1cfc4078fdd7c1b6386cf`, equal release tree `60dbddd08d752870b3c6b6729a60d1eb619b46c4`. Product unchanged after final CI; main/stable preserved. Docs-only closure follows.
