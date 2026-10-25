@@ -3,7 +3,7 @@
 
 **Alpha20 installed on MT3000, AutoON/confirmedreserve/bothVPN healthy.** Guarded Simplified interface button beside heading, visible unavailable reason, click-time/freshness validation, clipped skip-link fix and readable completed steps. Current setup remains incomplete, so the shortcut explains the missing setup rather than bypassing it. Settings/history/terms retained. Native-browser visual NOT_VERIFIED.
 
-**Alpha20 установлена, Auto включён на резерве.** «Упрощённый интерфейс» расположен справа от заголовка, недостающий шаг указан под кнопкой. Исправлена читаемость. [Отчёт](VERIFICATION-ALPHA20-2026-10-25.md) · [QA](../qa/HEADER-ALPHA20-2026-10-25.json) · [Роутер](../qa/MT3000-ALPHA20-2026-10-25.json). Publication pending evidence commit. Stable0.9.0 unchanged.
+**Alpha20 установлена, Auto включён на резерве.** «Упрощённый интерфейс» расположен справа от заголовка, недостающий шаг указан под кнопкой. Исправлена читаемость. [Отчёт](VERIFICATION-ALPHA20-2026-10-25.md) · [QA](../qa/HEADER-ALPHA20-2026-10-25.json) · [Роутер](../qa/MT3000-ALPHA20-2026-10-25.json). [GitHub alpha20](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20) · [Gitea alpha20](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20) — published and downloads verified. Stable0.9.0 unchanged.
 
 ## Previous alpha19 delivery
 

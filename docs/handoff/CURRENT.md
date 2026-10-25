@@ -1,3 +1,15 @@
+# COMPLETE alpha20 / owner76 —25 October2026
+
+[GitHub alpha20](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20) · [Gitea alpha20](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20)
+
+Owner76 complete: guarded «Упрощённый интерфейс» beside actual heading, current readiness and click-time validation, readable unavailable reason, correct lost-RPC message. Upper-left partial blue skip link fixed with full clipping before focus and fixed/unclipped keyboard focus; completed steps opacity1/foreground. Original strict terms/setup/current-pair/running Auto gate retained; no navigation RPC/config writes. Source tests EN/RU and generated route/header checks passed. Exact2ce089091eb6851af8741b604154979a71905eb9 dualCI774app/112QA each/52UI PASS. Canonical849731bytes SHA8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf.
+
+MT3000/4.11.0alpha20/dashboard96/ui68 installed;87files/modes/RPC/HTTP/pinnedHTTPS verified. AutoON confirmedreserve/bothVPN healthy;1644closedoldlatencyrows/4speedrows/settings/terms1 preserved,193-entry encrypted pre/post backups independently read. Actual setup_complete/onboarding_complete stillFALSE, header correctly disabled with «Сначала завершите первичную настройку». Ready transition tested against actual frame with completed flags only in memory, never persisted. Native-browser visual NOT_VERIFIED; no Computer Use attempted this turn, no physical button-click/layout claim. MainMT6000/hostnetwork unchanged. Keep gateway127.0.0.2:8080 and designpreview64171 running.
+
+Canonical release source/tag174b4d551c44af984f83680a1bda04d66a5a42ab;public source/tag65926127a65583af3e2c02c3792065a80499bf36;equalTreeebb2b01b338d295b49bbfed80c1c0a06f7aa7952. Actual both prereleases/four assets each downloaded/hash verified. Final docs-only branch closure recorded privately in header-alpha20-20261025/publication.json. No remaining owner76 work. Alpha19 earlier GitHub/Gitea release also complete; old quota blockers below superseded. Read docs/VERIFICATION-ALPHA20-2026-10-25.md and qa/HEADER-ALPHA20-2026-10-25.json,qa/MT3000-ALPHA20-2026-10-25.json.
+
+For nextAI: inspect live state/ledger before writes; never rerun completed install/prepare scripts blindly. Normal entry remains wizard until explicit setup completion. Do not auto-mark it complete; existing onboarding=defer recovery link opens full panel but never grants home readiness. To review header in full Getting started use http://127.0.0.2:8080/cgi-bin/luci/admin/services/homensai-vpn?onboarding=defer&lang=ru#start . New user requests save immediately. No old observer/app writer remains after closure.
+
 # ALPHA20 INSTALLED / PUBLICATION NEXT —25 October2026
 
 Owner76 implemented: guarded shortcut beside actual heading, clear reason if unavailable, current model and click-time recheck, lost-RPC copy; clipped skip link fixed without losing keyboard focus, done-step opacity1. Exact2ce089091eb6851af8741b604154979a71905eb9 dualCI774app/112QA each/52UI PASS. Canonical849731bytes SHA 8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf.

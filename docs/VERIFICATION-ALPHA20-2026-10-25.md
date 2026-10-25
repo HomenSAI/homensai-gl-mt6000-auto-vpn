@@ -22,3 +22,7 @@ Actual physical source/frame: shortcut disabled and explains «Сначала з
 NormalStop24.64s/install5.5s/Start63.844s/reserve43.141s. Protected network settings unchanged; only expected own native_trial/native_until lifecycle values changed,35options retained.1644closedlegacy latency rows compared with decrypted pre-backup; open minute excluded. Four speed results retained. Before/after encrypted backups193entries independently decrypted/read. No hostnetwork/mainMT6000/firmware changes. User router gateway remains127.0.0.2:8080; preview64171 separate.
 
 Publication follows verified feature source, no product changes after CI. Stable/main preserved.
+
+## Published
+
+[GitHub alpha20](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20) · [Gitea alpha20](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20). Actual non-draft prereleases; four assets per host downloaded/SHA256verified. Canonical source/tag `174b4d551c44af984f83680a1bda04d66a5a42ab`, GitHub source/tag `65926127a65583af3e2c02c3792065a80499bf36`, equal release tree `ebb2b01b338d295b49bbfed80c1c0a06f7aa7952`. Main/stable unchanged; docs-only closure follows.
