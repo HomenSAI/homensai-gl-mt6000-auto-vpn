@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "result": "PASS_ACTUAL_OFF_ON_ACCESS_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha21",
+  "tested_product_source": "4ae700097b3b921d9cf7b396e98f661fd18c8f7c",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha21-1_all.ipk",
+    "bytes": 849653,
+    "sha256": "caadfa384d048c384f3efc3ca9f27dcf9e019420a77879d187cd13581865d29e"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha21-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "closed_legacy_latency_rows_preserved": 1729,
+    "retained_speed_rows": 4,
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "actual_on_home_access": true,
+    "actual_off_home_access": false,
+    "setup_flags_written_to_grant_access": false,
+    "start_seconds": 65.734,
+    "reserve_restore_seconds": 45.094,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "actual_off_frame_semantics": {
+    "result": "PASS_ACTUAL_OFF_ACCESS",
+    "version": "0.9.1-alpha21",
+    "stage": "off",
+    "show_card": false,
+    "shortcut_aria_disabled": "true",
+    "tooltip_text": "Чтобы воспользоваться упрощённым интерфейсом, необходимо настроить систему и включить Auto.",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_on_frame_semantics": {
+    "result": "PASS_ACTUAL_ON_ACCESS",
+    "version": "0.9.1-alpha21",
+    "stage": "on",
+    "show_card": true,
+    "shortcut_aria_disabled": "false",
+    "tooltip_text": "",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "limitations": [
+    "Native browser hover/layout acceptance not performed; exact installed source, CSS and actual OFF/ON data models verified",
+    "No fake readiness flags or synthetic observations written to device",
+    "ExternalLAN/IPv6/KillSwitch/powerloss scope unchanged"
+  ],
+  "recorded_utc": "2026-10-25T12:09:32.267783+00:00"
+}

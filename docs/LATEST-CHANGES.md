@@ -1,5 +1,12 @@
 # Последние изменения / Latest changes — 24.10.2026
 
+## 0.9.1-alpha21 —25 October2026 / 25 октября2026
+
+Simplified access now follows confirmed enabled Auto alone, regardless of setup/test markers. Off/unconfirmed Auto has a red shortcut and setup tooltip on hover/focus/tap, dismissible with Escape. A running Auto bypasses the unfinished-wizard entry screen without marking it complete. Missing channel data and handovers render honest card states. Existing Auto start protections unchanged.
+
+Упрощённый интерфейс доступен всегда при включённом Auto независимо от отметок настройки. При выключенном режиме кнопка красная, при наведении/фокусе/тапе показана подсказка. Незавершённый мастер не блокирует вход работающего Auto; его отметки не меняются. Ошибки и переходы каналов отображаются внутри карточки.
+
+
 ## 0.9.1-alpha20 —25 October2026 / 25 октября2026
 
 Added a guarded Simplified interface button beside the page title, with an explicit unavailable reason and click-time revalidation. Fixed the clipped upper-left skip link while retaining keyboard access; completed setup steps keep readable foreground/opacity. No configuration or Auto-mode changes from navigation.

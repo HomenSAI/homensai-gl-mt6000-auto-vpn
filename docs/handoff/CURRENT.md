@@ -1,3 +1,13 @@
+# ALPHA21 INSTALLED / PUBLICATION NEXT — owner77
+
+Latest rule implemented: confirmed enabled Auto grants display access regardless of setup/tests markers; off/unconfirmed red shortcut with hover/focus/tap tooltip and Escape. Initial unfinished wizard skipped while AutoON without changing its markers. Missing-channel/transition/fault states rendered honestly. Real startup protections unchanged. Final4ae700097b3b921d9cf7b396e98f661fd18c8f7c dualCI774app/112QA each/52UI PASS. Two test-fixture CI failures retained;28targeted native tests passed in both environments, production package unchanged. Canonical849653bytes SHAcaadfa384d048c384f3efc3ca9f27dcf9e019420a77879d187cd13581865d29e.
+
+Physical MT3000alpha21/dashboard97/ui69/87files/modes/RPC/HTTP/HTTPS passed. ActualOFF then actualON snapshots: off denies; on grants with setup_complete/onboarding_completeFALSE. No fake completion flags or synthetic observations. AutoONreserve/bothVPN healthy;1729closedoldlatencyrows/4speedresults/settings/terms preserved;193-entry pre/post encrypted backups independently read. Native visual NOT_VERIFIED, no Computer Use this turn. Keep both gateways. Next commit evidence, prepared publish_refs.py/publish_releases.py, verify assets then docs-only closure. Read docs/VERIFICATION-ALPHA21-2026-10-25.md and qa/AUTO-ACCESS-ALPHA21-2026-10-25.json,qa/MT3000-ALPHA21-2026-10-25.json. Do not rerun completed device steps.
+
+# ACTIVE alpha21 / owner77
+
+Latest owner rule supersedes setup-gated access: enabled Auto always permits simplified view even with unfinished setup/tests; off/unconfirmed shortcut red with hover/focus/tap tooltip and Escape. Source implemented with resilient missing-profile/transition/error rendering; real Auto startup protection unchanged. Next52UI/build/exact dualCI/normal MT3000 install/Auto reserve/real incomplete-marker home entry checks. Current physical20AutoONreserve. No Computer Use this turn. Private auto-access-alpha21-20261025; save new dictation immediately. Earlier strict-gate notes below superseded.
+
 # COMPLETE alpha20 / owner76 —25 October2026
 
 [GitHub alpha20](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20) · [Gitea alpha20](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha20)

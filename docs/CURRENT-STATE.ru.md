@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Текущее поведение и руководство
 
-> Исходный кандидат: **0.9.1-alpha20**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
+> Исходный кандидат: **0.9.1-alpha21**. Здесь описано дерево исходников, а не автоматически подтверждённая установка. [Фактическая доставка](CURRENT-STATUS.md) фиксируется отдельными датированными квитанциями.
 
 ## Поддержка и три разных режима
 
@@ -57,12 +57,18 @@
 
 ## Startup card / Стартовая карточка
 
-The selected card opens only after accepted current terms, completed first setup, verified current-pair preparation and fresh confirmed running Auto/healthy selected route. Incomplete setup and deferred recovery links never qualify; explicit full-menu/deep links remain available. The original Auto button forwards to the existing controller action. Primary is above reserve, red is softened 50%, and stale data returns to full management. Physical installation acceptance is recorded separately.
+The simplified interface is available whenever Auto is confirmed on, regardless of setup/test completion flags or individual channel health. Incomplete setup cannot block enabled Auto; explicit full-menu/deep links remain available. The original Auto button forwards to the existing controller action. Primary is above reserve, red is softened 50%, and stale data returns to full management. Physical installation acceptance is recorded separately.
 
-Выбранная карточка появляется только после условий, завершённого мастера, подтверждённых проверок текущей пары и свежего подтверждения работающего Auto/маршрута. Исходная кнопка использует существующее управление. Основной выше резерва; красный ослаблен50%. Неполная настройка/устаревшие данные не допускают стартовую карточку. [Подробности](SIMPLE-HOME-2026-10-25.md).
+Выбранная карточка появляется только после условий, завершённого мастера, подтверждённых проверок текущей пары и свежего подтверждения работающего Auto/маршрута. Исходная кнопка использует существующее управление. Основной выше резерва; красный ослаблен50%. Неполная настройка не блокирует уже включённый Auto; неподтверждённое состояние не выдаётся за включённый режим. [Подробности](SIMPLE-HOME-2026-10-25.md).
 
 ## Full-menu shortcut / Переход из полного меню
 
 The page title now has a Simplified interface button on its right. It uses the same current readiness gate as the home screen, updates with status and rechecks at click time. If unavailable, a readable explanation states the missing step. No configuration or Auto command is issued by this navigation. The skip link is fully clipped until keyboard focus, then fully visible above the fixed router navigation. Completed-step text stays opaque.
 
 Справа от заголовка доступна кнопка «Упрощённый интерфейс». Она использует прежний строгий допуск и проверяет его заново перед переходом. Если подготовка не завершена, видна конкретная причина. Кнопка не запускает Auto и не сохраняет настройки. Обрезанная ссылка вверху слева исправлена; выполненные шаги читаемы.
+
+## Enabled-Auto access / Доступ при включённом Auto
+
+Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirmed status shows a red shortcut with a setup/enable tooltip on hover, keyboard focus or tap; Escape dismisses it. Clicking an unavailable shortcut never starts Auto. Channel failures/transitions are displayed honestly inside the card rather than denying access. The existing controller start requirements and terms acceptance are unchanged.
+
+При включённом Auto доступ открыт независимо от завершённости настройки. При выключенном/неподтверждённом режиме кнопка красная; наведение, фокус и тап показывают подсказку о настройке и включении Auto, Escape скрывает её. Нажатие не запускает Auto автоматически.

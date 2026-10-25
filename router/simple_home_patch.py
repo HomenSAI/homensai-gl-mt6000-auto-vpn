@@ -7,6 +7,9 @@ def apply(source):
         assert source.count(old)==1,old[:100]
         source=source.replace(old,new,1)
     replace('return view.extend({',(base/'simple_home_policy.inc.js').read_text(encoding='utf8')+'\n'+(base/'simple_home_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+    replace('First steps: terms, training, monitoring, your two VPNs and Auto. This page opens first until they are done.','Setup, training and checks. The simplified interface is available whenever Auto is on.')
+    replace('Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto. Эта страница открывается первой, пока они не выполнены.','Настройка, обучение и проверки. При включённом Auto упрощённый интерфейс доступен всегда.')
+    replace("if(!inventory.error&&!onboardingComplete(inventory)&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);","if(!inventory.error&&!onboardingComplete(inventory)&&!simpleHomeAutoEnabled(data[1],statusNow(data[1]))&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);")
     replace("heading,(subtitle=E('p',{},bi(","E('div',{'class':'hv-heading-row'},[heading,(homeShortcut=renderSimpleHomeShortcut(function(){return simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));},goSimpleHome))]),(subtitle=E('p',{},bi(")
     replace("    var activeTab=setup?'settings':window.location.hash.slice(1);if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);", """    var homeLatest=data[1],homeMenuRequested=false;
     var homeShortcut=null;

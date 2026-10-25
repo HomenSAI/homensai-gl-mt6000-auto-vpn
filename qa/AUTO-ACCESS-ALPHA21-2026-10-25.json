@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "result": "PASS_ENABLED_AUTO_ACCESS_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha21",
+  "tested_product_source": "4ae700097b3b921d9cf7b396e98f661fd18c8f7c",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha21-1_all.ipk",
+    "bytes": 849653,
+    "sha256": "caadfa384d048c384f3efc3ca9f27dcf9e019420a77879d187cd13581865d29e"
+  },
+  "ci": [
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha21-1_all.ipk",
+      "bytes": 849653,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "caadfa384d048c384f3efc3ca9f27dcf9e019420a77879d187cd13581865d29e",
+      "skipped_tests": 16,
+      "source": "4ae700097b3b921d9cf7b396e98f661fd18c8f7c",
+      "ui_suites": 52,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha21-1_all.ipk",
+      "bytes": 849653,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "caadfa384d048c384f3efc3ca9f27dcf9e019420a77879d187cd13581865d29e",
+      "skipped_tests": 0,
+      "source": "4ae700097b3b921d9cf7b396e98f661fd18c8f7c",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "initial_ci_failures_retained": [
+    {
+      "result": "FAIL",
+      "source": "f004055daf2aa398cb569c1cf26dbf68a5db20d8",
+      "runtime": "Python3.9",
+      "test": "NativeTests.test_no_client_confirmation_means_rollback",
+      "observed": "Expected CONFIRMATION-TIMEOUT, received HISTORY-001 after mocked Popen intercepted uncached UCI subprocess.run",
+      "cause": "Global shared subprocess mock plus expiring configured_days cache",
+      "fix": "Test fixture explicitly pins native_history.configured_days=7; real History and rollback assertions retained",
+      "production_payload_changed": false
+    },
+    {
+      "result": "FAIL_TEST_FIXTURE",
+      "source": "f9589fb7293111231140272391462a0583cb146e",
+      "runtime": "Python3.11",
+      "errors": 28,
+      "cause": "First fixture patch targeted native_history.configured_days, but History imports it locally from retention_settings",
+      "fix": "Patch retention_settings.configured_days directly; keep real History stores and rollback assertions",
+      "production_payload_changed": false
+    }
+  ],
+  "targeted_native_tests_each_runtime": 28,
+  "features": {
+    "enabled_auto_ignores_wizard_and_test_markers": true,
+    "unfinished_wizard_not_forced_while_auto_on": true,
+    "controller_start_protections_unchanged": true,
+    "off_unconfirmed_shortcut_red": true,
+    "hover_focus_tap_tooltip": true,
+    "escape_dismissal": true,
+    "off_click_does_not_navigate_or_start_auto": true,
+    "missing_channels_failures_and_transitions_render_without_denial_or_fabricated_details": true
+  },
+  "physical_receipt": "qa/MT3000-ALPHA21-2026-10-25.json",
+  "recorded_utc": "2026-10-25T12:09:32.267783+00:00"
+}

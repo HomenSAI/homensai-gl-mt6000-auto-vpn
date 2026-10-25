@@ -149,7 +149,7 @@ function renderStartPage(status,inventory){
   }));
   return E('section',{'class':'hv-chart-card hv-start-page'},[
     E('h3',{},open.length?bi('Step ','Шаг ')+(steps.indexOf(next)+1)+bi(' of ',' из ')+steps.length:bi('All steps are done','Все шаги выполнены')),
-    E('p',{},open.length?bi('Complete the steps in order. Once setup and checks are complete and Auto is confirmed running, the simplified interface is available from the button beside the page title.','Пройдите шаги по порядку. После завершения настройки и проверок, когда работа Auto подтверждена, упрощённый интерфейс доступен по кнопке справа от заголовка.'):bi('Setup steps are complete. Use the simplified-interface button when Auto is ready, or continue in the full Overview.','Шаги выполнены. Когда Auto готов, воспользуйтесь кнопкой упрощённого интерфейса или продолжайте работу в полном «Обзоре».')),
+    E('p',{},open.length?bi('The simplified interface is available whenever Auto is on, even if steps remain here. If Auto cannot start, complete system setup.','Упрощённый интерфейс доступен всегда, когда включён Auto, даже если здесь остались незавершённые шаги. Если Auto не включается, завершите настройку системы.'):bi('Use the simplified interface whenever Auto is on, or continue in the full Overview.','При включённом Auto можно перейти в упрощённый интерфейс или продолжить работу в полном «Обзоре».')),
     list,
     E('p',{},E('a',{'class':'cbi-button'+(open.length?'':' cbi-button-action'),'href':'#overview'},bi('Go to the Overview','Перейти на «Обзор»')))]);
 }

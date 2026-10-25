@@ -2,7 +2,7 @@
 
 [Русский](README.ru.md) · [English](README.md)
 
-Current **0.9.1-alpha20** is installed on dedicatedMT3000, AutoON/confirmedreserve. A guarded Simplified interface button sits beside the page title; clipped skip-link and completed-step contrast are fixed. [Verification](docs/VERIFICATION-ALPHA20-2026-10-25.md) · [Delivered state](docs/CURRENT-STATUS.md). Stable0.9.0 unchanged.
+Current **0.9.1-alpha21** is installed on dedicatedMT3000, AutoON/confirmedreserve. Simplified access follows enabled Auto independently of setup markers; off state has a red shortcut and setup tooltip. [Verification](docs/VERIFICATION-ALPHA21-2026-10-25.md) · [Delivered state](docs/CURRENT-STATUS.md). Stable0.9.0 unchanged.
 
 Monitor an existing OpenVPN/WireGuard pair and switch a verified route. Eight lessons include interactive diagrams with playback, pause and step controls.
 

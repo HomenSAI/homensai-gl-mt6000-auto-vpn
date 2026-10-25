@@ -1,10 +1,12 @@
 /* Owner-selected card. The power button remains the existing project control. */
 .hv-heading-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px 18px;padding:14px 0 18px;min-width:0}
 .hv-workspace[data-hv-design] .hv-heading-row>h1{margin:0;min-width:0;overflow-wrap:anywhere}
-.hv-simple-shortcut-group{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto;max-width:min(100%,300px);min-width:0}
+.hv-simple-shortcut-group{position:relative;display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-left:auto;max-width:min(100%,300px);min-width:0}
 .hv-app .hv-simple-shortcut-button{margin:0!important;min-height:44px;height:auto!important;max-width:100%;padding:10px 16px!important;white-space:normal!important;font:inherit;font-size:14px;line-height:1.3}
-.hv-simple-shortcut-reason{color:var(--text,#262421);font-size:12px;line-height:1.4;text-align:right;max-width:300px;overflow-wrap:anywhere}
-.hv-app .hv-simple-shortcut-button:disabled{opacity:1!important;color:var(--muted)!important;background:var(--surface)!important;border-color:var(--line)!important;cursor:default}
+.hv-simple-shortcut-reason{display:none;position:absolute;z-index:50;top:calc(100% + 8px);right:0;box-sizing:border-box;width:min(320px,calc(100vw - 32px));max-width:none;margin:0;padding:13px 16px;border:1px solid var(--bad,#c2364a);border-radius:12px;color:var(--text,#262421);background:var(--surface,#fffdf8);box-shadow:0 8px 24px #0003;font-size:13px;line-height:1.5;text-align:left;overflow-wrap:anywhere}
+.hv-simple-shortcut-group[data-simple-home-available="false"]:hover .hv-simple-shortcut-reason,.hv-simple-shortcut-group[data-simple-home-available="false"]:focus-within .hv-simple-shortcut-reason,.hv-simple-shortcut-group[data-simple-home-available="false"][data-tooltip-open="true"] .hv-simple-shortcut-reason{display:block}
+.hv-simple-shortcut-group[data-tooltip-dismissed="true"] .hv-simple-shortcut-reason{display:none!important}
+.hv-app .hv-simple-shortcut-group[data-simple-home-available="false"] .hv-simple-shortcut-button{opacity:1!important;color:var(--bad,#c2364a)!important;background:color-mix(in srgb,var(--bad,#c2364a) 12%,var(--surface,#fffdf8))!important;border-color:var(--bad,#c2364a)!important;box-shadow:0 0 0 2px #c2364a1f;cursor:help}
 @media(max-width:700px){.hv-workspace[data-hv-design] .hv-page-header{flex-direction:column}.hv-page-header>.hv-header-main{width:100%}.hv-page-header>.hv-page-actions{align-self:stretch;flex-direction:row;flex-wrap:wrap;min-width:0}.hv-heading-row{gap:12px;padding-top:4px}}
 .hv-app[data-hv-active="home"] .hv-sidebar,.hv-app[data-hv-active="home"] .hv-page-header,.hv-app[data-hv-active="home"] .hv-settings{display:none!important}
 .hv-app[data-hv-active="home"]{display:block!important}
