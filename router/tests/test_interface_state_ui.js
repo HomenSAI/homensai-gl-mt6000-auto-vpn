@@ -41,3 +41,15 @@ console.log('PASS: primary/reserve and at most one green, yellow standby/red dis
  delete c.Date;delete c.performance;
 }
 console.log('PASS: client clock skew does not grey out fresh VPN data; old observations still expire');
+
+{
+ const disclosure=(key,open)=>({key,open,getAttribute:()=>key});
+ const technical=disclosure('technical',false),live=disclosure('live-statistics',true);
+ let nodes=[technical,live];
+ const section={querySelectorAll:s=>s==='details'?nodes:[],querySelector:s=>nodes.find(n=>s==='details[data-auto-disclosure="'+n.key+'"]')||null};
+ const root={isConnected:true,querySelector:()=>section};
+ const saved=c.capturePageViewport(root,'overview');
+ const inserted=disclosure('new-readiness-detail',false);nodes=[inserted,technical,live];technical.open=true;live.open=false;
+ c.restorePageViewport(root,saved);assert.equal(technical.open,false);assert.equal(live.open,true);assert.equal(inserted.open,false,'a new earlier detail must not inherit the chart expansion');
+ console.log('PASS: Auto technical/live disclosures restore by stable identity when readiness details change order');
+}

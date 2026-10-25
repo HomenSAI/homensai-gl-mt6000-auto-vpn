@@ -1,22 +1,28 @@
-# How Auto VPN works
+<!-- doc-role: current -->
+# How the system works
 
-[Install](INSTALL.en.md) · [Eight setup steps](FIRST-RUN-SETUP.md) · [Current status](CURRENT-STATUS.md)
+[Current version/evidence](CURRENT-STATUS.md) · [Full guide](CURRENT-STATE.en.md)
 
-Monitoring measures DNS/HTTPS through existing router VPNs and displays health, latency, traffic and history. Monitoring alone never changes routes. On the prepared MT3000, explicitly enabled Auto starts the saved primary/reserve profiles and selects traffic using verified observations.
+## Roles, clients and traffic
 
-Repeated primary failures with a healthy reserve trigger readiness, worker, current-configuration and rolling-budget checks before a verified switch. Return depends on stable primary recovery and policy. Manual selection works while Auto is on; a healthy operator preference stays preferred. A queue acknowledgement is not completion.
+Main and reserve are roles, not WireGuard/OpenVPN names. Stock firmware owns provider profiles, credentials and server selection within a tunnel. The application observes exact protocol/interface/profile generations and coordinates the saved pair of distinct clients. A country/display group such as `default` is metadata, not proof of channel membership.
 
-```mermaid
-flowchart LR
-  A[Monitor both VPNs] --> B{Repeated primary failure?}
-  B -- No --> A
-  B -- Yes, healthy reserve --> C[Verified reserve selection]
-  C --> D{Primary stably recovered?}
-  D -- Return allowed by policy --> E[Return to primary]
-  D -- Wait / operator preference --> C
-  E --> A
-```
+The configured profile, connected tunnel, healthy router probe and selected common traffic route are different states. Both clients can be connected while one route is selected. Saving the pair edits application metadata; explicit prepared Auto Start can enable managed clients and select their policy. Normal Stop restores the managed baseline when verified, otherwise exposes the retained/unconfirmed outcome.
 
-A tunnel is an established VPN connection; the selected channel is the current route for ordinary traffic. Both tunnels may be Connected while one route is selected. Stock firmware may manage servers inside a tunnel; this application coordinates the selected distinct tunnels.
+## Continuous Auto
 
-The healthy selected card is green and animated; inactive/error cards are static. Yellow indicates a command/check in progress. Graph levels are primary/reserve/off; missing observations are gaps. Router probes do not prove connectivity for a separate LAN client. Restart requires an explicit Auto Start.
+The qualified prepared MT3000/4.11.0 path uses fresh router IPv4 DNS/HTTPS evidence, stable identity, policy/worker/ownership checks and bounded recovery. Consecutive-failure/success thresholds, cooldown, dwell, budgets and operator hold prevent an immediate switch on every noisy sample. A low HTTPS delay is a recommendation, not permission to move traffic.
+
+Manual selection is an explicit command with a confirmed result, not an immediate lamp change on queue ACK. Automatic return follows saved policy and readiness; manual reserve hold does not promise return just because primary recovers. A deliberate bounded fault test is separately labelled and can test both directions without changing the saved preference.
+
+## Other proof modes
+
+A client-confirmed trial uses the Windows helper; its DNS/HTTPS/exit evidence comes from that real client. Router-hosted namespace and router-probed evidence are not external-client proof. CheckOnly is prerequisite inspection; ProbeOnly sends bound data probes; a full trial can change router traffic. None changes PC routes/NIC/DNS automatically.
+
+## Display and history
+
+Role cards keep main left/top and reserve right/bottom. Current-check tables and pinned service rows put the working channel first. M/R direction and green/red in a confirmed transition describe route selection; a standalone red failure marks only its observed channel. Event-time roles cannot be rewritten using today's pair.
+
+Only blue main/orange reserve failure episodes are charted. Legacy records without a saved role are disclosed outside those series. Consecutive equal log states share a time range; A→B→A remains three runs. Saved history begins with 20 rows, and the full downloaded retained snapshot supports search/sort.
+
+[Storage limits](HISTORY-RETENTION.md) · [Control/setup](CONTROL-AND-SETUP.md) · [Helper](LAN-HELPER.en.md) · [Recovery](../router-test-kit/EMERGENCY.md).

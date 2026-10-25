@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha18",
+  "tested_product_source": "76498b5db82e8f5fa25f22d946b338c26b39c869",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha18-1_all.ipk",
+    "bytes": 845457,
+    "sha256": "f38a7f8926a6e717841af5cac0d13dfda9207fa3e9338bde6f624fc7c88fc81f"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha18-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "retention_seconds": 604800,
+    "week_window_hours": 168,
+    "closed_legacy_latency_rows_preserved": 918,
+    "retained_speed_rows": 4,
+    "synthetic_physical_data": false,
+    "start_first_attempt_seconds": 66.141,
+    "reserve_restore_seconds": 43.125,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true,
+    "help_after_settings": true,
+    "embedded_training_installed": true,
+    "event_dictionary_installed": true
+  },
+  "limitations": [
+    "Native-browser visual acceptance not performed; installed source, CSS visibility, RPC and served bytes verified",
+    "No new VM required for this UI-only update; alpha17 weekly-storage VM proof remains separately scoped",
+    "Independent LAN, IPv6, Kill Switch and physical power-loss not certified"
+  ],
+  "recorded_utc": "2026-10-24T22:35:47.477218+00:00"
+}

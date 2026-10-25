@@ -110,7 +110,7 @@ def consume(backend, settings, revision, stopped, runtime=None, persist=None):
         atomic_json(attempts_path, consumed)
         publish('APPLYING')
         attempt(backend, selection, record['until'], False,
-                control_revision=record['control_revision'], manual_request_id=request_id)
+                control_revision=record['control_revision'], manual_request_id=request_id,request_source=record.get('request_source'))
         journal = journal_read()
         if not _confirmed_reserve(record, journal, backend.order()):
             raise Refused('MANUAL-COMPLETION-UNVERIFIED')

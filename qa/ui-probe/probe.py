@@ -1,7 +1,7 @@
 """Loopback synthetic fixture + headless Edge page probe. No router access, no network beyond 127.0.0.1.
 Usage: python qa/ui-probe/probe.py gate | matrix main | matrix more-a|more-b|more-c | scen
 Results go to private/ui-probe/ (git-ignored). Each persona has a bounded timeout; a full 50-case run takes several minutes."""
-import importlib.util, json, re, subprocess, sys, threading, time
+import importlib.util, json, re, shutil, subprocess, sys, threading, time
 from concurrent.futures import ThreadPoolExecutor
 from http.server import ThreadingHTTPServer
 from pathlib import Path
@@ -52,7 +52,7 @@ def run(kind,d,tab,theme,lang,w,h=900,budget=0,timeout=240):
     qid=uuid.uuid4().hex[:10];ev=threading.Event();EVENTS[qid]=ev
     prof=OUTDIR/'profiles'/qid
     url='http://127.0.0.1:%d/__probe/%s/%s/%s/%s/%s/%s/%s/%s'%(PORT,kind,d,tab,theme,lang,w,h,qid)
-    cmd=[EDGE,'--headless=new','--disable-gpu','--no-first-run','--user-data-dir='+str(prof),'--window-size=%s,%s'%(w,h+40),url]
+    cmd=[EDGE,'--headless=new','--disable-gpu','--no-first-run','--inprivate','--renderer-process-limit=2','--disable-background-networking','--user-data-dir='+str(prof),'--window-size=%s,%s'%(w,h+40),url]
     proc=subprocess.Popen(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:
         got=ev.wait(timeout)
@@ -89,6 +89,11 @@ def gate():
     srv.shutdown();sys.exit(1 if problems else 0)
 
 
+def _replace_retry(source,target):
+    # Python 3.15.1 on Windows can refuse rename of a just-written file; shutil.move copies instead
+    try:source.replace(target)
+    except PermissionError:shutil.move(str(source),str(target))
+
 def fool(part,workers=2):
     """Persona numbers a-b. Each result retains its own failure; rerun selected cases as separate commands."""
     a,b=map(int,part.split('-'))
@@ -109,7 +114,7 @@ def fool(part,workers=2):
         except Exception as error:row={'error':'HARNESS-'+type(error).__name__,'cfg':list(job[1:])}
         row['source_identity']=identity
         row['verdict']='FAIL' if fool_check.failed(fool_check.summarise([row])) else 'PASS'
-        temporary=case_path.with_suffix('.json.tmp');temporary.write_text(json.dumps([row],indent=1),encoding='utf-8');temporary.replace(case_path)
+        temporary=case_path.with_suffix('.json.tmp');temporary.write_text(json.dumps([row],indent=1),encoding='utf-8');_replace_retry(temporary,case_path)
         print('CASE',job[2],row['verdict'],'steps',row.get('steps',0),'calls',row.get('callCount',0),flush=True)
         return row
     with ThreadPoolExecutor(workers) as ex:res=list(ex.map(one,jobs))

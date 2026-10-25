@@ -69,6 +69,7 @@ def read_state():
             or not isinstance(data.get('network_identity'), str) or not __import__('re').fullmatch('[a-f0-9]{64}', data['network_identity'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
     if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
+    if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     return data
 
 
@@ -88,7 +89,7 @@ def intent():
     return row
 
 
-def request(revision):
+def request(revision,request_source=None):
     from auto_control import control_lock, revision_locked
     from agent import RUNTIME, atomic_json
     with control_lock():
@@ -104,14 +105,16 @@ def request(revision):
             return {'accepted': False, 'blockers': ['PAIR-RECOVERY-REQUIRED']}
         if old.get('mode') == 'on' and old.get('revision') == revision:
             return {'accepted': True, 'queued': True, 'already_requested': True}
-        atomic_json(paths()[0], {'mode': 'on', 'revision': revision, 'time': time.time(), 'id': uuid.uuid4().hex})
+        from auto_control import normalize_request_source as source_label
+        atomic_json(paths()[0], {'mode': 'on', 'revision': revision, 'time': time.time(), 'id': uuid.uuid4().hex,'request_source':source_label(request_source)})
     return {'accepted': True, 'queued': True, 'mode': 'continuous-pair', 'proof_scope': MODE,
             'external_lan_verified': False}
 
 
-def stop_locked(revision):
+def stop_locked(revision,request_source="programmatic"):
     from agent import atomic_json
-    atomic_json(paths()[0], {'mode': 'off', 'revision': revision, 'time': time.time()})
+    from auto_control import normalize_request_source
+    atomic_json(paths()[0], {'mode': 'off', 'revision': revision, 'time': time.time(),'request_source':normalize_request_source(request_source)})
 
 
 def public_intent():

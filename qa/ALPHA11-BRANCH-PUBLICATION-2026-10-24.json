@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "result": "PASS",
+  "tested_source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+  "public_snapshot": "497649b1d0100cf5b644b5e7450ee5c5b9c449f8",
+  "tree": "13b11b0d51d97575a53831bcd63b2d139ced4fe9",
+  "branch": "feature/owner-ui-20261023",
+  "ci": [
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 16,
+      "source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+      "ui_suites": 45,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 0,
+      "source": "99eab5956c3f0af63e380d1ff336750a2d6e8549",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "package_sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+  "scope": "Equal source trees on GitHub/Gitea. Following documentation-only closure preserves product files. No physical installation or native browser acceptance."
+}

@@ -128,5 +128,14 @@ class Tests(unittest.TestCase):
             self.assertTrue(manual.held_reserve(self.backend,self.state,journal,self.settings,{}));restore.assert_not_called()
         self.assertEqual(self.publish.call_args[0][0]['state'],'DEGRADED-ON-RESERVE')
 
+    def test_programmatic_test_override_is_not_attributed_to_operator(self):
+        answer=manual.request('reserve',self.revision,request_source='test');self.assertTrue(answer['accepted'])
+        self.assertEqual(manual.public()['request_source'],'test')
+        with patch.object(pair,'configure_lease',return_value=NOW+180),patch.object(n,'attempt',side_effect=self.attempt) as apply:
+            self.assertTrue(manual.consume(self.backend,pair.read_state(),self.settings,self.revision))
+        self.assertEqual(apply.call_args.kwargs['request_source'],'test')
+        self.assertEqual(self.publish.call_args[0][0]['transition_source'],'test')
+        self.assertEqual(pair.read_state()['manual_hold_source'],'test')
+
 
 if __name__=='__main__':unittest.main()

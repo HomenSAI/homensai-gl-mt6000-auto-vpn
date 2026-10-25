@@ -292,7 +292,7 @@ class AdversarialState(unittest.TestCase):
             output=io.StringIO()
             with patch.object(sys,'stdin',SimpleNamespace(buffer=io.BytesIO(json.dumps(arguments).encode()))),patch.object(control,'start',return_value={'accepted':True,'queued':True}) as start,redirect_stdout(output):
                 agent.rpc('native_start')
-            if set(arguments)=={'control_revision'}:start.assert_called_once_with(after)
+            if set(arguments)=={'control_revision'}:start.assert_called_once_with(after,request_source=None)
             else:
                 start.assert_not_called();self.assertEqual(json.loads(output.getvalue())['blockers'],['CONTROL-REVISION-STALE'])
 

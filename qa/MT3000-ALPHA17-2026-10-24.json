@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha17",
+  "tested_product_source": "01b5740d8a8771881d95b26f2922a80d76457581",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha17-1_all.ipk",
+    "bytes": 832683,
+    "sha256": "344c60ab5eaa9dc3f8cf1ddb1bddf19500c189dce3d2264d24f1ecff36425102"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha17-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "retention_seconds": 604800,
+    "week_window_hours": 168,
+    "closed_legacy_latency_rows_preserved": 824,
+    "retained_speed_rows": 4,
+    "synthetic_physical_data": false,
+    "start_first_attempt_seconds": 59.359,
+    "reserve_restore_seconds": 41.14,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "limitations": [
+    "Native-browser visual acceptance not performed",
+    "VM week samples are explicitly synthetic; no fake observations injected into physicalMT3000",
+    "Old deleted days cannot be reconstructed",
+    "IndependentLAN/IPv6/KillSwitch/physicalpowerloss not certified"
+  ],
+  "recorded_utc": "2026-10-24T20:50:09.499711+00:00"
+}

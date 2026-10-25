@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
 import agent
-from reliability import Reliability,WEEK,active_controller
+from reliability import Reliability,WEEK,active_controller,failure_pair_context
 from native_history import History
 from statistics_export import page
 
@@ -12,6 +12,59 @@ def probe(stamp,code=None):return {'id':'wireguard:peer_3','time':stamp,'code':c
 
 
 class ReliabilityTests(unittest.TestCase):
+    def test_recovery_keeps_its_event_time_role_including_pair_change_and_restart(self):
+        r=Reliability();pair={'source':'wireguard:peer_3','target':'openvpn:1_1'}
+        r.observe(probe(BASE,'DNS-001'),pair=pair)
+        r=Reliability(r.export());changed={'source':'openvpn:1_1','target':'wireguard:peer_3'}
+        r.observe(probe(BASE+20),pair=changed)
+        self.assertEqual([e['role'] for e in r.data['events']],['source','target'])
+        restored=Reliability(r.export());self.assertEqual(restored.data['events'][-1]['role'],'target')
+        r.observe(probe(BASE+30,'DNS-001'),pair=changed);r.observe(probe(BASE+40),pair={})
+        self.assertEqual(r.data['events'][-1]['role'],'unknown','missing current evidence cannot reuse the previous outage role')
+    def test_native_state_does_not_overwrite_failed_probe_state(self):
+        r=Reliability();r.observe(probe(BASE,'DNS-001'),native={'time':BASE+1,'source':'wireguard:peer_3','target':'openvpn:1_1','state':'COMMITTED'})
+        self.assertEqual(r.data['profiles']['wireguard:peer_3']['state'],'down')
+        restored=Reliability(r.export());restored.observe(probe(BASE+10,'DNS-001'));restored.observe(probe(BASE+20))
+        self.assertEqual(restored.data['totals']['outages'],1);self.assertEqual(restored.data['totals']['recoveries'],1)
+        self.assertEqual(restored.data['events'][0]['role'],'source')
+
+    def test_repair_only_provable_previous_native_state_overwrite(self):
+        r=Reliability();r.observe(probe(BASE,'DNS-001'));data=r.export();data['profiles']['wireguard:peer_3']['state']='ARMED'
+        restored=Reliability(data);self.assertEqual(restored.data['profiles']['wireguard:peer_3']['state'],'down')
+        self.assertEqual(restored.data['totals'],r.data['totals'])
+        bad=copy.deepcopy(data);bad['events'][0].pop('role')
+        with self.assertRaises(ValueError):Reliability(bad)
+        bad=copy.deepcopy(data);bad['profiles']['wireguard:peer_3']['state']='INVENTED'
+        with self.assertRaises(ValueError):Reliability(bad)
+
+    def test_pair_attribution_ignores_controller_phase_and_preserves_event_role(self):
+        pair={'source':'wireguard:peer_3','target':'openvpn:1_1'}
+        r=Reliability();r.observe(probe(BASE,'DNS-001'),native={'time':BASE+1,'state':'ARMED'},pair=pair)
+        self.assertEqual(r.data['events'][0]['role'],'source');self.assertEqual(r.data['profiles']['wireguard:peer_3']['state'],'down')
+        r=Reliability(r.export());r.observe(probe(BASE+10,'DNS-001'),pair={'source':'openvpn:1_1','target':'wireguard:peer_3'})
+        self.assertEqual(r.data['events'][0]['role'],'source');self.assertEqual(r.data['totals']['outages'],1)
+
+    def test_configured_pair_must_match_before_and_after_probe(self):
+        rows=[{'id':'wireguard:peer_3','protocol':'wireguard','interface':'wgclient1','vendor_tunnel_id':'wireguard:wgclient1'},
+              {'id':'openvpn:1_1','protocol':'openvpn','interface':'ovpnclient1','vendor_tunnel_id':'openvpn:ovpnclient1'}]
+        data={'profiles':rows,'settings':{'plan_source_tunnel':'wireguard:wgclient1','plan_target_tunnel':'openvpn:ovpnclient1'}}
+        pair=failure_pair_context(data,data);self.assertEqual(pair,{'source':'wireguard:peer_3','target':'openvpn:1_1'})
+        changed=copy.deepcopy(data);changed['profiles'][0]['id']='wireguard:peer_4';self.assertEqual(failure_pair_context(data,changed),{})
+        changed=copy.deepcopy(data);changed['settings']['plan_source_tunnel']='openvpn:ovpnclient1';self.assertEqual(failure_pair_context(data,changed),{})
+        changed=copy.deepcopy(data);changed['profiles'].append(rows[0]);self.assertEqual(failure_pair_context(changed,changed),{})
+
+    def test_failure_chart_preserves_original_role_and_episode_across_pair_changes(self):
+        r=Reliability();native={'time':BASE,'source':'wireguard:peer_3','target':'openvpn:1_1','state':'COMMITTED'}
+        r.observe(probe(BASE,'DNS-001'),native=native)
+        r.observe(probe(BASE+10,'DNS-001'),native=dict(native,source='wireguard:peer_4'))
+        self.assertEqual(r.public()['failure_history']['events'],[[BASE,'source','target']])
+        r=Reliability(r.export());r.observe(probe(BASE+20))
+        r.observe(probe(BASE+40,'VPN-001'),native=native)
+        self.assertEqual(r.public()['failure_history']['events'][-1],[BASE+40,'unknown','unknown'])
+        self.assertEqual(len(r.public()['failure_history']['events']),2)
+        old=r.export();old['events'][0].pop('role');old['events'][0].pop('selected')
+        self.assertEqual(Reliability(old).public()['failure_history']['events'][0],[BASE,'unknown','unknown'])
+
     def test_outage_is_one_episode_and_probe_failures_are_separate(self):
         r=Reliability();r.observe(probe(BASE));r.observe(probe(BASE+10,'VPN-003'));r.observe(probe(BASE+20,'VPN-003'));r.observe(probe(BASE+30))
         totals=r.public()['totals']

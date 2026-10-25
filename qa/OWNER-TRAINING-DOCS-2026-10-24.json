@@ -1,0 +1,70 @@
+{
+  "result": "PASS",
+  "version": "0.9.1-alpha11",
+  "markdown_files": 179,
+  "missing_local_targets": [],
+  "scope": "offline target existence and version/scope agreement; not external URL or native visual acceptance",
+  "training": {
+    "lessons": 8,
+    "languages": [
+      "ru",
+      "en"
+    ],
+    "full_quiz": "PASS",
+    "controls": [
+      "play",
+      "pause",
+      "previous",
+      "next",
+      "reset"
+    ],
+    "hidden_and_disposal": "PASS",
+    "router_RPC": "none",
+    "native_visual": "NOT_RUN"
+  },
+  "historical_reports": "preserved; not rewritten as current evidence",
+  "product_source": "e5451728e43b2f649aaf1e3f8a9538949ac488a5",
+  "ci": [
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 16,
+      "source": "e5451728e43b2f649aaf1e3f8a9538949ac488a5",
+      "ui_suites": 45,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 750,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha11-1_all.ipk",
+      "bytes": 806313,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 108,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6",
+      "skipped_tests": 0,
+      "source": "e5451728e43b2f649aaf1e3f8a9538949ac488a5",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "canonical_package": {
+    "version": "0.9.1-alpha11-1",
+    "bytes": 806313,
+    "sha256": "8671e8096ff75cab54b2855589123d8ab85ee0bdc28008dacd40dd4856d846f6"
+  }
+}

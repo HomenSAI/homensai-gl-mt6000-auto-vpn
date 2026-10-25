@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha13",
+  "tested_product_source": "2e8f5499e4245321c3611e95981d68f539e14e86",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha13-1_all.ipk",
+    "bytes": 815967,
+    "sha256": "f570634022381f8520b3214786bab207228497eda6589fb81cb5ab5f4fd786a8"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha13-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "policy_selection_confirmed": true,
+    "fault_tables_absent": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "start_first_attempt_seconds": 58.797,
+    "reserve_restore_seconds": 38.375,
+    "fault_readiness_current_reserve": "PASS_READ_ONLY_NO_FAULT_STARTED",
+    "live_log_limit": 2000,
+    "history_days": 7,
+    "encrypted_backup_before_entries": 190,
+    "encrypted_backup_after_entries": 190,
+    "backups_independently_decrypted_read": true
+  },
+  "limitations": [
+    "No independent external LAN/IPv6/KillSwitch certification",
+    "No real traffic fault injected on physical MT3000",
+    "No physical native-browser visual acceptance"
+  ],
+  "recorded_utc": "2026-10-24T16:44:53.066551+00:00"
+}

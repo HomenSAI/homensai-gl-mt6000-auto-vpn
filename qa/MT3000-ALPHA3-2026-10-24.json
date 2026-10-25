@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_WITH_BROWSER_LIMIT",
+  "version": "0.9.1-alpha3",
+  "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+    "bytes": 790185,
+    "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad"
+  },
+  "change": "Current server probes: five visible rows, triangle expands/collapses all remaining rows, persistent across polling, full-list search/sort; primary-first role labels instead of default",
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+      "bytes": 790185,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad",
+      "skipped_tests": 16,
+      "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha3-1_all.ipk",
+      "bytes": 790185,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dab1c30348925c75eb44f07ce020622a32d69e5e338f5ac539181605c2e234ad",
+      "skipped_tests": 0,
+      "source": "ebc0df0a1058be175a8e688901d4a8ef37ecbe2b",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "files_modes_verified": 86,
+  "actual_https": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard79.js",
+        "http_status": 200,
+        "bytes": 927645,
+        "sha256": "6fc44ff5781fd402d6b183684d92b3b657ea9b3ebc20b3b809aedda94c31b54e",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "bytes": 120848,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "actual_http8080": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard79.js",
+        "http_status": 200,
+        "sha256": "6fc44ff5781fd402d6b183684d92b3b657ea9b3ebc20b3b809aedda94c31b54e",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "final": {
+    "result": "PASS",
+    "time": 1792827577.4857395,
+    "version": "0.9.1-alpha3",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 10.6192045211792,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 30,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 34,
+      "channel_switches": 0,
+      "committed": 22,
+      "manual_attempts": 12,
+      "manual_committed": 11,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 6,
+      "rollbacks": 12,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 13166,
+      "failed_checks": 552,
+      "outages": 148,
+      "observed_down_seconds": 5738.289471626282,
+      "observed_up_seconds": 130636.75464344025,
+      "auto_observed_seconds": 67556.57207608223,
+      "recoveries": 132,
+      "unknown_intervals": 3
+    },
+    "external_lan_verified": false
+  },
+  "table_data": {
+    "event": "CURRENT-PROBES-COMPACT",
+    "result": "PASS",
+    "limit": 5,
+    "all_server_rows_available": 30,
+    "triangle_disclosure_wiring": true,
+    "full_search_sort_retained": true,
+    "scope": "installed canonical module and actual router API; native browser visual acceptance not claimed"
+  },
+  "stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 22.031,
+    "bytes": 725,
+    "sha256": "9cf37df638b9d30bbfd93e89b9d6d10437f1fae5a4c85af2306515cab5027da1",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 58.344,
+    "bytes": 2031,
+    "sha256": "e53413cd0d4c76d24fe0ce8a8f7b4593eb24401f289c350640a652685a75e052",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "reserve": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 35.719,
+    "bytes": 11016,
+    "sha256": "0c2d50215d204113a90c320e1f967b52f16d3b9e799341534bc3d55877969e52",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "e6f7a814917819bde04a6151cfab1a498b974b23917f3d61898f6605ef6b9084",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_backup": {
+    "step": "backup-after",
+    "result": "PASS",
+    "encrypted_sha256": "3dd3a33708c2e163e31adf6077bfc47aadce68ed73807fe27f5cbc88e592ebb9",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "scope": {
+    "native_browser_visual": "NOT_VERIFIED_NO_CONFIGURED_BROWSER",
+    "router_originated_ipv4": true,
+    "independent_LAN": false,
+    "host_network_changed": false,
+    "primary_MT6000_changed": false,
+    "fault_test_run": false,
+    "release_published": false
+  },
+  "recorded_utc": "2026-10-24T07:39:36.450006+00:00"
+}

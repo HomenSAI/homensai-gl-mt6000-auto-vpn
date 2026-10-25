@@ -1,7 +1,27 @@
-<!-- current-release-context:0.9.0 -->
-> Historical or versioned reference. [Current release0.9.0 and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+<!-- documentation-context: archive -->
+> Historical or versioned reference. [Current delivered state and verified scope](CURRENT-STATUS.md) · [documentation index](DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
 
 # Work log
+
+## 2026-10-24 · owner71 alpha17 weekly latency
+
+True1–7daylatency storage/1–168h window/weekpan,legacycheckpoint preservation,compactfullweekRPC andboundedmarkers. Exact01b5740 CI774app/112QA perruntime/47UI,10latencyPythonregressions/extendedUI andinstalledx86VM10081row file/actualRPC passed; retainedrawRPC/harnessfailures resolved; VMoff0. ActualMT3000AutoONreserve/newAPI/824closedlegacyrows/settings/terms/4speedrows/193entrypre-postbackuprestoreproof verified. GitHub/Gitea actualprereleases/fourassets each downloaded/hashchecked. No physicalsyntheticdata or nativevisualclaim. [Report](VERIFICATION-ALPHA17-2026-10-24.md).
+
+## 2026-10-24 · owner70 alpha16 saved-history column layout
+
+State wider/Event narrower; M/R diagram block before unbroken code; saved-history scopedCSS only. Existingjournal/history regressions and exacte7609c9 dualCI771app/112QA/47UI PASS after isolating an unrelatedTTL-dependent Popen testfixture (failed01207a3retained). ActualMT3000AutoONreserve,87files/RPC/HTTP/HTTPS/layoutCSS/settings/terms/4speedrows/193-entrypre-postencryptedbackups verified. GitHub/Gitea actualprereleases,4assets each downloaded/hashchecked. Nativebrowserinventoryempty; no visualclaim. [Report](VERIFICATION-ALPHA16-2026-10-24.md).
+
+## 2026-10-24 · owner69 speed launch/chart alpha15
+
+Disabled speed setting explained and reviewed manual enable/start implemented; connected preselection, guard feedback and measured history graph. Exacta60971e dualCI771app/112QA each/47UI PASS; canonical831752byteIPK. ActualMT3000updatedAutoONreserve,192/193encryptedbackuprestoreproof,4successfulspeedrows across pre/postmeasurement,settings/terms retained. GitHub/Gitea actualprereleases/4assets each downloaded/hashverified. Nativevisualblockedbeforecapture byComputerUseURLpolicy. [Report](VERIFICATION-ALPHA15-2026-10-24.md).
+
+## 2026-10-24 · alpha14 delivered
+
+FullCI fe3b492771app/112QA per runtime/46UI, new actualOpenWrt VM acceptance and physicalMT3000AutoONreserve verified. Documentation/helper audit completed; actual GitHub/Gitea prereleases uploaded and four assets/server downloaded/hash-checked. Failed intermediate install-kit mismatch retained. Stable0.9.0/main unchanged; externalAI/LAN/nativevisual limitations remain explicit. [Final report](VERIFICATION-ALPHA14-2026-10-24.md).
+
+## 2026-10-24 · comprehensive documentation/helper audit (source candidate alpha14)
+
+Owner68: stale mode/menu/restore promises and missing wizard retention fields corrected; wrong-adapter helper control requests and emergency pending/failed-stop commits prevented. Full Help/code/four prompts now source-generated with drift checks.46UI, native SelfTest,2PS,3Linux regressions PASS; unchanged normative terms/licences and privacy scan verified. Full CI/VM/delivery pending. [Audit](DOCUMENTATION-AUDIT-2026-10-24.md).
 
 All times are Europe/Berlin unless an entry explicitly states otherwise. Historical entries describe the evidence available at that time; later entries supersede readiness statements. Missing timestamps are explicitly marked rather than invented. Format: timestamp → error → confirmed cause → change → verification → remaining limits.
 

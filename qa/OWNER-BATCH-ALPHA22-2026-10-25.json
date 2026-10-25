@@ -1,0 +1,139 @@
+{
+  "schema": 1,
+  "result": "PASS_AUTOMATED_DEVICE_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha22",
+  "tested_product_source": "27a0280267d0a7d07ecb0e5092a5fc58d1c18cff",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha22-1_all.ipk",
+    "bytes": 850115,
+    "sha256": "faf4ee1e218dbc70d2810784404727b640510ae9803f9ccd84a2a98fee3307ca"
+  },
+  "ci": [
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha22-1_all.ipk",
+      "bytes": 850115,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "faf4ee1e218dbc70d2810784404727b640510ae9803f9ccd84a2a98fee3307ca",
+      "skipped_tests": 16,
+      "source": "27a0280267d0a7d07ecb0e5092a5fc58d1c18cff",
+      "ui_suites": 54,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha22-1_all.ipk",
+      "bytes": 850115,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "faf4ee1e218dbc70d2810784404727b640510ae9803f9ccd84a2a98fee3307ca",
+      "skipped_tests": 0,
+      "source": "27a0280267d0a7d07ecb0e5092a5fc58d1c18cff",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "owner_batch_tasks": [
+    {
+      "id": 1,
+      "change": "Language preserves page and interface",
+      "evidence": "test_navigation_context_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 2,
+      "change": "Single Auto power control cancels Start and handles Stop races",
+      "evidence": "test_auto_button_ui.js, test_onboarding_ui.js, test_legacy_actions_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 3,
+      "change": "Hide roleless archive presentation without fabricating historical roles",
+      "evidence": "test_auto_live_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 4,
+      "change": "Four-column persistent preparation",
+      "evidence": "test_readiness_help_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 5,
+      "change": "Describe independent boot startup separately from current VPN",
+      "evidence": "test_readiness_ui.js, source review",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 6,
+      "change": "Simple latency line samples and explicit current route",
+      "evidence": "test_latency_ui.js, source review",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 7,
+      "change": "Remembered collapsed statistical notes",
+      "evidence": "test_latency_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 8,
+      "change": "Native wizard checkboxes and consistent spacing/type",
+      "evidence": "test_onboarding_ui.js, scoped CSS review; native visual unverified",
+      "state": "IMPLEMENTED_CSS_REVIEW_NATIVE_VISUAL_UNVERIFIED"
+    },
+    {
+      "id": 9,
+      "change": "Remove forecast presentation; keep controller checks",
+      "evidence": "generated source review, full backend CI",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 10,
+      "change": "Live journal sentences plain, short codes linked",
+      "evidence": "test_journal_semantics_ui.js, test_journal_terminal_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 11,
+      "change": "Saved history sentences plain, short states/codes linked",
+      "evidence": "test_journal_semantics_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 12,
+      "change": "Explicit Home entry starts at top; refresh retains scroll",
+      "evidence": "test_home_top_ui.js, test_simple_home_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    },
+    {
+      "id": 13,
+      "change": "Advanced menu label and unchanged full-menu navigation",
+      "evidence": "test_simple_home_ui.js",
+      "state": "IMPLEMENTED_AUTOMATED_VERIFIED"
+    }
+  ],
+  "documentation": {
+    "files_read": 218,
+    "markdown_files": 213,
+    "generated_outputs": 10,
+    "local_targets": "PASS",
+    "normative_legal_bodies_unchanged": true,
+    "publication_privacy": "PASS"
+  },
+  "physical_receipt": "qa/MT3000-ALPHA22-2026-10-25.json",
+  "native_browser_visual": "NOT_VERIFIED"
+}

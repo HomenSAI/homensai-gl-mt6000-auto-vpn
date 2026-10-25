@@ -11,14 +11,19 @@ function capturePageViewport(root,page){
       saved.anchor={id:node.id||null,code:node.getAttribute('data-error-code'),top:rect.top};break;
     }
   }
-  section.querySelectorAll('details').forEach(function(node,index){saved.details.push({index:index,open:node.open});});
+  section.querySelectorAll('details').forEach(function(node,index){saved.details.push({index:index,key:typeof node.getAttribute==='function'?node.getAttribute('data-auto-disclosure'):null,open:node.open});});
   return saved;
 }
 function restorePageViewport(root,saved){
   if(!root||!root.isConnected||!saved||!Number.isFinite(saved.y))return;
   var section=root.querySelector('[data-hv-page="'+saved.page+'"]')||root;
   var details=section.querySelectorAll('details');
-  (Array.isArray(saved.details)?saved.details.slice(0,1000):[]).forEach(function(item){if(item&&Number.isSafeInteger(item.index)&&item.index>=0&&details[item.index])details[item.index].open=item.open===true;});
+  (Array.isArray(saved.details)?saved.details.slice(0,1000):[]).forEach(function(item){
+    if(!item)return;var node=null;
+    if(typeof item.key==='string'&&/^[a-z][a-z0-9-]{0,63}$/.test(item.key))node=section.querySelector('details[data-auto-disclosure="'+item.key+'"]');
+    else if(Number.isSafeInteger(item.index)&&item.index>=0)node=details[item.index];
+    if(node)node.open=item.open===true;
+  });
   var top=saved.y,anchor=saved.anchor,node=null;
   if(anchor&&Number.isFinite(anchor.top)){
     if(anchor.id==='hv-auto-live-chart'||anchor.id==='hv-auto-day-chart')node=section.querySelector('#'+anchor.id);
@@ -29,6 +34,14 @@ function restorePageViewport(root,saved){
 }
 function rememberPageViewport(root,page){var saved=capturePageViewport(root,page);if(saved)pageViewportStates[page]=saved;return saved;}
 function revisitPageViewport(root,page){restorePageViewport(root,pageViewportStates[page]||{page:page,x:0,y:0,details:[]});}
+function restorePageControlFocus(pages,saved){
+  if(!saved||!pages[saved.page])return;
+  var page=pages[saved.page],node=saved.node;
+  // Cached Help/training nodes are moved, not rebuilt. Restore the exact control,
+  // rather than the first checkbox with the same empty text/aria-label.
+  if(!node||!page.contains(node))node=Array.from(page.querySelectorAll('button,input[type=checkbox],input[type=range],select')).find(function(el){return el.tagName===saved.tag&&el.getAttribute('aria-label')===saved.label&&el.textContent===saved.text;});
+  if(node)node.focus({preventScroll:true});
+}
 function installViewportPersistence(root,getPage){
   window.addEventListener('pagehide',function(){
     try{rememberPageViewport(root,getPage());sessionStorage.setItem('homensai-vpn-viewports',JSON.stringify({path:window.location.pathname,time:Date.now(),pages:pageViewportStates}));}catch(error){}
@@ -44,4 +57,10 @@ function installViewportPersistence(root,getPage){
     });
     requestAnimationFrame(function(){revisitPageViewport(root,getPage());});
   }catch(error){}
+}
+
+// An explicit shortcut entry starts at the card top; polling preserves reading position.
+function resetPageViewport(root,page){
+  pageViewportStates[page]={page:page,x:0,y:0,details:[]};
+  revisitPageViewport(root,page);
 }

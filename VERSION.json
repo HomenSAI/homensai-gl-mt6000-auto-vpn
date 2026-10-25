@@ -1,15 +1,15 @@
 {
   "schema": 1,
   "application": {
-    "version": "0.9.0",
+    "version": "0.9.1-alpha25",
     "package_revision": 1,
-    "package_version": "0.9.0-1",
-    "release_tag": "v0.9.0",
-    "ui_module": "dashboard76",
-    "ui_stylesheet": "ui53.css",
-    "artifact": "homensai-auto-vpn_0.9.0-1_all.ipk",
-    "sha256": "7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a",
-    "source_fingerprint": "a47e6075bf436342c398b4183d0fab1b6490e0681a2cad3e950afdc5e1b40769"
+    "package_version": "0.9.1-alpha25-1",
+    "release_tag": "v0.9.1-alpha25",
+    "ui_module": "dashboard101",
+    "ui_stylesheet": "ui73.css",
+    "artifact": "homensai-auto-vpn_0.9.1-alpha25-1_all.ipk",
+    "sha256": "38b377ad2e3522405450942e5f918f565b90ac2f6abdc825302b4c03022f8d3a",
+    "source_fingerprint": "5cb846e4092aac7df2921df3f10793d448eb9f6c52f7738dc0075fbf01f11f2b"
   },
   "handoff": {
     "version": "1.0.0",

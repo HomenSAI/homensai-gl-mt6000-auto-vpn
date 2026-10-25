@@ -14,6 +14,41 @@ import uuid
 from agent import RUNTIME, PERSIST, atomic_json, read_json
 
 
+def normalize_request_source(value):
+    return value if isinstance(value,str) and value in ('manual','test','programmatic') else 'unknown'
+
+
+def action_context(runtime=None,persist=None,now=None):
+    """Read-only, allowlisted audit context. Never locks, enables or certifies Auto."""
+    runtime=runtime or RUNTIME;persist=persist or PERSIST;now=time.time() if now is None else now
+    candidates=[]
+    for path,stamp,action in ((runtime/'auto-control.json','time','start'),(runtime/'pair-auto-control.json','time','start'),(persist/'native-stop.json','requested','stop')):
+        try:row=read_json(path,{})
+        except (OSError,ValueError,TypeError):continue
+        if not isinstance(row,dict):continue
+        if action=='start' and row.get('mode')!='on':
+            if path.name=='pair-auto-control.json' and row.get('mode')=='off':action='stop'
+            else:continue
+        epoch=row.get(stamp)
+        if type(epoch) not in (int,float) or not 0<epoch<=now or not math.isfinite(epoch):continue
+        candidates.append({'control_action':action,'control_source':normalize_request_source(row.get('request_source')),'control_time':epoch})
+    return max(candidates,key=lambda row:row['control_time']) if candidates else {}
+
+
+def manual_action_source(runtime,value,now):
+    # Audit only: match the active dispatcher request to this transition's pair.
+    for filename in ('pair-manual-control.json','manual-control.json'):
+        try:row=read_json(runtime/filename,{})
+        except (OSError,ValueError,TypeError):continue
+        if not isinstance(row,dict) or row.get('state') not in ('CLAIMED','APPLYING','WAIT-CLIENT'):continue
+        updated=row.get('updated',row.get('updated_at'))
+        if type(updated) not in (int,float) or not now-90<=updated<=now:continue
+        pair=row.get('selection') if filename=='pair-manual-control.json' else {'source':row.get('source_id'),'target':row.get('target_id')}
+        if isinstance(pair,dict) and all(isinstance(value.get(k),str) and pair.get(k)==value[k] for k in ('source','target')):
+            return normalize_request_source(row.get('request_source'))
+    return 'unknown'
+
+
 def valid_stop(record):
     if not isinstance(record,dict):return False
     if not record:return True
@@ -162,9 +197,10 @@ def trial_readiness(settings,consumed,selection,blockers,trial,now):
     return sorted(set(reasons))
 
 
-def start(control_revision=None,trial_nonce=None):
+def start(control_revision=None,trial_nonce=None,request_source=None):
     from native_switch import Linux, journal_read, deadline, Refused
     arrived=time.time()
+    source='test' if trial_nonce is not None else normalize_request_source(request_source)
     if not isinstance(control_revision,str) or not re.fullmatch(r'[a-f0-9]{32}',control_revision):
         return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
     with control_lock():
@@ -184,7 +220,7 @@ def start(control_revision=None,trial_nonce=None):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
-        return pair_request(control_revision)
+        return pair_request(control_revision,request_source=source)
     blockers, selection = backend.diagnostic()
     try:
         consumed=read_json(PERSIST/'native-attempts.json',{})
@@ -224,12 +260,12 @@ def start(control_revision=None,trial_nonce=None):
             return {'accepted':True,'queued':True,'already_requested':True}
         if type(old.get('time')) in (int,float) and old['time']>arrived:
             return {'accepted':False,'blockers':['STOP-SUPERSEDED-START']}
-        atomic_json(RUNTIME/'auto-control.json',{'mode':'on','time':now,
+        atomic_json(RUNTIME/'auto-control.json',{'mode':'on','time':now,'request_source':source,
                     'trial':settings['native_trial'],'until':deadline(settings.get('native_until'))})
         return {'accepted':True,'queued':True}
 
 
-def stop(runtime=None,persist=None):
+def stop(runtime=None,persist=None,request_source=None):
     runtime=runtime or RUNTIME
     persist=persist or PERSIST
     from agent import command
@@ -242,7 +278,7 @@ def stop(runtime=None,persist=None):
         if (runtime/'pair-auto-control.json').exists():
             # Same serialized Stop cancels preparation and all later hops.
             marker=read_json(runtime/'auto-control-revision.json',{}).get('revision','unverified')
-            atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time()})
+            atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time(),'request_source':normalize_request_source(request_source)})
         try:request=read_json(runtime/'auto-control.json',{})
         except (OSError,ValueError):request={}
         if not isinstance(request,dict):request={}
@@ -270,7 +306,7 @@ def stop(runtime=None,persist=None):
                 and previous >= requested):
             return dict({'queued':True,'already_requested':True},**extra)
         floor=previous if type(previous) in (int,float) and math.isfinite(previous) else 0
-        record = {'requested':max(time.time(),floor),'trial':trial}
+        record = {'requested':max(time.time(),floor),'trial':trial,'request_source':normalize_request_source(request_source)}
         if revision_error is not None:record['control_revision_failed']=True
         if needs_global or revision_error is not None:
             record['all_trials'] = True
@@ -327,7 +363,11 @@ def public_status():
     except (OSError,ValueError):pair=None
     if pair and valid and pair.get('revision')==revision and pair.get('time',0)>stop:
         mode=pair['mode'];requested=max(requested,pair['time']);until=0
+    context=action_context()
+    origin=context.get('control_source','unknown') if valid and context.get('control_time')==max(requested,stop) else 'unknown'
     return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
+            'request_source':origin,'request_action':('start' if mode=='on' else 'stop' if mode=='off' else None) if valid else None,
+            'activation_source':origin if mode=='on' else 'unknown',
             'pair_phase':public_phase(),
             'control_revision':revision,
             'until':until,'reboot_autostart':False,'return_result':return_result}

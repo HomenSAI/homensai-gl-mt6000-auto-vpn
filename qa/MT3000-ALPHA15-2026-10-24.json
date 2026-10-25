@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha15",
+  "tested_product_source": "a60971e61cecb5a870aa2dc500c96d260f203f5f",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha15-1_all.ipk",
+    "bytes": 831752,
+    "sha256": "98e8ff51ab77e895a693ef08f519d51062e3d6fab41afa78ba7c10ed6c78dab0"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha15-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "policy_selection_confirmed": true,
+    "fault_tables_absent": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "manual_speed_enabled": true,
+    "automatic_speed_after_connection": false,
+    "new_launch_and_graph_source_installed": true,
+    "old_speed_samples_preserved": true,
+    "successful_measurements_after_install": 2,
+    "start_first_attempt_seconds": 67.125,
+    "reserve_restore_seconds": 41.203,
+    "encrypted_backup_before_entries": 192,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "limitations": [
+    "Computer Use stopped before state capture because browser URL could not be confidently determined; no further UI input",
+    "No independent external LAN/IPv6/KillSwitch certification",
+    "No physical fault injected",
+    "Bounded HTTPS goodput samples, not guaranteed line capacity"
+  ],
+  "recorded_utc": "2026-10-24T19:21:53.926117+00:00"
+}

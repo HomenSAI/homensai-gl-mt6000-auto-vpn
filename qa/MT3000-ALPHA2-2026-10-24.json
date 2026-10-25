@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "result": "PASS_WITH_RETAINED_HARNESS_FAILURE",
+  "version": "0.9.1-alpha2",
+  "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+    "bytes": 790193,
+    "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857"
+  },
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+      "bytes": 790193,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+      "skipped_tests": 16,
+      "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha2-1_all.ipk",
+      "bytes": 790193,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "2b4276fd79c0abfe25b745783920af63f5e33050f9d3f2da2cc4f158f45b1857",
+      "skipped_tests": 0,
+      "source": "bc8a298e89d61b63bb27915c5f3135281ca190db",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "device": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "immutable_files_modes_verified": 86,
+    "actual_https": {
+      "result": "PASS",
+      "assets": [
+        {
+          "asset": "dashboard78.js",
+          "http_status": 200,
+          "bytes": 927601,
+          "sha256": "8d1ef64e9574d0fceb428547ef10060742ce845a3ad019b11237ab41fa32a9fb",
+          "matches_canonical_ipk": true
+        },
+        {
+          "asset": "ui55.css",
+          "http_status": 200,
+          "bytes": 120848,
+          "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+          "matches_canonical_ipk": true
+        }
+      ]
+    },
+    "actual_http8080": {
+      "result": "PASS",
+      "assets": [
+        {
+          "asset": "dashboard78.js",
+          "http_status": 200,
+          "sha256": "8d1ef64e9574d0fceb428547ef10060742ce845a3ad019b11237ab41fa32a9fb",
+          "matches_canonical_ipk": true
+        },
+        {
+          "asset": "ui55.css",
+          "http_status": 200,
+          "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+          "matches_canonical_ipk": true
+        }
+      ]
+    },
+    "final": {
+      "result": "PASS",
+      "time": 1792825661.5725408,
+      "version": "0.9.1-alpha2",
+      "auto_left_running": true,
+      "selected_role": "reserve",
+      "manual_preference": "target",
+      "both_vpn_dns_and_https_passed": true,
+      "live_policy_selection_confirmed": true,
+      "monitor_age_seconds": 4.2861998081207275,
+      "server_clock_supplied": true,
+      "firmware": "4.11.0",
+      "openwrt": "21.02-SNAPSHOT",
+      "test_fault_tables_absent": true,
+      "temporary_full_block_absent": true,
+      "controller_totals": {
+        "attempts": 29,
+        "automatic_attempts": 16,
+        "automatic_committed": 11,
+        "blocked_episodes": 34,
+        "channel_switches": 0,
+        "committed": 21,
+        "manual_attempts": 11,
+        "manual_committed": 10,
+        "protocol_switches": 11,
+        "rate_limited_episodes": 3,
+        "returns": 6,
+        "rollbacks": 12,
+        "server_switches": 0,
+        "trials_passed": 1
+      },
+      "reliability_totals": {
+        "checks": 12811,
+        "failed_checks": 549,
+        "outages": 145,
+        "observed_down_seconds": 5723.569338798523,
+        "observed_up_seconds": 127061.37273144722,
+        "auto_observed_seconds": 65803.64909005165,
+        "recoveries": 130,
+        "unknown_intervals": 3
+      },
+      "external_lan_verified": false
+    },
+    "ui_data": {
+      "event": "INSTALLED-UI-DATA",
+      "result": "PASS",
+      "latency_metric": "https-rtt-ms",
+      "history_rows": 8,
+      "history_notice": null,
+      "endpoint_checks": [
+        {
+          "role": "reserve",
+          "current_peer_observed": true,
+          "transport": "tcp",
+          "fresh_https_delay": true
+        },
+        {
+          "role": "primary",
+          "current_peer_observed": true,
+          "transport": "udp",
+          "fresh_https_delay": true
+        }
+      ],
+      "scope": "authenticated router data, no peer addresses exported"
+    },
+    "terms_preserved": true,
+    "unrelated_settings_preserved": true
+  },
+  "normal_stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 20.063,
+    "bytes": 711,
+    "sha256": "0bbd3a3796cce35f69b698a124099495c0a6f2ccb235037e2011dbcd64771e4d",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "normal_start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 60.844,
+    "bytes": 1987,
+    "sha256": "f235582e9f050bc8baeba9a9228c2db3ea09d221eaae60069e048d7a916c7f58",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "owner_reserve_restoration": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 39.906,
+    "bytes": 11018,
+    "sha256": "b0ba5c51d62fbed21dd765be03efd8cd95618f0e3fbf36343d0578acb9cfa3c7",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "installation_reconciliation": {
+    "result": "PASS_INDEPENDENT_VERIFICATION_AFTER_HARNESS_FAILURE",
+    "version": "0.9.1-alpha2-1",
+    "immutable_files_modes": 86,
+    "terms_preserved": true,
+    "unrelated_settings_preserved": true,
+    "initial_harness_result": "FAIL at empty native_trial UCI readback; code1 is the observed empty option representation",
+    "original_failure_evidence": "install.transport.log and options.jsonl retained",
+    "opkg_repeated": false
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "6bb403f7c18f66522da7323af359fa2d815ab1d70aa39c1429e960d9ecae70fe",
+    "entries": 189,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_backup": {
+    "step": "backup-after",
+    "result": "PASS",
+    "encrypted_sha256": "0a15cd1b960b347f6670a78ac8bed26cad18ee588bdf4e095fb53dac0fa1d083",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "persisted_history": {
+    "result": "PASS",
+    "actual_device_export_contains_latency_history": true,
+    "checksum_verified": true,
+    "schema_verified": true,
+    "persisted_rows": 8,
+    "file_bytes": 818,
+    "plaintext_persisted": false,
+    "scope": "actual saved file recovered in memory from post-install supported encrypted export; not invented past-day history"
+  },
+  "retained_failures": [
+    "Installation harness returned nonzero after package installation while demanding successful uci get for empty native_trial. Actual UCI exit1/empty was confirmed; independent86file/mode/config/terms/RPC/HTTP verification passed. No opkg retry or safety bypass.",
+    "Local helper named inspect.py shadowed Python standard inspect during an independent settings comparison. Renamed local helper and repeated read-only comparison; no device change in failed local attempt."
+  ],
+  "scope": {
+    "actual": "dedicated MT3000 router-originated IPv4 installation/normal Auto startup/manual reserve/health/API data/persisted file/served resources",
+    "browser_visual_acceptance": "NOT_VERIFIED_NO_CONFIGURED_BROWSER",
+    "independent_lan": false,
+    "twenty_four_hours": false,
+    "ipv6": false,
+    "power_loss": false,
+    "windows_network_changed": false,
+    "primary_mt6000_changed": false,
+    "new_release_published": false
+  },
+  "recorded_utc": "2026-10-24T07:09:11.986241+00:00"
+}

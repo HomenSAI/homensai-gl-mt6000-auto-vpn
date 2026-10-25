@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "result": "PASS_STARTUP_HOME_SOURCE_AND_DEVICE_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha19",
+  "tested_product_source": "3d759a889c71e771afd1b2747facd8c7539b00af",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha19-1_all.ipk",
+    "bytes": 848531,
+    "sha256": "d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd"
+  },
+  "ci": [
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha19-1_all.ipk",
+      "bytes": 848531,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd",
+      "skipped_tests": 16,
+      "source": "3d759a889c71e771afd1b2747facd8c7539b00af",
+      "ui_suites": 52,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha19-1_all.ipk",
+      "bytes": 848531,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd",
+      "skipped_tests": 0,
+      "source": "3d759a889c71e771afd1b2747facd8c7539b00af",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "startup_policy": {
+    "terms_before_setup": true,
+    "complete_current_pair_required": true,
+    "current_pair_tests_required": true,
+    "fresh_running_auto_required": true,
+    "confirmed_healthy_active_path_required": true,
+    "no_truthy_or_localstorage_shortcuts": true,
+    "pending_or_transition_not_ready": true,
+    "healthy_reserve_allowed_when_primary_failed": true,
+    "direct_setup_tests_links_preserved": true,
+    "full_menu_button_does_not_stop_auto": true,
+    "actual_power_button_action_reused": true,
+    "stale_home_watchdog": true
+  },
+  "design": {
+    "selected": "card",
+    "primary_above_reserve": true,
+    "red_mix_percent": 50,
+    "green_unchanged": true,
+    "button_below_status": true,
+    "measured_endpoints_and_latency": true
+  },
+  "device_semantics": {
+    "result": "PASS_INSTALLED_SOURCE_ACTUAL_FRAME",
+    "version": "0.9.1-alpha19",
+    "actual_entry": "existing setup wizard",
+    "incomplete_master_preserved": true,
+    "auto_on_confirmed_reserve": true,
+    "completed_setup_projection": "in-memory only, never saved to router",
+    "projected_home": "PASS actual bound profiles, endpoints and freshness",
+    "primary_before_reserve": true,
+    "original_auto_button": true,
+    "native_browser_visual": "NOT_VERIFIED",
+    "credentials_or_control_nonces_published": false
+  },
+  "physical_receipt": "qa/MT3000-ALPHA19-2026-10-25.json",
+  "recorded_utc": "2026-10-25T08:57:36.809421+00:00"
+}

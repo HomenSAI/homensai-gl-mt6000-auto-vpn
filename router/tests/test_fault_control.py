@@ -14,6 +14,81 @@ from test_native_switch import fixture
 import native_switch as native
 
 class FaultTests(unittest.TestCase):
+    @contextmanager
+    def pair_context(self,reserve=False):
+        import pair_auto as pair,pair_manual,auto_control
+        from failure_diagnosis import profile_identity
+        data,status,state,settings,selection,certificate=self.context()
+        settings['pair_auto_mode']=pair.MODE
+        state.update(state='COMMITTED' if reserve else 'OBSERVING',certified=False,readiness_verified=not reserve)
+        owned={'phase':'RUNNING','id':'e'*32,'revision':'d'*32,'process_bindings':{},'network_identity':'network',
+               'protected':{'vpn':'config'},'order':['primary','reserve'],'policy_hash':'hash'}
+        requested={'mode':'on','id':'e'*32,'revision':'d'*32}
+        journal={'phase':'COMMITTED','confirmed':990,'control_revision':'d'*32,'after':['reserve','primary'],'hash':'hash',
+                 'source':selection['source']['id'],'target':selection['target']['id'],
+                 'vendor_profiles':{k:profile_identity(selection[k]) for k in ('source','target')}} if reserve else {}
+        backend=MagicMock();backend.order.return_value=(journal['after'] if reserve else owned['order'],'hash')
+        with ExitStack() as stack:
+            for obj,name,kwargs in ((pair,'read_state',{'return_value':owned}),(pair,'intent',{'return_value':requested}),
+                    (pair,'network',{'return_value':{}}),(pair,'normalized_network',{'return_value':'network'}),
+                    (pair,'configs',{'return_value':{'vpn':'config'}}),(pair_manual,'read',{'return_value':{}}),
+                    (auto_control,'current_revision',{'return_value':'d'*32}),(native,'Linux',{'return_value':backend}),
+                    (native,'journal_read',{'return_value':journal})):
+                stack.enter_context(patch.object(obj,name,**kwargs))
+            yield data,status,state,settings,selection,owned,requested,journal,backend
+
+    def test_pair_fault_automatically_uses_actual_primary_or_reserve_without_lan_certificate(self):
+        for reserve in (False,True):
+            with self.subTest(reserve=reserve),self.pair_context(reserve) as ctx:
+                data,status,state,settings,selection,*_=ctx
+                selected='target' if reserve else 'source';args=dict(self.args(),profile=selection[selected]['id'])
+                rows=fault.eligibility(args,data,status,state,settings,selection,[],1000,{})
+                self.assertEqual([p['id'] for p in rows],[args['profile']])
+                wrong=dict(args,profile=selection['source' if reserve else 'target']['id'])
+                with self.assertRaisesRegex(fault.FaultError,'NOT-CURRENT'):
+                    fault.eligibility(wrong,data,status,state,settings,selection,[],1000,{})
+
+    def test_pair_fault_rejects_stopped_intent_changed_policy_and_unconfirmed_reserve(self):
+        for case in ('stop','policy','unconfirmed','generation','health'):
+            with self.subTest(case=case),self.pair_context(True) as ctx:
+                data,status,state,settings,selection,owned,requested,journal,backend=ctx
+                if case=='stop':requested['mode']='off'
+                if case=='policy':backend.order.return_value=(['unexpected'],'hash')
+                if case=='unconfirmed':journal['confirmed']=None
+                if case=='generation':journal['vendor_profiles']['target']['vendor_generation']='f'*32
+                if case=='health':status['profiles'][0]['code']='DNS-001'
+                with self.assertRaises(fault.FaultError):
+                    fault.eligibility(dict(self.args(),profile=selection['target']['id']),data,status,state,settings,selection,[],1000,{})
+
+    def test_transition_needs_fresh_opposite_health_and_private_route_confirmation(self):
+        from failure_diagnosis import profile_identity
+        for reserve in (False,True):
+            with self.subTest(reserve=reserve),self.pair_context(reserve) as ctx:
+                data,status,state,settings,selection,owned,requested,journal,backend=ctx
+                # This context represents the destination after switching.
+                if not reserve:journal['phase']='ROLLED-BACK'
+                value={'phase':'ACTIVE','pair_mode':True,'started':980,'control_revision':'d'*32,
+                       'fault_role':'source' if reserve else 'target',
+                       'vendor_profiles':{k:profile_identity(selection[k]) for k in ('source','target')}}
+                def read(path,default=None):return state if path.name=='native-status.json' else status
+                with patch.object(fault,'read_json',side_effect=read):
+                    self.assertTrue(fault.transition_confirmed(value,1000))
+                    destination=1 if reserve else 0
+                    status['profiles'][destination]['time']=970
+                    self.assertFalse(fault.transition_confirmed(value,1000),'pre-test sample cannot prove transition')
+                    status['profiles'][destination]['time']=1000
+                    backend.order.return_value=(['external'],'changed')
+                    self.assertFalse(fault.transition_confirmed(value,1000),'UI/native hints alone cannot prove actual policy')
+
+    def test_only_active_unexpired_uncancelled_fault_marks_a_tested_profile(self):
+        value={'phase':'ACTIVE','pair_mode':True,'nonce':'a'*32,'control_revision':'d'*32,
+               'monotonic_until':200,'profiles':['current'],'control_settings':{}}
+        with patch.object(fault,'load',return_value=value),patch.object(fault,'require_revision'),patch.object(fault,'require_auto_on'),patch.object(fault.time,'monotonic',return_value=100),patch.object(fault,'read_json',return_value={}) as read:
+            self.assertTrue(fault.testing_profile('current'));self.assertFalse(fault.testing_profile('other'))
+            value['phase']='ARMED';self.assertFalse(fault.testing_profile('current'))
+            value['phase']='ACTIVE';value['monotonic_until']=100;self.assertFalse(fault.testing_profile('current'))
+            value['monotonic_until']=200;read.return_value={'nonce':'a'*32};self.assertFalse(fault.testing_profile('current'))
+
     def args(self):return {'profile':'wireguard:peer_1','scope':'profile','duration':60}
     def context(self):
         from vendor_fixture import attach
@@ -64,8 +139,11 @@ class FaultTests(unittest.TestCase):
             fault.eligibility(dict(self.args(),profile='wireguard:peer_3'),data,status,state,settings,selection,[],1000,certificate)
 
     @contextmanager
-    def launch(self,stop_at=None,watchdog=True,apply_error=False,old=None):
+    def launch(self,stop_at=None,watchdog=True,apply_error=False,old=None,pair_role=None):
         data,status,state,settings,selection,certificate=self.context();held=[];current=[copy.deepcopy(old) or {}]
+        if pair_role:
+            settings['pair_auto_mode']='router-probed-ipv4'
+            state.update(state='COMMITTED' if pair_role=='target' else 'OBSERVING',certified=False,readiness_verified=pair_role=='source')
         files={'auto-control-revision.json':{'revision':'d'*32},'status.json':status,'native-status.json':state,
                'native-certificate.json':certificate}
         calls={'applied':0,'cleanups':[],'diagnostic':0}
@@ -92,12 +170,14 @@ class FaultTests(unittest.TestCase):
             def cleanup(inner,nonce,**kwargs):self.assertFalse(held);calls['cleanups'].append(nonce);return True
             def apply(inner,devices,duration,nonce,commit_guard):
                 self.assertFalse(held)
+                calls['devices']=devices
                 if stop_at=='preflight':stop()
                 with commit_guard():
                     self.assertTrue(held);calls['applied']+=1
                     if apply_error:raise fault.FaultError('FAULT-TIMEOUT-RULE-FAILED')
                 if stop_at=='after_apply':stop()
         backend=MagicMock();backend.diagnostic.side_effect=diagnostic;backend.policy.return_value={'settings':settings}
+        backend.order.return_value=(['reserve','primary'] if pair_role=='target' else ['primary','reserve'],'hash')
         worker=MagicMock(pid=321);worker.poll.return_value=None if watchdog else 0
         with ExitStack() as stack:
             for obj,name,kwargs in ((fault,'control_lock',{'side_effect':lock}),(fault,'load',{'side_effect':lambda:copy.deepcopy(current[0])}),
@@ -113,6 +193,12 @@ class FaultTests(unittest.TestCase):
     def test_slow_preflight_is_unlocked_and_one_install_is_fenced_by_claim(self):
         with self.launch() as (calls,current,files):answer=fault.start(self.args())
         self.assertTrue(answer['accepted']);self.assertEqual(calls['applied'],1);self.assertEqual(current[0]['phase'],'ACTIVE')
+    def test_pair_launch_blocks_only_actual_selected_device_in_both_directions(self):
+        for reserve in (False,True):
+            with self.subTest(reserve=reserve),self.pair_context(reserve),self.launch(pair_role='target' if reserve else 'source') as (calls,current,files):
+                answer=fault.start(dict(self.args(),profile='wireguard:peer_2' if reserve else 'wireguard:peer_1'))
+                self.assertTrue(answer['accepted']);self.assertEqual(calls['devices'],['wg2' if reserve else 'wg1'])
+                self.assertEqual(current[0]['fault_role'],'target' if reserve else 'source')
     def test_stop_during_checks_or_before_dispatch_prevents_install_and_releases_claim(self):
         for when in ('diagnostic','preflight'):
             with self.subTest(when=when),self.launch(stop_at=when) as (calls,current,files):

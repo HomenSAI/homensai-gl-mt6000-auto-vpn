@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "result": "PASS_DEVICE_AND_GENERATED_MODEL_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha24",
+  "tested_product_source": "87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha24-1_all.ipk",
+    "bytes": 856098,
+    "sha256": "9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha24-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "own_options": 35,
+    "closed_prior_latency_rows_preserved": 2001,
+    "prior_speed_results_preserved": 6,
+    "speed_results_after": 6,
+    "new_bandwidth_test_run": false,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "generated_learning_regression": {
+    "result": "PASS_GENERATED_INSTALLED_MODULE_REGRESSION",
+    "version": "0.9.1-alpha24",
+    "module": "dashboard100",
+    "sha256": "1ac6011ed0aba7e863ddfc85d7d9df30feca4f0adaa63469d0c457b1a68153f3",
+    "matches_installed_payload_manifest": true,
+    "questions_each_locale": 11,
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "exact_dom_scroll_focus_hash_preserved_on_choice": true,
+    "poll_restores_same_retained_checkbox": true,
+    "grade_gate_and_stale_actions_passed": true,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_on_access": {
+    "result": "PASS_ACTUAL_ON_ACCESS",
+    "version": "0.9.1-alpha24",
+    "stage": "on",
+    "show_card": true,
+    "shortcut_aria_disabled": "false",
+    "tooltip_text": "",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_off_access": {
+    "result": "PASS_ACTUAL_OFF_ACCESS",
+    "version": "0.9.1-alpha24",
+    "stage": "off",
+    "show_card": false,
+    "shortcut_aria_disabled": "true",
+    "tooltip_text": "Чтобы воспользоваться упрощённым интерфейсом, необходимо настроить систему и включить Auto.",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "gateway": {
+    "result": "PASS",
+    "origin": "http://127.0.0.2:8080",
+    "login": {
+      "status": 403,
+      "mt3000_title": true,
+      "login_form": true
+    },
+    "served_dashboard": "dashboard100",
+    "sha256": "1ac6011ed0aba7e863ddfc85d7d9df30feca4f0adaa63469d0c457b1a68153f3",
+    "time": 1792946304.7695117,
+    "gateway_left_running": true,
+    "scope": "user loopback browser gateway HTTP/login/static bytes; not a native browser visual or LAN-witness test"
+  },
+  "limitations": [
+    "Checkbox DOM/scroll/focus regression uses the exact canonical module matching installed bytes; native browser clicks/layout remain unverified",
+    "No main MT6000/host-network/firmware changes or new fault/LAN/power-loss acceptance claimed"
+  ],
+  "recorded_utc": "2026-10-25T16:42:18.041177+00:00"
+}

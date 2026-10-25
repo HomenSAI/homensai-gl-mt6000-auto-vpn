@@ -28,8 +28,9 @@ def _stamp(value):
 
 
 def valid_record(record):
-    if not isinstance(record, dict) or set(record) != FIELDS:
+    if not isinstance(record, dict) or set(record) not in (FIELDS,FIELDS|{'request_source'}):
         return False
+    if 'request_source' in record and (not isinstance(record['request_source'],str) or record['request_source'] not in ('manual','test','programmatic','unknown')):return False
     return (type(record['schema']) is int and record['schema'] == 1
         and isinstance(record['state'], str) and record['state'] in STATES
         and isinstance(record['direction'], str) and record['direction'] in ('reserve', 'primary')
@@ -133,9 +134,9 @@ def _preflight(direction, settings, blockers, selection, journal, state, auto,
     return []
 
 
-def request(direction, control_revision):
+def request(direction, control_revision, request_source=None):
     from agent import RUNTIME, PERSIST, read_json, atomic_json
-    from auto_control import control_lock, revision_locked, readiness, effective_intent
+    from auto_control import control_lock, revision_locked, normalize_request_source, readiness, effective_intent
     from native_switch import Linux, journal_read, deadline, Refused
     invalid = validate_arguments(direction, control_revision)
     if invalid:
@@ -191,7 +192,7 @@ def request(direction, control_revision):
                 'source_id': selection['source']['id'], 'target_id': selection['target']['id'],
                 'transaction_id': journal.get('tx') if direction == 'primary' else None,
                 'selection_hash': selection.get('hash'), 'vendor_identity': selection.get('vendor_identity'),
-                'settings_hash': selection.get('settings_hash'), 'code': None}
+                'settings_hash': selection.get('settings_hash'), 'code': None,'request_source':normalize_request_source(request_source)}
             if not valid_record(record):
                 return refusal('MANUAL-SELECTION-UNVERIFIED')
             atomic_json(RUNTIME/'manual-control.json', record)
@@ -210,7 +211,7 @@ def claim_pending(settings, revision, stopped, now=None, runtime=None):
     transaction lock. A crash after CLAIMED is never replayed as QUEUED.
     """
     from agent import RUNTIME, read_json, atomic_json
-    from auto_control import control_lock, revision_locked
+    from auto_control import control_lock, revision_locked, normalize_request_source
     runtime = runtime or RUNTIME
     now = time.time() if now is None else now
     with control_lock(runtime):
@@ -278,7 +279,7 @@ def public_status(runtime=None):
         return {'state': 'UNCONFIRMED', 'completed': False, 'code': 'MANUAL-STATE-UNVERIFIED'}
     return dict({key: record[key] for key in ('state', 'direction', 'request_id',
         'requested_at', 'updated_at', 'source_id', 'target_id', 'transaction_id', 'code')},
-        completed=record['state'] == 'COMPLETED')
+        completed=record['state'] == 'COMPLETED',request_source=record.get('request_source','unknown'))
 
 
 def control_status():

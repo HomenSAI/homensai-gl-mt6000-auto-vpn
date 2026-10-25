@@ -128,22 +128,38 @@ function renderDesignA(ctx,m){
   var control=E('div',{'class':'hv-dv-control'},[ctx.controlCard]);
   var servers=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-rowhead','aria-hidden':'true'},[E('span'),E('span',{},bi('Server','Сервер')),E('span'),E('span',{'class':'hv-dv-num'},bi('HTTPS','HTTPS')),E('span',{'class':'hv-dv-num'},bi('Passed','Успех'))]),dvServerRows(ctx.status,ctx.rows,m)]);
   var events=dvCard(bi('Recent events','Последние события'),[dvEventList(ctx.status,ctx.rows,6),E('a',{'class':'hv-dv-more','href':'#events'},bi('All events and errors','Все события и ошибки'))]);
-  return E('div',{'class':'hv-dv hv-dv-a'},[strip,E('div',{'class':'hv-dv-cols'},[E('div',{'class':'hv-dv-stack'},[control,servers]),events])]);
+  return E('div',{'class':'hv-dv hv-dv-a'},[control,strip,E('div',{'class':'hv-dv-cols'},[E('div',{'class':'hv-dv-stack'},[servers]),events])]);
 }
 
 /* ---------- B · Calm ---------- */
+var DV_OTHER_VPNS_EXPANDED=false;
+function dvProfileIdentity(p){
+  // Only metadata already exposed by the inventory; never fetch raw VPN files.
+  var names=[p.router_name,p.name].filter(function(v){return typeof v==='string'&&v.trim()&&v.trim()!==countryName(p);}).map(function(v){return v.trim().slice(0,240);});
+  return names.filter(function(v,i){return names.indexOf(v)===i;}).join(' · ')||bi('Profile identity unavailable','Название профиля недоступно');
+}
 function renderDesignB(ctx,m){
   var stats=E('div',{'class':'hv-dv-three'},[dvKpi(bi('VPN links ready','Доступные VPN-подключения'),m.counts.connected?m.counts.working+bi(' of ',' из ')+m.counts.connected:'—'),
     dvKpi(bi('Problems today','Проблемы сегодня'),m.passPercent==null?bi('No data','Нет данных'):m.passPercent>=99.5?bi('None','Нет'):bi('Some','Есть')),dvKpi(bi('Used this month','Использовано за месяц'),m.traffic)]);
-  var list=E('div',{'class':'hv-dv-list'},sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
+  var ordered=typeof roleOrderedRows==='function'?roleOrderedRows(ctx.rows,ctx.status,ctx.inventory,m.now):sortServerCards(ctx.rows,m.selected,m.now),pairIds=[m.primary&&m.primary.id,m.reserve&&m.reserve.id].filter(Boolean);
+  var top=ordered.filter(function(p){return pairIds.indexOf(p.id)>=0;});
+  if(!top.length)top=ordered.slice(0,2);
+  var rest=ordered.filter(function(p){return !top.some(function(q){return q.id===p.id;});});
+  function profileRow(p){
     var h=profileHealth(p,m.now),country=countryOf(p),use=dvChannelUse(p,m,ctx.status),role=use.role,kind=use.kind;
     return E('div',{'class':'hv-dv-item','data-profile':p.id},[E('span',{'class':'hv-dv-flag','aria-hidden':'true'},country?country.code.toUpperCase():'··'),
-      E('div',{},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),E('small',{},role+' · '+protocolLabel(p))]),
+      E('div',{'style':'min-width:0;overflow-wrap:anywhere'},[E('b',{},countryName(p)||customName(p)||protocolLabel(p)),typeof endpointText==='function'?E('small',{'class':'hv-server-address'},endpointText(p,m.now)):null,E('small',{'class':'hv-profile-identity'},bi('Profile: ','Профиль: ')+dvProfileIdentity(p)),E('small',{},role+' · '+protocolLabel(p))].filter(Boolean)),
       E('span',{'class':'hv-dv-statuscol','data-health':h.state,'data-route-state':use.state},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{},use.label)])]);
-  }));
-  var autoOn=m.light.key==='ok';
+  }
+  var list=E('div',{'class':'hv-dv-list'},top.map(profileRow));
+  if(rest.length){
+    var more=E('details',{'class':'hv-vpn-more','data-vpn-more':'1','open':DV_OTHER_VPNS_EXPANDED?'open':null},[
+      E('summary',{'class':'hv-dv-more'},bi('More VPN profiles','Ещё VPN-профили')+' ('+rest.length+')'),E('div',{},rest.map(profileRow))]);
+    more.addEventListener('toggle',function(){DV_OTHER_VPNS_EXPANDED=more.open===true;});list.appendChild(more);
+  }
+  var autoOn=typeof autoWorking==='function'?autoWorking(m.light):m.light.key==='ok';
   var q1=m.primary?E('div',{'class':'hv-dv-q'},[E('b',{},bi('What happens if '+(countryName(m.primary)||'the primary')+' stops working?','Что будет, если '+(countryName(m.primary)||'основной')+' перестанет работать?')),
-    E('p',{},autoOn?bi('The app can consider a reserve only within a validated bounded trial, with router firmware coordination and independent LAN confirmation. Router probes alone do not authorize a switch.','Приложение может рассматривать резерв только в подтверждённом ограниченном тесте, с координацией со штатной прошивкой и независимым подтверждением LAN. Одних проверок с роутера недостаточно для разрешения переключения.'):bi('Automatic inter-tunnel switching by this app is off. The router firmware may still select servers within its own tunnel.','Автоматическое переключение между туннелями этим приложением выключено. Штатная прошивка по-прежнему может выбирать серверы внутри своего туннеля.'))]):null;
+    E('p',{},autoOn?bi('In prepared-MT3000 router-probed IPv4 mode, repeated primary failures can switch to a healthy reserve; return follows your policy after stable recovery. Independent LAN confirmation belongs to a separate client-confirmed trial.','В router-probed IPv4 режиме подготовленного MT3000 повторные отказы основного могут вызвать переход на исправный резерв; возврат следует вашей политике после устойчивого восстановления. Независимое подтверждение LAN относится к отдельному тесту с клиентом.'):bi('Automatic inter-tunnel switching by this app is off. The router firmware may still select servers within its own tunnel.','Автоматическое переключение между туннелями этим приложением выключено. Штатная прошивка по-прежнему может выбирать серверы внутри своего туннеля.'))]):null;
   var last=dvEvents(ctx.status,ctx.rows,1)[0];
   var q2=E('div',{'class':'hv-dv-q'},[E('b',{},bi('Last thing that happened','Последнее событие')),E('p',{},last?dvDay(last.time)+' '+dvClock(last.time)+' · '+last.text:bi('No switches or failures are recorded on the router.','На роутере не записано ни переключений, ни сбоев.'))]);
   var links=E('p',{'class':'hv-dv-links'},[E('a',{'href':'#statistics'},bi('Statistics','Статистика')),E('a',{'href':'#help'},bi('Help','Помощь')),E('a',{'href':'#learn'},bi('Training','Обучение')),E('a',{'href':'#events'},bi('Details for technicians →','Подробности для техников →'))]);
@@ -175,7 +191,7 @@ function renderDesignC(ctx,m){
       E('td',{'class':'n'},h.state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'),E('td',{'class':'n'},dvPercentText(dvPercent(r))),E('td',{'class':'n'},String(r.n||0)),E('td',{},dvConfidence(r.n||0))]);});
   var table=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-tablewrap'},E('table',{},[E('thead',{},E('tr',{},head)),E('tbody',{},body)]))],'hv-dv-servers');
   var keys=E('div',{'class':'hv-dv-keys'},[E('span',{},[E('kbd',{},'1'),'–',E('kbd',{},'9'),bi('sections','разделы')]),E('span',{},[E('kbd',{},'/'),bi('search','поиск')]),E('span',{},bi('Error codes are links to the error table','Коды ошибок — ссылки на таблицу ошибок'))]);
-  return E('div',{'class':'hv-dv hv-dv-c'},[bar,E('div',{'class':'hv-dv-grid'},[chartCard,log]),E('div',{'class':'hv-dv-control'},[ctx.controlCard]),table,keys]);
+  return E('div',{'class':'hv-dv hv-dv-c'},[E('div',{'class':'hv-dv-control'},[ctx.controlCard]),bar,E('div',{'class':'hv-dv-grid'},[chartCard,log]),table,keys]);
 }
 function renderDesignOverview(design,ctx){
   var m=dvModel(ctx.status,ctx.inventory,ctx.rows,ctx.month);

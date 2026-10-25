@@ -12,9 +12,9 @@ import uuid
 SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$')
 PROFILE_GROUP=re.compile(r'^(openvpn|wireguard):[0-9]{1,20}$')
-HEALTH=('https_success','dns_ok','rtt_ms','exit_ip')
+HEALTH=('https_success','dns_ok','rtt_ms','exit_ip','server_endpoint')
 MEASUREMENT_FIELDS=('id','time','code','scope','lan_path_verified','device','mark','table','ifindex',
-                    'https_success','dns_ok','rtt_ms','exit_ip')
+                    'https_success','dns_ok','rtt_ms','exit_ip','server_endpoint')
 
 
 def tunnel_identity(profile):

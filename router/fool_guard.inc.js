@@ -15,6 +15,8 @@ var FOOL_RANGES={
   'telegram.hour':[0,23,'','' ],
   'monitor.interval':[10,300,'seconds','секунд'],
   'monitor.checkpoint':[300,3600,'seconds','секунд'],
+  'monitor.live_log_limit':[1,2000,'observations','наблюдений'],
+  'monitor.history_days':[1,7,'days','дней'],
   'monitor.probe_limit':[1,16,'','' ],
   'speed.budget_mib':[1,32,'MiB','МиБ'],
   'speed.duration':[2,15,'seconds','секунд'],

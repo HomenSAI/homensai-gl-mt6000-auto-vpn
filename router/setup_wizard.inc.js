@@ -45,6 +45,9 @@ function setupCheckRequest(){
   return entry.promise;
 }
 function setupWizard(inventory,kind){
+  // Every system/pair entry in the full application uses the same configured
+  // client chooser. Keep the standalone legacy renderer for its isolated use.
+  if(kind==='system'&&typeof openOnboardingSettings==='function')return openOnboardingSettings(inventory,{},'system');
   if(inventory.error){ui.addNotification(null,E('p',{},'RPC-INVENTORY-UNAVAILABLE: setup is blocked.'));return;}
   var setupCheck=kind==='system'?'pending':'passed',wizardGeneration=++setupWizardGeneration;
   var step=0,busy=false,closed=false,settings=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],custom=Array.isArray(inventory.servers)?inventory.servers:[];

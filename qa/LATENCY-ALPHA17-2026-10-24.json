@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "result": "PASS_WEEKLY_HISTORY_SOURCE_VM_AND_ROUTER_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha17",
+  "tested_product_source": "01b5740d8a8771881d95b26f2922a80d76457581",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha17-1_all.ipk",
+    "bytes": 832683,
+    "sha256": "344c60ab5eaa9dc3f8cf1ddb1bddf19500c189dce3d2264d24f1ecff36425102"
+  },
+  "feature": {
+    "label_ru": "Просмотр последних 7 суток",
+    "window_hours": [
+      1,
+      168
+    ],
+    "pan_seconds": 604800,
+    "configured_retention_days": [
+      1,
+      7
+    ],
+    "max_rows": 10081,
+    "max_file_bytes": 2097152,
+    "marker_budget_per_series": 720,
+    "legacy_checkpoint_schema": 1,
+    "legacy_daily_rpc_tail": 1441,
+    "full_week_transport": "rows_json with rows_count, frontend size/shape/count validation",
+    "deleted_data_backfilled": false,
+    "slider_causes_routing_or_probe_rpc": false
+  },
+  "ci": {
+    "runtimes": 2,
+    "application_each": 774,
+    "qa_each": 112,
+    "ui_suites": 47,
+    "complementary_skips_recorded": true
+  },
+  "focused": {
+    "python_latency_tests": 10,
+    "weekly_ui_controls_codec_budget": "PASS"
+  },
+  "vm": {
+    "actual_week_file_bytes": 685748,
+    "auto_off": true,
+    "fixture_only": true,
+    "hardware_identity_spoofed": false,
+    "installed_version": "0.9.1-alpha17",
+    "legacy_tail_rows": 1441,
+    "one_day_prune_and_no_backfill": true,
+    "owned_proof_worker_finished": true,
+    "result": "PASS",
+    "rpc_compact_json_bytes": 707573,
+    "rpc_stdout_bytes": 782815,
+    "runtime_fixture_restored": true,
+    "ubus_exit": 0,
+    "week_rows": 10081
+  },
+  "vm_failures_and_recovery": [
+    {
+      "case": "01-weekly-rpc-transport-before-package",
+      "result": "FAIL"
+    },
+    {
+      "case": "02-weekly-rpc-compact-transport",
+      "result": "FAIL"
+    },
+    {
+      "case": "03-weekly-rpc-compact-fresh-registration",
+      "result": "PASS"
+    },
+    {
+      "case": "13-alpha17-real-upgrade-harness-error",
+      "result": "HARNESS_ERROR"
+    },
+    {
+      "case": "14-alpha17-actual-runtime-assets",
+      "result": "PASS"
+    },
+    {
+      "case": "15-installed-week-file-and-rpc-harness-error",
+      "result": "HARNESS_ERROR"
+    },
+    {
+      "case": "16-opkg-resume-with-closed-stdin",
+      "result": "PASS"
+    },
+    {
+      "case": "21-weekly-proof-final",
+      "result": "PASS"
+    },
+    {
+      "case": "30-vm-cleanup",
+      "result": "PASS"
+    }
+  ],
+  "vm_cleanup": {
+    "powered_off": true,
+    "exit_code": 0
+  },
+  "physical_week": {
+    "result": "PASS",
+    "version": "0.9.1-alpha17",
+    "retention_seconds": 604800,
+    "window_max_hours": 168,
+    "week_label_installed": true,
+    "current_observed_rows": 829,
+    "old_checkpoint_format_loaded": true,
+    "rows_limit": 10081,
+    "file_limit_bytes": 2097152,
+    "auto_on_reserve": true,
+    "speed_rows_preserved": 4,
+    "synthetic_week_data_injected": false,
+    "native_browser_visual": "NOT_VERIFIED",
+    "time": 1792874945.48875,
+    "observed_utc": "2026-10-24T20:48:59.408102+00:00"
+  },
+  "legacy_checkpoint": {
+    "result": "PASS",
+    "closed_legacy_rows_preserved": 824,
+    "old_file_rows": 825,
+    "new_file_rows": 829,
+    "open_minute_excluded_from_equality": true,
+    "checksums_verified": true,
+    "scope": "actual encrypted pre-update checkpoint versus installed post-update checkpoint; no fake old-week observations"
+  },
+  "limits": [
+    "Native-browser visual acceptance not performed",
+    "VM week samples are explicitly synthetic; no fake observations injected into physicalMT3000",
+    "Old deleted days cannot be reconstructed",
+    "IndependentLAN/IPv6/KillSwitch/physicalpowerloss not certified"
+  ],
+  "recorded_utc": "2026-10-24T20:50:09.495260+00:00"
+}

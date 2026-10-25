@@ -21,3 +21,58 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
   a3(page.includes('finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport'));
   console.log('PASS: refresh preserves viewport; page navigation remembers each visited position');
 }
+
+// Real LuCI serialises null children; a module-local factory must clean all callers,
+// not hide literal words in CSS or alter meaningful zeroes/attributes/JSON text.
+{
+ const guard=fs.readFileSync('router/element_guard.inc.js','utf8');
+ class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};this.children=Array.isArray(children)?children:[children];this.nodeType=1;}text(){return this.children.map(n=>n instanceof Node?n.text():String(n)).join('');}}
+ const native=function(tag,attrs,children){if(Array.isArray(tag))return new Node('fragment',{},tag);if(Array.isArray(attrs)&&arguments.length===2)return new Node(tag,{},attrs);return new Node(tag,attrs,arguments.length>2?children:[]);};
+ let nativeThis;
+ const dom={create:function(){nativeThis=this;return native.apply(null,arguments);}};
+ const globalFactory=native;
+ const element=new Function('L',guard+'; return E;')({dom});
+ let clicked=0;const attrs={disabled:null,click:()=>clicked++};
+ const original=Object.freeze([null,undefined,0,'—',Object.freeze([null,'Нет данных'])]);
+ const node=element('div',attrs,original);assert.equal(node.text(),'0—Нет данных');assert.strictEqual(nativeThis,dom);assert.strictEqual(node.attrs,attrs);node.attrs.click();assert.equal(clicked,1);assert.strictEqual(node.attrs.disabled,null);
+ assert.equal(element('p',{},undefined).text(),'');assert.equal(element('p',{},null).text(),'');
+ assert.equal(element('div',[null,'two arguments',undefined]).text(),'two arguments');
+ assert.equal(element([null,'fragment',undefined]).text(),'fragment');
+ assert.equal(element('pre',{},'{"value":null}').text(),'{"value":null}','diagnostic data is not rewritten');
+ assert.equal(original.length,5,'source arrays remain untouched');
+ const ctx={E:globalFactory,bi:(en,ru)=>ctx.ru?ru:en,Date,window:{localStorage:{getItem:()=>null,setItem:()=>{}}}};vm.createContext(ctx);
+ vm.runInContext(guard,ctx);vm.runInContext(guard,ctx);assert.equal(ctx.E('span',{},[null,0,undefined]).text(),'0','reloading cannot recursively wrap its own factory');
+ vm.runInContext(fs.readFileSync('router/summary_panel.inc.js','utf8'),ctx);
+ for(const ru of [false,true])for(const done of [false,true]){
+  ctx.ru=ru;ctx.startSteps=()=>[{key:'terms',done:true,title:'Terms',hint:null},{key:'learn',done,title:'Training',hint:undefined},{key:'monitor',done,title:'Monitoring',hint:null}];
+  const start=ctx.renderStartPage({},{settings:{}});assert(!/null|undefined/.test(start.text()),'actual Getting started page with absent optional copy');
+  const journalIntro=ctx.ru?'Живой журнал того, что видит роутер.':'A live log of what the router sees.';
+  assert.equal(ctx.E('header',{},[ctx.E('p',{},journalIntro),null,undefined]).text(),journalIntro,'live journal shared subtitle omits absent connectivity slot');
+  const intro='Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto.';
+  assert.equal(ctx.E('header',{},[ctx.E('p',{},intro),null,undefined]).text(),intro,'reported subtitle/footer slot cannot print null');
+ }
+ const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(builder.includes("element_guard.inc.js"));assert(builder.includes("must_replace(\"'require ui';\""),'guard follows dependency directives');
+ console.log('PASS: module-local LuCI element guard, nested null/undefined cleanup, zero/attributes/callback preservation, reload safety and actual Getting started rendering in EN/RU');
+}
+
+// Current source fragment only: do not regenerate installed-version assets during a local batch.
+{
+ const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');
+ const start=builder.indexOf('var advancedOpen=false;');const end=builder.indexOf('var links=',start);
+ assert(start>=0&&end>start);const fragment=builder.slice(start,end);
+ class NavNode{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children);}setAttribute(k,v){this.attrs[k]=v;}}
+ for(const ru of [false,true]){
+  const saved={};const nav={E:(...a)=>new NavNode(...a),bi:(en,rus)=>ru?rus:en,ADVANCED_KEYS:['tests','events'],activeTab:'overview',tabLink:k=>new NavNode('a',{},k),localStorage:{getItem:k=>saved[k]||null,setItem:(k,v)=>saved[k]=v}};
+  vm.createContext(nav);vm.runInContext(fragment,nav);
+  assert(nav.advancedBox.hidden);assert.equal(nav.advancedToggle.attrs['aria-expanded'],'false');
+  assert.equal(nav.advancedToggle.children.length,1);assert.equal(nav.advancedToggle.children[0].children[0],ru?'Расширенные настройки':'Advanced settings');
+  assert.equal(nav.advancedToggle.attrs['aria-controls'],nav.advancedBox.attrs.id);
+  nav.advancedToggle.attrs.click();assert(!nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'1');
+  nav.advancedToggle.attrs.click();assert(nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'0');
+  const clause=builder.match(/if\(oldTab!==key&&advancedBox&&ADVANCED_KEYS[^\n]+?\}/)[0];
+  nav.oldTab='tests';nav.key='tests';vm.runInContext(clause,nav);assert(nav.advancedBox.hidden,'poll must not reopen collapsed active group');
+  nav.oldTab='overview';vm.runInContext(clause,nav);assert(!nav.advancedBox.hidden,'navigating to an advanced page reveals its menu');
+ }
+ const css=fs.readFileSync('router/design_layer.css','utf8');assert(!css.includes('.hv-advanced-toggle{display:none}'));assert(css.includes('.hv-advanced-links[hidden]{display:none!important}'));assert(css.includes('letter-spacing:0;text-transform:none;white-space:nowrap'));
+ console.log('PASS: single-line RU/EN Advanced settings, working toggle/ARIA/storage, no poll reopen and design C collapse respected');
+}

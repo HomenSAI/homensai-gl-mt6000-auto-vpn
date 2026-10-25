@@ -5,7 +5,7 @@ var HV_DESIGNS=[
    about:['Sections as tabs across the top, full width for the content. Status, failover path and servers stay where they are now.','Разделы вкладками сверху, вся ширина отдана содержимому. Статус, путь переключения и серверы на привычных местах.'],
    suits:['Everyone who prefers the full control-room layout.','Всем, кто предпочитает полный вид пульта.']},
   {key:'b',name:['B · Calm','B · Спокойный'],
-   about:['Larger text and more space. Administrator sections are hidden behind “Advanced”; on a phone the sections sit at the bottom of the screen.','Крупнее текст и больше воздуха. Разделы для администратора спрятаны за «Расширенное»; на телефоне разделы внизу экрана.'],
+   about:['Larger text and more space. Administrator sections are hidden behind “Advanced”; on a phone the sections sit at the bottom of the screen.','Крупнее текст и больше воздуха. Разделы для администратора спрятаны за «Расширенные настройки»; на телефоне разделы внизу экрана.'],
    suits:['The default. People who only want to know that the internet works, and phone users.','Вариант по умолчанию. Тем, кому важно только знать, что интернет работает, и для телефона.']},
   {key:'c',name:['C · Instrument panel','C · Приборная панель'],
    about:['A narrow icon column, compact cards, numbers and tables in a monospaced font. All sections, including administrator ones, are always visible.','Узкая колонка иконок, компактные карточки, цифры и таблицы моноширинным шрифтом. Все разделы, включая администраторские, видны всегда.'],

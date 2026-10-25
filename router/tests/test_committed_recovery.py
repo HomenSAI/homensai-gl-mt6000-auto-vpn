@@ -2,7 +2,7 @@ from pathlib import Path
 import sys
 import unittest
 import copy
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock,patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
 from native_switch import committed_recovery_decision as decide
 from vendor_fixture import attach
@@ -41,6 +41,14 @@ class CommittedRecoveryTests(unittest.TestCase):
         self.backend.recovery_ready.return_value=True;self.backend.health.return_value=False
         result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)
         self.assertEqual(result['action'],'HOLD');self.backend.recovery_ready.assert_not_called()
+    def test_explicit_bounded_fault_tests_return_even_during_reserve_hold(self):
+        self.backend.recovery_ready.return_value=True
+        with patch('fault_control.testing_profile',return_value=True):
+            self.assertEqual(self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)['action'],'RESTORE-PRIMARY')
+            self.assertEqual(self.decide({'recovery_return_policy':'hold_reserve'},[],1000)['action'],'OBSERVE','test cannot bypass failure evidence')
+        self.backend.recovery_ready.return_value=False;self.backend.health.return_value=False
+        with patch('fault_control.testing_profile',return_value=True):
+            self.assertEqual(self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)['action'],'HOLD','test cannot bypass healthy primary verification')
     def test_unknown_live_health_is_explicit(self):
         self.backend.health.return_value=None
         self.assertEqual(self.decide({},self.samples,1000)['reason'],'RESERVE-HEALTH-UNKNOWN')

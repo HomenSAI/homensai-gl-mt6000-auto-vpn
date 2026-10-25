@@ -1,0 +1,233 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_WITH_BROWSER_LIMIT",
+  "version": "0.9.1-alpha4",
+  "source": "3042905d50ed2c75552e7d19f78937492cd733d5",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha4-1_all.ipk",
+    "bytes": 791838,
+    "sha256": "a5ba29a40a0b6c7d33b4113781e73e94a665c766db095c349354283fd37b8009"
+  },
+  "change": "Pair chooser lists only unambiguous configured VPN clients, reserve excludes primary client; clear roles/protocol/server assignment explanation; no vendor profile import or server-address edit",
+  "ci": [
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha4-1_all.ipk",
+      "bytes": 791838,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 0,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "a5ba29a40a0b6c7d33b4113781e73e94a665c766db095c349354283fd37b8009",
+      "skipped_tests": 16,
+      "source": "3042905d50ed2c75552e7d19f78937492cd733d5",
+      "ui_suites": 44,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 737,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha4-1_all.ipk",
+      "bytes": 791838,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 15,
+      "qa_tests": 107,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "a5ba29a40a0b6c7d33b4113781e73e94a665c766db095c349354283fd37b8009",
+      "skipped_tests": 0,
+      "source": "3042905d50ed2c75552e7d19f78937492cd733d5",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "files_modes_verified": 86,
+  "actual_https": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard80.js",
+        "http_status": 200,
+        "bytes": 932841,
+        "sha256": "cbb72a9ff073ac8e5e6cab27bde71574607961d05d3e9c8c64511e6f883ffed6",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "bytes": 120848,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "actual_http8080": {
+    "result": "PASS",
+    "assets": [
+      {
+        "asset": "dashboard80.js",
+        "http_status": 200,
+        "sha256": "cbb72a9ff073ac8e5e6cab27bde71574607961d05d3e9c8c64511e6f883ffed6",
+        "matches_canonical_ipk": true
+      },
+      {
+        "asset": "ui55.css",
+        "http_status": 200,
+        "sha256": "957890e012730b6fb87864a91c8b0467766e69300cc8f8fe0e21635cc1eac2dc",
+        "matches_canonical_ipk": true
+      }
+    ]
+  },
+  "final": {
+    "result": "PASS",
+    "time": 1792829228.1962104,
+    "version": "0.9.1-alpha4",
+    "auto_left_running": true,
+    "selected_role": "reserve",
+    "manual_preference": "target",
+    "both_vpn_dns_and_https_passed": true,
+    "live_policy_selection_confirmed": true,
+    "monitor_age_seconds": 4.52378249168396,
+    "server_clock_supplied": true,
+    "firmware": "4.11.0",
+    "openwrt": "21.02-SNAPSHOT",
+    "test_fault_tables_absent": true,
+    "temporary_full_block_absent": true,
+    "controller_totals": {
+      "attempts": 31,
+      "automatic_attempts": 16,
+      "automatic_committed": 11,
+      "blocked_episodes": 34,
+      "channel_switches": 0,
+      "committed": 23,
+      "manual_attempts": 13,
+      "manual_committed": 12,
+      "protocol_switches": 11,
+      "rate_limited_episodes": 3,
+      "returns": 6,
+      "rollbacks": 12,
+      "server_switches": 0,
+      "trials_passed": 1
+    },
+    "reliability_totals": {
+      "checks": 13482,
+      "failed_checks": 554,
+      "outages": 150,
+      "observed_down_seconds": 5751.580008029938,
+      "observed_up_seconds": 133746.14302659035,
+      "auto_observed_seconds": 69078.97566485405,
+      "recoveries": 133,
+      "unknown_intervals": 4
+    },
+    "external_lan_verified": false
+  },
+  "client_choices": {
+    "event": "VPN-PAIR-CLIENT-CHOICES",
+    "result": "PASS",
+    "catalog_profiles": 30,
+    "configured_clients": 2,
+    "protocols": [
+      "openvpn",
+      "wireguard"
+    ],
+    "same_client_reserve_filtered": true,
+    "roles_preserved": true,
+    "scope": "actual configured bindings and canonical installed chooser; no browser visual acceptance or vendor profile edit"
+  },
+  "stop": {
+    "step": "stop",
+    "result": "PASS",
+    "remote_seconds": 21.969,
+    "bytes": 725,
+    "sha256": "fd476e34a21d41482aa376c7e8389376ad866f4e608dd5638004a67d03f5bb5a",
+    "events": [
+      "STOP-ACK",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "STOP-STATE",
+      "DISPLAY-PHASE",
+      "STOP-STATE",
+      "FINAL",
+      "BUTTON-STOP-PHASES"
+    ]
+  },
+  "start": {
+    "step": "start",
+    "result": "PASS",
+    "remote_seconds": 62.906,
+    "bytes": 2022,
+    "sha256": "482fc9758f355cf31a3db70df98c5f71c0809e5714e985ae87e353594615dfb5",
+    "events": [
+      "PRIOR-FAILED-START-COMPLETION",
+      "START-ACK",
+      "DISPLAY-PHASE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "DISPLAY-PHASE",
+      "STATE",
+      "MONITOR-INTERVAL",
+      "STATE",
+      "START-FINAL",
+      "BUTTON-START-PHASES",
+      "ADAPTIVE-POLLING"
+    ]
+  },
+  "reserve": {
+    "step": "reserve",
+    "result": "PASS",
+    "remote_seconds": 37.219,
+    "bytes": 11010,
+    "sha256": "fb55dbb94365e12b3daac26cce60562529038d5805f5c302ca83103848543ed1",
+    "events": [
+      "REQUEST",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "MANUAL-STATE",
+      "PROOF",
+      "POLICY-SELECTION-VERIFIED",
+      "UI-FRAME",
+      "FINAL"
+    ]
+  },
+  "pre_backup": {
+    "step": "backup-before",
+    "result": "PASS",
+    "encrypted_sha256": "0d8d9fc136dd11f1f537d15984febf252cbb99b53b43b0f9d4b9631636c0eeee",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "final_backup": {
+    "step": "backup-after",
+    "result": "PASS",
+    "encrypted_sha256": "0a11bffb98f1145af3c05b887d0d9559f0c0ed14da8a418abe1108b2198d4bd6",
+    "entries": 190,
+    "independent_in_memory_decrypt_read": true,
+    "plaintext_persisted": false
+  },
+  "scope": {
+    "native_browser_visual": "NOT_VERIFIED_NO_CONFIGURED_BROWSER",
+    "router_originated_ipv4": true,
+    "independent_LAN": false,
+    "host_network_changed": false,
+    "primary_MT6000_changed": false,
+    "fault_test_run": false,
+    "release_published": false
+  },
+  "recorded_utc": "2026-10-24T08:07:08.819839+00:00",
+  "vendor_profile_configuration_preservation": {
+    "result": "PASS",
+    "wireguard_configuration_byte_identical": true,
+    "openvpn_configuration_byte_identical": true,
+    "method": "independent in-memory comparison of both verified encrypted configuration exports",
+    "plaintext_persisted": false
+  }
+}

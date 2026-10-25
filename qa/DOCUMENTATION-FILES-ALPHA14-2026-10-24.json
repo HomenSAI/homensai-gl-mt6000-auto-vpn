@@ -1,0 +1,1567 @@
+{
+  "schema": 1,
+  "version": "0.9.1-alpha14",
+  "result": "PASS_STRUCTURAL_SOURCE_REVIEW_WITH_ACCEPTANCE_LIMITS",
+  "markdown_files": 193,
+  "prose_and_notice_files": 199,
+  "runtime_helper_sources": 60,
+  "method": "Full-file reads/hashes and scoped classification; current guides/runtime commands reviewed and corrected; archived bodies retained, not re-certified. Source-driven generated references and local link checks passed. Not independent proof of every historical claim or external AI autonomy.",
+  "files": [
+    {
+      "path": ".claude/handoff/REVIEW-PROMPT.md",
+      "sha256": "e967b94df845c924eccf0415427d9cd618a41f7f0c8b5bfb72c96ab429b07637",
+      "scope": "historical-reference",
+      "bytes": 3178
+    },
+    {
+      "path": ".claude/handoff/REVIEW-RESULT-TEMPLATE.md",
+      "sha256": "cdc92e7dde8996e88d011adb5417870421df0daefad361c7adc281d94bdbe69f",
+      "scope": "historical-reference",
+      "bytes": 1391
+    },
+    {
+      "path": ".claude/handoff/ROUTER-READINESS.md",
+      "sha256": "dc82ffdc40bb113ec2d8502377ffd1b6481e90050840ca9b513c4aac368d6049",
+      "scope": "historical-reference",
+      "bytes": 3792
+    },
+    {
+      "path": ".claude/handoff/START-HERE.md",
+      "sha256": "cd9e7f4a98a9640200a293948ccee5fe3be1f1f76663437a759bd8033fb379bd",
+      "scope": "historical-reference",
+      "bytes": 3145
+    },
+    {
+      "path": ".claude/handoff/STATE.md",
+      "sha256": "a3703445cb7d7a3e2ab44b5edcbff6dd861d19c8b59a52f143993fd4b480462b",
+      "scope": "historical-reference",
+      "bytes": 7072
+    },
+    {
+      "path": ".claude/handoff/TODO-50.md",
+      "sha256": "a9a1ef81b463c03c7554a7e4a27f691151963f6ac408e813c02d60bed45faad1",
+      "scope": "historical-reference",
+      "bytes": 10690
+    },
+    {
+      "path": "CHANGELOG.md",
+      "sha256": "943cfb76bb2a98cdcf4d3c8bfee4501e93a8d6f86268d0a0dd28de607777240f",
+      "scope": "technical-reference",
+      "bytes": 41899
+    },
+    {
+      "path": "CLAUDE.md",
+      "sha256": "380c042a1c0a4f2a2989945be741668cf4706c8b942b7fbd57fa873bbc4dc6dc",
+      "scope": "technical-reference",
+      "bytes": 1503
+    },
+    {
+      "path": "demo/README.md",
+      "sha256": "c02df6a7fa030914cc74a5417ed45faa9a6f3baede824d65227d88e0d36d83cc",
+      "scope": "historical-reference",
+      "bytes": 9064
+    },
+    {
+      "path": "DISCLAIMER.md",
+      "sha256": "df146b4741b61afc184b946056b088fc01dc33021915a3579e9c6a7b247a7184",
+      "scope": "preserved-legal",
+      "bytes": 2818
+    },
+    {
+      "path": "DISCLAIMER.ru.md",
+      "sha256": "f43e01049e62851ae4e63b0e1e04950e1cc2686cadabaa063d199150b5538579",
+      "scope": "preserved-legal",
+      "bytes": 5030
+    },
+    {
+      "path": "docs/AI-INSTALL.en.md",
+      "sha256": "99a286337ba6bb23f7048d65d37d27846da375ad730315e50c721725ba2bc3b9",
+      "scope": "current-generated-prompt",
+      "bytes": 11841
+    },
+    {
+      "path": "docs/AI-INSTALL.ru.md",
+      "sha256": "9459ac8b331186da61a3d84b3f4beb989c17d1893bf6941ab533600c4465f6bb",
+      "scope": "current-generated-prompt",
+      "bytes": 20270
+    },
+    {
+      "path": "docs/AI-LAN.en.md",
+      "sha256": "7d74d630696183e5a2099aab10bb826bad4f51ab4e8414b2ffca15fc994e0150",
+      "scope": "current-generated-prompt",
+      "bytes": 4754
+    },
+    {
+      "path": "docs/AI-LAN.ru.md",
+      "sha256": "6c5b56b380038568a17deaec1b6a42ac6076ba60d4622a62ce29491f53f41e44",
+      "scope": "current-generated-prompt",
+      "bytes": 7531
+    },
+    {
+      "path": "docs/ALPHA8-UX-ALGORITHMS-RESULTS.md",
+      "sha256": "31d9e0c5dc5a9a0f461bde19322689a250dbfe8d82b21dbd3565c35329341920",
+      "scope": "historical-reference",
+      "bytes": 7795
+    },
+    {
+      "path": "docs/AUTO-QUICKSTART.en.md",
+      "sha256": "075118a6986c123942990a7e2a672d3b71a7646012408e7de880ef401a8defb0",
+      "scope": "current",
+      "bytes": 2127
+    },
+    {
+      "path": "docs/AUTO-QUICKSTART.ru.md",
+      "sha256": "944caa284ff0ff98590a88919b9093d2dd2dee81abf731af87d3bcfeed2a597e",
+      "scope": "current",
+      "bytes": 3571
+    },
+    {
+      "path": "docs/BUILTIN-HELP.en.md",
+      "sha256": "7260a3e5896bda097e5a023bafd90f526090b3788f3f842ff09d90c6b65e675f",
+      "scope": "current-generated-help",
+      "bytes": 88383
+    },
+    {
+      "path": "docs/BUILTIN-HELP.ru.md",
+      "sha256": "0f6f62927d0bf8d95a0a0c2ed1a9d3f85b07b7456a17dcddce8bc678c458a0c3",
+      "scope": "current-generated-help",
+      "bytes": 149469
+    },
+    {
+      "path": "docs/CASCADE-ADAPTER-CONTRACT.md",
+      "sha256": "0c9ae35897718101d7c96a8e653f7364c4c7cf37c0009af34fd96ddd68cc675d",
+      "scope": "historical-reference",
+      "bytes": 3363
+    },
+    {
+      "path": "docs/CHANNEL-ATTRIBUTION.md",
+      "sha256": "846da3119f57309d98406b9bb4daf0c08159fee4afc9ac5cca4ce63b969e3c0b",
+      "scope": "technical-reference",
+      "bytes": 3446
+    },
+    {
+      "path": "docs/CI-PRIMARY.md",
+      "sha256": "b9bae1642b1e76482e5bf852a3c2268719d14c57fe475b60f9261e9727a144ca",
+      "scope": "current-technical",
+      "bytes": 2336
+    },
+    {
+      "path": "docs/CLIENT-TRIAL.md",
+      "sha256": "16d4edce8d1fbed2151867844e1f1ddacea5764dbcec58c5b6a41808f3b678db",
+      "scope": "current",
+      "bytes": 2715
+    },
+    {
+      "path": "docs/COMPLETION-PLAN.md",
+      "sha256": "fdc53d8c318a0fa5dc704e66fcd386bd127bbb666a4f9feeae612a2f4fed102e",
+      "scope": "historical-reference",
+      "bytes": 16323
+    },
+    {
+      "path": "docs/CONTROL-AND-SETUP.md",
+      "sha256": "144f8e08d148a88a6097f6fbd09880a3cd006e07bf0c02ac64bbfd15d5ef3007",
+      "scope": "current",
+      "bytes": 3064
+    },
+    {
+      "path": "docs/CURRENT-STATE.en.md",
+      "sha256": "ebf8bf87e3a2be1fa0af0a7723ba0550041d18d04e38ffc9c33517278d6be981",
+      "scope": "current-canonical",
+      "bytes": 6474
+    },
+    {
+      "path": "docs/CURRENT-STATE.ru.md",
+      "sha256": "225eb0ce865a7742bec144b47ed4db4d288f2883f7b4eef974fc9930ebbc38a7",
+      "scope": "current-canonical",
+      "bytes": 11226
+    },
+    {
+      "path": "docs/CURRENT-STATUS.md",
+      "sha256": "526aaf583733fa4167abe72f56941cbf347c28ab7cfdd23757447c3d296f5853",
+      "scope": "current-delivery-record",
+      "bytes": 2023
+    },
+    {
+      "path": "docs/DOCUMENTATION-AUDIT-2026-10-24.md",
+      "sha256": "4fc38e76d326d7715b8428264accff8fe172a2ad09eb07898ee017f041e90e3e",
+      "scope": "versioned-evidence",
+      "bytes": 4633
+    },
+    {
+      "path": "docs/DOCUMENTATION-INDEX.md",
+      "sha256": "b42a4666c5fd4f85051ab1c09ca27361ae152457837bf370a97aaba7eba19c67",
+      "scope": "current-index",
+      "bytes": 18078
+    },
+    {
+      "path": "docs/ERROR_CODES.md",
+      "sha256": "b794bb03255e2f77c01507a4423f42c2a3659cc3252e18b84b7665aee26497c5",
+      "scope": "current-generated-codes",
+      "bytes": 278417
+    },
+    {
+      "path": "docs/FAILOVER-RESEARCH.md",
+      "sha256": "3e4464a1f19ba621f8f4a607f06aced002215e7f655a21d7d931f354e6f5816f",
+      "scope": "historical-reference",
+      "bytes": 5620
+    },
+    {
+      "path": "docs/FAILURE-ANALYSIS-0.9.0-alpha2.md",
+      "sha256": "7684cc05409247f43c1886fc6db56d1c974b79369b8d9587bfee4bdd06d0760f",
+      "scope": "historical-reference",
+      "bytes": 9727
+    },
+    {
+      "path": "docs/FAILURE-ANALYSIS-0.9.0-alpha3.md",
+      "sha256": "b130eb3dd98e752b6fb124b36c5846288b670dc02719b8ddcbc894b370d97280",
+      "scope": "historical-reference",
+      "bytes": 5563
+    },
+    {
+      "path": "docs/FIRST-RUN-SETUP.md",
+      "sha256": "7a233da44c3de2302c6b0863f7639349195d6231bebb0131ad1c689c0ace9967",
+      "scope": "current",
+      "bytes": 3908
+    },
+    {
+      "path": "docs/GITHUB-PUBLICATION-2026-10-17.md",
+      "sha256": "43a613d55b7679b5fb15ab0ef9bed1a059ce60e55087a60382bb811da35e735d",
+      "scope": "historical-reference",
+      "bytes": 3772
+    },
+    {
+      "path": "docs/GL-MT3000-TEST-PLAN.md",
+      "sha256": "9d76321785f1d90d1cdf610a179d68fe9dfeeb448afcc7c51cbcd54e3469c43c",
+      "scope": "historical-reference",
+      "bytes": 15419
+    },
+    {
+      "path": "docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md",
+      "sha256": "0b19303687a51cb945b6c9659d77bfa63ae2944edd80f549809edcf4604edc43",
+      "scope": "historical-reference",
+      "bytes": 8929
+    },
+    {
+      "path": "docs/handoff/APPEARANCE-2026-10-23.md",
+      "sha256": "c92127a11bf0ebb4920b8e5682297ed5e3ded3c2e955c46aec9c52a242e9feab",
+      "scope": "historical-reference",
+      "bytes": 2787
+    },
+    {
+      "path": "docs/handoff/AUTO-MATRIX-2026-10-23.md",
+      "sha256": "8a1968401321bc27bb042a80ab484e18a7377192cebf9040e9966d1665eec021",
+      "scope": "historical-reference",
+      "bytes": 7251
+    },
+    {
+      "path": "docs/handoff/CONTINUATION-2026-10-20.md",
+      "sha256": "ce09e8e37ecf2304d81dd74787ee04b7fa7ff1e1766a150e1602a70b1056b6ea",
+      "scope": "historical-reference",
+      "bytes": 9330
+    },
+    {
+      "path": "docs/handoff/CONTINUATION-2026-10-21.md",
+      "sha256": "8f932f37bc09ec5aedc38e9fbf33f4e2cf5bfa3a2bb2f268823323e7107ba7e4",
+      "scope": "historical-reference",
+      "bytes": 6390
+    },
+    {
+      "path": "docs/handoff/CONTINUE-PROMPT.md",
+      "sha256": "5c124805353877f76b4229512b3f88248c67e8df43561179b56fe4a4610a7364",
+      "scope": "recovery-record",
+      "bytes": 1042
+    },
+    {
+      "path": "docs/handoff/CURRENT.md",
+      "sha256": "56b390a1f3f1e1872d75a9567e8ae5d9ddddaf05d7e4d8bcaccd66f98a54914c",
+      "scope": "recovery-record",
+      "bytes": 109916
+    },
+    {
+      "path": "docs/handoff/FIRST-RUN-FLOW-2026-10-23.md",
+      "sha256": "1755e7324710d65e5bc5bc7fd1eea48e992fb9aa5d8231010d1920a5d80cba8e",
+      "scope": "historical-reference",
+      "bytes": 4194
+    },
+    {
+      "path": "docs/handoff/LIMIT-CHECKPOINT-2026-10-21.md",
+      "sha256": "38024d749cb7acb6a7bd18ade6024264b7d055e61791ca4c2d6431e3cc0e3c7f",
+      "scope": "historical-reference",
+      "bytes": 25630
+    },
+    {
+      "path": "docs/handoff/NEXT-AI-2026-10-24.md",
+      "sha256": "a9e684d6c3ab11e9d75cbbe8f7b35318b16cc973d609d737e72c70d58ce66d07",
+      "scope": "recovery-record",
+      "bytes": 116902
+    },
+    {
+      "path": "docs/handoff/OV-QUEUE-ANALYSIS-2026-10-22.md",
+      "sha256": "3b70246b1e04c517c089c64f8bbcda4e26ef5e3ced72212c3cd379d79da8b9c4",
+      "scope": "historical-reference",
+      "bytes": 5720
+    },
+    {
+      "path": "docs/handoff/OV-SETTLING-DESIGN-2026-10-22.md",
+      "sha256": "881e6dc5aac645d9b5040b2cc864efa5d633786510ecfa1b1e6aea807a9612b2",
+      "scope": "historical-reference",
+      "bytes": 4659
+    },
+    {
+      "path": "docs/handoff/OWNER-IDEAS-2026-10-23.md",
+      "sha256": "cf46bee5e0f586461c44c75dc6484d238a9991d34594eba2f4f385c964f083a1",
+      "scope": "historical-reference",
+      "bytes": 22962
+    },
+    {
+      "path": "docs/handoff/OWNER-STATUS-2026-10-23.md",
+      "sha256": "3d2abe1d8be2c984f0ed9c52503efaf7927af0444f3211e503ac5f867d06b6c9",
+      "scope": "historical-reference",
+      "bytes": 14812
+    },
+    {
+      "path": "docs/handoff/OWNER-UI-TODO-2026-10-23.md",
+      "sha256": "1616ed71568caf028c9a2cd9bd216f91e965e462b4780c0190d51bfe2f631d68",
+      "scope": "recovery-record",
+      "bytes": 126512
+    },
+    {
+      "path": "docs/handoff/PAUSED-STATE-2026-10-16.md",
+      "sha256": "3311f0a0774b3f46b8ef44ada6d99c21cb36dd527b71a80d76b97d440fade255",
+      "scope": "historical-reference",
+      "bytes": 3324
+    },
+    {
+      "path": "docs/handoff/pending-uci-fix/README.md",
+      "sha256": "68115b5729757930619c1d868f46f16e2940faacedbda5a0c255b4b53c130857",
+      "scope": "historical-reference",
+      "bytes": 1644
+    },
+    {
+      "path": "docs/handoff/README.md",
+      "sha256": "5c124805353877f76b4229512b3f88248c67e8df43561179b56fe4a4610a7364",
+      "scope": "recovery-record",
+      "bytes": 1042
+    },
+    {
+      "path": "docs/handoff/RECOVERY-2026-10-23.md",
+      "sha256": "83224a6df8cb318a17355d7306777a50c235ff0e1a8d1057ca1d8135681f4bd4",
+      "scope": "historical-reference",
+      "bytes": 6823
+    },
+    {
+      "path": "docs/handoff/RECOVERY-TODO-2026-10-20.md",
+      "sha256": "739a8b0efa3ec48c3893c0369231de63d4b124db664d1053bc8c56ba5abf15cb",
+      "scope": "historical-reference",
+      "bytes": 11402
+    },
+    {
+      "path": "docs/handoff/RESUME-TODO.md",
+      "sha256": "820e627f5abf49591096b626dcbf4045b64f4a63c11cfe7462bcc19f2bef8ff0",
+      "scope": "historical-reference",
+      "bytes": 21550
+    },
+    {
+      "path": "docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md",
+      "sha256": "aa35a7ae5365696d0931b9955865954026c89cc3d99d6e31eefd00bc686dab82",
+      "scope": "historical-reference",
+      "bytes": 5720
+    },
+    {
+      "path": "docs/handoff/STATUS.md",
+      "sha256": "5c124805353877f76b4229512b3f88248c67e8df43561179b56fe4a4610a7364",
+      "scope": "recovery-record",
+      "bytes": 1042
+    },
+    {
+      "path": "docs/handoff/STOP-2026-10-21.md",
+      "sha256": "3164505ca524b2b043a789bd80d4875004f25c23d5f951a647f1d9bfbcb154ae",
+      "scope": "historical-reference",
+      "bytes": 6086
+    },
+    {
+      "path": "docs/handoff/TEST-RESULTS.md",
+      "sha256": "e42511849eed5eff53e2e1a0f50567e5b08488c3cf020030057ac153df641102",
+      "scope": "historical-reference",
+      "bytes": 2305
+    },
+    {
+      "path": "docs/handoff/TODO.md",
+      "sha256": "5c124805353877f76b4229512b3f88248c67e8df43561179b56fe4a4610a7364",
+      "scope": "recovery-record",
+      "bytes": 1042
+    },
+    {
+      "path": "docs/handoff/UI-CRASH-RECOVERY-2026-10-24.md",
+      "sha256": "de7d6e40206636ec46b9f2a1fe43f7fcad9460153a1c9520a0829ef847f79490",
+      "scope": "recovery-record",
+      "bytes": 3044
+    },
+    {
+      "path": "docs/handoff/UI-OPERATOR-2026-10-23.md",
+      "sha256": "93ec07c1c48200e0716500c45dfd7a0ff3e55ff05003611681acf5e21361ac0f",
+      "scope": "historical-reference",
+      "bytes": 10062
+    },
+    {
+      "path": "docs/handoff/URGENT-PAUSE-2026-10-20.md",
+      "sha256": "bf49753e1924b55a3495b63ace2f92048b54e882c96744d5f5b2a99e5974ffc4",
+      "scope": "historical-reference",
+      "bytes": 8041
+    },
+    {
+      "path": "docs/handoff/VM-AUDIT-2026-10-24.md",
+      "sha256": "4740dd6cb61b1aca90f7bc66c5f5cc33e56dda85759ab0940e56689f99611a23",
+      "scope": "recovery-record",
+      "bytes": 6273
+    },
+    {
+      "path": "docs/handoff/WORKSPACE-LOCATION.md",
+      "sha256": "4c641a8a7eb96502052ca5fdf0068655e9422292b330be77120d165083461c4f",
+      "scope": "historical-reference",
+      "bytes": 1879
+    },
+    {
+      "path": "docs/HISTORY-RETENTION.md",
+      "sha256": "ea49d1560c654136bf087d6d3aab937ff950a8c3b5edb1a1c4e57c6d9a8b91ff",
+      "scope": "current",
+      "bytes": 3588
+    },
+    {
+      "path": "docs/HOW-IT-WORKS.en.md",
+      "sha256": "cf10218fbcf93e8ab32cebb35b7714015d2d3042aa60ee5a21d26b3aa6d7be9c",
+      "scope": "current",
+      "bytes": 2897
+    },
+    {
+      "path": "docs/HOW-IT-WORKS.ru.md",
+      "sha256": "fa8b8838df53f4a5ebcd0d0852d472d9037686f3f3dc4c746be408bd2af29e08",
+      "scope": "current",
+      "bytes": 5124
+    },
+    {
+      "path": "docs/INSTALL-WALKTHROUGH.md",
+      "sha256": "c83485f47c8f6b1678e11dbd411b336754c2ab95d95fe4ff59da2626efe1d0a3",
+      "scope": "historical-reference",
+      "bytes": 2512
+    },
+    {
+      "path": "docs/INSTALL.en.md",
+      "sha256": "db80652808021167a4de07a7d69b37949be96fcb5d2d11e3074551ef79eaa2f2",
+      "scope": "current",
+      "bytes": 3993
+    },
+    {
+      "path": "docs/INSTALL.ru.md",
+      "sha256": "8ade590c239607357e81521d96f42830b06b6d429e9c8797a044ace3fa3a06a2",
+      "scope": "current",
+      "bytes": 6491
+    },
+    {
+      "path": "docs/LAN-HELPER.en.md",
+      "sha256": "01289a24aab30335e35029af157c22a061056854f45d302cf3b1c4948687841b",
+      "scope": "current",
+      "bytes": 2541
+    },
+    {
+      "path": "docs/LAN-HELPER.ru.md",
+      "sha256": "1da8b1417a378040b0934e7b92410e5024b786815f667d9120d103d758c361db",
+      "scope": "current",
+      "bytes": 4006
+    },
+    {
+      "path": "docs/LANGUAGE.md",
+      "sha256": "8b40b1d143e027f52df26867e36ae9db5eb6dbf40971ff57f8fefb6afd5a6d81",
+      "scope": "current",
+      "bytes": 1558
+    },
+    {
+      "path": "docs/LATEST-CHANGES.md",
+      "sha256": "743e1e2ebfe516fc460c160b20ea42d07b3ebf5c9a490b1747807e8681dba2c9",
+      "scope": "technical-reference",
+      "bytes": 6295
+    },
+    {
+      "path": "docs/LICENSING-AND-TERMS.md",
+      "sha256": "775abd43f798705c3774bb3c7fe1746f01e73a3a7ac7eba74fbff1f551693959",
+      "scope": "preserved-legal",
+      "bytes": 1471
+    },
+    {
+      "path": "docs/LOCAL-ACCESS.md",
+      "sha256": "0e8042e7aac1634ee77a19d4175b002eb191d6ab1dd8f2fcea1bf4382cdf8925",
+      "scope": "current",
+      "bytes": 1393
+    },
+    {
+      "path": "docs/MT3000-AUTO-TEST-REPORT-2026-10-23.md",
+      "sha256": "91fa6ed3b14f8f98a2100a60e0b168a4fd13f27540c6b6acf76289ec2ab01915",
+      "scope": "historical-reference",
+      "bytes": 10678
+    },
+    {
+      "path": "docs/MT3000-OPERATIONS-2026-10-22.md",
+      "sha256": "f6f923af8b1691bb48c16f090896670e3fb2c678122aa55a23a4b3b5211d3afd",
+      "scope": "historical-reference",
+      "bytes": 27661
+    },
+    {
+      "path": "docs/NATIVE-EXPERIMENTAL.md",
+      "sha256": "40dffc1e3fe932411d990236014e872523ffe4bb67c28db771db7bbf682b7c33",
+      "scope": "historical-reference",
+      "bytes": 7276
+    },
+    {
+      "path": "docs/NEXT-STAGE-RESULTS.md",
+      "sha256": "fad823dfb831a09ac2a2447c9c5db975c78230c0f8a698218495aeafa0822ad8",
+      "scope": "historical-reference",
+      "bytes": 5642
+    },
+    {
+      "path": "docs/NEXT-STAGE-REVIEW.md",
+      "sha256": "b688d31cd92d1ced2021f1ae98b0635d35250240604232cebfd9a486767636b0",
+      "scope": "historical-reference",
+      "bytes": 4922
+    },
+    {
+      "path": "docs/OFFLINE-COMPLETION.md",
+      "sha256": "5816ad04a9a04c7784f561d3f0b23d09b4b960b27db7a0a77460c3e6bdca2c9f",
+      "scope": "historical-reference",
+      "bytes": 4232
+    },
+    {
+      "path": "docs/OFFLINE-HARDENING-2026-10-20.md",
+      "sha256": "92e80446ea9a2797c7f9e486b18bac43cda1d5737835b038f3356bda919b6391",
+      "scope": "historical-reference",
+      "bytes": 9527
+    },
+    {
+      "path": "docs/OVERNIGHT-TEST-REPORT-2026-10-17.md",
+      "sha256": "b52820363add274e5a63c20d9566091e98b141189a7fb4afdd4ad9f76a7e64b1",
+      "scope": "historical-reference",
+      "bytes": 5662
+    },
+    {
+      "path": "docs/OVERVIEW-PATH-COLOURS.md",
+      "sha256": "22985aed4259695e6ed6d98d19bb0e1d16950f0359ccca4fbff62d1b533cfd51",
+      "scope": "current",
+      "bytes": 1299
+    },
+    {
+      "path": "docs/OWNER-UI-ALPHA2.md",
+      "sha256": "be300bda9d0bf4ff0b3349153a07c3a670e5bcd513c02278981f6c97bbab201a",
+      "scope": "versioned-evidence",
+      "bytes": 3838
+    },
+    {
+      "path": "docs/PAIR-AUTO-OPERATIONS-2026-10-22.md",
+      "sha256": "7453814adbfda8f93dda5eb7d6c0284cfa743102700fafa7aa677debafcafd72",
+      "scope": "historical-reference",
+      "bytes": 12751
+    },
+    {
+      "path": "docs/PHYSICAL-MT3000-2026-10-20.md",
+      "sha256": "98d1e84717c55be668ae4a1354e587fd845db51587059d16303b0db71aef84e1",
+      "scope": "historical-reference",
+      "bytes": 11590
+    },
+    {
+      "path": "docs/PHYSICAL-ROUTER-ONLY-2026-10-20.md",
+      "sha256": "7e74f7392d9d379cfcd852b58828f368b2bd61cb52139399d1d87040b35aa79b",
+      "scope": "historical-reference",
+      "bytes": 5569
+    },
+    {
+      "path": "docs/POST-ALPHA10-EXTERNAL-PREREQUISITES.md",
+      "sha256": "5a6f925b2ec92640c766f32b73fa19af4e67505ad2b37ac464c33bc21d87f5d4",
+      "scope": "historical-reference",
+      "bytes": 2469
+    },
+    {
+      "path": "docs/POST-ALPHA10-VIRTUAL-CHECKPOINT.md",
+      "sha256": "8045e02a3e405494ddb8d796179ac76a63e0b6766a11b3396fb58d9b2559167a",
+      "scope": "historical-reference",
+      "bytes": 2475
+    },
+    {
+      "path": "docs/PRODUCT_REQUIREMENTS.md",
+      "sha256": "0e0d9d6dd1540f5ddfa2e48cb057484c365faf5bdbcb028fa0ede124a67fd042",
+      "scope": "historical-reference",
+      "bytes": 17484
+    },
+    {
+      "path": "docs/PROMPT-VALIDATION-2026-10-23.md",
+      "sha256": "b60e11bc5a840f18242104bc55d6765acc45da20aaabba7d73af86b22db23925",
+      "scope": "versioned-evidence",
+      "bytes": 4332
+    },
+    {
+      "path": "docs/PROTOCOL-SOAK-FINAL-2026-10-17.md",
+      "sha256": "982828fbfc747abb2f75efc3a8bc4ecb21c839c072d77ed12e5f24fb66213c5b",
+      "scope": "historical-reference",
+      "bytes": 5648
+    },
+    {
+      "path": "docs/PUBLICATION.md",
+      "sha256": "f50af7f213c3e43f862d299db8858fa3486bb876d1fe6c017e0afc930967dddc",
+      "scope": "current",
+      "bytes": 1707
+    },
+    {
+      "path": "docs/RELEASE-0.9.0.md",
+      "sha256": "68fda63bd52c898024b317429737bf8ee5a8a00aac798f24e3a0567a6c57c019",
+      "scope": "technical-reference",
+      "bytes": 4908
+    },
+    {
+      "path": "docs/ROADMAP.md",
+      "sha256": "81c000100a7492b962978faef1e6a7e2ac8312b43024b6e1ea7500451a49fb58",
+      "scope": "current",
+      "bytes": 1856
+    },
+    {
+      "path": "docs/ROUTER-AUTO-TEST-PLAN-2026-10-16.md",
+      "sha256": "dca82b67fbacf1cbf4aacc73259e04d55fe5e4210df051a0d61b6c2b1d42369a",
+      "scope": "historical-reference",
+      "bytes": 4110
+    },
+    {
+      "path": "docs/ROUTER-BASELINE-2026-10-16.md",
+      "sha256": "02fa4546f43e446fd2d34ecad2dc71344b895485532dbb40ed24f9df26e8e02a",
+      "scope": "historical-reference",
+      "bytes": 3413
+    },
+    {
+      "path": "docs/ROUTER-PREPARATION.md",
+      "sha256": "796384fbda57f6f9fad4702e0aece8f1255651f7551ae3b17f6a6bd195c3508e",
+      "scope": "current",
+      "bytes": 2617
+    },
+    {
+      "path": "docs/ROUTER-TEST-PREPARATION-2026-10-16.md",
+      "sha256": "2fb8f64307fd5100f467cf31c89d3855ce2feb2444f93d81125f49030fb65669",
+      "scope": "historical-reference",
+      "bytes": 3522
+    },
+    {
+      "path": "docs/SDK-ACCEPTANCE.md",
+      "sha256": "3539ca609bce8d9ab7807e08f99912d52089ba12efe31585b2781867a7d81f6c",
+      "scope": "historical-reference",
+      "bytes": 19465
+    },
+    {
+      "path": "docs/SECURITY-RETEST-2026-10-16.md",
+      "sha256": "87cb52156db87f217ea044076628cc5717a3d1e03a554027e8ce8758d0f9fddf",
+      "scope": "historical-reference",
+      "bytes": 3678
+    },
+    {
+      "path": "docs/SIDEBAR-RESPONSIVE-ALPHA10.md",
+      "sha256": "a40338fb5e706ac10634e181725b22df8010016b687d3eb94e23f361a0ac06b5",
+      "scope": "historical-reference",
+      "bytes": 1723
+    },
+    {
+      "path": "docs/STATE.md",
+      "sha256": "6aa36998e7b21d109767aeeaf64abb9b3cddc244c8e6a298b901b3891fb20dbd",
+      "scope": "current",
+      "bytes": 665
+    },
+    {
+      "path": "docs/STATISTICS-RETENTION.md",
+      "sha256": "84283f5dd14019e2401664c21cc14fb8a70d0419b93ff84215258c7b3259dbc3",
+      "scope": "current",
+      "bytes": 3335
+    },
+    {
+      "path": "docs/STYLE.md",
+      "sha256": "daffb80ff55033df44272af5e782ea2bc87c55720166abcb09f323f73769a3a0",
+      "scope": "current",
+      "bytes": 1399
+    },
+    {
+      "path": "docs/TESTED-ENVIRONMENT.en.md",
+      "sha256": "c36b43f4daf7c9655a9dc468bd8ed94e212a46d1abb764621aaaa6d0b1fbf869",
+      "scope": "current",
+      "bytes": 1756
+    },
+    {
+      "path": "docs/TESTED-ENVIRONMENT.ru.md",
+      "sha256": "f90edaef43191c5842269f8fb41587a14b6db0d03d04d888ef2963a17198dd91",
+      "scope": "current",
+      "bytes": 2682
+    },
+    {
+      "path": "docs/TODO-ALGORITHMS-UX-2026-10-17.md",
+      "sha256": "e558d6261cc9447a17fc057dac350f503d63dfcea6dbfd45e81df0473e71da8c",
+      "scope": "historical-reference",
+      "bytes": 11568
+    },
+    {
+      "path": "docs/TODO-NEXT-STAGE.md",
+      "sha256": "abb030239ebc1a273ffc77ead87675f2666ff0eaab6c9cf43e0799976c560c57",
+      "scope": "historical-reference",
+      "bytes": 16194
+    },
+    {
+      "path": "docs/TODO-POST-ALPHA10.md",
+      "sha256": "b70024ffc83fe608f67e2ce7ad3a91c7183be03d3cd431d370dd08b33016453d",
+      "scope": "historical-reference",
+      "bytes": 4432
+    },
+    {
+      "path": "docs/TODO-VIRTUAL-HARDENING.md",
+      "sha256": "2cdd0a54d02526386de528a26d8c4c9098832fc6a0ba0f264eabfda32aaea72f",
+      "scope": "historical-reference",
+      "bytes": 2472
+    },
+    {
+      "path": "docs/TODO-WORKING-SYSTEM.md",
+      "sha256": "4d849f46bbbaa553e17f80a47eb181b96edee6d9bfd61ea2ba43f606d76ee005",
+      "scope": "historical-reference",
+      "bytes": 7081
+    },
+    {
+      "path": "docs/TRAINING-AND-DOCS-AUDIT-2026-10-24.md",
+      "sha256": "ca92e0b5095ce4755ad690656824c6d8f4596f7e801aa6533eff3b6bc1b55602",
+      "scope": "versioned-evidence",
+      "bytes": 4061
+    },
+    {
+      "path": "docs/TUNNEL-COORDINATION.md",
+      "sha256": "c460c828736c0c0ea17a79e46aff6bf7260cab896d3c4519bedd604c389b2eda",
+      "scope": "current-technical",
+      "bytes": 4448
+    },
+    {
+      "path": "docs/UCI-FIX-RESULTS-2026-10-16.md",
+      "sha256": "9a554f613f7c4ff29cc9a805d4d7f5b1405728b686847f86ab31883821661a5f",
+      "scope": "historical-reference",
+      "bytes": 1915
+    },
+    {
+      "path": "docs/UCI-PENDING-CHANGES.md",
+      "sha256": "d99d664c91409232e1f9e7da889bf1ca0396d16ab959ec56e815e874b604f8a4",
+      "scope": "historical-reference",
+      "bytes": 2422
+    },
+    {
+      "path": "docs/UI-ACCEPTANCE-alpha13.md",
+      "sha256": "91be53d73ce97fdfbc526edb8259e4391797c0fda72ff313fca7656e7b53f5e2",
+      "scope": "historical-reference",
+      "bytes": 1719
+    },
+    {
+      "path": "docs/VALIDATION.md",
+      "sha256": "2ab92513a30d5d74537b13f82645a250a2508ebcc969ba112e8d46710169f073",
+      "scope": "current",
+      "bytes": 1648
+    },
+    {
+      "path": "docs/VERIFICATION-ALPHA13-2026-10-24.md",
+      "sha256": "bbbf18635bd67769faee9f488857be527dac1780e74541841c90ad13d0f03791",
+      "scope": "versioned-evidence",
+      "bytes": 5797
+    },
+    {
+      "path": "docs/VERIFICATION-ALPHA14-2026-10-24.md",
+      "sha256": "de852109c19bce46a13802ffa9b5d12965d54fa437fae02f6d451b2950dc05a5",
+      "scope": "versioned-evidence",
+      "bytes": 3846
+    },
+    {
+      "path": "docs/VERIFICATION.md",
+      "sha256": "537fb6d083751fca4e5841629b994ddc1d4c2d129c274fd95d94239122d7f932",
+      "scope": "current",
+      "bytes": 1281
+    },
+    {
+      "path": "docs/VERSIONING.md",
+      "sha256": "8962d6751622ba63ff34fd4a47a9a1ef86bbc7f81be0d8f054ba573abc52fe4b",
+      "scope": "current",
+      "bytes": 1613
+    },
+    {
+      "path": "docs/VIRTUAL-ENDURANCE.md",
+      "sha256": "9d446c76ff1f2b72e962aa44e06551a1dc4b8ea18e7ae954684e33ce19a43315",
+      "scope": "historical-reference",
+      "bytes": 3439
+    },
+    {
+      "path": "docs/WORKLOG.md",
+      "sha256": "f6c26b407d6ea7dab8f33cf3ed6580947783d736f9d6e17fe6309547efafce85",
+      "scope": "historical-reference",
+      "bytes": 197640
+    },
+    {
+      "path": "lab/openwrt-qemu/README.md",
+      "sha256": "d97409bdb1dae8ec7f447116aa68bd4026ac994e5ea3b5198255d987b22aac46",
+      "scope": "historical-reference",
+      "bytes": 3822
+    },
+    {
+      "path": "lab/README.md",
+      "sha256": "6c4abe3e107abf728c34fc5827549547afb9f472099abea6f9c11bafb861cbe5",
+      "scope": "historical-reference",
+      "bytes": 1429
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "a54aff814f9cb786229a518700f546843371d7c8290d1a6f11ca7f20a70748fd",
+      "scope": "preserved-legal",
+      "bytes": 1130
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "e3d6782c089917d9839ce68a7133a2eea4396c6b76341b84c922ee94c741e25d",
+      "scope": "preserved-legal",
+      "bytes": 2638
+    },
+    {
+      "path": "qa/ALPHA4-CHECKPOINT.md",
+      "sha256": "11b15722d0e4411ec270c1d3b6191730da3568872bd36758d80f2ef0179d9abd",
+      "scope": "historical-reference",
+      "bytes": 3749
+    },
+    {
+      "path": "qa/ALPHA5-CHECKPOINT.md",
+      "sha256": "5b76974b8efd8f4b3d9b39866e88d3aeeacd3e2bcddc4925130814dde294fbc5",
+      "scope": "historical-reference",
+      "bytes": 2535
+    },
+    {
+      "path": "qa/NATIVE_BUILD_REPORT.md",
+      "sha256": "605b9e5364b507a15f8b36dc205f7573e21cd219a86ced34ebea498a205057d0",
+      "scope": "historical-reference",
+      "bytes": 2019
+    },
+    {
+      "path": "qa/OPENWRT-VIRTUAL-REPORT.md",
+      "sha256": "6b44ef9a46d16385ec6a7e1d4a6e700809896c966479efe5ecfb047bc1e17d2f",
+      "scope": "historical-reference",
+      "bytes": 7414
+    },
+    {
+      "path": "qa/ROUTER_FAULT_REPORT.md",
+      "sha256": "f941ecf6950301068cfebdd51748a08dd05f959a4e565e860c92a9fe8a15752f",
+      "scope": "historical-reference",
+      "bytes": 5574
+    },
+    {
+      "path": "qa/STRESS_REPORT.md",
+      "sha256": "61c918bb52ec23d643c696c3a5e0f8c816f700d445a2c3ffeab76155d3b19730",
+      "scope": "historical-reference",
+      "bytes": 5421
+    },
+    {
+      "path": "qa/ui-probe/README.md",
+      "sha256": "fd7a49a8204f4373eb39a86b5a2cd6ca55555173544aff145dfad854f2a09bd6",
+      "scope": "historical-reference",
+      "bytes": 2713
+    },
+    {
+      "path": "README.md",
+      "sha256": "3857cc2d8a61b7a6f4b7b07ba2b50678e8c3bf7a58d418e1fc9acf438d29d1e1",
+      "scope": "technical-reference",
+      "bytes": 1157
+    },
+    {
+      "path": "README.ru.md",
+      "sha256": "798cdb646bbf285e6771d712d849d65a01bdb4308ef84e20571e4b1f0ba8df7c",
+      "scope": "technical-reference",
+      "bytes": 1539
+    },
+    {
+      "path": "releases/handoff-v1.0.0.md",
+      "sha256": "bd616fa4794ae8693e5090a6908f05389f7f5cbcea9f0045ccf77e2c49b2691f",
+      "scope": "historical-reference",
+      "bytes": 1868
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha12.md",
+      "sha256": "02fe999106469303ca760fc4572c1553db9c2f36f2357a79b0361094ad207bd7",
+      "scope": "historical-reference",
+      "bytes": 2797
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha14.md",
+      "sha256": "aebeda4d9efbfc31c58f99107303a7adb2c604d0de9a8d16e958263997f27210",
+      "scope": "historical-reference",
+      "bytes": 2521
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha15.md",
+      "sha256": "6e26ac98370cb10e7708631a830b2b3809519a12a1c64d796cd154355098ec24",
+      "scope": "historical-reference",
+      "bytes": 3247
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha16.md",
+      "sha256": "e96f57252599d93d58d91aaaadb8dae3cedb0d8c34f60ab537e6a2d8943d2acc",
+      "scope": "historical-reference",
+      "bytes": 1974
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha18.md",
+      "sha256": "7318b86830c0682249179767307e81d64a4ea2bc602e6a2614f0443f012baf65",
+      "scope": "historical-reference",
+      "bytes": 1941
+    },
+    {
+      "path": "releases/notes-v0.9.0-alpha19.md",
+      "sha256": "98fa676fd02f8200dd2130041100e9e6cfc8d9b65fd8c3a0f9b7ea9ebafc4347",
+      "scope": "historical-reference",
+      "bytes": 1870
+    },
+    {
+      "path": "releases/v0.7.0-alpha10.md",
+      "sha256": "a8dd338f5c64ff182538ec5c6911e14db2048cac5085e75328d70be462590972",
+      "scope": "historical-reference",
+      "bytes": 1529
+    },
+    {
+      "path": "releases/v0.7.0-alpha5.md",
+      "sha256": "b2d8dec2db0cafbea6bfd1ec617c7cd1c4d4f47094830f3ce623e279c87d0e7a",
+      "scope": "historical-reference",
+      "bytes": 2171
+    },
+    {
+      "path": "releases/v0.7.0-alpha6.md",
+      "sha256": "8ce6a0d5a7b2c0d67565448b0e007ae9f82d3477d9386996e3402ec092234dcf",
+      "scope": "historical-reference",
+      "bytes": 1883
+    },
+    {
+      "path": "releases/v0.7.0-alpha8.md",
+      "sha256": "fdbbe36bb3965308e6a5f1f625618483d5a78133610f58ac1a02578b5d0b0d20",
+      "scope": "historical-reference",
+      "bytes": 2190
+    },
+    {
+      "path": "releases/v0.7.0-alpha9.md",
+      "sha256": "f18a6674dc9e3c92270e58a3b86701babce190b679c9ef1ccf83cf0cbf64bc95",
+      "scope": "historical-reference",
+      "bytes": 1719
+    },
+    {
+      "path": "releases/v0.8.0-alpha1.md",
+      "sha256": "bf3057370723f77363b604612da7422358a930f26cb4afa4772f06aedc17b3c0",
+      "scope": "historical-reference",
+      "bytes": 2458
+    },
+    {
+      "path": "releases/v0.8.0-alpha10.md",
+      "sha256": "66c92de8136eef29e0c56905e71ec3b4fb2b73c8ec059f353e4b1e75d15f1a89",
+      "scope": "historical-reference",
+      "bytes": 1193
+    },
+    {
+      "path": "releases/v0.8.0-alpha11.md",
+      "sha256": "8ca05301bea910f1f77346df35b73dfd87ee7018c83fa16af384c4c6157c143a",
+      "scope": "historical-reference",
+      "bytes": 1536
+    },
+    {
+      "path": "releases/v0.8.0-alpha12.md",
+      "sha256": "9808d701bf129c2e167d031fe2b25d50e5f2e1719378236516229128cd09ba22",
+      "scope": "historical-reference",
+      "bytes": 1336
+    },
+    {
+      "path": "releases/v0.8.0-alpha13.md",
+      "sha256": "f95eef559bfeb6f2de04ae6b0bbfbd00826e7fc3febf01f8af161e9d861c4521",
+      "scope": "historical-reference",
+      "bytes": 1750
+    },
+    {
+      "path": "releases/v0.8.0-alpha14.md",
+      "sha256": "973c1079e5a13c28ffad6d790946c816cbbe57a4199091f74cd202d1bfe2da18",
+      "scope": "historical-reference",
+      "bytes": 1351
+    },
+    {
+      "path": "releases/v0.8.0-alpha15.md",
+      "sha256": "3d26f29d91ce1de7114b8cc63e2ec6fb86a7184370a0bd057907628208a9ea36",
+      "scope": "historical-reference",
+      "bytes": 1475
+    },
+    {
+      "path": "releases/v0.8.0-alpha16.md",
+      "sha256": "2e736d303b242d5321f15f26aaafe9579c61c1902cb4c2fd5609b5cdd7872072",
+      "scope": "historical-reference",
+      "bytes": 1833
+    },
+    {
+      "path": "releases/v0.8.0-alpha17.md",
+      "sha256": "3ebe90f1756208a0e53bf89de5b16e54d137547c000ceee02443f49a123c6c92",
+      "scope": "historical-reference",
+      "bytes": 1325
+    },
+    {
+      "path": "releases/v0.8.0-alpha18.md",
+      "sha256": "e3f5f0c655e1d331aa0a4082d28d1f3defff2e7f5397a7452fe862e8b986549b",
+      "scope": "historical-reference",
+      "bytes": 2175
+    },
+    {
+      "path": "releases/v0.8.0-alpha19.md",
+      "sha256": "2acb1ff4fafbbf2b834619d0e83a867c87a41ea6e07064ba5b7d9d9641cd63fb",
+      "scope": "historical-reference",
+      "bytes": 1326
+    },
+    {
+      "path": "releases/v0.8.0-alpha2.md",
+      "sha256": "f524e6d9680c5eb8f87976f6ee6caba23ee4df4ea80038897f07f058a0341516",
+      "scope": "historical-reference",
+      "bytes": 2422
+    },
+    {
+      "path": "releases/v0.8.0-alpha20.md",
+      "sha256": "bcf7ad4ee7b9402923951acb172a0f6eae19a71aace0d87a3945eae1f21f5ca8",
+      "scope": "historical-reference",
+      "bytes": 2025
+    },
+    {
+      "path": "releases/v0.8.0-alpha21.md",
+      "sha256": "bc962ce20d0acb0b047e1a9728d2d41dc3a9e4fdc2e9c249ea027671c5a4cda2",
+      "scope": "historical-reference",
+      "bytes": 1936
+    },
+    {
+      "path": "releases/v0.8.0-alpha22.md",
+      "sha256": "aa8441de86ebd8488a48f0ef3a4d4e2d032c0738f933452ecc7bd9edb78404a4",
+      "scope": "historical-reference",
+      "bytes": 1623
+    },
+    {
+      "path": "releases/v0.8.0-alpha3.md",
+      "sha256": "4332547734a3653feda615845077631a47b93f31fe31ca717c1ace507371182a",
+      "scope": "historical-reference",
+      "bytes": 1358
+    },
+    {
+      "path": "releases/v0.8.0-alpha4.md",
+      "sha256": "b7d220da48774c0bd91820231ef64970fabfe0906029007d709a755eb310a336",
+      "scope": "historical-reference",
+      "bytes": 1562
+    },
+    {
+      "path": "releases/v0.8.0-alpha5.md",
+      "sha256": "a65c1bb61d29d4d8af81b442f9d41203b4d1b3e2491933af4d2d998d26b1c178",
+      "scope": "historical-reference",
+      "bytes": 1347
+    },
+    {
+      "path": "releases/v0.8.0-alpha6.md",
+      "sha256": "7767004d0d37e4c1a654559a9c635186731d34bca4fd15524c1fc973d9b8b92a",
+      "scope": "historical-reference",
+      "bytes": 1471
+    },
+    {
+      "path": "releases/v0.8.0-alpha7.md",
+      "sha256": "62c5144d31558b73cec6eb22875a6dfbc4313042cb54a5a5f48300f2545d9650",
+      "scope": "historical-reference",
+      "bytes": 1233
+    },
+    {
+      "path": "releases/v0.8.0-alpha8.md",
+      "sha256": "cb28a430f8001a87e287f6e78d4107f793d0aae9217d4beae9a8c4a55ca6de97",
+      "scope": "historical-reference",
+      "bytes": 1499
+    },
+    {
+      "path": "releases/v0.8.0-alpha9.md",
+      "sha256": "c20d47a350f1dc85a8f624187b369751a59403fa853838aa9512941646b8edb6",
+      "scope": "historical-reference",
+      "bytes": 2109
+    },
+    {
+      "path": "releases/v0.9.0-alpha1.md",
+      "sha256": "46ab7635e0b5384cab4da2bfe0450d8f5ca7c451a435b736de00fb5f25fe5ca1",
+      "scope": "historical-reference",
+      "bytes": 2553
+    },
+    {
+      "path": "releases/v0.9.0-alpha2.md",
+      "sha256": "cc3c05f86b24edd5cedf94f0a2fd75771108dde066c2c2178223f1c25790feff",
+      "scope": "historical-reference",
+      "bytes": 2371
+    },
+    {
+      "path": "releases/v0.9.0-alpha27.md",
+      "sha256": "f1d305c145d57efedb4414ba205fba6abe7a9a6cc1125775814689bcd9bd2f95",
+      "scope": "historical-reference",
+      "bytes": 2388
+    },
+    {
+      "path": "releases/v0.9.0-alpha3.md",
+      "sha256": "ede1cd969619cc3eb2b1554cae9f4087680c43ab61848f95b7373bc895017680",
+      "scope": "historical-reference",
+      "bytes": 3654
+    },
+    {
+      "path": "releases/v0.9.0-alpha35.md",
+      "sha256": "012bef7a85bc33556e8b7ac2dc4bfbeb96a6715774e646b64be8e8de521e04e2",
+      "scope": "historical-reference",
+      "bytes": 4256
+    },
+    {
+      "path": "releases/v0.9.0-alpha6.md",
+      "sha256": "41b493bde8ef43bf8f8980371ded6c100ab62a467c5e8dd36dbe4addb9458442",
+      "scope": "historical-reference",
+      "bytes": 2440
+    },
+    {
+      "path": "releases/v0.9.0-alpha9.md",
+      "sha256": "d3cd4ac291a53166d549efeddf11fd898abb1aeb90dd79185fd66e31020b1286",
+      "scope": "historical-reference",
+      "bytes": 1514
+    },
+    {
+      "path": "releases/v0.9.0.md",
+      "sha256": "dea498e0698033e10a752079cf62a6b2794f92ff6286ed01df5ee4f44f3e7856",
+      "scope": "technical-reference",
+      "bytes": 3799
+    },
+    {
+      "path": "releases/v0.9.1-alpha13.md",
+      "sha256": "edbab2b0237f4940eb2a4048640e3355f9d214d0d053608262dfed0c7efdb380",
+      "scope": "versioned-evidence",
+      "bytes": 3609
+    },
+    {
+      "path": "releases/v0.9.1-alpha14.md",
+      "sha256": "9d01f7f02c03a9a0386f775534c36482df609aa43511af6a7d8e8a85e5949a44",
+      "scope": "versioned-evidence",
+      "bytes": 2158
+    },
+    {
+      "path": "router/files/usr/share/homensai-vpn/LICENSE",
+      "sha256": "a54aff814f9cb786229a518700f546843371d7c8290d1a6f11ca7f20a70748fd",
+      "scope": "preserved-legal",
+      "bytes": 1130
+    },
+    {
+      "path": "router/files/usr/share/licenses/homensai-auto-vpn/LICENSE",
+      "sha256": "a54aff814f9cb786229a518700f546843371d7c8290d1a6f11ca7f20a70748fd",
+      "scope": "preserved-legal",
+      "bytes": 1130
+    },
+    {
+      "path": "router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md",
+      "sha256": "5cb86a7ca41ffc3a281302a6a5335694b5e848011f9ba69b63b09a80fb480757",
+      "scope": "preserved-legal",
+      "bytes": 2296
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/NOTICE.txt",
+      "sha256": "3b8bc029ef1724df3d34ba4778b721d1a254124d0315bc5240579c75f133aaea",
+      "scope": "preserved-legal",
+      "bytes": 2431
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/style/LICENSE",
+      "sha256": "ca95b7411e626e9e912d16537b4889e2193ef826845245143b3f5d29d0850db9",
+      "scope": "preserved-legal",
+      "bytes": 1230
+    },
+    {
+      "path": "router/README.md",
+      "sha256": "658ba7eb09d211527501f18278d5e5582f26f92b8094af7a5f0ccb15c9a81318",
+      "scope": "current",
+      "bytes": 1382
+    },
+    {
+      "path": "router-test-kit/EMERGENCY.md",
+      "sha256": "5557f7a95f29b17d246dc826511e47f40a0752abd17249f18f009cb8cb46dcf7",
+      "scope": "current",
+      "bytes": 2456
+    },
+    {
+      "path": "router-test-kit/README.md",
+      "sha256": "1821af2252cc8e88ffdf35ca128abb968e71199514f1164ac1c84d3c8850bb19",
+      "scope": "current",
+      "bytes": 1479
+    },
+    {
+      "path": "scripts/recovery/README.md",
+      "sha256": "2d148ef725aa4368a698b364e20e38a2dad0963e80fe61da460d3edf6f174a8d",
+      "scope": "historical-reference",
+      "bytes": 2145
+    },
+    {
+      "path": "START-HERE.md",
+      "sha256": "1d7c60635ed3014fd978085fe3a4304225bc92c1e2a32c0b0bb0e7841a8ac136",
+      "scope": "current",
+      "bytes": 2130
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/OFL.txt",
+      "sha256": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d",
+      "scope": "preserved-legal",
+      "bytes": 4363
+    },
+    {
+      "path": "router/ai_prompt.inc.js",
+      "sha256": "50299085f1cb10970f8a21b1c880d36c54d200dc35cc284e65f3ece4014e6773",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 52224
+    },
+    {
+      "path": "router/analytics_panel.inc.js",
+      "sha256": "b865f34f2435f15556352229273d0aca4a0587ea5531b6cc79da0146157a5937",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 56067
+    },
+    {
+      "path": "router/attribution_panel.inc.js",
+      "sha256": "195c41b23c7a46b68e0c044145704b7891b55d80ab923854e76bf41870804937",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 1325
+    },
+    {
+      "path": "router/auto_live_chart.inc.js",
+      "sha256": "895e5da6bb3cd251bc0f0dac5277d8fb556aa6a10033eaaae2291fbe3c06f7c1",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 18971
+    },
+    {
+      "path": "router/auto_panel.inc.js",
+      "sha256": "06d9e56a55843fe6e209056c4b1bd411c008ef9e46769666eb6671b69b43b448",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 63063
+    },
+    {
+      "path": "router/channel_guidance.inc.js",
+      "sha256": "8577e0ea039e8b018b9892c384230be106fb5e875c3942585d23f7486f9ffff0",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 6643
+    },
+    {
+      "path": "router/connectivity_panel.inc.js",
+      "sha256": "74295b65e6399c05a4f8a46796341f5d5ab122257cf1d173236fa8dea90b7931",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 8480
+    },
+    {
+      "path": "router/country_panel.inc.js",
+      "sha256": "ea0f96a1d0848f679708572d68ae47ce92ae3f7a4ee89ddd0afa5bfb1e794f22",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 5186
+    },
+    {
+      "path": "router/design_panel.inc.js",
+      "sha256": "21288d5001bdcb878dd1429d2e6fc13ffbc82e40b6ba04d2235d251e04a328f3",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 7403
+    },
+    {
+      "path": "router/design_views.inc.js",
+      "sha256": "524af3c55d3bc6ac2a8d0b8f745a0cd9fc6bdf98150b60c0e79cfc57737c4d16",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 25197
+    },
+    {
+      "path": "router/element_guard.inc.js",
+      "sha256": "4d7e590b2139cea488f1cac312068573c15812ad93cbb1daaea410ba1a7c49e8",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 1271
+    },
+    {
+      "path": "router/error_links.inc.js",
+      "sha256": "3312c558973b199d35954f63764b974cd6538b983b995feec4f019a8b0d0afe3",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 2756
+    },
+    {
+      "path": "router/error_rows_extra.inc.js",
+      "sha256": "15aa445c91460e65f8387ad3b1b48d42402d36e096199e6433a484ab8d65da14",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 159734
+    },
+    {
+      "path": "router/error_table.inc.js",
+      "sha256": "cedabd73fd2e9ea5537cb85acdb1eed77d3535abe67e70a913fbee792f7b225d",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 67547
+    },
+    {
+      "path": "router/fault_panel.inc.js",
+      "sha256": "9f237aa03ca3f9c4eba494c2acdc7d0ddf9b4d05746d9826297cdc57ce98264f",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 16683
+    },
+    {
+      "path": "router/files/usr/sbin/homensai-vpn-emergency",
+      "sha256": "b5d5bf4554d81a478ce55244775ba4679bd46a91b7815f37813c6ffe32bc2df3",
+      "scope": "helper-source",
+      "bytes": 3357
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/client-test.ps1",
+      "sha256": "71079f12287744aafea46e7f0df84d3575c86c493304d7e90d09b21cfac46697",
+      "scope": "helper-source",
+      "bytes": 27009
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/start-lan-helper.cmd",
+      "sha256": "b1e687d63dd37fe067723af30d29afc63c7c5a1be45282b431971adb6bbe12cc",
+      "scope": "helper-source",
+      "bytes": 417
+    },
+    {
+      "path": "router/files/www/luci-static/resources/view/homensai-vpn/start-lan-helper.ps1",
+      "sha256": "3a3a2511d8437420685b6b6545fea4476b6173be936071478269688e2b630663",
+      "scope": "helper-source",
+      "bytes": 2899
+    },
+    {
+      "path": "router/fool_guard.inc.js",
+      "sha256": "f5dd59d1595675395e8abaac066496ec42388faf6160da040bf2bbd33a770045",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 13031
+    },
+    {
+      "path": "router/help_panel.inc.js",
+      "sha256": "067c1488217d102f7fd75dc5090652f43d56ee604002292b09a66722ed60c491",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 84768
+    },
+    {
+      "path": "router/identity_panel.inc.js",
+      "sha256": "e461a9c60b71ca3c5b8811633298566db0f5d7645e2e538bdb8e3159b679e697",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 2685
+    },
+    {
+      "path": "router/incident_panel.inc.js",
+      "sha256": "ff5e5476ea7808eecfc3f8c2322ba0e9b50f7cce4070e07403e4376597bd6e3e",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3543
+    },
+    {
+      "path": "router/inventory_reliable.inc.js",
+      "sha256": "5a893d19722f435f0c423969062e7105ea1473735aa5d103323e7e65729ebca5",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 562
+    },
+    {
+      "path": "router/journal_panel.inc.js",
+      "sha256": "ab8e82f7c11e1e36d843d5cb6f71985b0100da1e4eef5e016b42bad349922410",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 20095
+    },
+    {
+      "path": "router/latency_chart.inc.js",
+      "sha256": "4bcf41ffd270f0420a1c5e355cb67cb34997b352c81cbfb853ad3f669768d218",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 5753
+    },
+    {
+      "path": "router/latency_panel.inc.js",
+      "sha256": "64eec0456a0e62c6868bf4c3d0730e2e39a335173bd827b9f60979bf0f7607ea",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 14591
+    },
+    {
+      "path": "router/learn_panel.inc.js",
+      "sha256": "5124493ba531b9efafefa9e8409a8e2b9dd2303bf226703c0736ffd1e3b2548f",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 36496
+    },
+    {
+      "path": "router/learn_scenes.inc.js",
+      "sha256": "9ace1d8c69a25ccf2ebabb7a01be9fd2441fb4d651adbd829a2584bde7d7d756",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 8699
+    },
+    {
+      "path": "router/live_log.inc.js",
+      "sha256": "37803ce833620dec15bcdec7010e34e30c32f6afadc5ef08e8345ed5569af14a",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3971
+    },
+    {
+      "path": "router/live_terminal.inc.js",
+      "sha256": "4736ecb178bae2996a5a757db0dc2b8fe75100d6cec31115df93b11f8fe08f6e",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 11602
+    },
+    {
+      "path": "router/manual_panel.inc.js",
+      "sha256": "695d9c4ab15c969d9012064c2db4354cdd5fc6cd3c80ef8028b243ced3d304ba",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 19507
+    },
+    {
+      "path": "router/monitor_panel.inc.js",
+      "sha256": "3f0367ed1c879c4ff8dec6bc8722f58c3f50daa2cbd75ccb6d794872d35c9c29",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 8455
+    },
+    {
+      "path": "router/onboarding_panel.inc.js",
+      "sha256": "d317bebb430007ccc866ded6f498edd61a5d725dfcec1c7d4574cb66f9a15b41",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 53997
+    },
+    {
+      "path": "router/readiness_panel.inc.js",
+      "sha256": "dcec200edfb0703d283f78aa6f38e679caad47b802d41fb333f075ae2bd82561",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 28742
+    },
+    {
+      "path": "router/recovery_panel.inc.js",
+      "sha256": "7170ac5f15acb4a94ace84094690eb9eb06f60ebeea101ccc8ecf46f4f334571",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 13917
+    },
+    {
+      "path": "router/router_link.inc.js",
+      "sha256": "cfb0d38fa35696707bea3ff6fd5c3f6921de7ca6b160ab82093b860cf4bddacd",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 848
+    },
+    {
+      "path": "router/servers_panel.inc.js",
+      "sha256": "962e1fa8cc0df8677f3745da5aff612a808906e3516852121b23b5e9b920e862",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3157
+    },
+    {
+      "path": "router/setup_guides.inc.js",
+      "sha256": "c178c4746b4f6757e43fe7e1e94cc4fd3180ad0bf2604ebdd74a8141ba473726",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 14332
+    },
+    {
+      "path": "router/setup_wizard.inc.js",
+      "sha256": "467b04410e253e572aeb39b400283ed430ec1c21917e5a4365b63b2d33ba2341",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 24122
+    },
+    {
+      "path": "router/sidebar_layout.inc.js",
+      "sha256": "503cc05e1cf8e841be210df885a3fed7f80eb3417028e1a4d749fb44e62da6ff",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 2514
+    },
+    {
+      "path": "router/sidebar_status.inc.js",
+      "sha256": "bf91b9c7bf1c94a37f8869c6e63c23ab2a48266412e63261dd3feb01022b1fbf",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3730
+    },
+    {
+      "path": "router/speed_panel.inc.js",
+      "sha256": "e5b884c018f51246072db1dc922abd0aeef2053b17c89b5679f48615eedad45b",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 11869
+    },
+    {
+      "path": "router/speed_table.inc.js",
+      "sha256": "a152456331d9b7a68e90727f116b517c2bacac2dd4e952d669e02a5590e05507",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 11160
+    },
+    {
+      "path": "router/summary_panel.inc.js",
+      "sha256": "706555d36f46abc77602a86a4a42c9ea439596b18aeffb815fc65498f609833e",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 22534
+    },
+    {
+      "path": "router/terms_panel.inc.js",
+      "sha256": "7e52df65bd7543f2c66c885ebe99df9724183119f038b3783b05d3e2b753d92d",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 19958
+    },
+    {
+      "path": "router/theme_panel.inc.js",
+      "sha256": "1f5ce7282dc3b0cc555e2076d4005de7f09e0bf4088fd5503b7f010de89c43bd",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 1180
+    },
+    {
+      "path": "router/traffic_chart.inc.js",
+      "sha256": "352d28e7e89ea0e947973c70ce8be368195491ba5e7d22bf5d083fa432b0d8d1",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 7658
+    },
+    {
+      "path": "router/traffic_panel.inc.js",
+      "sha256": "13f4d4fb7c288ee2ad46e801ba790217b71ca451cdea41762dc41ab2dfa9e036",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 2499
+    },
+    {
+      "path": "router/ui_logic.inc.js",
+      "sha256": "a338c60c48b3b7deb16e27a3059378217f73f9d1b3daa8f7456b80172de6b39d",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3490
+    },
+    {
+      "path": "router/vendor_diagnostics.inc.js",
+      "sha256": "05d275c466b26ffa47ac5a24521a5ce948aa38a9a87b48fdfad0d8b4dfeb82ea",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 20058
+    },
+    {
+      "path": "router/viewport_state.inc.js",
+      "sha256": "da86e50a83d2994301ccf48fcf57708d1de3b5867cababad83f08e17c1ae2671",
+      "scope": "runtime-copy-and-wizard-source",
+      "bytes": 3486
+    },
+    {
+      "path": "router-test-kit/00-mt3000-monitor-preflight.sh",
+      "sha256": "b9f44eec0d32c3222f80b2293195fdaf96c43fbd07fe3ec29ce6b00745b41d9f",
+      "scope": "helper-source",
+      "bytes": 4802
+    },
+    {
+      "path": "router-test-kit/00-platform-probe.sh",
+      "sha256": "58fa7091de99190811566a8b2b56e034577a4272b16697e10071f4830e64dd1f",
+      "scope": "helper-source",
+      "bytes": 2864
+    },
+    {
+      "path": "router-test-kit/00-runtime-probe.sh",
+      "sha256": "1c02cffd65305e8e52dfdf4d6fce315a16baf3572a70cae31a35c78d8bed0d68",
+      "scope": "helper-source",
+      "bytes": 4877
+    },
+    {
+      "path": "router-test-kit/01-preflight.sh",
+      "sha256": "76f5b525d654d6be71e8ca0307e51103446d634364f8f8399504c90def6e82b4",
+      "scope": "helper-source",
+      "bytes": 5271
+    },
+    {
+      "path": "router-test-kit/02-install.sh",
+      "sha256": "ae93a88d4384d61fdef40e3aca2eff28572981aac6db5c9b09f63dc313a3ff59",
+      "scope": "helper-source",
+      "bytes": 1879
+    },
+    {
+      "path": "router-test-kit/03-verify.sh",
+      "sha256": "55fc6c0c5c2f24fab276dac8cfd21a9ec7e80de1b8c85ec4c3d941b6d49e597f",
+      "scope": "helper-source",
+      "bytes": 2653
+    },
+    {
+      "path": "router-test-kit/04-uninstall.sh",
+      "sha256": "53395dfd0a8c0cce50b0b291f0b45725fa6522e5c3ce7463ada16bb864a806d3",
+      "scope": "helper-source",
+      "bytes": 926
+    },
+    {
+      "path": "router-test-kit/05-emergency.sh",
+      "sha256": "1968972f5e24343af10b828ad3e9fee871e338b703eebbec6c45cb9cb49e9cf4",
+      "scope": "helper-source",
+      "bytes": 3182
+    }
+  ],
+  "snapshot": "Working-tree file inventory before publication-only handoff/receipt closure; historical snapshot hashes, not a claim of immutable future document bytes",
+  "recorded_utc": "2026-10-24T18:58:28.470891+00:00"
+}

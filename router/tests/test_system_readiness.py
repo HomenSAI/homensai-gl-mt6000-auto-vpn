@@ -7,6 +7,13 @@ import subprocess
 path=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn/system_readiness.py'
 spec=importlib.util.spec_from_file_location('system_readiness',path);module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
 class ReadinessTests(unittest.TestCase):
+    def test_free_space_does_not_hide_readonly_configuration_storage(self):
+        from types import SimpleNamespace
+        for readonly,expected in [(True,'fail'),(False,'pass')]:
+            with patch.object(module.subprocess,'run',side_effect=OSError),patch.object(module.shutil,'disk_usage',return_value=SimpleNamespace(free=30*1024*1024)),patch.object(module.os,'statvfs',return_value=SimpleNamespace(f_flag=1 if readonly else 0),create=True),patch.object(module.os,'access',return_value=True):
+                data=module.snapshot(100)
+            check=next(c for c in data['checks'] if c['code']=='CONFIG-STORAGE-FREE')
+            self.assertEqual(check['state'],expected);self.assertEqual(data['config_storage_writable'],not readonly)
     def test_board_allowlist_and_no_permission(self):
         reply=subprocess.CompletedProcess([],0,b'{"model":"x86","board_name":"generic","serial":"private","release":{"version":"21.02"},"hostname":"private"}')
         with patch.object(module.subprocess,'run',return_value=reply):s=module.snapshot(100)

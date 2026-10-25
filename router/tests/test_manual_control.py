@@ -63,6 +63,14 @@ class ManualControlTests(unittest.TestCase):
         self.assertIs(answer['completed'], False)
         return self.data['manual-control.json']
 
+    def test_programmatic_source_is_kept_without_enabling_auto(self):
+        answer=manual.request('reserve',self.revision,request_source='programmatic')
+        self.assertTrue(answer['accepted']);self.assertEqual(self.data['manual-control.json']['request_source'],'programmatic')
+        self.assertEqual(manual.public_status()['request_source'],'programmatic')
+        self.assertEqual(self.data['auto-control.json'],{})
+        malformed=dict(self.data['manual-control.json'],request_source={'private':'sentinel'})
+        self.assertFalse(manual.valid_record(malformed))
+
     def test_queue_never_enables_auto_or_reports_completion(self):
         old_revision = self.revision
         answer = self.queue()

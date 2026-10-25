@@ -1,6 +1,7 @@
 """Read-only environment snapshot; never authorizes native activation."""
 import re
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -29,10 +30,12 @@ def snapshot(now=None):
             text=vendor.read_text(encoding='utf8').strip()
             if re.fullmatch(r'[A-Za-z0-9 ._+~-]{1,96}',text):board['firmware']=text
     except (OSError,ValueError,UnicodeError):pass
-    try:free=shutil.disk_usage('/etc').free
+    try:free=shutil.disk_usage('/etc/config').free
     except OSError:free=None
-    checks.append({'code':'CONFIG-STORAGE-FREE','state':'unknown' if free is None else 'pass' if free>=1048576 else 'fail'})
+    try:writable=not bool(os.statvfs('/etc/config').f_flag&getattr(os,'ST_RDONLY',1)) and os.access('/etc/config',os.W_OK)
+    except (OSError,AttributeError):writable=None
+    checks.append({'code':'CONFIG-STORAGE-FREE','state':'fail' if writable is False else 'unknown' if free is None or writable is None else 'pass' if free>=1048576 else 'fail'})
     from preparation_status import snapshot as preparation_snapshot
-    return {'time':now,'board':board,'checks':checks,'config_free_bytes':free,
+    return {'time':now,'board':board,'checks':checks,'config_free_bytes':free,'config_storage_writable':writable,
             'preparation':preparation_snapshot(),
             'native_permission':'not_assessed','scope':'Dependencies only; native Start performs authoritative certification and lease checks.'}

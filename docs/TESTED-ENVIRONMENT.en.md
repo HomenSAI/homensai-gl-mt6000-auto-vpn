@@ -1,9 +1,16 @@
-# Tested environments —23 October 2026
+<!-- doc-role: current -->
+# Tested environment and limits
 
-Current continuous mode was tested on a dedicated GL.iNet GL-MT3000/Beryl AX, GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, mediatek/mt7981, kernel 5.4.211. Evidence is router-originated IPv4 DNS/twoHTTPS probes and actual route-policy selection. [Exact release evidence](RELEASE-0.9.0.md).
+The authoritative current delivered version is [CURRENT-STATUS](CURRENT-STATUS.md). Source-candidate documentation is not acceptance of a new package. Each versioned receipt retains its own scope.
 
-Historical MT6000/Flint2:GL.iNet 4.11.0, OpenWrt 21.02-SNAPSHOT, kernel 5.4.238; the15October passport remains in tested-environment-2026-10-15.json. It is not a current primary-MT6000 query or current continuous-mode acceptance on that device.
+| Evidence | What it establishes | What it does not establish |
+|---|---|---|
+|Exact-source dual-runtime CI|The named committed code/tests and matching canonical artifact in the stated runtimes|Physical device, browser visuals or LAN|
+|Source/DOM and synthetic browser personas|Guarded UI/validation behavior against frozen fixtures|Real firmware/VPN routing, autonomous external models|
+|Actual isolated x86 OpenWrt VM|Its install/files/UCI/RPC/HTTP/kernel/lifecycle cases|A spoofed GL hardware pass or real external LAN|
+|Named MT3000/4.11.0 receipt|That package's actual installed/served bytes, controlled operation and measured router IPv4 state|Every provider, MT6000 continuous mode, IPv6/KillSwitch/day-long/power-cut acceptance|
+|LAN helper SelfTest/CheckOnly|The stated offline or prerequisite mode|A completed Internet/switching trial|
 
-Isolated builds/checks use Python 3.11 and Python 3.9.15/Lua 5.1/CJSON. Generic x86/QEMU results are separate lab evidence. IPK Architecture:all describes interpreted files, not universal hardware compatibility; actual model/firmware/native-component checks still apply.
+[Alpha13 delivery and preserved failures](VERIFICATION-ALPHA13-2026-10-24.md) is a versioned example. Its first60s VM reboot window failed; a longer bounded observation confirmed eventual fresh monitoring and preserved configuration. It is not a guaranteed startup SLA. [Alpha10 VM/prompt recipes](handoff/VM-AUDIT-2026-10-24.md) are historical, not the new source's acceptance.
 
-No independent LAN client, IPv6 failover,24-hour soak, physical power-cut or arbitrary other-firmware acceptance is claimed. [Current status](CURRENT-STATUS.md).
+External-LAN/IPv6/KillSwitch/native physical-browser visual and autonomous ChatGPT/Claude execution remain separate unless explicitly evidenced in a newer receipt. No matrix proves every possible network/firmware/power combination. [Roadmap](ROADMAP.md).

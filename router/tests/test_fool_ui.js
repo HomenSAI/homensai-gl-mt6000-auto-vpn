@@ -55,7 +55,11 @@ const click=node=>node.attrs.click({currentTarget:node,target:node});
   // Monitor preferences reject silently coercible numeric text and do not duplicate a pending save.
   m=make();c=m.ctx;c.monitorPreferences({settings:{interval:0}});save=button(m.modal,'Save monitoring preferences');assert(save.disabled,'invalid stored zero is preserved');
   const interval=field(m.modal,'Probe interval, seconds');assert.equal(interval.value,0);interval.value='30';interval.emit('input');assert(!save.disabled);
-  const monitorSave=click(save);click(save);assert.equal(m.calls.length,1);assert.equal(m.calls[0].args[0],30);m.finish({saved:false});await monitorSave;
+  const liveLimit=field(m.modal,'Live journal observations'),historyDays=field(m.modal,'Detailed history, days');
+  liveLimit.value='2001';liveLimit.emit('input');assert(save.disabled);liveLimit.value='100';liveLimit.emit('input');
+  historyDays.value='0';historyDays.emit('input');assert(save.disabled);historyDays.value='2';historyDays.emit('input');assert(!save.disabled);
+  const monitorSave=click(save);click(save);assert.equal(m.calls.length,1);assert.equal(m.calls[0].args[0],30);assert.deepEqual(Array.from(m.calls[0].args.slice(4)),[100,2]);m.finish({saved:false});await monitorSave;
+  m=make();c=m.ctx;c.monitorPreferences({settings:{live_log_limit:1500,history_days:1}});assert.equal(field(m.modal,'Live journal observations').value,1500);assert.equal(field(m.modal,'Detailed history, days').value,1);
   // Recovery review cannot convert exponent syntax into an accepted integer.
   m=make();c=m.ctx;c.recoveryWizard({settings:{}});const failures=field(m.modal,'Consecutive failures before switching (3–10)');failures.value='3e0';failures.emit('input');save=button(m.modal,'Next');assert(save.disabled);click(save);assert.equal(m.calls.length,0);assert(field(m.modal,'Return policy'));
   c.setupWizard({settings:{telegram_configured:false}},'telegram');assert(button(m.modal,'Next').disabled);assert(m.modal.textContent.includes('No stored token is available.'));

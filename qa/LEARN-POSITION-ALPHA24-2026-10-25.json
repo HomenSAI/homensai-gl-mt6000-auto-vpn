@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "result": "PASS_IN_PLACE_CHECKBOX_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha24",
+  "tested_product_source": "87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha24-1_all.ipk",
+    "bytes": 856098,
+    "sha256": "9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20"
+  },
+  "ci": [
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha24-1_all.ipk",
+      "bytes": 856098,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20",
+      "skipped_tests": 16,
+      "source": "87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54",
+      "ui_suites": 56,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha24-1_all.ipk",
+      "bytes": 856098,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20",
+      "skipped_tests": 0,
+      "source": "87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "focused_learning": {
+    "result": "PASS_GENERATED_INSTALLED_MODULE_REGRESSION",
+    "version": "0.9.1-alpha24",
+    "module": "dashboard100",
+    "sha256": "1ac6011ed0aba7e863ddfc85d7d9df30feca4f0adaa63469d0c457b1a68153f3",
+    "matches_installed_payload_manifest": true,
+    "questions_each_locale": 11,
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "exact_dom_scroll_focus_hash_preserved_on_choice": true,
+    "poll_restores_same_retained_checkbox": true,
+    "grade_gate_and_stale_actions_passed": true,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "features": {
+    "checkbox_changes_do_not_redraw_course": true,
+    "same_question_dom_hash_scroll_focus_preserved": true,
+    "same_check_button_dynamic_disabled_guard": true,
+    "poll_restores_exact_retained_control": true,
+    "scoring_wrong_only_retry_and_stale_actions_preserved": true,
+    "no_learning_router_rpc": true
+  },
+  "canonical_byte_proof": {
+    "canonical_source_sha256": "1ac6011ed0aba7e863ddfc85d7d9df30feca4f0adaa63469d0c457b1a68153f3",
+    "windows_working_copy_crlf_differs_from_linux_canonical": true,
+    "canonical_payload_matches_installed_http_https": true,
+    "production_payload_changed": false
+  },
+  "physical_receipt": "qa/MT3000-ALPHA24-2026-10-25.json",
+  "native_browser_visual": "NOT_VERIFIED"
+}

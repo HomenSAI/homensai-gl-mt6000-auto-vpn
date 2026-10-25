@@ -1,5 +1,8 @@
-# Current state
+<!-- doc-role: current -->
+# State reference
 
-The released application is **0.9.0**. Read [CURRENT-STATUS](CURRENT-STATUS.md), [release evidence](RELEASE-0.9.0.md), [roadmap](ROADMAP.md) and [latest task handoff](handoff/CURRENT.md).
+The authoritative dated installed/released state is [CURRENT-STATUS](CURRENT-STATUS.md); do not keep another copied guide here.
 
-Older stopped review windows, physical versions and prototype-only main descriptions are historical. The current dedicated MT3000 has verified two-channel router-probed IPv4 operation and operator switching. This does not establish external LAN, unattended boot Auto,24h/power-cut or MT6000 continuous-mode acceptance. GitHub and Gitea main retain different histories with matching reviewed release trees; normal publication does not force or overwrite older tags/assets.
+Runtime state is observed through authenticated `homensai-vpn status`: monitor timestamp, `auto_control`, `native_failover`, `channel_path`, per-profile evidence and history. Queue intent, controller phase, connected interface and verified route are separate fields. Missing/stale data never becomes success.
+
+[Behavior RU](CURRENT-STATE.ru.md) · [Behavior EN](CURRENT-STATE.en.md) · [Device receipt](../qa/MT3000-ALPHA13-2026-10-24.json) · [Resume handoff](handoff/CURRENT.md).

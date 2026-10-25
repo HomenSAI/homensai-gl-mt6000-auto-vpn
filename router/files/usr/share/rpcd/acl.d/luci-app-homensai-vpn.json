@@ -9,7 +9,8 @@
           "statistics",
           "inventory",
           "events",
-          "priority_preview"
+          "priority_preview",
+          "speed_live"
         ]
       }
     },

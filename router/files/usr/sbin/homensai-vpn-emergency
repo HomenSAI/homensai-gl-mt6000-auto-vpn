@@ -2,11 +2,11 @@
 # HomenSAI Auto VPN emergency helper (installed as /usr/sbin/homensai-vpn-emergency). Use ONLY if LAN clients lost internet after a native
 # transaction (owned nft guard left closed) or the monitor misbehaves. Needs SSH/console to the router.
 #   homensai-vpn-emergency show            read-only: guard, journal, current policy order
-#   homensai-vpn-emergency stop-auto       stop own services, native_enabled=0 (no network changes)
+#   homensai-vpn-emergency stop-auto       stop own services, disable own Auto flag; managed rollback may restore policies/interfaces
 #   homensai-vpn-emergency remove-guard    delete ONLY the owned nft table, after printing state
 #   homensai-vpn-emergency start           start the own monitor and controller again
 #   homensai-vpn-emergency close-journal   archive a stale journal after YOU restored the VPN rules by hand
-# It never reorders VPN rules by itself. See EMERGENCY.md for restoring the original order.
+# Stop delegates managed restoration to the native controller. See EMERGENCY.md; verify the resulting route.
 TABLE=homensai_vpn_guard
 case "$1" in
 show)
@@ -18,11 +18,11 @@ show)
   uci show route_policy 2>/dev/null | grep -E "^route_policy\.[^.=]+=|\.via=|\.enabled=" | head -60
   ;;
 start)
-  /etc/init.d/homensai-vpn start && echo "own services started (monitor and controller)"
+  /etc/init.d/homensai-vpn start && echo "own services started; Auto and connectivity still require separate confirmation"
   ;;
 stop-auto)
-  /etc/init.d/homensai-vpn stop
-  if [ -n "$(uci -q changes homensai_vpn)" ]; then echo "WARN pending uci changes exist for homensai_vpn; not committing them"; fi
+  if ! /etc/init.d/homensai-vpn stop; then echo "STOP: service stop failed; saved Auto flag was not changed. Inspect managed recovery before retrying."; exit 1; fi
+  if [ -n "$(uci -q changes homensai_vpn)" ]; then echo "STOP: own services stopped; pending homensai_vpn changes remain uncommitted. Resolve them before changing the saved Auto flag."; exit 1; fi
   uci set homensai_vpn.main.native_enabled=0 && uci commit homensai_vpn && echo "native_enabled=0 committed"
   ;;
 close-journal)

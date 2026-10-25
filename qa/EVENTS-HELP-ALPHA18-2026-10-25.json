@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "result": "PASS_EVENTS_HELP_SOURCE_AND_ROUTER_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha18",
+  "tested_product_source": "76498b5db82e8f5fa25f22d946b338c26b39c869",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha18-1_all.ipk",
+    "bytes": 845457,
+    "sha256": "f38a7f8926a6e717841af5cac0d13dfda9207fa3e9338bde6f624fc7c88fc81f"
+  },
+  "ci": [
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha18-1_all.ipk",
+      "bytes": 845457,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "f38a7f8926a6e717841af5cac0d13dfda9207fa3e9338bde6f624fc7c88fc81f",
+      "skipped_tests": 16,
+      "source": "76498b5db82e8f5fa25f22d946b338c26b39c869",
+      "ui_suites": 50,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha18-1_all.ipk",
+      "bytes": 845457,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "f38a7f8926a6e717841af5cac0d13dfda9207fa3e9338bde6f624fc7c88fc81f",
+      "skipped_tests": 0,
+      "source": "76498b5db82e8f5fa25f22d946b338c26b39c869",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "training": {
+    "lessons": 8,
+    "questions": 11,
+    "local_no_router_control": true,
+    "any_question_navigation": true,
+    "first_attempt_and_current_score": true,
+    "wrong_or_unanswered_only_retry": true,
+    "correct_answers_retained": true,
+    "incomplete_course_cannot_pass": true,
+    "stale_actions_guarded": true
+  },
+  "journal": {
+    "dictionary_entries": 490,
+    "semantic_event_codes": 32,
+    "state_and_event_explanation_links": true,
+    "separate_diagnostic_cause_links": true,
+    "check_not_misrepresented_as_switch": true,
+    "missing_legacy_details_not_invented": true,
+    "actual_installed_frame": {
+      "result": "PASS_REAL_FRAME_SEMANTICS",
+      "source_runtime_version": "0.9.1-alpha18",
+      "rows": 231,
+      "definition_counts": {
+        "EVENT-RESERVE-SELECTED": 15,
+        "EVENT-RESERVE-HELD": 7,
+        "EVENT-PATH-CONFIRMATION": 6,
+        "EVENT-ROUTE-APPLYING": 6,
+        "EVENT-CHANNEL-PREPARATION": 20,
+        "EVENT-MONITORING": 6,
+        "EVENT-CHECK-OK": 2,
+        "EVENT-CONNECTION-RECOVERED": 29,
+        "VPN-001": 1,
+        "EVENT-CHECK-FAILED": 50,
+        "EVENT-AUTO-START-REQUESTED": 9,
+        "EVENT-OPERATION-STOPPED": 30,
+        "EVENT-AUTO-STOP-REQUESTED": 19,
+        "EVENT-PROFILE-DISABLED": 21,
+        "EVENT-RETURN-IN-PROGRESS": 8,
+        "EVENT-OPERATION-BLOCKED": 2
+      },
+      "legacy_detail_gaps": [],
+      "private_frame_not_published": true,
+      "generation_substitution_preserves_validity_only": true,
+      "scope": "installedalpha18 exact-source taxonomy applied to redacted actual old/new events, not native-browser rendering"
+    }
+  },
+  "physical_receipt": "qa/MT3000-ALPHA18-2026-10-25.json",
+  "native_browser_visual": "NOT_VERIFIED",
+  "recorded_utc": "2026-10-24T22:35:47.477218+00:00"
+}

@@ -32,11 +32,34 @@ def active_controller(native,state,intent,now):
             and finite(stamp) and finite(now) and 0<=now-stamp<90)
 
 
+def failure_pair_context(before,after):
+    """Capture roles from two matching configured snapshots, never route health."""
+    from vendor_observation import current_bindings,tunnel_identity
+    def pair(data):
+        if not isinstance(data,dict):return None
+        settings=data.get('settings',{});rows=data.get('profiles',[])
+        if not isinstance(settings,dict) or not isinstance(rows,list):return None
+        bindings=current_bindings(rows);result={};anchors=[]
+        for role in ('source','target'):
+            anchor=settings.get('plan_'+role+'_tunnel')
+            if not anchor:
+                matches=[r for r in rows if isinstance(r,dict) and r.get('id')==settings.get('plan_'+role)]
+                anchor=tunnel_identity(matches[0]) if len(matches)==1 else None
+            row=bindings.get(anchor)
+            if not row or not PROFILE.fullmatch(str(row.get('id',''))):return None
+            result[role]=row['id'];anchors.append(anchor)
+        return dict(result,anchors=anchors) if len(set(anchors))==2 and result['source']!=result['target'] else None
+    left,right=pair(before),pair(after)
+    return {role:left[role] for role in ('source','target')} if left and left==right else {}
+
+
 class Reliability:
     MAX_EVENTS=10000
     DETAIL_BYTES=1024*1024
 
-    def __init__(self,data=None):
+    def __init__(self,data=None,detail_days=7):
+        if type(detail_days) is not int or not 1<=detail_days<=7:raise ValueError("STATISTICS-RETENTION")
+        self.detail_days=detail_days
         self.data=copy.deepcopy(data) if data else {'schema':1,'since':None,'sequence':0,
             'totals':{},'months':{},'events':[],'profiles':{},'details_dropped':0}
         d=self.data
@@ -54,14 +77,21 @@ class Reliability:
             if not re.fullmatch(r'[0-9]{4}-(?:0[1-9]|1[0-2])',month):raise ValueError('STATISTICS-MONTH')
         last=0
         for row in d['events']:
-            if (not isinstance(row,dict) or set(row)-{'sequence','time','profile','kind','code','observed_duration_seconds'}
+            if (not isinstance(row,dict) or set(row)-{'sequence','time','profile','kind','code','observed_duration_seconds','role','selected'}
                     or type(row.get('sequence')) is not int or not last<row['sequence']<=d['sequence']
                     or not finite(row.get('time')) or not PROFILE.fullmatch(str(row.get('profile','')))
                     or row.get('kind') not in ('FAILURE','RECOVERY','DISABLED') or 'code' in row and row['code'] not in BAD
-                    or 'observed_duration_seconds' in row and not finite(row['observed_duration_seconds'])):
+                    or 'observed_duration_seconds' in row and not finite(row['observed_duration_seconds'])
+                    or 'role' in row and row['role'] not in ('source','target','unknown')
+                    or 'selected' in row and row['selected'] not in ('source','target','off','unknown')):
                 raise ValueError('STATISTICS-EVENT')
             last=row['sequence']
         for key,row in d['profiles'].items():
+            if (isinstance(row,dict) and row.get('state') not in ('up','down','off','unknown')
+                    and row.get('state') in (None,'OBSERVING','COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','BLOCKED','STOPPED','STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','DISABLED','EXPIRED','SERVICE-STOPPED')
+                    and row.get('opened')==row.get('time') and row.get('opened_observed') is True
+                    and any(e.get('profile')==key and e.get('time')==row.get('time') and e.get('kind')=='FAILURE' and e.get('code') in BAD and 'role' in e for e in d['events'])):
+                row['state']='down'
             if (not PROFILE.fullmatch(key) or not isinstance(row,dict) or set(row)-{'time','state','opened','opened_observed'}
                     or not finite(row.get('time')) or row.get('state') not in ('up','down','off','unknown')
                     or row.get('opened') is not None and not finite(row['opened'])):
@@ -95,18 +125,30 @@ class Reliability:
         if finite(duration):item['observed_duration_seconds']=duration
         d['events'].append(item);self.critical=True
 
+    def event_context(self,key,now,native,pair):
+        # Both outage edges retain their own event-time role, never today's pair.
+        event=self.data['events'][-1];event.update(role='unknown',selected='unknown')
+        if isinstance(pair,dict) and pair.get('source')!=pair.get('target'):
+            event['role']='source' if key==pair.get('source') else 'target' if key==pair.get('target') else 'unknown'
+        if (isinstance(native,dict) and finite(native.get('time')) and -5<=now-native['time']<=30
+                and (pair is None or all(native.get(role)==pair.get(role) for role in ('source','target')))):
+            if pair is None and native.get('source')!=native.get('target'):
+                event['role']='source' if key==native.get('source') else 'target' if key==native.get('target') else 'unknown'
+            native_state=native.get('state')
+            event['selected']='target' if native_state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if native_state=='OBSERVING' and (native.get('certified') is True or native.get('readiness_verified') is True) else 'off' if native_state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED') else 'unknown'
+
     def prune(self,now):
         d=self.data
-        d['events']=[row for row in d['events'] if now-WEEK<=row['time']<=now]
+        d['events']=[row for row in d['events'] if now-self.detail_days*86400<=row['time']<=now]
         overflow=max(0,len(d['events'])-self.MAX_EVENTS)
         while len(d['events'])-overflow>1 and len(json.dumps(d['events'][overflow:],separators=(',',':')).encode())>self.DETAIL_BYTES:
             overflow+=max(1,(len(d['events'])-overflow)//10)
         if overflow:
             d['events']=d['events'][overflow:];d['details_dropped']+=overflow
         for month in sorted(d['months'])[:-1200]:del d['months'][month]
-        d['profiles']={key:value for key,value in d['profiles'].items() if now-value['time']<=WEEK}
+        d['profiles']={key:value for key,value in d['profiles'].items() if now-value['time']<=self.detail_days*86400}
 
-    def observe(self,row,max_gap=90):
+    def observe(self,row,max_gap=90,native=None,pair=None):
         key=row.get('id');now=row.get('time')
         if not isinstance(key,str) or not PROFILE.fullmatch(key) or not finite(now) or now>253370764799:return False
         d=self.data;previous=d['profiles'].get(key)
@@ -127,9 +169,11 @@ class Reliability:
             self.event(key,'DISABLED',now);opened=None;observed=False
         elif state=='down' and opened is None:
             self.add('outages',1,now);self.event(key,'FAILURE',now,code);opened=now;observed=True
+            self.event_context(key,now,native,pair)
         elif state=='up' and opened is not None:
             self.add('recoveries',1,now)
             self.event(key,'RECOVERY',now,duration=now-opened if observed else None);opened=None
+            self.event_context(key,now,native,pair)
         d['profiles'][key]={'time':now,'state':state,'opened':opened,'opened_observed':observed}
         if len(d['profiles'])>400:
             oldest=min(d['profiles'],key=lambda k:d['profiles'][k]['time']);del d['profiles'][oldest]
@@ -153,7 +197,9 @@ class Reliability:
                 'weekly':None if d['details_dropped'] else {'outages':sum(row['kind']=='FAILURE' for row in d['events']),
                           'recoveries':sum(row['kind']=='RECOVERY' for row in d['events'])},
                 'months':copy.deepcopy(d['months']),'events':copy.deepcopy(d['events'][-100:]),
-                'sequence':d['sequence'],'detail_days':7,'details_dropped':d['details_dropped'],
+                'sequence':d['sequence'],'detail_days':self.detail_days,'details_dropped':d['details_dropped'],
                 'route_history':self.routes.export(),
+                'failure_history':{'events':[[e['time'],e.get('role','unknown'),e.get('selected','unknown')] for e in d['events'] if e['kind']=='FAILURE' and e['time']>=max((p['time'] for p in d['profiles'].values()),default=0)-86400],
+                                   'since':d['since'],'details_dropped':d['details_dropped']},
                 'scope':'observed VPN checks and outage edges; not LAN availability',
                 'checkpointed':True}

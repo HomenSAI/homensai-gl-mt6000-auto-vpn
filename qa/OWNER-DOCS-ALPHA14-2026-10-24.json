@@ -1,0 +1,708 @@
+{
+  "schema": 1,
+  "version": "0.9.1-alpha14",
+  "result": "PARTIAL",
+  "prompts": 82,
+  "method": "Real command recipes and native mocked helper execution, not autonomous interpretation by external ChatGPT/Claude services",
+  "ci_source": "fe3b4927559e426f5741e7a677bccaedeec3590f",
+  "package_sha256": "49ffb3e57b288f899c84e77546e7b1a0e26243300765bf5927ef8270ae214342",
+  "tests": {
+    "dual_runtime_application_each": 771,
+    "dual_runtime_qa_each": 112,
+    "ui_suites": 46,
+    "native_powershell_regressions": 2,
+    "linux_emergency_regressions": 3
+  },
+  "virtual_scope": "new isolated real OpenWrt21.02.7 x86/64; network none, no mounts or published ports, no privileges; unchanged actual hardware identity and Auto OFF",
+  "verified": [
+    "stable0.9.0 hash/preflight expected hardware refusal/ordinary opkg install/reinstall",
+    "independently decrypted and read encrypted backup",
+    "canonical alpha14 upgrade,87immutable files/modes,freshRPC,actualHTTP JS/CSS",
+    "real setup save EN/RU with pair deferred and terms unchanged",
+    "retention100/1,1500/2,2000/7,invalid rejection and restoration",
+    "all31topic read-only diagnostic paths",
+    "eight component command/idempotence paths",
+    "actual emergency command preserves pending UCI without commit",
+    "corrupt package hash detected before installation"
+  ],
+  "not_certified": [
+    "autonomous named external AI execution",
+    "GL native Auto on generic x86",
+    "all possible firmware/provider/fault combinations",
+    "independent external LAN/IPv6/KillSwitch acceptance",
+    "physical power-loss durability",
+    "new native-browser visual acceptance"
+  ],
+  "retained_failure": "8984120 full CI failed VERSION-INSTALL-KIT because kit hash still alpha13; fixed in fe3b492, full dual-runtime PASS; no product payload change",
+  "receipts": [
+    {
+      "case": "01-alpha14-virtual-baseline",
+      "sha256": "4ea40d78356aab4ff305de66e7f2c4f93567d084cce745242f2b83ea2b508691",
+      "result": "PASS"
+    },
+    {
+      "case": "01-baseline",
+      "sha256": "b0b8e386827f6dab6783764c6905262bcdd53dcd0248e75edd45adc3b12a17f5",
+      "result": "PASS"
+    },
+    {
+      "case": "02-backup",
+      "sha256": "b41b8d66a66654029d8eca9bb0cf8767bf1b66128aa8e5a809334c8a3bdaa575",
+      "result": "PASS"
+    },
+    {
+      "case": "03-transfer-and-preflight",
+      "sha256": "aac93b82077bbbc4faec8d0179280d0ae17218dc7dfb31c6bf42fa356721b0bb",
+      "result": "PASS_WITH_EXPECTED_HARDWARE_REFUSAL"
+    },
+    {
+      "case": "04-real-opkg-install-en",
+      "sha256": "13bac526a30a651fdd608d84ba9e756dda3efce1da6f4eda261f475fb7612ad3",
+      "result": "PASS"
+    },
+    {
+      "case": "05-runtime-verify-and-idempotent-ru",
+      "sha256": "c0e8400674c03382274a45f08f35032d48cfc66561133adc8ff52977b267c883",
+      "result": "PASS"
+    },
+    {
+      "case": "08-real-setup-and-persistence-en-ru",
+      "sha256": "34eecd3353ac96f40795a2f91efd2aa942f2da0379bce872ec1e546a5e7611ce",
+      "result": "PASS"
+    },
+    {
+      "case": "09-readonly-topic-diagnoses",
+      "sha256": "8037b3bef1fcb84d8b41bdab9849902336f0cee03ea533212daa82465c34faec",
+      "result": "PASS"
+    },
+    {
+      "case": "10-artifact-mismatch-refusal",
+      "sha256": "e9c405c8ee5e02c661208c9d4f383f844bf8b7750a8f9bd2408445368585b6d0",
+      "result": "PASS"
+    },
+    {
+      "case": "13-alpha14-real-upgrade",
+      "sha256": "245184668bb521ae71b43a525867b008ca4ada7fe6a659abff0da7874d0048ab",
+      "result": "PASS"
+    },
+    {
+      "case": "14-alpha14-actual-runtime-assets",
+      "sha256": "31b7ecce31a9c31ac5d1d58012ea0cbd51997206918bcd35ed8554a6ce21a299",
+      "result": "PASS"
+    },
+    {
+      "case": "15-actual-emergency-pending-preservation",
+      "sha256": "e1ee6e3e412818275bb5a1f2b446c0c82d1af2b180ca0ca3ae5a317a48cce7f4",
+      "result": "PASS"
+    },
+    {
+      "case": "16-current-component-recipes",
+      "sha256": "73667c585eb9317c46ac3a6574589129a139f01b8ad948210ddb5ccc2d2b6368",
+      "result": "PASS"
+    },
+    {
+      "case": "17-current-install-kit-verification",
+      "sha256": "0a6e895d48399731e4f91c7f046f6c3fd17a9cb4c662c156a9d7e6da7c5b9e87",
+      "result": "PASS"
+    },
+    {
+      "case": "29-controlled-vm-shutdown",
+      "sha256": "360f9d7f6928035d112cb3a8298295c07c9a17d03ede5ca23f76b701abb8716d",
+      "result": "PASS"
+    },
+    {
+      "case": "30-vm-cleanup",
+      "sha256": "9adab29c35f5d65bfaa5f5e5010442e56b910af23eefdee444186a298f42577a",
+      "result": "PASS"
+    },
+    {
+      "case": "alpha14-retention-rpc-actual-uci",
+      "sha256": "36049276a89297cc95d33e1875bbe4a105b09b92fc571c054aba9f00a3f8372a",
+      "result": "PASS"
+    }
+  ],
+  "prompt_inventory": [
+    {
+      "id": "installation",
+      "language": "en",
+      "sha256": "71685caf137a444e6846e6113a88f419b5888c57975655feb5ded1e9d4974be8",
+      "category": "installation",
+      "recipe_validation": "actual stable installation and alpha14 upgrade in isolated OpenWrt"
+    },
+    {
+      "id": "lan-helper",
+      "language": "en",
+      "sha256": "b8a05ed5a716778fbdecdb3c3adc0cd9a5a09d87c197cde60d8f1ab355f440dd",
+      "category": "lan-helper",
+      "recipe_validation": "native SelfTest and wrong-control-path/CheckOnly mocks; full external LAN trial NOT RUN"
+    },
+    {
+      "id": "ai-prompt",
+      "language": "en",
+      "sha256": "c92119d7921016853dd96526bf298b042c20b7757d576d25562d377136c799af",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "ai-lan-prompt",
+      "language": "en",
+      "sha256": "45a07da2ea3fce424cb142751ad53c018f3b35cafd993e036243a990e16380b4",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "planner-wait",
+      "language": "en",
+      "sha256": "95301b74387457687111eda0c1e19503ab7854da24e97dc9cb84dd8f7b2f5bf8",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "no-internet",
+      "language": "en",
+      "sha256": "3ea0e32d18936e1a44b01b6c20c2551f4ce374405f0bc488e39c623c66ef75db",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "ssh",
+      "language": "en",
+      "sha256": "653e149c0c5bbc42fb8de89d64e478593cf5963a21f4b692b247440bf6cda322",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "reserve",
+      "language": "en",
+      "sha256": "122163023206834a2de2b19aa79ec000c5ef79a23bf59a8b8adf4d091bf7c1be",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "auto-refuses",
+      "language": "en",
+      "sha256": "774201bf9b1b7f656341ec375376e7cdc8cf98f3a9e9a660a2fce1efae93d025",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "helper-what",
+      "language": "en",
+      "sha256": "756e4507d163eda251b56ce77ea6a468f9fe5c6857d05f15b392e8e5f0d88731",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "helper",
+      "language": "en",
+      "sha256": "bab87d1eb40ebff1bd507d58396f623a6f16c275b73d2e2213dd0cbd69c51d93",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "stale",
+      "language": "en",
+      "sha256": "d0849f278bb3b8f32e7a24f67fb23b6e54d4a24f66368374dd6e014d87110458",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "outside-change",
+      "language": "en",
+      "sha256": "3b2b0aa09ece8fd9e23331982f801018bb98a2cdefe077461525887645e964ba",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "telegram",
+      "language": "en",
+      "sha256": "243801248d1fd93636689e4c91b7eca1b1e110c490d62c329291e89ece0e87c6",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "clock",
+      "language": "en",
+      "sha256": "f52e5b928064d91b0dff2ee076717703cf7a11339e9ee8dd0b13e9ee0c066e7c",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "backup",
+      "language": "en",
+      "sha256": "8ccb4af15a80807f16e3e1becefe5540a9cf30191d3955c2ee5caf836ca7b436",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "remove",
+      "language": "en",
+      "sha256": "5226e8720ca21e5e06819e9beedae7234d47689b2e714e807a39020df4efc087",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "report",
+      "language": "en",
+      "sha256": "3a2e8fee6dbc173f8e5eaa75a202ab49e6ce7b13671d0b4e8e160fc57831f029",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "history-retention",
+      "language": "en",
+      "sha256": "6d761ecd68d1997240cb156ba645bd8dbd863d6cc2d038f1709a795624a42ec5",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "controlled-fault",
+      "language": "en",
+      "sha256": "c786fb4d4a20c964326f4e623d935331433b7eff3c9671c5869473df1b55e00c",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "address-conflict",
+      "language": "en",
+      "sha256": "9925f6f35fbd71743a5dc0c847e609487270a36ce315ed7dd318e72653c59d28",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "setup-guide",
+      "language": "en",
+      "sha256": "7f50de15bfde5887a04a99b79ad0f6cb3f14f2e9e0867b2961f9425c5d9cbb46",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-PYTHON-39-MINIMUM",
+      "language": "en",
+      "sha256": "ad731cf23fde21c7cd57a65821ef3def49d1df498eccbc91505b320deecbafc6",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-PYTHON-39-MINIMUM-repair",
+      "language": "en",
+      "sha256": "0473d6475154dfa14757c1c0f1e008458852e35013471a4d35ad1edfc8257f4d",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UBUS",
+      "language": "en",
+      "sha256": "dafeef15606a0f955dccc79321d84cb7166cb40ba7d1315c3511b9fa6d213f0f",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UBUS-repair",
+      "language": "en",
+      "sha256": "6cc4b1bdb369c013cd9cd9b466cb8236735794d1927de37d2d25e9602b4b6a1b",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UCI",
+      "language": "en",
+      "sha256": "e3f7a0192c2968836334c28c2ae9abfddf5d6d37cbca589402fec52ed53dce93",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UCI-repair",
+      "language": "en",
+      "sha256": "bb64d8c569370c1d10cfb6220388db98d4b37847941c74f8bd51d52bbb6c9691",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-LUA",
+      "language": "en",
+      "sha256": "6c79d9846266075edad4e22ffe738552fd04d2a952658a98eaf022288a1b947a",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-LUA-repair",
+      "language": "en",
+      "sha256": "f150a2952b6aeb9cc6dc584fa8b25435849cf849128c884fac2746583d1e7270",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-IP",
+      "language": "en",
+      "sha256": "17de6dfc1f5245a71363a86f8201c011bbe4a666e32d322e7f66d5cff2eb644c",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-IP-repair",
+      "language": "en",
+      "sha256": "69b83459dec4d0848f6f9f7d6d31290a4cd65046ee6614d5f7c52381b770a013",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-RPC-PLUGIN",
+      "language": "en",
+      "sha256": "719dbb6e05c9ad9c93a072c865c11a58af19f41919904f01fad31b881f6f58f0",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-RPC-PLUGIN-repair",
+      "language": "en",
+      "sha256": "3fd7da29ed4e8e3321c4201d70d3309191bd161a3df5026332a36819649f3db7",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-CA-BUNDLE",
+      "language": "en",
+      "sha256": "d9ad8d4f29ebf7e179a24822034edd5491ccd739572735eb6c34c5707c667ce1",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-CA-BUNDLE-repair",
+      "language": "en",
+      "sha256": "d1d33d3e5bcd6aca124f411f79160f4f3e837155fb2ff47eb7c6cd0ae377461f",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-CONFIG-STORAGE-FREE",
+      "language": "en",
+      "sha256": "b5d5285a85e17f1534eaaf43de850a71f505bc91f7d1b51805b9eaf6ef51bf4d",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-CONFIG-STORAGE-FREE-repair",
+      "language": "en",
+      "sha256": "764a8140ef6d51d24fd244aad5db63223c36ce2c411e3b436c4d7271ed89333f",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "router-preparation",
+      "language": "en",
+      "sha256": "6d413a8dae6dbd8fa57df6181a16287f80e6567a08ca62f8c63f35a13d2a764c",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "diagnose-all",
+      "language": "en",
+      "sha256": "c8cf7693b0052233ec5f1963d9e7d72dc3c2cb7f9ce2885392002da076cda6ee",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "terms",
+      "language": "en",
+      "sha256": "fdde77481096521ab94c1d30088618d53ff4a2658b0f8d21af518134259aa442",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "installation",
+      "language": "ru",
+      "sha256": "94fd6f9ea0bcbc8cd39bb9ee2a7fc9824ff1ea19ee5907294433be172e7af0ec",
+      "category": "installation",
+      "recipe_validation": "actual stable installation and alpha14 upgrade in isolated OpenWrt"
+    },
+    {
+      "id": "lan-helper",
+      "language": "ru",
+      "sha256": "73b6abb4ad5e0977674d22e32460371554f7534c6dfcb9b612f0dd0c67f3e95f",
+      "category": "lan-helper",
+      "recipe_validation": "native SelfTest and wrong-control-path/CheckOnly mocks; full external LAN trial NOT RUN"
+    },
+    {
+      "id": "ai-prompt",
+      "language": "ru",
+      "sha256": "f537cf1178c1f59a8a8f4892c9f4d3f289308e223c35600988d27a9d97c4ebd8",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "ai-lan-prompt",
+      "language": "ru",
+      "sha256": "10c538a220199a6a1a944d6d6d1ac48caab3785a7deeebdad87ca88db4c09d98",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "planner-wait",
+      "language": "ru",
+      "sha256": "89079ff2acc4bb1992ff4c4eaa6053a61bc5045a510b87e46479539f56a7ca7a",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "no-internet",
+      "language": "ru",
+      "sha256": "b4afd2f2fba881b86b83079ceadc7ea1827dac2f5d5a25024d8b8b18fe48768b",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "ssh",
+      "language": "ru",
+      "sha256": "353a083e268359322008cc0e867c5b192aaf4a9ab8695cecacf2b4d96f0e850b",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "reserve",
+      "language": "ru",
+      "sha256": "8ba085011733fcca1bd2482c3817c901be089bbcd0de72b32b6436571bed6405",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "auto-refuses",
+      "language": "ru",
+      "sha256": "c8dd35a85172b796129229d5477b657aecff5ee911cc45a4c5bc313231c06fb6",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "helper-what",
+      "language": "ru",
+      "sha256": "b70c5a286dd0008f53dbc51527e74d00c56ecbb7eadfde5e27028e885882302c",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "helper",
+      "language": "ru",
+      "sha256": "4f34331b365a8a71535a98fd5c201dae9331bd8d268449a8e2b99779991cc756",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "stale",
+      "language": "ru",
+      "sha256": "049401a93e0fcf27a0e521b5c45d9b4fed4ae28e0d373396118246ee0e04812b",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "outside-change",
+      "language": "ru",
+      "sha256": "674b68ddb2ee297490819fce79b51a5816b37ad2aaf2ea3c823263188e1d8846",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "telegram",
+      "language": "ru",
+      "sha256": "aa97332706579f5890e06fb01a95f2227ae7f712575c5a42744c09b186077ae4",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "clock",
+      "language": "ru",
+      "sha256": "f4956379a08bf24f64721fd4be440da14734ccf247c02b20f82e49542619904e",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "backup",
+      "language": "ru",
+      "sha256": "775ae97688a354444fb7151b8ab2aa3974f15ae71c2f1211094f67cd4cab96aa",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "remove",
+      "language": "ru",
+      "sha256": "4522da30670b2e4da6a0b26f41c859bf1cf860b0aee7957f596af78d2423ed73",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "report",
+      "language": "ru",
+      "sha256": "7441cbb1faa0c63bc7efd076c13826e9a670cacef015137349becadee61f6ce8",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "history-retention",
+      "language": "ru",
+      "sha256": "1edc341b967dcf42453cde02f89daa40215c42580c2f9f22c2cb17af5243a6ef",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "controlled-fault",
+      "language": "ru",
+      "sha256": "84c352f9876f278fc9d42bf2dd11a2a02891c7703166533b6ee2fcc34d1c9372",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "address-conflict",
+      "language": "ru",
+      "sha256": "60809b776d3b6d67e6ada060f021c29a88d05ed8e90c007897eaf2e3fbf24c08",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "setup-guide",
+      "language": "ru",
+      "sha256": "195431cf37218e6ca8687ac51647b9123146fe2019c3a84a612097e9b4df0c14",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-PYTHON-39-MINIMUM",
+      "language": "ru",
+      "sha256": "040064237e62721d4ffcbf3ee8ab9aad6ab8c9d4a4b9aca3e1450991b5fa9345",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-PYTHON-39-MINIMUM-repair",
+      "language": "ru",
+      "sha256": "0a48b49fea151a94c34b8502e084e12f151f9289b1eb710b4e9ccffc6b0f5658",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UBUS",
+      "language": "ru",
+      "sha256": "41f3dc3c3f44b83c5c90fcb65f17579b9b65c14703e2dade9f2478922214a5e6",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UBUS-repair",
+      "language": "ru",
+      "sha256": "4e2b728f70d98dd48b7c7bbb99d9ad22bf4d18be5da046d75059a3b8602237e7",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UCI",
+      "language": "ru",
+      "sha256": "a9096c68bb3e2a907191335def9e105344be828c3f803950f29b11a16b385ef7",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-UCI-repair",
+      "language": "ru",
+      "sha256": "008e48c51bfad545e02f881fa0b91da8d1dc337510fe9ea2465cdf0813951f95",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-LUA",
+      "language": "ru",
+      "sha256": "b0cea91b3bbe05952ddb8f5fb9a09e8bd88d4024dd34c4ac07825becddfb9d0f",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-LUA-repair",
+      "language": "ru",
+      "sha256": "972d2d97ac58d1ca3b8847865fd4cbb8da790dda83e41d50150cb984d093e7fa",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-DEPENDENCY-IP",
+      "language": "ru",
+      "sha256": "310f5d61c2221d413e22f29479ab77994a7266b06bb52b2c39a3beb1635a6085",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-DEPENDENCY-IP-repair",
+      "language": "ru",
+      "sha256": "ededa87b14bcd4592c05169ff35bdce2b734445262a56852cb4b2315246750a8",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-RPC-PLUGIN",
+      "language": "ru",
+      "sha256": "96ac56bcc01dfc872fb4cfe21f6957a68e620672c8cfd7ca0ca65cc64d2d751e",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-RPC-PLUGIN-repair",
+      "language": "ru",
+      "sha256": "b11a658ccde59a5d42e54d40789fcf46f5fa2ad7318acaa4ee9f111d2348c024",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-CA-BUNDLE",
+      "language": "ru",
+      "sha256": "138184c7202881d07c9639c993705a316f569499c4e5ab9a3b4f9d118e718bb9",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-CA-BUNDLE-repair",
+      "language": "ru",
+      "sha256": "b9b0391981873353f64fb561e9fb1cb2a6eb0ac7da42ac87c074588e715f78ac",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "dependency-CONFIG-STORAGE-FREE",
+      "language": "ru",
+      "sha256": "4b92daf96204fbb8f081e0e6b13aa6c71e5249a91252f6f5abba0476918660c7",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "dependency-CONFIG-STORAGE-FREE-repair",
+      "language": "ru",
+      "sha256": "70c62c2c46fe08bee23e792c4c62b766c18160a4d8924c1771478bdd49550d39",
+      "category": "component-repair",
+      "recipe_validation": "eight actual component commands and ordinary opkg idempotence; missing-package removal/reinstall not repeated in this run"
+    },
+    {
+      "id": "router-preparation",
+      "language": "ru",
+      "sha256": "4e1b891995b77e925d80a06b3a4ea0d1f6d4669e9216d6416ad5e4b3ce4d5833",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "diagnose-all",
+      "language": "ru",
+      "sha256": "61343b09d8b29db9885ea8df2b98f44a1aa4134023fa9f425f40989db9667a63",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    },
+    {
+      "id": "terms",
+      "language": "ru",
+      "sha256": "37d55785cb25fc25ef93c142e4a3d1aa4c50151cce5b3ac92c2ac0f4ff7de946",
+      "category": "diagnosis",
+      "recipe_validation": "actual read-only topic diagnosis on installed x86; not reproduction of every failure"
+    }
+  ],
+  "native_actual_checkonly": {
+    "result": "REFUSED_AS_DESIGNED",
+    "code": "CLIENT-CABLE-PROBE-ROUTE-MISMATCH",
+    "credentials_requested": false,
+    "http_sent": false,
+    "host_network_changed": false
+  },
+  "documentation_file_inventory": "qa/DOCUMENTATION-FILES-ALPHA14-2026-10-24.json"
+}

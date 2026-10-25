@@ -1,9 +1,12 @@
-# Main and release publication
+<!-- doc-role: current -->
+# Publication policy
 
-The owner authorized the current0.9.0 release on main in GitHub and Gitea. Publish the reviewed source, user documentation, IPK/checksum and exact verification record. [Release evidence](RELEASE-0.9.0.md).
+The owner's **latest applicable instruction** determines allowed delivery. Previously authorized operations do not need repeated permission; an old dated report is not new authorization. Feature-branch save, prerelease publication, main/stable changes and physical installation are distinct facts.
 
-Preserve both existing histories. Current development descends from GitHub main; publish it by normal fast-forward only after full-history privacy review and exact tests. Canonical Gitea main has a different root but the previous main tree matched GitHub's. Integrate the new reviewed tree with both the old canonical main and the public release commit as parents; verify tree/package identity. Do not export unrelated, unaudited canonical history merely to make commit IDs equal. Equal reviewed trees/assets can have different main/tag SHAs, which must be recorded.
+Canonical Gitea history is preserved. A public snapshot can parent the existing verified public branch while reusing the exact reviewed canonical tree, avoiding unrelated private history. Record canonical/public commits, complete tree equality and the tested product source. Fast-forward only: never force/mirror/delete old refs or replace published tags/assets. A docs-only closure can follow a tested product commit if the product fingerprint/code are unchanged and that distinction is recorded.
 
-Respect branch protections and concurrent head changes; never force, mirror, delete old refs or overwrite tags/assets. Verify tag/main reachability, source/tree identity, metadata and independently downloaded assets. Existing releases remain historical; add a current-release notice without rewriting their test results or binaries. A new normal-numbered release retains experimental scope and does not imply external-LAN or unattended-production acceptance.
+For a release, use one immutable tag, matching canonical IPK/checksum/verification and same-tag kit. Privacy-scan the complete public tree and archives, publish draft/prerelease/stable flags deliberately, independently download every attachment and verify SHA256. A manifest tag or branch push alone is not a server Release. Stable/main remain unchanged unless the owner actually included them.
 
-Use a private restore-verified source bundle and private encrypted device backup. Public files/assets must exclude keys, bot tokens, sessions, passwords, raw device state and backups. Device installation is a separate authorized task, never an automatic side effect of publication. The user's ongoing dedicated-MT3000 update request is recorded separately from this Git authorization.
+Keep credentials, raw configuration, private transaction data and unencrypted backups out of Git/releases. A reviewed source save does not prove physical installation, browser rendering, external-model execution or LAN connectivity. Device work follows its own current identity/backup/lifecycle verification; never resume old observers automatically.
+
+[Versioning](VERSIONING.md) · [CI](CI-PRIMARY.md) · [Actual current delivery](CURRENT-STATUS.md).

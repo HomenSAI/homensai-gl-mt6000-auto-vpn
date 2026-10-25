@@ -1,179 +1,243 @@
-# Documentation index — 0.9.0
+<!-- doc-role: current-index -->
+# Документация / Documentation
 
-Current instructions are listed first. Historical/versioned pages keep their original facts and now point to the current status. Legal terms/license are preserved. Every tracked Markdown document is classified below; dated JSON QA records and old release binaries/tags remain unchanged.
+[Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [Фактически доставлено / Delivered](CURRENT-STATUS.md)
 
-[Current status](CURRENT-STATUS.md) · [Install EN](INSTALL.en.md) · [Установка RU](INSTALL.ru.md) · [Release evidence](RELEASE-0.9.0.md) · [Roadmap](ROADMAP.md)
+Текущие инструкции описывают исходники. Состояние установленного пакета подтверждается только отдельным отчётом о доставке. Исторические отчёты сохраняют свои даты, версии, результаты и прежние ограничения: их команды не являются текущим планом работ. Правовые тексты сохранены без изменения условий.
 
-|Document|Classification|
+Current instructions describe source behavior. Installed state requires a separate delivery receipt. Historical reports retain their dates, versions, outcomes and former restrictions; they are not current execution plans. Legal terms remain unchanged. Generated Help, four AI prompts and error-code references are checked against runtime sources by `scripts/sync-documentation.py --check`.
+
+`current*` — действующее руководство; `historical-reference` / `versioned-evidence` — архив; `recovery-record` — передача задачи; `technical-reference` — контракт/справка, не доказательство аппаратной приёмки; `preserved-legal` — неизменённые правовые тексты. Inventory/link/source checks do not re-certify every historical claim or an external AI's autonomy.
+
+|Документ / Document|Область / Scope|
 |---|---|
-|[docs/handoff/OWNER-UI-TODO-2026-10-23.md](handoff/OWNER-UI-TODO-2026-10-23.md)|Current owner requests and crash recovery|
-|[CHANGELOG.md](../CHANGELOG.md)|Current|
-|[CLAUDE.md](../CLAUDE.md)|Current|
-|[README.md](../README.md)|Current|
-|[README.ru.md](../README.ru.md)|Current|
-|[START-HERE.md](../START-HERE.md)|Current|
-|[docs/AI-INSTALL.en.md](AI-INSTALL.en.md)|Current|
-|[docs/AI-INSTALL.ru.md](AI-INSTALL.ru.md)|Current|
-|[docs/AUTO-QUICKSTART.en.md](AUTO-QUICKSTART.en.md)|Current|
-|[docs/AUTO-QUICKSTART.ru.md](AUTO-QUICKSTART.ru.md)|Current|
-|[docs/CONTROL-AND-SETUP.md](CONTROL-AND-SETUP.md)|Current|
-|[docs/CURRENT-STATUS.md](CURRENT-STATUS.md)|Current|
-|[docs/DOCUMENTATION-INDEX.md](DOCUMENTATION-INDEX.md)|Current|
-|[docs/FIRST-RUN-SETUP.md](FIRST-RUN-SETUP.md)|Current|
-|[docs/HOW-IT-WORKS.en.md](HOW-IT-WORKS.en.md)|Current|
-|[docs/HOW-IT-WORKS.ru.md](HOW-IT-WORKS.ru.md)|Current|
-|[docs/INSTALL.en.md](INSTALL.en.md)|Current|
-|[docs/INSTALL.ru.md](INSTALL.ru.md)|Current|
-|[docs/LANGUAGE.md](LANGUAGE.md)|Current|
-|[docs/OVERVIEW-PATH-COLOURS.md](OVERVIEW-PATH-COLOURS.md)|Current|
-|[docs/PUBLICATION.md](PUBLICATION.md)|Current|
-|[docs/RELEASE-0.9.0.md](RELEASE-0.9.0.md)|Current|
-|[docs/ROADMAP.md](ROADMAP.md)|Current|
-|[docs/STATE.md](STATE.md)|Current|
-|[docs/TESTED-ENVIRONMENT.en.md](TESTED-ENVIRONMENT.en.md)|Current|
-|[docs/TESTED-ENVIRONMENT.ru.md](TESTED-ENVIRONMENT.ru.md)|Current|
-|[docs/VALIDATION.md](VALIDATION.md)|Current|
-|[docs/VERIFICATION.md](VERIFICATION.md)|Current|
-|[docs/VERSIONING.md](VERSIONING.md)|Current|
-|[docs/handoff/CONTINUE-PROMPT.md](handoff/CONTINUE-PROMPT.md)|Current|
-|[docs/handoff/CURRENT.md](handoff/CURRENT.md)|Current|
-|[docs/handoff/README.md](handoff/README.md)|Current|
-|[docs/handoff/STATUS.md](handoff/STATUS.md)|Current|
-|[docs/handoff/TODO.md](handoff/TODO.md)|Current|
-|[releases/v0.9.0.md](../releases/v0.9.0.md)|Current|
-|[router-test-kit/README.md](../router-test-kit/README.md)|Current|
-|[.claude/handoff/REVIEW-PROMPT.md](../.claude/handoff/REVIEW-PROMPT.md)|Historical / versioned|
-|[.claude/handoff/REVIEW-RESULT-TEMPLATE.md](../.claude/handoff/REVIEW-RESULT-TEMPLATE.md)|Historical / versioned|
-|[.claude/handoff/ROUTER-READINESS.md](../.claude/handoff/ROUTER-READINESS.md)|Historical / versioned|
-|[.claude/handoff/START-HERE.md](../.claude/handoff/START-HERE.md)|Historical / versioned|
-|[.claude/handoff/STATE.md](../.claude/handoff/STATE.md)|Historical / versioned|
-|[.claude/handoff/TODO-50.md](../.claude/handoff/TODO-50.md)|Historical / versioned|
-|[DISCLAIMER.md](../DISCLAIMER.md)|License / terms|
-|[DISCLAIMER.ru.md](../DISCLAIMER.ru.md)|License / terms|
-|[LICENSING.md](../LICENSING.md)|License / terms|
-|[demo/README.md](../demo/README.md)|Component reference|
-|[docs/ALPHA8-UX-ALGORITHMS-RESULTS.md](ALPHA8-UX-ALGORITHMS-RESULTS.md)|Historical / versioned|
-|[docs/CASCADE-ADAPTER-CONTRACT.md](CASCADE-ADAPTER-CONTRACT.md)|Historical / versioned|
-|[docs/CI-PRIMARY.md](CI-PRIMARY.md)|Technical reference|
-|[docs/CLIENT-TRIAL.md](CLIENT-TRIAL.md)|Historical / versioned|
-|[docs/COMPLETION-PLAN.md](COMPLETION-PLAN.md)|Historical / versioned|
-|[docs/ERROR_CODES.md](ERROR_CODES.md)|Technical reference|
-|[docs/FAILOVER-RESEARCH.md](FAILOVER-RESEARCH.md)|Historical / versioned|
-|[docs/FAILURE-ANALYSIS-0.9.0-alpha2.md](FAILURE-ANALYSIS-0.9.0-alpha2.md)|Historical / versioned|
-|[docs/FAILURE-ANALYSIS-0.9.0-alpha3.md](FAILURE-ANALYSIS-0.9.0-alpha3.md)|Historical / versioned|
-|[docs/GITHUB-PUBLICATION-2026-10-17.md](GITHUB-PUBLICATION-2026-10-17.md)|Historical / versioned|
-|[docs/GL-MT3000-TEST-PLAN.md](GL-MT3000-TEST-PLAN.md)|Historical / versioned|
-|[docs/INSTALL-WALKTHROUGH.md](INSTALL-WALKTHROUGH.md)|Historical / versioned|
-|[docs/LAN-HELPER.en.md](LAN-HELPER.en.md)|Current|
-|[docs/LAN-HELPER.ru.md](LAN-HELPER.ru.md)|Current|
-|[docs/MT3000-AUTO-TEST-REPORT-2026-10-23.md](MT3000-AUTO-TEST-REPORT-2026-10-23.md)|Historical / versioned|
-|[docs/MT3000-OPERATIONS-2026-10-22.md](MT3000-OPERATIONS-2026-10-22.md)|Historical / versioned|
-|[docs/NATIVE-EXPERIMENTAL.md](NATIVE-EXPERIMENTAL.md)|Historical / versioned|
-|[docs/NEXT-STAGE-RESULTS.md](NEXT-STAGE-RESULTS.md)|Historical / versioned|
-|[docs/NEXT-STAGE-REVIEW.md](NEXT-STAGE-REVIEW.md)|Historical / versioned|
-|[docs/OFFLINE-COMPLETION.md](OFFLINE-COMPLETION.md)|Historical / versioned|
-|[docs/OFFLINE-HARDENING-2026-10-20.md](OFFLINE-HARDENING-2026-10-20.md)|Historical / versioned|
-|[docs/OVERNIGHT-TEST-REPORT-2026-10-17.md](OVERNIGHT-TEST-REPORT-2026-10-17.md)|Historical / versioned|
-|[docs/PAIR-AUTO-OPERATIONS-2026-10-22.md](PAIR-AUTO-OPERATIONS-2026-10-22.md)|Historical / versioned|
-|[docs/PHYSICAL-MT3000-2026-10-20.md](PHYSICAL-MT3000-2026-10-20.md)|Historical / versioned|
-|[docs/PHYSICAL-ROUTER-ONLY-2026-10-20.md](PHYSICAL-ROUTER-ONLY-2026-10-20.md)|Historical / versioned|
-|[docs/POST-ALPHA10-EXTERNAL-PREREQUISITES.md](POST-ALPHA10-EXTERNAL-PREREQUISITES.md)|Historical / versioned|
-|[docs/POST-ALPHA10-VIRTUAL-CHECKPOINT.md](POST-ALPHA10-VIRTUAL-CHECKPOINT.md)|Historical / versioned|
-|[docs/PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md)|Historical / versioned|
-|[docs/PROTOCOL-SOAK-FINAL-2026-10-17.md](PROTOCOL-SOAK-FINAL-2026-10-17.md)|Historical / versioned|
-|[docs/ROUTER-AUTO-TEST-PLAN-2026-10-16.md](ROUTER-AUTO-TEST-PLAN-2026-10-16.md)|Historical / versioned|
-|[docs/ROUTER-BASELINE-2026-10-16.md](ROUTER-BASELINE-2026-10-16.md)|Historical / versioned|
-|[docs/ROUTER-PREPARATION.md](ROUTER-PREPARATION.md)|Technical reference|
-|[docs/ROUTER-TEST-PREPARATION-2026-10-16.md](ROUTER-TEST-PREPARATION-2026-10-16.md)|Historical / versioned|
-|[docs/SDK-ACCEPTANCE.md](SDK-ACCEPTANCE.md)|Historical / versioned|
-|[docs/SECURITY-RETEST-2026-10-16.md](SECURITY-RETEST-2026-10-16.md)|Historical / versioned|
-|[docs/SIDEBAR-RESPONSIVE-ALPHA10.md](SIDEBAR-RESPONSIVE-ALPHA10.md)|Historical / versioned|
-|[docs/STATISTICS-RETENTION.md](STATISTICS-RETENTION.md)|Technical reference|
-|[docs/STYLE.md](STYLE.md)|Technical reference|
-|[docs/TODO-ALGORITHMS-UX-2026-10-17.md](TODO-ALGORITHMS-UX-2026-10-17.md)|Historical / versioned|
-|[docs/TODO-NEXT-STAGE.md](TODO-NEXT-STAGE.md)|Historical / versioned|
-|[docs/TODO-POST-ALPHA10.md](TODO-POST-ALPHA10.md)|Historical / versioned|
-|[docs/TODO-VIRTUAL-HARDENING.md](TODO-VIRTUAL-HARDENING.md)|Historical / versioned|
-|[docs/TODO-WORKING-SYSTEM.md](TODO-WORKING-SYSTEM.md)|Historical / versioned|
-|[docs/TUNNEL-COORDINATION.md](TUNNEL-COORDINATION.md)|Technical reference|
-|[docs/UCI-FIX-RESULTS-2026-10-16.md](UCI-FIX-RESULTS-2026-10-16.md)|Historical / versioned|
-|[docs/UCI-PENDING-CHANGES.md](UCI-PENDING-CHANGES.md)|Historical / versioned|
-|[docs/UI-ACCEPTANCE-alpha13.md](UI-ACCEPTANCE-alpha13.md)|Historical / versioned|
-|[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|Historical / versioned|
-|[docs/WORKLOG.md](WORKLOG.md)|Historical / versioned|
-|[docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md](handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md)|Historical / versioned|
-|[docs/handoff/APPEARANCE-2026-10-23.md](handoff/APPEARANCE-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/AUTO-MATRIX-2026-10-23.md](handoff/AUTO-MATRIX-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/CONTINUATION-2026-10-20.md](handoff/CONTINUATION-2026-10-20.md)|Historical / versioned|
-|[docs/handoff/CONTINUATION-2026-10-21.md](handoff/CONTINUATION-2026-10-21.md)|Historical / versioned|
-|[docs/handoff/FIRST-RUN-FLOW-2026-10-23.md](handoff/FIRST-RUN-FLOW-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/LIMIT-CHECKPOINT-2026-10-21.md](handoff/LIMIT-CHECKPOINT-2026-10-21.md)|Historical / versioned|
-|[docs/handoff/OV-QUEUE-ANALYSIS-2026-10-22.md](handoff/OV-QUEUE-ANALYSIS-2026-10-22.md)|Historical / versioned|
-|[docs/handoff/OV-SETTLING-DESIGN-2026-10-22.md](handoff/OV-SETTLING-DESIGN-2026-10-22.md)|Historical / versioned|
-|[docs/handoff/OWNER-IDEAS-2026-10-23.md](handoff/OWNER-IDEAS-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/OWNER-STATUS-2026-10-23.md](handoff/OWNER-STATUS-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/PAUSED-STATE-2026-10-16.md](handoff/PAUSED-STATE-2026-10-16.md)|Historical / versioned|
-|[docs/handoff/RECOVERY-2026-10-23.md](handoff/RECOVERY-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/RECOVERY-TODO-2026-10-20.md](handoff/RECOVERY-TODO-2026-10-20.md)|Historical / versioned|
-|[docs/handoff/RESUME-TODO.md](handoff/RESUME-TODO.md)|Historical / versioned|
-|[docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md](handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md)|Historical / versioned|
-|[docs/handoff/STOP-2026-10-21.md](handoff/STOP-2026-10-21.md)|Historical / versioned|
-|[docs/handoff/TEST-RESULTS.md](handoff/TEST-RESULTS.md)|Historical / versioned|
-|[docs/handoff/UI-OPERATOR-2026-10-23.md](handoff/UI-OPERATOR-2026-10-23.md)|Historical / versioned|
-|[docs/handoff/URGENT-PAUSE-2026-10-20.md](handoff/URGENT-PAUSE-2026-10-20.md)|Historical / versioned|
-|[docs/handoff/WORKSPACE-LOCATION.md](handoff/WORKSPACE-LOCATION.md)|Historical / versioned|
-|[docs/handoff/pending-uci-fix/README.md](handoff/pending-uci-fix/README.md)|Historical / versioned|
-|[lab/README.md](../lab/README.md)|Component reference|
-|[lab/openwrt-qemu/README.md](../lab/openwrt-qemu/README.md)|Component reference|
-|[qa/ALPHA4-CHECKPOINT.md](../qa/ALPHA4-CHECKPOINT.md)|Historical / versioned|
-|[qa/ALPHA5-CHECKPOINT.md](../qa/ALPHA5-CHECKPOINT.md)|Historical / versioned|
-|[qa/NATIVE_BUILD_REPORT.md](../qa/NATIVE_BUILD_REPORT.md)|Historical / versioned|
-|[qa/OPENWRT-VIRTUAL-REPORT.md](../qa/OPENWRT-VIRTUAL-REPORT.md)|Historical / versioned|
-|[qa/ROUTER_FAULT_REPORT.md](../qa/ROUTER_FAULT_REPORT.md)|Historical / versioned|
-|[qa/STRESS_REPORT.md](../qa/STRESS_REPORT.md)|Historical / versioned|
-|[qa/ui-probe/README.md](../qa/ui-probe/README.md)|Historical / versioned|
-|[releases/handoff-v1.0.0.md](../releases/handoff-v1.0.0.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha12.md](../releases/notes-v0.9.0-alpha12.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha14.md](../releases/notes-v0.9.0-alpha14.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha15.md](../releases/notes-v0.9.0-alpha15.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha16.md](../releases/notes-v0.9.0-alpha16.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha18.md](../releases/notes-v0.9.0-alpha18.md)|Historical / versioned|
-|[releases/notes-v0.9.0-alpha19.md](../releases/notes-v0.9.0-alpha19.md)|Historical / versioned|
-|[releases/v0.7.0-alpha10.md](../releases/v0.7.0-alpha10.md)|Historical / versioned|
-|[releases/v0.7.0-alpha5.md](../releases/v0.7.0-alpha5.md)|Historical / versioned|
-|[releases/v0.7.0-alpha6.md](../releases/v0.7.0-alpha6.md)|Historical / versioned|
-|[releases/v0.7.0-alpha8.md](../releases/v0.7.0-alpha8.md)|Historical / versioned|
-|[releases/v0.7.0-alpha9.md](../releases/v0.7.0-alpha9.md)|Historical / versioned|
-|[releases/v0.8.0-alpha1.md](../releases/v0.8.0-alpha1.md)|Historical / versioned|
-|[releases/v0.8.0-alpha10.md](../releases/v0.8.0-alpha10.md)|Historical / versioned|
-|[releases/v0.8.0-alpha11.md](../releases/v0.8.0-alpha11.md)|Historical / versioned|
-|[releases/v0.8.0-alpha12.md](../releases/v0.8.0-alpha12.md)|Historical / versioned|
-|[releases/v0.8.0-alpha13.md](../releases/v0.8.0-alpha13.md)|Historical / versioned|
-|[releases/v0.8.0-alpha14.md](../releases/v0.8.0-alpha14.md)|Historical / versioned|
-|[releases/v0.8.0-alpha15.md](../releases/v0.8.0-alpha15.md)|Historical / versioned|
-|[releases/v0.8.0-alpha16.md](../releases/v0.8.0-alpha16.md)|Historical / versioned|
-|[releases/v0.8.0-alpha17.md](../releases/v0.8.0-alpha17.md)|Historical / versioned|
-|[releases/v0.8.0-alpha18.md](../releases/v0.8.0-alpha18.md)|Historical / versioned|
-|[releases/v0.8.0-alpha19.md](../releases/v0.8.0-alpha19.md)|Historical / versioned|
-|[releases/v0.8.0-alpha2.md](../releases/v0.8.0-alpha2.md)|Historical / versioned|
-|[releases/v0.8.0-alpha20.md](../releases/v0.8.0-alpha20.md)|Historical / versioned|
-|[releases/v0.8.0-alpha21.md](../releases/v0.8.0-alpha21.md)|Historical / versioned|
-|[releases/v0.8.0-alpha22.md](../releases/v0.8.0-alpha22.md)|Historical / versioned|
-|[releases/v0.8.0-alpha3.md](../releases/v0.8.0-alpha3.md)|Historical / versioned|
-|[releases/v0.8.0-alpha4.md](../releases/v0.8.0-alpha4.md)|Historical / versioned|
-|[releases/v0.8.0-alpha5.md](../releases/v0.8.0-alpha5.md)|Historical / versioned|
-|[releases/v0.8.0-alpha6.md](../releases/v0.8.0-alpha6.md)|Historical / versioned|
-|[releases/v0.8.0-alpha7.md](../releases/v0.8.0-alpha7.md)|Historical / versioned|
-|[releases/v0.8.0-alpha8.md](../releases/v0.8.0-alpha8.md)|Historical / versioned|
-|[releases/v0.8.0-alpha9.md](../releases/v0.8.0-alpha9.md)|Historical / versioned|
-|[releases/v0.9.0-alpha1.md](../releases/v0.9.0-alpha1.md)|Historical / versioned|
-|[releases/v0.9.0-alpha2.md](../releases/v0.9.0-alpha2.md)|Historical / versioned|
-|[releases/v0.9.0-alpha27.md](../releases/v0.9.0-alpha27.md)|Historical / versioned|
-|[releases/v0.9.0-alpha3.md](../releases/v0.9.0-alpha3.md)|Historical / versioned|
-|[releases/v0.9.0-alpha35.md](../releases/v0.9.0-alpha35.md)|Historical / versioned|
-|[releases/v0.9.0-alpha6.md](../releases/v0.9.0-alpha6.md)|Historical / versioned|
-|[releases/v0.9.0-alpha9.md](../releases/v0.9.0-alpha9.md)|Historical / versioned|
-|[router-test-kit/EMERGENCY.md](../router-test-kit/EMERGENCY.md)|Historical / versioned|
-|[router/README.md](../router/README.md)|Historical / versioned|
-|[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|License / terms|
-|[scripts/recovery/README.md](../scripts/recovery/README.md)|Historical / versioned|
+|[.claude/handoff/REVIEW-PROMPT.md](../.claude/handoff/REVIEW-PROMPT.md)|historical-reference|
+|[.claude/handoff/REVIEW-RESULT-TEMPLATE.md](../.claude/handoff/REVIEW-RESULT-TEMPLATE.md)|historical-reference|
+|[.claude/handoff/ROUTER-READINESS.md](../.claude/handoff/ROUTER-READINESS.md)|historical-reference|
+|[.claude/handoff/START-HERE.md](../.claude/handoff/START-HERE.md)|historical-reference|
+|[.claude/handoff/STATE.md](../.claude/handoff/STATE.md)|historical-reference|
+|[.claude/handoff/TODO-50.md](../.claude/handoff/TODO-50.md)|historical-reference|
+|[CHANGELOG.md](../CHANGELOG.md)|technical-reference|
+|[CLAUDE.md](../CLAUDE.md)|technical-reference|
+|[demo/README.md](../demo/README.md)|historical-reference|
+|[DISCLAIMER.md](../DISCLAIMER.md)|preserved-legal|
+|[DISCLAIMER.ru.md](../DISCLAIMER.ru.md)|preserved-legal|
+|[docs/AI-INSTALL.en.md](AI-INSTALL.en.md)|current-generated-prompt|
+|[docs/AI-INSTALL.ru.md](AI-INSTALL.ru.md)|current-generated-prompt|
+|[docs/AI-LAN.en.md](AI-LAN.en.md)|current-generated-prompt|
+|[docs/AI-LAN.ru.md](AI-LAN.ru.md)|current-generated-prompt|
+|[docs/ALPHA8-UX-ALGORITHMS-RESULTS.md](ALPHA8-UX-ALGORITHMS-RESULTS.md)|historical-reference|
+|[docs/AUTO-QUICKSTART.en.md](AUTO-QUICKSTART.en.md)|current|
+|[docs/AUTO-QUICKSTART.ru.md](AUTO-QUICKSTART.ru.md)|current|
+|[docs/BUILTIN-HELP.en.md](BUILTIN-HELP.en.md)|current-generated-help|
+|[docs/BUILTIN-HELP.ru.md](BUILTIN-HELP.ru.md)|current-generated-help|
+|[docs/CASCADE-ADAPTER-CONTRACT.md](CASCADE-ADAPTER-CONTRACT.md)|historical-reference|
+|[docs/CHANNEL-ATTRIBUTION.md](CHANNEL-ATTRIBUTION.md)|technical-reference|
+|[docs/CI-PRIMARY.md](CI-PRIMARY.md)|current-technical|
+|[docs/CLIENT-TRIAL.md](CLIENT-TRIAL.md)|current|
+|[docs/COMPLETION-PLAN.md](COMPLETION-PLAN.md)|historical-reference|
+|[docs/CONTROL-AND-SETUP.md](CONTROL-AND-SETUP.md)|current|
+|[docs/CURRENT-STATE.en.md](CURRENT-STATE.en.md)|current-canonical|
+|[docs/CURRENT-STATE.ru.md](CURRENT-STATE.ru.md)|current-canonical|
+|[docs/CURRENT-STATUS.md](CURRENT-STATUS.md)|current-delivery-record|
+|[docs/DOCUMENTATION-AUDIT-2026-10-24.md](DOCUMENTATION-AUDIT-2026-10-24.md)|versioned-evidence|
+|[docs/ERROR_CODES.md](ERROR_CODES.md)|current-generated-codes|
+|[docs/FAILOVER-RESEARCH.md](FAILOVER-RESEARCH.md)|historical-reference|
+|[docs/FAILURE-ANALYSIS-0.9.0-alpha2.md](FAILURE-ANALYSIS-0.9.0-alpha2.md)|historical-reference|
+|[docs/FAILURE-ANALYSIS-0.9.0-alpha3.md](FAILURE-ANALYSIS-0.9.0-alpha3.md)|historical-reference|
+|[docs/FIRST-RUN-SETUP.md](FIRST-RUN-SETUP.md)|current|
+|[docs/GITHUB-PUBLICATION-2026-10-17.md](GITHUB-PUBLICATION-2026-10-17.md)|historical-reference|
+|[docs/GL-MT3000-TEST-PLAN.md](GL-MT3000-TEST-PLAN.md)|historical-reference|
+|[docs/handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md](handoff/ALPHA17-WIP-CHECKPOINT-2026-10-20.md)|historical-reference|
+|[docs/handoff/APPEARANCE-2026-10-23.md](handoff/APPEARANCE-2026-10-23.md)|historical-reference|
+|[docs/handoff/AUTO-MATRIX-2026-10-23.md](handoff/AUTO-MATRIX-2026-10-23.md)|historical-reference|
+|[docs/handoff/BATCH-TASKS-2026-10-25.md](handoff/BATCH-TASKS-2026-10-25.md)|recovery-record|
+|[docs/handoff/CONTINUATION-2026-10-20.md](handoff/CONTINUATION-2026-10-20.md)|historical-reference|
+|[docs/handoff/CONTINUATION-2026-10-21.md](handoff/CONTINUATION-2026-10-21.md)|historical-reference|
+|[docs/handoff/CONTINUE-PROMPT.md](handoff/CONTINUE-PROMPT.md)|recovery-record|
+|[docs/handoff/CURRENT.md](handoff/CURRENT.md)|recovery-record|
+|[docs/handoff/FIRST-RUN-FLOW-2026-10-23.md](handoff/FIRST-RUN-FLOW-2026-10-23.md)|historical-reference|
+|[docs/handoff/LEARN-ACTIONS-TASK-2026-10-25.md](handoff/LEARN-ACTIONS-TASK-2026-10-25.md)|recovery-record|
+|[docs/handoff/LEARN-POSITION-TASK-2026-10-25.md](handoff/LEARN-POSITION-TASK-2026-10-25.md)|recovery-record|
+|[docs/handoff/LIMIT-CHECKPOINT-2026-10-21.md](handoff/LIMIT-CHECKPOINT-2026-10-21.md)|historical-reference|
+|[docs/handoff/NEXT-AI-2026-10-24.md](handoff/NEXT-AI-2026-10-24.md)|recovery-record|
+|[docs/handoff/NEXT-AI-2026-10-25.md](handoff/NEXT-AI-2026-10-25.md)|recovery-record|
+|[docs/handoff/OV-QUEUE-ANALYSIS-2026-10-22.md](handoff/OV-QUEUE-ANALYSIS-2026-10-22.md)|historical-reference|
+|[docs/handoff/OV-SETTLING-DESIGN-2026-10-22.md](handoff/OV-SETTLING-DESIGN-2026-10-22.md)|historical-reference|
+|[docs/handoff/OWNER-IDEAS-2026-10-23.md](handoff/OWNER-IDEAS-2026-10-23.md)|historical-reference|
+|[docs/handoff/OWNER-STATUS-2026-10-23.md](handoff/OWNER-STATUS-2026-10-23.md)|historical-reference|
+|[docs/handoff/OWNER-UI-TODO-2026-10-23.md](handoff/OWNER-UI-TODO-2026-10-23.md)|recovery-record|
+|[docs/handoff/PAUSED-STATE-2026-10-16.md](handoff/PAUSED-STATE-2026-10-16.md)|historical-reference|
+|[docs/handoff/pending-uci-fix/README.md](handoff/pending-uci-fix/README.md)|historical-reference|
+|[docs/handoff/README.md](handoff/README.md)|recovery-record|
+|[docs/handoff/RECOVERY-2026-10-23.md](handoff/RECOVERY-2026-10-23.md)|historical-reference|
+|[docs/handoff/RECOVERY-TODO-2026-10-20.md](handoff/RECOVERY-TODO-2026-10-20.md)|historical-reference|
+|[docs/handoff/RESUME-TODO.md](handoff/RESUME-TODO.md)|historical-reference|
+|[docs/handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md](handoff/ROUTER-ONLY-COMPLETION-2026-10-22.md)|historical-reference|
+|[docs/handoff/SPEED-LIVE-TASK-2026-10-25.md](handoff/SPEED-LIVE-TASK-2026-10-25.md)|recovery-record|
+|[docs/handoff/STATUS.md](handoff/STATUS.md)|recovery-record|
+|[docs/handoff/STOP-2026-10-21.md](handoff/STOP-2026-10-21.md)|historical-reference|
+|[docs/handoff/TEST-RESULTS.md](handoff/TEST-RESULTS.md)|historical-reference|
+|[docs/handoff/TODO.md](handoff/TODO.md)|recovery-record|
+|[docs/handoff/UI-CRASH-RECOVERY-2026-10-24.md](handoff/UI-CRASH-RECOVERY-2026-10-24.md)|recovery-record|
+|[docs/handoff/UI-OPERATOR-2026-10-23.md](handoff/UI-OPERATOR-2026-10-23.md)|historical-reference|
+|[docs/handoff/URGENT-PAUSE-2026-10-20.md](handoff/URGENT-PAUSE-2026-10-20.md)|historical-reference|
+|[docs/handoff/VM-AUDIT-2026-10-24.md](handoff/VM-AUDIT-2026-10-24.md)|recovery-record|
+|[docs/handoff/WORKSPACE-LOCATION.md](handoff/WORKSPACE-LOCATION.md)|historical-reference|
+|[docs/HISTORY-RETENTION.md](HISTORY-RETENTION.md)|current|
+|[docs/HOW-IT-WORKS.en.md](HOW-IT-WORKS.en.md)|current|
+|[docs/HOW-IT-WORKS.ru.md](HOW-IT-WORKS.ru.md)|current|
+|[docs/INSTALL-WALKTHROUGH.md](INSTALL-WALKTHROUGH.md)|historical-reference|
+|[docs/INSTALL.en.md](INSTALL.en.md)|current|
+|[docs/INSTALL.ru.md](INSTALL.ru.md)|current|
+|[docs/LAN-HELPER.en.md](LAN-HELPER.en.md)|current|
+|[docs/LAN-HELPER.ru.md](LAN-HELPER.ru.md)|current|
+|[docs/LANGUAGE.md](LANGUAGE.md)|current|
+|[docs/LATEST-CHANGES.md](LATEST-CHANGES.md)|technical-reference|
+|[docs/LICENSING-AND-TERMS.md](LICENSING-AND-TERMS.md)|preserved-legal|
+|[docs/LIVE-SPEED-ALPHA23-2026-10-25.md](LIVE-SPEED-ALPHA23-2026-10-25.md)|versioned-evidence|
+|[docs/LOCAL-ACCESS.md](LOCAL-ACCESS.md)|current|
+|[docs/MT3000-AUTO-TEST-REPORT-2026-10-23.md](MT3000-AUTO-TEST-REPORT-2026-10-23.md)|historical-reference|
+|[docs/MT3000-OPERATIONS-2026-10-22.md](MT3000-OPERATIONS-2026-10-22.md)|historical-reference|
+|[docs/NATIVE-EXPERIMENTAL.md](NATIVE-EXPERIMENTAL.md)|historical-reference|
+|[docs/NEXT-STAGE-RESULTS.md](NEXT-STAGE-RESULTS.md)|historical-reference|
+|[docs/NEXT-STAGE-REVIEW.md](NEXT-STAGE-REVIEW.md)|historical-reference|
+|[docs/OFFLINE-COMPLETION.md](OFFLINE-COMPLETION.md)|historical-reference|
+|[docs/OFFLINE-HARDENING-2026-10-20.md](OFFLINE-HARDENING-2026-10-20.md)|historical-reference|
+|[docs/OVERNIGHT-TEST-REPORT-2026-10-17.md](OVERNIGHT-TEST-REPORT-2026-10-17.md)|historical-reference|
+|[docs/OVERVIEW-PATH-COLOURS.md](OVERVIEW-PATH-COLOURS.md)|current|
+|[docs/OWNER-BATCH-ALPHA22-2026-10-25.md](OWNER-BATCH-ALPHA22-2026-10-25.md)|versioned-evidence|
+|[docs/OWNER-UI-ALPHA2.md](OWNER-UI-ALPHA2.md)|versioned-evidence|
+|[docs/PAIR-AUTO-OPERATIONS-2026-10-22.md](PAIR-AUTO-OPERATIONS-2026-10-22.md)|historical-reference|
+|[docs/PHYSICAL-MT3000-2026-10-20.md](PHYSICAL-MT3000-2026-10-20.md)|historical-reference|
+|[docs/PHYSICAL-ROUTER-ONLY-2026-10-20.md](PHYSICAL-ROUTER-ONLY-2026-10-20.md)|historical-reference|
+|[docs/POST-ALPHA10-EXTERNAL-PREREQUISITES.md](POST-ALPHA10-EXTERNAL-PREREQUISITES.md)|historical-reference|
+|[docs/POST-ALPHA10-VIRTUAL-CHECKPOINT.md](POST-ALPHA10-VIRTUAL-CHECKPOINT.md)|historical-reference|
+|[docs/PRODUCT_REQUIREMENTS.md](PRODUCT_REQUIREMENTS.md)|historical-reference|
+|[docs/PROMPT-VALIDATION-2026-10-23.md](PROMPT-VALIDATION-2026-10-23.md)|versioned-evidence|
+|[docs/PROTOCOL-SOAK-FINAL-2026-10-17.md](PROTOCOL-SOAK-FINAL-2026-10-17.md)|historical-reference|
+|[docs/PUBLICATION.md](PUBLICATION.md)|current|
+|[docs/RELEASE-0.9.0.md](RELEASE-0.9.0.md)|technical-reference|
+|[docs/ROADMAP.md](ROADMAP.md)|current|
+|[docs/ROUTER-AUTO-TEST-PLAN-2026-10-16.md](ROUTER-AUTO-TEST-PLAN-2026-10-16.md)|historical-reference|
+|[docs/ROUTER-BASELINE-2026-10-16.md](ROUTER-BASELINE-2026-10-16.md)|historical-reference|
+|[docs/ROUTER-PREPARATION.md](ROUTER-PREPARATION.md)|current|
+|[docs/ROUTER-TEST-PREPARATION-2026-10-16.md](ROUTER-TEST-PREPARATION-2026-10-16.md)|historical-reference|
+|[docs/SDK-ACCEPTANCE.md](SDK-ACCEPTANCE.md)|historical-reference|
+|[docs/SECURITY-RETEST-2026-10-16.md](SECURITY-RETEST-2026-10-16.md)|historical-reference|
+|[docs/SIDEBAR-RESPONSIVE-ALPHA10.md](SIDEBAR-RESPONSIVE-ALPHA10.md)|historical-reference|
+|[docs/SIMPLE-HOME-2026-10-25.md](SIMPLE-HOME-2026-10-25.md)|versioned-evidence|
+|[docs/STATE.md](STATE.md)|current|
+|[docs/STATISTICS-RETENTION.md](STATISTICS-RETENTION.md)|current|
+|[docs/STYLE.md](STYLE.md)|current|
+|[docs/TESTED-ENVIRONMENT.en.md](TESTED-ENVIRONMENT.en.md)|current|
+|[docs/TESTED-ENVIRONMENT.ru.md](TESTED-ENVIRONMENT.ru.md)|current|
+|[docs/TODO-ALGORITHMS-UX-2026-10-17.md](TODO-ALGORITHMS-UX-2026-10-17.md)|historical-reference|
+|[docs/TODO-NEXT-STAGE.md](TODO-NEXT-STAGE.md)|historical-reference|
+|[docs/TODO-POST-ALPHA10.md](TODO-POST-ALPHA10.md)|historical-reference|
+|[docs/TODO-VIRTUAL-HARDENING.md](TODO-VIRTUAL-HARDENING.md)|historical-reference|
+|[docs/TODO-WORKING-SYSTEM.md](TODO-WORKING-SYSTEM.md)|historical-reference|
+|[docs/TRAINING-AND-DOCS-AUDIT-2026-10-24.md](TRAINING-AND-DOCS-AUDIT-2026-10-24.md)|versioned-evidence|
+|[docs/TRAINING.en.md](TRAINING.en.md)|current-generated-training|
+|[docs/TRAINING.ru.md](TRAINING.ru.md)|current-generated-training|
+|[docs/TUNNEL-COORDINATION.md](TUNNEL-COORDINATION.md)|current-technical|
+|[docs/UCI-FIX-RESULTS-2026-10-16.md](UCI-FIX-RESULTS-2026-10-16.md)|historical-reference|
+|[docs/UCI-PENDING-CHANGES.md](UCI-PENDING-CHANGES.md)|historical-reference|
+|[docs/UI-ACCEPTANCE-alpha13.md](UI-ACCEPTANCE-alpha13.md)|historical-reference|
+|[docs/VALIDATION.md](VALIDATION.md)|current|
+|[docs/VERIFICATION-ALPHA13-2026-10-24.md](VERIFICATION-ALPHA13-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA14-2026-10-24.md](VERIFICATION-ALPHA14-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA15-2026-10-24.md](VERIFICATION-ALPHA15-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA16-2026-10-24.md](VERIFICATION-ALPHA16-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA17-2026-10-24.md](VERIFICATION-ALPHA17-2026-10-24.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA18-2026-10-25.md](VERIFICATION-ALPHA18-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA19-2026-10-25.md](VERIFICATION-ALPHA19-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA20-2026-10-25.md](VERIFICATION-ALPHA20-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA21-2026-10-25.md](VERIFICATION-ALPHA21-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA22-2026-10-25.md](VERIFICATION-ALPHA22-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA23-2026-10-25.md](VERIFICATION-ALPHA23-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA24-2026-10-25.md](VERIFICATION-ALPHA24-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION-ALPHA25-2026-10-25.md](VERIFICATION-ALPHA25-2026-10-25.md)|versioned-evidence|
+|[docs/VERIFICATION.md](VERIFICATION.md)|current|
+|[docs/VERSIONING.md](VERSIONING.md)|current|
+|[docs/VIRTUAL-ENDURANCE.md](VIRTUAL-ENDURANCE.md)|historical-reference|
+|[docs/WORKLOG.md](WORKLOG.md)|historical-reference|
+|[lab/openwrt-qemu/README.md](../lab/openwrt-qemu/README.md)|historical-reference|
+|[lab/README.md](../lab/README.md)|historical-reference|
+|[LICENSE](../LICENSE)|preserved-legal|
+|[LICENSING.md](../LICENSING.md)|preserved-legal|
+|[qa/ALPHA4-CHECKPOINT.md](../qa/ALPHA4-CHECKPOINT.md)|historical-reference|
+|[qa/ALPHA5-CHECKPOINT.md](../qa/ALPHA5-CHECKPOINT.md)|historical-reference|
+|[qa/NATIVE_BUILD_REPORT.md](../qa/NATIVE_BUILD_REPORT.md)|historical-reference|
+|[qa/OPENWRT-VIRTUAL-REPORT.md](../qa/OPENWRT-VIRTUAL-REPORT.md)|historical-reference|
+|[qa/ROUTER_FAULT_REPORT.md](../qa/ROUTER_FAULT_REPORT.md)|historical-reference|
+|[qa/STRESS_REPORT.md](../qa/STRESS_REPORT.md)|historical-reference|
+|[qa/ui-probe/README.md](../qa/ui-probe/README.md)|historical-reference|
+|[README.md](../README.md)|technical-reference|
+|[README.ru.md](../README.ru.md)|technical-reference|
+|[releases/handoff-v1.0.0.md](../releases/handoff-v1.0.0.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha12.md](../releases/notes-v0.9.0-alpha12.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha14.md](../releases/notes-v0.9.0-alpha14.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha15.md](../releases/notes-v0.9.0-alpha15.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha16.md](../releases/notes-v0.9.0-alpha16.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha18.md](../releases/notes-v0.9.0-alpha18.md)|historical-reference|
+|[releases/notes-v0.9.0-alpha19.md](../releases/notes-v0.9.0-alpha19.md)|historical-reference|
+|[releases/v0.7.0-alpha10.md](../releases/v0.7.0-alpha10.md)|historical-reference|
+|[releases/v0.7.0-alpha5.md](../releases/v0.7.0-alpha5.md)|historical-reference|
+|[releases/v0.7.0-alpha6.md](../releases/v0.7.0-alpha6.md)|historical-reference|
+|[releases/v0.7.0-alpha8.md](../releases/v0.7.0-alpha8.md)|historical-reference|
+|[releases/v0.7.0-alpha9.md](../releases/v0.7.0-alpha9.md)|historical-reference|
+|[releases/v0.8.0-alpha1.md](../releases/v0.8.0-alpha1.md)|historical-reference|
+|[releases/v0.8.0-alpha10.md](../releases/v0.8.0-alpha10.md)|historical-reference|
+|[releases/v0.8.0-alpha11.md](../releases/v0.8.0-alpha11.md)|historical-reference|
+|[releases/v0.8.0-alpha12.md](../releases/v0.8.0-alpha12.md)|historical-reference|
+|[releases/v0.8.0-alpha13.md](../releases/v0.8.0-alpha13.md)|historical-reference|
+|[releases/v0.8.0-alpha14.md](../releases/v0.8.0-alpha14.md)|historical-reference|
+|[releases/v0.8.0-alpha15.md](../releases/v0.8.0-alpha15.md)|historical-reference|
+|[releases/v0.8.0-alpha16.md](../releases/v0.8.0-alpha16.md)|historical-reference|
+|[releases/v0.8.0-alpha17.md](../releases/v0.8.0-alpha17.md)|historical-reference|
+|[releases/v0.8.0-alpha18.md](../releases/v0.8.0-alpha18.md)|historical-reference|
+|[releases/v0.8.0-alpha19.md](../releases/v0.8.0-alpha19.md)|historical-reference|
+|[releases/v0.8.0-alpha2.md](../releases/v0.8.0-alpha2.md)|historical-reference|
+|[releases/v0.8.0-alpha20.md](../releases/v0.8.0-alpha20.md)|historical-reference|
+|[releases/v0.8.0-alpha21.md](../releases/v0.8.0-alpha21.md)|historical-reference|
+|[releases/v0.8.0-alpha22.md](../releases/v0.8.0-alpha22.md)|historical-reference|
+|[releases/v0.8.0-alpha3.md](../releases/v0.8.0-alpha3.md)|historical-reference|
+|[releases/v0.8.0-alpha4.md](../releases/v0.8.0-alpha4.md)|historical-reference|
+|[releases/v0.8.0-alpha5.md](../releases/v0.8.0-alpha5.md)|historical-reference|
+|[releases/v0.8.0-alpha6.md](../releases/v0.8.0-alpha6.md)|historical-reference|
+|[releases/v0.8.0-alpha7.md](../releases/v0.8.0-alpha7.md)|historical-reference|
+|[releases/v0.8.0-alpha8.md](../releases/v0.8.0-alpha8.md)|historical-reference|
+|[releases/v0.8.0-alpha9.md](../releases/v0.8.0-alpha9.md)|historical-reference|
+|[releases/v0.9.0-alpha1.md](../releases/v0.9.0-alpha1.md)|historical-reference|
+|[releases/v0.9.0-alpha2.md](../releases/v0.9.0-alpha2.md)|historical-reference|
+|[releases/v0.9.0-alpha27.md](../releases/v0.9.0-alpha27.md)|historical-reference|
+|[releases/v0.9.0-alpha3.md](../releases/v0.9.0-alpha3.md)|historical-reference|
+|[releases/v0.9.0-alpha35.md](../releases/v0.9.0-alpha35.md)|historical-reference|
+|[releases/v0.9.0-alpha6.md](../releases/v0.9.0-alpha6.md)|historical-reference|
+|[releases/v0.9.0-alpha9.md](../releases/v0.9.0-alpha9.md)|historical-reference|
+|[releases/v0.9.0.md](../releases/v0.9.0.md)|technical-reference|
+|[releases/v0.9.1-alpha13.md](../releases/v0.9.1-alpha13.md)|versioned-evidence|
+|[releases/v0.9.1-alpha14.md](../releases/v0.9.1-alpha14.md)|versioned-evidence|
+|[releases/v0.9.1-alpha15.md](../releases/v0.9.1-alpha15.md)|versioned-evidence|
+|[releases/v0.9.1-alpha16.md](../releases/v0.9.1-alpha16.md)|versioned-evidence|
+|[releases/v0.9.1-alpha17.md](../releases/v0.9.1-alpha17.md)|versioned-evidence|
+|[releases/v0.9.1-alpha18.md](../releases/v0.9.1-alpha18.md)|versioned-evidence|
+|[releases/v0.9.1-alpha19.md](../releases/v0.9.1-alpha19.md)|versioned-evidence|
+|[releases/v0.9.1-alpha20.md](../releases/v0.9.1-alpha20.md)|versioned-evidence|
+|[releases/v0.9.1-alpha21.md](../releases/v0.9.1-alpha21.md)|versioned-evidence|
+|[releases/v0.9.1-alpha22.md](../releases/v0.9.1-alpha22.md)|versioned-evidence|
+|[releases/v0.9.1-alpha23.md](../releases/v0.9.1-alpha23.md)|versioned-evidence|
+|[releases/v0.9.1-alpha24.md](../releases/v0.9.1-alpha24.md)|versioned-evidence|
+|[releases/v0.9.1-alpha25.md](../releases/v0.9.1-alpha25.md)|versioned-evidence|
+|[router/files/usr/share/homensai-vpn/LICENSE](../router/files/usr/share/homensai-vpn/LICENSE)|preserved-legal|
+|[router/files/usr/share/licenses/homensai-auto-vpn/LICENSE](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSE)|preserved-legal|
+|[router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md](../router/files/usr/share/licenses/homensai-auto-vpn/LICENSING.md)|preserved-legal|
+|[router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/NOTICE.txt](../router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/NOTICE.txt)|preserved-legal|
+|[router/files/www/luci-static/resources/view/homensai-vpn/style/LICENSE](../router/files/www/luci-static/resources/view/homensai-vpn/style/LICENSE)|preserved-legal|
+|[router/README.md](../router/README.md)|current|
+|[router-test-kit/EMERGENCY.md](../router-test-kit/EMERGENCY.md)|current|
+|[router-test-kit/README.md](../router-test-kit/README.md)|current|
+|[scripts/recovery/README.md](../scripts/recovery/README.md)|historical-reference|
+|[START-HERE.md](../START-HERE.md)|current|
+|[router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/OFL.txt](../router/files/www/luci-static/resources/view/homensai-vpn/style/fonts/ibm-plex/OFL.txt)|preserved-legal / separately inventoried font licence|

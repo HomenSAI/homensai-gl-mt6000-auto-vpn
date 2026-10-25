@@ -1,9 +1,20 @@
-# Auto controls and setup — 0.9.0
+<!-- doc-role: current -->
+# Управление и настройка / Control and setup
 
-The round Overview control requests Start/Stop and locks during the actual operation, beyond queue acknowledgement. Green means Auto enabled/ready; red means off. Monitoring is required/default-on, and a real monitoring error is explicit. Exceptional cancellation remains under Technical actions; the first Language and appearance step has no Emergency Stop button.
+[RU guide](CURRENT-STATE.ru.md) · [EN guide](CURRENT-STATE.en.md) · [First run](FIRST-RUN-SETUP.md)
 
-The separate rounded manual panel has equal primary/reserve cards. The healthy selected card is green/animated and has no Turn on action. An eligible inactive red card offers Turn on; inactive/error diagrams are static. During switching the destination is yellow with Switching and the other card is red. Commands are authenticated, revision-bound and share Auto's health/worker/budget/rollback fences. Healthy manual preference stays preferred while Auto continues protecting it.
+| Действие / Action | Реальный результат / Effect |
+|---|---|
+| Проверить VPN / Check VPN now | Запрос свежих наблюдений; не выбирает маршрут / Requests observations without selecting a route |
+| Сохранить мастер / Save setup | Собственные параметры приложения; не принимает условия и не включает Auto / Own app preferences, no terms acceptance or Auto start |
+| Start Auto | Явный управляемый запуск подготовленного режима; ждите подтверждения / Explicit prepared-mode start, await confirmation |
+| Ручной канал / Manual selection | Запрос выбранного канала с актуальными проверками; ACK не завершение / Guarded channel request, ACK is not completion |
+| Stop Auto | Отмена ожидающего запуска и управляемое восстановление; итог проверяется / Revokes pending start, managed recovery must be verified |
+| Тест сбоя / Fault test | Ограниченный сбой текущего туннеля, проверка другого маршрута / Bounded current-tunnel fault and alternate-route check |
+| Мониторинг / Monitoring | Независимые измерения; часы журнала не ускоряют сетевые пробы / Independent measurements, log clock does not accelerate probes |
 
-On the prepared MT3000, continuous router-probed IPv4 mode starts the saved pair and does not require an external-LAN certificate. The separate bounded LAN-confirmed trial path retains its own witness requirements; do not confuse the two modes or invent a certificate. Stop success requires verified cleanup, not only an ACK. Restart requires fresh explicit Auto Start.
+Два клиента выбираются на шаге 3 общего мастера. Для другой привязки сервера/протокола сначала используйте штатную VPN-панель, затем обновите Auto VPN и дождитесь согласованной идентичности. Не меняйте штатные профили во время управляемого перехода.
 
-First entry and later preferences: [eight-step setup](FIRST-RUN-SETUP.md). Saving metadata does not import VPN keys or run a trial/speed test/Auto. Monitor observation alone never connects arbitrary inactive profiles. [Scope](CURRENT-STATUS.md) · [statistics](STATISTICS-RETENTION.md).
+Storage controls are available in setup step 2 and Settings → Monitoring and history retention: live count1–2000, detail days1–7. Preserve existing values by default. Short monitor preferences supports profile limit1–16; the complete wizard can retain supported legacy values up to32. For a selected pair,2 is a useful starting limit; it does not activate stopped profiles by itself.
+
+Для подтверждённой остановки проверяйте фазу/guard/восстановленный или удержанный маршрут. `STOPPED-ON-RESERVE` не означает успешный возврат исходного пути. [Аварийные команды](../router-test-kit/EMERGENCY.md) — осознанное восстановление, а не обычное чтение.

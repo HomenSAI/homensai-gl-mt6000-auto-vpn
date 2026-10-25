@@ -1,12 +1,12 @@
-<!-- current-release-context:0.9.0 -->
-> Historical or versioned reference. [Current release0.9.0 and verified scope](../docs/CURRENT-STATUS.md) · [documentation index](../docs/DOCUMENTATION-INDEX.md). Versions, paused windows, planned features and device states below describe their recorded time; they are not current installation instructions or new authorization. Original evidence is retained.
+<!-- doc-role: current -->
+# Native OpenWrt application
 
-# Native OpenWrt package
+Source identity is in [VERSION.json](../VERSION.json); installed/published evidence is in [CURRENT-STATUS](../docs/CURRENT-STATUS.md). The repository name retains MT6000 history, while qualified prepared continuous mode is the documented MT3000/4.11.0 path. Do not infer arbitrary firmware/device acceptance from architecture `all`.
 
-Current release candidate: **0.5.0-alpha12**. Monitor available; bounded two-connected-profile automatic failover and independent rollback have device evidence. Unattended production operation and multi-level hierarchy remain unvalidated.
+- [Install RU](../docs/INSTALL.ru.md) / [EN](../docs/INSTALL.en.md), then [setup](../docs/FIRST-RUN-SETUP.md).
+- Source: `router/files`, current `.inc.js` fragments, generator and selected immutable module/CSS. Older dashboard files are preserved generator/history inputs; only the selected pair is packaged.
+- Build/verify from the exact committed archive in [pinned CI](../docs/CI-PRIMARY.md); a host build is not canonical until hashes match.
+- Helpers: installed emergency tool and Windows LAN witness/launcher, each with a different side-effect scope. Never run the Windows helper on the router.
+- Modes: continuous router-probed pair, optional external-LAN bounded trial and separate router-hosted evidence. No automatic credentials import, unmanaged profile creation or direct-WAN fallback is implied.
 
-[Installation](../docs/INSTALL.en.md) · [Russian installation](../docs/INSTALL.ru.md) · [Validation](../docs/VALIDATION.md) · [Release history](../CHANGELOG.md) · [Current state](../docs/STATE.md)
-
-Build: `python3 router/build_ipk.py releases`. Test: `python3 -m unittest discover -s router/tests -q`.
-
-Public installation defaults to monitoring. Experimental operation requires the client workflow and supported prerequisites; see [client trial](../docs/CLIENT-TRIAL.md) and [completion checklist](../docs/TODO-WORKING-SYSTEM.md). English diagnostics/report text are default; the sidebar 0.6 UI remains a separately tested candidate.
+[Behavior](../docs/HOW-IT-WORKS.en.md) · [Validation](../docs/VALIDATION.md) · [History](../docs/HISTORY-RETENTION.md) · [Recovery](../router-test-kit/EMERGENCY.md).

@@ -68,7 +68,7 @@ if True:
  check('actual-correlated-scan-completion',scan.get('request_id')==queued['request_id'] and scan.get('state')=='COMPLETED' and scan.get('measurement_request_id')==queued['request_id'])
  check('no-fake-active-profiles',type(scan.get('checked')) is int and scan['checked']>=0)
  step='native-start-refusal';revision=live().get('auto_control',{}).get('control_revision');check('live-control-revision',isinstance(revision,str) and re.fullmatch('[a-f0-9]{32}',revision) is not None)
- refused=rpc('native_start',{'control_revision':revision});check('generic-board-auto-refused',refused.get('accepted') is False and bool(refused.get('blockers')) and 'CONTROL-REVISION-STALE' not in refused['blockers'])
+ refused=rpc('native_start',{'control_revision':revision,'request_source':'test'});check('generic-board-auto-refused',refused.get('accepted') is False and bool(refused.get('blockers')) and 'CONTROL-REVISION-STALE' not in refused['blockers'])
 check('final-protected-state-preserved',protected()==base)
 result={'result':'PASS','phase':__PHASE__,'package_version':__VERSION__,'package_sha256':__SHA__,'passed':len(checks),'checks':checks,'agent_version':status.get('version'),'protected_unchanged':True,'private_values_exported':False,'scope':'actual isolated x86 opkg/RPC/procd/UI files; no GL.iNet native or LAN acceptance','physical_router_access':False}
 """.replace('__VERSION__',repr(version)).replace('__SHA__',repr(sha)).replace('__PHASE__',repr(a.phase)).replace('__AGENT__',repr(agent)).replace('__DASHBOARD__',repr(a.dashboard))

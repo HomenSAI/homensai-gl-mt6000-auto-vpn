@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "result": "PASS_INSTALLED_SETUP_REQUIRED_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha19",
+  "tested_product_source": "3d759a889c71e771afd1b2747facd8c7539b00af",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha19-1_all.ipk",
+    "bytes": 848531,
+    "sha256": "d0a79466a8e79afb948f5eeb17bb195d39b5be01e022f84218b02a50ccb715cd"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha19-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "retention_seconds": 604800,
+    "closed_legacy_latency_rows_preserved": 1545,
+    "retained_speed_rows": 4,
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "actual_first_entry": "existing setup wizard; card withheld until explicit completion",
+    "start_seconds": 58.265,
+    "reserve_restore_seconds": 47.672,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true,
+    "synthetic_physical_data": false
+  },
+  "limitations": [
+    "Native-browser visual acceptance not performed",
+    "Completed-wizard home rendering was tested with actual current frame and completed flags only in memory; no flags or test results fabricated on device",
+    "Independent LAN/IPv6/KillSwitch/power-loss acceptance remains separate"
+  ],
+  "recorded_utc": "2026-10-25T08:57:36.809421+00:00"
+}

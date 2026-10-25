@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "result": "PASS_ACTUAL_LIVE_SPEED_WITH_NATIVE_VISUAL_LIMIT",
+  "version": "0.9.1-alpha23",
+  "tested_product_source": "20ebcfd68f2dba279b96840248f6f579f5e9dfca",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha23-1_all.ipk",
+    "bytes": 855870,
+    "sha256": "5b0c343f390b7040feef4df4285ab212ba69e5f0986114fb5e049e0575416324"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha23-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "own_options": 35,
+    "closed_prior_latency_rows_preserved": 1974,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "live_speed": {
+    "real_router_rpc_test": "PASS",
+    "real_rpc_frames": 6,
+    "running_frames_with_rendered_points": 4,
+    "role_order": [
+      "source",
+      "target"
+    ],
+    "points_each": {
+      "source": {
+        "download": 4,
+        "upload": 2
+      },
+      "target": {
+        "download": 7,
+        "upload": 3
+      }
+    },
+    "prior_results_preserved": 4,
+    "results_after_test": 6,
+    "payload_budget_each_mib": 8,
+    "payload_reserved_total_bytes": 16777216,
+    "settings_and_network_unchanged_by_test": true,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_off_access": {
+    "result": "PASS_ACTUAL_OFF_ACCESS",
+    "version": "0.9.1-alpha23",
+    "stage": "off",
+    "show_card": false,
+    "shortcut_aria_disabled": "true",
+    "tooltip_text": "Чтобы воспользоваться упрощённым интерфейсом, необходимо настроить систему и включить Auto.",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "actual_on_access": {
+    "result": "PASS_ACTUAL_ON_ACCESS",
+    "version": "0.9.1-alpha23",
+    "stage": "on",
+    "show_card": true,
+    "shortcut_aria_disabled": "false",
+    "tooltip_text": "",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "flags_changed_to_enable_access": false,
+    "synthetic_device_data": false,
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "gateway": {
+    "result": "PASS",
+    "origin": "http://127.0.0.2:8080",
+    "login": {
+      "status": 403,
+      "mt3000_title": true,
+      "login_form": true
+    },
+    "served_dashboard": "dashboard99",
+    "sha256": "55b4b0779005b55f108ccc07d844f181d8586ed51803195ae0add974ba191c1e",
+    "time": 1792944517.4507608,
+    "gateway_left_running": true,
+    "scope": "user loopback browser gateway HTTP/login/static bytes; not a native browser visual or LAN-witness test"
+  },
+  "limitations": [
+    "Actual router RPC frames were rendered in the real UI model; this is not native browser visual/click proof",
+    "No host-network/main-MT6000/firmware changes; no new LAN-witness/power-loss acceptance claimed"
+  ],
+  "recorded_utc": "2026-10-25T16:12:00.269954+00:00"
+}

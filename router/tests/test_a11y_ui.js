@@ -20,7 +20,11 @@ assert(/E\('nav',\{'tabindex':'0','aria-label':/.test(source),'labelled navigati
 assert((source.match(/E\('main',/g)||[]).length===1,'exactly one main landmark');
 // 2. CSS: visible focus for every kind of control, skip link hidden until focused, reduced motion handled.
 const css=fs.readFileSync(base+/ui[0-9]+\.css/.exec(source)[0],'utf8');
-for(const part of ['.hv-app a:focus-visible','.hv-app button:focus-visible','.hv-app summary:focus-visible','.hv-app .hv-skip:focus{top:8px}','prefers-reduced-motion'])assert(css.includes(part),part);
+for(const part of ['.hv-app a:focus-visible','.hv-app button:focus-visible','.hv-app summary:focus-visible','.hv-app .hv-skip:not(:focus)','.hv-app .hv-skip:focus','prefers-reduced-motion'])assert(css.includes(part),part);
+const skip=/\.hv-app \.hv-skip\{([^}]+)\}/.exec(css),hiddenSkip=/\.hv-app \.hv-skip:not\(:focus\)\{([^}]+)\}/.exec(css),focusedSkip=/\.hv-app \.hv-skip:focus\{([^}]+)\}/.exec(css);
+assert(skip&&skip[1].includes('position:fixed'),'Skip link must not be offset relative to a low page panel');
+assert(hiddenSkip&&hiddenSkip[1].includes('clip-path:inset(50%)')&&hiddenSkip[1].includes('height:1px'),'Unfocused link must leave no clipped blue strip');
+assert(focusedSkip&&focusedSkip[1].includes('clip-path:none')&&focusedSkip[1].includes('height:auto'),'Keyboard focus restores the complete visible link');
 // 3. Rendered overviews: every control has a name, no positive tabindex, lamps are never the only carrier of a state.
 const now=Date.now()/1000;
 const profiles=[{id:'a',name:'de-1',router_name:'de-1',protocol:'openvpn',interface:'vpna',channel:'Main',time:now-5,dns_ok:true,https_success:2,rtt_ms:38,code:null},{id:'b',name:'nl-1',router_name:'nl-1',protocol:'wireguard',interface:'vpnb',channel:'Main',time:now-5,dns_ok:false,https_success:0,rtt_ms:null,code:'DNS-001'},{id:'c',name:'fi-1',router_name:'fi-1',protocol:'openvpn',interface:null,channel:'Spare'}];

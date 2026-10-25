@@ -1,9 +1,17 @@
-# Verify a downloaded release
+<!-- doc-role: current -->
+# How to read verification
 
-1. Confirm the release tag0.9.0 and matching package/checksum names. Verify SHA256 locally before upload.
-2. Read [current scope](CURRENT-STATUS.md) and [exact release record](RELEASE-0.9.0.md); passing source tests alone are not device acceptance.
-3. Installation verification checks package version, all immutable payload hashes/modes, protected router settings and actual served JavaScript/CSS.
-4. Confirm advancing monitor data and DNS/twoHTTPS for the selected saved pair. A queue ACK is not Start or switch completion.
-5. Record final Auto/selected-route state, test cleanup and private recovery backup. Never claim an external-LAN certificate from router probes.
+[Actual current state](CURRENT-STATUS.md) · [Detailed alpha13 report](VERIFICATION-ALPHA13-2026-10-24.md)
 
-For maintainers, `scripts/offline-ci.ps1` runs both preinstalled isolated runtimes from a committed Git archive and records a source-bound receipt. Matching deterministic package bytes and source fingerprint are mandatory. [Publication](PUBLICATION.md) · [CI isolation](CI-PRIMARY.md).
+| Label | Meaning |
+|---|---|
+| PASS | The stated check ran successfully on the named source/environment |
+| FAIL | A check ran and failed; retain its attempt even after a retry |
+| PARTIAL | Only part of the named scope was exercised |
+| SKIPPED / NOT RUN | The check did not run; this is not success |
+| UNKNOWN / UNCONFIRMED | Available evidence does not establish the result |
+| BLOCKED | A prerequisite prevented dependent work |
+
+A valid report names source/version, artifact size/SHA256, environment, exact actions, preserved failures, final state and limitations. Distinguish package metadata, running code, served resources, browser rendering, router-originated probes and independent client traffic. A short sample is not a day-long soak; process tests are not physical power loss; prompt recipes are not autonomous ChatGPT/Claude execution.
+
+For stored history, an observed outage episode is not the number of failed checks. A missing historical channel/result is not reconstructed from today's settings. [Storage](STATISTICS-RETENTION.md) · [Channel attribution](CHANNEL-ATTRIBUTION.md).

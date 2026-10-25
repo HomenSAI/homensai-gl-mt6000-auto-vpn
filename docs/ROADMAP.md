@@ -1,14 +1,21 @@
-# Remaining work / Оставшиеся работы
+<!-- doc-role: current -->
+# Current roadmap / Текущие открытые задачи
 
-Current version and completed behavior: [CURRENT-STATUS](CURRENT-STATUS.md). The working two-channel controller, manual override, UI changes, setup/help and persistent statistics are implemented; they must not remain described as merely planned.
+[Фактическая версия и доказательства](CURRENT-STATUS.md) · [Последние изменения](LATEST-CHANGES.md)
 
-Open acceptance/product work:
+## Implemented baseline
 
-1. Independent LAN-client DNS/HTTPS/traffic-path verification for the current continuous mode.
-2. A completed24-hour traffic soak, clearly separating real provider failures, planned simulations and unobserved gaps.
-3. Physical power-loss/recovery tests and a separately designed explicit boot-auto-resume policy; current Auto stays off after restart.
-4. Current continuous-mode hardware acceptance on MT6000 and any other firmware/model. Do not infer it from a model selector or Architecture:all.
-5. IPv6 policy/failover acceptance, broader multireserve hierarchy, captive/interception scenarios and the remaining protocol/stress lab scope.
-6. Diagnosis of intermittent OpenVPN AUTH_FAILED startup rejections without hiding them, changing unrelated credentials or bypassing readiness/attempt budgets.
+The prepared MT3000 two-client controller, guarded manual selection, router IPv4 evidence, grouped live/saved logs, event-time roles/latency, M/R diagrams, five-row server disclosures,20-row event history, configurable retention and interactive EN/RU training have versioned source/tests and stated acceptance. Current delivery must still be read from CURRENT-STATUS, not inferred from this list.
 
-Exact vendor-SDK and hosted/server-CI work remain separate from successful interpreted-IPK/local-container checks. Historical numbered proposals remain available in archived task documents; they are not a new authorization to deploy, run faults or change the primary network.
+The comprehensive documentation/helper audit is tracked in the current handoff. Historical TODO files are dated plans, not a second live backlog or fresh permission.
+
+## Still separate / Отдельные области приёмки
+
+1. Native physical-browser visual acceptance, independent real-client LAN/DNS/exit and IPv6/KillSwitch failure acceptance.
+2. Real supported-device controlled faults in both directions, broad provider/firmware combinations and full-day client soak.
+3. Interrupted package/power/FS scenarios and all missing-dependency combinations, with actual recovery evidence rather than model-only proof.
+4. MT6000 continuous-mode qualification and matching-SDK provenance/build boundaries.
+5. Autonomous prompt execution by named external ChatGPT/Claude models; command recipes and simulations are different evidence.
+6. Restricted server-triggered Gitea CI activation; current local exact-SHA CI does not create a trusted server runner or required PR check automatically.
+
+Completed old alpha9/alpha10/alpha11/alpha12/alpha13 results remain in their dated reports. Never restart their old observers solely to continue reading documentation.

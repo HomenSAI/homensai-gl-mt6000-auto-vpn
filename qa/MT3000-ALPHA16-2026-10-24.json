@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "result": "PASS_ROUTER_AUTO_RESERVE_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha16",
+  "tested_product_source": "e7609c981cb108a4fc79439d2b11368c1161e795",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha16-1_all.ipk",
+    "bytes": 831904,
+    "sha256": "913acd14de698b1898d7333cc20a788c14b75e2abdebc9354054f0d0807989d9"
+  },
+  "physical": {
+    "board": "glinet,mt3000-snand",
+    "firmware": "4.11.0",
+    "installed": "0.9.1-alpha16-1",
+    "immutable_files_and_modes": 87,
+    "served_http8080": true,
+    "served_pinned_https": true,
+    "event_layout_css_installed": true,
+    "auto_running": true,
+    "selected_role": "reserve",
+    "both_vpn_dns_https": true,
+    "terms_and_unrelated_settings_preserved": true,
+    "speed_settings_preserved": true,
+    "retained_successful_speed_rows": 4,
+    "new_speed_tests": 0,
+    "start_first_attempt_seconds": 64.672,
+    "reserve_restore_seconds": 41.281,
+    "encrypted_backup_before_entries": 193,
+    "encrypted_backup_after_entries": 193,
+    "backups_independently_decrypted_read": true
+  },
+  "limitations": [
+    "No native-browser visual acceptance: exposed browser inventory empty",
+    "No independent externalLAN/IPv6/KillSwitch certification",
+    "No physical fault or new speed test performed"
+  ],
+  "recorded_utc": "2026-10-24T19:45:55.942471+00:00"
+}

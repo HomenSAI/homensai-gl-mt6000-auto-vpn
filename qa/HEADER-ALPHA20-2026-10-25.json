@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "result": "PASS_HEADER_SHORTCUT_SOURCE_AND_ROUTER_WITH_VISUAL_LIMIT",
+  "version": "0.9.1-alpha20",
+  "tested_product_source": "2ce089091eb6851af8741b604154979a71905eb9",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha20-1_all.ipk",
+    "bytes": 849731,
+    "sha256": "8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf"
+  },
+  "ci": [
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha20-1_all.ipk",
+      "bytes": 849731,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf",
+      "skipped_tests": 16,
+      "source": "2ce089091eb6851af8741b604154979a71905eb9",
+      "ui_suites": 52,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 774,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha20-1_all.ipk",
+      "bytes": 849731,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "8947728ed475072e457bfb90ffdc90d4a62e989eab6c85d3c6ff627f45233bdf",
+      "skipped_tests": 0,
+      "source": "2ce089091eb6851af8741b604154979a71905eb9",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "features": {
+    "shortcut_beside_title": true,
+    "initial_draw_and_status_and_freshness_updates": true,
+    "unavailable_reason_visible": true,
+    "lost_rpc_not_misreported_as_setup": true,
+    "strict_existing_home_gate_retained": true,
+    "click_time_revalidation": true,
+    "navigation_writes_config_or_auto": false,
+    "unfocused_skip_link_fully_clipped": true,
+    "focused_skip_link_fixed_and_unclipped": true,
+    "completed_steps_full_opacity_foreground": true,
+    "responsive_title_and_action_wrap": true
+  },
+  "device_semantics": {
+    "result": "PASS_INSTALLED_HEADER_ACTUAL_FRAME",
+    "version": "0.9.1-alpha20",
+    "actual_entry": "setup",
+    "current_shortcut_enabled": false,
+    "current_reason": "Сначала завершите первичную настройку",
+    "setup_complete": false,
+    "onboarding_complete": false,
+    "auto_on_confirmed_reserve": true,
+    "ready_projection": "PASS, completed flags in memory only, no device writes",
+    "click_guard": "PASS",
+    "native_browser_visual": "NOT_VERIFIED"
+  },
+  "physical_receipt": "qa/MT3000-ALPHA20-2026-10-25.json",
+  "recorded_utc": "2026-10-25T10:44:52.489669+00:00"
+}

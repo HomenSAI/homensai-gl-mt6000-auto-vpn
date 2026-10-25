@@ -11,6 +11,7 @@ from unittest.mock import patch,MagicMock
 ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 sys.path.insert(0,str(ROOT))
 import native_switch as native
+import retention_settings
 from vendor_fixture import stamp
 
 
@@ -49,6 +50,10 @@ class NativeTests(unittest.TestCase):
         self.killpg=patcher.start();self.addCleanup(patcher.stop)
         pause=patch.object(native,'RETURN_PAUSE',0);pause.start();self.addCleanup(pause.stop)
         options=patch.object(native,'clear_native_options',return_value=True);self.options=options.start();self.addCleanup(options.stop)
+        # Worker subprocess mocks must not intercept an unrelated UCI retention
+        # lookup when its five-second cache expires during a slower full suite.
+        # Keep the real History store/rollback checks, with explicit fixture retention.
+        retention=patch.object(retention_settings,'configured_days',return_value=7);retention.start();self.addCleanup(retention.stop)
 
     def test_exact_supported_policy_and_hash(self):
         data,profiles=fixture();s=native.choose(data,profiles)
