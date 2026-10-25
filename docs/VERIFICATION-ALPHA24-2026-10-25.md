@@ -15,3 +15,7 @@ Training checkbox changes now update choices and Check-answer availability in pl
 Exact source `87a3439b766fe6fab1bfbd1bb7f4d02ac089ee54` passed dual-runtime CI778application/112QA each and56UI suites, with complementary skips retained. All11questions EN/RU were tested for in-place selection/clearing/bursts and focus/viewport preservation; the same regression passed on canonical generated code matching installed bytes. Native browser visual/click proof remains unverified. MT3000 normal update/AutoONreserve/health/settings/history preservation and independent encrypted backup reads passed. Canonical856098bytes, SHA256 `9cb411017f9c38e7092030b3a523a01477f9abab5af10ecea7a08bdc7f541c20`. Actual non-draft prerelease; stable0.9.0 remains unchanged.
 
 [QA](../qa/LEARN-POSITION-ALPHA24-2026-10-25.json) · [MT3000](../qa/MT3000-ALPHA24-2026-10-25.json)
+
+## Published / Опубликовано
+
+[GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24). Actual non-draft prereleases, four assets each downloaded and SHA256verified. Canonical release/tag `01fdcd81da4f7415897cf558a9d2c3fb32b2be46`, public release/tag `e7a06764898f01698f0b12cc0af95deeb616457c`, equal release tree `05b65fa491c57787c253ba397c60d8d9412af8ec`. Stable/main unchanged; documentation-only closure follows.

@@ -1,6 +1,6 @@
 ## Alpha24 quiz position / Позиция чекбоксов
 
-Training checkbox selection preserves DOM, question, scroll and focus, including polling. Installed on MT3000; AutoONconfirmedreserve.56UI suites and exact dual-runtime CI passed. Publication pending evidence commit. [Verification](VERIFICATION-ALPHA24-2026-10-25.md). Native browser clicks unverified.
+Training checkbox selection preserves DOM, question, scroll and focus, including polling. Installed on MT3000; AutoONconfirmedreserve.56UI suites and exact dual-runtime CI passed. [GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) — published; four assets each downloaded and SHA256verified. [Verification](VERIFICATION-ALPHA24-2026-10-25.md). Native browser clicks unverified.
 
 ## Alpha23 live speed / Текущая скорость
 
