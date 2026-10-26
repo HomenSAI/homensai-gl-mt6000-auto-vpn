@@ -1,0 +1,146 @@
+<div id="vpn-design-review">
+  <div class="viz-carousel" aria-label="Варианты упрощённого Auto VPN" data-previous-label="Предыдущий" data-next-label="Следующий">
+    <section data-variant="Тихая карточка" aria-label="Тихая карточка">
+      <div class="vpn-stage">
+        <div class="vpn-product vpn-quiet" data-design="quiet" aria-label="Тихая карточка Auto VPN">
+          <header class="vpn-header"><strong>HomenS.AI <span>Auto VPN</span></strong><span class="vpn-demo">Макет</span></header>
+          <main class="vpn-body">
+            <div class="vpn-state-mark" aria-hidden="true">●</div>
+            <h2 data-state-title>Авторежим работает</h2>
+            <p class="vpn-description" data-state-detail>Используется основной канал.</p>
+            <button type="button" class="vpn-primary cursor-interaction" data-power>Остановить авторежим</button>
+            <p class="vpn-reserve" data-reserve>Резервный канал доступен</p>
+            <details class="vpn-details"><summary class="cursor-interaction">Подробности</summary><p>Проверки IPv4 выполняются с роутера. Состояние LAN-клиента проверяется отдельно.</p><p data-detail-extra>Оба канала отвечают на проверки.</p></details>
+          </main>
+          <footer class="vpn-footer"><button type="button" class="vpn-text cursor-interaction" data-open="settings">Настройки</button><button type="button" class="vpn-text cursor-interaction" data-open="help">Помощь</button></footer>
+          <div class="vpn-drawer" hidden></div>
+          <p class="vpn-feedback" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+    <section data-variant="Два канала" aria-label="Два канала" hidden>
+      <div class="vpn-stage">
+        <div class="vpn-product vpn-pair" data-design="pair" aria-label="Два канала Auto VPN">
+          <header class="vpn-header"><strong>HomenS.AI <span>Auto VPN</span></strong><span class="vpn-demo">Макет</span></header>
+          <main class="vpn-body">
+            <div class="vpn-pair-heading"><div><h2 data-state-title>Авторежим работает</h2><p class="vpn-description" data-state-detail>Используется основной канал.</p></div><button type="button" class="vpn-primary cursor-interaction" data-power>Остановить авторежим</button></div>
+            <div class="vpn-channel-grid">
+              <article class="vpn-channel" data-channel="primary"><span class="vpn-channel-label">Основной</span><h3 data-channel-health>Доступен</h3><span data-channel-use>Используется</span></article>
+              <article class="vpn-channel" data-channel="reserve"><span class="vpn-channel-label">Резервный</span><h3 data-channel-health>Доступен</h3><span data-channel-use>В ожидании</span></article>
+            </div>
+            <details class="vpn-details"><summary class="cursor-interaction">Проверки и события</summary><p data-detail-extra>Оба канала отвечают на проверки.</p><p>Данные IPv4 с роутера. Подробная история доступна в диагностике.</p></details>
+          </main>
+          <footer class="vpn-footer"><button type="button" class="vpn-text cursor-interaction" data-open="settings">Настройки</button><button type="button" class="vpn-text cursor-interaction" data-open="help">Помощь</button></footer>
+          <div class="vpn-drawer" hidden></div><p class="vpn-feedback" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+    <section data-variant="Три вкладки" aria-label="Три вкладки" hidden>
+      <div class="vpn-stage">
+        <div class="vpn-product vpn-tabs" data-design="tabs" aria-label="Три вкладки Auto VPN">
+          <header class="vpn-header"><strong>HomenS.AI <span>Auto VPN</span></strong><span class="vpn-demo">Макет</span></header>
+          <nav class="vpn-navigation" aria-label="Разделы приложения"><button type="button" class="cursor-interaction" data-page="home" aria-current="page">Главная</button><button type="button" class="cursor-interaction" data-page="diagnostics">Диагностика</button><button type="button" class="cursor-interaction" data-page="settings">Настройки</button></nav>
+          <main class="vpn-body" data-home>
+            <span class="vpn-overline">Автоматическое управление</span><h2 data-state-title>Авторежим работает</h2><p class="vpn-description" data-state-detail>Используется основной канал.</p>
+            <div class="vpn-route"><span>Рабочий канал</span><strong data-route>Основной</strong></div>
+            <button type="button" class="vpn-primary cursor-interaction" data-power>Остановить авторежим</button><p class="vpn-reserve" data-reserve>Резервный канал доступен</p>
+          </main>
+          <div class="vpn-tab-content" hidden></div>
+          <footer class="vpn-footer"><button type="button" class="vpn-text cursor-interaction" data-open="help">Помощь</button></footer>
+          <div class="vpn-drawer" hidden></div><p class="vpn-feedback" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<style>
+#vpn-design-review {color-scheme:light dark;}
+#vpn-design-review .vpn-stage {min-height:610px;display:flex;align-items:flex-start;justify-content:center;padding:16px 0 32px;box-sizing:border-box;}
+#vpn-design-review .vpn-product {--vpn-bg:light-dark(#ffffff,#17202c);--vpn-ink:light-dark(#182638,#edf2f8);--vpn-muted:light-dark(#4d6076,#b2c0d2);--vpn-line:light-dark(#dae2ec,#3c4b60);--vpn-soft:light-dark(#f2f6fb,#222f40);--vpn-brand:light-dark(#214a82,#a4c9ff);--vpn-onbrand:light-dark(#ffffff,#14273f);--vpn-good:light-dark(#21704d,#8cd9b0);font:16px/1.55 'IBM Plex Sans',system-ui,sans-serif;background:var(--vpn-bg);color:var(--vpn-ink);border:1px solid var(--vpn-line);border-radius:20px;max-width:100%;width:100%;box-sizing:border-box;overflow-wrap:anywhere;}
+#vpn-design-review .vpn-quiet {max-width:450px;}
+#vpn-design-review .vpn-pair,#vpn-design-review .vpn-tabs {max-width:720px;}
+#vpn-design-review .vpn-header {display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--vpn-line);padding:20px 24px;}
+#vpn-design-review .vpn-header strong {font-size:16px;}
+#vpn-design-review .vpn-header strong span {font-weight:400;color:var(--vpn-muted);margin-left:6px;}
+#vpn-design-review .vpn-demo {font-size:12px;color:var(--vpn-muted);}
+#vpn-design-review .vpn-body {padding:30px;}
+#vpn-design-review .vpn-quiet .vpn-body {text-align:center;}
+#vpn-design-review h2 {font-size:26px;font-weight:600;line-height:1.25;margin:10px 0;letter-spacing:-.4px;}
+#vpn-design-review h3 {font-size:21px;margin:10px 0 4px;font-weight:500;}
+#vpn-design-review p {margin:12px 0;}
+#vpn-design-review .vpn-description,#vpn-design-review .vpn-reserve {color:var(--vpn-muted);}
+#vpn-design-review .vpn-reserve {font-size:14px;}
+#vpn-design-review button {font:inherit;min-height:44px;border-radius:10px;padding:10px 16px;border:1px solid var(--vpn-line);background:var(--vpn-bg);color:var(--vpn-ink);max-width:100%;white-space:normal;}
+#vpn-design-review .vpn-primary {background:var(--vpn-brand);color:var(--vpn-onbrand);border-color:var(--vpn-brand);margin:16px 0 4px;}
+#vpn-design-review .vpn-state-mark {color:var(--vpn-good);font-size:25px;}
+#vpn-design-review [data-state="unknown"] .vpn-state-mark,#vpn-design-review [data-state="off"] .vpn-state-mark {color:var(--vpn-muted);}
+#vpn-design-review [data-state="fault"] .vpn-state-mark {color:light-dark(#b82e37,#ffadb2);}
+#vpn-design-review .vpn-details {text-align:left;font-size:14px;border-top:1px solid var(--vpn-line);padding-top:18px;margin-top:24px;}
+#vpn-design-review summary {min-height:32px;}
+#vpn-design-review .vpn-footer {display:flex;flex-wrap:wrap;justify-content:center;gap:12px;padding:14px 24px;border-top:1px solid var(--vpn-line);}
+#vpn-design-review .vpn-text {border:0;padding:8px;color:var(--vpn-brand);}
+#vpn-design-review .vpn-channel-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0;}
+#vpn-design-review .vpn-channel {background:var(--vpn-soft);border:1px solid var(--vpn-line);border-radius:12px;padding:20px;}
+#vpn-design-review .vpn-channel[data-active="true"] {border-color:var(--vpn-brand);}
+#vpn-design-review .vpn-channel-label,#vpn-design-review .vpn-channel [data-channel-use] {color:var(--vpn-muted);font-size:14px;}
+#vpn-design-review .vpn-pair-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 20px;}
+#vpn-design-review .vpn-pair-heading h2 {font-size:24px;}
+#vpn-design-review .vpn-navigation {display:flex;flex-wrap:wrap;gap:8px;padding:14px 24px;border-bottom:1px solid var(--vpn-line);}
+#vpn-design-review .vpn-navigation button {border:0;background:transparent;}
+#vpn-design-review .vpn-navigation [aria-current="page"] {background:var(--vpn-soft);color:var(--vpn-brand);}
+#vpn-design-review .vpn-overline {font-size:13px;color:var(--vpn-muted);}
+#vpn-design-review .vpn-route {display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;border-top:1px solid var(--vpn-line);border-bottom:1px solid var(--vpn-line);margin:24px 0 12px;padding:16px 0;}
+#vpn-design-review .vpn-route span {color:var(--vpn-muted);}
+#vpn-design-review .vpn-drawer,#vpn-design-review .vpn-tab-content {padding:20px 30px;border-top:1px solid var(--vpn-line);}
+#vpn-design-review .vpn-feedback:empty {display:none;}
+#vpn-design-review .vpn-feedback {padding:0 24px 16px;font-size:14px;color:var(--vpn-muted);}
+#vpn-design-review label {display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0;}
+#vpn-design-review select {font:inherit;min-height:44px;max-width:100%;border:1px solid var(--vpn-line);border-radius:8px;padding:8px;background:var(--vpn-bg);color:var(--vpn-ink);}
+@media(max-width:480px){#vpn-design-review .vpn-stage {min-height:750px;}#vpn-design-review .vpn-body {padding:24px 20px;}#vpn-design-review .vpn-header {padding:16px;}#vpn-design-review .vpn-channel-grid {grid-template-columns:1fr;}#vpn-design-review h2 {font-size:24px;}#vpn-design-review .vpn-navigation {padding:12px;gap:0;}#vpn-design-review .vpn-navigation button {padding:8px 10px;} }
+</style>
+<script>
+(() => {
+  const root = document.getElementById('vpn-design-review');
+  const states = {
+    primary:{title:'Авторежим работает',detail:'Используется основной канал.',reserve:'Резервный канал доступен',action:'Остановить авторежим',route:'Основной',extra:'Оба канала отвечают на проверки.',health:['Доступен','Доступен'],use:['Используется','В ожидании']},
+    reserve:{title:'Работает резервный канал',detail:'Основной канал недоступен.',reserve:'Автоматическое управление включено',action:'Остановить авторежим',route:'Резервный',extra:'Основной не прошёл проверку. Резерв отвечает.',health:['Недоступен','Доступен'],use:['Не используется','Используется']},
+    off:{title:'Авторежим выключен',detail:'Автоматическое переключение остановлено.',reserve:'Для запуска потребуется свежая проверка',action:'Запустить авторежим',route:'Не подтверждён',extra:'Остановка Auto не означает отключение VPN. Фактический маршрут проверяется отдельно.',health:['Не проверен','Не проверен'],use:['Не подтверждено','Не подтверждено']},
+    unknown:{title:'Нет свежих данных',detail:'Проверьте связь с роутером.',reserve:'Состояние авторежима неизвестно',action:'Обновить состояние',route:'Неизвестен',extra:'Последнее известное состояние не подтверждает текущее. Аварийная остановка доступна через средства восстановления.',health:['Нет данных','Нет данных'],use:['Неизвестно','Неизвестно']},
+    switching:{title:'Переключаем канал',detail:'Ожидаем подтверждения маршрута.',reserve:'Кратковременный разрыв связи возможен',action:'Остановить авторежим',route:'Уточняется',extra:'Запрос принят. Завершение переключения ещё не подтверждено.',health:['Проверяется','Проверяется'],use:['Уточняется','Уточняется']},
+    fault:{title:'Нужна проверка соединения',detail:'Оба канала не прошли проверку.',reserve:'Откройте диагностику для восстановления',action:'Открыть диагностику',route:'Не подтверждён',extra:'Нет подтверждённого рабочего канала. Проверьте WAN и VPN-профили.',health:['Недоступен','Недоступен'],use:['Не подтверждено','Не подтверждено']}
+  };
+  const options=[{label:'Основной работает',value:'primary'},{label:'Работает резерв',value:'reserve'},{label:'Auto выключен',value:'off'},{label:'Нет свежих данных',value:'unknown'},{label:'Переключение',value:'switching'},{label:'Оба канала недоступны',value:'fault'}];
+  root.querySelectorAll('[data-design]').forEach(product => {
+    const model={state:'primary'};
+    function render(){
+      const s=states[model.state]||states.primary;
+      product.dataset.state=model.state;
+      const fields={'state-title':s.title,'state-detail':s.detail,reserve:s.reserve,power:s.action,route:s.route,'detail-extra':s.extra};
+      Object.entries(fields).forEach(([key,value])=>product.querySelectorAll('[data-'+key+']').forEach(el=>el.textContent=value));
+      product.querySelectorAll('[data-channel]').forEach((el,i)=>{el.querySelector('[data-channel-health]').textContent=s.health[i];el.querySelector('[data-channel-use]').textContent=s.use[i];el.dataset.active=String(model.state===(i?'reserve':'primary'));});
+      product.querySelector('.vpn-feedback').textContent='';
+    }
+    function content(key){
+      if(key==='settings')return '<h3>Настройки</h3><p>Основной и резервный профили выбираются из настроенных на роутере.</p><details><summary class="cursor-interaction">Дополнительно</summary><p>Проверки, уведомления и сроки хранения истории.</p></details>';
+      if(key==='diagnostics')return '<h3>Диагностика</h3><p>'+states[model.state].extra+'</p><details><summary class="cursor-interaction">Технические подробности</summary><p>Здесь доступны причины, история событий, проверки и восстановление.</p></details>';
+      return '<h3>Помощь</h3><p>Auto управляет переключением между двумя VPN-каналами. Остановка Auto не отключает интернет сама по себе.</p><details><summary class="cursor-interaction">Обучение</summary><p>Уроки и вопросы доступны по желанию.</p></details>';
+    }
+    function open(key){const drawer=product.querySelector('.vpn-drawer');drawer.hidden=false;drawer.innerHTML=content(key);const close=document.createElement('button');close.type='button';close.className='vpn-text cursor-interaction';close.textContent='Закрыть';close.addEventListener('click',()=>{drawer.hidden=true;});drawer.appendChild(close);}
+    product.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',()=>open(button.dataset.open)));
+    product.querySelector('[data-power]').addEventListener('click',()=>{
+      if(model.state==='unknown'){product.querySelector('.vpn-feedback').textContent='Демонстрация: свежие данные не получены. Состояние остаётся неизвестным.';return;}
+      if(model.state==='fault'){open('diagnostics');return;}
+      model.state=model.state==='off'?'primary':'off';render();product.querySelector('.vpn-feedback').textContent='Демонстрационное изменение. Команды на роутер не отправляются.';
+    });
+    product.querySelectorAll('[data-page]').forEach(button=>button.addEventListener('click',()=>{
+      product.querySelectorAll('[data-page]').forEach(b=>b.removeAttribute('aria-current'));button.setAttribute('aria-current','page');
+      const home=product.querySelector('[data-home]'),panel=product.querySelector('.vpn-tab-content');home.hidden=button.dataset.page!=='home';panel.hidden=!home.hidden;if(!panel.hidden)panel.innerHTML=content(button.dataset.page);
+    }));
+    const simulation=document.createElement('details');simulation.className='vpn-details';simulation.style.margin='0 24px 20px';
+    const summary=document.createElement('summary');summary.className='cursor-interaction';summary.textContent='Сценарий макета';simulation.appendChild(summary);
+    const label=document.createElement('label');label.textContent='Состояние';const select=document.createElement('select');select.className='cursor-interaction';options.forEach(o=>{const option=document.createElement('option');option.value=o.value;option.textContent=o.label;select.appendChild(option);});label.appendChild(select);simulation.appendChild(label);product.appendChild(simulation);
+    select.addEventListener('change',()=>{model.state=select.value;render();});render();
+    if(globalThis.Tweak){const tweak=new Tweak({container:product,onChange:()=>{select.value=model.state;render();}});tweak.addSelect(model,'state',{label:'Состояние макета',options});}
+  });
+})();
+</script>

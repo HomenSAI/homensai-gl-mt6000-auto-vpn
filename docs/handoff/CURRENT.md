@@ -1,3 +1,13 @@
+# PLANNING CHECKPOINT — simplified UI / 26 October 2026
+
+Start after reboot: [NEXT-AI-SIMPLIFIED-UI-2026-10-26.md](NEXT-AI-SIMPLIFIED-UI-2026-10-26.md).
+
+Current owner request: preserve plans and three design mockups, save the feature branch to Gitea and GitHub before reboot. No new application implementation, device changes or 12-hour run started. Current execution proposal: [coordinator + three agents, up to 12 hours](../plans/AUTONOMOUS-12H-3-AGENTS-PLAN-2026-10-26.ru.md). The prompt inside that plan is for a future explicit start, not an active timer. Alpha25 product remains unchanged; all earlier delivery records below are history and not fresh commands.
+
+После перезагрузки начать с указанного NEXT-AI: планы и макеты сохранены; автономная сессия ещё не запущена. Публикация checkpoint касается рабочей ветки, не main, релиза или роутера.
+
+---
+
 # COMPLETE alpha25 — all training action viewport / 25October2026
 
 [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25)
