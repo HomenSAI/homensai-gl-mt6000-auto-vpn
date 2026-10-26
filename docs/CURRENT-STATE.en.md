@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Auto VPN — current source behavior
 
-Current source: **0.9.1-alpha33**, package **0.9.1-alpha33-1**. Installed on the dedicated MT3000; both real speed tests passed with Auto/monitor pause and automatic restoration. The responsive reference table and truthful diagnostics are delivered. [Current state](CURRENT-STATUS.md) · [Device proof and limits](VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md).
+Current source: **0.9.1-alpha34**, package **0.9.1-alpha34-1**. Installed on the dedicated MT3000 with the compact C sidebar fix; prior ON Auto was restored. [Current state](CURRENT-STATUS.md) · [Device proof and limits](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md).
 
 Speed tests now request a bounded cooperative pause from the Auto controller and background monitor. Measurement starts only after both active processes acknowledge a safe loop boundary. VPN connections, routing, Auto intent and service settings are preserved. CPU admission uses fresh CPU accounting after the pause, not minute load average. Normal completion, failure, cancellation or worker loss withdraw the pause; monitoring obtains a fresh observation before Auto continues. A manual Stop is never undone. Manual switching is refused during the quiet window. Both selected speed tests completed on the installed alpha33 with a verified pause and automatic restoration; see the physical receipt.
 
@@ -23,3 +23,5 @@ Continuous router-probed IPv4 Auto remains qualified only for the documented ded
 Diagnostics distinguish a partial HTTPS quorum failure from zero validated HTTPS responses and unavailable detail. Per-endpoint status is recorded without raw exceptions or credentials; an unsupported HTTP endpoint is a check-endpoint fault. Old incidents are never explained with today's profile state. Same-measurement incident/monitor rows are correlated only with retained matching timestamps. Vendor-worker contention is a temporary wait; an accepted Start with an old STOPPED observation is shown as pending Start. The diagnostic reference table wraps codes, descriptions and open explanations within the viewport, with a stacked mobile layout.
 
 The final alpha33 observer preserves a bounded allowlist of endpoint diagnostics through the identity check and discards them with the rest of old-identity health on a rebind.
+
+Desktop appearance C uses an 84 px sidebar, a compact scrollbar, and an icon-only Advanced menu control with its full localized accessible name and tooltip. The control retains keyboard focus, expansion state and the existing destinations. Appearances A/B and mobile retain the text label. Alpha34 installation and verification are recorded separately.

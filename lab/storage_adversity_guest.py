@@ -4,7 +4,7 @@ from pathlib import Path
 assert Path('/tmp/HOMENSAI_VIRTUAL_LAB').is_file()
 assert "DISTRIB_TARGET='x86/64'" in Path('/etc/openwrt_release').read_text()
 sys.path.insert(0,'/usr/lib/homensai-vpn');import agent
-assert agent.VERSION=='0.9.1-alpha33'
+assert agent.VERSION=='0.9.1-alpha34'
 checks=[];mounted=False;result={'state':'RUNNING','scope':'disposable 64KiB tmpfs and synthetic timestamps; not physical flash wear','physical_router_access':False}
 def protected():
  return hashlib.sha256(subprocess.check_output(['uci','export','network'])+subprocess.check_output(['uci','export','firewall'])+subprocess.check_output(['ip','-4','route','show','table','main'])).hexdigest()

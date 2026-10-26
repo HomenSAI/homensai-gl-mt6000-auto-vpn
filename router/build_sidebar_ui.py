@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard109'
+UI_MODULE='dashboard110'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -295,7 +295,7 @@ must_replace("var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'
       var advancedOpen=false;try{advancedOpen=localStorage.getItem('homensai-vpn-advanced')==='1';}catch(e){}
       if(ADVANCED_KEYS.indexOf(activeTab)>=0)advancedOpen=true;
       advancedBox=E('div',{'class':'hv-advanced-links','id':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
-      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced settings','Расширенные настройки'))]);
+      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','aria-label':bi('Advanced settings','Расширенные настройки'),'title':bi('Advanced settings','Расширенные настройки'),'click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{'class':'hv-advanced-icon','aria-hidden':'true'},'☰'),E('span',{'class':'hv-advanced-label'},bi('Advanced settings','Расширенные настройки'))]);
       var links=['overview','channels','statistics','settings','help'].map(tabLink).concat([advancedToggle,advancedBox]);""")
 # Ranking: number of checks and a confidence label; sparse servers never lead.
 must_replace('tr("Успех проверок"),tr("Средняя HTTPS-задержка")].map(','tr("Успех проверок"),tr("Средняя HTTPS-задержка"),bi("Checks","Проверок")].map(')
@@ -356,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui81.css')
+source=source.replace('ui15.css','ui82.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -509,6 +509,6 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 source=source.replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui81.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui82.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

@@ -1,3 +1,15 @@
+## Alpha34 installed; sidebar icon verified / Alpha34 установлена
+
+**0.9.1-alpha34-1**, dashboard110/ui82, installed on the dedicated MT3000. Desktop C rail fits the icon-only Advanced control and scrollbar; full localized label/tooltip and keyboard operation remain. A/B and mobile keep their text. Seven C browser cases and four A/B cases passed; exact dual-runtime CI passed. Prior ON Auto restored to RUNNING / OBSERVING with both VPNs healthy. [Verification](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md). Publication verified separately.
+
+---
+
+## Alpha34 source validation checkpoint / Локальная проверка меню C alpha34
+
+Owner requests a usable icon where the Advanced label was clipped by the narrow instrument-panel rail and scrollbar. The desktop C rail is 84 px; the toggle has a keyboard-operable icon, full localized accessible name/tooltip and unchanged expanded-menu behavior. A/B and mobile retain the text. At this earlier checkpoint installation had not yet been performed; see the current alpha34 delivery above.
+
+---
+
 ## Alpha33 installed; all requested changes verified / Alpha33 установлена
 
 **0.9.1-alpha33-1**, dashboard109/ui81. Real two-channel speed test confirmed cooperative pause, low daemon CPU and automatic monitor/Auto restoration with unchanged VPNs/config/intent/PIDs. Responsive reference table and truthful partial-connectivity/wait/start diagnostics passed native Chromium checks; actual per-endpoint data now reaches RPC. Auto remains ON / RUNNING / OBSERVING. [Verification and limits](VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md). Publication is separately verified by release metadata.

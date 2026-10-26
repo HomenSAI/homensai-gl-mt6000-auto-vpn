@@ -1,3 +1,9 @@
+## Alpha34 installed; icon sidebar fixed / Alpha34 установлена
+
+[Start here](NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md). C sidebar and accessible Advanced icon verified; prior ON Auto restored, both VPNs healthy. No automatic repeat deployment. Publication evidence is separate.
+
+---
+
 ## Alpha33 installed and real speed pause proved / Alpha33 установлена
 
 [Start here](NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md). All current owner requests implemented: pause/restore speed tests, responsive reference table, truthful diagnostics. Auto ON; leave current VPNs running. Publication proof is separate.
