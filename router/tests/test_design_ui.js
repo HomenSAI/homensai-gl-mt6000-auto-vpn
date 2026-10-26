@@ -42,16 +42,20 @@ assert.equal(context.storedDesign(),'b');
 // ...but the page keeps the choice for this session, so the next redraw uses C, not A.
 assert.equal(context.currentDesign(),'c');blocked=false;
 context.applyDesign(root,'invalid');assert.equal(root.attrs['data-hv-design'],'b','invalid direct application uses the same Calm default');
-// Generated page: root carries the stored design, Settings shows the picker, links carry tooltips, CSS covers all three.
+// Retained legacy helper remains tested above; released view fixes the accepted layout and removes its picker.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const base='router/files/www/luci-static/resources/view/homensai-vpn/';
 const dashboard=fs.readFileSync(base+page+'.js','utf8');
-assert(dashboard.includes("'data-hv-design':currentDesign()"));
-assert(dashboard.includes('renderDesignPicker(function(){return appRoot;}'));
+assert(dashboard.includes("'class':'hv-app hv-workspace hv-minimum-release','data-hv-design':'b'"));
+const releasedView=dashboard.slice(dashboard.lastIndexOf('return view.extend({'));
+assert(!releasedView.includes('renderDesignPicker('),'operator settings no longer expose competing layouts');
+const fixed=/function currentDesign\(\)\{return 'b';\}/.exec(dashboard);assert(fixed,'release ignores legacy layout choices');
+vm.runInContext(fixed[0],context);
+for(const old of ['a','c','constructor']){store['homensai-vpn-design']=old;assert.equal(context.currentDesign(),'b');}
 assert(dashboard.includes("'data-hv-tab':tab[0],'title':tab[2]"));
 const css=/ui[0-9]+\.css/.exec(dashboard)[0];
 const sheet=fs.readFileSync(base+css,'utf8');
 for(const k of ['a','b','c'])assert(sheet.includes('[data-hv-design="'+k+'"]'),'css '+k);
 assert(sheet.includes('.hv-design-options'));
-console.log('PASS: page design choice A/B/C, storage fallback, picker, generated page and stylesheet');
+console.log('PASS: retained legacy layout helpers and storage safety; released Minimum fixes accepted palette B and exposes no design picker');

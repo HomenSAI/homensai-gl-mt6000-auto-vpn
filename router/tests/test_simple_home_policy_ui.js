@@ -1,17 +1,18 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const context={};vm.createContext(context);vm.runInContext(fs.readFileSync('router/simple_home_policy.inc.js','utf8'),context);
-const ready={termsAccepted:true,onboardingComplete:true,setupComplete:true,pairValid:true,pairDeferred:false,testsPassed:true,testsMatchCurrentPair:true,statusFresh:true,controllerFresh:true,autoRunning:true,commandPending:false,transitioning:false,activePathConfirmed:true,selectedRole:'source'};
+const ready={termsAccepted:true,onboardingComplete:true,setupComplete:true,pairValid:true,statusFresh:true,controllerFresh:true,autoRunning:true};
 assert.equal(context.simpleHomeEntry(ready).page,'home');
-assert.equal(context.simpleHomeEntry({...ready,selectedRole:'target',primaryHealthy:false}).page,'home','Healthy reserve is not an unfinished setup');
-const required=['statusFresh','controllerFresh','autoRunning'];
-for(const key of required){for(const value of [false,undefined,null,'true',1])assert.equal(context.simpleHomeEntry({...ready,[key]:value}).showCard,false,key+' must be explicitly true');}
-for(const key of ['termsAccepted','onboardingComplete','setupComplete','pairValid','testsPassed','testsMatchCurrentPair','activePathConfirmed'])assert.equal(context.simpleHomeEntry({...ready,[key]:false}).showCard,true,key+' cannot block enabled Auto');
-for(const key of ['pairDeferred','commandPending','transitioning'])assert.equal(context.simpleHomeEntry({...ready,[key]:true}).showCard,true,key);
-for(const role of ['unknown','',null,undefined])assert.equal(context.simpleHomeEntry({...ready,selectedRole:role}).showCard,true,'Missing path is a display state, not an access restriction');
-assert.equal(context.simpleHomeEntry({}).page,'full');
-assert.equal(context.simpleHomeEntry({...ready,termsAccepted:false,onboardingComplete:false,autoRunning:false}).page,'full');
-assert.equal(context.simpleHomeEntry({...ready,onboardingComplete:false,testsPassed:false}).page,'home');
-assert.equal(context.simpleHomeEntry({...ready,testsPassed:false,autoRunning:false}).page,'full');
-assert.equal(context.simpleHomeEntry({...ready,autoRunning:false}).page,'full');
-assert.equal(context.simpleHomeEntry({...ready,autoRunning:false,localStorageReady:true}).showCard,false);
-console.log('PASS: enabled Auto grants display access regardless of setup/tests/path flags; off, unknown and stale states never gain access from browser storage.');
+assert.equal(context.simpleHomeEntry(ready).autoRunning,true);
+for(const key of ['statusFresh','controllerFresh','autoRunning'])for(const value of [false,undefined,null,'true',1]){
+ const result=context.simpleHomeEntry({...ready,[key]:value});
+ assert.equal(result.showCard,true,key+' is a displayed state, not an access gate');
+ assert.equal(result.autoRunning,false,key+' must be explicitly true to assert running Auto');
+}
+for(const key of ['termsAccepted','onboardingComplete','setupComplete','pairValid','testsPassed','testsMatchCurrentPair','activePathConfirmed']){
+ const result=context.simpleHomeEntry({...ready,[key]:false});assert.equal(result.showCard,true);assert.equal(result.autoRunning,true,'UI completion flags cannot replace actual fresh Auto evidence');
+}
+for(const flags of [{},{autoRunning:false},{autoRunning:false,localStorageReady:true},{autoRunning:true,localStorageReady:true}]){
+ const result=context.simpleHomeEntry(flags);assert.equal(result.page,'home');assert.equal(result.autoRunning,false);
+}
+assert.equal(context.simpleHomeEntry({...ready,selectedRole:'target',primaryHealthy:false}).autoRunning,true);
+console.log('PASS: Minimum is accessible ON/OFF/UNKNOWN; only strict fresh running evidence asserts Auto, never UI completion or browser storage.');

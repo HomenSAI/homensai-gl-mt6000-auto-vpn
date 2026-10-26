@@ -244,7 +244,13 @@ function renderAutoPowerControl(status,inventory){
   var light=autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),controlRevision=intent.control_revision;
   var monitorReady=typeof monitorLightModel!=='function'||monitorLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),false).key==='ok';
   var actionLabel=E('span',{'class':'hv-auto-action'},'');
+  function currentControl(){
+    var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
+    model=autoControlModel(status,now);
+    monitorReady=typeof monitorLightModel!=='function'||monitorLightModel(status,inventory,now,false).key==='ok';
+  }
   function syncButton(){
+    currentControl();
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;
     button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');}
@@ -254,6 +260,7 @@ function renderAutoPowerControl(status,inventory){
     actionLabel.textContent=operation?label:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
+    currentControl();
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
     autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};

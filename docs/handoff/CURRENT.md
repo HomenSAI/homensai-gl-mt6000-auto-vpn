@@ -1,3 +1,27 @@
+# VERIFIED Minimum UI alpha26-2 — delivery next / 26 October 2026
+
+Start with [NEXT-AI-MINIMUM-ALPHA26-2026-10-26](NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Product tested source e2d67b38b235a42b55fa536a4c99cd443a1d59c1; canonical IPK SHA256 84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8. CI/VM/native-browser-fixture gates passed; delivery must be read back from the private publication receipt and remote refs. Physical device/LAN/fault/soak not performed. Earlier ACTIVE/planning-only records below are history.
+
+Новый интерфейс реализован и проверен; продолжение — по указанному NEXT-AI. Не повторять 12-часовой план и не устанавливать на роутер по старым разрешениям.
+
+---
+
+# ACTIVE Minimum UI alpha26 — 26 October 2026
+
+Owner executed revision 3. Coordinator + three agents implemented Minimum and five advanced sections in `feature/minimum-ui-20261026`. Current work is final candidate verification; package/source may advance until release. See [specification](../plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md) and [verification](../VERIFICATION-ALPHA26-2026-10-26.md). Private checkpoints: `private/minimum-ui-20261026/`. Previous planning-only statements below are historical. Physical router installation/Auto state have not been changed.
+
+Выполнение запущено. Новый интерфейс реализован; идут финальные проверки пакета и одноразовой VM. Не запускать второй набор агентов и не повторять исторические установки. Актуальный source/package и публикацию читать из финального receipt, а не из старых строк ниже.
+
+---
+
+# ACCEPTED DESIGN PLAN — Minimum and advanced menu / 26 October 2026
+
+Owner accepted the Minimum design, colors and explicit advanced-menu entry/return, and requested a separate new-design release. Current product specification and SOL 6.1 high prompt: [revision 3](../plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md). [Resume handoff](NEXT-AI-SIMPLIFIED-UI-2026-10-26.md). Coordinator + three-agent / up-to-12-hour rules remain in revision 2. Planning only: implementation, autonomous run and new release have NOT started.
+
+Приняты «Минимум», цвета и навигация. Расширенное меню переработать по редакции 3; отдельный выпуск нового UI обязателен. Старые сообщения о невыбранном дизайне ниже — история.
+
+---
+
 # PLANNING CHECKPOINT — simplified UI / 26 October 2026
 
 Start after reboot: [NEXT-AI-SIMPLIFIED-UI-2026-10-26.md](NEXT-AI-SIMPLIFIED-UI-2026-10-26.md).

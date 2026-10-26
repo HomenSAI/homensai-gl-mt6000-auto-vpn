@@ -92,10 +92,11 @@ for(const d of ['a','b','c']){const n=render(ctx,d,hostile).node;n.all().forEach
 const ru=sandbox('ru');vm.runInContext("locale='ru'",ru);
 const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./.test(ra)&&/Последние события/.test(ra)&&/Германия/.test(ra));
 assert(/Что будет, если/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
-// A broken design view must leave the original overview in place (generated wiring).
-assert(source.includes("renderDesignOverview(currentDesign(),{status:status,inventory:inventory,rows:rows,month:month,controlCard:controlCard})"));
-assert(source.includes("pages.overview.setAttribute('data-hv-dv','1')")&&source.includes('DESIGN-VIEW-ERROR'));
-assert(source.includes('draw(lastGoodStatus||data[1])'),'changing the design redraws at once');
+// Legacy renderers remain callable for regression; the new view composes only the accepted design.
+const releasedView=source.slice(source.lastIndexOf('return view.extend({'));
+assert(!releasedView.includes('renderDesignOverview('),'no competing overview renderer in released view');
+assert(releasedView.includes('minimumComposePages(pages,panel,status,inventory,controlCard,minimumCommandHost,routerVpnUrl())'),'new composition retains actual source nodes');
+assert(releasedView.includes('renderMinimumSettings('),'persistent simplified settings replace layout picker');
 assert(source.includes("installDesignKeys(appRoot,"));
 // Keys of design C: digits open sections, ignored while typing and for other designs.
 {const listeners=[];const doc={addEventListener:(n,f)=>listeners.push(f)};const root=new N('div',{'data-hv-design':'c'});root.isConnected=true;root.querySelector=()=>null;
@@ -106,7 +107,7 @@ assert(source.includes("installDesignKeys(appRoot,"));
 // The stylesheet carries the three palettes, the new layouts and the attribute rules.
 const css=fs.readFileSync(base+/ui[0-9]+\.css/.exec(source)[0],'utf8');
 for(const part of ['.hv-dv-a','.hv-dv-b','.hv-dv-c','[data-hv-design="c"]{color-scheme:dark','[data-hv-dv] .hv-summary','prefers-color-scheme:dark'])assert(css.includes(part),part);
-console.log('PASS: A/B/C overviews from real status, tones, hostile names, Russian, keys and wiring');
+console.log('PASS: retained overview helpers handle real/hostile data and RU; release composes the accepted Minimum instead of alternate overviews');
 
 // Render the actual control subtree, not a placeholder: daily graph/manual cards must survive every overview layout.
 {

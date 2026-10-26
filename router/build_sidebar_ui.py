@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard101'
+UI_MODULE='dashboard102'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -356,7 +356,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui73.css')
+source=source.replace('ui15.css','ui74.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -506,6 +506,8 @@ must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_
 
 from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
-(root/'ui73.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+from minimum_release_patch import apply as apply_minimum_release
+source=apply_minimum_release(source)
+(root/'ui74.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'minimum_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

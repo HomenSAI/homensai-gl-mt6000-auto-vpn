@@ -1,5 +1,11 @@
 # Resume after reboot: simplified UI planning checkpoint / 26 October 2026
 
+## Latest owner decision — revision 3 / Последнее решение — редакция 3
+
+The owner accepted Minimum, the proposed colors and explicit advanced-menu navigation, and requested a separate design release. Read `docs/plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md` FIRST. It specifies every advanced section and contains the replacement implementation prompt for SOL 6.1 high. Revision 2 still governs the coordinator + three agents and up-to-12-hour workflow. No implementation session or new release has started. Earlier “no design selected” statements below are superseded.
+
+Владелец принял «Минимум», цвета и вход/возврат расширенного меню. Новое обязательное ТЗ — `docs/plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md`: пять расширенных разделов, удаление лишней информации, сохранение функций/защит, отдельный prerelease нового дизайна и последующий эксплуатационный допуск. Для запуска использовать его раздел 14. Сейчас сохранены только план и макеты; реализация и выпуск не запущены.
+
 ## English
 
 Status: planning and local design mockups prepared; application implementation and the 12-hour run have NOT started. The owner requested this checkpoint and publication of the current work to Gitea and GitHub before reboot. This is branch/source delivery, not a new application release or device installation.
@@ -38,3 +44,9 @@ Publication scope: fast-forward the existing feature branch on canonical Gitea; 
 Не повторять исторические установки/проверки, не включать наблюдатели, не принимать условия от имени владельца. Пилот, fault tests, питание, main и релизная публикация требуют разрешения на соответствующее действие; суточный soak не помещается в 12-часовую разработку.
 
 Публикация этого checkpoint: только текущая feature-ветка Gitea и равное дерево GitHub, без изменения main, тегов и releases. Подтверждение фактической доставки — удалённые refs и `private/planning-checkpoint-20261026/publication.json`, а не обещание в этом документе.
+
+## Owner design decision / Выбор владельца — 26.10.2026
+
+The owner now prefers “Минимум” from the four-variant preview. Add an explicit full-width “Расширенное меню” entry with channels, diagnostics, events, settings and help, and a visible return to the minimal screen. Updated local mockup: `prototype/simplified-20261026/four-designs.html`. This supersedes the earlier “no design selected” note. Application implementation and the 12-hour run still have not started; this preview update is not a device deployment.
+
+Владелец выбрал «Минимум» и отметил неочевидный вход в расширенное меню. В локальном макете добавлены явная кнопка «Расширенное меню», разделы и возврат «Вернуться к минимуму». Эту навигацию использовать как требование к реализации. Изменения текущего шага ещё не опубликованы в Git; предыдущий checkpoint остаётся отдельным.

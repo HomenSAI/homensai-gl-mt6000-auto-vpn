@@ -1,3 +1,11 @@
+## Minimum UI alpha26 — design prerelease candidate / 26.10.2026
+
+Implemented and verified source: **0.9.1-alpha26-2**, dashboard102/ui74. Minimum + five-section Advanced menu. [Release notes](RELEASE-0.9.1-alpha26.md) · [Verification](VERIFICATION-ALPHA26-2026-10-26.md) · [Next agent](handoff/NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Exact dual-runtime CI, native Chromium canonical-payload fixtures and actual disposable x86 OpenWrt package/RPC/HTTP checks passed. Publication/readback is a separate delivery receipt. This package has NOT been installed on the physical MT3000; the alpha25 installation records below remain historical device evidence. Stable/main are unchanged.
+
+Реализован и проверен новый дизайн. Это отдельный кандидат prerelease, а не заявление о физической установке или суточной приёмке. Далее — подтверждённая доставка и отдельный разрешённый пилот.
+
+---
+
 ## Alpha24 quiz position / Позиция чекбоксов
 
 Internal training buttons preserve scroll and meaningful focus through grading, navigation, results, retries, scenes and Help course toggles. Installed on MT3000; AutoONconfirmedreserve.57UI suites and exact dual-runtime CI passed. [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) — published; four assets each downloaded and SHA256verified. [Verification](VERIFICATION-ALPHA25-2026-10-25.md). Native browser clicks unverified.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1-alpha26 — Minimum UI candidate · 2026-10-26
+
+- Accepted Minimum home and five-section Advanced menu with route compatibility.
+- Single authoritative Auto element, click-time freshness, pending cancellation, persistent pair editor and guarded navigation.
+- Collapsed technical details/analytics, explicit diagnostics and retained training/history.
+- Separate design prerelease; actual device/LAN/24-hour acceptance recorded separately.
+
+
 ## 0.9.1-alpha25 —25 October2026 / 25 октября2026
 
 All internal training redraws preserve page position: Check answer, Next/Back, lesson/question jumps, contents, results, retry/restart, embedded course toggle and interactive scene controls. A short-lived height floor prevents removal collapse, with only the extra space required to keep a deep viewport when content becomes shorter. Meaningful focus is restored without scrolling; dynamic action guards and scoring remain. Checkbox-only alpha24 behavior retained.
