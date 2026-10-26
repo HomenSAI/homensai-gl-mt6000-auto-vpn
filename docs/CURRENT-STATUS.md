@@ -1,3 +1,11 @@
+## Published Minimum UI alpha26 / Опубликован новый дизайн
+
+[GitHub prerelease](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26) · [Gitea prerelease](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26). Package **0.9.1-alpha26-2**; six assets per service independently downloaded and SHA256 verified. Main/stable/latest unchanged. [Verification](VERIFICATION-ALPHA26-2026-10-26.md) · [Resume](handoff/NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). This release was not installed on the physical MT3000; physical acceptance remains separate.
+
+Релиз нового дизайна опубликован и проверен скачиванием. На физический роутер не устанавливался; сведения о старой alpha25 ниже не являются приёмкой новой версии.
+
+---
+
 ## Minimum UI alpha26 — design prerelease candidate / 26.10.2026
 
 Implemented and verified source: **0.9.1-alpha26-2**, dashboard102/ui74. Minimum + five-section Advanced menu. [Release notes](RELEASE-0.9.1-alpha26.md) · [Verification](VERIFICATION-ALPHA26-2026-10-26.md) · [Next agent](handoff/NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Exact dual-runtime CI, native Chromium canonical-payload fixtures and actual disposable x86 OpenWrt package/RPC/HTTP checks passed. Publication/readback is a separate delivery receipt. This package has NOT been installed on the physical MT3000; the alpha25 installation records below remain historical device evidence. Stable/main are unchanged.

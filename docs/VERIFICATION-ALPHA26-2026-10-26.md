@@ -1,5 +1,5 @@
 <!-- doc-role: versioned-evidence -->
-# Minimum UI alpha26 revision 2 — verified design candidate
+# Minimum UI alpha26 revision 2 — published design prerelease
 
 The owner started revision 3 on 26 October 2026. Coordinator and three fixed agents worked in a separate feature branch with explicit file ownership. Baseline planning commit: `554236d`; prior product: alpha25. The previous uncommitted plans/mockups were archived and read back before implementation.
 
@@ -28,3 +28,7 @@ Publication is a separate recorded action with remote tag/asset downloads. Physi
 Old overview → Minimum; channels → selected pair/details; tests/readiness/services → Diagnostics subviews; statistics/traffic → Events subviews; learn → Help/training; initial setup → Settings/setup. One source of Auto command authority. Technical observations, manual channel selection, retained events, speed quotas, statistics exports, validated settings editors and optional training remain reachable. Experimental fault injection is removed from normal operator navigation and retained in test tooling.
 
 Private run evidence: `private/minimum-ui-20261026/`. It contains run deadline/checkpoints, original WIP archive, per-attempt QA/browser logs, model-only and native-browser scope, VM identity and final delivery receipt when completed. Private files are not release assets.
+
+## Publication readback
+
+Published GitHub/Gitea prereleases, six assets each, all SHA256 checked after publication. Canonical tag commit `7e958ed83e90bcf917409c6a933519c86b2b8603`, GitHub tag commit `4693aae997b2f370cc7affbdc270ddfb8382fe72`, identical tree `51d410661cd453d939c59e41f7214f3a8f62fd9b`. Main refs and GitHub stable latest preserved. Temporary Gitea authentication revoked. Independent evidence-readiness review passed 18 cross-checks; publication proof is the separate coordinator readback. Both own QEMU VMs were shut down. Source ZIP restored and verified against all 1200 Git blob identities; the failed Windows-EOL archive attempt remains private and is not the verified archive.

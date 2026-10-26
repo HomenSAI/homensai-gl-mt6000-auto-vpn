@@ -1,5 +1,12 @@
 # Minimum UI alpha26 — release handoff / 26 October 2026
 
+## Published / Опубликовано — 26.10.2026
+
+Design prerelease `v0.9.1-alpha26` is published on [GitHub](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26) and [Gitea](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26). Six attachments per service were downloaded and SHA256 verified. Canonical tag source: `7e958ed83e90bcf917409c6a933519c86b2b8603`; public tag source: `4693aae997b2f370cc7affbdc270ddfb8382fe72`; equal tree `51d410661cd453d939c59e41f7214f3a8f62fd9b`. Product tested source remains `e2d67b38b235a42b55fa536a4c99cd443a1d59c1`. Immutable tags/assets must not be changed. Subsequent branch commits are documentation closure only.
+
+Опубликован отдельный prerelease нового дизайна, пакет `0.9.1-alpha26-2`. Шесть файлов на каждом сервисе скачаны и проверены. Main/stable/latest сохранены. Собственные VM выключены; физический роутер не изменялся. Эксплуатационный допуск/LAN/отказы/питание/суточный тест остаются отдельным этапом. Перед повтором внешнего действия читать `private/minimum-ui-20261026/publication.json` и реальные refs.
+
+
 ## English
 
 The owner executed revision 3. Minimum and the five-section Advanced menu are implemented, with the accepted palette B. Coordinator plus three fixed agents completed UI, behavior and independent QA work. Do not restart the original implementation plan blindly.
