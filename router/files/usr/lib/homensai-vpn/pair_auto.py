@@ -97,6 +97,8 @@ def request(revision,request_source=None):
     from auto_control import control_lock, revision_locked
     from agent import RUNTIME, atomic_json
     with control_lock():
+        from speed_pause import public as pause_status
+        if pause_status().get('active'):return {'accepted':False,'blockers':['SPEED-BUSY']}
         if revision != revision_locked(RUNTIME):
             return {'accepted': False, 'blockers': ['CONTROL-REVISION-STALE']}
         try:

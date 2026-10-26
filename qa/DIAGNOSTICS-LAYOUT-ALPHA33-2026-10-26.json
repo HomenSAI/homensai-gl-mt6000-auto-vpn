@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "result": "PASS_LOCAL_CANDIDATE",
+  "version": "0.9.1-alpha33-1",
+  "source": "67fc3b90c49d1b7629e948d3b8ff8a6dfa165bb4",
+  "sha256": "0e15b065b0ce6bdb7fdfaeac76e8f5e3869bfa13172ca6cafe519d15f8fc38cf",
+  "bytes": 885910,
+  "ci": [
+    {
+      "application_tests": 839,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha33-1_all.ipk",
+      "bytes": 885910,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "0e15b065b0ce6bdb7fdfaeac76e8f5e3869bfa13172ca6cafe519d15f8fc38cf",
+      "skipped_tests": 23,
+      "source": "67fc3b90c49d1b7629e948d3b8ff8a6dfa165bb4",
+      "ui_suites": 64,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 839,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha33-1_all.ipk",
+      "bytes": 885910,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "0e15b065b0ce6bdb7fdfaeac76e8f5e3869bfa13172ca6cafe519d15f8fc38cf",
+      "skipped_tests": 0,
+      "source": "67fc3b90c49d1b7629e948d3b8ff8a6dfa165bb4",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "feature": "speed-pause-truthful-diagnostics-responsive-reference",
+  "pause_regressions": 13,
+  "speed_regressions": 17,
+  "ui_suites": 64,
+  "chromium_groups": 4,
+  "chromium_checks_per_group": 46,
+  "board_fixtures": [
+    "mt3000"
+  ],
+  "actions": [
+    "source-autostart",
+    "target-autostart",
+    "wg-autostart",
+    "ovpn-autostart",
+    "vpn-boot",
+    "sfe-boot",
+    "hnat",
+    "flow-offload",
+    "sfe-autoload"
+  ],
+  "physical_devices_tested": [],
+  "physical_settings_changed": false,
+  "installed": false,
+  "published": false,
+  "scope": "Immutable dual Linux CI, real Lua helpers with mocked UCI, native Chromium/CDP synthetic-RPC UI. Physical delivery is recorded separately in MT3000-ALPHA33-2026-10-26.json.",
+  "diagnostic_regressions": 4
+}

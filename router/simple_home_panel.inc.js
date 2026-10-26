@@ -36,7 +36,8 @@ function simpleHomeModel(status,inventory,now){
   decision.enabled=simpleHomeAutoEnabled(status,now);decision.actionStop=control.stop||operation==='starting'||!control.fresh;
   decision.blockers=control.fresh&&Array.isArray(ns.blockers)?ns.blockers.slice(0,4):[];
   decision.setupRequired=!unavailable&&control.off&&!decision.moving&&!operation&&(!source||!target||!source.id||!target.id||source.id===target.id);
-  if(unavailable){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=bi('Check the connection to the router.','Проверьте связь с роутером.');}
+  if(control.paused){decision.state='pending';decision.title=bi('Auto paused for speed test','Auto на паузе для теста скорости');decision.summary=bi('Monitoring resumes first, then Auto. Your VPNs stay connected.','Сначала возобновится мониторинг, затем Auto. VPN остаются подключёнными.');}
+  else if(unavailable){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=bi('Check the connection to the router.','Проверьте связь с роутером.');}
   else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('Waiting for controller confirmation.','Ожидается подтверждение контроллера.');}
   else if(operation==='starting'){decision.state='pending';decision.title=bi('Turning Auto on…','Включение Auto…');decision.summary=bi('Waiting for controller confirmation.','Ожидается подтверждение контроллера.');}
   else if(decision.moving){decision.state='pending';decision.title=bi('Switching channel','Переключение канала');decision.summary=bi('The active channel is being confirmed.','Рабочий канал уточняется.');}

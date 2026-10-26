@@ -4,6 +4,8 @@ from native_switch import journal_read, Refused
 
 
 def blocked(settings):
+    from speed_pause import public as pause_status
+    if pause_status().get('active'):return 'SPEED-BUSY'
     from pair_auto import public_intent
     if public_intent():return 'CONFIG-STOP-AUTO-FIRST'
     try:

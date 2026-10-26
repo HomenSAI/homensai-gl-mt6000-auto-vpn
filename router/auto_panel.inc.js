@@ -13,16 +13,17 @@ function autoWindowDeadline(intent,settings){
 }
 function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
+  var paused=!!status.speed_pause&&status.speed_pause.active===true&&status.speed_pause.auto_paused===true;
   var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var on=fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED');
+  var on=!paused&&fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED');
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
   var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
-  return {fresh:fresh,on:on,transitioning:transitioning,off:off,awaiting:awaiting,
+  return {fresh:fresh,on:on,paused:paused,transitioning:transitioning,off:off,awaiting:awaiting,
     stop:on||transitioning||intent.requested==='on'||['DEGRADED-ON-RESERVE','COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
     returned:off&&ns.original_restored===true,
-    color:!fresh?'unknown':awaiting||transitioning?'pending':on?'on':off?'off':'error'};
+    color:paused?'pending':!fresh?'unknown':awaiting||transitioning?'pending':on?'on':off?'off':'error'};
 }
 function autoPathModel(status,source,target,now){
   var model=autoControlModel(status,now),ns=status.native_failover||{};
@@ -238,6 +239,7 @@ function autoLightModel(status,inventory,now){
   var blockers=(Array.isArray(ns.blockers)?ns.blockers:[]).filter(function(code){return AUTO_LAN_ONLY.indexOf(code)<0;});
   function out(key,title,hint,code){return {key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
+  if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint=bi('Two selected VPN channels; verified by router IPv4 probes. External LAN is not independently verified.','Два выбранных VPN-канала; проверяются IPv4-запросами роутера. Внешний LAN независимо не проверен.');
@@ -257,6 +259,7 @@ function autoLightModel(status,inventory,now){
   if(state==='DEGRADED-ON-RESERVE')return out('problem',bi('The reserve is failing too','Резерв тоже не работает'),bi('The selected reserve has problems. Check both VPNs; any return must satisfy the current mode, saved policy and fresh primary readiness.','На выбранном резерве есть проблемы. Проверьте оба VPN; возврат должен соответствовать текущему режиму, политике и свежей готовности основного.'));
   if(state==='STOPPED-ON-RESERVE')return out('problem',bi('Stopped, but still on the reserve','Остановлен, но роутер всё ещё на резерве'),bi('The original route is not restored. Press Return to primary when the primary works.','Исходный маршрут не восстановлен. Нажмите «Вернуться на основной», когда основной заработает.'));
   if(state==='RELEASE-PENDING'||blockers.indexOf('GUARD-RELEASE-UNCONFIRMED')>=0)return out('problem',bi('Traffic block removal is not confirmed','Снятие блокировки трафика не подтверждено'),bi('Recovery is still pending. See Help → emergency return; Stop has not completed.','Восстановление ещё не завершено. См. «Помощь» → аварийный возврат; остановка не завершена.'),'GUARD-RELEASE-UNCONFIRMED');
+  if(state==='BLOCKED'&&intent.requested==='on'&&blockers.length===1&&blockers[0]==='VENDOR-WORKER-BUSY')return out('switching',bi('Waiting for the router operation','Ожидание операции роутера'),bi('A stock network worker or lock is busy. Auto continues after it clears.','Штатный сетевой обработчик или блокировка заняты. Auto продолжит работу после их завершения.'));
   if(state==='BLOCKED'&&intent.requested==='on')return out('problem',bi('Auto is blocked','Auto заблокирован'),blockers.length?autoBlockerText(blockers[0]):bi('The router reports a condition that blocks Auto. See the list below.','Роутер сообщает условие, блокирующее Auto. См. список ниже.'),blockers[0]);
   if(state==='TRIAL-REQUIRED')return out('problem',bi('A LAN trial is required','Нужен LAN-тест'),autoBlockerText('LAN-TRIAL-REQUIRED'),'LAN-TRIAL-REQUIRED');
   if(state==='EXPIRED')return out('off',bi('Auto is off: the test window ended','Auto выключен: окно теста закончилось'),autoBlockerText('BOUNDED-DEADLINE-REQUIRED'));

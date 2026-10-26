@@ -2,3 +2,22 @@
 .hv-preparation-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;min-width:0;max-width:100%}
 .hv-app .hv-preparation-actions .cbi-button{max-width:100%;min-width:0;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;box-sizing:border-box}
 .hv-app[data-hv-active="home"] .hv-sidebar,.hv-app[data-hv-active="home"] .hv-page-header,.hv-app[data-hv-active="home"] .hv-settings{display:none!important}
+/* Reference text is wrapped inside the available column, including open fixes. */
+.hv-app table.hv-errors{display:table!important;table-layout:fixed;width:100%;max-width:100%;min-width:0!important;border-collapse:collapse}
+.hv-app table.hv-errors th,.hv-app table.hv-errors td{box-sizing:border-box;min-width:0;white-space:normal!important;overflow-wrap:anywhere;word-break:normal;vertical-align:top;padding:12px}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(1){width:19%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(2){width:16%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(3){width:49%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(4){width:16%}
+.hv-app table.hv-errors code{white-space:normal!important;overflow-wrap:anywhere;font-size:12px}
+.hv-app table.hv-errors .cbi-button{min-width:0;max-width:100%;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;padding:9px 12px!important;box-sizing:border-box}
+.hv-app table.hv-errors .hv-errfix td{width:auto;max-width:100%}
+.hv-app table.hv-errors .hv-errfix p{white-space:normal!important;overflow-wrap:anywhere;max-width:100%}
+@media(max-width:700px){
+ .hv-app table.hv-errors{display:block!important}
+ .hv-app table.hv-errors .hv-error-head{display:none}
+ .hv-app table.hv-errors tr:not(.hv-error-head):not(.hv-errfix){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;border-top:1px solid var(--line,#ddd)}
+ .hv-app table.hv-errors tr:not(.hv-errfix)>td{display:block;width:auto!important;padding:9px}
+ .hv-app table.hv-errors tr:not(.hv-errfix)>td:nth-child(3),.hv-app table.hv-errors tr:not(.hv-errfix)>td:nth-child(4){grid-column:1/-1}
+ .hv-app table.hv-errors .hv-errfix:not([hidden]),.hv-app table.hv-errors .hv-errfix td{display:block;width:100%}
+}

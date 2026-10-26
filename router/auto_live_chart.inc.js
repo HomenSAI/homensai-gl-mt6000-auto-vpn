@@ -3,7 +3,7 @@ var autoLivePoints=[],autoLiveKey='',autoLiveContext=null,autoLivePollAdded=fals
 var AUTO_LIVE_COLORS={source:'#16a34a',target:'#2563eb',off:'#64748b'};
 function autoLiveSample(status,now){
   status=status||{};
-  var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
+  var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&!(status.speed_pause&&status.speed_pause.active)&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   var kind='unknown',state=String(ns.state||'UNKNOWN');
   if(valid){
     if(state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))kind='source';

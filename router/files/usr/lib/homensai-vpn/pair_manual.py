@@ -114,6 +114,8 @@ def request(direction,revision,request_source=None):
             selection={k:chosen.get(k) for k in ('hash','settings_hash','vendor_identity')}
             selection.update(source=chosen['source']['id'],target=chosen['target']['id'],tx=n.journal_read().get('tx'))
         with control_lock(RUNTIME):
+            from speed_pause import public as pause_status
+            if pause_status().get('active'):return refuse('SPEED-BUSY')
             current=revision_locked(RUNTIME);state=pair.read_state()
             if current!=revision or not active(state,pair.intent(),revision):return refuse('CONTROL-REVISION-STALE')
             old=read()

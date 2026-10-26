@@ -23,6 +23,10 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 (async()=>{
 for(const language of ['en','ru']){
  const f=fixture(language),{c,inventory,base}=f;
+ const paused=clone(base);paused.speed_pause={active:true,phase:'PAUSED',auto_paused:true,monitor_paused:true};
+ assert.equal(c.autoControlModel(paused,1000).on,false,'paused Auto cannot claim it watches the route');assert(c.autoControlModel(paused,1000).paused);
+ assert.equal(c.simpleHomeModel(paused,inventory,1200).state,'pending','verified pause remains explicit when measurements age');
+ assert(c.autoLightModel(paused,inventory,1200).title.includes(language==='ru'?'паузе':'paused'),'pause beats stale/off descriptions');
  let model=c.simpleHomeModel(base,inventory,1000);assert(model.showCard);assert.equal(model.state,'on');assert.equal(model.selectedRole,'source');
  const blocked=clone(base);blocked.native_failover.state='BLOCKED';blocked.native_failover.blockers=['HARDWARE-ACCELERATOR-UNVERIFIED'];blocked.auto_control.requested='off';blocked.auto_control.pair_phase='HELD';
  const blockedModel=c.simpleHomeModel(blocked,inventory,1000);assert.equal(blockedModel.state,'error');assert.equal(blockedModel.blockers[0],'HARDWARE-ACCELERATOR-UNVERIFIED');

@@ -33,15 +33,15 @@ A listed code may describe a legacy mode or a guarded refusal; it does not prove
 
 ## DNS-001
 
-Не работает поиск адресов (DNS) / Name lookup fails
+DNS-проверка не прошла / DNS check did not pass
 
-**RU:** Поиск адресов (DNS) не работает, а соединения по IP-адресу работают.
+**RU:** Контрольный DNS-запрос через этот VPN не дал подтверждённого ответа. Другой DNS, кэшированные имена или прямые HTTPS-запросы могут работать; сам код не устанавливает причину.
 
-**EN:** Name lookup (DNS) fails while connections by IP address work.
+**EN:** The control DNS query through this VPN did not produce a validated answer. Other DNS paths, cached names or direct HTTPS may still work; the code alone does not identify the cause.
 
-**Что делать:** Проверьте DNS-сервер VPN-профиля или роутера. Обычно помогает другой DNS (например 1.1.1.1) в VPN-профиле. Если на компьютере работает программа VPN, остановите её на время теста.
+**Что делать:** Повторите проверку и изучите сохранённые результаты DNS/HTTPS, доступность DNS-сервера, маршрутизацию и фильтрацию. Перезапуск профиля согласуйте со штатным Stop/восстановлением Auto.
 
-**Action:** Check the DNS server of the VPN profile or of the router. Another DNS (for example 1.1.1.1) in the VPN profile usually helps. If a VPN program runs on a computer, stop it for the test.
+**Action:** Repeat the check and inspect the saved DNS/HTTPS results, resolver reachability, routing and filtering. Coordinate any profile restart with managed Auto Stop/recovery.
 
 ## VPN-001
 
@@ -69,15 +69,15 @@ VPN отклонил вход / VPN login rejected
 
 ## VPN-003
 
-Туннель поднят, но трафика нет / Tunnel is up but carries nothing
+Недостаточно успешных HTTPS-проверок / HTTPS availability below threshold
 
-**RU:** Туннель подключён, но проверочный трафик через него не проходит. Это не всегда вина сервера: причиной может быть маршрутизация или фильтрация.
+**RU:** Через подключённый VPN успешно прошли менее двух из трёх HTTPS-проверок. Часть трафика может проходить. Сам код не доказывает полное отсутствие доступа в Интернет.
 
-**EN:** The tunnel is connected but the check traffic does not pass through it. It does not always mean a bad server: routing or filtering may be the cause.
+**EN:** Fewer than two of three HTTPS checks succeeded through the connected VPN. Some traffic may still pass. This code alone does not establish complete loss of Internet access.
 
-**Что делать:** Подождите несколько минут (мониторинг повторяет проверку). Затем переподключите профиль или возьмите другой сервер. Если так у всех VPN, проверьте WAN.
+**Что делать:** Посмотрите сохранённое число успешных HTTPS-проверок, результат DNS и сведения об адресах проверки. Повторите проверку; перед переподключением работающего VPN выясните причину повторяющихся сбоев.
 
-**Action:** Wait a few minutes (the monitor repeats the check). Then reconnect the profile or use another server. If all VPNs show it, check the WAN.
+**Action:** Read the saved HTTPS success count, DNS result and endpoint details. Retry the check; investigate repeated failures before reconnecting a working VPN.
 
 ## VPN-004
 
@@ -1146,6 +1146,78 @@ VPN не подключён / VPN not connected
 **Что делать:** Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.
 
 **Action:** Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.
+
+## SPEED-PAUSE-UNVERIFIED
+
+Не удалось проверить паузу / Pause could not be verified
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-BUSY
+
+Пауза ещё завершается / Pause recovery in progress
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-LOST
+
+Условия паузы изменились / Pause ownership changed
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-TIMEOUT
+
+Нет подтверждения паузы / Pause acknowledgement timed out
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-MODE
+
+Состояние Auto не готово к паузе / Auto transition is not ready for pause
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-CPU-UNKNOWN
+
+Загрузка CPU не прочитана / CPU observation unavailable
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
 
 ## DEVICE-MODEL-INVALID
 
@@ -2653,11 +2725,11 @@ Auto выключен / Auto disabled
 
 ## HTTPS-FAILED
 
-Сайты не открываются / Websites do not open
+HTTPS-проверки ниже порога / HTTPS checks below threshold
 
-**RU:** VPN подключён, но открыть сайт через него не получается.
+**RU:** VPN не прошёл достаточное число HTTPS-проверок. Возможна частичная доступность; смотрите сохранённое число ответов и результат DNS.
 
-**EN:** The VPN is connected but opening a website through it fails.
+**EN:** The VPN did not pass enough HTTPS checks. This may be partial availability; read the saved count and DNS result.
 
 **Что делать:** См. VPN-003.
 
@@ -5785,9 +5857,9 @@ Kill Switch / Kill Switch
 
 **EN:** The monitor received a result without a diagnostic error. This records channel availability at that observation; it does not mean traffic switched or that Auto was activated.
 
-**Что делать:** Проверка канала завершена без ошибки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+**Что делать:** Условие доступности канала выполнено. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
-**Action:** Channel check completed without an error. Read the separate saved reason code if present; observation and a confirmed route change are different.
+**Action:** Channel availability threshold was met. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-CHECK-FAILED
 
@@ -5849,17 +5921,17 @@ Kill Switch / Kill Switch
 
 **Action:** The controller is observing the VPN channels. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
-## EVENT-AUTO-STARTING
+## EVENT-START-CONFIRMATION-PENDING
 
-Запуск Auto / Auto starting
+Запуск ожидает подтверждения / Start awaiting confirmation
 
-**RU:** Запуск принят и ещё подготавливается. Дождитесь фактического завершения или конкретного отказа; запрос не равен работающему сеансу.
+**RU:** Запрос Start сохранён, пока ещё видно прежнее остановленное состояние. Это ожидание запуска, а не новая команда Stop.
 
-**EN:** Startup was accepted and is still being prepared. Wait for its actual completion or a specific refusal; a request is not a running session.
+**EN:** The Start request is recorded while the previous stopped state is still visible. This is not another Stop command.
 
-**Что делать:** Выполняется запуск Auto. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+**Что делать:** Запрос включения принят; ожидается подтверждение контроллера. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
-**Action:** Auto startup is in progress. Read the separate saved reason code if present; observation and a confirmed route change are different.
+**Action:** Start accepted; waiting for the controller. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-CHANNEL-PREPARATION
 
@@ -6160,3 +6232,15 @@ Auto работает / Auto running
 **Что делать:** Фактический результат операции ещё не проверен. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
 **Action:** The operation result has not been verified. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-VENDOR-WAIT
+
+Ожидание операции роутера / Waiting for router operation
+
+**RU:** Обнаружен обработчик или блокировка GL.iNet. Контроллер временно откладывает решения о переключении; сама запись не подтверждает отказ VPN. Конкретный обработчик мог не сохраниться в истории.
+
+**EN:** A GL.iNet worker or lock was observed. The controller defers switching decisions until it clears; the record alone does not establish a VPN outage. The exact worker may not have been retained.
+
+**Что делать:** Ожидание завершения штатной сетевой операции или снятия её блокировки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Waiting for the stock network operation or lock to clear. Read the separate saved reason code if present; observation and a confirmed route change are different.

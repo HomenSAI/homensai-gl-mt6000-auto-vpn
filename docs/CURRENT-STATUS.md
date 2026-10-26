@@ -1,3 +1,27 @@
+## Alpha33 installed; all requested changes verified / Alpha33 установлена
+
+**0.9.1-alpha33-1**, dashboard109/ui81. Real two-channel speed test confirmed cooperative pause, low daemon CPU and automatic monitor/Auto restoration with unchanged VPNs/config/intent/PIDs. Responsive reference table and truthful partial-connectivity/wait/start diagnostics passed native Chromium checks; actual per-endpoint data now reaches RPC. Auto remains ON / RUNNING / OBSERVING. [Verification and limits](VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md). Publication is separately verified by release metadata.
+
+---
+
+## Alpha33 endpoint diagnostics integration / Интеграция диагностики alpha33
+
+Alpha32 is installed with Auto ON and correct HTTP/UI assets. Actual device verification caught endpoint details stripped by the vendor-identity observer. Alpha33 adds bounded nested sanitization, preserves the details for the matching profile and removes them on a rebind; a regression covers the complete observation boundary and secret-field exclusion. Final CI/deployment pending. Speed-test pause remains physically proved on alpha31 and retained unchanged.
+
+---
+
+## Alpha32 combined diagnostics and layout under validation / Общие правки alpha32
+
+Owner's latest requests are included with the physically proved alpha31 speed-test pause: wrapped reference table, partial/zero/unknown HTTPS wording, per-endpoint errors, correlated same-check rows, vendor-operation wait and pending-Start labels. Alpha32 full immutable CI and deployment are pending. Dedicated MT3000 currently runs alpha31; both actual speed tests completed, CPU after quiet-window acknowledgement 11.4%, Auto/monitor restored with same processes/config/intent. [Physical alpha31 checkpoint](../qa/MT3000-ALPHA31-2026-10-26.json).
+
+---
+
+## Alpha31 speed-test pause under validation / Проверяется пауза для теста скорости
+
+Owner-requested cooperative pause of Auto and background monitoring during bounded speed tests. Existing VPNs/routes and prior enablement are retained; monitor resumes first, Auto follows fresh measurement, manual Stop wins. CPU admission occurs after both safe-point acknowledgements. Local focused tests and 63 UI suites passed; immutable full CI, installation and real speed-test proof pending. Actual dedicated MT3000 remains alpha30 with Auto ON.
+
+---
+
 ## Alpha30 installed; Auto running / Alpha30 установлена, Auto работает
 
 **0.9.1-alpha30-1**, dashboard106/ui78, installed and read back on the dedicated MT3000. The former expanded interface is restored; new Minimum retained. Actual ordinary Start confirmed RUNNING / OBSERVING with two healthy VPNs, no reconnect, protected settings preserved. Auto remains ON. Dual immutable CI, 63 UI suites and Chromium 4×33 passed. [Device and scope](VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-HYBRID-ALPHA30-INSTALLED-2026-10-26.md). Publication state is recorded by the linked release metadata; source/device evidence alone is not publication proof.

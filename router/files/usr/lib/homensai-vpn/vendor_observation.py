@@ -12,9 +12,26 @@ import uuid
 SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$')
 PROFILE_GROUP=re.compile(r'^(openvpn|wireguard):[0-9]{1,20}$')
-HEALTH=('https_success','dns_ok','rtt_ms','exit_ip','server_endpoint')
+HEALTH=('https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks')
 MEASUREMENT_FIELDS=('id','time','code','scope','lan_path_verified','device','mark','table','ifindex',
-                    'https_success','dns_ok','rtt_ms','exit_ip','server_endpoint')
+                    'https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks')
+
+
+def probe_checks(value):
+    """Bounded public endpoint facts, never arbitrary measurement metadata."""
+    result=[];seen=set()
+    for row in value[:3]if isinstance(value,list)else []:
+        if not isinstance(row,dict):continue
+        target=row.get('target');outcome=row.get('result')
+        if (not isinstance(target,str)or target not in('one.one.one.one','dns.google','dns.quad9.net')
+                or target in seen or outcome not in('ok','http-unsupported','http-error','timeout',
+                    'tls-error','transport-error','invalid-response','unknown')):continue
+        seen.add(target);clean={'target':target,'result':outcome}
+        status=row.get('http_status');elapsed=row.get('elapsed_ms')
+        if type(status)is int and 100<=status<=599:clean['http_status']=status
+        if type(elapsed)in(int,float)and 0<=elapsed<=60000 and math.isfinite(elapsed):clean['elapsed_ms']=elapsed
+        result.append(clean)
+    return result
 
 
 def tunnel_identity(profile):
@@ -133,6 +150,7 @@ class VendorObserver:
             # Measurement payloads never override inventory-owned identity or
             # copy arbitrary vendor metadata into the authenticated status.
             row={key:original[key] for key in MEASUREMENT_FIELDS if key in original}
+            if 'probe_checks'in row:row['probe_checks']=probe_checks(row['probe_checks'])
             identifier=row.get('id')
             if not isinstance(identifier,str) or not SAFE.fullmatch(identifier):row['id']=identifier=None
             profile=before_ids.get(identifier)

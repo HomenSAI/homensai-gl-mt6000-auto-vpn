@@ -81,9 +81,10 @@ function terminalPinned(now){
   while(state.pinned.firstChild)state.pinned.removeChild(state.pinned.firstChild);
   state.clock.textContent=terminalTime(now);
   function line(kind,name,text){return E('div',{'class':'hv-terminal-status'},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('strong',{},name),E('span',{},text)]);}
-  state.pinned.appendChild(line(fresh?'green':'red','HomenS.AI monitor',fresh?'OK · '+bi('last router observation ','последнее наблюдение роутера ')+terminalTime(status.time):bi('No fresh verified data','Нет свежих проверенных данных')));
-  var light=autoLightModel(status,inventory,now),running=autoWorking(light),autoKind=running?(light.key==='switching'?'yellow':'green'):light.key==='off'?'grey':'red';
-  state.pinned.appendChild(line(autoKind,'Auto VPN',(running?'OK · '+bi('ON','ВКЛ'):bi('OFF or unconfirmed','ВЫКЛ или не подтверждено'))+' · '+light.title+(running?' · '+bi('Activation: ','Активация: ')+journalSourceLabel((status.auto_control||{}).activation_source):'')));
+  var speedPaused=status.speed_pause&&status.speed_pause.active;
+  state.pinned.appendChild(line(speedPaused?'yellow':fresh?'green':'red','HomenS.AI monitor',speedPaused?bi('Paused for speed test','Пауза для теста скорости'):fresh?'OK · '+bi('last router observation ','последнее наблюдение роутера ')+terminalTime(status.time):bi('No fresh verified data','Нет свежих проверенных данных')));
+  var light=autoLightModel(status,inventory,now),running=autoWorking(light),autoKind=speedPaused||light.key==='switching'?'yellow':running?'green':light.key==='off'?'grey':'red';
+  state.pinned.appendChild(line(autoKind,'Auto VPN',(speedPaused?bi('PAUSED','ПАУЗА'):running?'OK · '+bi('ON','ВКЛ'):bi('OFF or unconfirmed','ВЫКЛ или не подтверждено'))+' · '+light.title+(running?' · '+bi('Activation: ','Активация: ')+journalSourceLabel((status.auto_control||{}).activation_source):'')));
   rolePairIds(status,inventory,now).map(function(id,index){
     var p=rows.find(function(p){return p.id===id;}),use=p?channelDisplayUse(p,status,inventory):null;
     var rank=use&&use.kind==='green'?0:use&&use.kind==='yellow'?1:use&&use.kind==='red'?3:2;

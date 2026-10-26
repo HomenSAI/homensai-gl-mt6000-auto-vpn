@@ -1190,6 +1190,9 @@ def serve():
         last_return=0;consumed={};last_trial=None;last_attempt=0
         while not STOP:
             try:
+                from speed_pause import gate as speed_gate
+                if speed_gate('auto'):
+                    time.sleep(1);continue
                 from auto_control import current_revision
                 decision_revision=current_revision(RUNTIME)
                 progress_error=None

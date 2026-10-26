@@ -1,0 +1,362 @@
+{
+  "schema": 1,
+  "result": "PASS_INSTALLED_SPEED_PAUSE_DIAGNOSTICS_LAYOUT",
+  "version": "0.9.1-alpha33-1",
+  "source": "67fc3b90c49d1b7629e948d3b8ff8a6dfa165bb4",
+  "sha256": "0e15b065b0ce6bdb7fdfaeac76e8f5e3869bfa13172ca6cafe519d15f8fc38cf",
+  "bytes": 885910,
+  "board": "glinet,mt3000-snand",
+  "firmware": "4.11.0",
+  "install": {
+    "result": "PASS_INSTALLED",
+    "package": "0.9.1-alpha33-1",
+    "running_version": "0.9.1-alpha33",
+    "sha256": "0e15b065b0ce6bdb7fdfaeac76e8f5e3869bfa13172ca6cafe519d15f8fc38cf",
+    "payload_files_verified": 92,
+    "opkg_exit": 0,
+    "opkg_log_sha256": "0f3d652d46aef4e3b146884405224b0f05be5c3f7a05b16335f340958a202951",
+    "protected_configs_unchanged": true,
+    "unrelated_app_settings_unchanged": true,
+    "terms_preserved": true,
+    "main_routes_unchanged": true,
+    "fresh_status_age": 3.499847412109375,
+    "auto_requested": "off",
+    "pair_phase": "STOPPED",
+    "native_state": "STOPPED",
+    "native_blockers": [],
+    "services": {
+      "monitor": {
+        "running": true,
+        "pid": 15064
+      },
+      "native": {
+        "running": true,
+        "pid": 15065
+      }
+    },
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793049293.882874
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793049293.898912
+      }
+    ]
+  },
+  "http": {
+    "result": "PASS",
+    "version": "0.9.1-alpha33",
+    "assets": [
+      {
+        "name": "dashboard109.js",
+        "bytes": 1180662,
+        "sha256": "40067d8d1e04e6c8913ce0aa807223785cd04e41c694261851499a92ac0de3e5"
+      },
+      {
+        "name": "ui81.css",
+        "bytes": 141607,
+        "sha256": "511b476a0d1e70298fa7995564111aca8450a62b487365f6c534fea076eaeb2b"
+      }
+    ],
+    "selected_module": "dashboard109",
+    "fresh_rpc": true,
+    "scope": "Actual physical router HTTP/RPC; native browser page not driven",
+    "observed_utc": "2026-10-26T21:15:19.075876+00:00"
+  },
+  "speed_test": {
+    "result": "PASS_SPEED_PAUSE_AND_RESTORE",
+    "options": {
+      "profiles": [
+        "wireguard:peer_2002",
+        "openvpn:40354_2020"
+      ],
+      "budget_mib": 8,
+      "duration": 5,
+      "streams": 2
+    },
+    "payload_budget_bytes": 16777216,
+    "timeline": [
+      {
+        "elapsed": 0.2,
+        "job": "QUEUED",
+        "preparation": null,
+        "pause": null,
+        "acks": [],
+        "completed": 0,
+        "code": null
+      },
+      {
+        "elapsed": 0.9,
+        "job": "QUEUED",
+        "preparation": "pausing",
+        "pause": "PAUSING",
+        "acks": [],
+        "completed": 0,
+        "code": null
+      },
+      {
+        "elapsed": 1.6,
+        "job": "QUEUED",
+        "preparation": "pausing",
+        "pause": "PAUSED",
+        "acks": [
+          "auto",
+          "monitor"
+        ],
+        "completed": 0,
+        "code": null
+      },
+      {
+        "elapsed": 3.0,
+        "job": "RUNNING",
+        "preparation": "testing",
+        "pause": "PAUSED",
+        "acks": [
+          "auto",
+          "monitor"
+        ],
+        "completed": 0,
+        "code": null
+      },
+      {
+        "elapsed": 8.6,
+        "job": "RUNNING",
+        "preparation": "testing",
+        "pause": "PAUSED",
+        "acks": [
+          "auto",
+          "monitor"
+        ],
+        "completed": 1,
+        "code": null
+      },
+      {
+        "elapsed": 18.4,
+        "job": "DONE",
+        "preparation": "testing",
+        "pause": "RESUMING",
+        "acks": [
+          "auto",
+          "monitor"
+        ],
+        "completed": 2,
+        "code": "SPEED-COMPLETE"
+      },
+      {
+        "elapsed": 22.9,
+        "job": "DONE",
+        "preparation": "testing",
+        "pause": null,
+        "acks": [],
+        "completed": 2,
+        "code": "SPEED-COMPLETE"
+      }
+    ],
+    "cpu_percent_after_pause": 21.1,
+    "pause_samples": 24,
+    "monitor_observations_paused": true,
+    "auto_decisions_paused": true,
+    "daemon_cpu_percent_during_pause": {
+      "monitor": 0.49,
+      "native": 0.45
+    },
+    "job_state": "DONE",
+    "job_code": "SPEED-COMPLETE",
+    "rows": [
+      {
+        "id": "wireguard:peer_2002",
+        "time": 1793049363.4586904,
+        "code": null,
+        "download": {
+          "payload_bytes": 6291456,
+          "seconds": 2.926,
+          "mbps": 17.201
+        },
+        "upload": {
+          "payload_bytes": 2097152,
+          "seconds": 1.399,
+          "mbps": 11.994
+        },
+        "latency_ms": 286.8,
+        "payload_budget_bytes": 8388608
+      },
+      {
+        "id": "openvpn:40354_2020",
+        "time": 1793049369.1832957,
+        "code": null,
+        "download": {
+          "payload_bytes": 5242880,
+          "seconds": 5.086,
+          "mbps": 8.246
+        },
+        "upload": {
+          "payload_bytes": 2097152,
+          "seconds": 1.84,
+          "mbps": 9.118
+        },
+        "latency_ms": 630.0,
+        "payload_budget_bytes": 8388608
+      }
+    ],
+    "restored": true,
+    "auto_state": "OBSERVING",
+    "pair_phase": "RUNNING",
+    "guard_exists": true,
+    "configuration_unchanged": true,
+    "same_service_pids": true,
+    "same_auto_intent": true,
+    "vpn_reconnected": false,
+    "external_lan_tested": false,
+    "observed_time": 1793049384.0638602,
+    "observed_utc": "2026-10-26T21:16:18.625911+00:00"
+  },
+  "diagnostics": {
+    "result": "PASS",
+    "version": "0.9.1-alpha33",
+    "current_profiles": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "probe_checks": [
+          {
+            "target": "one.one.one.one",
+            "result": "ok",
+            "http_status": 200,
+            "elapsed_ms": 674.4
+          },
+          {
+            "target": "dns.google",
+            "result": "ok",
+            "http_status": 200,
+            "elapsed_ms": 723.0
+          },
+          {
+            "target": "dns.quad9.net",
+            "result": "http-unsupported",
+            "http_status": 505,
+            "elapsed_ms": 621.7
+          }
+        ],
+        "time": 1793049414.465557
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "probe_checks": [
+          {
+            "target": "one.one.one.one",
+            "result": "ok",
+            "http_status": 200,
+            "elapsed_ms": 404.6
+          },
+          {
+            "target": "dns.google",
+            "result": "ok",
+            "http_status": 200,
+            "elapsed_ms": 510.5
+          },
+          {
+            "target": "dns.quad9.net",
+            "result": "http-unsupported",
+            "http_status": 505,
+            "elapsed_ms": 410.6
+          }
+        ],
+        "time": 1793049414.466663
+      }
+    ],
+    "auto": {
+      "state": "OBSERVING",
+      "blockers": [],
+      "readiness_verified": true,
+      "time": 1793049423.745249
+    },
+    "scope": "Actual individual probe HTTP/transport results. Unsupported check endpoint is separate from VPN quorum status.",
+    "observed_utc": "2026-10-26T21:17:00.304491+00:00"
+  },
+  "final_health": {
+    "result": "PASS",
+    "version": "0.9.1-alpha33",
+    "phase": "RUNNING",
+    "native": "OBSERVING",
+    "requested": "on",
+    "blockers": [],
+    "readiness_verified": true,
+    "running_seconds": 107.4,
+    "network_identity_matches": true,
+    "protected_configs_match": true,
+    "profiles": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "dns_ok": true,
+        "https_success": 2,
+        "code": null,
+        "time": 1793049425.094934
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "dns_ok": true,
+        "https_success": 2,
+        "code": null,
+        "time": 1793049425.1028
+      }
+    ],
+    "external_lan_tested": false,
+    "observed_utc": "2026-10-26T21:17:04.342370+00:00"
+  },
+  "encrypted_backups": {
+    "before": {
+      "result": "PASS",
+      "encrypted_sha256": "9623fdf7c9486d5853354dd0b71304fd2620068607982897b791b8f6b3d1235a",
+      "entries": 197,
+      "expanded_bytes": 3932546,
+      "encrypted_bytes": 602015,
+      "independent_decrypt_and_tar_read": true,
+      "plaintext_persisted": false,
+      "key_protection": "Windows DPAPI current user"
+    },
+    "after": {
+      "result": "PASS",
+      "encrypted_sha256": "df5b8135c01fb285c93d6642337da25fc74e18c75ef81e0c0417e6a7bdc86644",
+      "entries": 197,
+      "expanded_bytes": 3939098,
+      "encrypted_bytes": 602581,
+      "independent_decrypt_and_tar_read": true,
+      "plaintext_persisted": false,
+      "key_protection": "Windows DPAPI current user"
+    }
+  },
+  "native_chromium": {
+    "groups": 4,
+    "checks_per_group": 46,
+    "ui_suites": 64,
+    "scope": "Full generated module, synthetic RPC; table/disclosure/long-code overflow, responsive layouts, pause/resume; screenshots captured through CDP."
+  },
+  "external_lan_tested": false,
+  "injected_failover_tested": false,
+  "reboot_tested": false,
+  "long_endurance_tested": false,
+  "main_mt6000_changed": false,
+  "windows_network_changed": false,
+  "publication": "Separate prerelease stage; see actual GitHub release metadata."
+}

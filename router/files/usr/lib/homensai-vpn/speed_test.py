@@ -215,7 +215,14 @@ def stage(binding,address,direction,budget,duration,streams,cancelled,transport=
         while time.monotonic()<deadline and not cancelled():
             amount=quota.take(MIB)
             if not amount:break
-            total+=transport(binding,address,direction,amount,deadline,cancelled,progress=report) if progress else transport(binding,address,direction,amount,deadline,cancelled)
+            try:
+                total+=transport(binding,address,direction,amount,deadline,cancelled,progress=report) if progress else transport(binding,address,direction,amount,deadline,cancelled)
+            except (SpeedError,OSError) as error:
+                # An elapsed measurement window is normal. Retain only fully
+                # completed HTTP payloads; real cancellation still wins below.
+                if time.monotonic()>=deadline and not cancelled()and (
+                        isinstance(error,OSError)or error.code=='SPEED-CANCELLED'):break
+                raise
         return total
     with ThreadPoolExecutor(max_workers=streams) as pool:
         futures=[pool.submit(stream) for _ in range(streams)]
@@ -312,10 +319,13 @@ def start(arguments,automatic=False):
         if now<1704067200:return {'accepted':False,'code':'SPEED-CLOCK-UNSET'}
         if old.get('started',0)>now+5:return {'accepted':False,'code':'SPEED-CLOCK-BACKWARD'}
         if active_job():return {'accepted':False,'code':'SPEED-BUSY'}
+        from speed_pause import public as pause_status
+        if pause_status().get('active'):return {'accepted':False,'code':'SPEED-PAUSE-BUSY'}
         if now-old.get('started',0)<(300 if automatic else 60):return {'accepted':False,'code':'SPEED-COOLDOWN'}
         native=read_json(RUNTIME/'native-status.json',{})
         if native.get('state') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):return {'accepted':False,'code':'SPEED-SWITCH-IN-PROGRESS'}
-        if os.getloadavg()[0]>max(1,os.cpu_count() or 1)*.75:return {'accepted':False,'code':'SPEED-CPU-BUSY'}
+        # CPU admission is measured by the worker after the two quiet-window
+        # acknowledgements. The minute load average still contains our own work.
         traffic=read_json(RUNTIME/'speed-traffic.json',{})
         if not isinstance(traffic.get('rate_bps'),(int,float)) or not 0<=time.monotonic()-traffic.get('monotonic',0)<=90:
             return {'accepted':False,'code':'SPEED-TRAFFIC-UNKNOWN'}
@@ -326,7 +336,7 @@ def start(arguments,automatic=False):
         try:used=reserve_quota(quota,daily,now)
         except SpeedError as error:return {'accepted':False,'code':error.code}
         tx=uuid.uuid4().hex
-        duration=min(300,len(options['profiles'])*(2*options['duration']+15))
+        duration=35+min(300,len(options['profiles'])*(2*options['duration']+15))
         job=dict(options,state='QUEUED',tx=tx,started=now,deadline=now+duration,monotonic_deadline=time.monotonic()+duration,
                  quota_reserved_bytes=quota,daily_reserved_bytes=used,automatic=automatic)
         atomic_json(JOB,job)
@@ -439,13 +449,14 @@ def public_live(job=None):
         if isinstance(raw.get('code'),str) and re.fullmatch(r'SPEED-[A-Z0-9-]{1,64}',raw['code']):row['code']=raw['code']
         result['profiles'].append(row)
     if isinstance(job.get('code'),str) and re.fullmatch(r'SPEED-[A-Z0-9-]{1,64}',job['code']):result['code']=job['code']
+    if job.get('preparation')in('pausing','testing'):result['preparation']=job['preparation']
     return result
 
 
 def public_status():
     expire_worker()
     job=read_json(JOB,{})
-    result={key:job[key] for key in ('state','started','finished','code','profiles','payload_budget_bytes','quota_reserved_bytes','daily_reserved_bytes','completed','automatic') if key in job}
+    result={key:job[key] for key in ('state','started','finished','code','profiles','payload_budget_bytes','quota_reserved_bytes','daily_reserved_bytes','completed','automatic','preparation','cpu_percent_after_pause') if key in job}
     if job.get('state') in ('QUEUED','RUNNING') and not active_job():result.update(state='FAILED',code='SPEED-WORKER-LOST')
     result['live']=public_live(job)
     try:result.update(load_history())
@@ -460,13 +471,22 @@ def run(tx):
     job=read_json(JOB,{})
     if job.get('tx')!=tx or job.get('state')!='QUEUED':return
 
+    quiet_acquired=False
     def cancelled():
-        return (read_json(CANCEL,{}).get('tx')==tx or time.monotonic()>=job['monotonic_deadline'] or read_json(JOB,{}).get('tx')!=tx)
-    job.update(state='RUNNING',pid=os.getpid(),completed=0)
+        from speed_pause import interrupted
+        return (read_json(CANCEL,{}).get('tx')==tx or time.monotonic()>=job['monotonic_deadline']
+                or read_json(JOB,{}).get('tx')!=tx or quiet_acquired and interrupted(tx))
+    job.update(pid=os.getpid(),completed=0,preparation='pausing')
     if not publish_job(job):return
     rows=[];live=LiveProgress(job)
     publish_job(job)
     try:
+        from speed_pause import acquire, cpu_usage, PauseError
+        acquire(job);quiet_acquired=True
+        usage=cpu_usage();job['cpu_percent_after_pause']=usage
+        if cancelled():raise SpeedError('SPEED-CANCELLED')
+        if usage>75:raise SpeedError('SPEED-CPU-BUSY')
+        job.update(state='RUNNING',preparation='testing');publish_job(job)
         for identifier in job['profiles']:
             if cancelled():break
             data=inventory();profile=next((p for p in data['profiles'] if p['id']==identifier),None)
@@ -480,8 +500,13 @@ def run(tx):
                    code='SPEED-CANCELLED' if cancelled() else 'SPEED-COMPLETE')
         publish_job(job)
     except (SpeedError,OSError,ValueError,KeyError,subprocess.SubprocessError) as error:
-        code=error.code if isinstance(error,SpeedError) else 'SPEED-SYSTEM'
+        code=error.code if isinstance(error,SpeedError) else str(error)if isinstance(error,PauseError)else 'SPEED-SYSTEM'
         publish_job(dict(job,state='FAILED',finished=time.time(),code=code))
+    finally:
+        # Withdrawal grants no new Start: original intent is never overwritten.
+        # The monitor resumes first; Auto waits for its post-test observation.
+        from speed_pause import release
+        release(tx)
 
 
 if __name__=='__main__' and len(sys.argv)==3 and sys.argv[1]=='run':

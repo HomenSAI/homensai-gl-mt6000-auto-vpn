@@ -1,3 +1,9 @@
+## Alpha33 installed and real speed pause proved / Alpha33 установлена
+
+[Start here](NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md). All current owner requests implemented: pause/restore speed tests, responsive reference table, truthful diagnostics. Auto ON; leave current VPNs running. Publication proof is separate.
+
+---
+
 ## Installed alpha30; Auto running / Установлена alpha30, Auto работает
 
 [Start here](NEXT-AI-HYBRID-ALPHA30-INSTALLED-2026-10-26.md) · [Device proof](../VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md). Legacy expanded UI restored, new Minimum retained; selected WG1/OV2, ordinary Start RUNNING / OBSERVING. Keep current VPNs and Auto state; no automatic repeat deployment. Publication evidence is separate.

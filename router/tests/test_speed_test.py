@@ -43,6 +43,22 @@ class SpeedTests(unittest.TestCase):
         with self.assertRaises(speed.SpeedError):speed.stage({},'9.9.9.9','download',1000,2,2,lambda:True,transport)
         transport.assert_not_called()
 
+    def test_elapsed_window_retains_only_completed_payload_instead_of_cancel_error(self):
+        clock=[100.0];calls=[]
+        def transfer(binding,address,direction,amount,deadline,cancelled):
+            calls.append(amount)
+            if len(calls)==1:clock[0]=101;return amount
+            clock[0]=103;raise speed.SpeedError('SPEED-CANCELLED')
+        with patch.object(speed.time,'monotonic',side_effect=lambda:clock[0]):
+            row=speed.stage({},'9.9.9.9','download',2*speed.MIB,2,1,lambda:False,transfer)
+        self.assertEqual(row['payload_bytes'],speed.MIB);self.assertEqual(row['seconds'],3)
+
+    def test_real_cancel_after_completed_payload_still_cancels_the_measurement(self):
+        cancelled=[False]
+        def transfer(*args):cancelled[0]=True;return args[3]
+        with self.assertRaisesRegex(speed.SpeedError,'SPEED-CANCELLED'):
+            speed.stage({},'9.9.9.9','download',2*speed.MIB,2,1,lambda:cancelled[0],transfer)
+
     def test_invalid_and_oversized_requests_rejected(self):
         good={'profiles':['a'],'budget_mib':8,'duration':5,'streams':2}
         self.assertEqual(speed.validate_request(good,[{'id':'a'}]),good)
@@ -97,7 +113,7 @@ class SpeedTests(unittest.TestCase):
     def test_admitted_job_reserves_quota_and_records_only_owned_worker(self):
         data={'profiles':[{'id':'a'}],'settings':{'speed_enabled':True}}
         atomic_json(self.path/'speed-traffic.json',{'monotonic':time.monotonic(),'rate_bps':0})
-        with patch.object(speed,'inventory',return_value=data),patch.object(speed.os,'getloadavg',return_value=(0,0,0)),patch.object(speed.subprocess,'Popen',return_value=type('Child',(),{'pid':12345})()) as worker:
+        with patch.object(speed,'inventory',return_value=data),patch.object(speed.os,'getloadavg',side_effect=AssertionError('CPU admission must happen after the quiet window')),patch.object(speed.subprocess,'Popen',return_value=type('Child',(),{'pid':12345})()) as worker:
             result=speed.start({'profiles':['a'],'budget_mib':8,'duration':5,'streams':2})
             self.assertTrue(result['accepted']);worker.assert_called_once()
         job=read_json(speed.JOB)
@@ -124,7 +140,7 @@ class SpeedTests(unittest.TestCase):
     def test_busy_network_does_not_reserve_quota_or_spawn(self):
         data={'profiles':[{'id':'a'}],'settings':{'speed_enabled':True}}
         atomic_json(self.path/'speed-traffic.json',{'monotonic':time.monotonic(),'rate_bps':3e6})
-        with patch.object(speed,'inventory',return_value=data),patch.object(speed.os,'getloadavg',return_value=(0,0,0)),patch.object(speed.subprocess,'Popen') as worker:
+        with patch.object(speed,'inventory',return_value=data),patch.object(speed.os,'getloadavg',side_effect=AssertionError('CPU admission must happen after the quiet window')),patch.object(speed.subprocess,'Popen') as worker:
             result=speed.start({'profiles':['a'],'budget_mib':8,'duration':5,'streams':2})
             self.assertEqual(result['code'],'SPEED-TRAFFIC-BUSY');worker.assert_not_called()
             self.assertFalse(speed.LEDGER.exists())
