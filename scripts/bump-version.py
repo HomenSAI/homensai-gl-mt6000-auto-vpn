@@ -66,8 +66,13 @@ def rewrite(old_version, old_package, new_version, new_package):
             continue
         text = path.read_text(encoding='utf-8')
         updated = text.replace(old_package, new_package).replace(old_version, new_version)
+        if name == 'router/Makefile':
+            updated, count = re.subn(r'(?m)^PKG_RELEASE:=[1-9][0-9]*$', 'PKG_RELEASE:=1', updated)
+            if count != 1:
+                raise ValueError('VERSION-MAKEFILE-REVISION')
         if updated != text:
-            path.write_text(updated, encoding='utf-8', newline='')
+            with path.open('w', encoding='utf-8', newline='') as stream:
+                stream.write(updated)
 
 
 def main(argv):

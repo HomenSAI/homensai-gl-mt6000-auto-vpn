@@ -1,46 +1,18 @@
 <!-- doc-role: current-canonical -->
 # Auto VPN — current source behavior
 
-Source candidate: **0.9.1-alpha26**, package **0.9.1-alpha26-2**, Minimum UI. [Delivered and installed state](CURRENT-STATUS.md) and [verification](VERIFICATION-ALPHA26-2026-10-26.md) are separate from source metadata.
+Current source: **0.9.1-alpha30**, package **0.9.1-alpha30-1**. The new Minimum and former expanded interface are installed on the dedicated MT3000; ordinary Auto Start is verified RUNNING / OBSERVING. [Current delivery](CURRENT-STATUS.md) · [Physical proof and limits](VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md).
 
-## Minimum and Advanced menu
+Minimum remains accessible with Auto OFF, unknown data or errors. It shows the real Auto state, confirmed traffic channel and independent reserve health. Its button opens the former Overview. The expanded interface retains its twelve destinations, legacy page content, additional-navigation group, settings and A/B/C appearance selection. Return to Minimum reuses the same actual Auto button and action label without cloning handlers. Old beta nested links map to the corresponding legacy pages. Navigation does not run command RPCs.
 
-Minimum shows Auto state, the confirmed channel, the actual Auto button and reserve health. Connection details are collapsed. Minimum stays accessible with Auto OFF, stale data or an error; a missing pair on fresh idle OFF offers setup. Display access never grants Start permission.
+Start requests are pending until the controller confirms them. A preflight refusal consumes only the matching accepted request and reports FAILED plus the specific BLOCKED reason, allowing retry without indefinite Starting. A late failure cannot overwrite a newer Start or Stop. Stop retains the existing recovery contract. Restart requires explicit Start.
 
-Advanced menu opens Channels first, then retains the last advanced section in this session. The header returns to Minimum. Five sections replace the old twelve: Channels, Diagnostics, Events, Settings and Help. On phones, Sections opens the navigation. Browser Back/Forward and old section links retain their destinations. Opening sections does not send command RPCs.
+The pair uses exact, distinct selected vendor tunnel identities, including a second OpenVPN client slot after channels have been removed. Readiness, startup preparation, firmware-zone checks and network compare-and-swap use those identities. Disabled historical profiles do not consume the active-probe limit. A healthy standby is not a failed traffic path; old observations cannot confirm current selection.
 
-Both views reuse the same actual Auto control. Pending commands are not completion. Start checks current control revision, monitoring and backend prerequisites; the click handler rechecks evidence age. Stop remains governed by the existing recovery contract. Confirm the actual restored/retained route; stopping Auto does not by itself mean disconnecting VPN or Internet. Explicit Start is required after restart.
+Reviewed preparation actions show the exact selected source/target interface. They change only bounded startup/acceleration settings, record original values and verify readback. They never restart the network or force-unload acceleration. Runtime blockers and restart requirements remain enforced. [Control effects](CONTROL-AND-SETUP.md) · [Codes](ERROR_CODES.md).
 
-## Channels
+Existing monitoring, history, speed tests, terms, Telegram, training, keyboard focus and scroll behavior remain. Speed and fault tests never run on navigation. Artificial fault injection remains in test tooling. Terms acceptance belongs to the person and is preserved when the terms version is unchanged. Secrets stay on the router.
 
-The selected primary and reserve show name, independent selection and health. A healthy standby is neutral. Details contain endpoint, protocol, country, fresh HTTPS RTT and observation time. Missing data is not zero. Other profiles open in a searchable disclosure. Profiles and VPN keys remain owned by GL.iNet; this page never connects an inactive profile just to display it. Manual channel selection retains its own guards.
+Continuous router-probed IPv4 Auto remains qualified only for the documented dedicated MT3000 / GL.iNet 4.11.0 arrangement. Router DNS/HTTPS success is not external LAN, IPv6, physical failover or unattended endurance acceptance. [Client trial](CLIENT-TRIAL.md) · [Recovery](../router-test-kit/EMERGENCY.md).
 
-## Diagnostics
-
-Checks requests a bounded connection measurement without selecting a channel. QUEUED/RUNNING is not a successful result; completion must match the request and measured snapshot. Conditions and technical data open on demand. Router-originated IPv4 observations are not proof of a LAN client's path.
-
-Speed opens its actual measurement panel; it consumes traffic only after explicit review/start. CPU, route, cooldown and quota guards, sequential channels, cancellation and job isolation remain. Missing/error directions are gaps, not zero throughput. Old results, rankings and test preferences are collapsed. Controlled artificial faults are outside normal operator navigation and remain in test tooling.
-
-Recovery provides instructions and existing guarded actions. Technical details retain the live log and all-profile observations. No universal automatic network repair is implied. [Control effects](CONTROL-AND-SETUP.md) · [Recovery](../router-test-kit/EMERGENCY.md).
-
-## Events and retention
-
-The journal initially shows up to 20 recent rows with period/type filtering; search/sorting and detailed analytics are disclosures. More history reads retained records. Historical main/reserve identity and reasons stay tied to event time, not the current pair. No missing events or routes are reconstructed.
-
-History and Traffic retain their measurements, exports, monthly counters and explicit gaps. [Retention](HISTORY-RETENTION.md) remains bounded: 1–7 detail days, separate monthly/lifetime counters, configured browser observation limits. Increasing retention cannot restore expired detail. Latency/route timelines retain their existing bounded windows.
-
-## Settings, terms and help
-
-The pair editor keeps an unsaved draft through polling. Save opens review, verifies fresh configuration and uses the existing writer without starting Auto; negative/unconfirmed saving retains the draft. Leaving dirty settings offers Save/Discard/Stay. Browser language/theme are under Interface in this browser; saved defaults and optional preferences are under Additional settings. The accepted B design is fixed; old layout preferences no longer select alternate layouts.
-
-First setup retains eight validated internal stages grouped into three phases. [Setup](FIRST-RUN-SETUP.md) covers required fields. Current terms are accepted by the person, never by an agent on their behalf; a package update preserves acceptance of the unchanged terms version. Telegram is optional and never sends a test on navigation/save without the explicit existing action. Secrets remain on the router and are not returned in status.
-
-Help starts with four common tasks. Full instructions/codes, eight lessons/eleven questions and About remain available. Training does not invoke router control; answer grading, wrong-only retries and scroll/focus preservation remain. [Built-in Help](BUILTIN-HELP.en.md) · [Training](TRAINING.en.md) · [Codes](ERROR_CODES.md).
-
-## Qualified scope and delivery
-
-Prepared continuous Auto is qualified only for the documented MT3000/GL.iNet 4.11.0 arrangement and two existing independent clients using router IPv4 evidence. Architecture all, model selection or dependency checks do not qualify arbitrary firmware, MT6000 continuous mode or IPv6.
-
-The optional [client-confirmed bounded trial](CLIENT-TRIAL.md) uses its own real LAN witness/certificate. It is distinct from normal router-probed Auto, which does not require a LAN certificate. [LAN helper modes](LAN-HELPER.en.md) and their side effects remain explicit.
-
-[Install](INSTALL.en.md) one immutable package with matching SHA256/evidence/kit; preserve verified private recovery and do not downgrade an active newer installation. This is a design prerelease, with CI/VM/browser-fixture proof recorded separately from physical-device, external LAN/fault/power and 24-hour acceptance. [Release notes](RELEASE-0.9.1-alpha26.md) · [Verification meanings](VERIFICATION.md).
+[History and retention / История и сроки хранения](HISTORY-RETENTION.md).

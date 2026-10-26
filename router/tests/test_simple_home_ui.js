@@ -24,6 +24,16 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 for(const language of ['en','ru']){
  const f=fixture(language),{c,inventory,base}=f;
  let model=c.simpleHomeModel(base,inventory,1000);assert(model.showCard);assert.equal(model.state,'on');assert.equal(model.selectedRole,'source');
+ const blocked=clone(base);blocked.native_failover.state='BLOCKED';blocked.native_failover.blockers=['HARDWARE-ACCELERATOR-UNVERIFIED'];blocked.auto_control.requested='off';blocked.auto_control.pair_phase='HELD';
+ const blockedModel=c.simpleHomeModel(blocked,inventory,1000);assert.equal(blockedModel.state,'error');assert.equal(blockedModel.blockers[0],'HARDWARE-ACCELERATOR-UNVERIFIED');
+ blocked.auto_control.requested='on';blocked.auto_control.pair_phase='RUNNING';assert.equal(c.simpleHomeAutoEnabled(blocked,1000),false,'old RUNNING intent cannot claim a blocked controller works');
+ blocked.auto_control.requested='off';blocked.auto_control.pair_phase='FAILED';blocked.auto_control.requested_at=950;
+ c.autoCommandPending={stop:false,acknowledged:true,baseline:900};
+ assert.equal(c.autoCommandOperation(blocked,1000),null,'refused preflight ends queued Start');
+ assert.equal(c.simpleHomeModel(blocked,inventory,1000).state,'error','failed Start shows reason instead of indefinite Starting');
+ blocked.auto_control.requested='on';blocked.auto_control.pair_phase='STARTING';c.autoCommandPending={stop:false,acknowledged:true,baseline:900};
+ assert.equal(c.autoCommandOperation(blocked,1000),null,'fresh explicit BLOCKED never hides behind Starting');
+ assert.equal(c.simpleHomeModel(blocked,inventory,1000).state,'error');
  let clicked=0;const original=new N('button',{'class':'hv-auto-power','click':()=>clicked++}),control={querySelector:selector=>selector==='.hv-auto-power'?original:null};
  const card=c.renderSimpleHome(base,inventory,model,control,f.open),nodes=card.all(),power=nodes.find(n=>n.attrs['data-simple-home-auto']);
  assert.equal(f.calls.length,0,'Rendering performs no RPC');assert.equal(nodes.filter(n=>n.attrs['data-simple-home-auto']).length,1);

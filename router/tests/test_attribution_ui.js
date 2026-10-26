@@ -24,9 +24,14 @@ const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-a
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const base='router/files/www/luci-static/resources/view/homensai-vpn/';
 const dashboard=fs.readFileSync(base+page+'.js','utf8');
-assert(dashboard.includes('minimumCommandHost,settingsHost,panel,renderMinimumFooter(data[1])])'),'persistent pair form precedes closed controller details');
-assert(dashboard.includes("E('div',{'class':'hv-page-actions'},[])"),'common header stays concise');
-assert(dashboard.includes("settingsHost.appendChild(minimumDisclosure(bi('Interface in this browser','Интерфейс в этом браузере'),'browser-interface'"),'language/theme remain in Settings disclosure');
+if(dashboard.includes('hv-hybrid-release')){
+ assert(dashboard.includes('panel,settingsHost,renderAttribution(data[1]),footer'),'legacy expanded attribution remains in its original footer');
+ assert(dashboard.includes("[versionBadge,language,renderThemeSelect()]"),'legacy version/language/theme controls restored');
+}else{
+ assert(dashboard.includes('minimumCommandHost,settingsHost,panel,renderMinimumFooter(data[1])])'),'persistent pair form precedes closed controller details');
+ assert(dashboard.includes("E('div',{'class':'hv-page-actions'},[])"),'common header stays concise');
+ assert(dashboard.includes("settingsHost.appendChild(minimumDisclosure(bi('Interface in this browser','Интерфейс в этом браузере'),'browser-interface'"),'language/theme remain in Settings disclosure');
+}
 const sections=fs.readFileSync('router/minimum_sections.inc.js','utf8');
 assert(sections.includes("minimumSubview('help','about'"));
 assert(sections.includes("typeof renderAttribution==='function'?renderAttribution(status):null"),'detailed owner attribution remains in About');
@@ -46,5 +51,5 @@ for(const [,selector,body] of rules){
 }
 assert(/\.hv-app \.hv-attribution\{display:flex!important/.test(css));
 const compactFooter=/\.hv-minimum-release \.hv-minimum-footer\{([^}]+)\}/.exec(css);
-assert(compactFooter&&compactFooter[1].includes('display:flex')&&/gap:[1-9]/.test(compactFooter[1]),'compact identity links have visible spacing and wrap');
+if(!dashboard.includes('hv-hybrid-release'))assert(compactFooter&&compactFooter[1].includes('display:flex')&&/gap:[1-9]/.test(compactFooter[1]),'compact identity links have visible spacing and wrap');
 console.log('PASS: compact owner identity on every page; detailed attribution/version and licenses remain reachable in About');

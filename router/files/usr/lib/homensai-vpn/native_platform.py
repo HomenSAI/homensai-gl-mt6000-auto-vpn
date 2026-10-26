@@ -29,7 +29,8 @@ def assess(board,data):
     try:
         if Path('/sbin/fw4').exists()or Path('/usr/sbin/fw4').exists():errors.append('MT3000-FIREWALL-UNVERIFIED')
         zones=_zones(_read('/var/run/fw3.state',65536).decode('utf8'))
-        if not {'wgclient1','ovpnclient1'}.issubset(zones):errors.append('FW3-SELECTED-ZONE-UNVERIFIED')
+        from pair_interfaces import roles
+        if not set(roles(data.get('settings',{})).values()).issubset(zones):errors.append('FW3-SELECTED-ZONE-UNVERIFIED')
     except (OSError,ValueError,UnicodeError):errors.append('FW3-RUNTIME-STATE-UNVERIFIED')
     try:
         for name,want in PINS.items():

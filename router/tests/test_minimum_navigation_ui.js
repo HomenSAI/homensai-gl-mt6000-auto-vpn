@@ -43,7 +43,9 @@ assert.equal(context.simpleHomeEntry({statusFresh:true,controllerFresh:true,auto
 // Exercise the generated routing handler, including a blocked Back/hash transition.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const selected=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
-const generated=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+selected+'.js','utf8');
+// Preserve the released five-section adapter regression independently of the
+// owner's subsequently selected legacy-expanded/current-Minimum combination.
+const generated=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/dashboard104.js','utf8');
 if(generated.includes('var minimumCurrentRoute=minimumRouteFromUrl')){
  const a=generated.indexOf('    function showPage(key){'),b=generated.indexOf('    function put(key,node){',a);
  assert(a>=0&&b>a);

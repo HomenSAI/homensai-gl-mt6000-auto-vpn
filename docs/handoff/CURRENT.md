@@ -1,3 +1,33 @@
+## Installed alpha30; Auto running / Установлена alpha30, Auto работает
+
+[Start here](NEXT-AI-HYBRID-ALPHA30-INSTALLED-2026-10-26.md) · [Device proof](../VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md). Legacy expanded UI restored, new Minimum retained; selected WG1/OV2, ordinary Start RUNNING / OBSERVING. Keep current VPNs and Auto state; no automatic repeat deployment. Publication evidence is separate.
+
+---
+
+# INSTALLED alpha28 on MT3000 / 26 October 2026
+
+Start with [NEXT-AI-ALPHA28-INSTALLED-2026-10-26](NEXT-AI-ALPHA28-INSTALLED-2026-10-26.md). Dedicated MT3000 now runs alpha28-1/dashboard104/ui76. Owner-approved archived stale-session handoff, normal lifecycle/opkg, 90 files/modes, served HTTP/RPC/services and protected config plus encrypted pre/post backup proof complete. Auto OFF; both enabled VPN router probes healthy. Remaining pair/policy blockers are separate from installation. Main/stable/publication/MT6000/host network unchanged.
+
+Установка завершена; старые утверждения ниже «только локально, не установлен» теперь история. Не повторять установку и не включать Auto по старым разрешениям. Новый UI доступен после обновления страницы Ctrl+F5.
+
+---
+
+# VERIFIED LOCAL alpha28 preparation buttons / 26 October 2026
+
+Start with [NEXT-AI-PREPARATION-BUTTONS-2026-10-26](NEXT-AI-PREPARATION-BUTTONS-2026-10-26.md). Product `7ff1b81f`, package alpha28-1, dashboard104/ui76. Seven reviewed preparation buttons, durable originals, config/control/boot binding, readback and restart/recovery refusals. Dual immutable CI 807 app/113 QA per runtime, 62 UI suites and Chromium 4×22 passed; explicit skips retained. No physical configuration, package installation, publication or Auto change.
+
+Кнопки готовы локально. На физическом роутере их ещё нет: alpha28 не устанавливалась. Главный роутер/сеть компьютера не менялись. Продолжать по новому handoff; старые записи ниже — история.
+
+---
+
+# VERIFIED LOCAL alpha27 channel fixes / 26 October 2026
+
+Start with [NEXT-AI-CHANNEL-RECONFIGURATION-2026-10-26](NEXT-AI-CHANNEL-RECONFIGURATION-2026-10-26.md). Source `601ad227`, package `0.9.1-alpha27-1`, dashboard103/ui75. Dual immutable CI and native Chromium synthetic checks passed; packet bytes/hash match both runtimes. This is local work, not a publication or installation. Earlier alpha26/alpha25 delivery records below remain history.
+
+Локально исправлены удаление/смена каналов, падение восстановления и объяснения блокировок. На физическом MT3000 — прежняя alpha25; аппаратное ускорение уже выключено. Сохраняются конфликт старой сессии и настройки автозапуска. Не обходить владение/журналы и не возобновлять Auto по старым разрешениям. Продолжать по новому handoff.
+
+---
+
 # COMPLETE Minimum UI design prerelease alpha26-2 / 26 October 2026
 
 ## Published / Опубликовано — 26.10.2026

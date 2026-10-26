@@ -1132,6 +1132,54 @@ Find why HomenS.AI Auto VPN does not work, even if I cannot identify the right H
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn
 ```
 
+<a id="network-acceleration"></a>
+## Auto blocked: hardware and network acceleration
+
+Start reports HNAT, hardware acceleration or PREP-HNAT-CONFIG.
+
+Disable network acceleration
+GL.iNet → NETWORK → Network Acceleration
+
+Turn Enable off and click Apply. Selecting Auto, Hardware or Software mode does not disable acceleration. Return here and check readiness again; Auto VPN needs a separate Start. Older firmware calls this menu Hardware Acceleration.
+Open settings
+GL.iNet instructions
+
+If it is already off but the check still fails, open System readiness → Persistent router preparation for the exact failed check. Saved configuration and loaded runtime acceleration are checked separately.
+
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Auto blocked: hardware and network acceleration.
+Start reports HNAT, hardware acceleration or PREP-HNAT-CONFIG.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="preparation-buttons"></a>
+## Disable a blocking router setting here
+
+A preparation reason offers a Disable button next to the menu link.
+
+Press the button for that exact reason. The first request only reads the current router/model and prepares a review. Cancel leaves settings unchanged.
+
+Apply only the displayed change. The app preserves its original values privately, checks that Auto is stopped and recovery is complete, rejects changed reviews, then reads the result again. No VPN reconnect, Auto Start or automatic reboot occurs.
+
+Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto remains blocked until a separate deliberate router reboot and fresh checks.
+
+An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed with this button.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Disable a blocking router setting here.
+A preparation reason offers a Disable button next to the menu link.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="terms"></a>
 ## Terms of use (experimental software)
 

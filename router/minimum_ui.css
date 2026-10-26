@@ -71,3 +71,5 @@
  .hv-minimum-release .hv-minimum-actions>*{flex:1 1 auto;justify-content:center}
  .hv-minimum-release .hv-minimum-command{align-items:flex-start}.hv-workspace.hv-minimum-release[data-hv-design="b"] .hv-page-header .hv-heading-row>h1{font-size:23px}
 }
+.hv-preparation-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;min-width:0;max-width:100%}
+.hv-app .hv-preparation-actions .cbi-button{max-width:100%;min-width:0;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;box-sizing:border-box}

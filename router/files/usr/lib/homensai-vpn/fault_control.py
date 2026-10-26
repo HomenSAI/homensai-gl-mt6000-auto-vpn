@@ -186,7 +186,8 @@ def pair_fault_role(native,selection,now):
     if pending and pending.get('state') in ('QUEUED','CLAIMED'):raise FaultError('FAULT-NATIVE-PREREQUISITES')
     backend=n.Linux();backend.use_process_bindings(state.get('process_bindings'))
     configs=pair.configs()
-    if (pair.normalized_network(pair.network())!=state['network_identity']
+    from pair_interfaces import state as state_interfaces
+    if (pair.normalized_network(pair.network(),state_interfaces(state))!=state['network_identity']
             or any(configs.get(k)!=v for k,v in state['protected'].items() if k!='route_policy')):
         raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     journal=n.journal_read()

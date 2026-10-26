@@ -4,6 +4,7 @@ class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};thi
   all(){return [this].concat(...this.children.filter(c=>typeof c!=='string').map(c=>c.all()));}}
 const context={bi:(en)=>en,E:(tag,attrs,children)=>new Node(tag,attrs,children),navigator:{}};
 vm.createContext(context);
+vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
 vm.runInContext(fs.readFileSync('router/help_panel.inc.js','utf8'),context);
 const topics=context.HELP_TOPICS;
 const ids=new Set(topics.map(t=>t.id));

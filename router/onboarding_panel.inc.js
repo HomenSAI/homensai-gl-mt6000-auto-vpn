@@ -11,7 +11,7 @@ function onboardingPairChannels(profiles,settings){
     logicals[p.interface]=(logicals[p.interface]||0)+1;rows.push(p);
   });
   var mt3000=(settings||{}).detected_router_model==='mt3000'||(settings||{}).pair_auto_mode==='router-probed-ipv4';
-  return rows.filter(function(p){return ids[p.id]===1&&logicals[p.interface]===1&&(!mt3000||(p.protocol==='wireguard'&&p.interface==='wgclient1'||p.protocol==='openvpn'&&p.interface==='ovpnclient1'));});
+  return rows.filter(function(p){return ids[p.id]===1&&logicals[p.interface]===1&&(!mt3000||(p.protocol==='wireguard'&&/^wgclient[1-9][0-9]{0,3}$/.test(p.interface)||p.protocol==='openvpn'&&/^ovpnclient[1-9][0-9]{0,3}$/.test(p.interface)));});
 }
 function onboardingPairChannelLabel(p){return (p.protocol==='wireguard'?'WireGuard':'OpenVPN')+' · '+(p.name||p.id);}
 var ONBOARDING_DEFER_USED=false;

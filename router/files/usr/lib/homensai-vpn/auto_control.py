@@ -218,6 +218,9 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+    from preparation_control import auto_blocker
+    preparation_reason=auto_blocker()
+    if preparation_reason:return {'accepted':False,'blockers':[preparation_reason]}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
         return pair_request(control_revision,request_source=source)

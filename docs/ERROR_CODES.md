@@ -4441,6 +4441,18 @@ Python слишком старый / Python is too old
 
 **Action:** Repeat; try a shorter duration.
 
+## PREPARATION-*
+
+Действие подготовки роутера / Router preparation action
+
+**RU:** Проверенное действие подготовки выполнено либо отклонено с указанным кодом. Запись настройки не запускает Auto и не доказывает выполнение всех условий.
+
+**EN:** A reviewed preparation action was verified or refused with this specific code. A successful setting write does not start Auto or prove all prerequisites.
+
+**Что делать:** Прочитайте конкретную причину у кнопки. До изменений остановите Auto и завершите восстановление. После неподтверждённой записи сохраните приватный журнал preparation-changes; не удаляйте его и не повторяйте вслепую. Restart-required означает отдельную осознанную перезагрузку роутера перед Auto.
+
+**Action:** Read the exact reason shown beside the button. Stop and complete recovery before edits. After an unconfirmed write retain the private preparation-changes record; do not delete it or repeat blindly. Restart-required means a separate deliberate router reboot before Auto.
+
 ## LATENCY-*
 
 История задержки недоступна / Delay history unavailable
@@ -4756,6 +4768,18 @@ Python слишком старый / Python is too old
 **Что делать:** Обратитесь в поддержку с кодом.
 
 **Action:** Contact support with the code.
+
+## GUARD-DEVICE-UNVERIFIED
+
+Состояние VPN-интерфейса недоступно / VPN interface state unavailable
+
+**RU:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются.
+
+**EN:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded.
+
+**Что делать:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## LAN-TRIAL-REQUIRED
 
@@ -5440,6 +5464,222 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 **Что делать:** Основной восстановился, Auto вернулся на него. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
 **Action:** The primary recovered and Auto returned to it. If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-EXTERNAL-POLICY-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-EXTERNAL-NETWORK-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-EXTERNAL-CONFIG-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-RECOVERY-REQUIRED
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-STATE-UNVERIFIED
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-PROFILES-UNVERIFIED
+
+Проверьте текущую пару VPN / Review the current VPN pair
+
+**RU:** Проверьте текущую пару VPN
+
+**EN:** Review the current VPN pair
+
+**Что делать:** Проверьте текущую пару VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review the current VPN pair If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-PREPARATION-REQUIRED
+
+Завершите подготовку роутера / Complete router preparation
+
+**RU:** Завершите подготовку роутера
+
+**EN:** Complete router preparation
+
+**Что делать:** Завершите подготовку роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Complete router preparation If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-HNAT-CONFIG
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-WGCLIENT1-AUTOSTART
+
+Проверьте автозапуск wgclient1 / Review wgclient1 startup
+
+**RU:** Проверьте автозапуск wgclient1
+
+**EN:** Review wgclient1 startup
+
+**Что делать:** Проверьте автозапуск wgclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review wgclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-OVPNCLIENT1-AUTOSTART
+
+Проверьте автозапуск ovpnclient1 / Review ovpnclient1 startup
+
+**RU:** Проверьте автозапуск ovpnclient1
+
+**EN:** Review ovpnclient1 startup
+
+**Что делать:** Проверьте автозапуск ovpnclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review ovpnclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-STOCK-VPN-BOOT
+
+Отключите конкурирующий автозапуск VPN / Disable competing VPN startup
+
+**RU:** Отключите конкурирующий автозапуск VPN
+
+**EN:** Disable competing VPN startup
+
+**Что делать:** Отключите конкурирующий автозапуск VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable competing VPN startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-BOOT
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-AUTOLOAD
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-RUNTIME
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREPARATION-RESTART-REQUIRED
+
+Нужна перезагрузка роутера / Router restart required
+
+**RU:** Нужна перезагрузка роутера
+
+**EN:** Router restart required
+
+**Что делать:** Нужна перезагрузка роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Router restart required If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREPARATION-RECOVERY-REQUIRED
+
+Завершите подготовку роутера / Complete router preparation
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SOURCE-AUTOSTART
+
+Отключите автозапуск основного VPN / Disable primary VPN boot startup
+
+**RU:** Отключите автозапуск основного VPN
+
+**EN:** Disable primary VPN boot startup
+
+**Что делать:** Отключите автозапуск основного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable primary VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-TARGET-AUTOSTART
+
+Отключите автозапуск резервного VPN / Disable reserve VPN boot startup
+
+**RU:** Отключите автозапуск резервного VPN
+
+**EN:** Disable reserve VPN boot startup
+
+**Что делать:** Отключите автозапуск резервного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable reserve VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## GL-ADAPTER-UNVERIFIED
 

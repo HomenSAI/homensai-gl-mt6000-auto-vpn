@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 
-def snapshot(now=None):
+def snapshot(now=None,settings=None):
     now=time.time() if now is None else now
     checks=[{'code':'PYTHON-39-MINIMUM','state':'pass' if sys.version_info >= (3,9) else 'fail'}]
     for binary in ('ubus','uci','lua','ip'):
@@ -37,5 +37,5 @@ def snapshot(now=None):
     checks.append({'code':'CONFIG-STORAGE-FREE','state':'fail' if writable is False else 'unknown' if free is None or writable is None else 'pass' if free>=1048576 else 'fail'})
     from preparation_status import snapshot as preparation_snapshot
     return {'time':now,'board':board,'checks':checks,'config_free_bytes':free,'config_storage_writable':writable,
-            'preparation':preparation_snapshot(),
+            'preparation':preparation_snapshot(settings=settings),
             'native_permission':'not_assessed','scope':'Dependencies only; native Start performs authoritative certification and lease checks.'}

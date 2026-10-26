@@ -58,13 +58,17 @@ def read_state():
     if not envelope:
         return {}
     data = envelope.get('data') if isinstance(envelope, dict) else None
+    from pair_interfaces import state as state_interfaces
+    try:managed=state_interfaces(data) if isinstance(data,dict) else {}
+    except (ValueError,TypeError):raise ValueError('PAIR-STATE-UNVERIFIED') from None
     if (not isinstance(data, dict) or envelope.get('sha256') != checksum(data)
+            or not isinstance(data.get('phase'), str)
             or data.get('phase') not in {'STARTING', 'RUNNING', 'STOPPING', 'HELD', 'STOPPED', 'FAILED'}
             or not isinstance(data.get('id'), str) or not __import__('re').fullmatch('[a-f0-9]{32}', data['id'])
             or not isinstance(data.get('owned'), list) or any(not isinstance(x,str) for x in data['owned'])
             or len(data['owned']) != len(set(data['owned']))
-            or any(x not in INTERFACES for x in data['owned'])
-            or not isinstance(data.get('before_flags'), dict) or set(data['before_flags']) != set(INTERFACES)
+            or any(x not in managed for x in data['owned'])
+            or not isinstance(data.get('before_flags'), dict) or set(data['before_flags']) != set(managed)
             or any(x not in ('0', '1') for x in data['before_flags'].values())
             or not isinstance(data.get('network_identity'), str) or not __import__('re').fullmatch('[a-f0-9]{64}', data['network_identity'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
@@ -136,9 +140,31 @@ def public_phase():
         if state.get('id') != requested.get('id') or state.get('revision') != requested.get('revision'):
             return 'STARTING'
         return state.get('phase', 'STARTING')
+    if (requested.get('mode')=='off' and isinstance(requested.get('failed_request_id'),str)
+            and __import__('re').fullmatch('[a-f0-9]{32}',requested['failed_request_id'])
+            and isinstance(requested.get('failure_code'),str)
+            and __import__('re').fullmatch('[A-Z][A-Z0-9_-]{0,95}',requested['failure_code'])
+            and state.get('phase') in (None,'STOPPED','FAILED')):
+        return 'FAILED'
     if state.get('phase') in ('STARTING', 'RUNNING', 'STOPPING'):
         return 'STOPPING'
     return state.get('phase')
+
+
+def fail_request(request,revision,error):
+    """A refused preflight is terminal, not an indefinitely queued Start."""
+    import native_switch as n
+    from auto_control import control_lock,revision_locked
+    from agent import atomic_json,RUNTIME
+    code=str(error) if isinstance(error,(n.Refused,ValueError)) and n.re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'PAIR-SYSTEM-001'
+    with control_lock():
+        current=intent()
+        if (revision_locked(RUNTIME)!=revision or current.get('revision')!=revision
+                or current.get('mode')!='on' or current.get('id')!=request.get('id')):
+            return False
+        atomic_json(paths()[0],{'mode':'off','revision':revision,'time':time.time(),
+                    'failed_request_id':request['id'],'failure_code':code,'request_source':current.get('request_source','unknown')})
+    return True
 
 
 def budget(events, now, window=900, limit=3):
@@ -169,7 +195,13 @@ local function eq(a,b)
  for k,v in pairs(a)do if not eq(v,b[k])then return false end end
  for k in pairs(b)do if a[k]==nil then return false end end return true end
 assert(eq(all,q.expected),'changed')
-assert(q.interface=='wgclient1'or q.interface=='ovpnclient1','interface')
+assert(type(q.managed)=='table'and q.managed[q.interface],'interface')
+local count=0
+for name,proto in pairs(q.managed)do
+ assert(name:match('^wgclient[1-9]%d*$')and proto=='wgclient'or name:match('^ovpnclient[1-9]%d*$')and proto=='ovpnclient','interface')
+ assert(#name<=14,'interface');count=count+1
+end
+assert(count==2,'interface')
 assert(q.value=='0'or q.value=='1','value')
 assert(c:set('network',q.interface,'disabled',q.value));assert(c:save('network'));assert(c:commit('network'))
 """
@@ -183,11 +215,11 @@ def network():
     return data
 
 
-def normalized_network(data):
+def normalized_network(data, interfaces=None):
     from agent import checksum
     rows = copy.deepcopy(data)
     for row in rows:
-        if row.get('.name') in INTERFACES:
+        if row.get('.name') in (INTERFACES if interfaces is None else interfaces):
             row.pop('disabled', None)
     return checksum(rows)
 
@@ -206,7 +238,10 @@ def set_disabled(state, interface, value, revision=None):
     from agent import RUNTIME
     import native_switch as n
     data = network()
-    if normalized_network(data) != state['network_identity']:
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    if interface not in managed:raise ValueError('PAIR-PROFILES-UNVERIFIED')
+    if normalized_network(data,managed) != state['network_identity']:
         raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
     # RTP legitimately derives gl_process_vpn; the native semantic policy hash
     # separately binds that rule. Never accept edits to profile credentials.
@@ -217,7 +252,7 @@ def set_disabled(state, interface, value, revision=None):
         if observed_configs[name] != sha:
             raise ValueError('PAIR-EXTERNAL-CONFIG-CHANGE')
     with tempfile.TemporaryDirectory(prefix='pair-uci-', dir=str(RUNTIME)) as stage:
-        payload = json.dumps({'stage': stage, 'expected': data, 'interface': interface, 'value': value}).encode()
+        payload = json.dumps({'stage': stage, 'expected': data, 'interface': interface, 'value': value,'managed':managed}).encode()
         if revision is None:
             reply = subprocess.run(['lua', '-e', NETWORK_WRITE], input=payload, stdout=subprocess.DEVNULL,
                                    stderr=subprocess.DEVNULL, timeout=8)
@@ -236,7 +271,7 @@ def set_disabled(state, interface, value, revision=None):
             require_running(revision)
     after = network()
     row = next((r for r in after if r.get('.name') == interface), {})
-    if normalized_network(after) != state['network_identity'] or row.get('disabled') != value:
+    if normalized_network(after,managed) != state['network_identity'] or row.get('disabled') != value:
         raise ValueError('PAIR-NETWORK-WRITE-UNVERIFIED')
 
 
@@ -250,8 +285,12 @@ def preflight(backend, settings):
         raise ValueError('SESSION-LOSS-NOT-ACCEPTED')
     if Path('/tmp/sysinfo/board_name').read_text().strip() != 'glinet,mt3000-snand':
         raise ValueError('PAIR-PLATFORM-UNVERIFIED')
-    if Path('/etc/glversion').read_text().strip() != '4.11.0' or snapshot()['state'] != 'pass':
-        raise ValueError('PAIR-PREPARATION-REQUIRED')
+    if Path('/etc/glversion').read_text().strip() != '4.11.0':
+        raise ValueError('UNSUPPORTED-FIRMWARE')
+    preparation = snapshot(settings=settings)
+    if preparation['state'] != 'pass':
+        failed = [row['code'] for row in preparation.get('checks', []) if row.get('state') != 'pass']
+        raise ValueError(failed[0] if failed else 'PAIR-PREPARATION-REQUIRED')
     from device_profile import detect,validate
     validate(settings.get('router_model','auto'),detect())
     from native_platform import PINS
@@ -275,8 +314,8 @@ def preflight(backend, settings):
     if errors:
         raise ValueError(errors[0])
     selection = n.choose(data, inventory()['profiles'])
-    if {selection[k]['interface'] for k in ('source', 'target')} != set(INTERFACES):
-        raise ValueError('PAIR-PROFILES-UNVERIFIED')
+    from pair_interfaces import selection as selection_interfaces
+    selection_interfaces(selection)
     backend.use_process_bindings(selection['process_bindings'])
     return selection
 
@@ -284,14 +323,16 @@ def preflight(backend, settings):
 def begin(backend, settings, request):
     import native_switch as n
     selection = preflight(backend, settings)
+    from pair_interfaces import selection as selection_interfaces
+    managed=selection_interfaces(selection)
     data = network()
-    selected = {row['.name']: row for row in data if row.get('.name') in INTERFACES}
-    if set(selected) != set(INTERFACES) or any(
-            row.get('proto') != INTERFACES[name] or row.get('auto') != '0' or row.get('disabled') not in ('0', '1')
+    selected = {row['.name']: row for row in data if row.get('.name') in managed}
+    if set(selected) != set(managed) or any(
+            row.get('proto') != managed[name] or row.get('auto') != '0' or row.get('disabled') not in ('0', '1')
             for name, row in selected.items()):
         raise ValueError('PAIR-PROFILES-UNVERIFIED')
     state = dict(id=request['id'], phase='STARTING', started=time.time(), revision=request['revision'],
-                 network_identity=normalized_network(data), protected=configs(), owned=[],
+                 network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(), owned=[],
                  before_flags={name: row['disabled'] for name, row in selected.items()},
                  process_bindings=selection['process_bindings'], order=selection['order'], policy_hash=selection['hash'])
     save(state)  # Durable ownership precedes any network write.
@@ -316,6 +357,8 @@ def begin(backend, settings, request):
 
 def cleanup(backend, state):
     import native_switch as n
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
     backend.use_process_bindings(state.get('process_bindings'))
     journal = n.journal_read()
     if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
@@ -329,7 +372,7 @@ def cleanup(backend, state):
     save(state)
     for interface in reversed(state['owned']):
         # Never stop a profile after an external identity/configuration change.
-        if normalized_network(network()) != state['network_identity']:
+        if normalized_network(network(),managed) != state['network_identity']:
             raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
         observed_configs = configs()
         for name, sha in state['protected'].items():
@@ -348,16 +391,47 @@ def cleanup(backend, state):
 
 def recover(backend):
     """Called after core journal recovery on supervisor restart; never resumes."""
-    state = read_state()
-    from pair_manual import recover as recover_manual
-    recover_manual()
-    if state and state['phase'] not in TERMINAL:
-        cleanup(backend, state)
+    import native_switch as n
     from auto_control import control_lock, revision_locked
     from agent import RUNTIME
-    if paths()[0].exists():
-        with control_lock():
-            stop_locked(revision_locked(RUNTIME))
+    try:
+        # Fence old intent even when its durable ownership can no longer be
+        # reconciled. Retain that ownership and every recovery guard on failure.
+        if paths()[0].exists():
+            with control_lock():
+                stop_locked(revision_locked(RUNTIME))
+        state = read_state()
+        from pair_manual import recover as recover_manual
+        recover_manual()
+        if state and state['phase'] not in TERMINAL:
+            if not cleanup(backend, state):
+                publish_failure('PAIR-RECOVERY-REQUIRED')
+                return False
+    except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        publish_failure(error)
+        return False
+    return True
+
+
+def publish_failure(error):
+    """Expected recovery conflicts are observable states, never daemon exits."""
+    import native_switch as n
+    code = str(error) if isinstance(error, (str, n.Refused, ValueError)) and n.re.fullmatch('[A-Z][A-Z0-9_-]{0,95}', str(error)) else 'PAIR-SYSTEM-001'
+    try:
+        pending = read_state()
+        if pending and pending['phase'] not in TERMINAL:
+            pending.update(phase='HELD', recovery_error=code)
+            save(pending)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass  # Never overwrite an unreadable ownership record.
+    value = {'state': 'BLOCKED', 'mode': 'continuous-pair', 'proof_scope': MODE,
+             'original_restored': False, 'blockers': [code]}
+    try:
+        n.publish(value)
+    except n.Refused:
+        # A damaged history must not hide the live recovery error.
+        from agent import atomic_json
+        atomic_json(n.STATE, dict(value, time=time.time(), history_error='HISTORY-001'))
 
 
 def configure_lease(state):
@@ -385,13 +459,14 @@ def tick(backend, settings, revision):
     from recovery_settings import normalized
     from failover_plan import streak
     from failure_diagnosis import diagnose
-    state = read_state()
-    request_row = intent()
-    running = request_row.get('mode') == 'on' and request_row.get('revision') == revision
-    relevant = running or state and state['phase'] not in TERMINAL
-    if not relevant:
-        return False
+    request_row={}
     try:
+        request_row = intent()
+        state = read_state()
+        running = request_row.get('mode') == 'on' and request_row.get('revision') == revision
+        relevant = running or state and state['phase'] not in TERMINAL
+        if not relevant:
+            return False
         if not running:
             if state and state['phase'] not in TERMINAL:
                 if not cleanup(backend, state):
@@ -408,7 +483,8 @@ def tick(backend, settings, revision):
         backend.use_process_bindings(state['process_bindings'])
         if settings.get('pair_auto_mode')!=MODE:
             raise ValueError('PAIR-MODE-NOT-CONFIGURED')
-        if normalized_network(network())!=state['network_identity']:
+        from pair_interfaces import state as state_interfaces
+        if normalized_network(network(),state_interfaces(state))!=state['network_identity']:
             raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
         current_configs=configs()
         if any(current_configs.get(name)!=sha for name,sha in state['protected'].items()if name!='route_policy'):
@@ -470,18 +546,20 @@ def tick(backend, settings, revision):
                        'source_failures': failed, 'reserve_healthy': healthy,
                        'reason': 'PAIR-RATE-LIMIT' if not permitted else diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-MANUAL-HOLD-PRIMARY' if state.get('manual_hold')=='source' else 'PAIR-WATCHING',
                        'blockers': []})
-    except (n.Refused, OSError, ValueError, subprocess.SubprocessError) as error:
-        code = str(error) if isinstance(error, (n.Refused, ValueError)) and n.re.fullmatch('[A-Z][A-Z0-9_-]{0,95}', str(error)) else 'PAIR-SYSTEM-001'
-        pending = read_state()
+    except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        try:pending = read_state()
+        except (OSError, ValueError, KeyError, TypeError):pending = {}
         if pending.get('phase') == 'STARTING':
             try:
                 cleanup(backend, pending)
-                from auto_control import control_lock
-                with control_lock():
-                    stop_locked(revision)
-            except (OSError, ValueError, subprocess.SubprocessError):
+                pending=read_state()
+            except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
                 pending['phase'] = 'HELD'
                 save(pending)
+        # A failed Start before durable acquisition has no STARTING state to
+        # finish. Consume its exact request; a newer Stop/Start cannot be lost.
+        if pending.get('phase') in (None,'STOPPED','FAILED','HELD') and request_row.get('mode')=='on':
+            fail_request(request_row,revision,error)
         # Leave unverified ownership intact. Stop is independent of this code.
-        n.publish({'state': 'BLOCKED', 'mode': 'continuous-pair', 'proof_scope': MODE, 'blockers': [code]})
+        publish_failure(error)
     return True

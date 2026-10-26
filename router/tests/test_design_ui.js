@@ -47,12 +47,18 @@ const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-a
 const page=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const base='router/files/www/luci-static/resources/view/homensai-vpn/';
 const dashboard=fs.readFileSync(base+page+'.js','utf8');
-assert(dashboard.includes("'class':'hv-app hv-workspace hv-minimum-release','data-hv-design':'b'"));
+const hybrid=dashboard.includes('hv-hybrid-release');
+assert(hybrid||dashboard.includes("'class':'hv-app hv-workspace hv-minimum-release','data-hv-design':'b'"));
 const releasedView=dashboard.slice(dashboard.lastIndexOf('return view.extend({'));
-assert(!releasedView.includes('renderDesignPicker('),'operator settings no longer expose competing layouts');
-const fixed=/function currentDesign\(\)\{return 'b';\}/.exec(dashboard);assert(fixed,'release ignores legacy layout choices');
-vm.runInContext(fixed[0],context);
-for(const old of ['a','c','constructor']){store['homensai-vpn-design']=old;assert.equal(context.currentDesign(),'b');}
+if(hybrid){
+ assert(releasedView.includes('renderDesignPicker('),'legacy expanded design choice restored');
+ assert(dashboard.includes("page==='home'?'b':currentDesign()"),'Minimum keeps accepted B independent of expanded design');
+}else{
+ assert(!releasedView.includes('renderDesignPicker('),'operator settings no longer expose competing layouts');
+ const fixed=/function currentDesign\(\)\{return 'b';\}/.exec(dashboard);assert(fixed,'release ignores legacy layout choices');
+ vm.runInContext(fixed[0],context);
+ for(const old of ['a','c','constructor']){store['homensai-vpn-design']=old;assert.equal(context.currentDesign(),'b');}
+}
 assert(dashboard.includes("'data-hv-tab':tab[0],'title':tab[2]"));
 const css=/ui[0-9]+\.css/.exec(dashboard)[0];
 const sheet=fs.readFileSync(base+css,'utf8');

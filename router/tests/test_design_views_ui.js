@@ -94,9 +94,14 @@ const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./
 assert(/Что будет, если/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
 // Legacy renderers remain callable for regression; the new view composes only the accepted design.
 const releasedView=source.slice(source.lastIndexOf('return view.extend({'));
-assert(!releasedView.includes('renderDesignOverview('),'no competing overview renderer in released view');
-assert(releasedView.includes('minimumComposePages(pages,panel,status,inventory,controlCard,minimumCommandHost,routerVpnUrl())'),'new composition retains actual source nodes');
-assert(releasedView.includes('renderMinimumSettings('),'persistent simplified settings replace layout picker');
+if(source.includes('hv-hybrid-release')){
+ assert(releasedView.includes('renderDesignOverview('),'owner-selected legacy overview restored');
+ assert(releasedView.includes('placeHybridControls(key)'),'actual controls reparented across Minimum and legacy overview');
+}else{
+ assert(!releasedView.includes('renderDesignOverview('),'no competing overview renderer in released view');
+ assert(releasedView.includes('minimumComposePages(pages,panel,status,inventory,controlCard,minimumCommandHost,routerVpnUrl())'),'new composition retains actual source nodes');
+ assert(releasedView.includes('renderMinimumSettings('),'persistent simplified settings replace layout picker');
+}
 assert(source.includes("installDesignKeys(appRoot,"));
 // Keys of design C: digits open sections, ignored while typing and for other designs.
 {const listeners=[];const doc={addEventListener:(n,f)=>listeners.push(f)};const root=new N('div',{'data-hv-design':'c'});root.isConnected=true;root.querySelector=()=>null;

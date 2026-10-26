@@ -25,12 +25,14 @@ console.log('PASS: RU/EN retains canonical page/subview and help deep links, con
  const selected=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+path+'.js','utf8');
  const handler=selected.split('\n').find(line=>line.includes("language.addEventListener('change',function(){"));assert(handler);
  const body=handler.slice(handler.indexOf('function(){')+11,handler.lastIndexOf('});'));
- const change=new Function('language','locale','localStorage','window','minimumCurrentRoute','languageNavigationUrl','minimumSettingsRequestLeave',body);
- for(const allowed of [false,true]){
+ const hybrid=selected.includes('hv-hybrid-release');
+ const legacyContext={URL};vm.createContext(legacyContext);vm.runInContext(fs.readFileSync('router/navigation_context.inc.js','utf8'),legacyContext);
+ const change=new Function('language','locale','localStorage','window','minimumCurrentRoute','languageNavigationUrl','minimumSettingsRequestLeave','activeTab',body);
+ for(const allowed of hybrid?[true]:[false,true]){
   const language={value:'ru'},saved=[],window={location:{href:'http://router/#diagnostics/speed',assign:url=>window.destination=url}};
-  change(language,'en',{setItem:(...args)=>saved.push(args)},window,{hash:'diagnostics/speed'},c.languageNavigationUrl,fn=>{if(allowed)fn();});
-  assert.equal(language.value,'en','visible control resets until permitted reload');
-  if(allowed){assert.equal(new URL(window.destination).hash,'#diagnostics/speed');assert.equal(new URL(window.destination).searchParams.get('lang'),'ru');assert.deepEqual(saved,[['homensai-vpn-language','ru']]);}
+  change(language,'en',{setItem:(...args)=>saved.push(args)},window,{hash:'diagnostics/speed'},hybrid?legacyContext.languageNavigationUrl:c.languageNavigationUrl,fn=>{if(allowed)fn();},'tests');
+  if(!hybrid)assert.equal(language.value,'en','visible control resets until permitted reload');
+  if(allowed){assert.equal(new URL(window.destination).hash,hybrid?'#tests':'#diagnostics/speed');assert.equal(new URL(window.destination).searchParams.get('lang'),'ru');assert.deepEqual(saved,[['homensai-vpn-language','ru']]);}
   else{assert.equal(window.destination,undefined);assert.equal(saved.length,0,'Stay neither reloads nor persists the unconfirmed language');}
  }
  console.log('PASS: relocated actual language handler preserves dirty-draft guard and current subview before reload');

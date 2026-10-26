@@ -455,6 +455,9 @@ class Linux:
                 'debugfs_mounted':Path('/sys/kernel/debug').is_mount(),'hook_exists':Path('/sys/kernel/debug/hnat/hook_toggle').exists()}
     def diagnostic(self):
         blockers=[];board={}
+        from preparation_control import auto_blocker
+        preparation_reason=auto_blocker()
+        if preparation_reason:blockers.append(preparation_reason)
         try:
             board=json.loads(command(['ubus','call','system','board']))
             if board.get('board_name')not in('glinet,gl-mt6000','glinet,mt3000-snand'):blockers.append('UNSUPPORTED-BOARD')
@@ -486,8 +489,10 @@ class Linux:
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')
             metadata=inventory();selection=choose(data,metadata['profiles'])
-            if board.get('board_name')=='glinet,mt3000-snand' and {selection[role]['interface']for role in('source','target')}!={'wgclient1','ovpnclient1'}:
-                blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
+            if board.get('board_name')=='glinet,mt3000-snand':
+                from pair_interfaces import selection as selected_interfaces
+                try:selected_interfaces(selection)
+                except ValueError:blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
             self.use_process_bindings(selection.get('process_bindings'))
             from failure_diagnosis import resolve_pair,profile_identity
             interval=data.get('settings',{}).get('interval','30')
@@ -612,8 +617,12 @@ class Linux:
     def devices(self):
         devices=[]
         for p in inventory()['profiles']:
-            if not p.get('interface'):continue
-            s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
+            if not p.get('interface') or p.get('administrative_state')=='disabled':continue
+            try:
+                s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
+                if not isinstance(s,dict):raise ValueError('status')
+            except (OSError,ValueError,subprocess.SubprocessError):
+                raise Refused('GUARD-DEVICE-UNVERIFIED') from None
             if s.get('up') and s.get('l3_device'):devices.append(s['l3_device'])
         return devices
     def recovery_ready(self,identifier,settings):
@@ -1191,10 +1200,11 @@ def serve():
                 else:
                     last_return=returned.get('request',0);consumed=attempts
                     last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
-                data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
+                data=backend.policy(); settings=data['settings']
                 from pair_auto import tick as pair_tick
                 if pair_tick(backend,settings,decision_revision):
                     time.sleep(2);continue
+                until=deadline(settings.get('native_until'))
                 from native_proof import requested,matches
                 try:PROOF_SCOPE=requested(settings)
                 except ValueError:raise Refused('LAN-TRIAL-REQUIRED') from None

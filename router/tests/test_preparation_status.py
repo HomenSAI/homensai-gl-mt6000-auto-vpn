@@ -68,6 +68,14 @@ class Tests(unittest.TestCase):
         (self.root / 'tmp/sysinfo/board_name').unlink()
         self.assertEqual(self.report()['state'], 'unknown')
 
+    def test_selected_second_client_is_checked_instead_of_an_unused_first_slot(self):
+        seen=[]
+        def run(args,**kwargs):seen.append(args[-1]);return self.run_flag(args,**kwargs)
+        report=p.snapshot(self.root,run,settings={'plan_source_tunnel':'wireguard:wgclient1','plan_target_tunnel':'openvpn:ovpnclient2'})
+        self.assertEqual(report['state'],'pass');self.assertIn('network.ovpnclient2.auto',seen)
+        self.assertNotIn('network.ovpnclient1.auto',seen)
+        self.assertIn('PREP-TARGET-AUTOSTART',[row['code']for row in report['checks']])
+
 
 if __name__ == '__main__':
     unittest.main()

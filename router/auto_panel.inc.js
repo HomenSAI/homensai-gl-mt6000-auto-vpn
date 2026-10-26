@@ -48,7 +48,8 @@ function autoNoInternetLink(){
   return E('a',{'href':'#help','click':function(ev){if(typeof openHelpTopic==='function'){ev.preventDefault();openHelpTopic('no-internet');}}},bi('Help: no internet?','Справка: нет интернета?'));
 }
 var AUTO_BLOCKERS={
-  'EXISTING-TUNNEL-BINDING-UNVERIFIED':['This MT3000 profile supports the verified wgclient1 and ovpnclient1 pair. Other tunnel bindings remain blocked.','Этот профиль MT3000 поддерживает проверенную пару wgclient1 и ovpnclient1. Другие привязки туннелей остаются заблокированы.'],
+  'GUARD-DEVICE-UNVERIFIED':['An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded.','Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются.'],
+  'EXISTING-TUNNEL-BINDING-UNVERIFIED':['The two selected VPN clients need distinct, confirmed live interfaces, routing tables and marks. Check the selected pair and current tunnel state.','У двух выбранных VPN-клиентов должны быть разные подтверждённые интерфейсы, таблицы маршрутизации и метки. Проверьте выбранную пару и текущее состояние туннелей.'],
   'MT3000-FIRMWARE-UNVERIFIED':['The actual MT3000 firmware, kernel or architecture does not match the verified profile. Keep monitoring and check the router facts.','Фактическая прошивка, ядро или архитектура MT3000 не совпадает с проверенным профилем. Оставьте мониторинг и проверьте данные роутера.'],
   'MT3000-FIREWALL-UNVERIFIED':['This MT3000 firewall arrangement is not verified. Native switching remains blocked.','Этот вариант firewall MT3000 не проверен. Нативное переключение остаётся заблокировано.'],
   'FW3-INCLUDE-CONTRACT-UNVERIFIED':['The stock FW3 VPN include differs from the verified configuration. Review it before switching.','VPN include штатного FW3 отличается от проверенной конфигурации. Проверьте его перед переключением.'],
@@ -130,8 +131,68 @@ var AUTO_BLOCKERS={
 };
 function autoBlockerText(code){
   var row=Object.prototype.hasOwnProperty.call(AUTO_BLOCKERS,code)?AUTO_BLOCKERS[code]:null;
-  return row?bi(row[0],row[1]):bi('Unrecognised controller code; see the Service monitor.','Неизвестный код контроллера; см. «Службу мониторинга».');
+  var guide=typeof AUTO_REMEDIES!=='undefined'&&AUTO_REMEDIES[autoRemedyKey(code)];
+  return row?bi(row[0],row[1]):guide?bi(guide.title[0],guide.title[1]):bi('Unrecognised controller code; see the Service monitor.','Неизвестный код контроллера; см. «Службу мониторинга».');
 }
+var AUTO_REMEDIES={
+  'acceleration':{
+    title:['Disable network acceleration','Отключите сетевое ускорение'],path:['GL.iNet → NETWORK → Network Acceleration','GL.iNet → Сеть → Сетевое ускорение (Network Acceleration)'],
+    text:['Turn Enable off and click Apply. Selecting Auto, Hardware or Software mode does not disable acceleration. Return here and check readiness again; Auto VPN needs a separate Start. Older firmware calls this menu Hardware Acceleration.','Выключите переключатель Enable («Включить») и нажмите Apply («Применить»). Выбор режима Auto, Hardware или Software не отключает ускорение. Вернитесь сюда и обновите готовность; Auto VPN запускается отдельно. В старых прошивках пункт называется Hardware Acceleration.'],
+    route:'/#/netnat',docs:'https://docs.gl-inet.com/router/en/4/interface_guide/network_acceleration/'},
+  'offload':{
+    title:['Disable firewall flow offloading','Отключите flow offloading в firewall'],path:['LuCI → Network → Firewall → General Settings → Routing/NAT Offloading','LuCI → Сеть → Межсетевой экран → Общие настройки → Routing/NAT Offloading'],
+    text:['Clear Software flow offloading and Hardware flow offloading, then Save & Apply. Return here and check readiness again.','Снимите Software flow offloading и Hardware flow offloading, затем нажмите Save & Apply («Сохранить и применить»). Вернитесь сюда и обновите готовность.'],route:'/cgi-bin/luci/admin/network/firewall'},
+  'pair':{
+    title:['Review the current VPN pair','Проверьте текущую пару VPN'],path:['Advanced menu → Settings → Primary and reserve VPN','Расширенное меню → Настройки → Основной и резервный VPN'],
+    text:['The selected channel was removed, rebound or is not supported by this controller. Review the actual tunnel bindings in GL.iNet → VPN → VPN Dashboard, then explicitly save a supported pair here. On the prepared MT3000 mode these are wgclient1 and ovpnclient1; a server catalogue entry is not a second tunnel.','Выбранный канал удалён, перепривязан или не поддерживается этим контроллером. Проверьте привязки в GL.iNet → VPN → VPN Dashboard, затем явно сохраните здесь поддерживаемую пару. Для подготовленного режима MT3000 это wgclient1 и ovpnclient1; запись каталога серверов не является вторым туннелем.'],route:'#settings'},
+  'recovery':{
+    title:['The previous Auto session needs recovery','Нужно восстановление предыдущей сессии Auto'],path:['Advanced menu → Diagnostics → Recovery and technical information','Расширенное меню → Диагностика → Восстановление и технические сведения'],
+    text:['Router settings differ from the saved session. Auto remains blocked to preserve your changes. Open recovery diagnostics and use the preserved backup/transaction to reconcile the old session before saving a new pair. A repeated Start or page refresh cannot resolve this conflict.','Настройки роутера отличаются от сохранённой сессии. Auto заблокирован, чтобы сохранить ваши изменения. Откройте диагностику восстановления: старую сессию нужно согласовать по сохранённой копии и транзакции до выбора новой пары. Повторный Start или обновление страницы конфликт не устраняет.'],route:'#diagnostics/recovery'}
+};
+AUTO_REMEDIES.preparation={title:['Complete router preparation','Завершите подготовку роутера'],path:['System readiness → Persistent router preparation','Готовность системы → Постоянная подготовка роутера'],text:['Open the preparation table, find the failed row and follow its instructions. A failed boot or runtime check remains separate from the hardware acceleration switch.','Откройте таблицу подготовки, найдите непрошедший пункт и выполните его инструкцию. Ошибки автозапуска и работающих модулей проверяются отдельно от переключателя аппаратного ускорения.'],route:'#readiness'};
+['wgclient1','ovpnclient1'].forEach(function(name){AUTO_REMEDIES['autostart-'+name]={title:['Review '+name+' startup','Проверьте автозапуск '+name],path:['LuCI → Network → Interfaces → '+name+' → Edit → General Setup','LuCI → Сеть → Интерфейсы → '+name+' → Изменить → Основные настройки'],text:['After stopping Auto and verifying completed recovery, clear Bring up on boot for this interface, then Save & Apply. Auto manages its startup separately. This is a startup check, not a hardware acceleration failure.','После остановки Auto и подтверждённого завершения восстановления снимите Bring up on boot («Поднимать при загрузке») у этого интерфейса, затем Save & Apply («Сохранить и применить»). Auto управляет запуском отдельно. Это проверка автозапуска, а не ошибка аппаратного ускорения.'],route:'/cgi-bin/luci/admin/network/network'};});
+AUTO_REMEDIES.stockboot={title:['Disable competing VPN startup','Отключите конкурирующий автозапуск VPN'],path:['LuCI → System → Startup → vpn-client','LuCI → Система → Автозагрузка → vpn-client'],text:['After stopping Auto and verifying completed recovery, use Disable for vpn-client in the startup list. Disable changes startup; Stop is a different action and disconnects the running service. Return here and check preparation again.','После остановки Auto и подтверждённого завершения восстановления нажмите Disable («Отключить») у vpn-client в списке автозапуска. Это отключает запуск при загрузке. Кнопка Stop («Остановить») выполняет другое действие и останавливает работающую службу. Вернитесь сюда и повторите проверку подготовки.'],route:'/cgi-bin/luci/admin/system/startup'};
+function autoRemedyKey(code){
+  if(code==='PREP-SOURCE-AUTOSTART')return 'sourceboot';
+  if(code==='PREP-TARGET-AUTOSTART')return 'targetboot';
+  if(code==='PREPARATION-RESTART-REQUIRED')return 'restart';
+  if(/^PREPARATION-/.test(code||''))return 'preparation';
+  if(code==='PREP-WGCLIENT1-AUTOSTART')return 'autostart-wgclient1';
+  if(code==='PREP-OVPNCLIENT1-AUTOSTART')return 'autostart-ovpnclient1';
+  if(code==='PREP-STOCK-VPN-BOOT')return 'stockboot';
+  if(['HARDWARE-ACCELERATOR-UNVERIFIED','SOFTWARE-ACCELERATOR-UNVERIFIED','PREP-HNAT-CONFIG','PREP-SFE-BOOT','PREP-SFE-AUTOLOAD','PREP-SFE-RUNTIME'].indexOf(code)>=0)return 'acceleration';
+  if(code==='FLOW-OFFLOAD-ENABLED')return 'offload';
+  if(code==='PAIR-PREPARATION-REQUIRED'||/^PREP-/.test(code||''))return 'preparation';
+  if(['SOURCE-RESERVE-NOT-CONFIGURED','VENDOR-IDENTITY-UNKNOWN','PROFILE-IDENTITY-CHANGED','EXISTING-TUNNEL-BINDING-UNVERIFIED','PAIR-PROFILES-UNVERIFIED'].indexOf(code)>=0)return 'pair';
+  if(/^PAIR-(EXTERNAL-|RECOVERY-REQUIRED|STATE-UNVERIFIED)/.test(code||''))return 'recovery';
+  return null;
+}
+function autoRemedyHref(guide){
+  if(guide.route==='/#/netnat'){
+    var loc=typeof window!=='undefined'&&window.location;
+    return loc&&loc.hostname?(loc.protocol==='https:'?'https:':'http:')+'//'+loc.hostname+guide.route:guide.docs;
+  }
+  return guide.route;
+}
+function renderAutoRemedy(code){
+  var g=AUTO_REMEDIES[autoRemedyKey(code)];if(!g)return null;
+  var nodes=[E('strong',{},bi(g.title[0],g.title[1])),E('p',{},bi(g.path[0],g.path[1])),E('p',{},bi(g.text[0],g.text[1])),E('a',{'href':autoRemedyHref(g),'class':'cbi-button','target':g.route.charAt(0)==='#'?null:'_blank','rel':'noopener noreferrer'},bi('Open settings','Открыть настройки'))];
+  if(g.docs)nodes.push(E('p',{},E('a',{'href':g.docs,'target':'_blank','rel':'noopener noreferrer'},bi('GL.iNet instructions','Инструкция GL.iNet'))));
+  if(typeof renderPreparationButtons==='function'){var preparationButtons=renderPreparationButtons(code);if(preparationButtons)nodes.splice(1,0,preparationButtons);}
+  if(autoRemedyKey(code)==='acceleration')nodes.push(E('p',{},bi('If it is already off but the check still fails, open System readiness → Persistent router preparation for the exact failed check. Saved configuration and loaded runtime acceleration are checked separately.','Если уже выключено, а ошибка остаётся, откройте «Готовность системы → Постоянная подготовка роутера»: там указан конкретный непрошедший пункт. Сохранённые настройки и фактически работающее ускорение проверяются отдельно.')));
+  return E('div',{'class':'hv-chart-card hv-auto-remedy','data-auto-remedy':code},nodes);
+}
+['PAIR-EXTERNAL-POLICY-CHANGE','PAIR-EXTERNAL-NETWORK-CHANGE','PAIR-EXTERNAL-CONFIG-CHANGE','PAIR-RECOVERY-REQUIRED','PAIR-STATE-UNVERIFIED','PAIR-PROFILES-UNVERIFIED','EXISTING-TUNNEL-BINDING-UNVERIFIED','PAIR-PREPARATION-REQUIRED','PREP-HNAT-CONFIG','PREP-WGCLIENT1-AUTOSTART','PREP-OVPNCLIENT1-AUTOSTART','PREP-STOCK-VPN-BOOT','PREP-SFE-BOOT','PREP-SFE-AUTOLOAD','PREP-SFE-RUNTIME'].forEach(function(code){
+  if(!Object.prototype.hasOwnProperty.call(AUTO_BLOCKERS,code)){var guide=AUTO_REMEDIES[autoRemedyKey(code)];AUTO_BLOCKERS[code]=guide.title.slice();}
+});
+AUTO_REMEDIES.restart={title:['Router restart required','Нужна перезагрузка роутера'],path:['LuCI → System → Reboot','LuCI → Система → Перезагрузка'],text:['The boot/acceleration setting is saved and verified. Restart this router deliberately, then wait for fresh preparation checks before a separate Auto Start. The preparation button never reboots the router itself.','Настройка автозапуска/ускорения сохранена и проверена. Отдельно перезагрузите этот роутер, дождитесь новых проверок подготовки и затем явно запустите Auto. Кнопка подготовки сама роутер не перезагружает.'],route:'/cgi-bin/luci/admin/system/reboot'};
+AUTO_BLOCKERS['PREPARATION-RESTART-REQUIRED']=AUTO_REMEDIES.restart.title.slice();
+AUTO_BLOCKERS['PREPARATION-RECOVERY-REQUIRED']=AUTO_REMEDIES.recovery.title.slice();
+['source','target'].forEach(function(role){
+ var primary=role==='source',key=primary?'sourceboot':'targetboot';
+ AUTO_REMEDIES[key]={title:primary?['Disable primary VPN boot startup','Отключите автозапуск основного VPN']:['Disable reserve VPN boot startup','Отключите автозапуск резервного VPN'],path:['LuCI → Network → Interfaces → selected '+(primary?'primary':'reserve')+' VPN → Edit → General Setup','LuCI → Сеть → Интерфейсы → выбранный '+(primary?'основной':'резервный')+' VPN → Изменить → Основные настройки'],text:['Disable Bring up on boot for the selected client. Auto manages startup separately; the current connection is preserved.','Выключите «Поднимать при загрузке» для выбранного клиента. Auto управляет запуском отдельно; текущее подключение сохраняется.'],route:'/cgi-bin/luci/admin/network/network'};
+ AUTO_BLOCKERS['PREP-'+role.toUpperCase()+'-AUTOSTART']=AUTO_REMEDIES[key].title.slice();
+});
 // What must be true before Start can be accepted, in the order the owner can fix it.
 var AUTO_LAN_ONLY=['LAN-TRIAL-REQUIRED','BOUNDED-DEADLINE-REQUIRED','SESSION-LOSS-NOT-ACCEPTED'];
 function autoReadiness(status,inventory,now){
@@ -219,21 +280,22 @@ function renderAutoLight(light,technicalCode){
 // Reply of the Auto button: the code of the answer is shown as a link to its row in the error table, with its short meaning.
 function autoCodeNotice(code,extra){
   var row=(typeof ERROR_ROWS!=='undefined'?ERROR_ROWS:[]).filter(function(r){return r[0]===code;})[0];
-  return E('p',{},[errorCodeLink(code),row?' · '+bi(row[2],row[3]):'',extra?' · '+extra:'']);
+  return E('div',{},[E('p',{},[errorCodeLink(code),row?' · '+bi(row[2],row[3]):' · '+autoBlockerText(code),extra?' · '+extra:'']),renderAutoRemedy(code)].filter(Boolean));
 }
 var autoRequestBusy=false,autoStopBusy=false,autoStartPending=false;
 var autoCommandPending=null,autoControlRefresh=function(){};
 function autoCommandOperation(status,now){
   var model=autoControlModel(status,now),intent=status.auto_control||{},phase=intent.pair_phase;
+  var failedStart=model.fresh&&(status.native_failover||{}).state==='BLOCKED'&&!model.awaiting&&!model.on&&!model.transitioning;
   if(autoCommandPending&&autoCommandPending.acknowledged&&model.fresh&&intent.requested_at>autoCommandPending.baseline){
-    var terminal=['FAILED','STOPPED','HELD'].indexOf(phase)>=0;
+    var terminal=['FAILED','STOPPED','HELD'].indexOf(phase)>=0||!autoCommandPending.stop&&failedStart;
     var done=autoCommandPending.stop?terminal:terminal||phase==='RUNNING'&&model.on&&!model.awaiting&&!model.transitioning;
     var legacyDone=!phase&&!model.awaiting&&!model.transitioning&&
       (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
     if(done||legacyDone)autoCommandPending=null;
   }
   if(autoCommandPending)return autoCommandPending.stop?'stopping':'starting';
-  if(phase==='STARTING')return 'starting';
+  if(phase==='STARTING')return failedStart?null:'starting';
   if(phase==='STOPPING')return 'stopping';
   if(phase==='UNKNOWN')return 'unknown';
   if(model.awaiting||model.transitioning)return intent.requested==='off'?'stopping':'starting';
@@ -270,7 +332,7 @@ function renderAutoPowerControl(status,inventory){
       if(autoCommandPending&&autoCommandPending.stop===stop){if(autoRequestAcknowledged(result,stop))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
       if(!stop&&result&&result.accepted===false&&(result.code==='CONTROL-REVISION-STALE'||Array.isArray(result.blockers)&&result.blockers.indexOf('CONTROL-REVISION-STALE')>=0)){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
       if(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9-]{2,95}$/.test(result.code)&&(result.accepted===false||result.queued===false))ui.addNotification(null,autoCodeNotice(result.code,result.settings_unverified?bi('router settings could not be read','настройки роутера не прочитаны'):''));
-      else if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},code+' · '+autoBlockerText(code));}))]));}
+      else if(result&&result.accepted===false){ui.addNotification(null,E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},[code+' · '+autoBlockerText(code),renderAutoRemedy(code)].filter(Boolean));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
       else ui.addNotification(null,E('p',{},bi('Request queued. The indicator changes only after controller confirmation.','Запрос принят. Индикатор изменится после подтверждения контроллера.')));
     }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop){if(stop)autoCommandPending=null;else autoCommandPending.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
@@ -305,7 +367,7 @@ function renderAutoControl(status,inventory,refresh){
   }else if(!model.on&&!model.transitioning&&!model.stop){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Step 2 · Turn on Auto. Do it after step 1 (“Check the VPNs now”, at the top of this page) shows that your VPNs work and the list below is complete.','Шаг 2 · Включите Auto. Делайте это после шага 1 («Проверить VPN сейчас», вверху страницы), когда проверка показала, что ваши VPN работают, и список ниже выполнен.')),E('h3',{},readiness.ready?bi('Ready to start','Готово к запуску'):bi('Before you can start Auto','Что нужно перед запуском Auto')),E('ol',{'class':'hv-req-list'},readiness.steps.map(function(step){
       var isNext=readiness.next&&readiness.next.key===step.key;
-      var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[safeCode(code)?errorCodeLink(code):E('code',{},code),' · '+autoBlockerText(code)]);})):null;
+      var extra=step.key==='router'&&!step.done&&step.codes&&step.codes.length?E('ul',{'class':'hv-req-codes'},step.codes.map(function(code){return E('li',{},[safeCode(code)?errorCodeLink(code):E('code',{},code),' · '+autoBlockerText(code),renderAutoRemedy(code)].filter(Boolean));})):null;
       return E('li',{'class':'hv-req hv-req-'+(step.done?'done':isNext?'next':'todo')},[E('span',{'class':'hv-req-mark','aria-hidden':'true'},step.done?'✓':isNext?'→':'·'),E('div',{},[E('strong',{},step.title),step.done?null:E('p',{},step.hint),extra].filter(Boolean)),E('span',{'class':'hv-visually-hidden'},step.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
     })),E('p',{'class':'hv-req-actions'},[E('a',{'class':'cbi-button','href':'#settings'},bi('Open Settings','Открыть настройки')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск'))])]);
   }

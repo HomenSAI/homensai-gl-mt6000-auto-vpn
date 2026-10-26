@@ -4,8 +4,8 @@ function simpleHomeAutoEnabled(status,now){
   status=status||{};var ns=status.native_failover||{},intent=status.auto_control||{};
   if(status.rpc_error||status.error||!manualFresh(status.time,now,90)||!manualFresh(ns.time,now,30))return false;
   if(intent.requested==='off')return false;
-  if(intent.pair_phase)return intent.pair_phase==='RUNNING'&&intent.requested==='on';
   var control=autoControlModel(status,now);
+  if(intent.pair_phase)return intent.pair_phase==='RUNNING'&&intent.requested==='on'&&(control.on||control.transitioning);
   return control.fresh&&!control.awaiting&&(control.on||control.transitioning&&intent.requested==='on');
 }
 function renderSimpleHomeShortcut(getModel,goHome){
@@ -34,6 +34,7 @@ function simpleHomeModel(status,inventory,now){
   decision.moving=!unavailable&&(!!path.moving||control.transitioning);
   decision.dataUnavailable=unavailable;decision.control=control;decision.operation=operation;
   decision.enabled=simpleHomeAutoEnabled(status,now);decision.actionStop=control.stop||operation==='starting'||!control.fresh;
+  decision.blockers=control.fresh&&Array.isArray(ns.blockers)?ns.blockers.slice(0,4):[];
   decision.setupRequired=!unavailable&&control.off&&!decision.moving&&!operation&&(!source||!target||!source.id||!target.id||source.id===target.id);
   if(unavailable){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=bi('Check the connection to the router.','Проверьте связь с роутером.');}
   else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('Waiting for controller confirmation.','Ожидается подтверждение контроллера.');}
@@ -41,6 +42,7 @@ function simpleHomeModel(status,inventory,now){
   else if(decision.moving){decision.state='pending';decision.title=bi('Switching channel','Переключение канала');decision.summary=bi('The active channel is being confirmed.','Рабочий канал уточняется.');}
   else if(control.on&&decision.activeHealthy){decision.state='on';decision.title=selected==='target'?bi('Reserve is working','Работает резерв'):bi('Auto works','Auto работает');decision.summary=selected==='target'?bi('Reserve channel is in use.','Задействован резервный канал.'):bi('Primary channel is in use.','Задействован основной канал.');}
   else if(control.on){decision.state=activeHealth&&['failed','inactive'].indexOf(activeHealth.state)>=0?'error':'unknown';decision.title=bi('Connection needs checking','Нужна проверка соединения');decision.summary=selected?bi('The selected channel has no fresh successful check.','У выбранного канала нет свежей успешной проверки.'):bi('The active channel is not confirmed.','Рабочий канал не подтверждён.');}
+  else if(ns.state==='BLOCKED'){decision.state='error';decision.title=bi('Auto is blocked','Auto заблокирован');decision.summary=decision.blockers.length?autoBlockerText(decision.blockers[0]):bi('Open diagnostics for the current reason.','Откройте диагностику для уточнения причины.');}
   else if(decision.setupRequired){decision.state='setup';decision.title=bi('Finish setup','Завершите настройку');decision.summary=bi('Choose a primary and a different reserve profile.','Выберите основной и другой, резервный профиль.');}
   else if(control.off){decision.state='off';decision.title=bi('Auto is off','Auto выключен');decision.summary=selected==='target'?bi('Automatic switching is stopped; reserve remains selected.','Автопереключение остановлено; выбран резерв.'):bi('Automatic switching is stopped.','Автоматическое переключение остановлено.');}
   else{decision.state='error';decision.title=bi('Auto needs attention','Нужна проверка Auto');decision.summary=bi('Open diagnostics to see the reason.','Причина доступна в диагностике.');}
@@ -66,18 +68,19 @@ function renderSimpleHome(status,inventory,model,controlCard,openMenu){
       profile&&countryName(profile)?E('div',{},countryName(profile)):null,E('div',{'class':'hv-simple-latency'},bi('Delay: ','Задержка: ')+latency)
     ].filter(Boolean));
   }
-  var monitor=model.dataUnavailable?bi('State unknown','Состояние неизвестно'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
+  var monitor=model.dataUnavailable?bi('State unknown','Состояние неизвестно'):model.state==='error'?bi('Needs attention','Нужно внимание'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
   return E('section',{'class':'hv-simple-home','data-simple-home':model.state},[
     E('div',{'class':'hv-simple-card'},[
       E('div',{'class':'hv-simple-top'},[E('strong',{},'Auto VPN'),E('span',{'class':'hv-simple-monitor hv-simple-monitor-'+model.state},monitor)]),
       E('h2',{'class':'hv-simple-state','role':'status'},model.title),
       E('div',{'class':'hv-simple-power-unit'},[E('div',{'class':'hv-simple-power'},power),actionLabel]),
       E('p',{'class':'hv-simple-route'},model.summary),
+      typeof renderAutoRemedy==='function'?E('div',{},(model.blockers||[]).map(renderAutoRemedy).filter(Boolean)):null,
       model.setupRequired?E('p',{'class':'hv-simple-setup-action'},E('a',{'class':'cbi-button hv-minimum-action','href':'#settings','data-simple-setup':'1'},bi('Configure pair','Настроить пару'))):null,
       E('div',{'class':'hv-simple-reserve'},[E('span',{},bi('Reserve channel','Резервный канал')),E('strong',{},model.targetHealth.label)]),
       E('details',{'class':'hv-simple-details','data-home-details':'channels'},[E('summary',{},bi('Connection details','Подробности соединения')),E('div',{'class':'hv-simple-pair'},[member(model.source,'source'),member(model.target,'target')]),E('p',{},bi('Checks originate from the router over IPv4.','Проверки выполняются с роутера по IPv4.'))]),
       E('button',{'type':'button','class':'cbi-button hv-simple-open-menu','data-simple-open-menu':'1','click':openMenu},bi('Advanced menu →','Расширенное меню →')),
-      E('p',{'class':'hv-simple-menu-hint'},bi('Channels · diagnostics · events · settings','Каналы · диагностика · события · настройки'))
+      E('p',{'class':'hv-simple-menu-hint'},bi('Overview · channels · checks · settings','Обзор · каналы · проверки · настройки'))
     ].filter(Boolean))
   ]);
 }

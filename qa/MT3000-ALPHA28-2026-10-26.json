@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "result": "PASS_INSTALL",
+  "observed_utc": "2026-10-26T17:39:03.682044+00:00",
+  "target": "dedicated GL-MT3000",
+  "board": "glinet,mt3000-snand",
+  "firmware": "4.11.0",
+  "previous_package": "0.9.1-alpha25-1",
+  "installed_package": "0.9.1-alpha28-1",
+  "running_version": "0.9.1-alpha28",
+  "product_source": "7ff1b81f89b83d6fb4bd0bc6e6327df7bc7eb8b4",
+  "package_sha256": "58610b1c3355668b9a1de8f20c7dc8d7ca802c6860c3d35ca459ce00558a1ab3",
+  "package_status": "install user installed",
+  "payload_files_verified": 90,
+  "http_assets": [
+    {
+      "asset": "dashboard104.js",
+      "status": 200,
+      "bytes": 1188233,
+      "sha256": "97cc4c6e72c9a1574466399ef85872359f0d3a258989afa57667407dee1ac070",
+      "matches_package": true
+    },
+    {
+      "asset": "ui76.css",
+      "status": 200,
+      "bytes": 149963,
+      "sha256": "a670feaca888967d324d6f5f6921724364494fdd031293690dd1830d36128d15",
+      "matches_package": true
+    }
+  ],
+  "monitor_and_controller_fresh": true,
+  "process_counts": {
+    "monitor": 1,
+    "native": 1
+  },
+  "auto": "OFF",
+  "guard_absent": true,
+  "protected_configuration_preserved": true,
+  "application_settings_preserved_except_expected_native_scope_clear": true,
+  "terms_preserved": true,
+  "enabled_vpn_profiles": 2,
+  "router_bound_dns_and_two_https_pass": 2,
+  "native_blockers": [
+    "FW3-SELECTED-ZONE-UNVERIFIED",
+    "PROFILES-NOT-GENERIC-RULES"
+  ],
+  "old_session_handoff": {
+    "owner_explicitly_approved": true,
+    "original_archived_and_hash_verified": true,
+    "old_flags_not_restored_over_new_config": true,
+    "native_journal_and_budgets_untouched": true
+  },
+  "backup_before": {
+    "result": "PASS",
+    "encrypted_sha256": "864700d8252402bd6f6ff5ed3da2f96f31591f97e51115d1c6534e43a4f10305",
+    "entries": 193,
+    "expanded_bytes": 3884673,
+    "encrypted_bytes": 595616,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user",
+    "observed_utc": "2026-10-26T17:22:01.668903+00:00"
+  },
+  "backup_after": {
+    "result": "PASS",
+    "encrypted_sha256": "9828ed234003b23cf7ac83e7c4f69e8da71c4b95376c014840c6f31f1bff1f30",
+    "entries": 194,
+    "expanded_bytes": 3887035,
+    "encrypted_bytes": 595907,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user",
+    "observed_utc": "2026-10-26T17:39:06.307836+00:00"
+  },
+  "preparation_preview_read_only_verified": true,
+  "preparation_apply_invoked": false,
+  "auto_start_invoked": false,
+  "native_browser_visual": "NOT_VERIFIED",
+  "physical_lan_failover": "NOT_TESTED",
+  "speed_test_run": false,
+  "reboot_performed": false,
+  "main_mt6000_changed": false,
+  "windows_network_changed": false,
+  "published": false,
+  "route_evidence": "Main-route hash unchanged during owner-approved handoff; network/route_policy configurations unchanged through install. Separate pre-opkg live-route hash receipt was not persisted.",
+  "scope": "Installed package, file/mode/HTTP/RPC/service/config preservation proof. Not Auto readiness, external LAN, failover, power-loss or soak acceptance."
+}

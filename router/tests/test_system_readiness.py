@@ -44,4 +44,4 @@ class CachedReadinessTests(unittest.TestCase):
         source=(path.parent/'agent.py').read_text(encoding='utf-8')
         rpc=source.split("elif method in ('status', 'events'):",1)[1]
         self.assertNotIn('readiness_snapshot()',rpc)
-        self.assertIn("status['system_readiness']=readiness_snapshot()",source)
+        self.assertIn("status['system_readiness']=readiness_snapshot(settings=settings)",source)

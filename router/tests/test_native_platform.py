@@ -10,16 +10,20 @@ class Tests(unittest.TestCase):
     def setUp(self):
         self.board={'board_name':'glinet,mt3000-snand','model':'GL.iNet GL-MT3000','kernel':'5.4.211','release':{'target':'mediatek/mt7981'}}
         self.data={'firewall_include':{'path':'/usr/bin/rtp2.sh','type':'script','reload':'0'}}
-    def assess(self,board=None,data=None,busy=0,source=b'audited'):
+    def assess(self,board=None,data=None,busy=0,source=b'audited',zones=None):
         with ExitStack()as s:
             s.enter_context(patch.object(p.os,'uname',return_value=types.SimpleNamespace(machine='aarch64')))
             s.enter_context(patch.object(p,'PINS',{'/stock':hashlib.sha256(b'audited').hexdigest()}))
             s.enter_context(patch.object(candidate,'_read',return_value=source))
-            s.enter_context(patch.object(candidate,'_zones',return_value={'lan','wan','wgclient1','ovpnclient1'}))
+            s.enter_context(patch.object(candidate,'_zones',return_value=zones if zones is not None else {'lan','wan','wgclient1','ovpnclient1'}))
             s.enter_context(patch.object(candidate,'_workers',return_value={'busy':busy,'verified':True}))
             s.enter_context(patch.object(Path,'exists',return_value=False));s.enter_context(patch.object(Path,'is_symlink',return_value=False))
             return p.assess(self.board if board is None else board,self.data if data is None else data)
     def test_exact_actual_profile_allows_only_after_all_facts_match(self):self.assertEqual(self.assess(),[])
+    def test_selected_second_zone_is_required_without_falling_back_to_unused_first(self):
+        data=dict(self.data,settings={'plan_source_tunnel':'wireguard:wgclient1','plan_target_tunnel':'openvpn:ovpnclient2'})
+        self.assertEqual(self.assess(data=data,zones={'lan','wan','wgclient1','ovpnclient2'}),[])
+        self.assertIn('FW3-SELECTED-ZONE-UNVERIFIED',self.assess(data=data))
     def test_unknown_board_and_incomplete_mt3000_facts_block(self):
         self.assertEqual(self.assess({'board_name':'other'}),['UNSUPPORTED-BOARD'])
         for field,value in(('kernel','6.6'),('release',None),('model','GL-MT6000')):

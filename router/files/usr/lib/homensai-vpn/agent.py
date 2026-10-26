@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha26'
+VERSION = '0.9.1-alpha30'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -620,6 +620,16 @@ def monitoring_profiles(data):
     return observed,selected
 
 
+def probe_profiles(profiles, settings):
+    """Disabled catalogue entries cannot consume a live measurement slot."""
+    anchors = {settings.get('plan_' + role + '_tunnel') for role in ('source', 'target')
+               if settings.get('plan_' + role + '_tunnel')}
+    eligible = [p for p in profiles if p.get('interface') and p.get('administrative_state') != 'disabled']
+    eligible.sort(key=lambda p: (p.get('vendor_tunnel_id') not in anchors,
+                                 p.get('administrative_state') != 'enabled'))
+    return eligible[:settings['probe_limit']]
+
+
 def monitor_poll_interval(settings, now=None):
     """Accelerate only a correlated bounded startup; never overlap probe rounds."""
     normal = settings['interval']
@@ -676,7 +686,7 @@ def serve():
             profiles = data['profiles']
             selected = {s['profile']: s for s in data.get('servers', []) if s.get('enabled')}
             observed = monitoring_profiles(data)[0]
-            bound = [p for p in observed if p.get('interface')][:settings['probe_limit']]
+            bound = probe_profiles(observed, settings)
             with ThreadPoolExecutor(max_workers=2) as pool:
                 measured = list(pool.map(probe, bound))
             # Read metadata again after the network observations. Never attach a
@@ -687,7 +697,7 @@ def serve():
             rows = []
             for p in observed:
                 row = dict(p)
-                row.update(mapped.get(p['id'], {'code': 'PROFILE-INACTIVE' if not p.get('interface') else 'CHECK-LIMIT'}))
+                row.update(mapped.get(p['id'], {'code': 'PROFILE-INACTIVE' if not p.get('interface') or p.get('administrative_state') == 'disabled' else 'CHECK-LIMIT'}))
                 custom = selected.get(p['id'], {})
                 row['router_name'] = p['name']  # the provider/router profile name; the UI derives the country from it
                 row['name'] = custom.get('name') or p['name']
@@ -759,7 +769,7 @@ def serve():
             from auto_control import public_status
             status['auto_control']=public_status()
             from system_readiness import snapshot as readiness_snapshot
-            status['system_readiness']=readiness_snapshot()
+            status['system_readiness']=readiness_snapshot(settings=settings)
             try:
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()
@@ -829,6 +839,7 @@ def rpc(method):
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
+                          'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
@@ -883,6 +894,9 @@ def rpc(method):
     if method in ('priority_preview','priority_apply'):
         from priority_config import preview,apply
         print(json.dumps(preview(arguments) if method=='priority_preview' else apply(arguments)));return
+    if method in ('preparation_preview','preparation_apply'):
+        from preparation_control import preview,apply
+        print(json.dumps(preview(arguments) if method=='preparation_preview' else apply(arguments)));return
     if method=='monitor_control':
         from monitor_control import change
         print(json.dumps(change(arguments)));return

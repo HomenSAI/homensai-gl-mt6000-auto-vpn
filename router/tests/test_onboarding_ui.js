@@ -58,17 +58,17 @@ function baseInventory(count=2){return {settings:{terms_version:'1',plan_source:
 for(const language of ['en','ru']){
  const inv=baseInventory();inv.settings.detected_router_model='mt3000';
  inv.profiles.push({id:'openvpn:2_3',protocol:'openvpn',name:'Saved only'},
-  {id:'wireguard:peer_99',protocol:'wireguard',name:'Wrong client',interface:'wgclient9',vendor_tunnel_id:'wireguard:wgclient9'});
+  {id:'wireguard:peer_99',protocol:'wireguard',name:'Additional configured client',interface:'wgclient9',vendor_tunnel_id:'wireguard:wgclient9'});
  const f=fixture({language,inventory:inv});f.c.openOnboardingSettings(inv,{version:app.version},'system');
  const values=n=>n.children.map(o=>o.attrs.value).filter(Boolean);
- assert.deepEqual(values(f.field('system.source')),['openvpn:1_1','wireguard:peer_2']);
- assert.deepEqual(values(f.field('system.target')),['wireguard:peer_2']);
+ assert.deepEqual(values(f.field('system.source')),['openvpn:1_1','wireguard:peer_2','wireguard:peer_99']);
+ assert.deepEqual(values(f.field('system.target')),['wireguard:peer_2','wireguard:peer_99']);
  f.set('system.source','wireguard:peer_2');assert.equal(f.field('system.target').value,'','changing primary clears a conflicting reserve, without routing writes');
- assert.deepEqual(values(f.field('system.target')),['openvpn:1_1']);assert(f.button('next').disabled);
+ assert.deepEqual(values(f.field('system.target')),['openvpn:1_1','wireguard:peer_99']);assert(f.button('next').disabled);
  f.set('system.target','openvpn:1_1');assert(!f.button('next').disabled);assert.equal(f.calls.length,0);
  const ambiguous=clean(inv.profiles);ambiguous.push({...ambiguous[0],id:'openvpn:1_2',name:'Duplicate tunnel'});
  assert(!f.c.onboardingPairChannels(ambiguous,inv.settings).some(p=>p.interface==='ovpnclient1'));
- const stopped=clean(inv.profiles);stopped[0].administrative_state='disabled';assert.equal(f.c.onboardingPairChannels(stopped,inv.settings).length,2,'configured clients remain selectable while stopped');
+ const stopped=clean(inv.profiles);stopped[0].administrative_state='disabled';assert.equal(f.c.onboardingPairChannels(stopped,inv.settings).length,3,'all uniquely bound configured clients remain selectable while stopped');
  const unbound=baseInventory();delete unbound.profiles[0].vendor_tunnel_id;const g=fixture({inventory:unbound});g.c.openOnboardingSettings(unbound,{version:app.version},'system');assert(g.button('next').disabled,'unassigned saved profile cannot qualify as a channel');
  g.set('system.defer_pair',true);assert(!g.button('next').disabled,'deferral remains available without enough clients');
 }

@@ -99,6 +99,7 @@ var ERROR_ROWS=[
  ['JOURNAL-INTEGRITY-FAILED','switch','Journal failed its check','Журнал не прошёл проверку','The transaction journal has a wrong checksum.','У журнала транзакций неверная контрольная сумма.','Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.','Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.']
 ];
 var AUTO_NAMES={
+  'GUARD-DEVICE-UNVERIFIED':['VPN interface state unavailable','Состояние VPN-интерфейса недоступно'],
  'EXISTING-TUNNEL-BINDING-UNVERIFIED':['Tunnel binding unverified','Привязка туннеля не проверена'],
  'MT3000-FIRMWARE-UNVERIFIED':['MT3000 firmware unverified','Прошивка MT3000 не проверена'],
  'MT3000-FIREWALL-UNVERIFIED':['MT3000 firewall unverified','Firewall MT3000 не проверен'],
@@ -161,6 +162,8 @@ function persistErrorTableState(){try{sessionStorage.setItem('homensai-vpn-error
   var seen={};ERROR_ROWS.forEach(function(r){seen[r[0]]=true;});
   Object.keys(AUTO_BLOCKERS).forEach(function(code){
     if(seen[code])return;
+    var guide=typeof autoRemedyKey==='function'&&AUTO_REMEDIES[autoRemedyKey(code)];
+    if(!AUTO_NAMES[code]&&guide)AUTO_NAMES[code]=guide.title.slice();
     var nm=AUTO_NAMES[code]||(function(){var w=code.toLowerCase().split('-').join(' ');w=w.charAt(0).toUpperCase()+w.slice(1);return [w,w];})();
     ERROR_ROWS.push([code,'switch',nm[0],nm[1],AUTO_BLOCKERS[code][0],AUTO_BLOCKERS[code][1],AUTO_BLOCKERS[code][0]+' If it is still unclear, open Help → “The Auto button refuses to start”.',AUTO_BLOCKERS[code][1]+' Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».']);
   });
@@ -192,7 +195,7 @@ function renderErrorTable(){
         var expanded=ERROR_TABLE_STATE.open[r[0]]===true;
         var button=(r[6]||r[8])?E('button',{'type':'button','class':'cbi-button','aria-expanded':expanded?'true':'false','click':function(){var open=fixRow.hidden;fixRow.hidden=!open;ERROR_TABLE_STATE.open[r[0]]=open;persistErrorTableState();button.setAttribute('aria-expanded',open?'true':'false');button.textContent=open?bi('Hide','Скрыть'):(r[1]==='journal'?bi('Explanation','Расшифровка'):bi('How to fix','Как исправить'));}},expanded?bi('Hide','Скрыть'):(r[1]==='journal'?bi('Explanation','Расшифровка'):bi('How to fix','Как исправить'))):null;
         table.appendChild(E('tr',{'data-error-code':r[0],'class':ERROR_TABLE_STATE.selected===r[0]?'hv-err-selected':null},[E('td',{},E('code',{},r[0])),E('td',{},E('strong',{},bi(r[2],r[3]))),E('td',{},bi(r[4],r[5])),E('td',{},button||E('span',{'class':'hv-muted'},bi('See the message','См. сообщение')))]));
-        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
+        if(r[6]||r[8]){fixRow=E('tr',{'class':'hv-errfix'},[E('td',{'colspan':'4'},[r[6]?E('p',{},[E('strong',{},bi('How to fix: ','Как исправить: ')),bi(r[6],r[7])]):null,typeof renderAutoRemedy==='function'?renderAutoRemedy(r[0]):null,r[8]?E('p',{'class':'hv-errexample'},[E('strong',{},bi('Example: ','Пример: ')),bi(r[8],r[9])]):null].filter(Boolean))]);fixRow.hidden=!expanded;table.appendChild(fixRow);}
       });
       host.appendChild(table);
     });

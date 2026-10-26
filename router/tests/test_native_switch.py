@@ -55,6 +55,23 @@ class NativeTests(unittest.TestCase):
         # Keep the real History store/rollback checks, with explicit fixture retention.
         retention=patch.object(retention_settings,'configured_days',return_value=7);retention.start();self.addCleanup(retention.stop)
 
+    def test_disabled_removed_client_cannot_break_guard_device_discovery(self):
+        rows=[{'interface':'ovpnclient1','administrative_state':'disabled'},
+              {'interface':'wgclient1','administrative_state':'enabled'},
+              {'interface':'ovpnclient2','administrative_state':'enabled'}]
+        def status(args):
+            self.assertNotIn('network.interface.ovpnclient1',args)
+            return json.dumps({'up':True,'l3_device':args[2].split('.')[-1]}).encode()
+        with patch.object(native,'inventory',return_value={'profiles':rows}),patch.object(native,'command',side_effect=status)as query:
+            self.assertEqual(native.Linux().devices(),['wgclient1','ovpnclient2'])
+            self.assertEqual(query.call_count,2)
+
+    def test_missing_or_malformed_enabled_client_still_blocks_guard_discovery(self):
+        rows=[{'interface':'ovpnclient2','administrative_state':'enabled'}]
+        for reply in (native.subprocess.CalledProcessError(4,['ubus']),b'not-json',b'[]'):
+            with patch.object(native,'inventory',return_value={'profiles':rows}),patch.object(native,'command',side_effect=reply if isinstance(reply,Exception)else None,return_value=reply):
+                with self.assertRaisesRegex(native.Refused,'GUARD-DEVICE-UNVERIFIED'):native.Linux().devices()
+
     def test_exact_supported_policy_and_hash(self):
         data,profiles=fixture();s=native.choose(data,profiles)
         self.assertEqual(s['source_rule'],'a');self.assertEqual(s['target_rule'],'b')

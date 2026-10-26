@@ -15,7 +15,14 @@ function installMinimumSettingsGuard(root){
 }
 function minimumSettingsPair(inventory){
   var s=inventory&&inventory.settings||{};
-  return {source:s.plan_source||'',target:s.plan_target||'',session_loss:s.native_session_loss===true};
+  var rows=onboardingPairChannels(inventory&&inventory.profiles||[],s);
+  function member(role){
+    var anchor=s['plan_'+role+'_tunnel'];
+    if(!anchor)return s['plan_'+role]||'';
+    var matches=rows.filter(function(p){return p.vendor_tunnel_id===anchor;});
+    return matches.length===1?matches[0].id:'';
+  }
+  return {source:member('source'),target:member('target'),session_loss:s.native_session_loss===true};
 }
 function minimumSettingsPairKey(pair){return JSON.stringify([pair.source,pair.target,pair.session_loss===true]);}
 function minimumSettingsPayload(draft,inventory){

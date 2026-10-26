@@ -81,13 +81,16 @@ var PREPARATION_CHECKS={
   'PREP-SFE-AUTOLOAD':['SFE autoload is preserved outside startup','Автозагрузка SFE сохранена вне запуска'],
   'PREP-SFE-RUNTIME':['Software acceleration is not loaded','Программное ускорение не загружено']
 };
+var PREPARATION_ROLE_CHECKS={'PREP-SOURCE-AUTOSTART':['Primary VPN startup control','Управление автозапуском основного VPN'],'PREP-TARGET-AUTOSTART':['Reserve VPN startup control','Управление автозапуском резервного VPN']};
 function preparationModel(status,now){
   var ready=readinessModel(status,now),data=(status&&status.system_readiness||{}).preparation;
   if(!ready.environmentFresh||!data||data.scope!=='persistent-mt3000-preparation')return {state:'unknown',checks:[]};
   var rows=Array.isArray(data.checks)?data.checks:[],seen={},valid=true;
-  rows.forEach(function(row){if(!row||!Object.prototype.hasOwnProperty.call(PREPARATION_CHECKS,row.code)||seen[row.code]||['pass','fail','unknown'].indexOf(row.state)<0)valid=false;else seen[row.code]=row.state;});
+  rows.forEach(function(row){if(!row||!(Object.prototype.hasOwnProperty.call(PREPARATION_CHECKS,row.code)||Object.prototype.hasOwnProperty.call(PREPARATION_ROLE_CHECKS,row.code))||seen[row.code]||['pass','fail','unknown'].indexOf(row.state)<0)valid=false;else seen[row.code]=row.state;});
   if(data.state==='unsupported'&&!rows.length)return {state:'unsupported',checks:[]};
-  if(!valid||rows.length!==Object.keys(PREPARATION_CHECKS).length)return {state:'unknown',checks:[]};
+  var roles=seen['PREP-SOURCE-AUTOSTART']!==undefined||seen['PREP-TARGET-AUTOSTART']!==undefined;
+  var expected=Object.keys(PREPARATION_CHECKS).filter(function(code){return !roles||code!=='PREP-WGCLIENT1-AUTOSTART'&&code!=='PREP-OVPNCLIENT1-AUTOSTART';}).concat(roles?Object.keys(PREPARATION_ROLE_CHECKS):[]);
+  if(!valid||rows.length!==expected.length||expected.some(function(code){return seen[code]===undefined;}))return {state:'unknown',checks:[]};
   return {state:Object.keys(seen).every(function(code){return seen[code]==='pass';})?'pass':'incomplete',checks:rows};
 }
 function renderPreparation(status,now){
@@ -105,12 +108,12 @@ function renderPreparation(status,now){
     'PREP-SFE-RUNTIME':['Checks loaded software acceleration separately from saved settings.','Проверяет загруженное ускорение отдельно от сохранённых настроек.']
   };
   var rows=m.checks.map(function(row){
-    var label=PREPARATION_CHECKS[row.code],detail=meaning[row.code],pass=row.state==='pass';
+    var label=PREPARATION_CHECKS[row.code]||PREPARATION_ROLE_CHECKS[row.code],detail=meaning[row.code]||['Auto manages startup of the selected VPN; independent boot startup must not compete.','Auto управляет запуском выбранного VPN; отдельный запуск при загрузке не должен конкурировать.'],pass=row.state==='pass';
     return E('tr',{'data-preparation-code':row.code},[
       E('td',{},[E('strong',{},bi(label[0],label[1])),E('small',{'style':'display:block;overflow-wrap:anywhere'},row.code)]),
       E('td',{},[E('span',{'class':'hv-check-lamp hv-check-'+(pass?'green':row.state==='fail'?'red':'grey'),'aria-hidden':'true'}),' '+(pass?bi('Ready','Готово'):row.state==='fail'?bi('Needs preparation','Нужна подготовка'):bi('Not verified','Не проверено'))]),
       E('td',{},bi(detail[0],detail[1])),
-      E('td',{},typeof helpLink==='function'?helpLink('router-preparation',bi('Help','Помощь')):bi('See router preparation instructions.','См. инструкцию подготовки роутера.'))]);
+      E('td',{},[typeof helpLink==='function'?helpLink('router-preparation',bi('Help','Помощь')):bi('See router preparation instructions.','См. инструкцию подготовки роутера.'),!pass&&typeof renderAutoRemedy==='function'?renderAutoRemedy(row.code):null].filter(Boolean))]);
   });
   var table=E('div',{'class':'hv-dv-tablewrap','style':'overflow-x:auto'},E('table',{'class':'table hv-preparation-table','data-preparation-table':'1'},[
     E('thead',{},E('tr',{},[bi('Check','Проверка'),bi('State','Состояние'),bi('Meaning','Что означает'),bi('Help','Помощь')].map(function(label){return E('th',{'scope':'col'},label);}))),E('tbody',{},rows)]));
