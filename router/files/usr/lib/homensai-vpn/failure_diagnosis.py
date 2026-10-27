@@ -133,7 +133,7 @@ def explain(status,settings,now):
     from failover_plan import streak
     if not isinstance(settings,dict):settings={}
     from recovery_settings import normalized
-    recovery=normalized(settings);interval=settings.get('interval',30)
+    recovery=normalized(settings);interval=settings.get('interval',10)
     valid_interval=type(interval) is int and 10<=interval<=300
     age=max(30,min(900,interval*3)) if valid_interval else 90
     pair=resolve_pair(status,settings,now,age,max(30,min(600,interval*2)) if valid_interval else 60)

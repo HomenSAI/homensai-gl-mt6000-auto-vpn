@@ -10,6 +10,7 @@
           "inventory",
           "events",
           "priority_preview",
+          "preparation_preview",
           "speed_live"
         ]
       }
@@ -36,6 +37,7 @@
           "setup_speed",
           "telegram_retry",
           "monitor_control",
+          "preparation_apply",
           "priority_apply",
           "setup_recovery",
           "fault_start",

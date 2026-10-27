@@ -33,15 +33,15 @@ A listed code may describe a legacy mode or a guarded refusal; it does not prove
 
 ## DNS-001
 
-Не работает поиск адресов (DNS) / Name lookup fails
+DNS-проверка не прошла / DNS check did not pass
 
-**RU:** Поиск адресов (DNS) не работает, а соединения по IP-адресу работают.
+**RU:** Контрольный DNS-запрос через этот VPN не дал подтверждённого ответа. Другой DNS, кэшированные имена или прямые HTTPS-запросы могут работать; сам код не устанавливает причину.
 
-**EN:** Name lookup (DNS) fails while connections by IP address work.
+**EN:** The control DNS query through this VPN did not produce a validated answer. Other DNS paths, cached names or direct HTTPS may still work; the code alone does not identify the cause.
 
-**Что делать:** Проверьте DNS-сервер VPN-профиля или роутера. Обычно помогает другой DNS (например 1.1.1.1) в VPN-профиле. Если на компьютере работает программа VPN, остановите её на время теста.
+**Что делать:** Повторите проверку и изучите сохранённые результаты DNS/HTTPS, доступность DNS-сервера, маршрутизацию и фильтрацию. Перезапуск профиля согласуйте со штатным Stop/восстановлением Auto.
 
-**Action:** Check the DNS server of the VPN profile or of the router. Another DNS (for example 1.1.1.1) in the VPN profile usually helps. If a VPN program runs on a computer, stop it for the test.
+**Action:** Repeat the check and inspect the saved DNS/HTTPS results, resolver reachability, routing and filtering. Coordinate any profile restart with managed Auto Stop/recovery.
 
 ## VPN-001
 
@@ -69,15 +69,15 @@ VPN отклонил вход / VPN login rejected
 
 ## VPN-003
 
-Туннель поднят, но трафика нет / Tunnel is up but carries nothing
+Недостаточно успешных HTTPS-проверок / HTTPS availability below threshold
 
-**RU:** Туннель подключён, но проверочный трафик через него не проходит. Это не всегда вина сервера: причиной может быть маршрутизация или фильтрация.
+**RU:** Через подключённый VPN успешно прошли менее двух из трёх HTTPS-проверок. Часть трафика может проходить. Сам код не доказывает полное отсутствие доступа в Интернет.
 
-**EN:** The tunnel is connected but the check traffic does not pass through it. It does not always mean a bad server: routing or filtering may be the cause.
+**EN:** Fewer than two of three HTTPS checks succeeded through the connected VPN. Some traffic may still pass. This code alone does not establish complete loss of Internet access.
 
-**Что делать:** Подождите несколько минут (мониторинг повторяет проверку). Затем переподключите профиль или возьмите другой сервер. Если так у всех VPN, проверьте WAN.
+**Что делать:** Посмотрите сохранённое число успешных HTTPS-проверок, результат DNS и сведения об адресах проверки. Повторите проверку; перед переподключением работающего VPN выясните причину повторяющихся сбоев.
 
-**Action:** Wait a few minutes (the monitor repeats the check). Then reconnect the profile or use another server. If all VPNs show it, check the WAN.
+**Action:** Read the saved HTTPS success count, DNS result and endpoint details. Retry the check; investigate repeated failures before reconnecting a working VPN.
 
 ## VPN-004
 
@@ -1147,6 +1147,78 @@ VPN не подключён / VPN not connected
 
 **Action:** Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.
 
+## SPEED-PAUSE-UNVERIFIED
+
+Не удалось проверить паузу / Pause could not be verified
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-BUSY
+
+Пауза ещё завершается / Pause recovery in progress
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-LOST
+
+Условия паузы изменились / Pause ownership changed
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-TIMEOUT
+
+Нет подтверждения паузы / Pause acknowledgement timed out
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-PAUSE-MODE
+
+Состояние Auto не готово к паузе / Auto transition is not ready for pause
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
+## SPEED-CPU-UNKNOWN
+
+Загрузка CPU не прочитана / CPU observation unavailable
+
+**RU:** Тест скорости не может продолжаться при текущих условиях паузы. VPN остаются подключёнными.
+
+**EN:** The speed test cannot continue under the current quiet-window conditions. Existing VPNs stay connected.
+
+**Что делать:** Дождитесь завершения текущей операции и повторите. Ручной Stop не отменяется.
+
+**Action:** Wait for the current operation to finish and retry. A manual Stop is never undone.
+
 ## DEVICE-MODEL-INVALID
 
 Выберите поддерживаемую модель / Choose a supported router model
@@ -1710,6 +1782,30 @@ VPN не подключён / VPN not connected
 **Что делать:** Дождитесь текущих наблюдений; перед запуском Auto может потребоваться новый подтверждённый тест.
 
 **Action:** Wait for current observations; a new verified trial may be needed before Auto can run.
+
+## CHANNEL-UNRELIABLE
+
+Проблема с надёжностью канала / Channel reliability problem
+
+**RU:** За последние 5 минут собственные проверки роутера через этот канал не прошли минимум в 20% циклов (цикл не пройден, если не работает DNS или проходит меньше двух из трёх HTTPS-проверок). Туннель при этом может быть «подключён». Это измеренная доля непройденных проверок, а не ICMP-потеря пакетов; настройки она не меняет.
+
+**EN:** Over the last 5 minutes the router's own checks through this channel failed in at least 20% of the cycles (a cycle fails when DNS fails or fewer than two of three HTTPS checks pass). The tunnel can still show as connected. This is a measured share of failed checks, not an ICMP packet-loss figure, and it changes no setting.
+
+**Что делать:** Следуйте рекомендации: держите трафик на канале с меньшими потерями и замените сервер ненадёжного в «Каналы и серверы»; если теряют оба, сначала проверьте подключение роутера. Запустите тест скорости, чтобы измерить другие серверы.
+
+**Action:** Follow the recommendation: keep traffic on the channel with the lower loss and replace the server of the unreliable one in Channels and servers; if both lose checks, test the router uplink first. Run a speed test to measure other servers.
+
+## RESERVE-NOT-CONNECTED
+
+Резервный канал не подключён / Reserve channel is not connected
+
+**RU:** Резервный клиент включён, но роутер не видит работающего туннеля. Auto не может на него переключиться, основной канал продолжает работать.
+
+**EN:** The reserve client is enabled but the router reports no running tunnel. Auto cannot switch to it, and the primary keeps carrying traffic.
+
+**Что делать:** Auto сам запускает остановленный включённый резерв: не чаще раза в две минуты и четырёх раз за 15 минут. Если он не подключается, проверьте сервер резерва на странице VPN роутера или выберите другой сервер резерва в «Каналы и серверы».
+
+**Action:** Auto starts a stopped enabled reserve itself, at most once per two minutes and four times per 15 minutes. If it still does not connect, check the reserve server in the router VPN page or choose another reserve server in Channels and servers.
 
 ## VENDOR-SAME-TUNNEL
 
@@ -2653,11 +2749,11 @@ Auto выключен / Auto disabled
 
 ## HTTPS-FAILED
 
-Сайты не открываются / Websites do not open
+HTTPS-проверки ниже порога / HTTPS checks below threshold
 
-**RU:** VPN подключён, но открыть сайт через него не получается.
+**RU:** VPN не прошёл достаточное число HTTPS-проверок. Возможна частичная доступность; смотрите сохранённое число ответов и результат DNS.
 
-**EN:** The VPN is connected but opening a website through it fails.
+**EN:** The VPN did not pass enough HTTPS checks. This may be partial availability; read the saved count and DNS result.
 
 **Что делать:** См. VPN-003.
 
@@ -4441,6 +4537,18 @@ Python слишком старый / Python is too old
 
 **Action:** Repeat; try a shorter duration.
 
+## PREPARATION-*
+
+Действие подготовки роутера / Router preparation action
+
+**RU:** Проверенное действие подготовки выполнено либо отклонено с указанным кодом. Запись настройки не запускает Auto и не доказывает выполнение всех условий.
+
+**EN:** A reviewed preparation action was verified or refused with this specific code. A successful setting write does not start Auto or prove all prerequisites.
+
+**Что делать:** Прочитайте конкретную причину у кнопки. До изменений остановите Auto и завершите восстановление. После неподтверждённой записи сохраните приватный журнал preparation-changes; не удаляйте его и не повторяйте вслепую. Restart-required означает отдельную осознанную перезагрузку роутера перед Auto.
+
+**Action:** Read the exact reason shown beside the button. Stop and complete recovery before edits. After an unconfirmed write retain the private preparation-changes record; do not delete it or repeat blindly. Restart-required means a separate deliberate router reboot before Auto.
+
 ## LATENCY-*
 
 История задержки недоступна / Delay history unavailable
@@ -4756,6 +4864,18 @@ Python слишком старый / Python is too old
 **Что делать:** Обратитесь в поддержку с кодом.
 
 **Action:** Contact support with the code.
+
+## GUARD-DEVICE-UNVERIFIED
+
+Состояние VPN-интерфейса недоступно / VPN interface state unavailable
+
+**RU:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются.
+
+**EN:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded.
+
+**Что делать:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## LAN-TRIAL-REQUIRED
 
@@ -5441,6 +5561,222 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Action:** The primary recovered and Auto returned to it. If it is still unclear, open Help → “The Auto button refuses to start”.
 
+## PAIR-EXTERNAL-POLICY-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-EXTERNAL-NETWORK-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-EXTERNAL-CONFIG-CHANGE
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-RECOVERY-REQUIRED
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-STATE-UNVERIFIED
+
+Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-PROFILES-UNVERIFIED
+
+Проверьте текущую пару VPN / Review the current VPN pair
+
+**RU:** Проверьте текущую пару VPN
+
+**EN:** Review the current VPN pair
+
+**Что делать:** Проверьте текущую пару VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review the current VPN pair If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PAIR-PREPARATION-REQUIRED
+
+Завершите подготовку роутера / Complete router preparation
+
+**RU:** Завершите подготовку роутера
+
+**EN:** Complete router preparation
+
+**Что делать:** Завершите подготовку роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Complete router preparation If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-HNAT-CONFIG
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-WGCLIENT1-AUTOSTART
+
+Проверьте автозапуск wgclient1 / Review wgclient1 startup
+
+**RU:** Проверьте автозапуск wgclient1
+
+**EN:** Review wgclient1 startup
+
+**Что делать:** Проверьте автозапуск wgclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review wgclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-OVPNCLIENT1-AUTOSTART
+
+Проверьте автозапуск ovpnclient1 / Review ovpnclient1 startup
+
+**RU:** Проверьте автозапуск ovpnclient1
+
+**EN:** Review ovpnclient1 startup
+
+**Что делать:** Проверьте автозапуск ovpnclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Review ovpnclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-STOCK-VPN-BOOT
+
+Отключите конкурирующий автозапуск VPN / Disable competing VPN startup
+
+**RU:** Отключите конкурирующий автозапуск VPN
+
+**EN:** Disable competing VPN startup
+
+**Что делать:** Отключите конкурирующий автозапуск VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable competing VPN startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-BOOT
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-AUTOLOAD
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SFE-RUNTIME
+
+Отключите сетевое ускорение / Disable network acceleration
+
+**RU:** Отключите сетевое ускорение
+
+**EN:** Disable network acceleration
+
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREPARATION-RESTART-REQUIRED
+
+Нужна перезагрузка роутера / Router restart required
+
+**RU:** Нужна перезагрузка роутера
+
+**EN:** Router restart required
+
+**Что делать:** Нужна перезагрузка роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Router restart required If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREPARATION-RECOVERY-REQUIRED
+
+Завершите подготовку роутера / Complete router preparation
+
+**RU:** Нужно восстановление предыдущей сессии Auto
+
+**EN:** The previous Auto session needs recovery
+
+**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-SOURCE-AUTOSTART
+
+Отключите автозапуск основного VPN / Disable primary VPN boot startup
+
+**RU:** Отключите автозапуск основного VPN
+
+**EN:** Disable primary VPN boot startup
+
+**Что делать:** Отключите автозапуск основного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable primary VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
+## PREP-TARGET-AUTOSTART
+
+Отключите автозапуск резервного VPN / Disable reserve VPN boot startup
+
+**RU:** Отключите автозапуск резервного VPN
+
+**EN:** Disable reserve VPN boot startup
+
+**Что делать:** Отключите автозапуск резервного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+
+**Action:** Disable reserve VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
+
 ## GL-ADAPTER-UNVERIFIED
 
 Менеджер VPN GL.iNet / GL.iNet VPN manager
@@ -5545,9 +5881,9 @@ Kill Switch / Kill Switch
 
 **EN:** The monitor received a result without a diagnostic error. This records channel availability at that observation; it does not mean traffic switched or that Auto was activated.
 
-**Что делать:** Проверка канала завершена без ошибки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+**Что делать:** Условие доступности канала выполнено. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
-**Action:** Channel check completed without an error. Read the separate saved reason code if present; observation and a confirmed route change are different.
+**Action:** Channel availability threshold was met. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-CHECK-FAILED
 
@@ -5609,17 +5945,17 @@ Kill Switch / Kill Switch
 
 **Action:** The controller is observing the VPN channels. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
-## EVENT-AUTO-STARTING
+## EVENT-START-CONFIRMATION-PENDING
 
-Запуск Auto / Auto starting
+Запуск ожидает подтверждения / Start awaiting confirmation
 
-**RU:** Запуск принят и ещё подготавливается. Дождитесь фактического завершения или конкретного отказа; запрос не равен работающему сеансу.
+**RU:** Запрос Start сохранён, пока ещё видно прежнее остановленное состояние. Это ожидание запуска, а не новая команда Stop.
 
-**EN:** Startup was accepted and is still being prepared. Wait for its actual completion or a specific refusal; a request is not a running session.
+**EN:** The Start request is recorded while the previous stopped state is still visible. This is not another Stop command.
 
-**Что делать:** Выполняется запуск Auto. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+**Что делать:** Запрос включения принят; ожидается подтверждение контроллера. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
-**Action:** Auto startup is in progress. Read the separate saved reason code if present; observation and a confirmed route change are different.
+**Action:** Start accepted; waiting for the controller. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-CHANNEL-PREPARATION
 
@@ -5920,3 +6256,15 @@ Auto работает / Auto running
 **Что делать:** Фактический результат операции ещё не проверен. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
 **Action:** The operation result has not been verified. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-VENDOR-WAIT
+
+Ожидание операции роутера / Waiting for router operation
+
+**RU:** Обнаружен обработчик или блокировка GL.iNet. Контроллер временно откладывает решения о переключении; сама запись не подтверждает отказ VPN. Конкретный обработчик мог не сохраниться в истории.
+
+**EN:** A GL.iNet worker or lock was observed. The controller defers switching decisions until it clears; the record alone does not establish a VPN outage. The exact worker may not have been retained.
+
+**Что делать:** Ожидание завершения штатной сетевой операции или снятия её блокировки. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Waiting for the stock network operation or lock to clear. Read the separate saved reason code if present; observation and a confirmed route change are different.

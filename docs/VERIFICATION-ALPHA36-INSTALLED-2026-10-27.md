@@ -1,0 +1,5 @@
+# Alpha36: Auto operation diagram in Help
+
+A responsive diagram in Help presents monitoring, switching thresholds, safety limits, reserve dwell and return. It uses the current router inventory, shows missing values as dashes, and describes the hold-reserve policy correctly. EN/RU, desktop/mobile and light/dark were checked in native Chromium using synthetic RPC, including measured contrast. All 64 UI suites passed. Two isolated runtime builds produced identical packages; full dual-runtime application CI was not repeated for this interface change.
+
+The dedicated MT3000 was updated to 0.9.1-alpha36-1 after a verified encrypted backup. Its HTTP served the selected updated module and stylesheet, and the previously enabled Auto returned to RUNNING / OBSERVING. Both channels passed router DNS and 2/3 HTTPS checks; protected settings and routes were preserved. A second encrypted backup was independently verified. The physical router page was not driven in a browser; no real failover or LAN-client test was performed. [Receipt](../qa/MT3000-ALPHA36-2026-10-27.json).

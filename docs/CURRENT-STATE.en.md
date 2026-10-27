@@ -1,82 +1,29 @@
 <!-- doc-role: current-canonical -->
-# Current behavior and user guide
+# Auto VPN — current source behavior
 
-> Source version: **0.9.1-alpha25**. This describes the source tree, not an automatic installation claim. Read [actual delivered state](CURRENT-STATUS.md) and its dated receipts.
+Current source: **0.9.1-alpha41**, package **0.9.1-alpha41-1** installed on the MT3000 with Auto ON ([device proof](VERIFICATION-ALPHA41-INSTALLED-2026-10-27.md)). Channels now show a reliability problem with the measured share of failed checks, a catalogue code CHANNEL-UNRELIABLE and a recommendation computed from the statistics. Auto now starts an enabled but stopped channel itself, tolerates the stock client's firewall bookkeeping options and reports an unconnected reserve as RESERVE-NOT-CONNECTED; alpha37/alpha38 were installed first and exposed the firewall and stale-client issues, see the status page. Alpha39 is installed with Auto ON on the MT3000; [device proof](VERIFICATION-ALPHA39-INSTALLED-2026-10-27.md). [Current state](CURRENT-STATUS.md) · [Prior device proof](VERIFICATION-ALPHA36-INSTALLED-2026-10-27.md).
 
-## Supported scope and three different modes
+Speed tests now request a bounded cooperative pause from the Auto controller and background monitor. Measurement starts only after both active processes acknowledge a safe loop boundary. VPN connections, routing, Auto intent and service settings are preserved. CPU admission uses fresh CPU accounting after the pause, not minute load average. Normal completion, failure, cancellation or worker loss withdraw the pause; monitoring obtains a fresh observation before Auto continues. A manual Stop is never undone. Manual switching is refused during the quiet window. Both selected speed tests completed on the installed alpha33 with a verified pause and automatic restoration; see the physical receipt.
 
-Prepared continuous Auto is qualified on the documented MT3000/GL.iNet4.11.0 setup. It manages two existing independent clients using router-originated IPv4 DNS/HTTPS evidence. Architecture `all`, the model selector, Connected and a green dependency row do not establish switching readiness. MT6000 continuous/arbitrary firmware and independent LAN/IPv6/KillSwitch acceptance remain separate.
 
-The optional **client-confirmed bounded trial** uses a real Windows witness and its own certificate/confirmation. A router-hosted namespace is another proof scope. Neither must be confused with normal router-probed Auto, which does not need a LAN certificate. See [mode details](CLIENT-TRIAL.md).
+Minimum remains accessible with Auto OFF, unknown data or errors. It shows the real Auto state, confirmed traffic channel and independent reserve health. Its button opens the former Overview. The expanded interface retains its twelve destinations, legacy page content, additional-navigation group, settings and A/B/C appearance selection. Return to Minimum reuses the same actual Auto button and action label without cloning handlers. Old beta nested links map to the corresponding legacy pages. Navigation does not run command RPCs.
 
-## Access, terms, training and setup
+Start requests are pending until the controller confirms them. A preflight refusal consumes only the matching accepted request and reports FAILED plus the specific BLOCKED reason, allowing retry without indefinite Starting. A late failure cannot overwrite a newer Start or Stop. Stop retains the existing recovery contract. Restart requires explicit Start.
 
-Use the intended device's verified address/path, not simply any router answering the same private IP. [Overlapping networks](LOCAL-ACCESS.md) can route a browser to another adapter. A temporary browser gateway does not become a LAN-witness address or remove authentication.
+The pair uses exact, distinct selected vendor tunnel identities, including a second OpenVPN client slot after channels have been removed. Readiness, startup preparation, firmware-zone checks and network compare-and-swap use those identities. Disabled historical profiles do not consume the active-probe limit. A healthy standby is not a failed traffic path; old observations cannot confirm current selection.
 
-Current terms appear until the person accepts that terms version on this router. Acceptance is preserved; a new package version alone does not mean new terms. The unchanged versioned text and current qualification are distinct. AI agents never accept it for the owner. Training offers eight local SVG scenes with Play/Pause/step/reset and a quiz; they send no router-control RPC and do not certify readiness.
+Reviewed preparation actions show the exact selected source/target interface. They change only bounded startup/acceleration settings, record original values and verify readback. They never restart the network or force-unload acceleration. Runtime blockers and restart requirements remain enforced. [Control effects](CONTROL-AND-SETUP.md) · [Codes](ERROR_CODES.md).
 
-[The eight-step wizard](FIRST-RUN-SETUP.md) covers appearance/model, monitoring, existing clients, names/priorities, recovery, speed, Telegram and review. Next edits a draft; only reviewed Save persists it. Cancel/reload/dashboard escape have different draft semantics. Saving never starts Auto or sends a Telegram test automatically.
+Existing monitoring, history, speed tests, terms, Telegram, training, keyboard focus and scroll behavior remain. Speed and fault tests never run on navigation. Artificial fault injection remains in test tooling. Terms acceptance belongs to the person and is preserved when the terms version is unchanged. Secrets stay on the router.
 
-Choose roles for already assigned client profiles. Stock GL.iNet owns servers, protocol bindings and credentials. Two saved servers in one client are not independent channels. Change stock configuration only after managed recovery, then refresh and wait for current identity-bound evidence. Saving the pair itself is application metadata; explicit prepared Start can enable managed clients and select policy.
+Continuous router-probed IPv4 Auto remains qualified only for the documented dedicated MT3000 / GL.iNet 4.11.0 arrangement. Router DNS/HTTPS success is not external LAN, IPv6, physical failover or unattended endurance acceptance. [Client trial](CLIENT-TRIAL.md) · [Recovery](../router-test-kit/EMERGENCY.md).
 
-## Overview and operation
+[History and retention / История и сроки хранения](HISTORY-RETENTION.md).
 
-Auto is the first block, monitoring at upper right and Check VPN now alongside. Check requests observations without selecting a channel. Start requires the current mode's readiness and waits for actual STARTING→RUNNING/selection/health; queued ACK is not completion. Monitoring is independent of Auto. The one-second log clock does not accelerate network probes, and startup can temporarily use a faster measurement cadence.
+Diagnostics distinguish a partial HTTPS quorum failure from zero validated HTTPS responses and unavailable detail. Per-endpoint status is recorded without raw exceptions or credentials; an unsupported HTTP endpoint is a check-endpoint fault. Old incidents are never explained with today's profile state. Same-measurement incident/monitor rows are correlated only with retained matching timestamps. Vendor-worker contention is a temporary wait; an accepted Start with an old STOPPED observation is shown as pending Start. The diagnostic reference table wraps codes, descriptions and open explanations within the viewport, with a stacked mobile layout.
 
-Manual selection can work while Auto is on. It does not redefine which role is main. A working reserve is normal; return follows saved policy, fresh primary readiness and operator hold. Recommendation by lower comparable successful HTTPS RTT is a disclosure and never applies a route. HTTPS RTT is not ICMP ping; failed/gapped samples are not filled in as zeros.
+The final alpha33 observer preserves a bounded allowlist of endpoint diagnostics through the identity check and discards them with the rest of old-identity health on a rebind.
 
-Normal Stop revokes pending startup and performs managed restoration. Confirm the actual outcome: retained reserve/unverified recovery is not restored original traffic. Continuous Auto requires explicit Start after restart. [Control effects](CONTROL-AND-SETUP.md) · [Recovery](../router-test-kit/EMERGENCY.md).
+Desktop appearance C uses an 84 px sidebar, a compact scrollbar, and an icon-only Advanced menu control with its full localized accessible name and tooltip. The control retains keyboard focus, expansion state and the existing destinations. Appearances A/B and mobile retain the text label. Alpha34 installation and verification are recorded separately.
 
-## Channels, history and symbols
-
-Role cards keep main left/top, reserve right/bottom. Current-check tables and pinned service rows put the working channel first. The pair is visible; other cards fold. Server checks and speed/ranking start with five rows, full search/sort and disclosure.
-
-The live log starts with monitor/Auto, then working/waiting or failed channels. Real new events appear at top; consecutive repeats share a time range/count. A→B→A stays distinct. Events/saved history starts with20recent rows and expands; search/sort use the complete downloaded retained snapshot, not just the visible rows.
-
-Main/reserve identity is retained at event time before server/protocol/code. Later pair changes do not relabel it. M and R circles show direction: yellow pending, confirmed green selected/other red. A standalone failure marks only its own role, without inventing a switch or other health. Chart blue main/orange reserve count outage episodes once; failed checks and attempts are separate counters. Legacy missing roles/results remain disclosed rather than guessed.
-
-[Retention](HISTORY-RETENTION.md): choose1–2000browser observations and1–7detail days in setup step2 or Monitoring and history retention. Pruning preserves separate monthly/lifetime counters; increasing the period cannot recover deleted detail. Route charts stay within1–24h; latency supports1–168h with a7day pan horizon within configured1–7days. First data can take longer with many timed-out profiles; there is no universal one-second network-freshness promise.
-
-## Tests, help and reports
-
-The controlled fault test automatically chooses the current working channel, either role. It revalidates private pair/policy/health and consent, drops that tunnel's IPv4 traffic within its selected bound, and reports success only after fresh alternate-route confirmation. It does not stop the VPN service or isolate another profile by name. Early Stop removes the artificial block. Timeout/expiry alone is not success; normal thresholds, cooldown and budgets still matter.
-
-[LAN helper](LAN-HELPER.en.md): SelfTest offline, CheckOnly prerequisites, ProbeOnly actual bound data, full mode a separately authorized router-changing trial. The control path is checked before credentials/RPC; no host network settings are automatically repaired. [Full built-in Help](BUILTIN-HELP.en.md), [codes](ERROR_CODES.md) and [AI installation prompt](AI-INSTALL.en.md) are synchronized with runtime sources.
-
-[Install one chosen release](INSTALL.en.md) using matching immutable package/SHA256/evidence/kit; do not downgrade newer code. Preserve a verified private encrypted backup. Publication, unit/DOM/model tests, actual VM, actual device, native browser, client traffic and external AI-model execution are distinct evidence. [Tested environment](TESTED-ENVIRONMENT.en.md) · [verification meanings](VERIFICATION.md).
-
-## Speed tests
-
-The Test speed button opens a review with selected connected servers and payload quota. If tests are off, Enable and run test saves the current limits with manual tests enabled and auto-new OFF, then queues the test only after confirmed saving. Failed enable never starts a test. CPU, traffic, cooldown, quota and route checks remain enforced. Download/upload sample history appears below the server table, with server/period selection and gaps for failures; no live throughput is invented.
-
-## Help learning and event explanations
-
-[Help](TRAINING.en.md) is visible immediately after Settings in all layouts, including Calm. Its lazy embedded course has8illustrated lessons and11questions, direct lesson/question jumps and a result table. Only checked answers earn credit; first-attempt/current scores and check counts are separate. Review repeats only wrong/unanswered questions, retaining correct answers. Training never invokes router controls.
-
-Saved/live events use human state labels and clickable dictionary entries. Successful checks, recovery, requests, preparation, application, confirmation and retained-reserve transaction states are different; a successful check is not a switch and a retained reserve does not imply global AutoOFF. Separate recorded causes link to their own explanations. Missing legacy detail and contradictory records are explained without inventing historical routing or actors.
-
-## Startup card / Стартовая карточка
-
-The simplified interface is available whenever Auto is confirmed on, regardless of setup/test completion flags or individual channel health. Incomplete setup cannot block enabled Auto; explicit full-menu/deep links remain available. The original Auto button forwards to the existing controller action. Primary is above reserve, red is softened 50%, and stale data returns to full management. Physical installation acceptance is recorded separately.
-
-Выбранная карточка появляется только после условий, завершённого мастера, подтверждённых проверок текущей пары и свежего подтверждения работающего Auto/маршрута. Исходная кнопка использует существующее управление. Основной выше резерва; красный ослаблен50%. Неполная настройка не блокирует уже включённый Auto; неподтверждённое состояние не выдаётся за включённый режим. [Подробности](SIMPLE-HOME-2026-10-25.md).
-
-## Full-menu shortcut / Переход из полного меню
-
-The page title now has a Simplified interface button on its right. It uses the same current readiness gate as the home screen, updates with status and rechecks at click time. If unavailable, a readable explanation states the missing step. No configuration or Auto command is issued by this navigation. The skip link is fully clipped until keyboard focus, then fully visible above the fixed router navigation. Completed-step text stays opaque.
-
-Справа от заголовка доступна кнопка «Упрощённый интерфейс». Она использует прежний строгий допуск и проверяет его заново перед переходом. Если подготовка не завершена, видна конкретная причина. Кнопка не запускает Auto и не сохраняет настройки. Обрезанная ссылка вверху слева исправлена; выполненные шаги читаемы.
-
-## Enabled-Auto access / Доступ при включённом Auto
-
-Auto ON grants access even if initial setup is incomplete. Auto OFF or unconfirmed status shows a red shortcut with a setup/enable tooltip on hover, keyboard focus or tap; Escape dismisses it. Clicking an unavailable shortcut never starts Auto. Channel failures/transitions are displayed honestly inside the card rather than denying access. The existing controller start requirements and terms acceptance are unchanged.
-
-При включённом Auto доступ открыт независимо от завершённости настройки. При выключенном/неподтверждённом режиме кнопка красная; наведение, фокус и тап показывают подсказку о настройке и включении Auto, Escape скрывает её. Нажатие не запускает Auto автоматически.
-
-See [combined owner batch](OWNER-BATCH-ALPHA22-2026-10-25.md) for the current thirteen interface corrections.
-
-See [live speed panels](LIVE-SPEED-ALPHA23-2026-10-25.md) for current measured download/upload behavior.
-
-Training answer selection preserves the current question, scroll and exact focused checkbox; checking an answer still grades only on explicit action. Выбор ответов сохраняет текущий вопрос, прокрутку и фокус; оценка выставляется только по явному нажатию проверки.
-
-All internal learning buttons preserve viewport through grading, question navigation, contents/results/retries and scene updates. Все внутренние кнопки обучения сохраняют положение страницы, включая проверку ответа, переходы, результаты и схемы.
+Settings → Auto switching rules combines the check interval, source failure and reserve-success thresholds, cooldown, minimum reserve dwell, rolling forward-attempt limit/window, primary return successes/stability and return policy. Defaults for new configuration: 10 s, 3 failures, 2 reserve checks, 60 s cooldown/dwell, 3 attempts per 15 minutes, 2 primary checks over at least 30 s, automatic healthy-primary return. Saved existing values are preserved on upgrade. User values are range checked and reviewed before a single own-config save. Stop Auto and finish recovery before saving; saving never starts Auto. Attempt history for the entire maximum 15-minute window is retained across policy changes and shared with manual forward selection; Stop and return remain available.

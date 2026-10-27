@@ -1,15 +1,24 @@
+## Alpha24 quiz position / Позиция чекбоксов
+
+Internal training buttons preserve scroll and meaningful focus through grading, navigation, results, retries, scenes and Help course toggles. Installed on MT3000; AutoONconfirmedreserve.57UI suites and exact dual-runtime CI passed. [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA25-2026-10-25.md). Native browser clicks unverified.
+
+## Alpha24 quiz position / Позиция чекбоксов
+
+Training checkbox selection preserves DOM, question, scroll and focus, including polling. Installed on MT3000; AutoONconfirmedreserve.56UI suites and exact dual-runtime CI passed. [GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA24-2026-10-25.md). Native browser clicks unverified.
+
+## Alpha23 live speed / Текущая скорость
+
+Measured download/upload graphs for primary and reserve,1s lightweight updates. Installed and verified with an actual bounded two-VPN test on MT3000; AutoONconfirmedreserve. [GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA23-2026-10-25.md). Native browser visual unverified.
+
+## Alpha22 combined owner batch / Общая партия
+
+All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) — published; four assets per service downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
+
 # HomenS.AI Auto VPN
-
-## Проверено и работает / Tested and operational
-
-**Русский:** система **протестирована и работает на проверенной конфигурации GL-MT3000 с прошивкой GL.iNet 4.11.0**. Текущая проверенная версия — **0.9.1-alpha25** (prerelease). Подтверждены запуск Auto, работа через резервный VPN, DNS/HTTPS обоих каналов, сохранность настроек и истории. Пройдены CI двух сред и 57 наборов UI-проверок; детали пропусков тестов сохранены в отчётах. Нативная визуальная проверка и клики браузера отдельно не подтверждены.
-
-**English:** the system is **tested and operational on the verified GL-MT3000 configuration running GL.iNet firmware 4.11.0**. The current verified version is **0.9.1-alpha25** (prerelease). Validation confirmed Auto startup, the reserve VPN path, DNS/HTTPS through both channels, and preservation of settings and history. Dual-runtime CI and 57 UI suites passed; per-runtime skips are recorded in the reports. Native browser visual/click acceptance remains unverified.
-
-[Проверки / Verification](docs/MAIN-VALIDATION-2026-10-25.md) · [QA](qa/LEARN-ACTIONS-ALPHA25-2026-10-25.json) · [MT3000](qa/MT3000-ALPHA25-2026-10-25.json) · [Download / Скачать alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25)
 
 [Русский](README.ru.md) · [English](README.md)
 
+Текущая **0.9.1-alpha21** установлена на MT3000, Auto включён на резерве. Упрощённый интерфейс доступен при включённом Auto независимо от отметок мастера; при выключенном режиме кнопка красная с подсказкой. [Отчёт](docs/VERIFICATION-ALPHA21-2026-10-25.md) · [Состояние](docs/CURRENT-STATUS.md).
 
 Приложение для наблюдения за существующей парой OpenVPN/WireGuard и переключения подтверждённого маршрута. Восемь уроков содержат интерактивные схемы с запуском, паузой и пошаговым просмотром.
 

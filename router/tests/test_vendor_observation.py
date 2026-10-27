@@ -32,6 +32,18 @@ def measure(p,**extra):
 
 
 class VendorObservationTests(unittest.TestCase):
+    def test_endpoint_details_reach_status_only_for_matching_identity_and_without_extra_fields(self):
+        p=profile();data=inventory(p);observer=VendorObserver()
+        measured=measure(p,probe_checks=[{'target':'dns.quad9.net','result':'http-unsupported','http_status':505,'elapsed_ms':120,'token':'PRIVATE'},
+              {'target':'dns.google','result':'ok','http_status':200,'elapsed_ms':80},
+              {'target':'unknown-private-host','result':'ok','password':'PRIVATE'}])
+        _,rows=observer.observe(data,data,[measured],1000)
+        self.assertEqual(len(rows[0]['probe_checks']),2)
+        self.assertEqual(rows[0]['probe_checks'][0]['http_status'],505)
+        self.assertNotIn('PRIVATE',json.dumps(rows));self.assertNotIn('unknown-private-host',json.dumps(rows))
+        _,changed=observer.observe(data,inventory(profile(2)),[measured],1030)
+        self.assertNotIn('probe_checks',changed[0])
+
     def test_provider_group_does_not_merge_two_independent_logical_tunnels(self):
         first=profile();second=profile(2,'wgclient2')
         observed,_=VendorObserver().observe(inventory(first,second),inventory(first,second),[],1000)

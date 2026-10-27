@@ -258,5 +258,28 @@ class TunnelCoordination(unittest.TestCase):
             else:
                 self.assertNotIn('PROFILE-IDENTITY-CHANGED',blockers);self.assertIsNotNone(selection)
 
+    def test_stopped_reserve_has_its_own_blocker_and_is_not_a_changed_profile(self):
+        backend=Backend();now=1000
+        data={'profiles':copy.deepcopy(backend.profiles),'servers':[]}
+        for down,expected in (('target','RESERVE-NOT-CONNECTED'),('source',None)):
+            status=attach({'profiles':copy.deepcopy(backend.profiles),'samples':[]},now)
+            for index,row in enumerate(status['profiles']):row.update(device='vpn'+str(index),mark=index+1,table=str(100+index),ifindex=index+10)
+            interface=backend.selection[down]['interface']
+            for row in status['profiles']:
+                if row['interface']==interface:
+                    row['code']='VPN-001'
+                    for key in ('device','mark','table','ifindex'):row.pop(key)
+            router=native.Linux()
+            def binding(logical):
+                row=next(row for row in status['profiles'] if row['interface']==logical)
+                if logical==interface:return {'code':'VPN-001'}
+                value={key:row[key] for key in ('device','mark','table','ifindex')};value['code']=None
+                return value
+            with patch.object(router,'policy',return_value=backend.data),patch.object(router,'acceleration',return_value={'loaded':[],'hnat_runtime':'disabled'}),patch.object(native,'inventory',return_value=data),patch.object(native,'read_json',return_value=status),patch.object(native,'route_binding',side_effect=binding),patch.object(native.time,'time',return_value=now),patch.object(native,'command',return_value=json.dumps({'board_name':'glinet,gl-mt6000'}).encode()):
+                blockers,selection=router.diagnostic()
+            self.assertNotIn('PROFILE-IDENTITY-CHANGED',blockers)
+            if expected:self.assertIn(expected,blockers);self.assertIsNone(selection)
+            else:self.assertNotIn('RESERVE-NOT-CONNECTED',blockers)
+
 
 if __name__=='__main__':unittest.main()

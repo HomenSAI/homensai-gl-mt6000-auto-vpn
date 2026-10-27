@@ -6,8 +6,8 @@ var JOURNAL_TYPES={
       "Проверка прошла"
     ],
     "message": [
-      "Channel check completed without an error",
-      "Проверка канала завершена без ошибки"
+      "Channel availability threshold was met",
+      "Условие доступности канала выполнено"
     ],
     "meaning": [
       "The monitor received a result without a diagnostic error. This records channel availability at that observation; it does not mean traffic switched or that Auto was activated.",
@@ -423,7 +423,10 @@ function journalCodeRow(code){
   if(typeof ERROR_ROWS==='undefined'||typeof code!=='string')return null;
   return ERROR_ROWS.find(function(r){return r[0]===code;})||ERROR_ROWS.find(function(r){return r[0].endsWith('*')&&code.indexOf(r[0].slice(0,-1))===0;})||null;
 }
+JOURNAL_TYPES.STARTING={code:'EVENT-START-CONFIRMATION-PENDING',label:['Start awaiting confirmation','Запуск ожидает подтверждения'],message:['Start accepted; waiting for the controller','Запрос включения принят; ожидается подтверждение контроллера'],meaning:['The Start request is recorded while the previous stopped state is still visible. This is not another Stop command.','Запрос Start сохранён, пока ещё видно прежнее остановленное состояние. Это ожидание запуска, а не новая команда Stop.'],level:'warning'};
+JOURNAL_TYPES.VENDOR_WAIT={code:'EVENT-VENDOR-WAIT',label:['Waiting for router operation','Ожидание операции роутера'],message:['Waiting for the stock network operation or lock to clear','Ожидание завершения штатной сетевой операции или снятия её блокировки'],meaning:['A GL.iNet worker or lock was observed. The controller defers switching decisions until it clears; the record alone does not establish a VPN outage. The exact worker may not have been retained.','Обнаружен обработчик или блокировка GL.iNet. Контроллер временно откладывает решения о переключении; сама запись не подтверждает отказ VPN. Конкретный обработчик мог не сохраниться в истории.'],level:'warning'};
 function journalDefinition(entry){
+  if(entry.state==='BLOCKED'&&entry.code==='VENDOR-WORKER-BUSY')return JOURNAL_TYPES.VENDOR_WAIT;
   if((entry.state==='OK'||entry.code==='OK')&&(entry.state==='FAILURE'||entry.kind==='FAILURE'||entry.state==='OK'&&entry.code&&entry.code!=='OK'&&entry.level==='error'))return JOURNAL_TYPES.CONFLICT;
   if(entry.return_primary===true||entry.state==='ROLLED-BACK'&&entry.original_restored===true)return JOURNAL_TYPES.RETURNED;
   if(JOURNAL_TYPES[entry.state])return JOURNAL_TYPES[entry.state];
@@ -497,6 +500,7 @@ function journalCurrentLatency(p,status,now){
 function journalMessage(entry,status,hideCode){
   var t=journalDefinition(entry),text=bi(t.message[0],t.message[1]);
   var profiles=Array.isArray(status.profiles)?status.profiles:[],p=profiles.find(function(p){return p.id===entry.profile;});
+  if(entry.code==='VPN-003'&&entry.probe)text=entry.probe.https_success>0?bi('HTTPS checks passed partially; some traffic is passing','HTTPS-проверки прошли частично; часть трафика проходит'):bi('HTTPS availability was not confirmed by this check','Эта проверка не подтвердила HTTPS-доступность');
   if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')text=entry.role==='source'?bi('Connection restored on the primary channel','Соединение восстановлено на основном канале'):entry.role==='target'?bi('Connection restored on the reserve channel','Соединение восстановлено на резервном канале'):bi('Connection restored · channel was not saved in this record','Соединение восстановлено · канал не сохранён в этой записи');
   else if(entry.profile)text=(entry.role==='source'?bi('Primary channel','Основной канал'):entry.role==='target'?bi('Reserve channel','Резервный канал'):bi('VPN profile','VPN-профиль'))+' — '+text;
   if(entry.state==='APPLYING')text=bi('Switch: primary → reserve','Переход: основной → резервный');
@@ -505,6 +509,10 @@ function journalMessage(entry,status,hideCode){
   var sourced=entry.origin==='control'||entry.action_source||['APPLYING','RESTORING','COMMITTED','ROLLED-BACK','STOPPED'].indexOf(entry.state)>=0;
   var switching=entry.return_primary===true||['APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE','RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0;
   var code=!hideCode&&entry.code&&entry.code!=='OK'&&entry.code!==entry.state?' · '+entry.code:'';
+  if(entry.probe){
+    text+=' · HTTPS '+entry.probe.https_success+'/3 · '+(entry.probe.dns_ok===true?bi('DNS passed','DNS прошёл'):entry.probe.dns_ok===false?bi('DNS failed','DNS не прошёл'):bi('DNS result unavailable','Результат DNS не сохранён'));
+    entry.probe.checks.filter(function(c){return c.result==='http-unsupported';}).forEach(function(c){text+=' · '+bi('Check endpoint incompatible: ','Несовместимый проверочный адрес: ')+c.target+(c.http_status?' (HTTP '+c.http_status+')':'');});
+  }
   return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+code;
 }
 function journalDescriptionContent(entry,status,extra){
@@ -514,6 +522,27 @@ function journalDescriptionContent(entry,status,extra){
     nodes.push(' · ',E('a',{'href':'#events','class':'hv-errlink','data-journal-cause':target,'title':bi('Explain the recorded diagnostic code','Расшифровать сохранённый диагностический код'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(target);}},entry.code));
   }
   return E('span',{'class':'hv-journal-description-content'},nodes);
+}
+function journalProbeSnapshot(e,profile,status,code){
+  if(!code&&(e.kind==='FAILURE'||e.state==='FAILURE'))return null;
+  if(!profile||['VPN-001','VPN-003','DNS-001','OK',null].indexOf(code)<0)return null;
+  var expected=code==='OK'?null:code;
+  function sameCode(r){return (r.code==='OK'?null:r.code||null)===expected;}
+  function count(r){return Number.isInteger(r.https_success)&&r.https_success>=0&&r.https_success<=3;}
+  var stamp=Number.isFinite(e.measurement_time)&&e.measurement_time>0&&e.measurement_time<=e.time+5?e.measurement_time:null;
+  var row=stamp!==null&&count(e)?e:null;
+  if(!row){
+    var snapshots=(status.events||[]).filter(function(r){return r.profile===profile&&sameCode(r)&&count(r)&&Number.isFinite(r.measurement_time)&&Math.abs(r.measurement_time-(stamp===null?e.time:stamp))<.001;});
+    if(snapshots.length===1){row=snapshots[0];stamp=row.measurement_time;}
+  }
+  if(!row){
+    var samples=(status.samples||[]).filter(function(r){return r.id===profile&&sameCode(r)&&count(r)&&Number.isFinite(r.time)&&(stamp!==null?Math.abs(r.time-stamp)<.001:r.time<=e.time+.001&&e.time-r.time<=10);});
+    var exact=samples.filter(function(r){return Math.abs(r.time-e.time)<.001;});if(exact.length===1)samples=exact;
+    if(samples.length===1){row=samples[0];stamp=row.time;}
+  }
+  if(!row)return null;
+  var checks=(Array.isArray(row.probe_checks)?row.probe_checks:[]).slice(0,3).filter(function(r){return r&&['one.one.one.one','dns.google','dns.quad9.net'].indexOf(r.target)>=0&&['ok','http-unsupported','http-error','timeout','tls-error','transport-error','invalid-response','unknown'].indexOf(r.result)>=0;}).map(function(r){return {target:r.target,result:r.result,http_status:Number.isInteger(r.http_status)&&r.http_status>=100&&r.http_status<=599?r.http_status:null};});
+  return {time:stamp,https_success:row.https_success,dns_ok:typeof row.dns_ok==='boolean'?row.dns_ok:null,checks:checks};
 }
 function journalRows(status,stored,now){
   var retainedSeconds=journalHistoryDays(status)*86400;
@@ -529,7 +558,10 @@ function journalRows(status,stored,now){
       control(e.control_action,e.control_time,e.control_source);
       var state=journalToken(e.state||e.kind||e.code,'OBSERVATION'),code=typeof e.code==='string'&&safeCode(e.code)?e.code:Array.isArray(e.codes)?e.codes.find(safeCode)||null:null;
       var profile=typeof(e.profile||e.id)==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e.profile||e.id)?e.profile||e.id:null;
-      var key=group[0]+':'+(Number.isSafeInteger(e.sequence)?e.sequence:[e.time,profile,state,code].join(':'));
+      if(state==='STOPPED'&&e.control_action==='start'&&Number.isFinite(e.control_time)&&e.control_time<=e.time&&e.time-e.control_time<=30){state='STARTING';if(code==='CLIENT-STOP')code=Array.isArray(e.codes)?e.codes.find(function(c){return c!=='CLIENT-STOP'&&safeCode(c);})||null:null;}
+      var probe=journalProbeSnapshot(e,profile,status,code);
+      var family=state==='FAILURE'||['VPN-001','VPN-003','DNS-001'].indexOf(code)>=0?'failure':state==='RECOVERY'||code==='OK'?'recovery':null;
+      var key=probe&&family?'measurement:'+profile+':'+probe.time+':'+family:group[0]+':'+(Number.isSafeInteger(e.sequence)?e.sequence:[e.time,profile,state,code].join(':'));
       if(seen[key])return;seen[key]=true;
       var failed=/FAIL|REFUS|ERROR|DEGRADED/.test(state)||!!code&&/^(DNS-|VPN-|SYSTEM-|CHECK-)|FAILED|ERROR|REFUSED/.test(code),level=failed?'error':/GAP|UNKNOWN|UNCONFIRMED|UNAVAILABLE|UNVERIFIED|CANCEL|INACTIVE/.test(state+' '+(code||''))?'warning':'ok';
       var pair={};['source','target'].forEach(function(k){pair[k]=typeof e[k]==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e[k])?e[k]:null;});
@@ -540,11 +572,12 @@ function journalRows(status,stored,now){
         else if(e.codes.some(function(c){return ['SOURCE-FAILED','PRIMARY-STABLY-RECOVERED','RESERVE-FAILED-PRIMARY-VERIFIED'].indexOf(c)>=0;}))actionSource='automatic';
       }
       if(!actionSource&&state==='STOPPED'&&e.control_action==='stop')actionSource=['manual','test','programmatic'].indexOf(e.control_source)>=0?e.control_source:'unknown';
+      if(!actionSource&&state==='STARTING'&&e.control_action==='start')actionSource=['manual','test','programmatic'].indexOf(e.control_source)>=0?e.control_source:'unknown';
       var returnPrimary=state==='STOPPED'&&Array.isArray(e.codes)&&e.codes.indexOf('OPERATOR-RETURN')>=0;
       var delayProfile=(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
       var role=['source','target'].indexOf(e.role)>=0?e.role:null;
       if(!role&&profile&&pair.source&&pair.target&&pair.source!==pair.target)role=profile===pair.source?'source':profile===pair.target?'target':null;
-      var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0]};
+      var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0],probe:probe};
       var definition=journalDefinition(record);if(!(definition.code==='EVENT-DETAILS-NOT-SAVED'&&record.level==='error'))record.level=definition.level||record.level;result.push(record);
     });
   });

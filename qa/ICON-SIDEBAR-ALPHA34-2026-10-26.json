@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "result": "PASS_LOCAL_CANDIDATE",
+  "version": "0.9.1-alpha34-1",
+  "source": "e0ba6a727288b9f901bc46c32a8f3d08c18dcd0f",
+  "sha256": "578becade469974284f2584778875fa83956b8372d257f12eff19e13011f2a1a",
+  "bytes": 886161,
+  "ci": [
+    {
+      "application_tests": 839,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha34-1_all.ipk",
+      "bytes": 886161,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "578becade469974284f2584778875fa83956b8372d257f12eff19e13011f2a1a",
+      "skipped_tests": 23,
+      "source": "e0ba6a727288b9f901bc46c32a8f3d08c18dcd0f",
+      "ui_suites": 64,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 839,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha34-1_all.ipk",
+      "bytes": 886161,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "578becade469974284f2584778875fa83956b8372d257f12eff19e13011f2a1a",
+      "skipped_tests": 0,
+      "source": "e0ba6a727288b9f901bc46c32a8f3d08c18dcd0f",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "feature": "accessible-instrument-sidebar",
+  "pause_regressions": 13,
+  "speed_regressions": 17,
+  "ui_suites": 64,
+  "chromium_groups": 7,
+  "chromium_desktop_checks": 57,
+  "chromium_mobile_checks": 53,
+  "chromium_short_checks": 58,
+  "board_fixtures": [
+    "mt3000"
+  ],
+  "actions": [
+    "source-autostart",
+    "target-autostart",
+    "wg-autostart",
+    "ovpn-autostart",
+    "vpn-boot",
+    "sfe-boot",
+    "hnat",
+    "flow-offload",
+    "sfe-autoload"
+  ],
+  "physical_devices_tested": [],
+  "physical_settings_changed": false,
+  "installed": false,
+  "published": false,
+  "scope": "Immutable dual Linux CI and native Chromium/CDP with synthetic RPC; physical installation recorded separately.",
+  "other_design_browser_cases": [
+    {
+      "design": "a",
+      "cases": 2,
+      "checks_per_case": 53
+    },
+    {
+      "design": "b",
+      "cases": 2,
+      "checks_per_case": 53
+    }
+  ]
+}

@@ -1,3 +1,129 @@
+## Alpha41 installed: channel reliability indicator / Индикатор надёжности канала
+
+Owner request: say why a channel shows a failure. A channel whose router checks failed in at least 20% of the cycles over the last 5 minutes now reads "Reliability problem: check loss N% (X of Y checks in 5 min)" with the new catalogue code CHANNEL-UNRELIABLE (meaning and remediation in the error table). A connected tunnel that mostly passes now but is unreliable is yellow, not green. The Tests page recommendation is computed from the loss statistics: keep traffic on the channel with lower loss, replace the unreliable server, and name the best measured alternative (at least 20 checks and 95% success) or say that a speed test is needed. This is the measured share of failed checks, not an ICMP packet-loss figure, and it changes no setting or route. Installed on the dedicated MT3000 with Auto ON; Auto switched to the working reserve because the primary lost packets. [Verification](VERIFICATION-ALPHA41-INSTALLED-2026-10-27.md).
+
+Канал, у которого проверки роутера не прошли не менее чем в 20% циклов за 5 минут, теперь подписан «Проблема с надёжностью: потери проверок N% (X из Y за 5 мин)», код CHANNEL-UNRELIABLE описан в таблице ошибок. Рекомендация считается по статистике потерь: держать трафик на канале с меньшими потерями, заменить ненадёжный сервер, назвать лучший измеренный кандидат или предложить тест скорости. Это доля непройденных проверок, не ICMP-потеря пакетов; настройки и маршруты не меняются. Установлено на MT3000, Auto включён.
+
+---
+
+## Alpha39 installed: stopped channel is started / Остановленный канал запускается
+
+Owner-reported defect: the reserve client was enabled but stopped (no boot start), so the GL page showed "Connecting..." forever and Auto stayed BLOCKED as PROFILE-IDENTITY-CHANGED. Auto now starts such a client itself at Start and while running (Stop-fenced, one attempt per 120 s, four per 15 minutes, restored on Stop) and reports an unconnected reserve as the new RESERVE-NOT-CONNECTED blocker with catalogue entry and remediation. Clients the operator disabled are never touched. Alpha37 was installed first and proved the start works (the reserve connected with DNS and HTTPS passing), but the stock client then added gl_wan_like / gl_bwa_* options to a firewall zone, which Auto read as an external configuration change and held the pair (PAIR-EXTERNAL-CONFIG-CHANGE). Failed evidence is preserved privately. Alpha38 ignores exactly those four stock options when comparing the protected firewall and lets Stop undo them with ifdown; it was installed and the first real failover to the reserve then worked, but the stock firmware tidied stopped leftover client sections (ovpnclient1) out of network and dhcp, which Auto read as PAIR-EXTERNAL-NETWORK-CHANGE and held the pair. Alpha39 ignores only stopped (disabled) wgclient/ovpnclient leftovers that are not the selected pair in the network identity and dhcp digest. Installed on the dedicated MT3000 with Auto ON; it automatically switched to the working reserve because the primary lost 71% of packets. [Verification](VERIFICATION-ALPHA39-INSTALLED-2026-10-27.md). Not published.
+
+Исправлена ошибка: резервный клиент был включён, но не запущен, GL-страница вечно показывала «Connecting...», а Auto стоял в BLOCKED. Теперь Auto сам запускает такой клиент (с защитой от Stop, не чаще раза в 120 с и четырёх раз за 15 минут) и показывает неподключённый резерв как RESERVE-NOT-CONNECTED. Отключённые оператором клиенты не трогаются.
+
+---
+
+## Alpha36 installed: Auto operation diagram / Схема работы Auto установлена
+
+Help now contains a responsive diagram of monitoring, switching safeguards and return. It displays router-provided settings, marks unavailable data and respects the selected return policy. Alpha36 is installed on the dedicated MT3000; prior ON Auto restored and both channels passed router checks. [Verification](VERIFICATION-ALPHA36-INSTALLED-2026-10-27.md).
+
+---
+
+## Alpha35 configurable Auto policy installed / Настраиваемые правила Auto установлены
+
+Owner-requested default policy and editable thresholds, times and rolling attempt limit are implemented in one reviewed Settings form. Existing configuration/history are preserved. Dual-runtime CI passed and alpha35 was installed on the dedicated MT3000; prior ON Auto was restored and both channels passed router DNS/HTTPS checks. [Verification](VERIFICATION-ALPHA35-INSTALLED-2026-10-27.md).
+
+---
+
+## Alpha34 installed; sidebar icon verified / Alpha34 установлена
+
+**0.9.1-alpha34-1**, dashboard110/ui82, installed on the dedicated MT3000. Desktop C rail fits the icon-only Advanced control and scrollbar; full localized label/tooltip and keyboard operation remain. A/B and mobile keep their text. Seven C browser cases and four A/B cases passed; exact dual-runtime CI passed. Prior ON Auto restored to RUNNING / OBSERVING with both VPNs healthy. [Verification](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md). Publication verified separately.
+
+---
+
+## Alpha34 source validation checkpoint / Локальная проверка меню C alpha34
+
+Owner requests a usable icon where the Advanced label was clipped by the narrow instrument-panel rail and scrollbar. The desktop C rail is 84 px; the toggle has a keyboard-operable icon, full localized accessible name/tooltip and unchanged expanded-menu behavior. A/B and mobile retain the text. At this earlier checkpoint installation had not yet been performed; see the current alpha34 delivery above.
+
+---
+
+## Alpha33 installed; all requested changes verified / Alpha33 установлена
+
+**0.9.1-alpha33-1**, dashboard109/ui81. Real two-channel speed test confirmed cooperative pause, low daemon CPU and automatic monitor/Auto restoration with unchanged VPNs/config/intent/PIDs. Responsive reference table and truthful partial-connectivity/wait/start diagnostics passed native Chromium checks; actual per-endpoint data now reaches RPC. Auto remains ON / RUNNING / OBSERVING. [Verification and limits](VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md). Publication is separately verified by release metadata.
+
+---
+
+## Alpha33 endpoint diagnostics integration / Интеграция диагностики alpha33
+
+Alpha32 is installed with Auto ON and correct HTTP/UI assets. Actual device verification caught endpoint details stripped by the vendor-identity observer. Alpha33 adds bounded nested sanitization, preserves the details for the matching profile and removes them on a rebind; a regression covers the complete observation boundary and secret-field exclusion. Final CI/deployment pending. Speed-test pause remains physically proved on alpha31 and retained unchanged.
+
+---
+
+## Alpha32 combined diagnostics and layout under validation / Общие правки alpha32
+
+Owner's latest requests are included with the physically proved alpha31 speed-test pause: wrapped reference table, partial/zero/unknown HTTPS wording, per-endpoint errors, correlated same-check rows, vendor-operation wait and pending-Start labels. Alpha32 full immutable CI and deployment are pending. Dedicated MT3000 currently runs alpha31; both actual speed tests completed, CPU after quiet-window acknowledgement 11.4%, Auto/monitor restored with same processes/config/intent. [Physical alpha31 checkpoint](../qa/MT3000-ALPHA31-2026-10-26.json).
+
+---
+
+## Alpha31 speed-test pause under validation / Проверяется пауза для теста скорости
+
+Owner-requested cooperative pause of Auto and background monitoring during bounded speed tests. Existing VPNs/routes and prior enablement are retained; monitor resumes first, Auto follows fresh measurement, manual Stop wins. CPU admission occurs after both safe-point acknowledgements. Local focused tests and 63 UI suites passed; immutable full CI, installation and real speed-test proof pending. Actual dedicated MT3000 remains alpha30 with Auto ON.
+
+---
+
+## Alpha30 installed; Auto running / Alpha30 установлена, Auto работает
+
+**0.9.1-alpha30-1**, dashboard106/ui78, installed and read back on the dedicated MT3000. The former expanded interface is restored; new Minimum retained. Actual ordinary Start confirmed RUNNING / OBSERVING with two healthy VPNs, no reconnect, protected settings preserved. Auto remains ON. Dual immutable CI, 63 UI suites and Chromium 4×33 passed. [Device and scope](VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-HYBRID-ALPHA30-INSTALLED-2026-10-26.md). Publication state is recorded by the linked release metadata; source/device evidence alone is not publication proof.
+
+Исправлены устаревшая привязка резерва, проверка отключённого удалённого интерфейса и бесконечное ожидание Start. На реальном роутере Auto включился; свежие DNS/HTTPS проходят у обоих каналов. Main/stable, MT6000 и сеть Windows сохранены.
+
+---
+
+## Alpha30 fixes physical Start failure / Alpha30 исправляет физический отказ Start
+
+Alpha29 installed and actual HTTP/RPC payload verified. Its ordinary Start failed safely with PAIR-SYSTEM-001 because guard-device discovery queried the removed, disabled ovpnclient1. Existing active VPNs/routes were preserved. Alpha30 skips administratively disabled clients and still blocks missing/malformed enabled client state with GUARD-DEVICE-UNVERIFIED. Full CI, installation and actual Start of alpha30 are pending. No alpha29/30 publication yet.
+
+---
+
+## Alpha29 source in validation / Alpha29 проходит проверку
+
+Owner-directed restoration of the former expanded interface while retaining the new Minimum; terminal Start refusal and selected-client-slot fixes. Native Chromium passed 4×33 synthetic checks and 63 Node UI suites passed. Frozen dual-runtime CI and physical installation/startup are pending. The router still has alpha28 with Auto OFF after ordinary cancellation of the hung request. No GitHub publication has been performed for alpha29.
+
+Возвращён прежний расширенный интерфейс, новый «Минимум» сохранён. Исправлены бесконечное ожидание отказавшего Start и привязка к фактическому второму VPN-клиенту. До физической установки это результат проверки исходника.
+
+---
+
+## Alpha28 installed on dedicated MT3000 / Alpha28 установлена на MT3000
+
+**0.9.1-alpha28-1**, dashboard104/ui76, is installed and read back on the dedicated GL-MT3000. 90 files/modes, actual HTTP assets, fresh RPC/monitor/controller, settings/terms preservation and independently decrypted pre/post backups passed. Both currently enabled VPNs pass router DNS+twoHTTPS probes. Auto remains OFF; no speed/failover/reboot/native-browser acceptance. [Device verification](VERIFICATION-ALPHA28-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA28-INSTALLED-2026-10-26.md). No publication/main/stable/MT6000/Windows-network change.
+
+С явного согласия владельца прежняя зависшая сессия передана текущей конфигурации с сохранением исходника, без отката VPN. Затем выполнена штатная установка. Для запуска Auto остаются условия пары/политик; подготовка и Auto Start не выполнялись. После Ctrl+F5 роутер показывает новый интерфейс.
+
+---
+
+## Local alpha28 preparation buttons / Локальные кнопки подготовки
+
+Candidate **0.9.1-alpha28-1**, dashboard104/ui76, product source `7ff1b81f`. Seven reviewed preparation actions for verified MT3000/MT6000 firmware 4.11.0; this does not extend Auto compatibility. Dual immutable CI passed 807 app/113 QA per runtime with explicit complementary skips, 62 UI suites and Chromium 4×22 synthetic checks. IPK SHA256 `58610b1c3355668b9a1de8f20c7dc8d7ca802c6860c3d35ca459ce00558a1ab3`. [Report](diagnostics/PREPARATION-BUTTONS-2026-10-26.ru.md) · [Resume](handoff/NEXT-AI-PREPARATION-BUTTONS-2026-10-26.md). Not published or installed; physical settings and main/stable unchanged.
+
+Добавлены кнопки отключения мешающих настроек с обзором, сохранением исходных значений и проверкой результата. Незавершённое восстановление запрещает запись. Кнопки не запускают Auto и не перезагружают роутер; если нужна перезагрузка, это явно показано. Физическая установка не выполнялась.
+
+---
+
+## Local alpha27 channel fixes / Локальные исправления каналов
+
+Candidate **0.9.1-alpha27-1**, dashboard103/ui75, source `601ad227`. Dual immutable Linux CI passed: 787 application / 113 QA tests per runtime with explicit complementary skips, 61 UI suites; Chromium 4×12 synthetic checks passed. Equal IPK SHA256 `dba3827e0e3fdc8c0cc81504cdc4504da0d96da0def3fe670b582f7390d4e54f`. [Fix report](diagnostics/CHANNEL-RECONFIGURATION-FIX-2026-10-26.ru.md) · [Resume](handoff/NEXT-AI-CHANNEL-RECONFIGURATION-2026-10-26.md). Local only; not published or installed. Main/stable and physical device settings unchanged.
+
+Исправлены проверки после удаления/замены каналов, восстановление старой сессии и объяснения отказа Auto. На GL-MT3000 остаётся alpha25: ускорение уже выключено, но подготовка не проходит автозапуск WireGuard/штатного VPN; старая сессия расходится с текущей конфигурацией. Установка и эксплуатационная приёмка alpha27 не выполнялись.
+
+---
+
+## Published Minimum UI alpha26 / Опубликован новый дизайн
+
+[GitHub prerelease](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26) · [Gitea prerelease](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26). Package **0.9.1-alpha26-2**; six assets per service independently downloaded and SHA256 verified. Main/stable/latest unchanged. [Verification](VERIFICATION-ALPHA26-2026-10-26.md) · [Resume](handoff/NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). This release was not installed on the physical MT3000; physical acceptance remains separate.
+
+Релиз нового дизайна опубликован и проверен скачиванием. На физический роутер не устанавливался; сведения о старой alpha25 ниже не являются приёмкой новой версии.
+
+---
+
+## Minimum UI alpha26 — design prerelease candidate / 26.10.2026
+
+Implemented and verified source: **0.9.1-alpha26-2**, dashboard102/ui74. Minimum + five-section Advanced menu. [Release notes](RELEASE-0.9.1-alpha26.md) · [Verification](VERIFICATION-ALPHA26-2026-10-26.md) · [Next agent](handoff/NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Exact dual-runtime CI, native Chromium canonical-payload fixtures and actual disposable x86 OpenWrt package/RPC/HTTP checks passed. Publication/readback is a separate delivery receipt. This package has NOT been installed on the physical MT3000; the alpha25 installation records below remain historical device evidence. Stable/main are unchanged.
+
+Реализован и проверен новый дизайн. Это отдельный кандидат prerelease, а не заявление о физической установке или суточной приёмке. Далее — подтверждённая доставка и отдельный разрешённый пилот.
+
+---
+
 ## Alpha24 quiz position / Позиция чекбоксов
 
 Internal training buttons preserve scroll and meaningful focus through grading, navigation, results, retries, scenes and Help course toggles. Installed on MT3000; AutoONconfirmedreserve.57UI suites and exact dual-runtime CI passed. [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) — published; four assets each downloaded and SHA256verified. [Verification](VERIFICATION-ALPHA25-2026-10-25.md). Native browser clicks unverified.

@@ -206,6 +206,8 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     with control_lock():
         if control_revision!=revision_locked(RUNTIME):
             return {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+        from speed_pause import public as pause_status
+        if pause_status().get('active'):return {'accepted':False,'blockers':['SPEED-BUSY']}
     # Read-only diagnostics may be slow. They must not hold the lock needed by
     # Stop; a Stop received during preflight invalidates this pending Start.
     backend = Linux()
@@ -218,6 +220,9 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+    from preparation_control import auto_blocker
+    preparation_reason=auto_blocker()
+    if preparation_reason:return {'accepted':False,'blockers':[preparation_reason]}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
         return pair_request(control_revision,request_source=source)

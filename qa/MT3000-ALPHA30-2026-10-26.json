@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "result": "PASS_INSTALLED_AND_AUTO_START",
+  "version": "0.9.1-alpha30-1",
+  "source": "3e92dd9f6c585ee035d9f67be80387aa75b08513",
+  "sha256": "2c95d1cb1f3d369a691950c25c137c44f7e3ebfd32a608fc5aba6f12babe9f41",
+  "bytes": 876827,
+  "board": "glinet,mt3000-snand",
+  "firmware": "4.11.0",
+  "payload_files_verified": 91,
+  "http": {
+    "result": "PASS",
+    "version": "0.9.1-alpha30",
+    "assets": [
+      {
+        "name": "dashboard106.js",
+        "bytes": 1163187,
+        "sha256": "3789896d050ad67f9a0055515dca52c4f6c8f5f4dc850aa103081643d95d8233"
+      },
+      {
+        "name": "ui78.css",
+        "bytes": 139812,
+        "sha256": "b053dce9d06658037ba16e20976d132329a55d5bdd4b886577cd5a87b6089990"
+      }
+    ],
+    "selected_module": "dashboard106",
+    "fresh_rpc": true,
+    "scope": "Actual physical router HTTP/RPC; native browser page not driven",
+    "observed_utc": "2026-10-26T19:05:40.737651+00:00"
+  },
+  "auto_start": {
+    "result": "PASS_AUTO_RUNNING",
+    "started": 1793041511.531776,
+    "timeline": [
+      {
+        "elapsed": 2.5,
+        "phase": "STARTING",
+        "requested": "on",
+        "native": "STOPPED",
+        "blockers": [
+          "VENDOR-SETTLING"
+        ]
+      },
+      {
+        "elapsed": 14.0,
+        "phase": "STARTING",
+        "requested": "on",
+        "native": "ARMED",
+        "blockers": []
+      },
+      {
+        "elapsed": 19.6,
+        "phase": "RUNNING",
+        "requested": "on",
+        "native": "ARMED",
+        "blockers": []
+      },
+      {
+        "elapsed": 24.5,
+        "phase": "RUNNING",
+        "requested": "on",
+        "native": "OBSERVING",
+        "blockers": []
+      }
+    ],
+    "state": {
+      "state": "OBSERVING",
+      "mode": "continuous-pair",
+      "proof_scope": "router-probed-ipv4",
+      "readiness_verified": true,
+      "source": "wireguard:peer_2002",
+      "target": "openvpn:40354_2020",
+      "reason": "PAIR-WATCHING",
+      "blockers": [],
+      "time": 1793041534.193156,
+      "external_lan_verified": false
+    },
+    "phase": "RUNNING",
+    "owned": [],
+    "interfaces": {
+      "wgclient1": "wgclient",
+      "ovpnclient2": "ovpnclient"
+    },
+    "protected_configs_unchanged": true,
+    "network_interfaces_unchanged": true,
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793041530.717327
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793041530.723317
+      }
+    ],
+    "guard_exists": true,
+    "external_lan_tested": false,
+    "fault_injected": false,
+    "observed_utc": "2026-10-26T19:05:30.324425+00:00"
+  },
+  "encrypted_backups": {
+    "before": {
+      "result": "PASS",
+      "encrypted_sha256": "f35479e1376b9dbdd1f47ee24ff67f6de11d6993587795e72d60276822d2628e",
+      "entries": 197,
+      "expanded_bytes": 3902101,
+      "encrypted_bytes": 598417,
+      "independent_decrypt_and_tar_read": true,
+      "plaintext_persisted": false,
+      "key_protection": "Windows DPAPI current user"
+    },
+    "after": {
+      "result": "PASS",
+      "encrypted_sha256": "acfcd010f4a17dae0739ff0c7e3d74ee36426fcb8f4f697eccf6d4bcba78bd27",
+      "entries": 197,
+      "expanded_bytes": 3907544,
+      "encrypted_bytes": 599218,
+      "independent_decrypt_and_tar_read": true,
+      "plaintext_persisted": false,
+      "key_protection": "Windows DPAPI current user"
+    }
+  },
+  "preparation_actions": [
+    "source-autostart wgclient1",
+    "target-autostart ovpnclient2",
+    "vpn-boot"
+  ],
+  "preparation_earlier_version": "alpha29, all seven checks passed; retained across alpha30 installation",
+  "initial_failure": {
+    "version": "alpha29",
+    "code": "PAIR-SYSTEM-001",
+    "observed_exception": "CalledProcessError, ubus exit 4 for disabled absent ovpnclient1",
+    "fixed_by": "exclude disabled clients from guard discovery; enabled client absence remains a refusal"
+  },
+  "external_lan_tested": false,
+  "failover_injected": false,
+  "reboot_tested": false,
+  "endurance_tested": false,
+  "windows_network_changed": false,
+  "mt6000_changed": false,
+  "github_publication": "Separate prerelease delivery; release metadata determines publication state"
+}

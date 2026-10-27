@@ -51,7 +51,7 @@ BOUNDS = {
     'speed_daily_mib': (1, 1024), 'speed_busy_mbps': (1, 1000),
     'checkpoint': (300, 3600), 'probe_limit': (1, 16),
     'recovery_failures': (3, 10), 'recovery_successes': (2, 10), 'recovery_cooldown': (60, 1800),
-    'recovery_min_dwell': (60, 3600), 'recovery_primary_successes': (2, 10), 'recovery_primary_stable': (30, 600),
+    'recovery_min_dwell': (60, 3600), 'recovery_primary_successes': (2, 10), 'recovery_primary_stable': (30, 600), 'recovery_attempt_limit': (1, 10), 'recovery_attempt_window': (1, 15),
 }
 FLAGS = {'native_session_loss', 'setup_complete', 'telegram_enabled', 'telegram_weekly', 'telegram_monthly',
          'speed_enabled', 'speed_auto_new', 'plan_enabled', 'enabled'}
@@ -153,9 +153,10 @@ RECOVERY = {'failures': (3, 10), 'successes': (2, 10), 'cooldown': (60, 1800), '
 
 
 def v_recovery(a):
-    if not isinstance(a, dict) or set(a) != set(RECOVERY)|{'return_policy'}:
+    optional={'attempt_limit':(1,10),'attempt_window':(1,15),'interval':(10,300)}
+    if not isinstance(a,dict) or not (set(RECOVERY)|{'return_policy'})<=set(a) or set(a)-(set(RECOVERY)|{'return_policy'}|set(optional)):
         return False
-    return all(is_int(a[k], *r) for k, r in RECOVERY.items()) and a['return_policy'] in ('healthy_primary', 'hold_reserve')
+    return all(is_int(a[k],*r) for k,r in RECOVERY.items()) and all(k not in a or is_int(a[k],*r) for k,r in optional.items()) and a['return_policy'] in ('healthy_primary','hold_reserve')
 
 
 def v_terms(a):
@@ -229,7 +230,7 @@ SPECS = {
     'setup_telegram': (good_telegram, v_telegram),
     'setup_speed': (lambda: {'enabled': True, 'auto_new': False, 'budget_mib': 8, 'duration': 5, 'streams': 2, 'daily_mib': 128, 'busy_mbps': 2}, v_speed_cfg),
     'setup_monitor': (lambda: {'interval': 30, 'checkpoint': 600, 'probe_limit': 8, 'planning_enabled': True,'live_log_limit':100,'history_days':2}, v_monitor_cfg),
-    'setup_recovery': (lambda: {'failures': 3, 'successes': 2, 'cooldown': 180, 'min_dwell': 180, 'return_policy': 'healthy_primary', 'primary_successes': 3, 'primary_stable': 60}, v_recovery),
+    'setup_recovery': (lambda: {'failures': 3, 'successes': 2, 'cooldown': 60, 'min_dwell': 60, 'return_policy': 'healthy_primary', 'primary_successes': 2, 'primary_stable': 30, 'attempt_limit': 3, 'attempt_window': 15, 'interval': 10}, v_recovery),
     'terms_accept': (lambda: {'version': '1'}, v_terms),
     'telegram_forget': (dict, v_empty),
     'priority_preview': (lambda: {'ordered': ['wg_b', 'wg_a']}, lambda a: v_ordered(a, False)),

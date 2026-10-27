@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "result": "PASS_DESIGN_PRERELEASE_WITH_EXPLICIT_PHYSICAL_LIMITS",
+  "version": "0.9.1-alpha26",
+  "package_version": "0.9.1-alpha26-2",
+  "tested_product_source": "e2d67b38b235a42b55fa536a4c99cd443a1d59c1",
+  "package": {
+    "artifact": "homensai-auto-vpn_0.9.1-alpha26-2_all.ipk",
+    "bytes": 866573,
+    "sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8"
+  },
+  "source_fingerprint": "55c5c61bdaea6ea4b4acc9b734afce20c85311f1414c4a1a0d64ce5b1d5d6991",
+  "ui": {
+    "module": "dashboard102",
+    "stylesheet": "ui74.css",
+    "canonical_payload_sha256": {
+      "dashboard102.js": "a92be9031c5795231a513dca92202c2c84deaa6e5a2110e5edef3cf75920f149",
+      "ui74.css": "79e8705102951f1f0f52b8ba641e218cecd944e782f5824b7130193e60addc64"
+    }
+  },
+  "ci": [
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha26-2_all.ipk",
+      "bytes": 866573,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8",
+      "skipped_tests": 16,
+      "source": "e2d67b38b235a42b55fa536a4c99cd443a1d59c1",
+      "ui_suites": 60,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 778,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha26-2_all.ipk",
+      "bytes": 866573,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 112,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8",
+      "skipped_tests": 0,
+      "source": "e2d67b38b235a42b55fa536a4c99cd443a1d59c1",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "native_browser": {
+    "result": "PASS_SYNTHETIC_FULL_GENERATED_MODULE",
+    "engine": "Chromium headless shell 131 / local Playwright 1.49.1 image",
+    "network": "none; loopback synthetic server in container only",
+    "groups": 26,
+    "checks_per_group": 41,
+    "checks_total": 1066,
+    "viewports": [
+      320,
+      375,
+      768,
+      1366
+    ],
+    "locales": [
+      "en",
+      "ru"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "states": [
+      "primary",
+      "reserve",
+      "off",
+      "unknown",
+      "fault",
+      "expiry_without_rpc"
+    ],
+    "explicit_connection_check": true,
+    "navigation_writes": false,
+    "scope": "actual browser, canonical package payload, synthetic RPC; not actual-device browser acceptance"
+  },
+  "virtual_openwrt": {
+    "result": "PASS",
+    "target": "x86/64",
+    "firmware": "OpenWrt 21.02.7 lab",
+    "upgrade_paths": [
+      "0.8.0-alpha8-1 to alpha25-1",
+      "alpha25-1 to preliminary alpha26-1",
+      "preliminary alpha26-1 to final alpha26-2"
+    ],
+    "final_upgrade": {
+      "auto_off": true,
+      "installed": "0.9.1-alpha26-2",
+      "opkg_exit": 0,
+      "package_sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8",
+      "protected_configs_unchanged": true,
+      "result": "PASS",
+      "synthetic_persist_marker_unchanged": true,
+      "terms_unchanged": true
+    },
+    "runtime": {
+      "auto_off": true,
+      "fresh_rpc": true,
+      "immutable_files_modes_verified": 87,
+      "inventory_read": true,
+      "package_sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8",
+      "result": "PASS",
+      "served_http_sha256": {
+        "dashboard102.js": "a92be9031c5795231a513dca92202c2c84deaa6e5a2110e5edef3cf75920f149",
+        "ui74.css": "79e8705102951f1f0f52b8ba641e218cecd944e782f5824b7130193e60addc64"
+      },
+      "version": "0.9.1-alpha26",
+      "x86_identity_preserved": true
+    },
+    "scope": "own disposable unprivileged network-none QEMU; real opkg/rpcd/UCI/HTTP; no GL hardware spoof"
+  },
+  "kit": {
+    "result": "PASS",
+    "source": "e2d67b38b235a42b55fa536a4c99cd443a1d59c1",
+    "file": "router-test-kit-v0.9.1-alpha26.zip",
+    "bytes": 881030,
+    "sha256": "094d9b11f3c69acac2b61c34c7d5df5ff52dcb711db5ca0f1f5c494958480ac3",
+    "zip_readback_verified": true,
+    "canonical_scripts_verified": 9,
+    "package_sha256": "84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8"
+  },
+  "fixed_findings": [
+    "click-time stale Start freshness",
+    "actual scan action selected instead of same-class monitor panel",
+    "dirty settings and canonical deep links",
+    "single shared authoritative Auto control",
+    "compact layout and setup guidance"
+  ],
+  "failed_attempts_retained": [
+    "stale Start reproduction",
+    "monitor-vs-scan selector reproduction",
+    "browser harness counter/control identity and window minimum issues",
+    "Windows fcntl environment limitation",
+    "VM harness Python escaping errors",
+    "generated documentation manifest stale check"
+  ],
+  "not_performed": [
+    "physical MT3000 installation and browser acceptance",
+    "external LAN/DNS/exit fault proof",
+    "physical power-loss test",
+    "24-hour soak",
+    "MT6000 and IPv6 qualification"
+  ],
+  "release_scope": "design prerelease only; main/stable/device changes excluded"
+}

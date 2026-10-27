@@ -12,7 +12,7 @@ import subprocess
 AUTOLOAD_SHA = '8aad0842bbf4de46c61719fba3237d3127cee632f4312807ff3b591d388b2f49'
 
 
-def snapshot(root=Path('/'), run=subprocess.run):
+def snapshot(root=Path('/'), run=subprocess.run, settings=None):
     checks = []
     def add(code, state):
         checks.append({'code': code, 'state': state})
@@ -40,9 +40,17 @@ def snapshot(root=Path('/'), run=subprocess.run):
     if board != 'glinet,mt3000-snand':
         return {'scope': 'persistent-mt3000-preparation', 'state': 'unsupported' if board else 'unknown',
                 'checks': [], 'native_permission': False, 'external_lan_verified': False}
+    if settings is None and root==Path('/'):
+        from agent import inventory
+        settings=inventory().get('settings',{})
     add('PREP-HNAT-CONFIG', flag('mtkhnat.global.enable', '0'))
-    for name in ('wgclient1', 'ovpnclient1'):
-        add('PREP-' + name.upper() + '-AUTOSTART', flag('network.' + name + '.auto', '0'))
+    from pair_interfaces import roles
+    try:selected=roles(settings or {})
+    except ValueError:selected={'source':None,'target':None}
+    for role in ('source','target'):
+        name=selected[role]
+        code='PREP-'+role.upper()+'-AUTOSTART' if settings is not None else 'PREP-'+str(name).upper()+'-AUTOSTART'
+        add(code, flag('network.' + name + '.auto', '0') if name else 'unknown')
     for service, code in (('vpn-client', 'PREP-STOCK-VPN-BOOT'), ('shortcut-fe', 'PREP-SFE-BOOT')):
         try:
             links = list((root / 'etc/rc.d').iterdir())

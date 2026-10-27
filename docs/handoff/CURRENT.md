@@ -1,3 +1,115 @@
+## Alpha41 source: reliability indicator / Alpha41 исходник
+
+See [status](../CURRENT-STATUS.md). Installed on the MT3000; Auto ON / RUNNING on the reserve after an automatic failover. See [verification](../VERIFICATION-ALPHA41-INSTALLED-2026-10-27.md). Preserve live state.
+
+---
+
+## Alpha39 source: stopped channel is started / Alpha39 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha39 with Auto ON / RUNNING, traffic on the reserve after an automatic failover (primary lost 71% of packets). See [verification](../VERIFICATION-ALPHA39-INSTALLED-2026-10-27.md). Not published; preserve live state. Install and publication only after exact CI. Preserve live settings and state.
+
+---
+
+## Alpha36 installed: diagram in Help / Alpha36 установлена
+
+[Verification](../VERIFICATION-ALPHA36-INSTALLED-2026-10-27.md). Auto ON / RUNNING / OBSERVING, both VPNs healthy. Preserve live settings and state. No GitHub publication requested for alpha36.
+
+---
+
+## Alpha35 installed; Auto policy configurable / Alpha35 установлена
+
+[Verification](../VERIFICATION-ALPHA35-INSTALLED-2026-10-27.md). Auto ON / RUNNING / OBSERVING, both VPNs healthy; preserve live state. GitHub prerelease publication is pending.
+
+---
+
+## Alpha34 installed; icon sidebar fixed / Alpha34 установлена
+
+[Start here](NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md). C sidebar and accessible Advanced icon verified; prior ON Auto restored, both VPNs healthy. No automatic repeat deployment. Publication evidence is separate.
+
+---
+
+## Alpha33 installed and real speed pause proved / Alpha33 установлена
+
+[Start here](NEXT-AI-ALPHA33-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA33-INSTALLED-2026-10-26.md). All current owner requests implemented: pause/restore speed tests, responsive reference table, truthful diagnostics. Auto ON; leave current VPNs running. Publication proof is separate.
+
+---
+
+## Installed alpha30; Auto running / Установлена alpha30, Auto работает
+
+[Start here](NEXT-AI-HYBRID-ALPHA30-INSTALLED-2026-10-26.md) · [Device proof](../VERIFICATION-ALPHA30-INSTALLED-2026-10-26.md). Legacy expanded UI restored, new Minimum retained; selected WG1/OV2, ordinary Start RUNNING / OBSERVING. Keep current VPNs and Auto state; no automatic repeat deployment. Publication evidence is separate.
+
+---
+
+# INSTALLED alpha28 on MT3000 / 26 October 2026
+
+Start with [NEXT-AI-ALPHA28-INSTALLED-2026-10-26](NEXT-AI-ALPHA28-INSTALLED-2026-10-26.md). Dedicated MT3000 now runs alpha28-1/dashboard104/ui76. Owner-approved archived stale-session handoff, normal lifecycle/opkg, 90 files/modes, served HTTP/RPC/services and protected config plus encrypted pre/post backup proof complete. Auto OFF; both enabled VPN router probes healthy. Remaining pair/policy blockers are separate from installation. Main/stable/publication/MT6000/host network unchanged.
+
+Установка завершена; старые утверждения ниже «только локально, не установлен» теперь история. Не повторять установку и не включать Auto по старым разрешениям. Новый UI доступен после обновления страницы Ctrl+F5.
+
+---
+
+# VERIFIED LOCAL alpha28 preparation buttons / 26 October 2026
+
+Start with [NEXT-AI-PREPARATION-BUTTONS-2026-10-26](NEXT-AI-PREPARATION-BUTTONS-2026-10-26.md). Product `7ff1b81f`, package alpha28-1, dashboard104/ui76. Seven reviewed preparation buttons, durable originals, config/control/boot binding, readback and restart/recovery refusals. Dual immutable CI 807 app/113 QA per runtime, 62 UI suites and Chromium 4×22 passed; explicit skips retained. No physical configuration, package installation, publication or Auto change.
+
+Кнопки готовы локально. На физическом роутере их ещё нет: alpha28 не устанавливалась. Главный роутер/сеть компьютера не менялись. Продолжать по новому handoff; старые записи ниже — история.
+
+---
+
+# VERIFIED LOCAL alpha27 channel fixes / 26 October 2026
+
+Start with [NEXT-AI-CHANNEL-RECONFIGURATION-2026-10-26](NEXT-AI-CHANNEL-RECONFIGURATION-2026-10-26.md). Source `601ad227`, package `0.9.1-alpha27-1`, dashboard103/ui75. Dual immutable CI and native Chromium synthetic checks passed; packet bytes/hash match both runtimes. This is local work, not a publication or installation. Earlier alpha26/alpha25 delivery records below remain history.
+
+Локально исправлены удаление/смена каналов, падение восстановления и объяснения блокировок. На физическом MT3000 — прежняя alpha25; аппаратное ускорение уже выключено. Сохраняются конфликт старой сессии и настройки автозапуска. Не обходить владение/журналы и не возобновлять Auto по старым разрешениям. Продолжать по новому handoff.
+
+---
+
+# COMPLETE Minimum UI design prerelease alpha26-2 / 26 October 2026
+
+## Published / Опубликовано — 26.10.2026
+
+Design prerelease `v0.9.1-alpha26` is published on [GitHub](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26) and [Gitea](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha26). Six attachments per service were downloaded and SHA256 verified. Canonical tag source: `7e958ed83e90bcf917409c6a933519c86b2b8603`; public tag source: `4693aae997b2f370cc7affbdc270ddfb8382fe72`; equal tree `51d410661cd453d939c59e41f7214f3a8f62fd9b`. Product tested source remains `e2d67b38b235a42b55fa536a4c99cd443a1d59c1`. Immutable tags/assets must not be changed. Subsequent branch commits are documentation closure only.
+
+Опубликован отдельный prerelease нового дизайна, пакет `0.9.1-alpha26-2`. Шесть файлов на каждом сервисе скачаны и проверены. Main/stable/latest сохранены. Собственные VM выключены; физический роутер не изменялся. Эксплуатационный допуск/LAN/отказы/питание/суточный тест остаются отдельным этапом. Перед повтором внешнего действия читать `private/minimum-ui-20261026/publication.json` и реальные refs.
+
+Start after reboot: [NEXT-AI-MINIMUM-ALPHA26-2026-10-26](NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Earlier delivery-next/ACTIVE/planning records below are history. Do not restart completed implementation, old observers, speed tests or device installations automatically.
+
+---
+
+# VERIFIED Minimum UI alpha26-2 — delivery next / 26 October 2026
+
+Start with [NEXT-AI-MINIMUM-ALPHA26-2026-10-26](NEXT-AI-MINIMUM-ALPHA26-2026-10-26.md). Product tested source e2d67b38b235a42b55fa536a4c99cd443a1d59c1; canonical IPK SHA256 84c9c58f79915681163c8c0fab3f56a976f902dcdfcd0bf3c866a308abadb2d8. CI/VM/native-browser-fixture gates passed; delivery must be read back from the private publication receipt and remote refs. Physical device/LAN/fault/soak not performed. Earlier ACTIVE/planning-only records below are history.
+
+Новый интерфейс реализован и проверен; продолжение — по указанному NEXT-AI. Не повторять 12-часовой план и не устанавливать на роутер по старым разрешениям.
+
+---
+
+# ACTIVE Minimum UI alpha26 — 26 October 2026
+
+Owner executed revision 3. Coordinator + three agents implemented Minimum and five advanced sections in `feature/minimum-ui-20261026`. Current work is final candidate verification; package/source may advance until release. See [specification](../plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md) and [verification](../VERIFICATION-ALPHA26-2026-10-26.md). Private checkpoints: `private/minimum-ui-20261026/`. Previous planning-only statements below are historical. Physical router installation/Auto state have not been changed.
+
+Выполнение запущено. Новый интерфейс реализован; идут финальные проверки пакета и одноразовой VM. Не запускать второй набор агентов и не повторять исторические установки. Актуальный source/package и публикацию читать из финального receipt, а не из старых строк ниже.
+
+---
+
+# ACCEPTED DESIGN PLAN — Minimum and advanced menu / 26 October 2026
+
+Owner accepted the Minimum design, colors and explicit advanced-menu entry/return, and requested a separate new-design release. Current product specification and SOL 6.1 high prompt: [revision 3](../plans/MINIMUM-ADVANCED-DESIGN-RELEASE-2026-10-26.ru.md). [Resume handoff](NEXT-AI-SIMPLIFIED-UI-2026-10-26.md). Coordinator + three-agent / up-to-12-hour rules remain in revision 2. Planning only: implementation, autonomous run and new release have NOT started.
+
+Приняты «Минимум», цвета и навигация. Расширенное меню переработать по редакции 3; отдельный выпуск нового UI обязателен. Старые сообщения о невыбранном дизайне ниже — история.
+
+---
+
+# PLANNING CHECKPOINT — simplified UI / 26 October 2026
+
+Start after reboot: [NEXT-AI-SIMPLIFIED-UI-2026-10-26.md](NEXT-AI-SIMPLIFIED-UI-2026-10-26.md).
+
+Current owner request: preserve plans and three design mockups, save the feature branch to Gitea and GitHub before reboot. No new application implementation, device changes or 12-hour run started. Current execution proposal: [coordinator + three agents, up to 12 hours](../plans/AUTONOMOUS-12H-3-AGENTS-PLAN-2026-10-26.ru.md). The prompt inside that plan is for a future explicit start, not an active timer. Alpha25 product remains unchanged; all earlier delivery records below are history and not fresh commands.
+
+После перезагрузки начать с указанного NEXT-AI: планы и макеты сохранены; автономная сессия ещё не запущена. Публикация checkpoint касается рабочей ветки, не main, релиза или роутера.
+
+---
+
 # COMPLETE alpha25 — all training action viewport / 25October2026
 
 [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25)

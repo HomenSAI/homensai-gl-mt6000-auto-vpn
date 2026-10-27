@@ -136,7 +136,7 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
     if arguments['profile']!=selection[selected_role]['id']:raise FaultError('FAULT-NOT-CURRENT-SOURCE')
     from failure_diagnosis import resolve_pair,profile_identity,finite
     from vendor_observation import current_bindings,tunnel_identity
-    try:interval=int(settings.get('interval',30))
+    try:interval=int(settings.get('interval',10))
     except (ValueError,TypeError,OverflowError):raise FaultError('FAULT-IDENTITY-UNVERIFIED') from None
     if not 10<=interval<=300:raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     pair=resolve_pair(status,settings,now,max(30,min(900,interval*3)),max(30,min(600,interval*2)))
@@ -185,8 +185,9 @@ def pair_fault_role(native,selection,now):
     pending=manual_read()
     if pending and pending.get('state') in ('QUEUED','CLAIMED'):raise FaultError('FAULT-NATIVE-PREREQUISITES')
     backend=n.Linux();backend.use_process_bindings(state.get('process_bindings'))
-    configs=pair.configs()
-    if (pair.normalized_network(pair.network())!=state['network_identity']
+    from pair_interfaces import state as state_interfaces
+    configs=pair.configs(state_interfaces(state))
+    if (pair.normalized_network(pair.network(),state_interfaces(state))!=state['network_identity']
             or any(configs.get(k)!=v for k,v in state['protected'].items() if k!='route_policy')):
         raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     journal=n.journal_read()

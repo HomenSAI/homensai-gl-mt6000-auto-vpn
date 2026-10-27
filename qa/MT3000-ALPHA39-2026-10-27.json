@@ -1,0 +1,99 @@
+{
+  "result": "PASS_MT3000_INSTALL_AND_AUTO_START",
+  "version": "0.9.1-alpha39-1",
+  "source": "56fb842a60f2766246222b370d464addb8d94046",
+  "package_sha256": "27f4822eecdf0c3e07af6f4fb5d24d9e02eda6de3ee76d8f91d42c01546f7dc9",
+  "install": {
+    "result": "PASS_INSTALLED",
+    "package": "0.9.1-alpha39-1",
+    "running_version": "0.9.1-alpha39",
+    "sha256": "27f4822eecdf0c3e07af6f4fb5d24d9e02eda6de3ee76d8f91d42c01546f7dc9",
+    "payload_files_verified": 92,
+    "opkg_exit": 0,
+    "opkg_log_sha256": "a172d56b4dc1113727db651813d5eccabcc4001324a5e566c1aa91e7eb89456f",
+    "protected_configs_unchanged": true,
+    "unrelated_app_settings_unchanged": true,
+    "terms_preserved": true,
+    "main_routes_unchanged": true,
+    "fresh_status_age": 8.3597731590271,
+    "auto_requested": "off",
+    "pair_phase": "STOPPED",
+    "native_state": "STOPPED",
+    "native_blockers": [],
+    "services": {
+      "monitor": {
+        "running": true,
+        "pid": 18379
+      },
+      "native": {
+        "running": true,
+        "pid": 18346
+      }
+    },
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793103458.594164
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": "VPN-003",
+        "dns_ok": false,
+        "https_success": 0,
+        "time": 1793103458.595227
+      }
+    ]
+  },
+  "interface": {
+    "result": "PASS",
+    "version": "0.9.1-alpha39",
+    "assets": [
+      {
+        "name": "dashboard115.js",
+        "bytes": 1190653,
+        "sha256": "93a9bf202660a2f0cced8f6ca7f5fafa0f5dfde50c47fff7e9eadc94d921f5db"
+      },
+      {
+        "name": "ui84.css",
+        "bytes": 144184,
+        "sha256": "1063f3654bfb0bf8e4f0e617ae1169332a123ec6c3c4d6ae4983b46f5e6570aa"
+      }
+    ],
+    "selected_module": "dashboard115",
+    "fresh_rpc": true,
+    "scope": "Actual physical router HTTP/RPC; native browser page not driven",
+    "observed_utc": "2026-10-27T12:23:02.594379+00:00"
+  },
+  "backup_after": {
+    "result": "PASS",
+    "encrypted_sha256": "11dc0b9fa808990266479d62edb07248943fe7d210cb7326645b8c99ed8600eb",
+    "entries": 199,
+    "expanded_bytes": 4487099,
+    "encrypted_bytes": 660258,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user"
+  },
+  "live_findings": {
+    "defect": "Operator-enabled reserve client (ovpnclient2) was stopped, auto=0; GL page showed Connecting indefinitely; Auto stayed BLOCKED as PROFILE-IDENTITY-CHANGED.",
+    "alpha37": "Start of the stopped reserve worked (DNS ok, HTTPS 2/3) but stock firmware added gl_wan_like/gl_bwa_* options to a firewall zone; Auto held the pair with PAIR-EXTERNAL-CONFIG-CHANGE. Evidence preserved privately.",
+    "alpha38": "Real automatic failover to the reserve worked, then stock firmware removed stopped ovpnclient1 sections from network and dhcp; Auto held the pair with PAIR-EXTERNAL-NETWORK-CHANGE. Owner approved archiving the session; Start was refused with TRANSACTION-IN-PROGRESS while held on the reserve.",
+    "primary_measurement": "60 pings via wgclient1: 71% loss; ovpnclient2: 0% loss over 20 pings. native_return refused 14 times with SOURCE-NOT-HEALTHY.",
+    "forced_return": "Owner selected forced return; n.rollback restored primary-first order, guard removed, journal ROLLED-BACK.",
+    "alpha39_result": "Package installed after the return; ordinary Start accepted; Auto RUNNING, source failed, automatic switch to reserve confirmed (COMMITTED / CLIENT-CONFIRMED); pair not held; network identity unchanged."
+  },
+  "not_proven": [
+    "external LAN confirmation",
+    "24-hour soak",
+    "power-cut",
+    "IPv6",
+    "return to primary after recovery"
+  ]
+}

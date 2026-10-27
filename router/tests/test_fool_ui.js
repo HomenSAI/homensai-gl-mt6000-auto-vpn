@@ -65,5 +65,14 @@ const click=node=>node.attrs.click({currentTarget:node,target:node});
   c.setupWizard({settings:{telegram_configured:false}},'telegram');assert(button(m.modal,'Next').disabled);assert(m.modal.textContent.includes('No stored token is available.'));
   // The actual builder embeds the helper and its visible validation styles.
   const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');assert(builder.includes("/'fool_guard.inc.js').read_text"));assert(builder.includes('.hv-fool-invalid'));
+  // One reviewed form exposes the owner defaults and saves all values together.
+  m=make();c=m.ctx;c.recoveryWizard({settings:{}});
+  const policyFields=[['Check interval, seconds (10–300)',10],['Maximum switching attempts (1–10)',3],['Attempt counting window, minutes (1–15)',15],['Consecutive failures before switching (3–10)',3],['Reserve successes required (2–10)',2],['Cooldown between attempts, seconds (60–1800)',60],['Minimum dwell time, seconds (60–3600)',60],['Primary successes before return (2–10)',2],['Primary stable interval, seconds (30–600)',30]];
+  for(const [label,value] of policyFields)assert.equal(Number(field(m.modal,label).value),value,label+' default');
+  field(m.modal,policyFields[0][0]).value='20';field(m.modal,policyFields[0][0]).emit('input');field(m.modal,policyFields[1][0]).value='4';field(m.modal,policyFields[1][0]).emit('input');field(m.modal,policyFields[2][0]).value='8';field(m.modal,policyFields[2][0]).emit('input');
+  let preset=field(m.modal,'Recovery preset');preset.value='stability';preset.emit('change');assert.equal(Number(field(m.modal,policyFields[0][0]).value),20);assert.equal(Number(field(m.modal,policyFields[1][0]).value),4);assert.equal(Number(field(m.modal,policyFields[2][0]).value),8);
+  preset=field(m.modal,'Recovery preset');preset.value='defaults';preset.emit('change');for(const [label,value] of policyFields)assert.equal(Number(field(m.modal,label).value),value,label+' reset');
+  field(m.modal,policyFields[0][0]).value='20';field(m.modal,policyFields[0][0]).emit('input');field(m.modal,policyFields[1][0]).value='4';field(m.modal,policyFields[1][0]).emit('input');field(m.modal,policyFields[2][0]).value='8';field(m.modal,policyFields[2][0]).emit('input');
+  click(button(m.modal,'Next'));const policySave=click(button(m.modal,'Save recovery settings'));assert.equal(m.calls.length,1);assert.equal(m.calls[0].method,'setup_recovery');assert.deepEqual(Array.from(m.calls[0].args.slice(-3)),[4,8,20]);m.finish({saved:true});await policySave;
   console.log('PASS: '+Object.keys(c.FOOL_RANGES).length+' range contracts, strict numeric/text validation, bilingual errors, no secret echo, redraw single-flight/countdown, validation-lock composition, one-shot confirmation, speed/monitor/recovery integration and builder wiring');
 })().catch(error=>{console.error(error);process.exitCode=1;});

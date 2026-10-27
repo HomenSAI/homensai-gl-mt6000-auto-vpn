@@ -27,4 +27,6 @@ def snapshot():
     stamp=monitor.get('time')
     result={'time':stamp if type(stamp)in(int,float)and math.isfinite(stamp)and 0<=stamp<=now+5 else None,
             'server_time':now,'native_failover':clean}
+    from speed_pause import public as pause_status
+    result['speed_pause']=pause_status()
     return result

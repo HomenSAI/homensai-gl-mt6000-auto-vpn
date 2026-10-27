@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard101'
+UI_MODULE='dashboard116'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -243,6 +243,7 @@ reorganizer = """      (function(){
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
           E('p',{'class':'hv-setup-path','aria-label':bi('Order of the steps','Порядок шагов')},[E('b',{},bi('1 · System setup','1 · Настройка системы')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('2 · Telegram','2 · Telegram')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('3 · Test delivery','3 · Проверка доставки')),E('small',{},bi('Press a button below to open its wizard.','Нажмите кнопку ниже, чтобы открыть мастер.'))]),
           E('div',{'class':'hv-setup-grid hv-setup-steps'},[
+            launcher(bi('Auto switching rules','Правила переключения Auto'),bi('Check interval, failures, reserve readiness, attempt limit and return conditions. Stop Auto before saving.','Интервал проверок, ошибки, готовность резерва, лимит попыток и условия возврата. Перед сохранением выключите Auto.'),function(){recoveryWizard(inventory);},false,'recovery'),
             launcher(bi('1 · System setup','1 · Настройка системы'),bi('Press to open the wizard: primary and reserve VPN, names, groups, priorities and whether a short reconnection is acceptable.','Нажмите, чтобы открыть мастер: основной и резервный VPN, названия, группы, приоритеты и допустимость короткого переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
             launcher(bi('2 · Telegram channel','2 · Канал Telegram'),bi('Press to open the wizard: bot token and chat for reports. The wizard explains how to get both.','Нажмите, чтобы открыть мастер: токен бота и чат для отчётов. Мастер объясняет, как получить и то и другое.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
             launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery,false,null,'telegram-test')
@@ -295,7 +296,7 @@ must_replace("var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'
       var advancedOpen=false;try{advancedOpen=localStorage.getItem('homensai-vpn-advanced')==='1';}catch(e){}
       if(ADVANCED_KEYS.indexOf(activeTab)>=0)advancedOpen=true;
       advancedBox=E('div',{'class':'hv-advanced-links','id':'hv-advanced-links'},ADVANCED_KEYS.map(tabLink));advancedBox.hidden=!advancedOpen;
-      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{},bi('Advanced settings','Расширенные настройки'))]);
+      advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','aria-label':bi('Advanced settings','Расширенные настройки'),'title':bi('Advanced settings','Расширенные настройки'),'click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{'class':'hv-advanced-icon','aria-hidden':'true'},'☰'),E('span',{'class':'hv-advanced-label'},bi('Advanced settings','Расширенные настройки'))]);
       var links=['overview','channels','statistics','settings','help'].map(tabLink).concat([advancedToggle,advancedBox]);""")
 # Ranking: number of checks and a confidence label; sparse servers never lead.
 must_replace('tr("Успех проверок"),tr("Средняя HTTPS-задержка")].map(','tr("Успех проверок"),tr("Средняя HTTPS-задержка"),bi("Checks","Проверок")].map(')
@@ -331,7 +332,7 @@ must_replace("renderConnectivityCheck(data[1],function(){return statusCall().the
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
 must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
-must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp()));")
+must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp(inventory)));")
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
 _terms_version=_r.search(r"^TERMS_VERSION = '([^']+)'",(Path(__file__).parent/'files/usr/lib/homensai-vpn/agent.py').read_text(encoding='utf8'),_r.M).group(1)
 must_replace('return view.extend({',(Path(__file__).parent/'terms_panel.inc.js').read_text(encoding='utf8').replace('__TERMS_VERSION__',_terms_version)+'\nreturn view.extend({')
@@ -356,7 +357,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui73.css')
+source=source.replace('ui15.css','ui84.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -370,7 +371,7 @@ must_replace('return view.extend({',(Path(__file__).parent/'learn_scenes.inc.js'
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
 must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','channels','statistics','settings','help','learn'].map(tabLink)")
 must_replace("  help:['What to do when something is wrong.'","  learn:['A short interactive training: what the system is, how to use it and what to do when something goes wrong.','Короткое интерактивное обучение: что это за система, как ею пользоваться и что делать, если что-то пошло не так.'],\n  help:['What to do when something is wrong.'")
-must_replace("put('help',helpNode||(helpNode=renderHelp()));","put('help',helpNode||(helpNode=renderHelp()));put('learn',learnNode||(learnNode=renderLearn()));")
+must_replace("put('help',helpNode||(helpNode=renderHelp(inventory)));","put('help',helpNode||(helpNode=renderHelp(inventory)));put('learn',learnNode||(learnNode=renderLearn()));")
 must_replace("var helpNode=null;","var helpNode=null,learnNode=null;") if "var helpNode=null;" in source else None
 must_replace('return view.extend({',(Path(__file__).parent/'summary_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace('return view.extend({',(Path(__file__).parent/'theme_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
@@ -506,6 +507,9 @@ must_replace("'require ui';", "'require ui';\n"+(Path(__file__).parent/'element_
 
 from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
-(root/'ui73.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+from hybrid_release_patch import apply as apply_hybrid_release
+source=apply_hybrid_release(source)
+source=source.replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+(root/'ui84.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

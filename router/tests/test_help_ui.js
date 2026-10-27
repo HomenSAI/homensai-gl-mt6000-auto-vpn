@@ -4,6 +4,7 @@ class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};thi
   all(){return [this].concat(...this.children.filter(c=>typeof c!=='string').map(c=>c.all()));}}
 const context={bi:(en)=>en,E:(tag,attrs,children)=>new Node(tag,attrs,children),navigator:{}};
 vm.createContext(context);
+vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
 vm.runInContext(fs.readFileSync('router/help_panel.inc.js','utf8'),context);
 const topics=context.HELP_TOPICS;
 const ids=new Set(topics.map(t=>t.id));
@@ -41,7 +42,7 @@ assert(page.all().some(n=>n.attrs['data-help-training']==='1'),'Help exposes the
 // The page is wired into the generated dashboard.
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const dashboard=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
-assert(dashboard.includes("['help','?'")&&dashboard.includes("put('help',helpNode||(helpNode=renderHelp()))"));
+assert(dashboard.includes("['help','?'")&&dashboard.includes("put('help',helpNode||(helpNode=renderHelp(inventory)))"));
 console.log('PASS: help page has '+topics.length+' topics, '+commands+' copyable commands, English/Russian text and only real helper commands');
 
 context.URL=URL;context.window={location:{href:'http://router/?setup_help=1#help'}};

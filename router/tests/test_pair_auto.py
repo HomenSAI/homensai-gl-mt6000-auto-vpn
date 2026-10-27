@@ -42,6 +42,28 @@ class Tests(unittest.TestCase):
         for bad in ([401],[True],[float('nan')],None,[-1]):
             with self.assertRaises(ValueError):pair.budget(bad,400)
 
+    def test_custom_window_preserves_attempts_for_later_policy_changes(self):
+        events=[100,400,850];retained,allowed=pair.budget(events,1000,window=300,limit=2)
+        self.assertEqual(retained,[400,850]);self.assertTrue(allowed)
+        retained,allowed=pair.budget(retained,1000,window=900,limit=2)
+        self.assertEqual(retained,[400,850]);self.assertFalse(allowed)
+        self.assertTrue(pair.budget(retained,1000,window=900,limit=3)[1])
+        for window,limit in ((59,3),(901,3),(900,0),(900,11),(True,3)):
+            with self.assertRaises(ValueError):pair.budget(events,1000,window=window,limit=limit)
+
+    def test_automatic_switch_uses_custom_attempt_policy_without_erasing_history(self):
+        pair.request(self.revision);self.state['id']=pair.intent()['id'];pair.save(self.state)
+        selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64}
+        backend=Mock();backend.diagnostic.return_value=([],selection);backend.order.return_value=(self.state['order'],self.state['policy_hash'])
+        agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[9800,9900]})
+        settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5'}
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt')as attempt,patch.object(pair,'configure_lease',return_value=20000):
+            with patch.object(pair.time,'time',return_value=10000):pair.tick(backend,settings,self.revision)
+            attempt.assert_not_called()
+            with patch.object(pair.time,'time',return_value=10201):pair.tick(backend,settings,self.revision)
+            attempt.assert_called_once()
+        self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[9800,9900,10201])
+
     def test_duplicate_start_is_idempotent_and_stop_revision_fences_it(self):
         first=pair.request(self.revision);saved=pair.intent()
         second=pair.request(self.revision)
@@ -210,6 +232,123 @@ else:raise AssertionError('CLI/helper exceptions diverged')
 """
         result=subprocess.run([sys.executable,'-c',code,str(root)],capture_output=True,text=True,timeout=10)
         self.assertEqual(result.returncode,0,result.stderr)
+
+    def stopped_reserve(self,disabled='0',up=False,pending=False):
+        """Running pair whose reserve client is enabled but not connected."""
+        pair.request(self.revision);self.state.update(id=pair.intent()['id'],owned=[],started=1.0);pair.save(self.state)
+        rows=[{'.name':'wgclient1','disabled':'0'},{'.name':'ovpnclient1','disabled':disabled}]
+        status={'wgclient1':{'up':True},'ovpnclient1':{'up':up,'pending':pending,'available':True}}
+        def ubus(args,timeout=5):return json.dumps(status[args[2].rsplit('.',1)[1]]).encode()
+        backend=Mock();backend.devices.return_value=['wgclient1','ovpnclient1']
+        backend.diagnostic.return_value=(['PROFILE-IDENTITY-CHANGED'],None)
+        return backend,rows,ubus
+
+    def tick_at(self,backend,rows,ubus,stamp,journal=None):
+        with patch.object(native,'journal_read',return_value=journal or {}),patch.object(pair,'network',return_value=rows),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch.object(native,'command',side_effect=ubus),patch.object(native,'publish')as publish,patch.object(native,'forward_dispatch')as dispatch,patch.object(pair,'quiet')as quiet,patch.object(pair.time,'time',return_value=stamp):
+            pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision)
+        return dispatch,publish,quiet
+
+    def test_enabled_but_stopped_reserve_is_started_instead_of_blocking_the_pair(self):
+        backend,rows,ubus=self.stopped_reserve()
+        dispatch,publish,quiet=self.tick_at(backend,rows,ubus,10000)
+        dispatch.assert_called_once_with(['ifup','-w','ovpnclient1'],self.revision,timeout=20)
+        quiet.assert_called_once_with(45,self.revision)
+        backend.diagnostic.assert_not_called()
+        backend.guard.assert_called_once_with(['wgclient1','ovpnclient1'],control_revision=self.revision)
+        self.assertEqual(pair.read_state()['owned'],['ovpnclient1'])
+        self.assertEqual(pair.read_state()['phase'],'RUNNING')
+
+    def test_stopped_client_attempts_are_paused_and_bounded_then_recover_with_time(self):
+        backend,rows,ubus=self.stopped_reserve()
+        started=[]
+        for stamp in (10000,10050,10121,10242,10363,10484,10901):
+            dispatch,_,_=self.tick_at(backend,rows,ubus,stamp)
+            if dispatch.called:started.append(stamp)
+        # 10050 waits for the pause; 10484 hits the four-per-window limit;
+        # the 10000 attempt leaves the 900 s window before 10901.
+        self.assertEqual(started,[10000,10121,10242,10363,10901])
+
+    def test_operator_disabled_or_connecting_client_is_never_started(self):
+        for kwargs in ({'disabled':'1'},{'pending':True},{'up':True}):
+            with self.subTest(kwargs):
+                (self.runtime/'pair-revive.json').unlink(missing_ok=True)
+                backend,rows,ubus=self.stopped_reserve(**kwargs)
+                dispatch,_,_=self.tick_at(backend,rows,ubus,10000)
+                dispatch.assert_not_called();backend.diagnostic.assert_called_once()
+
+    def test_unconnected_reserve_is_waiting_during_start_window_then_a_real_blocker(self):
+        backend,rows,ubus=self.stopped_reserve(up=True)
+        backend.diagnostic.return_value=(['RESERVE-NOT-CONNECTED'],None)
+        for started,expected in ((9950,'ARMED'),(1.0,'BLOCKED')):
+            self.state['started']=started;pair.save(self.state)
+            _,publish,_=self.tick_at(backend,rows,ubus,10000)
+            self.assertEqual(publish.call_args.args[0]['state'],expected)
+            self.assertEqual(publish.call_args.args[0]['blockers'],['RESERVE-NOT-CONNECTED'])
+
+    def test_stopped_client_is_not_started_during_a_transaction(self):
+        backend,rows,ubus=self.stopped_reserve()
+        dispatch,_,_=self.tick_at(backend,rows,ubus,10000,journal={'phase':'APPLYING'})
+        dispatch.assert_not_called()
+
+    def test_failed_client_start_neither_fails_nor_blocks_the_running_pair(self):
+        import subprocess
+        backend,rows,ubus=self.stopped_reserve()
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=rows),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch.object(native,'command',side_effect=ubus),patch.object(native,'publish')as publish,patch.object(native,'forward_dispatch',side_effect=subprocess.CalledProcessError(1,'ifup')),patch.object(pair,'quiet')as quiet:
+            self.assertTrue(pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision))
+        publish.assert_not_called();quiet.assert_not_called()
+        self.assertEqual(pair.read_state()['phase'],'RUNNING')
+
+    def test_start_brings_up_an_enabled_but_stopped_client_and_restores_it_on_stop(self):
+        request={'id':'a'*32,'revision':self.revision}
+        selection={'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'},
+                   'process_bindings':None,'order':['a','b'],'hash':'c'*64}
+        rows=[{'.name':k,'proto':v,'auto':'0','disabled':'0','config':'selected'}for k,v in pair.INTERFACES.items()]
+        status={'wgclient1':{'up':True},'ovpnclient1':{'up':False,'pending':False}}
+        def ubus(args,timeout=5):return json.dumps(status[args[2].rsplit('.',1)[1]]).encode()
+        backend=Mock();backend.devices.return_value=['wgclient1']
+        with patch.object(pair,'preflight',return_value=selection),patch.object(pair,'network',return_value=rows),patch.object(pair,'configs',return_value={}),patch.object(pair,'quiet'),patch.object(pair,'set_disabled')as write,patch.object(native,'command',side_effect=ubus),patch.object(native,'forward_dispatch')as dispatch:
+            state=pair.begin(backend,{},request)
+        write.assert_not_called()
+        self.assertEqual([call.args[0] for call in dispatch.call_args_list],[['ifup','-w','ovpnclient1']])
+        self.assertEqual(state['owned'],['ovpnclient1']);self.assertEqual(state['before_flags']['ovpnclient1'],'0')
+        self.assertEqual(pair.read_state()['owned'],['ovpnclient1'])
+
+    def test_vendor_exit_options_are_not_an_external_firewall_edit(self):
+        base=b"config zone\n\toption name 'wan'\n\toption gl_wan_like '1'\nconfig zone\n\toption name 'ovpnclient2'\n"
+        up=base+b"\toption gl_wan_like '1'\r\n\toption gl_bwa_managed '1'\n\toption gl_bwa_exit_id 'ovpnclient2'\n\toption gl_bwa_bridge_reject '0'\n"
+        self.assertEqual(pair.config_digest('firewall',base),pair.config_digest('firewall',up))
+        self.assertNotEqual(pair.config_digest('firewall',base),pair.config_digest('firewall',base+b"\toption src 'lan'\n"))
+        self.assertNotEqual(pair.config_digest('firewall',base),pair.config_digest('firewall',base.replace(b'wan',b'lan')))
+        self.assertNotEqual(pair.config_digest('network',base),pair.config_digest('network',up))
+
+    def test_stop_lets_ifdown_undo_the_firewall_edit_but_not_other_config_drift(self):
+        self.state.update(owned=['ovpnclient1'],protected={'firewall':'a'*64,'dhcp':'b'*64})
+        backend=Mock();backend.order.return_value=(self.state['order'],self.state['policy_hash'])
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={'firewall':'c'*64,'dhcp':'b'*64}),patch.object(native,'command')as command,patch.object(pair,'quiet'),patch.object(pair,'set_disabled')as write:
+            self.assertTrue(pair.cleanup(backend,self.state))
+            command.assert_called_once_with(['ifdown','ovpnclient1'],timeout=20);write.assert_called_once()
+        self.state.update(phase='RUNNING',owned=['ovpnclient1'])
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={'firewall':'a'*64,'dhcp':'d'*64}),patch.object(native,'command')as command,patch.object(pair,'quiet'):
+            with self.assertRaisesRegex(ValueError,'PAIR-EXTERNAL-CONFIG-CHANGE'):pair.cleanup(backend,self.state)
+            command.assert_not_called()
+
+    def test_stopped_stock_leftover_clients_do_not_count_as_external_network_change(self):
+        managed={'wgclient1':'wgclient','ovpnclient2':'ovpnclient'}
+        net=[{'.name':'lan','ipaddr':'1'},{'.name':'ovpnclient1','disabled':'1'},{'.name':'wgclient1','disabled':'0'},{'.name':'ovpnclient2','disabled':'0'}]
+        without=[net[0],net[2],net[3]]
+        self.assertEqual(pair.normalized_network(net,managed),pair.normalized_network(without,managed))
+        self.assertNotEqual(pair.normalized_network(net,managed),pair.normalized_network([net[0],net[1],net[2]],managed))
+        self.assertNotEqual(pair.normalized_network([net[0],dict(net[1],disabled='0'),net[2],net[3]],managed),pair.normalized_network(without,managed))
+        self.assertNotEqual(pair.normalized_network(net,managed),pair.normalized_network([dict(net[0],ipaddr='2')]+net[1:],managed))
+
+    def test_stopped_stock_leftover_dnsmasq_sections_are_not_an_external_dhcp_edit(self):
+        before=b"config dnsmasq 'lan'\n\toption port '53'\n\nconfig dnsmasq 'ovpnclient1'\n\toption port '4153'\n\toption disabled '1'\n\nconfig dnsmasq 'wgclient1'\n\toption port '4154'\n"
+        after=b"config dnsmasq 'lan'\n\toption port '53'\n\nconfig dnsmasq 'wgclient1'\n\toption port '4154'\n"
+        managed={'wgclient1':'wgclient','ovpnclient2':'ovpnclient'}
+        self.assertEqual(pair.config_digest('dhcp',before,managed),pair.config_digest('dhcp',after,managed))
+        self.assertNotEqual(pair.config_digest('dhcp',before.replace(b"'1'",b"'0'"),managed),pair.config_digest('dhcp',after,managed))
+        self.assertNotEqual(pair.config_digest('dhcp',after+b"\nconfig dnsmasq 'ovpnclient2'\n\toption disabled '1'\n",managed),pair.config_digest('dhcp',after,managed))
+        self.assertNotEqual(pair.config_digest('dhcp',after.replace(b'4154',b'4155'),managed),pair.config_digest('dhcp',after,managed))
 
 
 if __name__=='__main__':unittest.main()

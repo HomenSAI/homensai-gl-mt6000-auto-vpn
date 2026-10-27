@@ -1,0 +1,230 @@
+{
+  "result": "PASS_MT3000_INSTALL_AND_POLICY",
+  "version": "0.9.1-alpha35-1",
+  "source": "36bcb3f2fa6a2d5db9081d01b44a58bb829c13df",
+  "package_sha256": "8ae64414caa043c72b296285325a99733313da9cb0e42a57e2100388904cfa68",
+  "install": {
+    "result": "PASS_INSTALLED",
+    "package": "0.9.1-alpha35-1",
+    "running_version": "0.9.1-alpha35",
+    "sha256": "8ae64414caa043c72b296285325a99733313da9cb0e42a57e2100388904cfa68",
+    "payload_files_verified": 92,
+    "opkg_exit": 0,
+    "opkg_log_sha256": "061879410510cb182101da9af2ebf1e053edffb90393d0bae1ad775fc0813ead",
+    "protected_configs_unchanged": true,
+    "unrelated_app_settings_unchanged": true,
+    "terms_preserved": true,
+    "main_routes_unchanged": true,
+    "fresh_status_age": 4.474331378936768,
+    "auto_requested": "off",
+    "pair_phase": "STOPPED",
+    "native_state": "STOPPED",
+    "native_blockers": [],
+    "services": {
+      "monitor": {
+        "running": true,
+        "pid": 29386
+      },
+      "native": {
+        "running": true,
+        "pid": 29334
+      }
+    },
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793058920.130651
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793058920.145989
+      }
+    ]
+  },
+  "interface": {
+    "result": "PASS",
+    "version": "0.9.1-alpha35",
+    "assets": [
+      {
+        "name": "dashboard111.js",
+        "bytes": 1184193,
+        "sha256": "b8959f6ad0c8c04ff4c8d7197c8e1882fde7c869902fd182c84a78d79d7591b6"
+      },
+      {
+        "name": "ui83.css",
+        "bytes": 143009,
+        "sha256": "420c63c5f81f20e0ae4cfdd7eed563dda0abd4b6969dda72fee5177dedfad2df"
+      }
+    ],
+    "selected_module": "dashboard111",
+    "fresh_rpc": true,
+    "scope": "Actual physical router HTTP/RPC; native browser page not driven",
+    "observed_utc": "2026-10-26T23:56:19.595473+00:00"
+  },
+  "auto": {
+    "result": "PASS_AUTO_RUNNING",
+    "started": 1793058947.5233164,
+    "timeline": [
+      {
+        "elapsed": 2.5,
+        "phase": "STARTING",
+        "requested": "on",
+        "native": "STOPPED",
+        "blockers": [
+          "VENDOR-SETTLING"
+        ]
+      },
+      {
+        "elapsed": 14.7,
+        "phase": "STARTING",
+        "requested": "on",
+        "native": "ARMED",
+        "blockers": []
+      },
+      {
+        "elapsed": 20.5,
+        "phase": "RUNNING",
+        "requested": "on",
+        "native": "ARMED",
+        "blockers": []
+      },
+      {
+        "elapsed": 25.5,
+        "phase": "RUNNING",
+        "requested": "on",
+        "native": "OBSERVING",
+        "blockers": []
+      }
+    ],
+    "state": {
+      "state": "OBSERVING",
+      "mode": "continuous-pair",
+      "proof_scope": "router-probed-ipv4",
+      "readiness_verified": true,
+      "source": "wireguard:peer_2002",
+      "target": "openvpn:40354_2020",
+      "reason": "PAIR-WATCHING",
+      "blockers": [],
+      "time": 1793058971.07691,
+      "external_lan_verified": false
+    },
+    "phase": "RUNNING",
+    "owned": [],
+    "interfaces": {
+      "wgclient1": "wgclient",
+      "ovpnclient2": "ovpnclient"
+    },
+    "protected_configs_unchanged": true,
+    "network_interfaces_unchanged": true,
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793058967.20264
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793058967.219284
+      }
+    ],
+    "guard_exists": true,
+    "external_lan_tested": false,
+    "fault_injected": false,
+    "observed_utc": "2026-10-26T23:56:07.691847+00:00"
+  },
+  "policy": {
+    "result": "PASS",
+    "current_policy": {
+      "failures": 3,
+      "successes": 2,
+      "cooldown": 60,
+      "min_dwell": 60,
+      "return_policy": "healthy_primary",
+      "primary_successes": 2,
+      "primary_stable": 30,
+      "attempt_limit": 3,
+      "attempt_window": 15
+    },
+    "interval": 10,
+    "isolated_custom_settings_readback": true,
+    "active_auto_save_guard": "CONFIG-STOP-AUTO-FIRST",
+    "live_configuration_unchanged": true,
+    "observed_utc": "2026-10-26T23:56:39.517113+00:00"
+  },
+  "final_health": {
+    "result": "PASS",
+    "version": "0.9.1-alpha35",
+    "phase": "RUNNING",
+    "native": "OBSERVING",
+    "requested": "on",
+    "blockers": [],
+    "readiness_verified": true,
+    "running_seconds": 70.4,
+    "network_identity_matches": true,
+    "protected_configs_match": true,
+    "profiles": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "dns_ok": true,
+        "https_success": 2,
+        "code": null,
+        "time": 1793059020.270848
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "dns_ok": true,
+        "https_success": 2,
+        "code": null,
+        "time": 1793059020.27731
+      }
+    ],
+    "external_lan_tested": false,
+    "observed_utc": "2026-10-26T23:57:00.258864+00:00"
+  },
+  "backup_before": {
+    "result": "PASS",
+    "encrypted_sha256": "2bb930e0b17dabb692e6d1c575a22c24f9c292e3da3bb0a596f47f7b5d9ae8e6",
+    "entries": 197,
+    "expanded_bytes": 3956507,
+    "encrypted_bytes": 604517,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user"
+  },
+  "backup_after": {
+    "result": "PASS",
+    "encrypted_sha256": "f9dfae2d66b0e5ff7fb29f2cead2297085684cd69d4899a7c8627fe52b6bc608",
+    "entries": 197,
+    "expanded_bytes": 3968238,
+    "encrypted_bytes": 606572,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user"
+  },
+  "limitations": [
+    "No injected fault or actual failover",
+    "No external LAN client or IPv6 test",
+    "No physical browser-driven acceptance"
+  ]
+}

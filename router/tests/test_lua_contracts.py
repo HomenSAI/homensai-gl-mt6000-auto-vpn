@@ -139,6 +139,14 @@ end
         result,calls=self.run_setup(json.dumps({'main':{'terms_accepted_by':'x'},'servers':[]}).encode(),pending=b'')
         self.assertNotEqual(result.returncode,0)
 
+    def test_auto_policy_and_interval_are_saved_in_one_scoped_commit(self):
+        data={'main':{'interval':'20','recovery_failures':'4','recovery_attempt_limit':'5',
+                      'recovery_attempt_window':'8'},'servers':[]}
+        result,calls=self.run_setup(json.dumps(data).encode(),pending=b'')
+        self.assertEqual(result.returncode,0);self.assertEqual(result.stdout,b'OK')
+        self.assertEqual({c['key']for c in calls if c['name']=='set'},set(data['main']))
+        self.assertEqual([c['name']for c in calls].count('commit'),1)
+
     def test_onboarding_marker_and_all_preferences_use_exactly_one_commit(self):
         payload=json.loads(self.payload())
         payload['main'].update(onboarding_version='1',onboarding_complete='1',onboarding_pair_deferred='1')

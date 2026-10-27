@@ -777,7 +777,29 @@ function renderHelpTraining(){
   container.hidden=true;
   section=E('section',{'class':'hv-help-training','data-help-training':'1'},[E('h3',{},bi('Learn to use Auto VPN','Как пользоваться Auto VPN')),E('p',{},bi('Explanation, interactive diagrams and questions. Jump to any question, see your score and repeat only the answers you missed. Training never switches the router.','Объяснения, интерактивные схемы и вопросы. Можно перейти к любому вопросу, увидеть баллы и повторить только ошибки. Обучение не переключает роутер.')),button,container]);return section;
 }
-function renderHelp(){
+function renderAutoSchematic(inventory){
+  var s=inventory&&inventory.settings||{};
+  function value(k){var v=s[k];return typeof v==='number'&&Number.isFinite(v)&&v>=0?String(v):'—';}
+  function box(title,text,kind){return E('div',{'class':'hv-schematic-box hv-schematic-'+kind},[E('strong',{},title),E('span',{},text)]);}
+  function arrow(){return E('div',{'class':'hv-schematic-arrow','aria-hidden':'true'},'↓');}
+  var sec=bi(' s',' с'),minutes=bi(' min',' мин');
+  var hold=s.recovery_return_policy==='hold_reserve',knownPolicy=hold||s.recovery_return_policy==='healthy_primary';
+  return E('section',{'class':'hv-auto-schematic','data-auto-schematic':'1','aria-label':bi('Auto operation diagram','Принципиальная схема работы Auto')},[
+    E('h3',{},bi('Auto operation diagram','Принципиальная схема работы Auto')),
+    E('p',{'class':'hv-schematic-intro'},bi('The controller observes the two selected VPN channels and switches only after the required checks and safeguards.','Контроллер наблюдает за двумя выбранными VPN-каналами и переключает их только после необходимых проверок и защитных условий.')),
+    E('div',{'class':'hv-schematic-flow'},[
+      box(bi('Primary and reserve VPN','Основной и резервный VPN'),bi('Existing VPN connections on the router','Существующие VPN-подключения роутера'),'channels'),arrow(),
+      box(bi('Monitor','Мониторинг'),bi('DNS and HTTPS checks · interval: ','Проверки DNS и HTTPS · интервал: ')+value('interval')+sec,'monitor'),arrow(),
+      box(bi('Decision to switch','Решение о переключении'),bi('Primary failures in a row: ','Сбоев основного подряд: ')+value('recovery_failures')+' · '+bi('successful reserve checks: ','успешных проверок резерва: ')+value('recovery_successes'),'decision'),arrow(),
+      box(bi('Safety limits','Защитные ограничения'),bi('Cooldown between attempts: ','Пауза между попытками: ')+value('recovery_cooldown')+sec+' · '+bi('maximum attempts: ','максимум попыток: ')+value('recovery_attempt_limit')+' / '+value('recovery_attempt_window')+minutes,'limits'),arrow(),
+      box(bi('Switch to reserve','Переключение на резерв'),bi('The controller changes the route and verifies the result. Minimum reserve dwell: ','Контроллер меняет маршрут и проверяет результат. Минимальное время на резерве: ')+value('recovery_min_dwell')+sec,'reserve'),arrow(),
+      box(bi('Return to primary','Возврат на основной'),!knownPolicy?bi('Return policy unavailable.','Правило возврата недоступно.'):hold?bi('Automatic return is disabled by the selected hold-reserve policy.','Автоматический возврат отключён выбранным правилом удержания резерва.'):bi('Primary successes: ','Успешных проверок основного: ')+value('recovery_primary_successes')+' · '+bi('stable for at least: ','стабильность не менее: ')+value('recovery_primary_stable')+sec,'return')
+    ]),
+    E('p',{'class':'hv-schematic-note'},bi('When automatic return is enabled and the reserve fails, a verified primary may be restored earlier than the normal reserve dwell. Settings → Auto switching rules contains these values. A dash means the router did not provide a value.','Если автоматический возврат включён и резерв отказал, проверенный основной может быть возвращён раньше обычной паузы пребывания на резерве. Значения меняются в «Настройки → Правила переключения Auto». Прочерк означает, что роутер не передал значение.')),
+    E('p',{'class':'hv-schematic-note'},bi('Router DNS/HTTPS checks do not independently prove the path of every LAN device.','DNS/HTTPS-проверки роутера отдельно не подтверждают работу каждого устройства в локальной сети.'))
+  ]);
+}
+function renderHelp(inventory){
   var setupGuide=false;try{setupGuide=new URL(window.location.href).searchParams.get('setup_help')==='1';}catch(e){}
   var topics=(setupGuide?HELP_TOPICS.filter(function(topic){return topic.id==='setup-guide';}):HELP_TOPICS).map(function(topic){
     var steps=topic.custom?topic.custom():E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){
@@ -789,6 +811,7 @@ function renderHelp(){
   });
   return E('section',{'class':'hv-chart-card hv-help'},[
     E('h2',{},setupGuide?bi('First setup: steps 1–8','Первая настройка: шаги 1–8'):bi('Help and recovery','Помощь и восстановление')),
+    !setupGuide?renderAutoSchematic(inventory):null,
     !setupGuide?renderHelpTraining():null,
     E('p',{},setupGuide?bi('Return to the setup tab after reading. This guide changes no settings and keeps your draft. Examples are starting points; keep suitable existing values.','После чтения вернитесь во вкладку мастера. Помощь ничего не меняет и сохраняет ваш черновик. Примеры — отправная точка; подходящие текущие значения можно оставить.'):bi('Pick the situation that matches. Commands are typed on the router over SSH (see “How to connect by SSH”); the Copy button copies a command so you can paste it.','Выберите подходящую ситуацию. Команды вводятся на роутере по SSH (см. «Как подключиться по SSH»); кнопка «Копировать» копирует команду, чтобы вставить её в терминал.'))
   ].concat(topics).filter(Boolean));
@@ -840,4 +863,11 @@ HELP_TOPICS.push({id:'router-preparation',title:['Persistent router preparation:
   {t:['Do not force-unload modules, remove drivers, disable a working DNS owner or alter computer networking. Recheck fresh status after the approved changes. A green preparation table does not start Auto or prove external LAN connectivity. The full operation/undo record is docs/ROUTER-PREPARATION.md in the project repository.','Не выгружайте модули принудительно, не удаляйте драйверы, не отключайте работающего DNS-владельца и не меняйте сеть компьютера. После разрешённых изменений перепроверьте свежие данные. Зелёная подготовка не запускает Auto и не доказывает связь LAN. Полная инструкция с отменой — docs/ROUTER-PREPARATION.md в репозитории проекта.']}
 ]});
 HELP_TOPICS.push({id:'diagnose-all',title:['Cannot find the cause: complete AI diagnosis','Причина неизвестна: полная диагностика с ИИ'],when:['No Help topic explains your symptoms or several parts fail together.','Подходящий ответ не найден либо одновременно не работают несколько частей.'],steps:[],custom:function(){return renderDiagnosticPrompt(null,true);}});
+HELP_TOPICS.push({id:'network-acceleration',title:['Auto blocked: hardware and network acceleration','Auto заблокирован: аппаратное и сетевое ускорение'],when:['Start reports HNAT, hardware acceleration or PREP-HNAT-CONFIG.','Запуск сообщает об HNAT, аппаратном ускорении или PREP-HNAT-CONFIG.'],steps:[],custom:function(){return renderAutoRemedy('HARDWARE-ACCELERATOR-UNVERIFIED');}});
+HELP_TOPICS.push({id:'preparation-buttons',title:['Disable a blocking router setting here','Отключить мешающую настройку прямо здесь'],when:['A preparation reason offers a Disable button next to the menu link.','Рядом с причиной подготовки и ссылкой на меню есть кнопка отключения.'],steps:[
+ {t:['Press the button for that exact reason. The first request only reads the current router/model and prepares a review. Cancel leaves settings unchanged.','Нажмите кнопку у конкретной причины. Первый запрос только читает текущий роутер/модель и готовит обзор. «Отмена» сохраняет настройки без изменений.']},
+ {t:['Apply only the displayed change. The app preserves its original values privately, checks that Auto is stopped and recovery is complete, rejects changed reviews, then reads the result again. No VPN reconnect, Auto Start or automatic reboot occurs.','Примените только показанное изменение. Приложение приватно сохраняет исходные значения, проверяет остановку Auto и завершение восстановления, отвергает изменившийся обзор и читает результат заново. VPN не переподключается, Auto не запускается, автоматической перезагрузки нет.']},
+ {t:['Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto remains blocked until a separate deliberate router reboot and fresh checks.','Переключатели автозапуска не останавливают работающую службу. При отключении автозагрузки SFE точный исходный файл сохраняется; работающие модули принудительно не выгружаются. Flow offloading сохраняется без перезапуска firewall. Если нужна перезагрузка, Auto остаётся заблокирован до отдельной осознанной перезагрузки роутера и свежих проверок.']},
+ {t:['An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed with this button.','Неопределённый ответ не означает успех. Сохраните /etc/homensai-vpn/preparation-changes для восстановления и проверьте реальное состояние до новой попытки. Неизвестную прошивку, привязки, сохранённые файлы или активное восстановление эта кнопка не обходит.']}
+]});
 // The terms can be re-read at any time (same points as the first-run screen).

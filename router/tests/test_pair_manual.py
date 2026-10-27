@@ -50,6 +50,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(manual.public()['state'],'COMPLETED');self.assertEqual(pair.read_state()['manual_hold'],'target')
         self.assertEqual(pair.intent()['mode'],'on');self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[NOW])
 
+    def test_manual_switch_uses_the_same_custom_attempt_window(self):
+        self.settings.update(recovery_attempt_limit='1',recovery_attempt_window='5')
+        agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[NOW-200]})
+        denied=manual.request('reserve',self.revision)
+        self.assertFalse(denied['accepted']);self.assertIn('PAIR-RATE-LIMIT',denied['blockers'])
+        self.settings['recovery_attempt_window']='1'
+        self.assertTrue(manual.request('reserve',self.revision)['accepted'])
+        self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[NOW-200])
+
     def test_stop_before_claim_cancels_without_dispatch(self):
         self.reserve_request();auto_control.current_revision(rotate=True)
         with patch.object(n,'attempt') as apply:

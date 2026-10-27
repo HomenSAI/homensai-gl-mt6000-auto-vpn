@@ -83,11 +83,15 @@ def controls():
         if journal.get('phase') not in (None,'ROLLED-BACK'):reserve.append('TRANSACTION-IN-PROGRESS')
         if not healthy(status,source,now):primary.append('SOURCE-NOT-HEALTHY')
         if not healthy(status,target,now):reserve.append('PAIR-MANUAL-TARGET-UNHEALTHY')
-        ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]});events,permitted=pair.budget(ledger.get('events'),now)
-        if not permitted:reserve.append('PAIR-RATE-LIMIT')
-        elif events:
+        ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+        events=ledger.get('events')
+        if events:
             from recovery_settings import normalized
             policy=normalized(n.Linux().policy()['settings'])
+            events,permitted=pair.budget(events,now,policy['attempt_window']*60,policy['attempt_limit'])
+        else:events,permitted=pair.budget(events,now)
+        if not permitted:reserve.append('PAIR-RATE-LIMIT')
+        elif events:
             if now-events[-1]<max(policy['cooldown'],policy['min_dwell']):reserve.append('PAIR-MANUAL-COOLDOWN')
         result.update(primary={'allowed':not primary,'blockers':primary},reserve={'allowed':not reserve,'blockers':reserve},
                       resume={'allowed':not reasons and state.get('manual_hold') in ('source','target'),'blockers':reasons},blockers=reasons)
@@ -114,6 +118,8 @@ def request(direction,revision,request_source=None):
             selection={k:chosen.get(k) for k in ('hash','settings_hash','vendor_identity')}
             selection.update(source=chosen['source']['id'],target=chosen['target']['id'],tx=n.journal_read().get('tx'))
         with control_lock(RUNTIME):
+            from speed_pause import public as pause_status
+            if pause_status().get('active'):return refuse('SPEED-BUSY')
             current=revision_locked(RUNTIME);state=pair.read_state()
             if current!=revision or not active(state,pair.intent(),revision):return refuse('CONTROL-REVISION-STALE')
             old=read()
@@ -167,9 +173,9 @@ def consume(backend,state,settings,revision):
         if row['direction']=='reserve':
             if journal.get('phase') not in (None,'ROLLED-BACK') or backend.order()!=(state['order'],state['policy_hash']):raise n.Refused('TRANSACTION-IN-PROGRESS')
             if backend.health(selection['target']['id']) is not True:raise n.Refused('PAIR-MANUAL-TARGET-UNHEALTHY')
-            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]});events,permitted=pair.budget(ledger.get('events'),now)
             from recovery_settings import normalized
             recovery=normalized(settings)
+            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]});events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
             if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
             if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
             pair.require_running(revision);atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
@@ -207,8 +213,8 @@ def held_reserve(backend,state,journal,settings,status):
     from failover_plan import streak
     row=next((p for p in status.get('profiles',[]) if p.get('id')==journal['target']),None)
     recovery=normalized(settings);now=time.time()
-    age=max(30,min(900,int(settings.get('interval',30))*3))
-    resolved=resolve_pair(status,settings,now,age,max(30,min(600,int(settings.get('interval',30))*2)))
+    age=max(30,min(900,int(settings.get('interval',10))*3))
+    resolved=resolve_pair(status,settings,now,age,max(30,min(600,int(settings.get('interval',10))*2)))
     expected=journal.get('vendor_profiles',{}).get('target')
     verified=(resolved['coordination']['state']=='READY' and resolved['target'] is not None
               and resolved['target']['id']==journal['target'] and (expected is None or profile_identity(resolved['target'])==expected))

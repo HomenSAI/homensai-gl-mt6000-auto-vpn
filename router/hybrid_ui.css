@@ -1,0 +1,40 @@
+/* Legacy expanded layout; the Minimum keeps its current separate card. */
+.hv-preparation-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;min-width:0;max-width:100%}
+.hv-app .hv-preparation-actions .cbi-button{max-width:100%;min-width:0;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;box-sizing:border-box}
+.hv-app[data-hv-active="home"] .hv-sidebar,.hv-app[data-hv-active="home"] .hv-page-header,.hv-app[data-hv-active="home"] .hv-settings{display:none!important}
+/* Reference text is wrapped inside the available column, including open fixes. */
+.hv-app table.hv-errors{display:table!important;table-layout:fixed;width:100%;max-width:100%;min-width:0!important;border-collapse:collapse}
+.hv-app table.hv-errors th,.hv-app table.hv-errors td{box-sizing:border-box;min-width:0;white-space:normal!important;overflow-wrap:anywhere;word-break:normal;vertical-align:top;padding:12px}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(1){width:19%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(2){width:16%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(3){width:49%}
+.hv-app table.hv-errors tr:not(.hv-errfix)>:nth-child(4){width:16%}
+.hv-app table.hv-errors code{white-space:normal!important;overflow-wrap:anywhere;font-size:12px}
+.hv-app table.hv-errors .cbi-button{min-width:0;max-width:100%;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;padding:9px 12px!important;box-sizing:border-box}
+.hv-app table.hv-errors .hv-errfix td{width:auto;max-width:100%}
+.hv-app table.hv-errors .hv-errfix p{white-space:normal!important;overflow-wrap:anywhere;max-width:100%}
+@media(max-width:700px){
+ .hv-app table.hv-errors{display:block!important}
+ .hv-app table.hv-errors .hv-error-head{display:none}
+ .hv-app table.hv-errors tr:not(.hv-error-head):not(.hv-errfix){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;border-top:1px solid var(--line,#ddd)}
+ .hv-app table.hv-errors tr:not(.hv-errfix)>td{display:block;width:auto!important;padding:9px}
+ .hv-app table.hv-errors tr:not(.hv-errfix)>td:nth-child(3),.hv-app table.hv-errors tr:not(.hv-errfix)>td:nth-child(4){grid-column:1/-1}
+ .hv-app table.hv-errors .hv-errfix:not([hidden]),.hv-app table.hv-errors .hv-errfix td{display:block;width:100%}
+}
+
+/* Instrument panel: a readable, keyboard-labelled control in the icon rail. */
+.hv-app .hv-advanced-toggle .hv-advanced-icon{display:none}
+@media(min-width:761px){
+ .hv-app.hv-workspace[data-hv-design="c"]{grid-template-columns:84px minmax(0,1fr)}
+ .hv-workspace[data-hv-design="c"] .hv-sidebar>nav{box-sizing:border-box;scrollbar-width:thin;scrollbar-color:var(--muted) transparent}
+ .hv-workspace[data-hv-design="c"] .hv-sidebar>nav::-webkit-scrollbar{width:6px}
+ .hv-workspace[data-hv-design="c"] .hv-sidebar>nav::-webkit-scrollbar-thumb{background:var(--muted);border-radius:6px}
+ .hv-workspace[data-hv-design="c"] .hv-sidebar>nav a,.hv-workspace[data-hv-design="c"] .hv-advanced-toggle{box-sizing:border-box;width:48px;min-width:48px;min-height:44px;margin:0 auto;justify-content:center;padding:8px!important;position:relative}
+ .hv-workspace[data-hv-design="c"] .hv-advanced-toggle .hv-advanced-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;font-size:20px;line-height:1;color:var(--teal)}
+ .hv-workspace[data-hv-design="c"] .hv-advanced-toggle .hv-advanced-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+ .hv-workspace[data-hv-design="c"] .hv-advanced-toggle:after{position:absolute;right:3px;bottom:3px;margin:0;font-size:10px;line-height:1}
+}
+
+/* Readable, responsive schematic; colors never indicate live channel status. */
+.hv-auto-schematic{margin:1.25rem 0;padding:1.25rem;border:1px solid var(--line,#d9dfe7);border-radius:18px;background:var(--surface,#fff);color:var(--text,#262421);}
+.hv-auto-schematic h3{margin:0 0 .5rem}.hv-schematic-intro,.hv-schematic-note{line-height:1.5;margin:.7rem 0}.hv-schematic-flow{display:grid;grid-template-columns:minmax(0,1fr);max-width:760px;margin:1rem auto;gap:0}.hv-schematic-box{display:flex;flex-direction:column;gap:.3rem;padding:.85rem 1rem;border:1px solid #a6bddd;border-left:5px solid #2c6bc2;border-radius:12px;overflow-wrap:anywhere;background:var(--pv-surface2,var(--surface,#f4f7fc));color:var(--text,#262421)}.hv-schematic-box span{line-height:1.45}.hv-schematic-decision,.hv-schematic-limits{border-left-color:#cb8827}.hv-schematic-reserve,.hv-schematic-return{border-left-color:#14866e}.hv-schematic-arrow{text-align:center;color:#557699;line-height:1.2;font-size:1.25rem;font-weight:bold}.hv-schematic-note{font-size:.94em}.hv-auto-schematic *{box-sizing:border-box}@media(max-width:480px){.hv-auto-schematic{padding:.8rem}.hv-schematic-box{padding:.7rem}}

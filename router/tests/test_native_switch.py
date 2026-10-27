@@ -44,6 +44,19 @@ class Backend:
 
 
 class NativeTests(unittest.TestCase):
+    def test_primary_recovery_uses_configured_long_probe_interval(self):
+        import failure_diagnosis
+        samples=[{'id':'primary','time':700,'code':None,'dns_ok':True,'https_success':2},
+                 {'id':'primary','time':1000,'code':None,'dns_ok':True,'https_success':2}]
+        pair={'coordination':{'state':'READY'},'source':{'id':'primary'},'target':None}
+        with patch.object(native,'read_json',return_value={'samples':samples}), \
+             patch.object(native.time,'time',return_value=1000), \
+             patch.object(failure_diagnosis,'resolve_pair',return_value=pair), \
+             patch.object(failure_diagnosis,'scoped_samples',return_value=samples), \
+             patch.object(native.Linux,'health',return_value=True):
+            self.assertTrue(native.Linux().recovery_ready('primary',{'interval':300}))
+            self.assertFalse(native.Linux().recovery_ready('primary',{'interval':10}))
+
     def setUp(self):
         # Fake PIDs must never reach the actual process-group kill syscall.
         patcher=patch.object(native.os,'killpg')
@@ -54,6 +67,23 @@ class NativeTests(unittest.TestCase):
         # lookup when its five-second cache expires during a slower full suite.
         # Keep the real History store/rollback checks, with explicit fixture retention.
         retention=patch.object(retention_settings,'configured_days',return_value=7);retention.start();self.addCleanup(retention.stop)
+
+    def test_disabled_removed_client_cannot_break_guard_device_discovery(self):
+        rows=[{'interface':'ovpnclient1','administrative_state':'disabled'},
+              {'interface':'wgclient1','administrative_state':'enabled'},
+              {'interface':'ovpnclient2','administrative_state':'enabled'}]
+        def status(args):
+            self.assertNotIn('network.interface.ovpnclient1',args)
+            return json.dumps({'up':True,'l3_device':args[2].split('.')[-1]}).encode()
+        with patch.object(native,'inventory',return_value={'profiles':rows}),patch.object(native,'command',side_effect=status)as query:
+            self.assertEqual(native.Linux().devices(),['wgclient1','ovpnclient2'])
+            self.assertEqual(query.call_count,2)
+
+    def test_missing_or_malformed_enabled_client_still_blocks_guard_discovery(self):
+        rows=[{'interface':'ovpnclient2','administrative_state':'enabled'}]
+        for reply in (native.subprocess.CalledProcessError(4,['ubus']),b'not-json',b'[]'):
+            with patch.object(native,'inventory',return_value={'profiles':rows}),patch.object(native,'command',side_effect=reply if isinstance(reply,Exception)else None,return_value=reply):
+                with self.assertRaisesRegex(native.Refused,'GUARD-DEVICE-UNVERIFIED'):native.Linux().devices()
 
     def test_exact_supported_policy_and_hash(self):
         data,profiles=fixture();s=native.choose(data,profiles)

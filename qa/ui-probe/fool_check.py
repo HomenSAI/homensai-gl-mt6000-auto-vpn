@@ -16,7 +16,7 @@ BOUNDS = {
     'setup_system': {'interval': (10, 300), 'duration': (1, 240)},
     'setup_speed': {'budget_mib': (1, 32), 'duration': (2, 15), 'streams': (1, 4), 'daily_mib': (1, 1024), 'busy_mbps': (1, 1000)},
     'setup_monitor': {'interval': (10, 300), 'checkpoint': (300, 3600), 'probe_limit': (1, 16),'live_log_limit':(1,2000),'history_days':(1,7)},
-    'setup_recovery': {k: tuple(v) for k, v in RECOVERY.items()},
+    'setup_recovery': dict({k: tuple(v) for k, v in RECOVERY.items()},interval=(10,300)),
     'speed_start': {'budget_mib': (1, 32), 'duration': (2, 15), 'streams': (1, 4)},
     'fault_start': {'duration': (1, 180)},
 }

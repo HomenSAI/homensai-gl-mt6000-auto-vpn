@@ -1,0 +1,98 @@
+{
+  "result": "PASS_MT3000_INSTALL_AND_AUTO_START",
+  "version": "0.9.1-alpha41-1",
+  "source": "aa9801523378951500788183896f94cccebc81df",
+  "package_sha256": "13060528209f3bd40e1f57896ace286c32b14005f20b2925ce80a5e62baa4b04",
+  "install": {
+    "result": "PASS_INSTALLED",
+    "package": "0.9.1-alpha41-1",
+    "running_version": "0.9.1-alpha41",
+    "sha256": "13060528209f3bd40e1f57896ace286c32b14005f20b2925ce80a5e62baa4b04",
+    "payload_files_verified": 92,
+    "opkg_exit": 0,
+    "opkg_log_sha256": "80fc975d49e434a2664e949fc2a0ad5b380a86ff4a2c40cec30f4a06d0ea24e9",
+    "protected_configs_unchanged": true,
+    "unrelated_app_settings_unchanged": true,
+    "terms_preserved": true,
+    "main_routes_unchanged": true,
+    "fresh_status_age": 8.928637742996216,
+    "auto_requested": "off",
+    "pair_phase": "STOPPED",
+    "native_state": "STOPPED",
+    "native_blockers": [
+      "VENDOR-SETTLING"
+    ],
+    "services": {
+      "monitor": {
+        "running": true,
+        "pid": 12993
+      },
+      "native": {
+        "running": true,
+        "pid": 12867
+      }
+    },
+    "profile_measurements": [
+      {
+        "id": "openvpn:40354_2020",
+        "interface": "ovpnclient2",
+        "administrative_state": "enabled",
+        "code": null,
+        "dns_ok": true,
+        "https_success": 2,
+        "time": 1793105987.993251
+      },
+      {
+        "id": "wireguard:peer_2002",
+        "interface": "wgclient1",
+        "administrative_state": "enabled",
+        "code": "VPN-003",
+        "dns_ok": true,
+        "https_success": 1,
+        "time": 1793105987.999138
+      }
+    ]
+  },
+  "interface": {
+    "result": "PASS",
+    "version": "0.9.1-alpha41",
+    "assets": [
+      {
+        "name": "dashboard116.js",
+        "bytes": 1198122,
+        "sha256": "3f7d62d5545f83485109de373c84bc95d92e144dfd87db30dbd81ca432c4f59b"
+      },
+      {
+        "name": "ui84.css",
+        "bytes": 144184,
+        "sha256": "1063f3654bfb0bf8e4f0e617ae1169332a123ec6c3c4d6ae4983b46f5e6570aa"
+      }
+    ],
+    "selected_module": "dashboard116",
+    "fresh_rpc": true,
+    "scope": "Actual physical router HTTP/RPC; native browser page not driven",
+    "observed_utc": "2026-10-27T13:01:41.958858+00:00"
+  },
+  "backup_after": {
+    "result": "PASS",
+    "encrypted_sha256": "cd610f712ef3bfae12767060b8777afc2dbddc128a5e6814143cfeadcae8c48a",
+    "entries": 199,
+    "expanded_bytes": 4517310,
+    "encrypted_bytes": 662864,
+    "independent_decrypt_and_tar_read": true,
+    "plaintext_persisted": false,
+    "key_protection": "Windows DPAPI current user"
+  },
+  "sequence": [
+    "Encrypted backup before; ordinary Stop (held on reserve because the primary was unhealthy); the supervisor restored the primary order itself (journal ROLLED-BACK, pair STOPPED); package installed; ordinary Start."
+  ],
+  "result_summary": "Auto RUNNING; the unhealthy primary (about 56-70% of test packets lost) caused an automatic switch to the working reserve (COMMITTED); pair not held; network identity and protected configs unchanged.",
+  "not_proven": [
+    "native browser rendering of the new labels",
+    "external LAN confirmation",
+    "24-hour soak",
+    "power-cut",
+    "IPv6",
+    "return to a recovered primary"
+  ]
+}

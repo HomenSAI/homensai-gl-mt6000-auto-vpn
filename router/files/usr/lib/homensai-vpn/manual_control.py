@@ -144,6 +144,8 @@ def request(direction, control_revision, request_source=None):
     arrived = time.time()
     try:
         with control_lock():
+            from speed_pause import public as pause_status
+            if pause_status().get('active'):return refusal('SPEED-BUSY')
             if control_revision != revision_locked(RUNTIME):
                 return refusal('CONTROL-REVISION-STALE')
             from pair_auto import public_intent
@@ -165,6 +167,8 @@ def request(direction, control_revision, request_source=None):
         if reasons:
             return refusal(*reasons)
         with control_lock():
+            from speed_pause import public as pause_status
+            if pause_status().get('active'):return refusal('SPEED-BUSY')
             if control_revision != revision_locked(RUNTIME):
                 return refusal('CONTROL-REVISION-STALE')
             current_policy = backend.policy()

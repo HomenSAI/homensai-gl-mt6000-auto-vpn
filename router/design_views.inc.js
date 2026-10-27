@@ -53,7 +53,12 @@ function dvChannelUse(profile,m,status){
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
   if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.label=status.rpc_error?bi('Status request failed','Ошибка получения статуса'):bi('Monitor data is out of date','Мониторинг не обновляет данные');return result;}
-  if(h.state==='failed'){result.kind='red';result.state='failed';return result;}
+  var rel=typeof channelReliability==='function'&&profile.interface&&profile.code!=='VPN-001'?channelReliability(profile,status,m.now):null;
+  if(h.state==='failed'){
+    result.kind='red';result.state='failed';
+    if(rel&&rel.unreliable){result.label=bi('Reliability problem: ','Проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
+    return result;
+  }
   if(h.state==='inactive'){result.label=bi('Off','Отключён');result.kind='red';result.state='off';return result;}
   if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
   var ns=status.native_failover||{};
@@ -64,6 +69,7 @@ function dvChannelUse(profile,m,status){
     else{result.kind='yellow';result.label=bi('Internet available; checking selected channel','Интернет доступен; уточняется выбранный канал');}
   }
   if(h.state==='unknown'){result.kind='yellow';result.label=bi('Internet check data unavailable','Нет результата проверки Интернета');}
+  if(h.state==='healthy'&&rel&&rel.unreliable){result.kind='yellow';result.label=bi('Works, but reliability problem: ','Работает, но проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
   return result;
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
@@ -75,7 +81,7 @@ function channelDisplayUse(profile,status,inventory){
 function renderChannelHeader(profile,status,inventory){
   var use=channelDisplayUse(profile,status,inventory);
   return E('div',{'class':'hv-server-top'},[dvChannelLamp(use),E('strong',{'class':'hv-protocol'},use.role+' · '+protocolLabel(profile)),
-    E('span',{'class':'hv-route-badge hv-route-'+use.kind,'data-route-state':use.state},use.label+(safeCode(profile.code)?' · '+profile.code:'')),
+    E('span',{'class':'hv-route-badge hv-route-'+use.kind,'data-route-state':use.state},use.label+(safeCode(use.code)?' · '+use.code:safeCode(profile.code)?' · '+profile.code:'')),
     E('span',{'class':'hv-profile-detail'},bi('Tunnel: ','Туннель: ')+(profile.interface?bi('Connected','Подключён'):bi('Off','Отключён'))+' · '+bi('Traffic: ','Трафик: ')+(use.state==='selected'?bi('Selected channel','Выбранный канал'):use.state==='standby'?bi('Standby','Ожидание'):bi('Unconfirmed','Не подтверждён')))]);
 }
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}

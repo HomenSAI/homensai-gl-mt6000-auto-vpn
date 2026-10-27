@@ -27,6 +27,8 @@ function fixture({language='en',design,inventory,store={},status,showIntro=false
   for(const file of ['element_guard','fool_guard','auto_panel','setup_wizard','theme_panel','design_panel','router_link','identity_panel','attribution_panel','onboarding_panel']){
     vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8').replace('__UI_BUILD__',app.ui_module).replace('__UI_AGENT__',app.version),c,{filename:file});
   }
+  // The release adapter fixes the accepted layout; language/theme remain variable.
+  c.currentDesign=()=> 'b';
   if(design!==undefined)store['homensai-vpn-design']=design;
   inventory=inventory||baseInventory();c.onboardingDisplayDefaults(inventory);
   let root=c.renderOnboardingGate(inventory,status||{version:app.version,package_version:app.version+'-1'});
@@ -56,17 +58,17 @@ function baseInventory(count=2){return {settings:{terms_version:'1',plan_source:
 for(const language of ['en','ru']){
  const inv=baseInventory();inv.settings.detected_router_model='mt3000';
  inv.profiles.push({id:'openvpn:2_3',protocol:'openvpn',name:'Saved only'},
-  {id:'wireguard:peer_99',protocol:'wireguard',name:'Wrong client',interface:'wgclient9',vendor_tunnel_id:'wireguard:wgclient9'});
+  {id:'wireguard:peer_99',protocol:'wireguard',name:'Additional configured client',interface:'wgclient9',vendor_tunnel_id:'wireguard:wgclient9'});
  const f=fixture({language,inventory:inv});f.c.openOnboardingSettings(inv,{version:app.version},'system');
  const values=n=>n.children.map(o=>o.attrs.value).filter(Boolean);
- assert.deepEqual(values(f.field('system.source')),['openvpn:1_1','wireguard:peer_2']);
- assert.deepEqual(values(f.field('system.target')),['wireguard:peer_2']);
+ assert.deepEqual(values(f.field('system.source')),['openvpn:1_1','wireguard:peer_2','wireguard:peer_99']);
+ assert.deepEqual(values(f.field('system.target')),['wireguard:peer_2','wireguard:peer_99']);
  f.set('system.source','wireguard:peer_2');assert.equal(f.field('system.target').value,'','changing primary clears a conflicting reserve, without routing writes');
- assert.deepEqual(values(f.field('system.target')),['openvpn:1_1']);assert(f.button('next').disabled);
+ assert.deepEqual(values(f.field('system.target')),['openvpn:1_1','wireguard:peer_99']);assert(f.button('next').disabled);
  f.set('system.target','openvpn:1_1');assert(!f.button('next').disabled);assert.equal(f.calls.length,0);
  const ambiguous=clean(inv.profiles);ambiguous.push({...ambiguous[0],id:'openvpn:1_2',name:'Duplicate tunnel'});
  assert(!f.c.onboardingPairChannels(ambiguous,inv.settings).some(p=>p.interface==='ovpnclient1'));
- const stopped=clean(inv.profiles);stopped[0].administrative_state='disabled';assert.equal(f.c.onboardingPairChannels(stopped,inv.settings).length,2,'configured clients remain selectable while stopped');
+ const stopped=clean(inv.profiles);stopped[0].administrative_state='disabled';assert.equal(f.c.onboardingPairChannels(stopped,inv.settings).length,3,'all uniquely bound configured clients remain selectable while stopped');
  const unbound=baseInventory();delete unbound.profiles[0].vendor_tunnel_id;const g=fixture({inventory:unbound});g.c.openOnboardingSettings(unbound,{version:app.version},'system');assert(g.button('next').disabled,'unassigned saved profile cannot qualify as a channel');
  g.set('system.defer_pair',true);assert(!g.button('next').disabled,'deferral remains available without enough clients');
 }
@@ -99,7 +101,7 @@ function advance(f,target='review'){
   assert.equal(f.c.onboardingComplete({error:'RPC',settings:{onboarding_complete:true,onboarding_version:1}}),false);
   assert.equal(f.calls.length,0,'render must not add a status/readiness RPC');
   assert.equal(f.step(),'appearance');assert.equal(f.field('appearance.language').value,'en');
-  assert.equal(f.c.currentDesign(),'b');assert.equal(f.field('appearance.design').value,'b','fresh wizard starts Calm without persisting a browser override');assert.equal(f.writes.length,0);
+  assert.equal(f.c.currentDesign(),'b');assert(!walk(f.root).some(n=>n.attrs['data-onboarding-field']==='appearance.design'),'accepted design is not a wizard selector');assert.equal(walk(f.root).find(n=>n.attrs['data-onboarding-group']).attrs['data-onboarding-group'],'1');assert.equal(f.writes.length,0);
   assert(!walk(f.root).some(n=>n.attrs['data-onboarding-action']==='auto-power'));assert(f.button('open-dashboard').attrs.class.includes('hv-onboarding-recovery-link'));
   f.set('appearance.theme','dark');f.set('appearance.language','ru');assert.equal(f.c.locale,'ru');assert(text(f.root).includes('Язык и оформление'));assert(text(f.root).includes('Далее'));assert.equal(new URL(f.button('open-dashboard').attrs.href).searchParams.get('lang'),'ru');assert(text(f.root).includes('Открыть панель и средства восстановления'));assert(!text(f.root).includes('Language and appearance'));assert.equal(f.field('appearance.theme').value,'dark');assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);assert.equal(f.reloads,0);
   const skip=walk(f.root).find(n=>n.attrs['data-onboarding-skip']==='1'),nav=f.button('next').parentNode;assert.equal(skip.parentNode,nav.parentNode);assert(skip.parentNode.children.indexOf(skip)>skip.parentNode.children.indexOf(nav),'skip is below Cancel/Next');assert(text(skip).includes('ничего не сбрасывает'));const guideUrl=new URL(f.button('setup-help').attrs.href);assert.equal(guideUrl.hash,'#help');assert.equal(guideUrl.searchParams.get('setup_help'),'1');assert.equal(guideUrl.searchParams.get('onboarding'),'defer');assert.equal(f.button('setup-help').attrs.target,'_blank');
@@ -133,7 +135,7 @@ function advance(f,target='review'){
   f.pending.resolve({saved:true,onboarding_complete:true,onboarding_version:1});await p;assert.equal(f.reloads,1);assert.equal(f.c.ONBOARDING_SESSION,null);
   const commit=f.calls.at(-1);assert.equal(commit.spec.method,'setup_onboarding');assert.deepEqual(commit.spec.params,['system','monitor','recovery','speed','telegram','appearance']);
   const [system,monitor,recovery,speed,telegram,appearance]=commit.args;
-  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,180);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
+  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,60);assert.equal(recovery.min_dwell,60);assert.equal(recovery.primary_successes,2);assert.equal(recovery.primary_stable,30);assert.equal(recovery.attempt_limit,3);assert.equal(recovery.attempt_window,15);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
   assert(f.calls.every(call=>call.spec.method==='setup_onboarding'),'never accepts terms, toggles a service or starts Auto');
   // Zero/one-profile installations require a deliberate defer; outgoing pair is empty, planning off, metadata retained.
   for(const count of [0,1]){
@@ -148,11 +150,11 @@ function advance(f,target='review'){
   f.set('telegram.configure',false);f.click('next');f.response={saved:true,onboarding_complete:true,onboarding_version:1};await f.click('save');assert.deepEqual(f.calls.at(-1).args[4],{configure:false});assert(!f.writes.some(row=>String(row).includes(token)),'never persists token in browser');
   const stored=baseInventory();stored.settings.telegram_configured=true;stored.settings.telegram_destination='@stored_channel';stored.settings.telegram_enabled=true;f=fixture({inventory:stored});advance(f,'telegram');f.set('telegram.configure',true);assert.equal(f.field('telegram.token').value,'');assert(!f.button('next').disabled,'blank token retains valid stored token');advance(f);assert(text(f.root).includes('Stored token retained (hidden)'));
   // Change every section through its real controls, then verify the complete transaction independently.
-  f=fixture();f.set('appearance.language','ru');f.set('appearance.theme','light');f.set('appearance.design','b');f.click('next');
+  f=fixture();f.set('appearance.language','ru');f.set('appearance.theme','light');f.click('next');
   f.set('monitor.interval',45);f.set('monitor.checkpoint',1200);f.set('monitor.probe_limit',24);f.set('monitor.planning_enabled',true);f.set('monitor.live_log_limit',1500);f.set('monitor.history_days',2);f.click('next');
   f.set('system.source','wireguard:peer_2');f.set('system.target','openvpn:1_1');f.set('system.duration',20);f.set('system.session_loss',true);f.click('next');
   f.set('servers.0.name','Main display');f.set('servers.0.channel','Group A');f.set('servers.0.priority',12);f.set('servers.1.name','Reserve display');f.set('servers.1.channel','Group B');f.set('servers.1.priority',34);f.click('next');
-  const customRecovery={failures:5,successes:4,cooldown:360,min_dwell:240,primary_successes:5,primary_stable:120,return_policy:'hold_reserve'};
+  const customRecovery={failures:5,successes:4,cooldown:360,min_dwell:240,primary_successes:5,primary_stable:120,attempt_limit:4,attempt_window:8,return_policy:'hold_reserve'};
   for(const [key,value] of Object.entries(customRecovery))f.set('recovery.'+key,value);f.click('next');
   const customSpeed={enabled:true,auto_new:true,budget_mib:16,duration:10,streams:3,daily_mib:256,busy_mbps:10};
   for(const [key,value] of Object.entries(customSpeed))f.set('speed.'+key,value);f.click('next');
@@ -165,9 +167,9 @@ function advance(f,target='review'){
   assert.deepEqual(full[5],{language:'ru',theme:'light',design:'b',router_model:'auto'});assert.equal(f.store['homensai-vpn-language'],'ru');assert.equal(f.store['homensai-vpn-theme'],'light');assert.equal(f.store['homensai-vpn-design'],'b');
   // Router defaults survive an empty browser, browser overrides win, and Settings reopens the same values/draft.
   const saved=baseInventory();Object.assign(saved.settings,{onboarding_complete:true,onboarding_version:1,appearance_language:'ru',appearance_design:'c',appearance_theme:'dark',probe_limit:32,recovery_cooldown:420});
-  f=fixture({inventory:saved});assert.equal(f.c.locale,'ru');assert.equal(f.c.currentDesign(),'c');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.onboardingComplete(saved),true);f.open();assert.equal(f.field('appearance.language').value,'ru');advance(f,'monitor');assert.equal(f.field('monitor.probe_limit').value,'32');f.set('monitor.checkpoint','1200');f.click('cancel');assert.equal(f.modal,null);f.open();assert.equal(f.field('monitor.checkpoint').value,'1200');advance(f,'recovery');assert.equal(f.field('recovery.cooldown').value,'420');
+  f=fixture({inventory:saved});assert.equal(f.c.locale,'ru');assert.equal(f.c.currentDesign(),'b');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.onboardingComplete(saved),true);f.open();assert.equal(f.field('appearance.language').value,'ru');advance(f,'monitor');assert.equal(f.field('monitor.probe_limit').value,'32');f.set('monitor.checkpoint','1200');f.click('cancel');assert.equal(f.modal,null);f.open();assert.equal(f.field('monitor.checkpoint').value,'1200');advance(f,'recovery');assert.equal(f.field('recovery.cooldown').value,'420');
   f=fixture({inventory:saved,store:{'homensai-vpn-language':'en','homensai-vpn-theme':'system','homensai-vpn-design':'b'}});assert.equal(f.c.locale,'en');assert.equal(f.c.storedTheme(),'system');assert.equal(f.c.currentDesign(),'b');
-  f.c.window.localStorage.getItem=()=>{throw Error('storage unavailable');};f.c.onboardingDisplayDefaults(saved);assert.equal(f.c.locale,'ru');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.currentDesign(),'c','router defaults work when browser persistence is unavailable');
+  f.c.window.localStorage.getItem=()=>{throw Error('storage unavailable');};f.c.onboardingDisplayDefaults(saved);assert.equal(f.c.locale,'ru');assert.equal(f.c.storedTheme(),'dark');assert.equal(f.c.currentDesign(),'b','accepted layout ignores old router/browser design preference');
   f=fixture({inventory:saved});f.c.requestedLanguage='en';f.c.locale='en';f.c.onboardingDisplayDefaults(saved);assert.equal(f.c.locale,'en','explicit language URL wins over router default');
   // One canonical power control, independent of the wizard save lock.
   for(const legacyStatus of [{native_failover:{state:'OBSERVING',certified:true},auto_control:{requested:'on'}},{rpc_error:'RPC-UNAVAILABLE'},{}]){
@@ -204,15 +206,15 @@ function advance(f,target='review'){
   assert.equal(f.calls.length,0);assert.equal(f.writes.length,0);assert.equal(JSON.stringify(f.inventory.settings),originalSettings);assert.equal(f.c.onboardingComplete(f.inventory),false);
   const fresh=fixture();fresh.c.window.location.href=f.c.window.location.href;assert.equal(fresh.c.onboardingEntryDeferred(),false,'a normal reload of the scrubbed URL offers setup again');
   const blockedHistory=fixture();blockedHistory.c.window.location.href='http://router/?onboarding=defer';blockedHistory.c.window.history.replaceState=()=>{throw Error('history unavailable');};assert.equal(blockedHistory.c.onboardingEntryDeferred(),false,'cannot promise one-entry escape when URL cleanup fails');
-  // Every step/pause in every design and locale retains complete owner identity; full-page styles load once.
+  // Every step/pause ignores legacy designs and retains owner identity in both locales; full-page styles load once.
   for(const language of ['en','ru'])for(const design of ['a','b','c']){
     f=fixture({language,design});assert.equal(walk(f.root).filter(n=>n.tag==='link').length,4);
-    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert.equal(walk(f.root).some(n=>n.attrs['data-onboarding-action']==='auto-power'),f.step()!=='appearance','Stop removed only from appearance');assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],design);if(f.step()==='review')break;f.click('next');}
+    while(true){const identity=walk(f.root).find(n=>n.attrs['data-hv-attribution']==='1');assert(identity);assert.equal(walk(f.root).some(n=>n.attrs['data-onboarding-action']==='auto-power'),f.step()!=='appearance','Stop removed only from appearance');assert(f.button('open-dashboard').attrs.href,'recovery escape available on '+f.step());const contents=text(f.root);for(const phrase of ['GL.iNet GL-MT6000','Serhii Khomenko','homensai.com'].filter(p=>p!=='homensai.com'))assert(contents.includes(phrase));assert(walk(f.root).some(n=>n.attrs.class==='hv-version'));assert.equal(walk(f.root).find(n=>n.attrs['data-hv-onboarding']==='1').attrs['data-hv-design'],'b','old layout preferences cannot alter accepted release design');if(f.step()==='review')break;f.click('next');}
     if(language==='ru'){assert(text(f.root).includes('Пауза, секунд'));assert(!text(f.root).includes('budget_mib'));assert(!text(f.root).includes('primary_successes'));}
     f.click('cancel');assert.equal(f.step(),'paused');assert(!f.button('auto-power').disabled);assert(walk(f.root).some(n=>n.attrs['data-hv-attribution']==='1'));assert.equal(f.calls.length,0);
   }
   const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');
   assert(builder.includes("onboarding_panel.inc.js"));assert(builder.includes("if(!inventory.error&&!onboardingComplete(inventory)&&!onboardingEntryDeferred())return renderOnboardingGate(inventory,data[1]);"));assert(builder.includes("openOnboardingSettings(inventory,lastGoodStatus||data[1]);"));assert(builder.includes("!onboardingComplete(inventory)?E('p',{'class':'alert-message warning','data-onboarding-incomplete':'1'}"));
   assert(builder.indexOf('return renderTermsGate(inventory,data[1]);')<builder.indexOf('return renderOnboardingGate(inventory,data[1]);'),'terms gate precedes complete setup');
-  console.log('PASS: integrated eight-step onboarding, typed persistence and validation, safe drafts/Telegram, router appearance, EN/RU A/B/C identity, independent emergency Stop and one-entry same-origin dashboard recovery escape with URL cleanup, no completion/storage/RPC writes and held-reserve/pending-save coverage');
+  console.log('PASS: integrated eight-step onboarding, typed persistence and validation, safe drafts/Telegram, router appearance, EN/RU fixed accepted design identity, independent emergency Stop and one-entry same-origin dashboard recovery escape with URL cleanup, no completion/storage/RPC writes and held-reserve/pending-save coverage');
 })().catch(error=>{console.error(error);process.exitCode=1;});

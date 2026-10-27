@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "result": "PASS_LOCAL_CANDIDATE",
+  "version": "0.9.1-alpha27-1",
+  "source": "601ad227deba89d367b26dab7a35129ee21af569",
+  "sha256": "dba3827e0e3fdc8c0cc81504cdc4504da0d96da0def3fe670b582f7390d4e54f",
+  "bytes": 871811,
+  "ci": [
+    {
+      "application_tests": 787,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha27-1_all.ipk",
+      "bytes": 871811,
+      "lua_available": false,
+      "python": "3.11.2",
+      "qa_skipped_tests": 2,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": false,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dba3827e0e3fdc8c0cc81504cdc4504da0d96da0def3fe670b582f7390d4e54f",
+      "skipped_tests": 16,
+      "source": "601ad227deba89d367b26dab7a35129ee21af569",
+      "ui_suites": 61,
+      "image": "local-dev-tools:installed",
+      "image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7"
+    },
+    {
+      "application_tests": 787,
+      "artifact": "homensai-auto-vpn_0.9.1-alpha27-1_all.ipk",
+      "bytes": 871811,
+      "lua_available": true,
+      "python": "3.9.15",
+      "qa_skipped_tests": 17,
+      "qa_tests": 113,
+      "result": "PASS",
+      "runtime_only": true,
+      "scope": "isolated source archive; no physical/virtual router acceptance",
+      "sha256": "dba3827e0e3fdc8c0cc81504cdc4504da0d96da0def3fe670b582f7390d4e54f",
+      "skipped_tests": 0,
+      "source": "601ad227deba89d367b26dab7a35129ee21af569",
+      "ui_suites": 0,
+      "image": "homensai-vpn-python39:local",
+      "image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150"
+    }
+  ],
+  "ui_suites": 61,
+  "chromium_groups": 4,
+  "chromium_checks_per_group": 12,
+  "physical_router_changed": false,
+  "installed": false,
+  "published": false,
+  "live_router_version": "0.9.1-alpha25",
+  "actual_hardware_acceleration": "disabled",
+  "actual_preparation_failures": [
+    "PREP-WGCLIENT1-AUTOSTART",
+    "PREP-STOCK-VPN-BOOT"
+  ],
+  "retained_blockers": [
+    "old pair ownership conflicts with current config",
+    "configured reserve ovpnclient1 differs from enabled ovpnclient2; prepared mode currently verifies wgclient1/ovpnclient1"
+  ]
+}

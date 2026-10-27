@@ -16,7 +16,8 @@ ctx.location=ctx.window.location;vm.createContext(ctx);vm.runInContext(prefix,ct
 assert(source.includes("'class':'hv-skip'"),'skip link');
 assert(source.includes("heading=E('h1',{'tabindex':'-1'}"),'focusable heading');
 assert(source.includes("heading.focus({preventScroll:true})"),'focus moves to the heading when another section opens');
-assert(/E\('nav',\{'tabindex':'0','aria-label':/.test(source),'labelled navigation');
+assert(/E\('nav',\{'id':'hv-(?:minimum|expanded)-nav','aria-label':/.test(source),'labelled navigation without an extra tab stop');
+if(!source.includes('hv-hybrid-release'))assert(source.includes("'aria-controls':'hv-minimum-nav','aria-expanded':'false'"),'mobile sections button exposes its controlled menu');
 assert((source.match(/E\('main',/g)||[]).length===1,'exactly one main landmark');
 // 2. CSS: visible focus for every kind of control, skip link hidden until focused, reduced motion handled.
 const css=fs.readFileSync(base+/ui[0-9]+\.css/.exec(source)[0],'utf8');

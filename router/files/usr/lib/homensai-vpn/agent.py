@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha25'
+VERSION = '0.9.1-alpha41'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -411,6 +411,11 @@ def https_probe(device, mark, target):
             sock.sendall(('GET %s HTTP/1.1\r\nHost: %s\r\nAccept: application/dns-json, application/dns-message, text/plain\r\nConnection: close\r\n\r\n' % (path, hostname)).encode('ascii'))
             response = http.client.HTTPResponse(DeadlineSocket(sock,end))
             response.begin()
+            detail=getattr(EXIT_CONTEXT,'probe_detail',None)
+            if detail is not None:
+                detail['http_status']=response.status
+                if response.status!=200:detail['result']='http-unsupported'if response.status in(426,505)else'http-error'
+            if response.status!=200:return None
             body = response.read(32769)
             remaining(end)
             if response.status != 200 or len(body) > 32768:
@@ -463,12 +468,28 @@ def route_binding(logical):
     return {'code': None, 'device': device, 'mark': mark, 'table': table,'ifindex':ifindex}
 
 
-def https_for_probe(device,mark,target,sink):
+def https_for_probe(device,mark,target,sink,checks=None):
     # The trace belongs to this one probe, even when two logical tunnels share
     # a device or a late worker finishes after another measurement started.
     EXIT_CONTEXT.sink=sink
-    try:return https_probe(device,mark,target)
-    finally:del EXIT_CONTEXT.sink
+    detail={'target':target[1],'result':'unknown'};EXIT_CONTEXT.probe_detail=detail;started=time.monotonic()
+    try:
+        value=https_probe(device,mark,target)
+        if value is not None:detail['result']='ok'
+        elif detail['result']=='unknown':detail['result']='invalid-response'
+        return value
+    except socket.timeout:
+        detail['result']='timeout';raise
+    except ssl.SSLError:
+        detail['result']='tls-error';raise
+    except ValueError:
+        detail['result']='invalid-response';raise
+    except (OSError,http.client.HTTPException):
+        detail['result']='transport-error';raise
+    finally:
+        detail['elapsed_ms']=round((time.monotonic()-started)*1000,1)
+        if checks is not None:checks[target[1]]=detail
+        del EXIT_CONTEXT.sink;del EXIT_CONTEXT.probe_detail
 
 
 def probe(profile):
@@ -484,9 +505,9 @@ def probe(profile):
         result.update(binding)
         if binding['code']:
             return result
-        exit_seen={}
+        exit_seen={};checks={}
         with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = [pool.submit(https_for_probe, binding['device'], binding['mark'], t,exit_seen) for t in TARGETS]
+            futures = [pool.submit(https_for_probe, binding['device'], binding['mark'], t,exit_seen,checks) for t in TARGETS]
             dns = pool.submit(dns_probe, binding['device'], binding['mark'])
             times = []
             for future in futures:
@@ -500,14 +521,14 @@ def probe(profile):
                 dns_ok = dns.result()
             except (OSError, ValueError):
                 dns_ok = False
-        result.update({'https_success': len(times), 'dns_ok': dns_ok,
+        result.update({'https_success': len(times), 'dns_ok': dns_ok,'probe_checks':[checks[t[1]]for t in TARGETS if t[1]in checks],
                        'rtt_ms': round(sum(times)/len(times), 1) if times else None,
                        'code': 'VPN-003' if len(times) < 2 else 'DNS-001' if not dns_ok else None})
         # A successful socket quorum cannot survive a kernel route/device epoch
         # change during the measurement. Configuration is checked by the scan too.
         after=route_binding(profile['interface'])
         if after.get('code') or any(after.get(key)!=binding.get(key) for key in ('device','mark','table','ifindex')):
-            for key in ('https_success','dns_ok','rtt_ms','exit_ip'):result.pop(key,None)
+            for key in ('https_success','dns_ok','rtt_ms','exit_ip','probe_checks'):result.pop(key,None)
             result['code']='VENDOR-IDENTITY-CHANGED'
             return result
         exit_ip = exit_seen.pop(binding['device'], None)
@@ -620,6 +641,16 @@ def monitoring_profiles(data):
     return observed,selected
 
 
+def probe_profiles(profiles, settings):
+    """Disabled catalogue entries cannot consume a live measurement slot."""
+    anchors = {settings.get('plan_' + role + '_tunnel') for role in ('source', 'target')
+               if settings.get('plan_' + role + '_tunnel')}
+    eligible = [p for p in profiles if p.get('interface') and p.get('administrative_state') != 'disabled']
+    eligible.sort(key=lambda p: (p.get('vendor_tunnel_id') not in anchors,
+                                 p.get('administrative_state') != 'enabled'))
+    return eligible[:settings['probe_limit']]
+
+
 def monitor_poll_interval(settings, now=None):
     """Accelerate only a correlated bounded startup; never overlap probe rounds."""
     normal = settings['interval']
@@ -666,6 +697,9 @@ def serve():
     vendor_observer=VendorObserver()
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
+        from speed_pause import gate as speed_gate
+        if speed_gate('monitor'):
+            time.sleep(1);continue
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         started = time.monotonic()
         try:
@@ -676,7 +710,7 @@ def serve():
             profiles = data['profiles']
             selected = {s['profile']: s for s in data.get('servers', []) if s.get('enabled')}
             observed = monitoring_profiles(data)[0]
-            bound = [p for p in observed if p.get('interface')][:settings['probe_limit']]
+            bound = probe_profiles(observed, settings)
             with ThreadPoolExecutor(max_workers=2) as pool:
                 measured = list(pool.map(probe, bound))
             # Read metadata again after the network observations. Never attach a
@@ -687,7 +721,7 @@ def serve():
             rows = []
             for p in observed:
                 row = dict(p)
-                row.update(mapped.get(p['id'], {'code': 'PROFILE-INACTIVE' if not p.get('interface') else 'CHECK-LIMIT'}))
+                row.update(mapped.get(p['id'], {'code': 'PROFILE-INACTIVE' if not p.get('interface') or p.get('administrative_state') == 'disabled' else 'CHECK-LIMIT'}))
                 custom = selected.get(p['id'], {})
                 row['router_name'] = p['name']  # the provider/router profile name; the UI derives the country from it
                 row['name'] = custom.get('name') or p['name']
@@ -726,7 +760,10 @@ def serve():
             for key, code in current.items():
                 if key not in old or old[key] != code:
                     role='source' if key==failure_pair.get('source') else 'target' if key==failure_pair.get('target') else 'unknown'
-                    events.append({'time': time.time(), 'profile': key, 'role':role, 'code': code or 'OK'})
+                    measured_row=next((p for p in rows if p['id']==key),{})
+                    events.append(dict({'time':time.time(),'profile':key,'role':role,'code':code or 'OK'},
+                        **{k:measured_row[k]for k in('https_success','dns_ok','probe_checks')if k in measured_row},
+                        measurement_time=measured_row.get('time')))
             if storage_error:
                 events.append({'time': time.time(), 'code': storage_error})
             status = {'version': VERSION, 'mode': 'monitor', 'time': time.time(), 'profiles': rows,
@@ -741,7 +778,7 @@ def serve():
             status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
             from candidate_hierarchy import rank_candidates
-            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',30)*3,observation=vendor_observation,settings=settings)
+            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',10)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             latency.observe(status,settings,time.time())
             status['latency_history']=latency.public()
@@ -759,7 +796,7 @@ def serve():
             from auto_control import public_status
             status['auto_control']=public_status()
             from system_readiness import snapshot as readiness_snapshot
-            status['system_readiness']=readiness_snapshot()
+            status['system_readiness']=readiness_snapshot(settings=settings)
             try:
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()
@@ -791,6 +828,7 @@ def serve():
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
         while not STOP and time.monotonic()-started < monitor_poll_interval(settings):
+            if (RUNTIME/'speed-pause.json').exists():break
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
                 break
@@ -828,7 +866,8 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
-                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
+                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
+                          'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},
                           'setup_speed':{'enabled':False,'auto_new':False,'budget_mib':0,'duration':0,'streams':0,'daily_mib':0,'busy_mbps':0},
@@ -883,6 +922,9 @@ def rpc(method):
     if method in ('priority_preview','priority_apply'):
         from priority_config import preview,apply
         print(json.dumps(preview(arguments) if method=='priority_preview' else apply(arguments)));return
+    if method in ('preparation_preview','preparation_apply'):
+        from preparation_control import preview,apply
+        print(json.dumps(preview(arguments) if method=='preparation_preview' else apply(arguments)));return
     if method=='monitor_control':
         from monitor_control import change
         print(json.dumps(change(arguments)));return
@@ -960,6 +1002,8 @@ def rpc(method):
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':
+            from speed_pause import public as speed_pause_status
+            status['speed_pause']=speed_pause_status()
             from scan_control import public as scan_public
             status['scan']=scan_public(RUNTIME,read_json)
             from native_history import read_public

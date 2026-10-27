@@ -455,6 +455,9 @@ class Linux:
                 'debugfs_mounted':Path('/sys/kernel/debug').is_mount(),'hook_exists':Path('/sys/kernel/debug/hnat/hook_toggle').exists()}
     def diagnostic(self):
         blockers=[];board={}
+        from preparation_control import auto_blocker
+        preparation_reason=auto_blocker()
+        if preparation_reason:blockers.append(preparation_reason)
         try:
             board=json.loads(command(['ubus','call','system','board']))
             if board.get('board_name')not in('glinet,gl-mt6000','glinet,mt3000-snand'):blockers.append('UNSUPPORTED-BOARD')
@@ -486,11 +489,13 @@ class Linux:
                 blockers.append('HARDWARE-ACCELERATOR-UNVERIFIED')
             if lan!='br-lan':blockers.append('LAN-LAYOUT-UNSUPPORTED')
             metadata=inventory();selection=choose(data,metadata['profiles'])
-            if board.get('board_name')=='glinet,mt3000-snand' and {selection[role]['interface']for role in('source','target')}!={'wgclient1','ovpnclient1'}:
-                blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
+            if board.get('board_name')=='glinet,mt3000-snand':
+                from pair_interfaces import selection as selected_interfaces
+                try:selected_interfaces(selection)
+                except ValueError:blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
             self.use_process_bindings(selection.get('process_bindings'))
             from failure_diagnosis import resolve_pair,profile_identity
-            interval=data.get('settings',{}).get('interval','30')
+            interval=data.get('settings',{}).get('interval','10')
             try:interval=int(interval)
             except (ValueError,TypeError,OverflowError):raise Refused('OBSERVATION-STALE')
             observed=read_json(RUNTIME/'status.json',{})
@@ -502,6 +507,8 @@ class Linux:
                     raise Refused('PROFILE-IDENTITY-CHANGED')
                 selection[role]=dict(current,**{key:measured.get(key) for key in ('vendor_generation','vendor_state','vendor_changed_at')})
                 live=route_binding(current['interface'])
+                # A reserve that is simply not connected is not a changed profile.
+                if role=='target' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001':raise Refused('RESERVE-NOT-CONNECTED')
                 if (live.get('code') is not None and not (role=='source' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001')
                         or any(live.get(key)!=measured.get(key) for key in ('device','mark','table','ifindex'))):
                     raise Refused('PROFILE-IDENTITY-CHANGED')
@@ -612,8 +619,12 @@ class Linux:
     def devices(self):
         devices=[]
         for p in inventory()['profiles']:
-            if not p.get('interface'):continue
-            s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
+            if not p.get('interface') or p.get('administrative_state')=='disabled':continue
+            try:
+                s=json.loads(command(['ubus','call','network.interface.'+p['interface'],'status']))
+                if not isinstance(s,dict):raise ValueError('status')
+            except (OSError,ValueError,subprocess.SubprocessError):
+                raise Refused('GUARD-DEVICE-UNVERIFIED') from None
             if s.get('up') and s.get('l3_device'):devices.append(s['l3_device'])
         return devices
     def recovery_ready(self,identifier,settings):
@@ -621,11 +632,11 @@ class Linux:
         from failure_diagnosis import resolve_pair,scoped_samples
         policy=normalized(settings)
         status=read_json(RUNTIME/'status.json',{})
-        interval=int(settings.get('interval',30))
+        interval=int(settings.get('interval',10))
         pair=resolve_pair(status,settings,time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
         row=next((pair[role] for role in ('source','target') if pair[role] and pair[role]['id']==identifier),None)
         return (pair['coordination']['state']=='READY' and row is not None
-                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time())
+                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time(),max(30,min(900,interval*3)))
                 and self.health(identifier) is True)
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
@@ -775,11 +786,11 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     from recovery_settings import normalized
     from failure_diagnosis import resolve_pair,profile_identity
     recovery=normalized(settings)
-    age=max(30,min(900,int(settings.get('interval',30))*3))
+    age=max(30,min(900,int(settings.get('interval',10))*3))
     selection_settings=dict(settings)
     for role in ('source','target'):
         if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
-    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',30))*2)))
+    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',10))*2)))
     proofs=journal.get('vendor_profiles',{})
     target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
     if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
@@ -1181,6 +1192,9 @@ def serve():
         last_return=0;consumed={};last_trial=None;last_attempt=0
         while not STOP:
             try:
+                from speed_pause import gate as speed_gate
+                if speed_gate('auto'):
+                    time.sleep(1);continue
                 from auto_control import current_revision
                 decision_revision=current_revision(RUNTIME)
                 progress_error=None
@@ -1191,10 +1205,11 @@ def serve():
                 else:
                     last_return=returned.get('request',0);consumed=attempts
                     last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
-                data=backend.policy(); settings=data['settings'];until=deadline(settings.get('native_until'))
+                data=backend.policy(); settings=data['settings']
                 from pair_auto import tick as pair_tick
                 if pair_tick(backend,settings,decision_revision):
                     time.sleep(2);continue
+                until=deadline(settings.get('native_until'))
                 from native_proof import requested,matches
                 try:PROOF_SCOPE=requested(settings)
                 except ValueError:raise Refused('LAN-TRIAL-REQUIRED') from None
@@ -1286,7 +1301,7 @@ def serve():
                     publish({'state':'BLOCKED','blockers':[diagnosis['code']],'reason':diagnosis['code'],'source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
                 from recovery_settings import normalized
                 recovery=normalized(settings)
-                age=max(30,min(900,int(settings.get('interval',30))*3))
+                age=max(30,min(900,int(settings.get('interval',10))*3))
                 failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False,selection['source'])
                 healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True,selection['target'])
                 certificate=read_json(CERT,{})

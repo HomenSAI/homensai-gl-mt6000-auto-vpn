@@ -14,8 +14,13 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
   const page=fs3.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
   const start=page.indexOf('function showPage(key){');a3(start>0);
   const body=page.slice(start,page.indexOf('\n    }',start));
-  a3(body.includes('var oldTab=activeTab;'));
-  a3(body.includes('if(oldTab!==key)revisitPageViewport'),'restore the visited page position only on real navigation');
+  if(page.includes('hv-hybrid-release')){
+    a3(body.includes('var oldTab=activeTab;'),'legacy route saves previous section');
+    a3(body.includes('if(oldTab!==key)revisitPageViewport'),'legacy section navigation restores viewport only on change');
+  }else{
+    a3(body.includes('oldTab=activeTab,oldRoute=minimumCurrentRoute'));
+    a3(body.includes('if(oldRoute.hash!==route.hash){revisitPageViewport'),'restore position only when canonical route/subview changes');
+  }
   // showPage must set activeTab before it compares, so a refresh of the same page never jumps.
   a3(body.includes('rememberPageViewport(appRoot||panel,oldTab)'));
   a3(page.includes('finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport'));
@@ -55,24 +60,28 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
  console.log('PASS: module-local LuCI element guard, nested null/undefined cleanup, zero/attributes/callback preservation, reload safety and actual Getting started rendering in EN/RU');
 }
 
-// Current source fragment only: do not regenerate installed-version assets during a local batch.
+// Exercise the selected generated release's five actual navigation links.
 {
- const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');
- const start=builder.indexOf('var advancedOpen=false;');const end=builder.indexOf('var links=',start);
- assert(start>=0&&end>start);const fragment=builder.slice(start,end);
+ const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
+ const source=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+menu['admin/services/homensai-vpn'].action.path.split('/').pop()+'.js','utf8');
+ const tabsLine=source.split('\n').find(line=>line.includes('    var tabs='));
+ const linkLine=source.split('\n').find(line=>line.includes('function tabLink(key)'));
+ const hybrid=source.includes('hv-hybrid-release');
+ const linksLine=hybrid?"var links=tabs.map(function(tab){return tabLink(tab[0]);});":source.split('\n').find(line=>line.includes("var links=['channels','diagnostics','events','settings','help'].map(tabLink)"));
+ assert(tabsLine&&linkLine&&linksLine,'selected module declares its actual navigation destinations');
+ const expected=hybrid?['start','overview','channels','tests','statistics','traffic','services','events','readiness','settings','learn','help']:['channels','diagnostics','events','settings','help'];
  class NavNode{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children);}setAttribute(k,v){this.attrs[k]=v;}}
  for(const ru of [false,true]){
-  const saved={};const nav={E:(...a)=>new NavNode(...a),bi:(en,rus)=>ru?rus:en,ADVANCED_KEYS:['tests','events'],activeTab:'overview',tabLink:k=>new NavNode('a',{},k),localStorage:{getItem:k=>saved[k]||null,setItem:(k,v)=>saved[k]=v}};
-  vm.createContext(nav);vm.runInContext(fragment,nav);
-  assert(nav.advancedBox.hidden);assert.equal(nav.advancedToggle.attrs['aria-expanded'],'false');
-  assert.equal(nav.advancedToggle.children.length,1);assert.equal(nav.advancedToggle.children[0].children[0],ru?'Расширенные настройки':'Advanced settings');
-  assert.equal(nav.advancedToggle.attrs['aria-controls'],nav.advancedBox.attrs.id);
-  nav.advancedToggle.attrs.click();assert(!nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'1');
-  nav.advancedToggle.attrs.click();assert(nav.advancedBox.hidden);assert.equal(saved['homensai-vpn-advanced'],'0');
-  const clause=builder.match(/if\(oldTab!==key&&advancedBox&&ADVANCED_KEYS[^\n]+?\}/)[0];
-  nav.oldTab='tests';nav.key='tests';vm.runInContext(clause,nav);assert(nav.advancedBox.hidden,'poll must not reopen collapsed active group');
-  nav.oldTab='overview';vm.runInContext(clause,nav);assert(!nav.advancedBox.hidden,'navigating to an advanced page reveals its menu');
+  const opened=[],ctx={E:(...args)=>new NavNode(...args),bi:(en,rus)=>ru?rus:en,showPage:key=>opened.push(key),minimumNavigate:key=>opened.push(key)};
+  vm.createContext(ctx);vm.runInContext(tabsLine+'\n'+linkLine+'\n'+linksLine,ctx);
+  assert.deepEqual(Array.from(ctx.links.map(n=>n.attrs['data-hv-tab'])),expected);
+  ctx.links.forEach(link=>{assert(link.attrs.title);assert.equal(link.attrs.href,'#'+link.attrs['data-hv-tab']);link.attrs.click({preventDefault(){}});});
+  assert.deepEqual(opened,expected);
  }
- const css=fs.readFileSync('router/design_layer.css','utf8');assert(!css.includes('.hv-advanced-toggle{display:none}'));assert(css.includes('.hv-advanced-links[hidden]{display:none!important}'));assert(css.includes('letter-spacing:0;text-transform:none;white-space:nowrap'));
- console.log('PASS: single-line RU/EN Advanced settings, working toggle/ARIA/storage, no poll reopen and design C collapse respected');
+ const css=fs.readFileSync('router/minimum_ui.css','utf8');
+ assert(css.includes('data-minimum-menu-open'),'mobile expanded state is styled');
+ if(!hybrid)assert(source.includes("'aria-controls':'hv-minimum-nav','aria-expanded':'false'"),'mobile menu discloses controlled navigation');
+ assert(source.includes("homeShortcut=renderSimpleHomeShortcut"),'return to Minimum remains visible in the heading');
+ assert(source.slice(source.lastIndexOf('return view.extend({')).includes("var advancedOpen=false;")===hybrid,'owner-selected navigation grouping matches the active shell');
+ console.log('PASS: actual five release links in EN/RU, named mobile disclosure, explicit return and canonical navigation without old menu group');
 }
