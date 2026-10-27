@@ -58,7 +58,7 @@ a=render(ctx,'a',none,[]).node;assert(/No VPN is connected/.test(a.text()));asse
 // B: plain words, tags, questions, links to the sections that are not in its menu.
 let b=render(ctx,'b',fixture()).node;t=b.text();
 for(const missing of [undefined,null,'invalid'])assert(render(ctx,missing,fixture()).node.attrs.class.includes('hv-dv-b'),'missing/invalid design renders Calm');
-assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');assert(/What happens if Germany stops working\?/.test(t));assert(/Last thing that happened/.test(t));
+assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');assert(!/What happens if/.test(t),'the what-if block was removed');assert(!/Last thing that happened/.test(t),'the last event block was removed');
 ['#statistics','#help','#learn','#events'].forEach(h=>assert(b.all().some(n=>n.tag==='a'&&n.attrs.href===h),'B link '+h));
 assert(b.all().some(n=>/hv-dv-flag/.test(n.attrs.class||'')&&n.text().trim()==='DE'));
 // The VPN list has a separate status column with a lamp per profile.
@@ -91,7 +91,7 @@ for(const d of ['a','b','c']){const n=render(ctx,d,hostile).node;n.all().forEach
 // Russian: same structure, translated text.
 const ru=sandbox('ru');vm.runInContext("locale='ru'",ru);
 const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./.test(ra)&&/Последние события/.test(ra)&&/Германия/.test(ra));
-assert(/Что будет, если/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
+assert(!/Что будет, если/.test(render(ru,'b',fixture()).node.text()));assert(/Журнал/.test(render(ru,'c',fixture()).node.text()));
 // Legacy renderers remain callable for regression; the new view composes only the accepted design.
 const releasedView=source.slice(source.lastIndexOf('return view.extend({'));
 if(source.includes('hv-hybrid-release')){

@@ -5,12 +5,12 @@ const now=100,primary={id:'a',interface:'wgclient1',time:99,dns_ok:true,https_su
 const model={now,primary,reserve,selected:'a',settings:{plan_source:'a',plan_target:'b'}};
 const status={time:99,native_failover:{state:'OBSERVING',time:99}};
 assert.equal(c.dvChannelUse(primary,model,status).kind,'green');assert.equal(c.dvChannelUse(primary,model,status).role,'Primary channel');
-assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Spare · ready to take over');
+assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Reserve channel: alive and waiting to be switched on by Auto');
 assert.equal(c.dvChannelUse({...reserve,interface:null},model,status).kind,'red');
 assert.equal(c.dvChannelUse({...primary,code:'DNS-001'},model,status).kind,'red');
-assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'red');
+assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'grey','no router answer is grey: waiting for the router');
 assert.equal(c.dvChannelUse(reserve,{...model,selected:'b'},status).kind,'green');assert.equal(c.dvChannelUse(primary,{...model,selected:'b'},status).kind,'yellow');
-assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'green');assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).label,'Ready for automatic mode');
+assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'grey','Auto on but no confirmed route: waiting for the router');c.autoWorking=l=>l.on;assert.equal(c.dvChannelUse(primary,{...model,light:{on:false}},status).kind,'yellow','Auto off: a working channel is ready (amber), not green');assert.equal(c.dvChannelUse(primary,{...model,light:{on:true}},status).kind,'green');delete c.autoWorking;assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).label,"Waiting for the router's answer which channel carries traffic");
 assert.equal(c.selectedProfile({native_failover:{state:'OBSERVING',source:'a',time:99,mode:'continuous-pair',readiness_verified:true}},100),'a');
 let segments=c.autoDaySegments({segments:[{start:0,end:10,kind:'source'},{start:99990,end:100000,kind:'target'},{start:100001,end:100002,kind:'source'},{start:99990,end:99999,kind:'invalid'}]},100000);
 assert.equal(segments.length,1);assert.equal(segments[0].kind,'target');
@@ -37,7 +37,7 @@ console.log('PASS: primary/reserve and at most one green, yellow standby/red dis
  const row={id:'p',interface:'wgclient1',time:999,dns_ok:true,https_success:2};
  assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'green');
  monotonic=92000;assert.equal(c.statusNow(frame),1092);
- assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'red','an old frame still expires');
+ assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'grey','an old frame still expires: waiting for the router (grey)');
  delete c.Date;delete c.performance;
 }
 console.log('PASS: client clock skew does not grey out fresh VPN data; old observations still expire');

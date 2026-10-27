@@ -245,7 +245,7 @@ function autoLightModel(status,inventory,now){
   if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
-    var scopeHint=bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.');
+    var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint);
     if(state==='OBSERVING'&&ns.readiness_verified===true)return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
@@ -296,6 +296,46 @@ function autoShowError(title,node){
 }
 var autoRequestBusy=false,autoStopBusy=false,autoStartPending=false;
 var autoCommandPending=null,autoControlRefresh=function(){};
+/* Countdown on the Auto button: the expected time is the median of the last measured starts/stops in this browser. */
+var AUTO_COUNTDOWN=null,AUTO_COUNTDOWN_TIMER=null,AUTO_COUNTDOWN_NODES=null,AUTO_DURATION_KEY='hv-auto-durations';
+function autoDurations(){try{var v=JSON.parse(window.localStorage.getItem(AUTO_DURATION_KEY)||'{}');return v&&typeof v==='object'?v:{};}catch(error){return {};}}
+function autoDurationEstimate(kind){
+  var rows=(autoDurations()[kind]||[]).filter(function(n){return Number.isFinite(n)&&n>0&&n<600;}).sort(function(a,b){return a-b;});
+  if(!rows.length)return kind==='stop'?10:30;
+  var mid=Math.floor(rows.length/2),median=rows.length%2?rows[mid]:(rows[mid-1]+rows[mid])/2;
+  return Math.max(3,Math.ceil(median));
+}
+function autoDurationRecord(kind,seconds){
+  if(!(Number.isFinite(seconds)&&seconds>0&&seconds<600))return;
+  var all=autoDurations();all[kind]=(Array.isArray(all[kind])?all[kind]:[]).concat([Math.round(seconds*10)/10]).slice(-5);
+  try{window.localStorage.setItem(AUTO_DURATION_KEY,JSON.stringify(all));}catch(error){}
+}
+function autoCountdownText(){
+  if(!AUTO_COUNTDOWN)return '';
+  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000;
+  return left>0?Math.ceil(left)+bi(' s',' с'):'+'+Math.floor(-left)+bi(' s',' с');
+}
+function autoCountdownTick(){
+  var n=AUTO_COUNTDOWN_NODES;if(!n)return;
+  function hide(on){if(on){if(n.root.setAttribute)n.root.setAttribute('hidden','');}else if(n.root.removeAttribute)n.root.removeAttribute('hidden');}
+  if(!AUTO_COUNTDOWN){hide(true);return;}
+  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000,part=Math.max(0,Math.min(1,left/AUTO_COUNTDOWN.estimate));
+  hide(false);n.text.textContent=autoCountdownText();
+  if(n.root.style&&n.root.style.setProperty)n.root.style.setProperty('--hv-countdown',String(part));
+  if(n.root.classList&&n.root.classList.toggle)n.root.classList.toggle('hv-auto-countdown-over',left<=0);
+}
+function autoCountdownBegin(kind){
+  if(AUTO_COUNTDOWN&&AUTO_COUNTDOWN.kind===kind)return;
+  AUTO_COUNTDOWN={kind:kind,t0:Date.now(),estimate:autoDurationEstimate(kind)};
+  if(!AUTO_COUNTDOWN_TIMER&&typeof setInterval==='function')AUTO_COUNTDOWN_TIMER=setInterval(autoCountdownTick,250);
+  autoCountdownTick();
+}
+function autoCountdownEnd(success){
+  if(!AUTO_COUNTDOWN)return;
+  if(success)autoDurationRecord(AUTO_COUNTDOWN.kind,(Date.now()-AUTO_COUNTDOWN.t0)/1000);
+  AUTO_COUNTDOWN=null;if(AUTO_COUNTDOWN_TIMER&&typeof clearInterval==='function'){clearInterval(AUTO_COUNTDOWN_TIMER);AUTO_COUNTDOWN_TIMER=null;}
+  autoCountdownTick();
+}
 function autoCommandOperation(status,now){
   var model=autoControlModel(status,now),intent=status.auto_control||{},phase=intent.pair_phase;
   var failedStart=model.fresh&&(status.native_failover||{}).state==='BLOCKED'&&!model.awaiting&&!model.on&&!model.transitioning;
@@ -318,6 +358,8 @@ function renderAutoPowerControl(status,inventory){
   var light=autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),controlRevision=intent.control_revision;
   var monitorReady=typeof monitorLightModel!=='function'||monitorLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),false).key==='ok';
   var actionLabel=E('span',{'class':'hv-auto-action'},'');
+  var countdownText=E('span',{'class':'hv-auto-countdown-text'},''),countdown=E('span',{'class':'hv-auto-countdown','aria-hidden':'true','hidden':''},[E('span',{'class':'hv-auto-countdown-ring'}),countdownText]);
+  var countdownNodes={root:countdown,text:countdownText};
   function currentControl(){
     var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
     model=autoControlModel(status,now);
@@ -331,16 +373,19 @@ function renderAutoPowerControl(status,inventory){
       // The button shows "on" only when Auto is confirmed working and no command is still pending.
       var confirmedOn=!operation&&autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
       button.classList.toggle('hv-auto-lit-on',confirmedOn);button.classList.toggle('hv-auto-lit-off',!confirmedOn);}
+    AUTO_COUNTDOWN_NODES=countdownNodes;
+    if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
+    else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn:!nowOn);}
     button.setAttribute('data-auto-operation',operation||'idle');
     var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
-    actionLabel.textContent=operation?label:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
+    actionLabel.textContent=operation?label+(AUTO_COUNTDOWN?' '+bi('about ','примерно ')+autoDurationEstimate(AUTO_COUNTDOWN.kind)+bi(' s',' с'):''):stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
     currentControl();
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
-    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};
+    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};autoCountdownBegin(stop?'stop':'start');
     if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
     var call=rpc.declare({object:'homensai-vpn',method:stop?'native_stop':'native_start',params:stop?['request_source']:['control_revision','request_source'],expect:{}});
     return (stop?call('manual'):call(controlRevision,'manual')).then(function(result){
@@ -350,7 +395,7 @@ function renderAutoPowerControl(status,inventory){
       else if(result&&result.accepted===false){autoShowError(bi('Auto did not start','Auto не запустился'),E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},[code+' · '+autoBlockerText(code),renderAutoRemedy(code)].filter(Boolean));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
     }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop){if(stop)autoCommandPending=null;else autoCommandPending.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
-  }},E('span',{'class':'hv-power-symbol','aria-hidden':'true'}));
+  }},[E('span',{'class':'hv-power-symbol','aria-hidden':'true'}),countdown]);
   autoControlRefresh=syncButton;syncButton();
   return {button:button,actionLabel:actionLabel,model:model,light:light};
 }
@@ -377,7 +422,7 @@ function renderAutoControl(status,inventory,refresh){
   var readiness=autoReadiness(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   var checklist=null;
   if(pairMode){
-    checklist=E('details',{'class':'hv-auto-readiness','data-auto-explanation':'mode'},[E('summary',{},bi('How two-channel Auto works','Как работает Auto двух каналов')),E('p',{'class':'hv-step-note'},bi('Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.','Auto запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается после повторных отказов и возвращается после устойчивого восстановления по вашим настройкам. Stop доступен при запуске. После перезапуска нужен явный Start.'))]);
+    checklist=null&&E('details',{'class':'hv-auto-readiness','data-auto-explanation':'mode'},[E('summary',{},bi('How two-channel Auto works','Как работает Auto двух каналов')),E('p',{'class':'hv-step-note'},bi('Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.','Auto запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается после повторных отказов и возвращается после устойчивого восстановления по вашим настройкам. Stop доступен при запуске. После перезапуска нужен явный Start.'))]);
   }else if(!model.on&&!model.transitioning&&!model.stop){
     checklist=E('div',{'class':'hv-auto-readiness'},[E('p',{'class':'hv-step-note'},bi('Step 2 · Turn on Auto. Do it after step 1 (“Check the VPNs now”, at the top of this page) shows that your VPNs work and the list below is complete.','Шаг 2 · Включите Auto. Делайте это после шага 1 («Проверить VPN сейчас», вверху страницы), когда проверка показала, что ваши VPN работают, и список ниже выполнен.')),E('h3',{},readiness.ready?bi('Ready to start','Готово к запуску'):bi('Before you can start Auto','Что нужно перед запуском Auto')),E('ol',{'class':'hv-req-list'},readiness.steps.map(function(step){
       var isNext=readiness.next&&readiness.next.key===step.key;
@@ -385,7 +430,7 @@ function renderAutoControl(status,inventory,refresh){
       return E('li',{'class':'hv-req hv-req-'+(step.done?'done':isNext?'next':'todo')},[E('span',{'class':'hv-req-mark','aria-hidden':'true'},step.done?'✓':isNext?'→':'·'),E('div',{},[E('strong',{},step.title),step.done?null:E('p',{},step.hint),extra].filter(Boolean)),E('span',{'class':'hv-visually-hidden'},step.done?bi('done','выполнено'):bi('not done','не выполнено'))]);
     })),E('p',{'class':'hv-req-actions'},[E('a',{'class':'cbi-button','href':'#settings'},bi('Open Settings','Открыть настройки')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/client-test.ps1'),'download':'homensai-vpn-client-test.ps1'},bi('Download LAN helper','Скачать LAN-помощник')),' ',E('a',{'class':'cbi-button','href':L.resource('view/homensai-vpn/start-lan-helper.ps1'),'download':'start-lan-helper.ps1'},bi('Download launcher','Скачать запуск'))])]);
   }
-  var holdReturn=E('p',{'class':'hv-auto-help'},[autoNoInternetLink()]);
+  var holdReturn=null;
   // Return to the primary belongs to this card: it is offered whenever traffic is on the reserve (also while Auto is on).
   if(!pairMode&&model.fresh&&['STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0){
     var answer=intent.return_result,answerText=answer&&Number.isFinite(answer.time)&&(typeof statusNow==='function'?statusNow(status):Date.now()/1000)-answer.time<600?(answer.ok?autoBlockerText('OPERATOR-RETURN'):autoBlockerText(answer.code)):'';
@@ -415,6 +460,6 @@ function renderAutoControl(status,inventory,refresh){
       ui.showModal(bi('Auto did not start','Auto не запустился'),[E('p',{},bi('Reason:','Причина:')),autoCodeNotice(failureInfo),E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
     }
   }
-  var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?renderConnectivityCheck(status,refresh,inventory):null].filter(Boolean)),holdReturn,checklist,E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
+  var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?renderConnectivityCheck(status,refresh,inventory):null].filter(Boolean)),holdReturn,checklist,pairMode?null:E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
   return E('div',{'class':'hv-auto-sections'},[automatic,statistics,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null].filter(Boolean));
 }

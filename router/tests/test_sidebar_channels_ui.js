@@ -12,5 +12,5 @@ for(const selected of ['a','b']){
 }
 {const st=state('b');Object.assign(st.profiles[0],{code:'VPN-003',dns_ok:false,https_success:0});const root=new N('div');c.fillSideStatus(root,st,{settings:{}});
  const knobs=root.all().filter(n=>(n.attrs.class||'').includes('hv-auto-pill-knob')).slice(2);assert(knobs[0].attrs.class.includes('hv-lamp-off'),'failing channel is red');assert(knobs[1].attrs.class.includes('hv-lamp-on'));
- const stale=new N('div');c.fillSideStatus(stale,Object.assign(state('a'),{time:1}),{settings:{}});assert(stale.all().filter(n=>(n.attrs.class||'').includes('hv-auto-pill-knob')).slice(2).every(k=>k.attrs.class.includes('hv-lamp-off')),'no data is red, never grey');}
+ const stale=new N('div');c.fillSideStatus(stale,Object.assign(state('a'),{time:1}),{settings:{}});assert(stale.all().filter(n=>(n.attrs.class||'').includes('hv-auto-pill-knob')).slice(2).every(k=>k.attrs.class.includes('hv-lamp-unknown')),'no data is grey: waiting for the router');}
 console.log('PASS: sidebar channel lamps show the real channel state: working green, failing or no data red');

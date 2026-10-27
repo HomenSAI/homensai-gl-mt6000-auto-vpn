@@ -52,7 +52,7 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
-  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
+  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
   var rel=typeof channelReliability==='function'&&profile.interface&&profile.code!=='VPN-001'?channelReliability(profile,status,m.now):null;
   if(h.state==='failed'){
     result.kind='red';result.state='failed';
@@ -60,15 +60,17 @@ function dvChannelUse(profile,m,status){
     return result;
   }
   if(h.state==='inactive'){result.label=bi('Off','Отключён');result.kind='red';result.state='off';return result;}
-  if(h.state==='checking'){result.kind='yellow';result.state='checking';return result;}
+  if(h.state==='checking'){result.kind='grey';result.state='checking';result.label=bi('Waiting for the router\'s answer','Ждём ответа роутера');return result;}
   var ns=status.native_failover||{};
-  if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='yellow';result.state='switching';result.label=bi('Switching','Переключение');return result;}
-  if(h.state==='healthy'){
+  if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='grey';result.state='switching';result.label=bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
+  var autoRuns=!m.light||typeof autoWorking!=='function'||autoWorking(m.light);
+  if(h.state==='healthy'&&!autoRuns){result.kind='yellow';result.state='ready';result.label=m.settings&&profile.id===m.settings.plan_target?bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат'):bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат');}
+  else if(h.state==='healthy'){
     if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
-    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Spare · ready to take over','Запасной · готов включиться');}
-    else{result.kind='green';result.state='ready';result.label=bi('Ready for automatic mode','Готов к работе в автомате');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=m.settings&&profile.id===m.settings.plan_source?bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат'):bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат');}
+    else{result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer which channel carries traffic','Ждём ответа роутера, какой канал несёт трафик');}
   }
-  if(h.state==='unknown'){result.kind='yellow';result.label=bi('Internet check data unavailable','Нет результата проверки Интернета');}
+  if(h.state==='unknown'){result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer','Ждём ответа роутера');}
   if(h.state==='healthy'&&rel&&rel.unreliable){result.kind='yellow';result.label=bi('Works, but reliability problem: ','Работает, но проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
   return result;
 }
@@ -170,7 +172,7 @@ function renderDesignB(ctx,m){
   var q2=E('div',{'class':'hv-dv-q'},[E('b',{},bi('Last thing that happened','Последнее событие')),E('p',{},last?dvDay(last.time)+' '+dvClock(last.time)+' · '+last.text:bi('No switches or failures are recorded on the router.','На роутере не записано ни переключений, ни сбоев.'))]);
   var links=E('p',{'class':'hv-dv-links'},[E('a',{'href':'#statistics'},bi('Statistics','Статистика')),E('a',{'href':'#help'},bi('Help','Помощь')),E('a',{'href':'#learn'},bi('Training','Обучение')),E('a',{'href':'#events'},bi('Details for technicians →','Подробности для техников →'))]);
   // The state sentence block was removed (owner): the Primary/Reserve boxes in the Auto card already show it.
-  return E('div',{'class':'hv-dv hv-dv-b'},[E('div',{'class':'hv-dv-control'},[ctx.controlCard]),stats,E('h3',{'class':'hv-dv-h'},bi('Your VPNs','Ваши VPN')),list,q1,q2,links].filter(Boolean));
+  return E('div',{'class':'hv-dv hv-dv-b'},[E('div',{'class':'hv-dv-control'},[ctx.controlCard]),stats,E('h3',{'class':'hv-dv-h'},bi('Your VPNs','Ваши VPN')),list,links].filter(Boolean));
 }
 
 /* ---------- C · Instrument panel ---------- */

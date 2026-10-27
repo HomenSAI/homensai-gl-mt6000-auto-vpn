@@ -69,6 +69,29 @@ Do not request secrets in chat or print full configs. This is diagnosis only: no
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
 ```
 
+<a id="auto-two-channels"></a>
+## How two-channel Auto works
+
+You want to know what Auto does after you press its button and what the router checks.
+
+Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.
+
+About these checks: two selected VPN channels; the router checks them itself, about every 10 seconds, through each tunnel.
+
+Lamp colours: green works in Auto; yellow is alive and waiting to be switched on by Auto; grey is waiting for the router's answer; red is an error, the channel does not work.
+
+No internet? Open the topic "No internet" below in Help for the recovery steps.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How two-channel Auto works.
+You want to know what Auto does after you press its button and what the router checks.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="planner-wait"></a>
 ## Why Auto waits before switching
 

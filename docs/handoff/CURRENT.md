@@ -1,3 +1,15 @@
+## Alpha48 source / Alpha48 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha47. Alpha48 is UI only: owner colour rule (green/yellow/grey/red), texts removed or moved to Help, floating Go back, Statistics under Advanced. Preserve live state.
+
+---
+
+## Alpha47 source / Alpha47 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha46 (GitHub prerelease v0.9.1-alpha46). Alpha47 is UI only: Auto countdown, Overview lands on the Auto card, aligned VPN list, plain failure-test channel name, readiness intro. Preserve live state.
+
+---
+
 ## Alpha46 source / Alpha46 исходник
 
 See [status](../CURRENT-STATUS.md). MT3000 runs alpha45. Alpha46 adds the stats_reset RPC (stats_reset.py: archive in /etc/homensai-vpn/stats-archive, then reset in the agent loop), Reset chart buttons, the channel failure test page, Go back, the Auto lamp link and RESERVE-ALREADY-FIRST. Preserve live state.

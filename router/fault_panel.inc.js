@@ -16,13 +16,20 @@ function faultCurrentBinding(status,inventory){
   }
   return {ready:ready,source:source,target:target,pairMode:pairMode,certificate:pairMode&&source&&target?source.vendor_generation+target.vendor_generation:native.vendor_identity||null};
 }
+function faultChannelName(profile,settings){
+  if(!profile)return bi('no working channel is selected now','сейчас не выбран рабочий канал');
+  var role=profile.id===settings.plan_source?bi('Primary channel','Основной канал'):profile.id===settings.plan_target?bi('Reserve channel','Резервный канал'):bi('Channel outside the pair','Канал вне пары');
+  var name=[typeof countryName==='function'?countryName(profile):null,typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol].filter(Boolean).join(' · ');
+  var tunnel=String(profile.vendor_tunnel_id||profile.interface||'').replace(/^[a-z]+:/,'');
+  return role+(name?' — '+name:'')+(tunnel?' ('+tunnel+')':'');
+}
 function faultPanel(status,inventory,refresh){
   var state=status.operator_fault||{},active=['PREPARING','ARMED','ACTIVE','TIMEOUT-ELAPSED','UNKNOWN'].indexOf(state.state)>=0||state.cleaned===false,native=status.native_failover||{},settings=inventory.settings||{},binding=faultCurrentBinding(status,inventory),source=binding.source,ready=binding.ready;
   FAULT_UI_CONTEXT={status:status,inventory:inventory};
   var section=E('section',{'class':'hv-chart-card hv-fault-panel'},[E('h2',{},bi('Controlled VPN tunnel traffic fault','Контролируемый сбой трафика VPN-туннеля')),E('p',{},bi('This temporarily blocks IPv4 traffic through the whole current VPN tunnel device, keeping its process connected. It cannot isolate one upstream server inside the tunnel. Router INPUT, management routes and Kill Switch are unchanged.','Временно блокируется IPv4-трафик всего устройства текущего VPN-туннеля, сам процесс остаётся подключённым. Это не позволяет изолировать один сервер внутри туннеля. INPUT роутера, маршруты управления и Kill Switch не меняются.'))]);
   section.appendChild(E('p',{'role':'status'},bi('Test state: ','Состояние теста: ')+(active?bi('Testing transition to the other channel','Тестируется переход на другой канал'):state.transition_confirmed===true?bi('Transition confirmed; artificial fault removed','Переход подтверждён; искусственный сбой снят'):state.code==='FAULT-TRANSITION-NOT-CONFIRMED'?bi('Transition was not confirmed in time; artificial fault removed','Переход не подтверждён за отведённое время; искусственный сбой снят'):state.code==='FAULT-CANCELLED'?bi('Test stopped; artificial fault removed','Тест остановлен; искусственный сбой снят'):state.code?bi('Last test: ','Последний тест: ')+state.code:bi('Ready to check the current channel','Готов к проверке текущего канала'))+(state.until?' · '+bi('Remaining about ','Осталось примерно ')+(state.remaining_seconds==null?Math.max(0,Math.ceil(state.until-(typeof routerWall==='function'?routerWall():Date.now()/1000))):state.remaining_seconds)+' s':'')));
   var duration=E('select',{'aria-label':bi('Fault duration','Длительность сбоя')},[30,60,120,150,180].map(function(value){return E('option',{value:String(value)},value+' s');}));duration.value='150';
-  section.appendChild(E('p',{},bi('Channel to interrupt: ','Канал для имитации сбоя: ')+(source?source.vendor_tunnel_id+' · '+source.id:'—')));
+  section.appendChild(E('p',{},[bi('Channel to interrupt: ','Канал для имитации сбоя: '),E('strong',{},faultChannelName(source,settings))]));
   section.appendChild(E('div',{'class':'hv-native-actions'},[duration,E('button',{'type':'button','class':'cbi-button cbi-button-negative hv-danger-action','disabled':active?'':null,'click':function(){
     if(active)return;
     if(!ready||!source){

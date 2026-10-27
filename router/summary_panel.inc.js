@@ -121,6 +121,13 @@ function attachStatsResets(root){
   });
   return added;
 }
+/* The Overview menu opens at the top of the Automatic VPN failover card, below the router's own header bar. */
+function overviewToAuto(){
+  var anchor=document.getElementById('hv-auto-vpn');if(!anchor)return false;
+  var card=anchor.closest?anchor.closest('.hv-auto-control')||anchor:anchor,bar=document.querySelector('header');
+  var offset=bar&&bar.getBoundingClientRect?Math.max(0,bar.getBoundingClientRect().bottom):0;
+  window.scrollTo(0,Math.max(0,card.getBoundingClientRect().top+(window.pageYOffset||0)-offset-12));return true;
+}
 /* "Go back" at the bottom of every page: the previous page and the scroll position where the owner was. */
 var PAGE_BACK_STACK=[],PAGE_BACK_GOING=false,pageBackButton=null;
 function pageBackRemember(page,y){
@@ -130,16 +137,16 @@ function pageBackRemember(page,y){
   if(PAGE_BACK_STACK.length>30)PAGE_BACK_STACK.shift();
 }
 function pageBackGo(){
-  var previous=PAGE_BACK_STACK.pop();if(!previous)return false;
+  var previous=PAGE_BACK_STACK.pop();
+  if(!previous){var home=document.querySelector('[data-hv-tab="overview"]');if(home&&typeof pageKeyNow==='function'&&pageKeyNow()!=='overview'){home.click();return true;}if(typeof overviewToAuto==='function')overviewToAuto();return false;}
   var link=document.querySelector('[data-hv-tab="'+previous.page+'"]');if(!link){PAGE_BACK_STACK.push(previous);return false;}
   PAGE_BACK_GOING=true;try{link.click();}finally{PAGE_BACK_GOING=false;}
   setTimeout(function(){window.scrollTo(0,previous.y||0);},60);return true;
 }
 function pageBackPlace(root,page){
-  var host=root&&root.querySelector('[data-hv-page="'+page+'"]');if(!host)return null;
-  if(!pageBackButton)pageBackButton=E('button',{'type':'button','class':'cbi-button hv-page-back','click':function(){pageBackGo();}},bi('← Go back','← Вернуться назад'));
-  if(host.lastChild!==pageBackButton)host.appendChild(pageBackButton);
-  if(PAGE_BACK_STACK.length)pageBackButton.removeAttribute('hidden');else pageBackButton.setAttribute('hidden','');
+  var host=typeof document!=='undefined'&&document.body?document.body:root&&root.querySelector('[data-hv-page="'+page+'"]');if(!host)return null;
+  if(!pageBackButton)pageBackButton=E('button',{'type':'button','class':'hv-back-float','click':function(){pageBackGo();}},bi('← Go back','← Вернуться назад'));
+  if(pageBackButton.parentNode!==host)host.appendChild(pageBackButton);
   return pageBackButton;
 }
 function hideErrorBack(){errorReturn=null;if(errorBackButton)errorBackButton.setAttribute('hidden','');if(errorBackTimer){clearInterval(errorBackTimer);errorBackTimer=null;}}

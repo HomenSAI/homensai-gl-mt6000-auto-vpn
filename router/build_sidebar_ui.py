@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard121'
+UI_MODULE='dashboard123'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -272,7 +272,7 @@ import re as _r
 must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
 source,_n=_r.subn(r"put\('overview',(E\('p',\{'class':'alert-message warning'\},\s*bi\('Monitoring is )",r"put('services',\1",source,count=1)
 assert _n==1,'monitor note'
-must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','traffic','services','events'];
+must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','statistics','traffic','services','events'];
 var PAGE_SUBTITLES={
   overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
   channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
@@ -357,7 +357,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui87.css')
+source=source.replace('ui15.css','ui89.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -412,7 +412,7 @@ must_replace('return view.extend({',"""function checkLampCell(p){
 return view.extend({""")
 # Getting started is its own first section; new users land there until every step is done, then on the Overview.
 must_replace("var tabs=[['overview','◉',bi('Overview','Обзор')],","var tabs=[['start','▶',bi('Getting started','Начало работы')],['overview','◉',bi('Overview','Обзор')],")
-must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','readiness','overview','channels','statistics','settings','help','learn'].map(tabLink)")
+must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','readiness','overview','channels','settings','help','learn'].map(tabLink)")
 must_replace("if(!validTab(activeTab))activeTab='overview';","if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);")
 must_replace("put('learn',learnNode||(learnNode=renderLearn()));","put('learn',learnNode||(learnNode=renderLearn()));put('start',renderStartPage(status,inventory));")
 must_replace("  learn:['A short interactive training","  start:['First steps: terms, training, monitoring, your two VPNs and Auto. This page opens first until they are done.','Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto. Эта страница открывается первой, пока они не выполнены.'],\n  learn:['A short interactive training")
@@ -510,6 +510,6 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 source=source.replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui87.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui89.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

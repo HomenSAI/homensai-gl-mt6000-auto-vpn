@@ -44,5 +44,5 @@ def apply(source):
     # The owner asked for the channel failure test on the Tests page again (27 Oct 2026).
     # "Go back" at the bottom of every page returns to the previous page and its scroll position.
     replace("      key=hybridPage(key);placeHybridControls(key);","      key=hybridPage(key);placeHybridControls(key);\n      if(activeTab&&key!==activeTab)pageBackRemember(activeTab,window.pageYOffset||0);")
-    replace("      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);","      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      pageBackPlace(appRoot||panel,key);attachStatsResets(appRoot||panel);")
+    replace("      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);","      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      pageBackPlace(appRoot||panel,key);attachStatsResets(appRoot||panel);\n      if(key==='overview'&&oldTab!=='overview'&&!PAGE_BACK_GOING)setTimeout(overviewToAuto,80);")
     return source

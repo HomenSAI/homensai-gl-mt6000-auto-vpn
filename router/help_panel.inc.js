@@ -1,6 +1,44 @@
 /* Built-in help: what to do when something is wrong. Data are [English, Russian] pairs; commands are never translated. */
 var HELP_TOPICS=[
   {
+    "id": "auto-two-channels",
+    "open": false,
+    "title": [
+      "How two-channel Auto works",
+      "Как работает Auto двух каналов"
+    ],
+    "when": [
+      "You want to know what Auto does after you press its button and what the router checks.",
+      "Вы хотите знать, что делает Auto после нажатия кнопки и что проверяет роутер."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.",
+          "Auto запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается после повторных отказов и возвращается после устойчивого восстановления по вашим настройкам. Stop доступен при запуске. После перезапуска нужен явный Start."
+        ]
+      },
+      {
+        "t": [
+          "About these checks: two selected VPN channels; the router checks them itself, about every 10 seconds, through each tunnel.",
+          "Об этих проверках: два выбранных VPN-канала; проверку делает сам роутер, примерно каждые 10 секунд, через каждый туннель."
+        ]
+      },
+      {
+        "t": [
+          "Lamp colours: green works in Auto; yellow is alive and waiting to be switched on by Auto; grey is waiting for the router's answer; red is an error, the channel does not work.",
+          "Цвета ламп: зелёный — работает в автомате; жёлтый — живой и ожидает включения в режиме автомат; серый — ждём ответа роутера; красный — ошибка, канал не работает."
+        ]
+      },
+      {
+        "t": [
+          "No internet? Open the topic \"No internet\" below in Help for the recovery steps.",
+          "Нет интернета? Откройте ниже в «Помощи» тему «Нет интернета» — там порядок восстановления."
+        ]
+      }
+    ]
+  },
+  {
     "id": "planner-wait",
     "open": false,
     "title": [

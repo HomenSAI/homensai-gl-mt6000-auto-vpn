@@ -1,3 +1,32 @@
+## Alpha48 source: one colour rule, fewer texts / Одно правило цветов, меньше текста
+
+- Owner colour rule for every channel lamp and card: green = works in Auto; yellow = alive and waiting to be switched on by Auto (also when Auto is off); grey = waiting for the router's answer (no fresh data, check running, switch pending); red = error, does not work.
+- Texts: "Primary/Reserve channel: alive and waiting to be switched on by Auto".
+- The Auto card no longer shows "About these checks", the scope sentence, "Help: no internet?" or "How two-channel Auto works"; these are in the Help topic "How two-channel Auto works".
+- Removed: "What happens if…", "Last thing that happened", "Why this channel is not available", the selection-pending message.
+- Go back floats bottom-right above Top on every page.
+- Statistics moved into Advanced settings between Tests and Monthly traffic.
+
+UI only.
+
+Одно правило цветов для всех ламп, лишние тексты убраны или перенесены в «Помощь», плавающая «Вернуться назад», «Статистика» в расширенных настройках.
+
+---
+
+## Alpha47 source: Auto countdown and clearer screens / Обратный отсчёт Auto и понятнее экраны
+
+- The Auto button shows a countdown ring along its inner edge with the seconds left. The expected time is the median of the last five measured starts or stops in this browser; the defaults are 30 s for a start and 10 s for a stop. When the router is slower, the button shows the overrun (+N s) instead of freezing at zero.
+- The Overview menu and the Auto lamp open at the top of the Automatic VPN failover card.
+- In "Your VPNs" the lamps form one column and the status text is left-aligned in the next column.
+- The failure test names the channel as primary or reserve, with the country and protocol.
+- The System readiness intro is rewritten in plain words.
+
+UI only.
+
+Обратный отсчёт на кнопке Auto, «Обзор» открывается с блока Auto, ровные столбцы в «Ваши VPN», понятное имя канала в тесте сбоя, простой текст на странице готовности.
+
+---
+
 ## Alpha46 source: reset buttons, failure test, Go back / Сброс графиков, тест сбоя, «Вернуться назад»
 
 - Every chart and statistics card (latency, live and 2-hour switching, outage statistics, transition evidence, traffic, speed ranking) has Reset chart. The router saves the old data into a checksummed archive (/etc/homensai-vpn/stats-archive, newest 10 kept) and only then starts measuring from zero. The monitoring agent applies the reset in its own loop. The button reports success only after the router confirms; failures show a catalogued code (STATS-RESET-*).
