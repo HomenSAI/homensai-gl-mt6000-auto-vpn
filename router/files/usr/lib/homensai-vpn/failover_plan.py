@@ -43,7 +43,7 @@ def plan(status, settings, now):
             'source':source,'target':target,'recommendation':None,'blockers':list(BLOCKERS),
             'requires_session_interruption':True,'direct_wan_fallback':False}
     from failure_diagnosis import diagnose,resolve_pair
-    interval=settings.get('interval',30)
+    interval=settings.get('interval',10)
     valid_interval=type(interval) is int and 10<=interval<=300
     age=max(30,min(900,interval*3)) if valid_interval else 90
     settle=max(30,min(600,interval*2)) if valid_interval else 60

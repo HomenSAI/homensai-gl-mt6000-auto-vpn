@@ -1,3 +1,9 @@
+## Alpha35 installed; Auto policy configurable / Alpha35 установлена
+
+[Verification](../VERIFICATION-ALPHA35-INSTALLED-2026-10-27.md). Auto ON / RUNNING / OBSERVING, both VPNs healthy; preserve live state. GitHub prerelease publication is pending.
+
+---
+
 ## Alpha34 installed; icon sidebar fixed / Alpha34 установлена
 
 [Start here](NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md) · [Verification](../VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md). C sidebar and accessible Advanced icon verified; prior ON Auto restored, both VPNs healthy. No automatic repeat deployment. Publication evidence is separate.

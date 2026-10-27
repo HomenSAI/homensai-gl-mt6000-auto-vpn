@@ -1,7 +1,7 @@
 <!-- doc-role: current-canonical -->
 # Auto VPN — current source behavior
 
-Current source: **0.9.1-alpha34**, package **0.9.1-alpha34-1**. Installed on the dedicated MT3000 with the compact C sidebar fix; prior ON Auto was restored. [Current state](CURRENT-STATUS.md) · [Device proof and limits](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md).
+Current source: **0.9.1-alpha35**, package **0.9.1-alpha35-1**. User-configurable Auto policy is installed and verified on the dedicated MT3000; prior ON Auto was restored. [Current state](CURRENT-STATUS.md) · [Prior device proof](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md).
 
 Speed tests now request a bounded cooperative pause from the Auto controller and background monitor. Measurement starts only after both active processes acknowledge a safe loop boundary. VPN connections, routing, Auto intent and service settings are preserved. CPU admission uses fresh CPU accounting after the pause, not minute load average. Normal completion, failure, cancellation or worker loss withdraw the pause; monitoring obtains a fresh observation before Auto continues. A manual Stop is never undone. Manual switching is refused during the quiet window. Both selected speed tests completed on the installed alpha33 with a verified pause and automatic restoration; see the physical receipt.
 
@@ -25,3 +25,5 @@ Diagnostics distinguish a partial HTTPS quorum failure from zero validated HTTPS
 The final alpha33 observer preserves a bounded allowlist of endpoint diagnostics through the identity check and discards them with the rest of old-identity health on a rebind.
 
 Desktop appearance C uses an 84 px sidebar, a compact scrollbar, and an icon-only Advanced menu control with its full localized accessible name and tooltip. The control retains keyboard focus, expansion state and the existing destinations. Appearances A/B and mobile retain the text label. Alpha34 installation and verification are recorded separately.
+
+Settings → Auto switching rules combines the check interval, source failure and reserve-success thresholds, cooldown, minimum reserve dwell, rolling forward-attempt limit/window, primary return successes/stability and return policy. Defaults for new configuration: 10 s, 3 failures, 2 reserve checks, 60 s cooldown/dwell, 3 attempts per 15 minutes, 2 primary checks over at least 30 s, automatic healthy-primary return. Saved existing values are preserved on upgrade. User values are range checked and reviewed before a single own-config save. Stop Auto and finish recovery before saving; saving never starts Auto. Attempt history for the entire maximum 15-minute window is retained across policy changes and shared with manual forward selection; Stop and return remain available.

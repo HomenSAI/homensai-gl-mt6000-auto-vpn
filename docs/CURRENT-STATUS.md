@@ -1,3 +1,9 @@
+## Alpha35 configurable Auto policy installed / Настраиваемые правила Auto установлены
+
+Owner-requested default policy and editable thresholds, times and rolling attempt limit are implemented in one reviewed Settings form. Existing configuration/history are preserved. Dual-runtime CI passed and alpha35 was installed on the dedicated MT3000; prior ON Auto was restored and both channels passed router DNS/HTTPS checks. [Verification](VERIFICATION-ALPHA35-INSTALLED-2026-10-27.md).
+
+---
+
 ## Alpha34 installed; sidebar icon verified / Alpha34 установлена
 
 **0.9.1-alpha34-1**, dashboard110/ui82, installed on the dedicated MT3000. Desktop C rail fits the icon-only Advanced control and scrollbar; full localized label/tooltip and keyboard operation remain. A/B and mobile keep their text. Seven C browser cases and four A/B cases passed; exact dual-runtime CI passed. Prior ON Auto restored to RUNNING / OBSERVING with both VPNs healthy. [Verification](VERIFICATION-ALPHA34-INSTALLED-2026-10-26.md) · [Resume](handoff/NEXT-AI-ALPHA34-INSTALLED-2026-10-26.md). Publication verified separately.

@@ -37,7 +37,7 @@ uci:foreach('homensai_vpn','server',function(s)
   channels[#channels+1]={id=s['.name'],profile=s.profile or '',name=s.name or '',channel=s.channel or 'default',
     priority=tonumber(s.priority) or 100,enabled=s.enabled~='0'}
 end)
-local main={enabled=false,interval=30,checkpoint=900,probe_limit=16,live_log_limit=2000,history_days=7,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
+local main={enabled=false,interval=10,checkpoint=900,probe_limit=16,live_log_limit=2000,history_days=7,timezone='CET-1CEST,M3.5.0,M10.5.0/3',
   onboarding_version=0,onboarding_complete=false,onboarding_pair_deferred=false,
   appearance_language='',appearance_design='b',appearance_theme='',router_model='auto',monitor_only=false,deployment_mode='standard'}
 uci:foreach('homensai_vpn','main',function(s)
@@ -57,10 +57,17 @@ uci:foreach('homensai_vpn','main',function(s)
   main.recovery_return_policy=s.recovery_return_policy=='hold_reserve' and 'hold_reserve' or 'healthy_primary'
   main.recovery_failures=math.max(3,math.min(10,tonumber(s.recovery_failures) or 3))
   main.recovery_successes=math.max(2,math.min(10,tonumber(s.recovery_successes) or 2))
-  main.recovery_cooldown=math.max(60,math.min(1800,tonumber(s.recovery_cooldown) or 180))
-  main.recovery_min_dwell=math.max(60,math.min(3600,tonumber(s.recovery_min_dwell) or 180))
-  main.recovery_primary_successes=math.max(2,math.min(10,tonumber(s.recovery_primary_successes) or 3))
-  main.recovery_primary_stable=math.max(30,math.min(600,tonumber(s.recovery_primary_stable) or 60))
+  main.recovery_cooldown=math.max(60,math.min(1800,tonumber(s.recovery_cooldown) or 60))
+  main.recovery_min_dwell=math.max(60,math.min(3600,tonumber(s.recovery_min_dwell) or 60))
+  main.recovery_primary_successes=math.max(2,math.min(10,tonumber(s.recovery_primary_successes) or 2))
+  main.recovery_primary_stable=math.max(30,math.min(600,tonumber(s.recovery_primary_stable) or 30))
+  local function attempt_number(raw,default,maximum)
+    if type(raw)~='string' or not raw:match('^%d%d?%d?$') then return default end
+    local n=tonumber(raw);if not n or n<1 or n>maximum then return default end
+    return n
+  end
+  main.recovery_attempt_limit=attempt_number(s.recovery_attempt_limit,3,10)
+  main.recovery_attempt_window=attempt_number(s.recovery_attempt_window,15,15)
 
   main.speed_enabled=s.speed_enabled=='1'
   main.speed_auto_new=s.speed_auto_new=='1'
@@ -89,7 +96,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.telegram_monthly=s.telegram_monthly~='0'
   main.telegram_items=s.telegram_items or ''
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0
-  main.interval=math.max(10,math.min(300,tonumber(s.interval) or 30))
+  main.interval=math.max(10,math.min(300,tonumber(s.interval) or 10))
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
   main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))

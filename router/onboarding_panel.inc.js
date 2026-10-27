@@ -55,13 +55,13 @@ function onboardingDraft(inventory){
   var s=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],servers=Array.isArray(inventory.servers)?inventory.servers:[];
   function value(key,fallback){return s[key]==null?fallback:s[key];}
   var recovery={},speed={enabled:!!s.speed_enabled,auto_new:!!s.speed_auto_new};
-  var recoveryDefaults={failures:3,successes:2,cooldown:180,min_dwell:180,return_policy:'healthy_primary',primary_successes:3,primary_stable:60};
+  var recoveryDefaults={failures:3,successes:2,cooldown:60,min_dwell:60,return_policy:'healthy_primary',primary_successes:2,primary_stable:30,attempt_limit:3,attempt_window:15};
   Object.keys(recoveryDefaults).forEach(function(k){recovery[k]=value('recovery_'+k,recoveryDefaults[k]);});
   var speedDefaults={budget_mib:8,duration:5,streams:2,daily_mib:128,busy_mbps:2};
   Object.keys(speedDefaults).forEach(function(k){speed[k]=value('speed_'+k,speedDefaults[k]);});
   return {
     appearance:{language:s.appearance_language||locale,theme:s.appearance_theme||storedTheme(),design:'b',router_model:s.router_model||'auto'},
-    monitor:{interval:value('interval',30),checkpoint:value('checkpoint',900),probe_limit:value('probe_limit',16),planning_enabled:!!s.plan_enabled,live_log_limit:value('live_log_limit',2000),history_days:value('history_days',7)},
+    monitor:{interval:value('interval',10),checkpoint:value('checkpoint',900),probe_limit:value('probe_limit',16),planning_enabled:!!s.plan_enabled,live_log_limit:value('live_log_limit',2000),history_days:value('history_days',7)},
     system:{defer_pair:!!s.onboarding_pair_deferred,source:s.plan_source||'',target:s.plan_target||'',duration:value('native_duration',10),session_loss:!!s.native_session_loss,
       servers:profiles.map(function(p){var row=servers.filter(function(r){return r.profile===p.id;})[0]||{};return {profile:p.id,name:row.name==null?p.name:row.name,channel:row.channel==null?'default':row.channel,priority:row.priority==null?100:row.priority,enabled:row.enabled!==false};})},
     recovery:recovery,speed:speed,
@@ -74,7 +74,7 @@ function onboardingPayload(draft){
     servers:draft.system.servers.map(function(s){return {profile:s.profile,name:s.name,channel:s.channel,priority:Number(s.priority),enabled:s.enabled};})};
   var monitor={interval:Number(draft.monitor.interval),checkpoint:Number(draft.monitor.checkpoint),probe_limit:Number(draft.monitor.probe_limit),planning_enabled:draft.monitor.planning_enabled,live_log_limit:Number(draft.monitor.live_log_limit),history_days:Number(draft.monitor.history_days)};
   var recovery={},speed={},telegram={configure:false};
-  ['failures','successes','cooldown','min_dwell','primary_successes','primary_stable'].forEach(function(k){recovery[k]=Number(draft.recovery[k]);});recovery.return_policy=draft.recovery.return_policy;
+  ['failures','successes','cooldown','min_dwell','primary_successes','primary_stable','attempt_limit','attempt_window'].forEach(function(k){recovery[k]=Number(draft.recovery[k]);});recovery.return_policy=draft.recovery.return_policy;
   ['enabled','auto_new'].forEach(function(k){speed[k]=draft.speed[k];});['budget_mib','duration','streams','daily_mib','busy_mbps'].forEach(function(k){speed[k]=Number(draft.speed[k]);});
   if(draft.telegram.configure){telegram={configure:true,token:draft.telegram.token,chat:draft.telegram.chat,enabled:draft.telegram.enabled,interval:Number(draft.telegram.interval),schedule:draft.telegram.schedule,hour:Number(draft.telegram.hour),weekly:draft.telegram.weekly,monthly:draft.telegram.monthly,items:tgItemsToSetting(draft.telegram.items)};}
   return [system,monitor,recovery,speed,telegram,{language:draft.appearance.language,theme:draft.appearance.theme,design:'b',router_model:draft.appearance.router_model}];
@@ -126,7 +126,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
   function clear(){while(host.firstChild)host.removeChild(host.firstChild);}
   function show(){
     var headings=[bi('Language and appearance','Язык и оформление'),bi('Monitoring','Мониторинг'),bi('Existing VPN profiles and trial preferences','Существующие VPN и параметры теста'),bi('Server names and priorities','Названия и приоритеты серверов'),bi('Recovery rules','Правила восстановления'),bi('Optional speed tests','Необязательные тесты скорости'),bi('Optional Telegram reports','Необязательные отчёты Telegram'),bi('Review all settings','Проверьте все настройки')];
-    var recoveryLabels={failures:bi('Failures before switching','Сбоев до переключения'),successes:bi('Reserve successes required','Успешных проверок резерва'),cooldown:bi('Cooldown, seconds','Пауза, секунд'),min_dwell:bi('Minimum dwell, seconds','Минимальное время работы, секунд'),primary_successes:bi('Primary successes before return','Успешных проверок основного перед возвратом'),primary_stable:bi('Primary stable interval, seconds','Период стабильности основного, секунд')};
+    var recoveryLabels={attempt_limit:bi('Maximum attempts','Максимум попыток'),attempt_window:bi('Attempt window, minutes','Период попыток, минут'),failures:bi('Failures before switching','Сбоев до переключения'),successes:bi('Reserve successes required','Успешных проверок резерва'),cooldown:bi('Cooldown, seconds','Пауза, секунд'),min_dwell:bi('Minimum dwell, seconds','Минимальное время работы, секунд'),primary_successes:bi('Primary successes before return','Успешных проверок основного перед возвратом'),primary_stable:bi('Primary stable interval, seconds','Период стабильности основного, секунд')};
     var speedLabels={enabled:bi('Speed-test feature enabled','Функция тестов скорости включена'),auto_new:bi('Automatic tests for new profiles','Автоматические тесты новых профилей'),budget_mib:bi('Traffic per test, MiB','Трафик на тест, МиБ'),duration:bi('Test duration, seconds','Длительность теста, секунд'),streams:bi('Parallel streams','Параллельных потоков'),daily_mib:bi('Daily traffic budget, MiB','Суточный лимит трафика, МиБ'),busy_mbps:bi('Busy threshold, Mbps','Порог занятости, Мбит/с')};
     clear();host.setAttribute('data-step',session.paused?'paused':ONBOARDING_STEPS[session.step]);
     if(firstRun&&!session.introSeen&&!onboardingComplete(inventory)){

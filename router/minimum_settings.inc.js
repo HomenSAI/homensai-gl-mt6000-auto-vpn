@@ -36,7 +36,7 @@ function minimumSettingsPayload(draft,inventory){
     return {profile:p.id,name:row.name==null?p.name:row.name,channel:row.channel==null?'default':row.channel,priority:row.priority==null?100:Number(row.priority),enabled:row.enabled!==false};
   });
   if(!servers.some(function(p){return p.profile===draft.source&&p.enabled;})||!servers.some(function(p){return p.profile===draft.target&&p.enabled;}))throw new Error('SETUP-PRIMARY-RESERVE-DISABLED');
-  var interval=settings.interval==null?30:Number(settings.interval),duration=settings.native_duration==null?10:Number(settings.native_duration);
+  var interval=settings.interval==null?10:Number(settings.interval),duration=settings.native_duration==null?10:Number(settings.native_duration);
   if(!Number.isInteger(interval)||interval<10||interval>300||!Number.isInteger(duration)||duration<1||duration>240)throw new Error('SETUP-RANGE');
   return {source:draft.source,target:draft.target,interval:interval,duration:duration,session_loss:draft.session_loss===true,servers:servers};
 }

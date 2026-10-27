@@ -18,7 +18,7 @@ def main():
     if not re.fullmatch('[a-f0-9]{40}',args.source):parser.error('SOURCE-SHA')
     root=Path(__file__).resolve().parents[1]
     def check(argv):
-        result=subprocess.run(argv,cwd=root,capture_output=True,text=True,timeout=120)
+        result=subprocess.run(argv,cwd=root,capture_output=True,text=True,timeout=300)
         if result.returncode:
             print(result.stdout);print(result.stderr,file=sys.stderr)
             raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))

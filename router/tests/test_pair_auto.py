@@ -42,6 +42,28 @@ class Tests(unittest.TestCase):
         for bad in ([401],[True],[float('nan')],None,[-1]):
             with self.assertRaises(ValueError):pair.budget(bad,400)
 
+    def test_custom_window_preserves_attempts_for_later_policy_changes(self):
+        events=[100,400,850];retained,allowed=pair.budget(events,1000,window=300,limit=2)
+        self.assertEqual(retained,[400,850]);self.assertTrue(allowed)
+        retained,allowed=pair.budget(retained,1000,window=900,limit=2)
+        self.assertEqual(retained,[400,850]);self.assertFalse(allowed)
+        self.assertTrue(pair.budget(retained,1000,window=900,limit=3)[1])
+        for window,limit in ((59,3),(901,3),(900,0),(900,11),(True,3)):
+            with self.assertRaises(ValueError):pair.budget(events,1000,window=window,limit=limit)
+
+    def test_automatic_switch_uses_custom_attempt_policy_without_erasing_history(self):
+        pair.request(self.revision);self.state['id']=pair.intent()['id'];pair.save(self.state)
+        selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64}
+        backend=Mock();backend.diagnostic.return_value=([],selection);backend.order.return_value=(self.state['order'],self.state['policy_hash'])
+        agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[9800,9900]})
+        settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5'}
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt')as attempt,patch.object(pair,'configure_lease',return_value=20000):
+            with patch.object(pair.time,'time',return_value=10000):pair.tick(backend,settings,self.revision)
+            attempt.assert_not_called()
+            with patch.object(pair.time,'time',return_value=10201):pair.tick(backend,settings,self.revision)
+            attempt.assert_called_once()
+        self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[9800,9900,10201])
+
     def test_duplicate_start_is_idempotent_and_stop_revision_fences_it(self):
         first=pair.request(self.revision);saved=pair.intent()
         second=pair.request(self.revision)

@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha34'
+VERSION = '0.9.1-alpha35'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -778,7 +778,7 @@ def serve():
             status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
             from candidate_hierarchy import rank_candidates
-            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',30)*3,observation=vendor_observation,settings=settings)
+            status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',10)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             latency.observe(status,settings,time.time())
             status['latency_history']=latency.public()
@@ -866,7 +866,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
-                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0},
+                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},

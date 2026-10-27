@@ -141,6 +141,9 @@ def onboarding_payload(arguments, profiles, existing=None):
                               {'interval':arguments['monitor']['interval']},profiles,existing)
         main.update(paired['main']);rows=paired['servers']
     from recovery_settings import payload as recovery_payload
+    # Onboarding owns the check interval in its monitoring section only.
+    # Do not let a second copy override the value shown in its review.
+    if 'interval' in arguments['recovery']:raise ValueError('ONBOARDING-FIELDS')
     for payload in (recovery_payload(arguments['recovery']),speed_payload(arguments['speed'])):
         main.update(payload['main'])
     appearance=arguments['appearance']

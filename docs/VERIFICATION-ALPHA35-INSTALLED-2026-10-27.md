@@ -1,0 +1,7 @@
+# Alpha35: configurable Auto policy on MT3000
+
+On 27 October 2026 the dedicated GL-MT3000 was upgraded to 0.9.1-alpha35-1. Verified encrypted backups were taken before and after. The installer verified 92 payload files; unrelated VPN configuration, routes, settings and accepted terms were preserved. Previously enabled Auto was restored to RUNNING / OBSERVING; both selected profiles passed router DNS and 2/3 HTTPS checks.
+
+Settings → Auto switching rules edits the interval, consecutive failure/success thresholds, cooldown, reserve dwell, attempt limit/window and primary recovery thresholds. Defaults are 10 s, 3 failures, 2 reserve successes, 60 s cooldown and dwell, 3 attempts per 15 minutes, 2 primary successes and 30 s stability. Existing values survive upgrade; changing settings requires stopping Auto first. An isolated UCI write/readback verified custom values without altering live configuration; the real RPC refused editing while Auto was active.
+
+Two isolated CI environments passed on source 36bcb3f2fa6a2d5db9081d01b44a58bb829c13df and produced the same package SHA-256 `8ae64414caa043c72b296285325a99733313da9cb0e42a57e2100388904cfa68`. Native Chromium used synthetic RPC; the actual device served the verified files. No injected failure, external LAN or IPv6 acceptance was performed. [Device receipt](../qa/MT3000-ALPHA35-2026-10-27.json) · [Candidate receipt](../qa/AUTO-POLICY-ALPHA35-2026-10-27.json).

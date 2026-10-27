@@ -6,7 +6,9 @@
     "min_dwell": 300,
     "return_policy": "healthy_primary",
     "primary_successes": 5,
-    "primary_stable": 120
+    "primary_stable": 120,
+    "attempt_limit": 3,
+    "attempt_window": 15
   },
   "fast_recovery": {
     "failures": 3,
@@ -15,7 +17,9 @@
     "min_dwell": 60,
     "return_policy": "healthy_primary",
     "primary_successes": 3,
-    "primary_stable": 60
+    "primary_stable": 60,
+    "attempt_limit": 3,
+    "attempt_window": 15
   },
   "hold_reserve": {
     "failures": 3,
@@ -24,6 +28,8 @@
     "min_dwell": 180,
     "return_policy": "hold_reserve",
     "primary_successes": 3,
-    "primary_stable": 60
+    "primary_stable": 60,
+    "attempt_limit": 3,
+    "attempt_window": 15
   }
 }

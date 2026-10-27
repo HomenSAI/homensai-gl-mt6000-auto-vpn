@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard110'
+UI_MODULE='dashboard111'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -243,6 +243,7 @@ reorganizer = """      (function(){
           E('p',{},bi('Simple settings for every user. Every wizard validates your input and shows a review before saving. Stored tokens are never shown again. Open “What is this and how to fill it in” under a step for examples.','Простые настройки для любого пользователя. Каждый мастер проверяет ввод и показывает обзор перед сохранением. Сохранённые токены больше не показываются. Под каждым шагом есть «Что это и как заполнить» с примерами.')),
           E('p',{'class':'hv-setup-path','aria-label':bi('Order of the steps','Порядок шагов')},[E('b',{},bi('1 · System setup','1 · Настройка системы')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('2 · Telegram','2 · Telegram')),E('span',{'aria-hidden':'true'},' → '),E('b',{},bi('3 · Test delivery','3 · Проверка доставки')),E('small',{},bi('Press a button below to open its wizard.','Нажмите кнопку ниже, чтобы открыть мастер.'))]),
           E('div',{'class':'hv-setup-grid hv-setup-steps'},[
+            launcher(bi('Auto switching rules','Правила переключения Auto'),bi('Check interval, failures, reserve readiness, attempt limit and return conditions. Stop Auto before saving.','Интервал проверок, ошибки, готовность резерва, лимит попыток и условия возврата. Перед сохранением выключите Auto.'),function(){recoveryWizard(inventory);},false,'recovery'),
             launcher(bi('1 · System setup','1 · Настройка системы'),bi('Press to open the wizard: primary and reserve VPN, names, groups, priorities and whether a short reconnection is acceptable.','Нажмите, чтобы открыть мастер: основной и резервный VPN, названия, группы, приоритеты и допустимость короткого переподключения.'),function(){setupWizard(inventory,'system');},true,'system'),
             launcher(bi('2 · Telegram channel','2 · Канал Telegram'),bi('Press to open the wizard: bot token and chat for reports. The wizard explains how to get both.','Нажмите, чтобы открыть мастер: токен бота и чат для отчётов. Мастер объясняет, как получить и то и другое.'),function(){setupWizard(inventory,'telegram');},false,'telegram'),
             launcher(bi('3 · Test Telegram delivery','3 · Проверить доставку Telegram'),bi('Press to send one test message with the saved settings. It should arrive within a few seconds.','Нажмите, чтобы отправить одно тестовое сообщение с сохранёнными настройками. Оно должно прийти за несколько секунд.'),testDelivery,false,null,'telegram-test')
@@ -356,7 +357,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui82.css')
+source=source.replace('ui15.css','ui83.css')
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -509,6 +510,6 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 source=source.replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui82.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui83.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

@@ -29,7 +29,10 @@ var FOOL_RANGES={
   'recovery.cooldown':[60,1800,'seconds','секунд'],
   'recovery.min_dwell':[60,3600,'seconds','секунд'],
   'recovery.primary_successes':[2,10,'','' ],
-  'recovery.primary_stable':[30,600,'seconds','секунд']
+  'recovery.primary_stable':[30,600,'seconds','секунд'],
+  'recovery.attempt_limit':[1,10,'attempts','попыток'],
+  'recovery.attempt_window':[1,15,'minutes','минут'],
+  'recovery.interval':[10,300,'seconds','секунд']
 };
 // Text limits that match the backend (names and channel groups 1-64 characters; chat id; bot token).
 var FOOL_TEXT={name:[1,64],channel:[1,64],chat:[1,33],token:[0,120]};

@@ -44,6 +44,19 @@ class Backend:
 
 
 class NativeTests(unittest.TestCase):
+    def test_primary_recovery_uses_configured_long_probe_interval(self):
+        import failure_diagnosis
+        samples=[{'id':'primary','time':700,'code':None,'dns_ok':True,'https_success':2},
+                 {'id':'primary','time':1000,'code':None,'dns_ok':True,'https_success':2}]
+        pair={'coordination':{'state':'READY'},'source':{'id':'primary'},'target':None}
+        with patch.object(native,'read_json',return_value={'samples':samples}), \
+             patch.object(native.time,'time',return_value=1000), \
+             patch.object(failure_diagnosis,'resolve_pair',return_value=pair), \
+             patch.object(failure_diagnosis,'scoped_samples',return_value=samples), \
+             patch.object(native.Linux,'health',return_value=True):
+            self.assertTrue(native.Linux().recovery_ready('primary',{'interval':300}))
+            self.assertFalse(native.Linux().recovery_ready('primary',{'interval':10}))
+
     def setUp(self):
         # Fake PIDs must never reach the actual process-group kill syscall.
         patcher=patch.object(native.os,'killpg')

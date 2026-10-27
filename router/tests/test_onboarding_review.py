@@ -17,6 +17,11 @@ import telegram_report
 
 
 class OnboardingReview(unittest.TestCase):
+    def test_recovery_section_cannot_override_reviewed_monitor_interval(self):
+        arguments=self.arguments();arguments['recovery']['interval']=300
+        with self.assertRaisesRegex(ValueError,'ONBOARDING-FIELDS'):
+            setup.onboarding_payload(arguments,[])
+
     def arguments(self):
         return {
             'system': {'defer_pair': True, 'source': '', 'target': '', 'duration': 10,

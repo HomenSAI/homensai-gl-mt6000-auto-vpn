@@ -2,8 +2,8 @@
 import hashlib
 import json
 
-DEFAULTS={'failures':3,'successes':2,'cooldown':180,'min_dwell':180,'return_policy':'healthy_primary','primary_successes':3,'primary_stable':60}
-RANGES={'failures':(3,10),'successes':(2,10),'cooldown':(60,1800),'min_dwell':(60,3600),'primary_successes':(2,10),'primary_stable':(30,600)}
+DEFAULTS={'failures':3,'successes':2,'cooldown':60,'min_dwell':60,'return_policy':'healthy_primary','primary_successes':2,'primary_stable':30,'attempt_limit':3,'attempt_window':15}
+RANGES={'failures':(3,10),'successes':(2,10),'cooldown':(60,1800),'min_dwell':(60,3600),'primary_successes':(2,10),'primary_stable':(30,600),'attempt_limit':(1,10),'attempt_window':(1,15)}
 
 
 def normalized(settings):
@@ -11,6 +11,13 @@ def normalized(settings):
     for key,default in DEFAULTS.items():
         value=settings.get('recovery_'+key,default)
         if key=='return_policy':result[key]=value if value in ('healthy_primary','hold_reserve') else default
+        elif key in ('attempt_limit','attempt_window'):
+            # Malformed/out-of-range input cannot silently relax the default limit.
+            import re
+            if type(value)is int:number=value
+            elif isinstance(value,str) and re.fullmatch('[0-9]{1,3}',value):number=int(value)
+            else:number=default
+            lo,hi=RANGES[key];result[key]=number if lo<=number<=hi else default
         else:
             try:number=int(value)
             except (ValueError,TypeError):number=default
@@ -19,11 +26,19 @@ def normalized(settings):
 
 
 def payload(arguments):
-    if set(arguments)!=set(DEFAULTS):raise ValueError('RECOVERY-FIELDS')
+    # Older installed pages send the original seven fields. Missing optional
+    # fields are left untouched, never silently reset when an old page saves.
+    required=set(DEFAULTS)-{'attempt_limit','attempt_window'}
+    optional={'attempt_limit','attempt_window','interval'}
+    if not isinstance(arguments,dict) or not required<=set(arguments) or set(arguments)-required-optional:
+        raise ValueError('RECOVERY-FIELDS')
     for key,(low,high) in RANGES.items():
-        if type(arguments[key]) is not int or not low<=arguments[key]<=high:raise ValueError('RECOVERY-RANGE')
+        if key in arguments and (type(arguments[key]) is not int or not low<=arguments[key]<=high):raise ValueError('RECOVERY-RANGE')
+    if 'interval' in arguments and (type(arguments['interval']) is not int or not 10<=arguments['interval']<=300):raise ValueError('RECOVERY-RANGE')
     if arguments['return_policy'] not in ('healthy_primary','hold_reserve'):raise ValueError('RECOVERY-RETURN-POLICY')
-    return {'main':{'recovery_'+key:str(value) for key,value in arguments.items()},'servers':[]}
+    main={'recovery_'+key:str(value) for key,value in arguments.items() if key!='interval'}
+    if 'interval' in arguments:main['interval']=str(arguments['interval'])
+    return {'main':main,'servers':[]}
 
 
 def fingerprint(settings):

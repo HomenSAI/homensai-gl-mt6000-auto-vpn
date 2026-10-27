@@ -22,6 +22,7 @@ ROOT=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'
 sys.path.insert(0,str(ROOT))
 import agent
 import native_switch as native
+import retention_settings
 import auto_control
 from vendor_fixture import stamp
 
@@ -67,6 +68,8 @@ class Backend:
 class Matrix(unittest.TestCase):
     def setUp(self):
         self.stack=ExitStack();self.addCleanup(self.stack.close)
+        # Worker mocks must not intercept unrelated cached UCI retention reads.
+        self.stack.enter_context(patch.object(retention_settings,'configured_days',return_value=7))
         self.dir=Path(self.stack.enter_context(tempfile.TemporaryDirectory()))
         for name,value in (('PERSIST',self.dir),('RUNTIME',self.dir),('JOURNAL',self.dir/'journal'),('STATE',self.dir/'status'),
                            ('CERT',self.dir/'cert'),('ATTEMPTS',self.dir/'attempts'),('PREPARE',self.dir/'prepare'),('JOURNAL_ALARM',self.dir/'journal-alarm')):

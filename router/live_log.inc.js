@@ -4,7 +4,7 @@ var liveLogTimer=null;
 function liveLampKind(profile,now){var s=profileHealth(profile,now).state;return s==='healthy'?'green':s==='checking'?'yellow':s==='failed'?'red':'grey';}
 function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateNames||{};
   if(typeof renderLiveTerminal==='function')return renderLiveTerminal(status,inventory);
-  var now=Date.now()/1000,interval=Number(((inventory||{}).settings||{}).interval)||30;
+  var now=Date.now()/1000,interval=Number(((inventory||{}).settings||{}).interval)||10;
   var fresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var light=autoLightModel(status,inventory||{},now);
   function lamp(kind,title){return E('span',{'class':'hv-live-lamp hv-live-lamp-'+kind,'role':'img','aria-label':title,'title':title});}

@@ -136,7 +136,7 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
     if arguments['profile']!=selection[selected_role]['id']:raise FaultError('FAULT-NOT-CURRENT-SOURCE')
     from failure_diagnosis import resolve_pair,profile_identity,finite
     from vendor_observation import current_bindings,tunnel_identity
-    try:interval=int(settings.get('interval',30))
+    try:interval=int(settings.get('interval',10))
     except (ValueError,TypeError,OverflowError):raise FaultError('FAULT-IDENTITY-UNVERIFIED') from None
     if not 10<=interval<=300:raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     pair=resolve_pair(status,settings,now,max(30,min(900,interval*3)),max(30,min(600,interval*2)))

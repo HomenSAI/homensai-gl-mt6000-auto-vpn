@@ -31,12 +31,14 @@ class CommittedRecoveryTests(unittest.TestCase):
         self.assertEqual(self.decide({},self.samples,1000)['action'],'OBSERVE')
         self.backend.health.assert_called_once_with('wireguard:b')
     def test_emergency_return_requires_verified_primary(self):
-        self.backend.recovery_ready.return_value=True
+        self.backend.recovery_ready.return_value=True;self.journal['confirmed']=990
         self.assertEqual(self.decide({},self.samples,1000)['reason'],'RESERVE-FAILED-PRIMARY-VERIFIED')
     def test_normal_return_waits_for_dwell_and_primary_verification(self):
         self.backend.recovery_ready.return_value=True
-        self.assertEqual(self.decide({},[],1000)['action'],'OBSERVE')
-        self.assertEqual(self.decide({},[],1100)['reason'],'PRIMARY-STABLY-RECOVERED')
+        self.assertEqual(self.decide({},[],959)['action'],'OBSERVE')
+        self.assertEqual(self.decide({},[],960)['reason'],'PRIMARY-STABLY-RECOVERED')
+        self.assertEqual(self.decide({'recovery_min_dwell':'180'},[],1000)['action'],'OBSERVE')
+        self.assertEqual(self.decide({'recovery_min_dwell':'180'},[],1080)['reason'],'PRIMARY-STABLY-RECOVERED')
     def test_operator_hold_never_forces_primary_return(self):
         self.backend.recovery_ready.return_value=True;self.backend.health.return_value=False
         result=self.decide({'recovery_return_policy':'hold_reserve'},self.samples,1000)

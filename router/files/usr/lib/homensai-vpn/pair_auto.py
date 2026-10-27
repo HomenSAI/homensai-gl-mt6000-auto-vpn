@@ -170,13 +170,17 @@ def fail_request(request,revision,error):
 
 
 def budget(events, now, window=900, limit=3):
-    """Three attempts per rolling 15 min; a new Start never resets this ledger."""
+    """Configurable rolling limit; retain 15 minutes, and never reset on Start."""
     if (not isinstance(events, list) or len(events) > 16 or type(now) not in (int, float)
             or not math.isfinite(now) or any(type(x) not in (int, float) or not math.isfinite(x)
                                            or x < 0 or x > now for x in events)):
         raise ValueError('PAIR-BUDGET-UNVERIFIED')
-    kept = sorted(x for x in events if now - x < window)
-    return kept, len(kept) < limit
+    if type(window)is not int or not 60<=window<=900 or type(limit)is not int or not 1<=limit<=10:
+        raise ValueError('PAIR-BUDGET-UNVERIFIED')
+    # Keep the whole maximum window so later policy changes cannot erase attempts.
+    kept = sorted(x for x in events if now - x < 900)
+    count=sum(now-x<window for x in kept)
+    return kept, count < limit and len(kept)<16
 
 
 NETWORK_READ = r"""
@@ -521,12 +525,12 @@ def tick(backend, settings, revision):
             raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
         now = time.time()
         recovery = normalized(settings)
-        age = max(30, min(900, int(settings.get('interval', 30)) * 3))
+        age = max(30, min(900, int(settings.get('interval', 10)) * 3))
         failed = streak(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, False, selection['source'])
         healthy = streak(status.get('samples', []), selection['target']['id'], recovery['successes'], now, age, True, selection['target'])
         diagnosis = diagnose(status, selection['source']['id'], now)
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
-        events, permitted = budget(ledger.get('events'), now)
+        events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])
         if failed and healthy and permitted and dwell and not diagnosis.get('suppress_switch'):
             if state.get('manual_hold'):

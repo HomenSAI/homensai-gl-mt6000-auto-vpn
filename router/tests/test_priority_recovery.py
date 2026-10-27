@@ -54,6 +54,22 @@ class PriorityTests(unittest.TestCase):
             self.assertFalse(result['saved']);run.assert_not_called()
 
 class RecoveryTests(unittest.TestCase):
+    def test_owner_defaults_and_atomic_extended_settings(self):
+        self.assertEqual(recovery.normalized({}),{'failures':3,'successes':2,'cooldown':60,'min_dwell':60,
+            'return_policy':'healthy_primary','primary_successes':2,'primary_stable':30,'attempt_limit':3,'attempt_window':15})
+        values=dict(recovery.DEFAULTS,interval=10,attempt_limit=4,attempt_window=8)
+        saved=recovery.payload(values)['main']
+        self.assertEqual((saved['interval'],saved['recovery_attempt_limit'],saved['recovery_attempt_window']),('10','4','8'))
+        self.assertNotIn('native_enabled',saved)
+        legacy={k:v for k,v in recovery.DEFAULTS.items()if k not in('attempt_limit','attempt_window')}
+        old=recovery.payload(legacy)['main']
+        self.assertNotIn('recovery_attempt_limit',old);self.assertNotIn('recovery_attempt_window',old)
+        for value in (9,301,True,'10'):
+            with self.assertRaises(ValueError):recovery.payload(dict(values,interval=value))
+        for bad in (True,'bad','999',0):
+            policy=recovery.normalized({'recovery_attempt_limit':bad,'recovery_attempt_window':bad})
+            self.assertEqual((policy['attempt_limit'],policy['attempt_window']),(3,15))
+
     def test_only_supported_bounded_fields(self):
         result=recovery.payload(dict(recovery.DEFAULTS));self.assertEqual(result['servers'],[])
         self.assertNotIn('native_enabled',result['main'])

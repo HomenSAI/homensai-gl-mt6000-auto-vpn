@@ -495,7 +495,7 @@ class Linux:
                 except ValueError:blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
             self.use_process_bindings(selection.get('process_bindings'))
             from failure_diagnosis import resolve_pair,profile_identity
-            interval=data.get('settings',{}).get('interval','30')
+            interval=data.get('settings',{}).get('interval','10')
             try:interval=int(interval)
             except (ValueError,TypeError,OverflowError):raise Refused('OBSERVATION-STALE')
             observed=read_json(RUNTIME/'status.json',{})
@@ -630,11 +630,11 @@ class Linux:
         from failure_diagnosis import resolve_pair,scoped_samples
         policy=normalized(settings)
         status=read_json(RUNTIME/'status.json',{})
-        interval=int(settings.get('interval',30))
+        interval=int(settings.get('interval',10))
         pair=resolve_pair(status,settings,time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
         row=next((pair[role] for role in ('source','target') if pair[role] and pair[role]['id']==identifier),None)
         return (pair['coordination']['state']=='READY' and row is not None
-                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time())
+                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time(),max(30,min(900,interval*3)))
                 and self.health(identifier) is True)
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
@@ -784,11 +784,11 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     from recovery_settings import normalized
     from failure_diagnosis import resolve_pair,profile_identity
     recovery=normalized(settings)
-    age=max(30,min(900,int(settings.get('interval',30))*3))
+    age=max(30,min(900,int(settings.get('interval',10))*3))
     selection_settings=dict(settings)
     for role in ('source','target'):
         if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
-    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',30))*2)))
+    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',10))*2)))
     proofs=journal.get('vendor_profiles',{})
     target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
     if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
@@ -1299,7 +1299,7 @@ def serve():
                     publish({'state':'BLOCKED','blockers':[diagnosis['code']],'reason':diagnosis['code'],'source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
                 from recovery_settings import normalized
                 recovery=normalized(settings)
-                age=max(30,min(900,int(settings.get('interval',30))*3))
+                age=max(30,min(900,int(settings.get('interval',10))*3))
                 failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False,selection['source'])
                 healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True,selection['target'])
                 certificate=read_json(CERT,{})

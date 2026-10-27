@@ -135,7 +135,7 @@ function advance(f,target='review'){
   f.pending.resolve({saved:true,onboarding_complete:true,onboarding_version:1});await p;assert.equal(f.reloads,1);assert.equal(f.c.ONBOARDING_SESSION,null);
   const commit=f.calls.at(-1);assert.equal(commit.spec.method,'setup_onboarding');assert.deepEqual(commit.spec.params,['system','monitor','recovery','speed','telegram','appearance']);
   const [system,monitor,recovery,speed,telegram,appearance]=commit.args;
-  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,180);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
+  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,60);assert.equal(recovery.min_dwell,60);assert.equal(recovery.primary_successes,2);assert.equal(recovery.primary_stable,30);assert.equal(recovery.attempt_limit,3);assert.equal(recovery.attempt_window,15);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
   assert(f.calls.every(call=>call.spec.method==='setup_onboarding'),'never accepts terms, toggles a service or starts Auto');
   // Zero/one-profile installations require a deliberate defer; outgoing pair is empty, planning off, metadata retained.
   for(const count of [0,1]){
@@ -154,7 +154,7 @@ function advance(f,target='review'){
   f.set('monitor.interval',45);f.set('monitor.checkpoint',1200);f.set('monitor.probe_limit',24);f.set('monitor.planning_enabled',true);f.set('monitor.live_log_limit',1500);f.set('monitor.history_days',2);f.click('next');
   f.set('system.source','wireguard:peer_2');f.set('system.target','openvpn:1_1');f.set('system.duration',20);f.set('system.session_loss',true);f.click('next');
   f.set('servers.0.name','Main display');f.set('servers.0.channel','Group A');f.set('servers.0.priority',12);f.set('servers.1.name','Reserve display');f.set('servers.1.channel','Group B');f.set('servers.1.priority',34);f.click('next');
-  const customRecovery={failures:5,successes:4,cooldown:360,min_dwell:240,primary_successes:5,primary_stable:120,return_policy:'hold_reserve'};
+  const customRecovery={failures:5,successes:4,cooldown:360,min_dwell:240,primary_successes:5,primary_stable:120,attempt_limit:4,attempt_window:8,return_policy:'hold_reserve'};
   for(const [key,value] of Object.entries(customRecovery))f.set('recovery.'+key,value);f.click('next');
   const customSpeed={enabled:true,auto_new:true,budget_mib:16,duration:10,streams:3,daily_mib:256,busy_mbps:10};
   for(const [key,value] of Object.entries(customSpeed))f.set('speed.'+key,value);f.click('next');
