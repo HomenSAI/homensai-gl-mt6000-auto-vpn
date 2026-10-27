@@ -307,7 +307,7 @@ def semantic_section(section,process_bindings=None):
     anonymous=section.get('.anonymous') in (True,'1')
     from process_policy import recognizes
     derived=recognizes(section,process_bindings)
-    return {k:v for k,v in section.items() if k!='.index' and not (anonymous and k=='.name')
+    return {k:v for k,v in section.items() if k not in ('.index','name') and not (anonymous and k=='.name')
             and not (derived and k in ('via','mark'))}
 
 

@@ -12,7 +12,7 @@ async function main(){
  assert(/Auto power button/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));assert(/may have been stored/.test(c.manualReason(['MANUAL-REQUEST-UNCONFIRMED'])));assert(/not certify|not passed/.test(c.manualReason(['MT3000-MANUAL-ADAPTER-NOT-CERTIFIED'])));assert(/integration/.test(c.manualReason(['FW3-INCLUDE-CONTRACT-UNVERIFIED'])));
  const english=c.bi;c.bi=(_en,ru)=>ru;assert(/аварийную остановку/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));c.bi=english;
  for(const code of ['__proto__','constructor','PRIVATE_SENTINEL'])assert(!c.manualReason([code]).includes(code),'unknown codes never echo untrusted text');
- let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');assert(/Waiting.*ready/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
+ let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');assert(/Spare.*working/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
  s.manual_switch={state:'QUEUED',updated_at:999,target_id:'b'};assert.equal(tone(s,'source').color,'green','queue never swaps route colors');assert.equal(tone(s,'target').color,'yellow');
  s.manual_switch.state='COMPLETED';assert.equal(tone(s,'target').color,'yellow','completion record alone never selects route');
  s.channel_path.transitioning=true;assert.equal(tone(s,'source').color,'yellow');assert.equal(tone(s,'target').color,'yellow');

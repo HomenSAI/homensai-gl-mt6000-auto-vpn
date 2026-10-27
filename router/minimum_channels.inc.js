@@ -13,21 +13,21 @@ function renderMinimumChannels(status,inventory,routerUrl){
   function details(profile){
     var health=simpleHomeHealth(profile,now,model.dataUnavailable),known=!!profile;
     var measured=health.state==='healthy'&&known&&Number.isFinite(profile.rtt_ms)&&profile.rtt_ms>=0;
-    var stamp=known&&Number.isFinite(profile.time)&&manualFresh(profile.time,now,90)?new Date(profile.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}):bi('No fresh measurement','Нет свежего замера');
+    var stamp=known&&Number.isFinite(profile.time)&&manualFresh(profile.time,now,90)?new Date(profile.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'));
     return E('details',{'class':'hv-minimum-details'},[
       E('summary',{},bi('Details','Подробнее')),
       E('dl',{'class':'hv-minimum-profile-details'},[
         E('dt',{},bi('Server','Сервер')),E('dd',{},endpointText(profile,now)),
-        E('dt',{},bi('Protocol','Протокол')),E('dd',{},known&&['wireguard','openvpn'].indexOf(profile.protocol)>=0?protocolLabel(profile):bi('Not confirmed','Не подтверждён')),
-        E('dt',{},bi('Country','Страна')),E('dd',{},known&&countryName(profile)||bi('Not confirmed','Не подтверждена')),
-        E('dt',{},bi('Delay','Задержка')),E('dd',{},measured?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):bi('No fresh measurement','Нет свежего замера')),
+        E('dt',{},bi('Protocol','Протокол')),E('dd',{},known&&['wireguard','openvpn'].indexOf(profile.protocol)>=0?protocolLabel(profile):bi('Not reported by the router','Роутер не сообщил')),
+        E('dt',{},bi('Country','Страна')),E('dd',{},known&&countryName(profile)||bi('Not reported by the router','Роутер не сообщил')),
+        E('dt',{},bi('Delay','Задержка')),E('dd',{},measured?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'))),
         E('dt',{},bi('Checked · Europe/Berlin','Проверено · Europe/Berlin')),E('dd',{},stamp)
       ])
     ]);
   }
   function card(profile,role){
     var health=role==='source'?model.sourceHealth:model.targetHealth;
-    var used=model.selectedRole===role,selection=used?bi('In use','Используется'):model.selectedRole?bi('Not in use','Не используется'):model.moving?bi('Selection is changing','Выбор меняется'):bi('Selection not confirmed','Выбор не подтверждён');
+    var used=model.selectedRole===role,selection=used?bi('In use','Используется'):model.selectedRole?bi('Not in use','Не используется'):model.moving?bi('Selection is changing','Выбор меняется'):bi('The router has not reported which VPN is in use yet','Роутер ещё не сообщил, какой VPN работает');
     return E('article',{'class':'hv-minimum-channel hv-minimum-health-'+health.state+(used?' hv-minimum-channel-selected':''),'data-minimum-channel':role},[
       E('div',{'class':'hv-minimum-channel-heading'},[E('span',{'class':'hv-minimum-role'},role==='source'?bi('Primary','Основной'):bi('Reserve','Резервный')),E('span',{'class':'hv-minimum-health'},health.label)]),
       E('h3',{},minimumProfileName(profile,inventory)),E('p',{'class':'hv-minimum-selection'},selection),details(profile)

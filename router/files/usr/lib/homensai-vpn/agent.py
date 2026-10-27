@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha41'
+VERSION = '0.9.1-alpha46'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -700,6 +700,15 @@ def serve():
         from speed_pause import gate as speed_gate
         if speed_gate('monitor'):
             time.sleep(1);continue
+        from stats_reset import pending as reset_pending,apply as reset_apply,RESULT as RESET_RESULT
+        reset_request=reset_pending(RUNTIME)
+        if reset_request:
+            # Owner reset of charts/statistics: archived first, then the counters start again from zero.
+            accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json)
+            try:
+                if reset_result.get('done'):checkpoint(accounting,latency);last_save=time.monotonic()
+            except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
+            atomic_json(RUNTIME/RESET_RESULT,reset_result)
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         started = time.monotonic()
         try:
@@ -793,6 +802,7 @@ def serve():
             status['accounting']['reliability']=accounting.reliability.public()
             from native_history import read_public
             status['native_history']=read_public(PERSIST)
+            status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()
             from system_readiness import snapshot as readiness_snapshot
@@ -832,6 +842,7 @@ def serve():
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
                 break
+            if (RUNTIME/'stats-reset-request.json').exists():break
             time.sleep(1)
     try:
         from speed_test import cancel as cancel_speed
@@ -863,7 +874,7 @@ def rpc(method):
         print(json.dumps({'status': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
-                          'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
+                          'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
@@ -914,6 +925,9 @@ def rpc(method):
         if transaction.get('proof_scope','external-lan')!='external-lan':raise ValueError('RPC-CONFIRM-UNVERIFIED')
         atomic_json(RUNTIME/'native-confirm.json',dict(arguments,time=time.time()))
         print('{"accepted":true}');return
+    if method=='stats_reset':
+        from stats_reset import request as reset_request
+        print(json.dumps(reset_request(arguments)));return
     if method in ('fault_start','fault_cancel'):
         from fault_control import start,cancel,FaultError
         try:result=start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
@@ -1009,6 +1023,7 @@ def rpc(method):
             from native_history import read_public
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             status['native_history']=read_public(PERSIST)
+            status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()
             from manual_control import public_status as manual_status, control_status

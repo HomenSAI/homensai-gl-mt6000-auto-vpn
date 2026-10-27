@@ -9,7 +9,7 @@ var SETUP_GUIDES={
       [['Reserve profile','Резервный профиль'],['The VPN used when the primary does not work. Choose a different country or provider, so one outage does not stop both.','VPN на случай, когда основной не работает. Выберите другую страну или другого провайдера, чтобы один сбой не остановил оба.'],['Netherlands · OpenVPN','Нидерланды · OpenVPN']],
       [['Name','Название'],['Your own short name shown in the tables and in reports. Optional.','Ваше короткое название в таблицах и отчётах. Необязательно.'],['Main (home)','Основной (дом)']],
       [['Priority','Приоритет'],['1 is the most preferred. The reserve gets a larger number.','1 — самый предпочтительный. У резерва число больше.'],['Primary 1, reserve 2','Основной 1, резерв 2']],
-      [['Allow session reconnection','Разрешить переподключение сессий'],['Switching to another VPN breaks open connections for a few seconds (calls, downloads). Tick it only if you accept that.','При переходе на другой VPN открытые соединения рвутся на несколько секунд (звонки, загрузки). Отметьте, только если вас это устраивает.'],['Tick it','Отметить']]
+      [['Allow a brief drop of calls and downloads when switching','Разрешить короткий обрыв звонков и загрузок при переключении'],['Switching to another VPN breaks open connections for a few seconds (calls, downloads). Tick it only if you accept that.','При переходе на другой VPN открытые соединения рвутся на несколько секунд (звонки, загрузки). Отметьте, только если вас это устраивает.'],['Tick it','Отметить']]
     ]},
   recovery:{
     what:['The rules for when the router switches to the reserve and when it goes back.','Правила: когда роутер переходит на резерв и когда возвращается обратно.'],

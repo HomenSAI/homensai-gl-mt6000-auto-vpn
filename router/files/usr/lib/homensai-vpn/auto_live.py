@@ -27,6 +27,20 @@ def snapshot():
     stamp=monitor.get('time')
     result={'time':stamp if type(stamp)in(int,float)and math.isfinite(stamp)and 0<=stamp<=now+5 else None,
             'server_time':now,'native_failover':clean}
+    # Channel verdicts of the two selected profiles only, so the chart can show "no working channel".
+    rows=[]
+    for p in (monitor.get('profiles') or [])[:8]:
+        if not isinstance(p,dict)or not isinstance(p.get('id'),str)or len(p['id'])>96:continue
+        row={'id':p['id']}
+        for key in ('time','https_success'):
+            if type(p.get(key))in(int,float)and math.isfinite(p[key]):row[key]=p[key]
+        code=p.get('code')
+        row['code']=code if isinstance(code,str)and re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',code)else None
+        row['dns_ok']=p['dns_ok']if type(p.get('dns_ok'))is bool else None
+        rows.append(row)
+    result['profiles']=rows
+    blockers=native.get('blockers')
+    if isinstance(blockers,list):clean['blockers']=[b for b in blockers[:8] if isinstance(b,str)and re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',b)]
     from speed_pause import public as pause_status
     result['speed_pause']=pause_status()
     return result

@@ -87,13 +87,13 @@ function minimumComposePages(legacy,panel,status,inventory,controlCard,commandHo
   var checkSummary=E('div',{'class':'hv-chart-card hv-minimum-checks'},[
     E('h2',{},bi('Connection check','Проверка соединения')),
     E('p',{'role':'status'},model.dataUnavailable?bi('No fresh router data.','Нет свежих данных роутера.'):bi('Check VPN availability without changing the active channel.','Проверить доступность VPN без смены рабочего канала.')),connectivity,
-    E('small',{},bi('Router IPv4 observations. LAN clients are checked separately.','Наблюдения IPv4 с роутера. LAN-клиенты проверяются отдельно.'))
+    E('small',{},bi('The router does the check itself.','Проверку делает сам роутер.'))
   ].filter(Boolean));
   if(!model.dataUnavailable&&passed)checkSummary.appendChild(minimumDisclosure(bi('Passed checks: ','Пройдено проверок: ')+passed,'passed-checks',E('ul',{},checks.filter(function(row){return row.state==='pass';}).map(function(row){var label=READINESS_CHECKS[row.code];return E('li',{},label?bi(label[0],label[1]):row.code);})))) ;
   if(!model.dataUnavailable&&failures.length)checkSummary.appendChild(E('ul',{},failures.map(function(row){return E('li',{},autoCodeNotice(row.code));})));
   var blockerCodes=(Array.isArray((status.native_failover||{}).blockers)?status.native_failover.blockers:[]).slice(0,32);
   if(blockerCodes.length)checkSummary.appendChild(E('div',{'class':'hv-minimum-blockers'},blockerCodes.slice(0,3).map(function(code){return autoCodeNotice(code);})));
-  var technical=[oldServices,oldChannels?minimumDisclosure(bi('All profile observations','Проверки всех профилей'),'profile-observations',oldChannels):null,oldOverview?minimumDisclosure(bi('Controller observations','Наблюдения контроллера'),'controller-observations',oldOverview):null];
+  var technical=[oldServices,oldChannels?minimumDisclosure(bi('All profile observations','Проверки всех профилей'),'profile-observations',oldChannels):null,oldOverview?minimumDisclosure(bi('What Auto sees','Что видит Auto'),'controller-observations',oldOverview):null];
   page('diagnostics',[
     minimumSubviewLinks('diagnostics',[['checks','Checks','Проверки'],['speed','Speed','Скорость'],['recovery','Recovery','Восстановление'],['technical','Technical details','Технические сведения']]),
     minimumSubview('diagnostics','checks',[checkSummary,minimumDisclosure(bi('Startup conditions','Условия запуска'),'readiness',oldReadiness)]),
@@ -133,7 +133,7 @@ function minimumComposePages(legacy,panel,status,inventory,controlCard,commandHo
       E('h2',{},'Auto VPN'),E('p',{},'HomenS.AI · Serhii Khomenko'),
       E('p',{},bi('Version: ','Версия: ')+(status.version||'unknown')),
       typeof renderAttribution==='function'?renderAttribution(status):null,
-      E('p',{},bi('Qualified configuration: GL-MT3000 / 4.11.0, router-probed IPv4. Other devices and IPv6 need separate qualification.','Квалифицированная конфигурация: GL-MT3000 / 4.11.0, проверки IPv4 с роутера. Другие устройства и IPv6 требуют отдельной приёмки.')),
+      E('p',{},bi('Tested on GL-MT3000 with firmware 4.11.0.','Проверено на GL-MT3000 с прошивкой 4.11.0.')),
       E('a',{'href':'https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE','target':'_blank','rel':'noopener noreferrer'},bi('MIT license and project source','Лицензия MIT и исходники проекта'))
     ])
   ]);

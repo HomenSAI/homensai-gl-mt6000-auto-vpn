@@ -73,7 +73,7 @@ const lampCol=b.all().filter(n=>/hv-dv-statuscol/.test(n.attrs.class||''));asser
   assert.equal(refreshed.all().find(n=>n.attrs['data-vpn-more']==='1').attrs.open,'open','ordinary refresh retains expansion');
   more.open=false;more.listeners.toggle();
 }
-assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[1].all().some(n=>/hv-check-yellow/.test(n.attrs.class||'')),'healthy standby: yellow lamp');assert(lampCol[2].all().some(n=>/hv-check-red/.test(n.attrs.class||'')),'known disconnected: red lamp');
+assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[1].all().some(n=>/hv-check-yellow/.test(n.attrs.class||'')),'healthy standby: amber ready lamp, same as the sidebar');assert(lampCol[2].all().some(n=>/hv-check-red/.test(n.attrs.class||'')),'known disconnected: red lamp');
 // C: status line with real identifiers, latency chart, log with codes, server table, keys.
 const c=render(ctx,'c',fixture()).node;t=c.text();
 const tc=t.replace(/\s+/g,' ');assert(/ctrl OBSERVING/.test(tc)&&/auto (OFF|ON)/.test(tc)&&/ui dashboard/.test(tc));assert(/Event log/.test(t)&&/DNS-001/.test(t));
@@ -139,7 +139,7 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  assert(statistics.all().some(n=>n.attrs.id==='hv-auto-live-chart')&&statistics.all().some(n=>n.attrs.id==='hv-auto-day-chart'),'both graphs remain available together');
  const manual=nodes.find(n=>n.attrs['data-manual-controls']==='1');assert(manual&&card.children.includes(manual),'manual panel is a separate sibling');
  const choices=manual.all().filter(n=>n.tag==='button'&&n.attrs['data-manual-direction']!=='resume'&&n.attrs['data-manual-direction']);
- assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-red'));assert(!choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
+ assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-yellow'),'working spare card is amber');assert(!choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
  assert.strictEqual(card.children[2],manual,'manual selection immediately follows compact disclosure headers');
  statistics.open=true;statistics.listeners.toggle();
  let redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert.equal(redrawn.children[1].attrs.open,'open');assert.equal(redrawn.children[1].attrs.open,'open','ordinary redraw preserves expansion');

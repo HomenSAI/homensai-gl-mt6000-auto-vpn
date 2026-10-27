@@ -38,15 +38,15 @@ function simpleHomeModel(status,inventory,now){
   decision.setupRequired=!unavailable&&control.off&&!decision.moving&&!operation&&(!source||!target||!source.id||!target.id||source.id===target.id);
   if(control.paused){decision.state='pending';decision.title=bi('Auto paused for speed test','Auto на паузе для теста скорости');decision.summary=bi('Monitoring resumes first, then Auto. Your VPNs stay connected.','Сначала возобновится мониторинг, затем Auto. VPN остаются подключёнными.');}
   else if(unavailable){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=bi('Check the connection to the router.','Проверьте связь с роутером.');}
-  else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('Waiting for controller confirmation.','Ожидается подтверждение контроллера.');}
-  else if(operation==='starting'){decision.state='pending';decision.title=bi('Turning Auto on…','Включение Auto…');decision.summary=bi('Waiting for controller confirmation.','Ожидается подтверждение контроллера.');}
+  else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
+  else if(operation==='starting'){decision.state='pending';decision.title=bi('Turning Auto on…','Включение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
   else if(decision.moving){decision.state='pending';decision.title=bi('Switching channel','Переключение канала');decision.summary=bi('The active channel is being confirmed.','Рабочий канал уточняется.');}
   else if(control.on&&decision.activeHealthy){decision.state='on';decision.title=selected==='target'?bi('Reserve is working','Работает резерв'):bi('Auto works','Auto работает');decision.summary=selected==='target'?bi('Reserve channel is in use.','Задействован резервный канал.'):bi('Primary channel is in use.','Задействован основной канал.');}
-  else if(control.on){decision.state=activeHealth&&['failed','inactive'].indexOf(activeHealth.state)>=0?'error':'unknown';decision.title=bi('Connection needs checking','Нужна проверка соединения');decision.summary=selected?bi('The selected channel has no fresh successful check.','У выбранного канала нет свежей успешной проверки.'):bi('The active channel is not confirmed.','Рабочий канал не подтверждён.');}
+  else if(control.on){decision.state=activeHealth&&['failed','inactive'].indexOf(activeHealth.state)>=0?'error':'unknown';decision.title=bi('Internet through the VPN has not been checked recently','Давно не проверялось, есть ли интернет через VPN');decision.summary=bi('Press "Check connection".','Нажмите «Проверить соединение».');}
   else if(ns.state==='BLOCKED'){decision.state='error';decision.title=bi('Auto is blocked','Auto заблокирован');decision.summary=decision.blockers.length?autoBlockerText(decision.blockers[0]):bi('Open diagnostics for the current reason.','Откройте диагностику для уточнения причины.');}
   else if(decision.setupRequired){decision.state='setup';decision.title=bi('Finish setup','Завершите настройку');decision.summary=bi('Choose a primary and a different reserve profile.','Выберите основной и другой, резервный профиль.');}
   else if(control.off){decision.state='off';decision.title=bi('Auto is off','Auto выключен');decision.summary=selected==='target'?bi('Automatic switching is stopped; reserve remains selected.','Автопереключение остановлено; выбран резерв.'):bi('Automatic switching is stopped.','Автоматическое переключение остановлено.');}
-  else{decision.state='error';decision.title=bi('Auto needs attention','Нужна проверка Auto');decision.summary=bi('Open diagnostics to see the reason.','Причина доступна в диагностике.');}
+  else{decision.state='error';decision.title=bi('Auto cannot run','Auto не может работать');decision.summary=bi('Press to see why.','Нажмите, чтобы узнать почему.');}
   return decision;
 }
 function renderSimpleHome(status,inventory,model,controlCard,openMenu){
@@ -60,16 +60,16 @@ function renderSimpleHome(status,inventory,model,controlCard,openMenu){
   if(actionLabel.classList&&actionLabel.classList.add)actionLabel.classList.add('hv-simple-action');
   function member(profile,role){
     var health=role==='source'?model.sourceHealth:model.targetHealth,selected=model.selectedRole===role;
-    var latency=health.state==='healthy'&&profile&&Number.isFinite(profile.rtt_ms)&&profile.rtt_ms>=0?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):bi('No fresh measurement','Нет свежего замера');
-    var title=profile&&(profile.name||profile.router_name)||bi('Profile not confirmed','Профиль не подтверждён');
+    var latency=health.state==='healthy'&&profile&&Number.isFinite(profile.rtt_ms)&&profile.rtt_ms>=0?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'));
+    var title=profile&&(profile.name||profile.router_name)||bi('No VPN selected','VPN не выбран');
     return E('div',{'class':'hv-simple-channel hv-simple-channel-'+health.state,'data-simple-role':role},[
       E('div',{'class':'hv-simple-channel-top'},[E('strong',{},role==='source'?bi('Primary','Основной'):bi('Reserve','Резервный')),E('span',{},health.label)]),
-      E('div',{'class':'hv-simple-profile'},title),E('div',{'class':'hv-simple-selection'},selected?bi('In use','Используется'):model.selectedRole?bi('Not in use','Не используется'):bi('Selection not confirmed','Выбор не подтверждён')),
-      E('div',{'class':'hv-simple-server'},endpointText(profile,now)),E('div',{},profile&&['wireguard','openvpn'].indexOf(profile.protocol)>=0?protocolLabel(profile):bi('Protocol not confirmed','Протокол не подтверждён')),
+      E('div',{'class':'hv-simple-profile'},title),E('div',{'class':'hv-simple-selection'},selected?bi('In use','Используется'):model.selectedRole?bi('Not in use','Не используется'):bi('The router has not reported which VPN is in use yet','Роутер ещё не сообщил, какой VPN работает')),
+      E('div',{'class':'hv-simple-server'},endpointText(profile,now)),E('div',{},profile&&['wireguard','openvpn'].indexOf(profile.protocol)>=0?protocolLabel(profile):bi('Not reported by the router','Роутер не сообщил')),
       profile&&countryName(profile)?E('div',{},countryName(profile)):null,E('div',{'class':'hv-simple-latency'},bi('Delay: ','Задержка: ')+latency)
     ].filter(Boolean));
   }
-  var monitor=model.dataUnavailable?bi('State unknown','Состояние неизвестно'):model.state==='error'?bi('Needs attention','Нужно внимание'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
+  var monitor=model.dataUnavailable?bi('No connection to the router','Нет связи с роутером'):model.state==='error'?bi('Needs attention','Нужно внимание'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
   return E('section',{'class':'hv-simple-home','data-simple-home':model.state},[
     E('div',{'class':'hv-simple-card'},[
       E('div',{'class':'hv-simple-top'},[E('strong',{},'Auto VPN'),E('span',{'class':'hv-simple-monitor hv-simple-monitor-'+model.state},monitor)]),

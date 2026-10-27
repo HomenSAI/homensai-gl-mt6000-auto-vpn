@@ -41,7 +41,7 @@ function trafficDayChart(vpnDays,wanDays,days,scope,onScope){
 }
 function trafficHistoryPanel(accounting){
   function dateKey(date){return new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit',day:'2-digit'}).format(date);}
-  var today=dateKey(new Date()),section=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Daily WAN and VPN traffic','Суточный трафик WAN и VPN'))]);
+  var today=dateKey(new Date()),section=E('section',{'class':'hv-chart-card','data-stats-reset':'traffic'},[E('h3',{},bi('Daily WAN and VPN traffic','Суточный трафик WAN и VPN'))]);
   var wan=accounting.wan||{},vpnDays=accounting.days||{},wanDays=wan.days||{},days=Array.from(new Set(Object.keys(vpnDays).concat(Object.keys(wanDays)))).filter(function(day){return day<=today;}).sort().reverse();
   // Chart: the last 30 calendar days up to today, oldest on the left.
   var parts=today.split('-').map(Number),span=[];

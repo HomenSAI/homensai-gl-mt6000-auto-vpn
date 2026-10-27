@@ -10,7 +10,7 @@ vm.createContext(c);for(const file of ['channel_guidance','latency_panel'])vm.ru
 const inventory={settings:{plan_source:'wireguard:peer_1',plan_target:'openvpn:1_1'}};
 function status(){return {profiles:[{id:'wireguard:peer_1',time:now,protocol:'wireguard',code:null,rtt_ms:20,dns_ok:true,https_success:2,vendor_state:'SETTLED'},{id:'openvpn:1_1',time:now,protocol:'openvpn',code:null,rtt_ms:40,dns_ok:true,https_success:2,vendor_state:'SETTLED'}],latency_history:{version:1,metric:'https-rtt-ms',pair:['wireguard:peer_1','openvpn:1_1'],rows:[[now-120,30,50,1,1,'source'],[now-60,40,null,1,0,'target']]}};}
 let s=status();assert(c.latencyRecommendation(s,inventory,now).text.includes('wireguard:peer_1'),'recommendation identifies the actual profile');assert.equal(c.latencyRecommendation(s,inventory,now).index,0);s.profiles[0].rtt_ms=80;assert.equal(c.latencyRecommendation(s,inventory,now).index,1);
-for(const change of [{time:now-100},{rtt_ms:NaN},{vendor_state:'CHANGING'},{dns_ok:false},{https_success:0}]){s=status();Object.assign(s.profiles[0],change);assert.equal(c.latencyRecommendation(s,inventory,now).index,null);}
+for(const change of [{time:now-100},{rtt_ms:NaN},{vendor_state:'CHANGING'},{dns_ok:false},{https_success:0}]){s=status();Object.assign(s.profiles[0],change);const r=c.latencyRecommendation(s,inventory,now);assert.equal(r.index,1,'the only working channel is recommended');assert(r.single&&/Only the reserve channel works now/.test(r.text));}
 s=status();s.profiles[0].rtt_ms=40;assert.equal(c.latencyRecommendation(s,inventory,now).index,null,'ties do not force a recommendation');
 s=status();s.latency_history.pair.reverse();assert.equal(c.latencyHistoryRows(s,inventory,now).length,0,'another pair never supplies this graph');
 const segments=c.latencySegments([[100,20,30,1,1,'source'],[160,null,40,0,1,'target'],[400,25,35,1,1,'target']],0,0,500,100);
@@ -31,11 +31,11 @@ summary=c.latencyStatistics(aggregate,now-60,now);assert.equal(summary[0].mean,4
 summary=c.latencyStatistics([],now-60,now);assert.equal(summary[0].mean,null);assert.equal(summary[0].count,0);
 s=status();s.time=now;s.channel_path={time:now,confirmed:true,active_profile_id:inventory.settings.plan_source};
 c.vendorDisplaySelected=()=>null;
-assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('Current traffic channel is not confirmed.'),'never bypass route helper refusal');
+assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('traffic follows the VPN priority list of the router')&&!JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('Traffic currently uses'),'never bypass route helper refusal');
 delete c.vendorDisplaySelected;
 assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('Traffic currently uses the primary channel.'));
 s.rpc_error='RPC-UNAVAILABLE';assert.equal(c.latencyRecommendation(s,inventory,now).index,null);
-assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('Current traffic channel is not confirmed.'),'RPC error cannot reuse cached selection');
+assert(JSON.stringify(c.renderLatencyRecommendation(s,inventory)).includes('STATUS-REQUEST-FAILED'),'RPC error cannot reuse cached selection');
 assert(!JSON.stringify(c.renderLatencyStatistics([],now-60,now)).includes('NaN'));
 console.log('PASS: weighted window statistics, empty history, route-helper refusal and cached RPC-error fences');
 
@@ -93,3 +93,9 @@ const compact=c.renderLatencyPanel(weekStatus,inventory),notes=compact.all().fin
 assert(notes&&!notes.attrs.open);assert(notes.all().filter(n=>n.tag==='p').length===8);
 assert(!textOf(compact).includes('Зелёный: выбранный маршрут.'));assert(!textOf(compact).includes('Grey: route unconfirmed.'));
 console.log('PASS: compact statistic explanation has eight retained paragraphs and no confusing permanent route-color prose');
+// Regression: a failing primary must render (the page once threw "ids is not defined" and stopped refreshing).
+{const s=status();Object.assign(s.profiles[0],{code:'VPN-003',dns_ok:false,https_success:0,rtt_ms:null});
+ const panel=c.renderLatencyPanel(s,inventory);assert(panel,'panel renders with a failing primary');
+ c.channelCheckText=(p)=>'CHECK '+p.id;const again=c.renderLatencyPanel(s,inventory);
+ assert(again.all().some(n=>n.children.some(x=>String(x).includes('CHECK wireguard:peer_1'))),'failing channel shows its latest check');
+ console.log('PASS: failing primary renders and shows its latest check');}

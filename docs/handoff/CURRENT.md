@@ -1,3 +1,27 @@
+## Alpha46 source / Alpha46 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha45. Alpha46 adds the stats_reset RPC (stats_reset.py: archive in /etc/homensai-vpn/stats-archive, then reset in the agent loop), Reset chart buttons, the channel failure test page, Go back, the Auto lamp link and RESERVE-ALREADY-FIRST. Preserve live state.
+
+---
+
+## Alpha44 source / Alpha44 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha43. Preserve live state.
+
+---
+
+## Alpha43 source / Alpha43 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha42 (Auto off: PREP-STOCK-VPN-BOOT needs the owner's reviewed preparation click). Preserve live state.
+
+---
+
+## Alpha42 source / Alpha42 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha41; its pair is HELD after a tunnel rename (PAIR-EXTERNAL-POLICY-CHANGE), so installing alpha42 first needs the owner-approved archiving of that session (alpha42 itself does this automatically). Preserve live state.
+
+---
+
 ## Alpha41 source: reliability indicator / Alpha41 исходник
 
 See [status](../CURRENT-STATUS.md). Installed on the MT3000; Auto ON / RUNNING on the reserve after an automatic failover. See [verification](../VERIFICATION-ALPHA41-INSTALLED-2026-10-27.md). Preserve live state.

@@ -286,6 +286,29 @@ def public_status(runtime=None):
         completed=record['state'] == 'COMPLETED',request_source=record.get('request_source','unknown'))
 
 
+DISPLAY_DIAGNOSTIC_SECONDS = 15
+
+
+def display_diagnostic(backend, now):
+    """The page polls every few seconds and the full diagnostic costs about two seconds on the
+    MT3000. The display reuses a result younger than 15 s; every action re-runs the diagnostic."""
+    from agent import RUNTIME, read_json, atomic_json
+    path = RUNTIME/'display-diagnostic.json'
+    try:
+        row = read_json(path, {})
+        if (isinstance(row, dict) and type(row.get('time')) in (int, float) and 0 <= now-row['time'] < DISPLAY_DIAGNOSTIC_SECONDS
+                and isinstance(row.get('blockers'), list) and (row.get('selection') is None or isinstance(row.get('selection'), dict))):
+            return row['blockers'], row.get('selection')
+    except (OSError, ValueError):
+        pass
+    blockers, selection = backend.diagnostic()
+    try:
+        atomic_json(path, {'time': now, 'blockers': blockers, 'selection': selection})
+    except (OSError, ValueError, TypeError):
+        pass
+    return blockers, selection
+
+
 def control_status():
     """Read-only control eligibility. Diagnostic blockers never grant a bypass."""
     from agent import RUNTIME, PERSIST, read_json
@@ -306,7 +329,7 @@ def control_status():
                           primary={'allowed': False, 'blockers': reasons})
             return result
         revision = current_revision()
-        blockers, selection = backend.diagnostic()
+        blockers, selection = display_diagnostic(backend, now)
         journal = journal_read()
         auto = read_json(RUNTIME/'auto-control.json', {})
         stopped = read_json(PERSIST/'native-stop.json', {})

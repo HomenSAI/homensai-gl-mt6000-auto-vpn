@@ -5,12 +5,12 @@ const now=100,primary={id:'a',interface:'wgclient1',time:99,dns_ok:true,https_su
 const model={now,primary,reserve,selected:'a',settings:{plan_source:'a',plan_target:'b'}};
 const status={time:99,native_failover:{state:'OBSERVING',time:99}};
 assert.equal(c.dvChannelUse(primary,model,status).kind,'green');assert.equal(c.dvChannelUse(primary,model,status).role,'Primary channel');
-assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Waiting');
+assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Spare · ready to take over');
 assert.equal(c.dvChannelUse({...reserve,interface:null},model,status).kind,'red');
 assert.equal(c.dvChannelUse({...primary,code:'DNS-001'},model,status).kind,'red');
 assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'red');
 assert.equal(c.dvChannelUse(reserve,{...model,selected:'b'},status).kind,'green');assert.equal(c.dvChannelUse(primary,{...model,selected:'b'},status).kind,'yellow');
-assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'yellow');
+assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).kind,'green');assert.equal(c.dvChannelUse(primary,{...model,selected:null},status).label,'Ready for automatic mode');
 assert.equal(c.selectedProfile({native_failover:{state:'OBSERVING',source:'a',time:99,mode:'continuous-pair',readiness_verified:true}},100),'a');
 let segments=c.autoDaySegments({segments:[{start:0,end:10,kind:'source'},{start:99990,end:100000,kind:'target'},{start:100001,end:100002,kind:'source'},{start:99990,end:99999,kind:'invalid'}]},100000);
 assert.equal(segments.length,1);assert.equal(segments[0].kind,'target');

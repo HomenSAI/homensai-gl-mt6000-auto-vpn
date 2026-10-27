@@ -65,7 +65,7 @@ function readinessCheckState(state){return state==='pass'?'ok':state==='fail'?'b
 function readinessTile(code,state){
   var r=Object.prototype.hasOwnProperty.call(READINESS_CHECKS,code)?READINESS_CHECKS[code]:[code,code,'',' ','•'];
   var st=readinessCheckState(state);
-  var word=st==='ok'?bi('OK','Есть'):st==='bad'?bi('Missing','Нет'):st==='waiting'?bi('Waiting…','Ожидается…'):bi('Not known','Неизвестно');
+  var word=st==='ok'?bi('OK','Есть'):st==='bad'?bi('Missing','Нет'):st==='waiting'?bi('Waiting…','Ожидается…'):bi('Not reported by the router','Роутер не сообщил');
   var mark=st==='ok'?'✓':st==='bad'?'✗':st==='waiting'?'…':'?';
   return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3])),typeof helpLink==='function'?helpLink('dependency-'+code,bi('Help','Помощь')):null].filter(Boolean)),E('b',{'class':'hv-rd-word'},word)]);
 }
@@ -120,7 +120,7 @@ function renderPreparation(status,now){
   return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Persistent router preparation','Постоянная подготовка роутера')),E('p',{},explanation),table,E('p',{'class':'hv-ready-note'},bi('Review DNS, runtime acceleration, supported firmware and recovery instructions before changing settings. Restoring stock startup or acceleration invalidates native readiness.','Перед изменениями проверьте DNS, текущее ускорение, поддерживаемую прошивку и инструкцию восстановления. Возврат штатного автозапуска или ускорения отменяет готовность к переключению.'))]);
 }
 function renderReadiness(status,inventory){
-  var now=Date.now()/1000,m=readinessModel(status,now),b=m.board||{};
+  var now=(typeof routerWall==='function'?routerWall():Date.now()/1000),m=readinessModel(status,now),b=m.board||{};
   function known(v){return v&&v!=='unknown';}
   var order=Object.keys(READINESS_CHECKS),byCode={};
   m.checks.forEach(function(c){byCode[String(c.code)]=String(c.state);});
@@ -134,7 +134,7 @@ function renderReadiness(status,inventory){
   var verdict={
     waiting:[bi('Waiting for the router','Ожидаем ответ роутера'),bi('The router has not reported its parts yet. This appears by itself within a minute after monitoring starts; reload the page if it does not.','Роутер ещё не прислал сведения о своих частях. Это появится само в течение минуты после запуска мониторинга; если нет, обновите страницу.')],
     bad:[bi('Something is missing','Чего-то не хватает'),bi('At least one required part is missing on the router (red below). Monitoring may still work, but Auto needs all of them.','На роутере не хватает хотя бы одной нужной части (красным ниже). Мониторинг может работать, но Auto нужны все.')],
-    partial:[bi('Almost there','Почти готово'),bi('Some parts are not confirmed yet.','Часть пунктов ещё не подтверждена.')],
+    partial:[bi('Almost there','Почти готово'),bi('The router is still checking some items — wait a minute.','Роутер ещё проверяет часть пунктов — подождите минуту.')],
     parts:[bi('The router has everything it needs','У роутера есть всё необходимое'),bi('All required parts are present. Auto still needs the steps below.','Все нужные части есть. Для Auto ещё нужны шаги ниже.')],
     ready:[bi('Ready for Auto','Готово к запуску Auto'),bi('Everything is in place. The router will still check it again when you press Start.','Всё на месте. Роутер всё равно проверит ещё раз при нажатии «Старт».')]
   }[verdictKey];

@@ -1449,7 +1449,7 @@ VPN не подключён / VPN not connected
 
 ## MANUAL-TRANSACTION-STATE-UNVERIFIED
 
-Предыдущей транзакции может требоваться восстановление / Previous transaction may need recovery
+Прошлое переключение не завершилось / The previous switch did not finish
 
 **RU:** Не удалось подтвердить отсутствие прежней транзакции или защитной блокировки приложения.
 
@@ -1653,7 +1653,7 @@ VPN не подключён / VPN not connected
 
 ## EXISTING-TUNNEL-BINDING-UNVERIFIED
 
-Рабочая привязка VPN не проверена / Live VPN binding is unverified
+Рабочий VPN не проверен / Working VPN not checked
 
 **RU:** Выбранный туннель отключён, изменяется либо больше не соответствует наблюдавшимся интерфейсу, устройству и маршрутизации.
 
@@ -1749,7 +1749,7 @@ VPN не подключён / VPN not connected
 
 ## VENDOR-IDENTITY-UNKNOWN
 
-Идентичность туннеля неизвестна / Tunnel identity is unknown
+Не удаётся найти этот VPN на роутере / Cannot find this VPN on the router
 
 **RU:** Не удалось однозначно сопоставить профиль с текущим туннелем роутера.
 
@@ -1761,19 +1761,19 @@ VPN не подключён / VPN not connected
 
 ## VENDOR-IDENTITY-CHANGED
 
-Привязка изменилась во время проверки / Binding changed during a check
+VPN изменился во время проверки / VPN changed during a check
 
 **RU:** Привязка туннеля изменилась во время измерений; результаты доступности и адреса выхода отброшены.
 
 **EN:** The tunnel binding changed while measurements were running; their health and exit results were discarded.
 
-**Что делать:** Дождитесь новых проверок текущей привязки.
+**Что делать:** Дождитесь новых проверок этого VPN.
 
-**Action:** Wait for new checks on the current binding.
+**Action:** Wait for new checks of this VPN.
 
 ## PROFILE-IDENTITY-CHANGED
 
-Данные о привязке профиля изменились / Profile evidence changed
+VPN-профиль изменился / VPN profile changed
 
 **RU:** Текущий профиль или поколение туннеля не соответствует данным, использованным для решения.
 
@@ -1782,6 +1782,186 @@ VPN не подключён / VPN not connected
 **Что делать:** Дождитесь текущих наблюдений; перед запуском Auto может потребоваться новый подтверждённый тест.
 
 **Action:** Wait for current observations; a new verified trial may be needed before Auto can run.
+
+## PAIR-EXTERNAL-POLICY-CHANGE
+
+Правила маршрутов изменены вне приложения / Route rules changed outside the app
+
+**RU:** Порядок или содержимое правил маршрутов VPN больше не совпадает с сохранённой сессией Auto, например туннель переставили в штатной странице VPN. Простое переименование туннеля не считается.
+
+**EN:** The order or content of the VPN route rules no longer matches the saved Auto session, for example a tunnel was moved in the stock VPN page. Renaming a tunnel alone does not count.
+
+**Что делать:** Нажмите Start: Auto сам архивирует старую сессию и принимает новые правила. Если в течение 15 минут отказ повторяется, сначала закончите правки в штатной странице.
+
+**Action:** Press Start: Auto archives the old session and adopts the new rules by itself. If it refuses again within 15 minutes, finish editing the stock page first.
+
+## PAIR-EXTERNAL-NETWORK-CHANGE
+
+Сетевые настройки изменены вне приложения / Network settings changed outside the app
+
+**RU:** Сетевой интерфейс выбранной пары или другой интерфейс изменился после запуска Auto (не остановленный лишний клиент).
+
+**EN:** A network interface of the selected pair, or another interface, changed after Auto started (not a stopped leftover client).
+
+**Что делать:** Нажмите Start: Auto сам примет новые настройки. Повторные отказы значат, что настройки ещё меняются.
+
+**Action:** Press Start: Auto adopts the new settings by itself. Repeated refusals mean the settings are still changing.
+
+## PAIR-EXTERNAL-CONFIG-CHANGE
+
+Конфигурация роутера изменена вне приложения / Router configuration changed outside the app
+
+**RU:** Защищённая конфигурация (файрвол, DNS, Wi-Fi или профили VPN) отличается от той, которую Auto видел при запуске.
+
+**EN:** A protected configuration (firewall, DNS, Wi-Fi or the VPN profiles) differs from the one Auto saw when it started.
+
+**Что делать:** Нажмите Start: Auto архивирует старую сессию и сам примет новую конфигурацию.
+
+**Action:** Press Start: Auto archives the old session and adopts the new configuration by itself.
+
+## PAIR-RECOVERY-REQUIRED
+
+Предыдущая сессия Auto передаётся заново / Previous Auto session is being taken over
+
+**RU:** Предыдущая сессия Auto не завершена и не может быть принята автоматически (например роутер удерживается на резерве или автоматический приём уже выполнялся три раза за 15 минут).
+
+**EN:** An earlier Auto session is not finished and cannot be taken over automatically (for example the router is held on the reserve, or the automatic takeover already ran three times in 15 minutes).
+
+**Что делать:** Если роутер на резерве, дождитесь восстановления основного или нажмите «Вернуться на основной». Иначе подождите 15 минут и нажмите Start ещё раз.
+
+**Action:** If the router is on the reserve, wait for the primary to recover or press Return to primary. Otherwise wait 15 minutes and press Start again.
+
+## PAIR-READOPTED
+
+Auto заново прочитал изменённые настройки / Auto re-read changed settings
+
+**RU:** Настройки изменили вне приложения. Auto архивировал старую сессию, принял новые настройки и сам запустился заново.
+
+**EN:** Settings were changed outside the app. Auto archived the old session, adopted the new settings and started again by itself.
+
+**Что делать:** Делать ничего не нужно. Старая сессия сохранена в папке восстановления роутера.
+
+**Action:** Nothing to do. The old session is kept in the router recovery folder.
+
+## VENDOR-REASON-UNOBSERVED
+
+Выбор сервера прошивкой не виден / Firmware server choice is not visible
+
+**RU:** Штатная прошивка сама выбирает сервер внутри канала и не сообщает, почему и сколько раз пыталась. Приложение проверяет только, работает ли канал сейчас.
+
+**EN:** The stock firmware chooses the server inside a channel and does not report why or how many times it tried. The app checks only whether the channel works now.
+
+**Что делать:** Делать ничего не нужно. Чтобы выбрать другой сервер, откройте «Каналы и серверы».
+
+**Action:** Nothing to do. To pick a different server use Channels and servers.
+
+## AUTOMATIC-EXTERNAL-CHANGE-READOPT
+
+Старая сессия Auto архивирована автоматически / Old Auto session archived automatically
+
+**RU:** Запись в архивной сессии Auto: настройки изменили вне приложения, и Auto сам принял их.
+
+**EN:** Recorded in the archived Auto session when settings were changed outside the app and Auto adopted them by itself.
+
+**Что делать:** Делать ничего не нужно. Архивная копия остаётся в папке восстановления роутера.
+
+**Action:** Nothing to do. The archived copy stays in the router recovery folder.
+
+## STATUS-REQUEST-FAILED
+
+Нет ответа от программы на роутере / No answer from the router program
+
+**RU:** Страница запросила у роутера текущее состояние и не получила ответа (тайм-аут, роутер занят или ошибка страницы). Пока ответа нет, ничего не показывается как рабочее.
+
+**EN:** The page asked the router for the current state and got no answer (timeout, a busy router or a page error). Nothing is shown as working until it answers.
+
+**Что делать:** Подождите несколько секунд и обновите страницу (Ctrl+F5). Если повторяется, откройте «Настройки» и проверьте, что мониторинг запущен.
+
+**Action:** Wait a few seconds; reload the page with Ctrl+F5. If it repeats, open Settings and check that monitoring is running.
+
+## MONITOR-DATA-STALE
+
+Данные роутера устарели / Router data is old
+
+**RU:** Программа роутера ответила, но её последнее измерение старше 90 секунд, поэтому оно не описывает каналы сейчас.
+
+**EN:** The router program answered, but its last measurement is older than 90 seconds, so it cannot describe the channels now.
+
+**Что делать:** Проверьте, что мониторинг запущен («Настройки»). Тест скорости приостанавливает измерения до минуты.
+
+**Action:** Check that monitoring is running (Settings). A speed test pauses measurements for up to a minute.
+
+## VENDOR-OBSERVATION-PENDING
+
+Канал ещё не наблюдался / Channel not observed yet
+
+**RU:** Мониторинг собирает первые наблюдения этого канала после запуска или изменения настроек.
+
+**EN:** Monitoring is collecting the first observations of this channel after a start or a settings change.
+
+**Что делать:** Подождите до минуты; результат появится сам.
+
+**Action:** Wait up to a minute; the result appears by itself.
+
+## STATS-RESET-FIELDS
+
+Запрос сброса не принят / Reset request not accepted
+
+**RU:** Страница попросила сбросить график, который роутер не знает. Ничего не сброшено.
+
+**EN:** The page asked to reset a chart the router does not know. Nothing was reset.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и снова нажмите «Сброс графика».
+
+**Action:** Reload the page (Ctrl+F5) and press Reset chart again.
+
+## STATS-RESET-FAILED
+
+Сброс не выполнен / Reset not completed
+
+**RU:** Роутер не смог сохранить архив старых данных и поэтому оставил данные без изменений.
+
+**EN:** The router could not save the archive of the old data, so it kept the data unchanged.
+
+**Что делать:** Проверьте свободное место на роутере (System → Software или df -h) и повторите.
+
+**Action:** Check free space on the router (System → Software or df -h) and try again.
+
+## STATS-RESET-ARCHIVE-PATH
+
+Папка архива небезопасна / Archive folder is not safe
+
+**RU:** Папка архива на роутере является ссылкой, а не папкой, поэтому сброс отклонён.
+
+**EN:** The archive folder on the router is a link, not a folder, so the reset was refused.
+
+**Что делать:** Удалите /etc/homensai-vpn/stats-archive на роутере и повторите.
+
+**Action:** Remove /etc/homensai-vpn/stats-archive on the router and try again.
+
+## STATS-RESET-UNCONFIRMED
+
+Сброс не подтверждён вовремя / Reset not confirmed in time
+
+**RU:** Роутер принял запрос, но мониторинг не сообщил результат за 45 секунд (он может быть остановлен или на паузе из-за теста скорости).
+
+**EN:** The router accepted the request but its monitoring did not report the result within 45 seconds (it may be stopped or paused by a speed test).
+
+**Что делать:** Проверьте, что мониторинг запущен («Настройки»), подождите минуту и посмотрите на график; при необходимости нажмите «Сброс» ещё раз.
+
+**Action:** Check that monitoring is running (Settings), wait a minute and look at the chart; press Reset again if needed.
+
+## RESERVE-ALREADY-FIRST
+
+Резерв уже стоит первым у роутера / The reserve is already the router first choice
+
+**RU:** Основной канал не работает, но в списке приоритетов VPN роутера резерв уже стоит первым, поэтому трафик уже идёт через резерв. Auto продолжает наблюдение и ничего не переключает.
+
+**EN:** The primary fails, but the router VPN priority list already puts the reserve first, so traffic already goes through the reserve. Auto keeps watching and does not switch.
+
+**Что делать:** Делать ничего не нужно. Если хотите снова поставить основной первым, когда он заработает, переместите его на Priority 1 в VPN Dashboard роутера.
+
+**Action:** Nothing to do. If you want the primary first again, move it to Priority 1 in the router VPN Dashboard when it works.
 
 ## CHANNEL-UNRELIABLE
 
@@ -1833,7 +2013,7 @@ VPN не подключён / VPN not connected
 
 ## VENDOR-SETTLING
 
-Идёт наблюдение текущей конфигурации / Observing the current configuration
+Роутер ещё проверяет настройки VPN / The router is still checking VPN settings
 
 **RU:** Окно наблюдения за идентичностью ещё не завершено. Это не показывает, исчерпала ли прошивка попытки подключения серверов.
 
@@ -1845,7 +2025,7 @@ VPN не подключён / VPN not connected
 
 ## CROSS-TUNNEL-READY
 
-Кандидат для проверки / Candidate for verification
+Эта пара VPN подходит для Auto / This VPN pair is suitable for Auto
 
 **RU:** Текущие привязки туннелей подходят для планирования без применения; изменение маршрутов требует отдельных проверок.
 
@@ -1869,7 +2049,7 @@ VPN не подключён / VPN not connected
 
 ## RESERVE-IDENTITY-UNKNOWN
 
-Текущая привязка резерва неизвестна / Current reserve identity is unknown
+Не удаётся найти этот VPN на роутере / Cannot find this VPN on the router
 
 **RU:** Контроллер не может безопасно отнести старые проверки резерва к текущему профилю туннеля.
 
@@ -1881,7 +2061,7 @@ VPN не подключён / VPN not connected
 
 ## VENDOR-FIRST-OBSERVATION
 
-Впервые наблюдалась привязка конфигурации / First configured binding observed
+VPN замечен впервые / VPN seen for the first time
 
 **RU:** Монитор впервые увидел этот профиль в конфигурации туннеля. Причина выбора не предполагается.
 
@@ -1905,19 +2085,19 @@ VPN не подключён / VPN not connected
 
 ## VENDOR-BINDING-CHANGED
 
-Поколение привязки туннеля изменилось / Tunnel binding generation changed
+Настройки VPN изменились / VPN settings changed
 
 **RU:** Монитор увидел новое поколение привязки; старые проверки не подтверждают его готовность.
 
 **EN:** The monitor observed a new binding generation; earlier health cannot make it ready.
 
-**Что делать:** Дождитесь проверок нового поколения привязки.
+**Что делать:** Дождитесь проверок с новыми настройками.
 
-**Action:** Wait for new generation-scoped checks.
+**Action:** Wait for checks with the new settings.
 
 ## VENDOR-BINDING-UNKNOWN
 
-Привязка конфигурации стала неизвестной / Configured binding became unknown
+VPN-профиль изменён или удалён на роутере / VPN profile changed or removed on the router
 
 **RU:** Предыдущий профиль конфигурации туннеля больше не определяется однозначно.
 
@@ -1931,9 +2111,9 @@ VPN не подключён / VPN not connected
 
 Некорректное время наблюдения / Invalid observation clock
 
-**RU:** Время наблюдения некорректно; текущая идентичность не подтверждена.
+**RU:** Время проверки неверно, поэтому неизвестно, какой VPN работает.
 
-**EN:** The observation time is invalid; no current identity is asserted.
+**EN:** The check time is invalid, so it is unknown which VPN is in use.
 
 **Что делать:** Проверьте часы роутера и дождитесь нового наблюдения.
 
@@ -5561,65 +5741,17 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Action:** The primary recovered and Auto returned to it. If it is still unclear, open Help → “The Auto button refuses to start”.
 
-## PAIR-EXTERNAL-POLICY-CHANGE
-
-Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
-
-**RU:** Нужно восстановление предыдущей сессии Auto
-
-**EN:** The previous Auto session needs recovery
-
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
-
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
-
-## PAIR-EXTERNAL-NETWORK-CHANGE
-
-Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
-
-**RU:** Нужно восстановление предыдущей сессии Auto
-
-**EN:** The previous Auto session needs recovery
-
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
-
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
-
-## PAIR-EXTERNAL-CONFIG-CHANGE
-
-Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
-
-**RU:** Нужно восстановление предыдущей сессии Auto
-
-**EN:** The previous Auto session needs recovery
-
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
-
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
-
-## PAIR-RECOVERY-REQUIRED
-
-Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
-
-**RU:** Нужно восстановление предыдущей сессии Auto
-
-**EN:** The previous Auto session needs recovery
-
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
-
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
-
 ## PAIR-STATE-UNVERIFIED
 
-Нужно восстановление предыдущей сессии Auto / The previous Auto session needs recovery
+Настройки изменены вне приложения / Settings were changed outside the app
 
-**RU:** Нужно восстановление предыдущей сессии Auto
+**RU:** Настройки изменены вне приложения
 
-**EN:** The previous Auto session needs recovery
+**EN:** Settings were changed outside the app
 
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Настройки изменены вне приложения Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** Settings were changed outside the app If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## PAIR-PROFILES-UNVERIFIED
 
@@ -5745,13 +5877,13 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 Завершите подготовку роутера / Complete router preparation
 
-**RU:** Нужно восстановление предыдущей сессии Auto
+**RU:** Настройки изменены вне приложения
 
-**EN:** The previous Auto session needs recovery
+**EN:** Settings were changed outside the app
 
-**Что делать:** Нужно восстановление предыдущей сессии Auto Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Настройки изменены вне приложения Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
-**Action:** The previous Auto session needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** Settings were changed outside the app If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## PREP-SOURCE-AUTOSTART
 

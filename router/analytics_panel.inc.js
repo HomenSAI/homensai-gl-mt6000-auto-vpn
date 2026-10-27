@@ -35,14 +35,14 @@ var CASCADE_NOTES={
 };
 function renderCascadePath(status,inventory){
   if(typeof renderCompactCascade==='function')return renderCompactCascade(status,inventory);
-  var model=cascadePathModel(status,Date.now()/1000);
+  var model=cascadePathModel(status,(typeof routerWall==='function'?routerWall():Date.now()/1000));
   var rows=status.profiles||[],nextRow=rows.filter(function(p){return p.id===model.next;})[0];
   var legendKeys=[];
   var groups=model.groups.map(function(g){
     return E('section',{'class':'hv-auto-node hv-cascade-group'},[
       E('div',{'class':'hv-cascade-head'},[E('strong',{},g.protocol),E('span',{},bi('Group: ','Группа: ')+g.channel)]),
       E('ul',{'class':'hv-cascade-list'},g.servers.map(function(s){
-        var p=s.profile,h=profileHealth(p,Date.now()/1000);
+        var p=s.profile,h=profileHealth(p,(typeof routerWall==='function'?routerWall():Date.now()/1000));
         var kind=s.state==='healthy'?'green':s.state==='checking'?'yellow':s.state==='failed'?'red':'grey';
         if(legendKeys.indexOf(s.reason)<0)legendKeys.push(s.reason);
         var note=ownGet(CASCADE_NOTES,s.reason)||CASCADE_NOTES.UNKNOWN;
@@ -174,7 +174,7 @@ function recoveryIdentity(identifier,profiles,inventory){
   var protocolName=protocol==='openvpn'?'OpenVPN':protocol==='wireguard'?'WireGuard':bi('Protocol not recorded','Протокол не записан');
   var name=meaningful(p.router_name)?p.router_name:meaningful(p.name)&&p.name!==identifier?p.name:null;
   var server=name?name+' · '+protocolName+' · '+bi('current profile','текущий профиль'):valid?bi('Archived profile: ','Архивный профиль: ')+identifier+' · '+protocolName:bi('Server not recorded in event','Сервер не записан в событии');
-  if(name&&typeof endpointText==='function'){var endpoint=endpointText(p,Date.now()/1000);if(endpoint!==bi('Server address: not observed','Адрес сервера: не получен'))server+=' · '+endpoint;}
+  if(name&&typeof endpointText==='function'){var endpoint=endpointText(p,(typeof routerWall==='function'?routerWall():Date.now()/1000));if(endpoint!==bi('Server address: not observed','Адрес сервера: не получен'))server+=' · '+endpoint;}
   var settings=(inventory||{}).settings||{},role=valid&&identifier===settings.plan_source?bi('Primary channel (current pair)','Основной канал (текущая пара)'):valid&&identifier===settings.plan_target?bi('Reserve channel (current pair)','Резервный канал (текущая пара)'):meaningful(p.channel)?bi('Current group: ','Текущая группа: ')+p.channel:bi('Channel not recorded','Канал не записан');
   return {server:server,channel:role,protocol:protocolName};
 }
@@ -205,7 +205,7 @@ function analyticsCSV(kind,rows){
 }
 function analyticsExportRows(kind,status,transitions){
   if(kind==='ranking')return (status.profiles||[]).map(function(p){return {server:p.id,name:p.name,protocol:p.protocol,channel:p.role==='source'?'primary':p.role==='target'?'reserve':p.channel,
-    latency_ms:p.rtt_ms,state:status.rpc_error?'unknown':profileHealth(p,Date.now()/1000).state};});
+    latency_ms:p.rtt_ms,state:status.rpc_error?'unknown':profileHealth(p,(typeof routerWall==='function'?routerWall():Date.now()/1000)).state};});
   if(kind==='traffic')return Object.keys((status.accounting||{}).months||{}).sort().map(function(month){var r=status.accounting.months[month];return {month:month,rx_bytes:r.rx,tx_bytes:r.tx,scope:'Observed interface counters; partial collection; overhead included'};});
   var rows=kind==='failures'?transitions.filter(function(r){return ['rolled_back','held'].indexOf(r.outcome)>=0;}):transitions;
   return rows.map(function(r){return {start_utc:new Date(r.start*1000).toISOString(),source:r.source,target:r.target,kind:r.kind,
@@ -283,7 +283,7 @@ function renderStoredStatistics(status){
     }catch(error){note.textContent=bi('Statistics could not be read. Try again; counters were not reset.','Не удалось прочитать статистику. Повторите выгрузку; счётчики не сброшены.');}
     finally{button.disabled=false;}
   }},bi('Download weekly detail and monthly summaries (JSON)','Скачать подробности недели и сводки по месяцам (JSON)'));
-  return E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Saved outage and switching statistics','Сохранённая статистика сбоев и переключений')),
+  return E('section',{'class':'hv-chart-card','data-stats-reset':'auto'},[E('h3',{},bi('Saved outage and switching statistics','Сохранённая статистика сбоев и переключений')),
     E('p',{},bi('Detailed incidents: configured retention of 1–7 days. Monthly and lifetime counters survive detail expiry and service restart. A repeated status of one transaction is counted once. Missing data is shown as —.','Подробные события: выбранный срок хранения 1–7 дней. Месячные и общие счётчики сохраняются после удаления старых подробностей и перезапуска службы. Повторные статусы одной транзакции считаются один раз. Нет данных — прочерк.')),
     E('p',{},bi('Outages are observed failure episodes; several failed probes may belong to one outage. Auto time includes only observed intervals. Old missing events and outage durations are not reconstructed.','Сбой — наблюдаемый эпизод отказа; в нём может быть несколько неудачных проверок. Время Auto включает только наблюдавшиеся интервалы. Утраченные старые события и длительность сбоев не восстанавливаются.')),
     E('p',{},bi('Counter coverage: ','Покрытие счётчиков: ')+(history.counter_accuracy||bi('No saved controller counters','Нет сохранённых счётчиков контроллера'))),
@@ -308,7 +308,7 @@ function renderTransitionAnalytics(status,inventory){
       E('tr',{'class':'tr table-titles'},[E('th',{'scope':'col'},bi('Measure','Показатель')),E('th',{'scope':'col'},bi('Value','Значение'))]),
       [[bi('Attempts','Попытки'),s.attempts],
        [bi('Known outcome','Известный результат'),s.known_outcomes],
-       [bi('Pending or unknown','Ожидание или неизвестно'),s.unknown_or_pending],
+       [bi('No result','Без итога'),s.unknown_or_pending],
        [bi('Trial attempts','Тестовые попытки'),s.trial_attempts],
        [bi('Automatic attempts','Автоматические попытки'),s.automatic_attempts],
        [bi('Verified outcome ratio (including trials)','Доля подтверждённых результатов (включая тесты)'),s.success_ratio==null?'—':(s.success_ratio*100).toFixed(1)+'%'],
@@ -350,9 +350,9 @@ function renderTransitionAnalytics(status,inventory){
   var stamps=(history.events||[]).map(function(e){return e.time;}).filter(function(at){return Number.isFinite(at)&&at>=0&&at<=253402300799;});
   var latest=stamps.length?Math.max.apply(null,stamps):null;
   var age=latest==null?'No retained event timestamp':latest>now?'UNKNOWN-FUTURE-TIMESTAMP':Math.floor(now-latest)+' s since latest retained event';
-  return E('section',{'class':'hv-chart-card'},[E('h2',{},bi('Transition evidence and recovery','Подтверждения переходов и восстановления')),
+  return E('section',{'class':'hv-chart-card','data-stats-reset':'auto'},[E('h2',{},bi('Transition evidence and recovery','Подтверждения переходов и восстановления')),
     E('p',{},bi('Retained controller events only. Missing sequences produce unknown outcomes. Probe/client details absent from this history remain unknown.','Только сохранённые события контроллера. Пропуски номеров дают неизвестный результат. Отсутствующие проверки сервера и клиента остаются неизвестными.')),
-    E('p',{},bi('Coverage: incomplete retained window; not measured LAN availability.','Покрытие: неполное сохранённое окно; это не измерение доступности LAN.')),
+    E('p',{},bi('Not all history for this period was saved.','Сохранена не вся история за этот период.')),
     E('p',{},age),
     E('small',{},'Calendar boundaries: '+(history.timezone||'Europe/Berlin')+'. Event timestamps: UTC. Durations measure retained APPLYING → controller-confirmed outcome events, not full outage duration. Retry episode IDs describe controller evidence, not certified LAN outages. Categories overlap and must not be summed.'),
     renderStoredStatistics(status),period,summaryHost,groupHost,E('p',{'class':'hv-muted'},bi('Names and channel roles marked current refer to today’s saved profiles. Older events without a profile cannot be assigned a server.','Названия и роли с пометкой «текущий» относятся к сохранённым сейчас профилям. Старым событиям без профиля нельзя достоверно назначить сервер.')),exports,recoveryTableWrap(table),preparations.length?E('details',{'class':'hv-recovery-preparations'},[E('summary',{},bi('Preparation before channel selection','Подготовка до выбора каналов')+' ('+preparations.length+')'),E('p',{},bi('No route application was recorded for these entries. They are separate from the switch-attempt table.','Для этих записей не зафиксировано применение маршрута. Они вынесены отдельно от таблицы попыток переключения.')),E('ul',{},preparations.map(function(r){return E('li',{},stamp(r.start)+' · '+recoveryOutcomeText(r)+' · '+r.codes.join(' · '));}))]):null].filter(Boolean));
@@ -396,10 +396,10 @@ function renderDecisionExplanation(status,inventory){
   else if(failMet&&goodMet)next=bi('The router probe quorum is met: a candidate can be reviewed. These checks do not authorize a route change; router firmware coordination, native capability, Stop state, the bounded trial and LAN verification remain separate gates.','Порог проверок с роутера достигнут: можно рассмотреть кандидата. Эти проверки не разрешают изменение маршрута; координация со штатной прошивкой, нативные возможности, состояние Stop, ограниченный тест и проверка LAN остаются отдельными условиями.');
   else if(failMet)next=bi('Router failures were observed, but reserve health is not yet confirmed. This card does not authorize a route change.','Наблюдались ошибки проверок с роутера, но здоровье резерва ещё не подтверждено. Эта карточка не разрешает изменение маршрута.');
   else next=bi('The retained router checks do not meet the failure threshold. This card does not authorize a route change.','Сохранённые проверки с роутера не достигают порога сбоев. Эта карточка не разрешает изменение маршрута.');
-  if(vendor)next+=' '+bi('Application planning gate: ','Условие планировщика приложения: ')+vendorCoordinationText(vendor)+'.';
+  if(vendor)next+=' '+bi('Why Auto will switch or wait: ','Почему Auto переключит или подождёт: ')+vendorCoordinationText(vendor)+'.';
   var code=native.reason||native.state,techCode=typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)?code:null;
   return E('section',{'class':'hv-chart-card hv-why'},[
-    E('h3',{},bi('Why the planner proposes or waits','Почему планировщик предлагает или ждёт')),
+    E('h3',{},bi('Why Auto will switch or wait','Почему Auto переключит или подождёт')),
     E('p',{},bi('Failure and success thresholds describe router probe evidence. They do not prove firmware attempts are exhausted or authorize Auto. Tunnel identity, coordination, controller policy and independent LAN verification remain separate conditions.','Пороги сбоев и успешных проверок описывают результаты проверок с роутера. Они не доказывают завершение попыток прошивки и не разрешают Auto. Идентичность туннеля, координация, политика контроллера и независимая проверка LAN остаются отдельными условиями.')),
     E('ul',{'class':'hv-why-list'},[
       line(row[0],bi('What the router sees on the VPN in use','Что роутер видит на используемом VPN'),bi(row[1],row[2])),

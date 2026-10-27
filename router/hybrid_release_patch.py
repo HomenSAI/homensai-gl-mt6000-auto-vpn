@@ -41,7 +41,8 @@ def apply(source):
     replace("if(activeTab==='home'&&!simpleHomeModel(homeLatest,inventory,statusNow(homeLatest)).showCard)showPage(startLanding(homeLatest,inventory));", "if(activeTab==='home'){var timed=simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));var key=JSON.stringify([timed.state,timed.title,timed.summary,timed.selectedRole,timed.targetHealth.state]);if(key!==hybridRenderedState)draw(homeLatest);}")
     replace("'class':'hv-app hv-workspace','data-hv-design':currentDesign()", "'class':'hv-app hv-workspace hv-hybrid-release','data-hv-design':currentDesign()")
     replace("E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')},links)","E('nav',{'id':'hv-expanded-nav','aria-label':bi('VPN sections','Разделы VPN')},links)")
-    # Artificial faults stay in the dedicated test kit; ordinary legacy pages
-    # and their original data, controls, layout and ordering remain intact.
-    replace("      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));",'      // Experimental fault injection remains in the test kit.')
+    # The owner asked for the channel failure test on the Tests page again (27 Oct 2026).
+    # "Go back" at the bottom of every page returns to the previous page and its scroll position.
+    replace("      key=hybridPage(key);placeHybridControls(key);","      key=hybridPage(key);placeHybridControls(key);\n      if(activeTab&&key!==activeTab)pageBackRemember(activeTab,window.pageYOffset||0);")
+    replace("      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);","      if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      pageBackPlace(appRoot||panel,key);attachStatsResets(appRoot||panel);")
     return source

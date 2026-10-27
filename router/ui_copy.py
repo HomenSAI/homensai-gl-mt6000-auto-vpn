@@ -20,15 +20,9 @@ COPY = [
      'Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.',
      'Мониторинг включён. Проверки выполняет сам роутер и показывают, работает ли каждый VPN; они не доказывают, что видит компьютер в вашей сети. Это отдельно подтверждает LAN-помощник перед включением Auto.'),
     # Auto card
-    ('Request queued. The indicator changes only after controller confirmation.',
-     'Request sent. The button changes only when the router confirms it.',
-     'Запрос отправлен. Кнопка изменится, только когда роутер подтвердит.'),
-    ('No current path confirmation', 'No fresh check', 'Нет свежей проверки'),
     ('Active traffic path', 'Carries your traffic', 'Пропускает ваш трафик'),
-    ('Ready; not selected for traffic', 'Ready, on standby', 'Готов, в резерве'),
     ('Tunnel not connected', 'Not connected', 'Не подключён'),
     ('Connectivity failed', 'Not working', 'Не работает'),
-    ('Checking / awaiting path confirmation', 'Being checked', 'Проверяется'),
     ('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.',
      'Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.',
      'Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'),
@@ -48,9 +42,6 @@ COPY = [
     ('Reserve recommended; live application is blocked', 'The reserve would be chosen now, but nothing is switched from this panel', 'Сейчас был бы выбран резерв, но из этой панели ничего не переключается'),
     ('Proposed target: ', 'Suggested reserve: ', 'Предлагаемый резерв: '),
     # Setup wizards
-    ('Names and priorities are monitoring metadata. Live route changes require a certified controller trial.',
-     'Names, channels and priorities are used for display and ranking only. Real route changes happen only after the LAN trial.',
-     'Названия, каналы и приоритеты нужны только для отображения и рейтинга. Реальная смена маршрута возможна только после LAN-теста.'),
     ('Saving does not start automatic switching. Use the Auto mode control after LAN certification.',
      'Saving does not start Auto. Next: run the LAN trial, then press Start on the Overview.',
      'Сохранение не запускает Auto. Дальше: пройдите LAN-тест и нажмите «Старт» на странице «Обзор».'),
@@ -66,8 +57,6 @@ COPY = [
     ('Checkpoint interval, seconds', 'Save statistics every, seconds', 'Сохранять статистику каждые, секунд'),
     ('Profile limit (1–16)', 'Most VPNs checked per round (1–16)', 'Максимум VPN за один раунд проверки (1–16)'),
     ('Profile limit per round', 'Most VPNs checked per round', 'Максимум VPN за один раунд проверки'),
-    ('Read-only failover planning', 'Show the failover forecast', 'Показывать прогноз переключения'),
-    ('Enable read-only planning', 'Show the failover forecast on the Overview', 'Показывать прогноз переключения на странице «Обзор»'),
     ('Only own monitor settings are changed. Short checkpoints increase flash writes. This does not enable Auto or start inactive VPNs.',
      'Only this program’s own settings change. Saving statistics more often wears the router flash memory faster. This does not start Auto or connect any VPN.',
      'Меняются только настройки этой программы. Частое сохранение статистики быстрее изнашивает флеш-память роутера. Auto не запускается, VPN не подключаются.'),
@@ -137,7 +126,6 @@ COPY += [
      'Счётчики WAN и VPN пересекаются, их нельзя складывать. Прочерк означает, что за этот день нет достоверных данных. Хранится до 90 дней.'),
     ('Only application priorities are saved. This does not switch a live route. Unselected profiles follow the selected servers in their existing order.', 'Only this program’s priorities are saved. No route is changed.', 'Сохраняются только приоритеты этой программы. Маршрут не меняется.'),
     ('Retained controller events only. Missing sequences produce unknown outcomes. Probe/client details absent from this history remain unknown.', 'Based only on the events the router kept. Gaps are shown as unknown, never guessed.', 'Основано только на событиях, которые сохранил роутер. Пропуски показываются как неизвестные, а не угадываются.'),
-    ('Coverage: incomplete retained window; not measured LAN availability.', 'Covers only the events kept on the router. This is not a measure of home-network uptime.', 'Охватывает только события, сохранённые на роутере. Это не показатель доступности домашней сети.'),
     ('Times are from the router measurements. A connected interface alone is not proof of internet access.', 'A live log of the router checks. “Connected” alone does not mean the internet works.', 'Живой журнал проверок роутера. Одного «подключено» мало, чтобы считать, что интернет работает.'),
 ]
 EN_VALUES += [

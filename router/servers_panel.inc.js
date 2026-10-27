@@ -7,7 +7,7 @@ function serverCounts(status,inventory,rows,now){
   return {onRouter:Math.max(onRouter,shown),shown:shown,connected:connected.length,working:working,hidden:Math.max(0,onRouter-shown)};
 }
 function renderServerSummary(status,inventory,rows){
-  var c=serverCounts(status,inventory,rows,Date.now()/1000);
+  var c=serverCounts(status,inventory,rows,(typeof routerWall==='function'?routerWall():Date.now()/1000));
   function tile(value,label,hint){return E('div',{'class':'hv-count'},[E('strong',{},String(value)),E('span',{},label),hint?E('small',{},hint):null].filter(Boolean));}
   var tiles=[
     tile(c.onRouter,bi('VPN profiles on the router','VPN-профилей на роутере'),bi('Added in GL.iNet → VPN','Добавлены в GL.iNet → VPN')),

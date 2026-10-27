@@ -19,7 +19,7 @@ let segments=c.autoLiveSegments([{time:1,kind:'source'},{time:3,kind:'source'},{
 assert.equal(segments[0].kind,'source');assert.equal(segments[1].kind,'source');assert(segments[2].gap);
 let shown=c.autoLiveDisplayPoints([{time:1,kind:'off'},{time:3,kind:'switching'},{time:5,kind:'source'},{time:7,kind:'switching'},{time:9,kind:'target'},{time:11,kind:'unknown'},{time:13,kind:'switching'},{time:40,kind:'switching'}]);
 assert.deepEqual(Array.from(shown,p=>p.kind),['off','off','source','source','target','unknown','unknown','unknown']);
-assert.deepEqual(Object.keys(c.AUTO_LIVE_COLORS).sort(),['off','source','target']);
+assert.deepEqual(Object.keys(c.AUTO_LIVE_COLORS).sort(),['blocked','down','off','source','target']);
 assert(c.autoLiveSegments(shown).filter(s=>!s.gap).every(s=>['source','target','off'].includes(s.a.kind)&&['source','target','off'].includes(s.b.kind)));
 const day=c.autoDaySegments({segments:[{start:1,end:3,kind:'source'},{start:3,end:5,kind:'switching'},{start:5,end:7,kind:'target'},{start:7,end:9,kind:'unknown'},{start:9,end:11,kind:'switching'},{start:11,end:13,kind:'off'}]},15);
 assert.deepEqual(Array.from(day,r=>r.kind),['source','source','target','off']);
@@ -59,3 +59,17 @@ assert(!two.all().some(n=>n.tag==='summary'&&n.children.join('').includes('Archi
 assert(!two.all().some(n=>String(n.textContent||'').includes('Channel unknown')));
 assert(two.all().filter(n=>n.attrs['data-failure-role']==='source').length>=2,'legend and bar share role');
 console.log('PASS: exactly two coloured series and matching legend; legacy unassigned rows excluded without fabricated attribution');
+// A blocked Auto and two failing channels are drawn as states of their own, not as an empty line.
+{
+  const now=1000,ns={state:'BLOCKED',time:now-2,blockers:['PAIR-EXTERNAL-POLICY-CHANGE']};
+  const bad=id=>({id,time:now-3,code:'VPN-003',dns_ok:false,https_success:0}),good=id=>({id,time:now-3,code:null,dns_ok:true,https_success:2});
+  const inv={settings:{plan_source:'a',plan_target:'b'}},base={time:now-2,server_time:now,native_failover:ns};
+  c.rolePairIds=(status,inventory)=>[inventory.settings.plan_source,inventory.settings.plan_target];
+  assert.equal(c.autoLiveSample(Object.assign({profiles:[good('a'),good('b')]},base),now,inv).kind,'blocked');
+  assert.equal(c.autoLiveSample(Object.assign({profiles:[bad('a'),good('b')]},base),now,inv).kind,'blocked','one working channel is not an outage');
+  const down=c.autoLiveSample(Object.assign({profiles:[bad('a'),bad('b')]},base),now,inv);
+  assert.equal(down.kind,'down');assert(c.autoLiveLabel('down').includes('оба канала')||c.autoLiveLabel('down').includes('both channels'));
+  assert.equal(c.autoLiveSample(Object.assign({profiles:[bad('a'),bad('b')]},base,{native_failover:{state:'OBSERVING',certified:true,time:now-2}}),now,inv).kind,'down','outage wins over a stale route confirmation');
+  assert.equal(c.autoLiveSample({time:now-2,native_failover:{}},now,inv).kind,'unknown');
+  console.log('PASS: blocked Auto and no working channel are visible states');
+}

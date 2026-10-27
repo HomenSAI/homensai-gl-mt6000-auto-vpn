@@ -52,7 +52,7 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
-  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.label=status.rpc_error?bi('Status request failed','Ошибка получения статуса'):bi('Monitor data is out of date','Мониторинг не обновляет данные');return result;}
+  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
   var rel=typeof channelReliability==='function'&&profile.interface&&profile.code!=='VPN-001'?channelReliability(profile,status,m.now):null;
   if(h.state==='failed'){
     result.kind='red';result.state='failed';
@@ -65,8 +65,8 @@ function dvChannelUse(profile,m,status){
   if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='yellow';result.state='switching';result.label=bi('Switching','Переключение');return result;}
   if(h.state==='healthy'){
     if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
-    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Waiting','Ожидает');}
-    else{result.kind='yellow';result.label=bi('Internet available; checking selected channel','Интернет доступен; уточняется выбранный канал');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=bi('Spare · ready to take over','Запасной · готов включиться');}
+    else{result.kind='green';result.state='ready';result.label=bi('Ready for automatic mode','Готов к работе в автомате');}
   }
   if(h.state==='unknown'){result.kind='yellow';result.label=bi('Internet check data unavailable','Нет результата проверки Интернета');}
   if(h.state==='healthy'&&rel&&rel.unreliable){result.kind='yellow';result.label=bi('Works, but reliability problem: ','Работает, но проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
@@ -81,8 +81,8 @@ function channelDisplayUse(profile,status,inventory){
 function renderChannelHeader(profile,status,inventory){
   var use=channelDisplayUse(profile,status,inventory);
   return E('div',{'class':'hv-server-top'},[dvChannelLamp(use),E('strong',{'class':'hv-protocol'},use.role+' · '+protocolLabel(profile)),
-    E('span',{'class':'hv-route-badge hv-route-'+use.kind,'data-route-state':use.state},use.label+(safeCode(use.code)?' · '+use.code:safeCode(profile.code)?' · '+profile.code:'')),
-    E('span',{'class':'hv-profile-detail'},bi('Tunnel: ','Туннель: ')+(profile.interface?bi('Connected','Подключён'):bi('Off','Отключён'))+' · '+bi('Traffic: ','Трафик: ')+(use.state==='selected'?bi('Selected channel','Выбранный канал'):use.state==='standby'?bi('Standby','Ожидание'):bi('Unconfirmed','Не подтверждён')))]);
+    E('span',{'class':'hv-route-badge hv-route-'+use.kind+(use.reliability?' hv-route-badge-long':''),'data-route-state':use.state},use.label+(safeCode(use.code)?' · '+use.code:safeCode(profile.code)?' · '+profile.code:'')),
+    E('span',{'class':'hv-profile-detail'},(use.code==='STATUS-REQUEST-FAILED'||use.code==='MONITOR-DATA-STALE')?bi('The page shows nothing as working until the router answers again. Reload the page (Ctrl+F5); if it repeats, check Monitoring in Settings.','Пока роутер не ответит, страница ничего не считает рабочим. Обновите страницу (Ctrl+F5); если повторяется, проверьте мониторинг в «Настройках».'):(profile.interface?bi('VPN server connection: established','Соединение с VPN-сервером: установлено'):bi('VPN server connection: none','Соединение с VPN-сервером: нет'))+' · '+(use.state==='selected'?bi('your internet goes through this channel','ваш интернет идёт через этот канал'):use.state==='standby'?bi('spare channel, your internet does not use it now','запасной канал, ваш интернет сейчас через него не идёт'):use.state==='failed'?bi('router checks fail: internet through this channel does not work','проверки роутера не проходят: интернет через этот канал не работает'):use.state==='switching'?bi('the route is being switched','маршрут переключается'):use.kind==='green'?bi('internet works through it; it takes over as soon as Auto is on','интернет через него работает; включится в работу, как только вы включите Auto'):bi('waiting for the first router check','ждём первую проверку роутера')))]);
 }
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
@@ -165,7 +165,7 @@ function renderDesignB(ctx,m){
   }
   var autoOn=typeof autoWorking==='function'?autoWorking(m.light):m.light.key==='ok';
   var q1=m.primary?E('div',{'class':'hv-dv-q'},[E('b',{},bi('What happens if '+(countryName(m.primary)||'the primary')+' stops working?','Что будет, если '+(countryName(m.primary)||'основной')+' перестанет работать?')),
-    E('p',{},autoOn?bi('In prepared-MT3000 router-probed IPv4 mode, repeated primary failures can switch to a healthy reserve; return follows your policy after stable recovery. Independent LAN confirmation belongs to a separate client-confirmed trial.','В router-probed IPv4 режиме подготовленного MT3000 повторные отказы основного могут вызвать переход на исправный резерв; возврат следует вашей политике после устойчивого восстановления. Независимое подтверждение LAN относится к отдельному тесту с клиентом.'):bi('Automatic inter-tunnel switching by this app is off. The router firmware may still select servers within its own tunnel.','Автоматическое переключение между туннелями этим приложением выключено. Штатная прошивка по-прежнему может выбирать серверы внутри своего туннеля.'))]):null;
+    E('p',{},autoOn?bi('In prepared-MT3000 router-probed IPv4 mode, repeated primary failures can switch to a healthy reserve; return follows your policy after stable recovery. Independent LAN confirmation belongs to a separate client-confirmed trial.','В режиме проверки самого роутера на подготовленном MT3000 повторные отказы основного могут вызвать переход на исправный резерв; возврат следует вашей политике после устойчивого восстановления. Независимое подтверждение LAN относится к отдельному тесту с клиентом.'):bi('Automatic inter-tunnel switching by this app is off. The router firmware may still select servers within its own tunnel.','Автоматическое переключение между туннелями этим приложением выключено. Штатная прошивка по-прежнему может выбирать серверы внутри своего туннеля.'))]):null;
   var last=dvEvents(ctx.status,ctx.rows,1)[0];
   var q2=E('div',{'class':'hv-dv-q'},[E('b',{},bi('Last thing that happened','Последнее событие')),E('p',{},last?dvDay(last.time)+' '+dvClock(last.time)+' · '+last.text:bi('No switches or failures are recorded on the router.','На роутере не записано ни переключений, ни сбоев.'))]);
   var links=E('p',{'class':'hv-dv-links'},[E('a',{'href':'#statistics'},bi('Statistics','Статистика')),E('a',{'href':'#help'},bi('Help','Помощь')),E('a',{'href':'#learn'},bi('Training','Обучение')),E('a',{'href':'#events'},bi('Details for technicians →','Подробности для техников →'))]);

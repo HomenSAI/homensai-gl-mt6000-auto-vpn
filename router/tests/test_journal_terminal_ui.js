@@ -86,12 +86,12 @@ const provenance=Object.assign({},status,{time:now,auto_control:{requested:'on',
 const evidence=c.journalRows(provenance,null,now);
 assert.equal(evidence.filter(e=>e.origin==='control').length,1,'current/persisted activation context deduplicates by actual request timestamp');
 assert(c.journalMessage(evidence.find(e=>e.origin==='control'),provenance).includes('activation requested'));
-assert(c.journalMessage(evidence.find(e=>e.state==='APPLYING'),provenance).includes('automatic controller'));
-assert(c.journalMessage(evidence.find(e=>e.action_source==='manual'&&e.state==='COMMITTED'),provenance).includes('operator command'));
+assert(c.journalMessage(evidence.find(e=>e.state==='APPLYING'),provenance).includes('Auto, automatically'));
+assert(c.journalMessage(evidence.find(e=>e.action_source==='manual'&&e.state==='COMMITTED'),provenance).includes('you, manually'));
 assert(c.journalMessage(evidence.find(e=>e.trial===true||e.action_source==='test'),provenance).includes('programmatic test'));
 assert(c.journalMessage(evidence.find(e=>e.state==='COMMITTED'&&!e.action_source),provenance).includes('source not recorded'));
 assert.equal(c.terminalGroups([event('m',20,'COMMITTED',{action_source:'manual'}),event('a',10,'COMMITTED',{action_source:'automatic'})]).length,2);
-c.renderLiveTerminal(provenance,{});assert(c.LIVE_TERMINAL.pinned.text().includes('Activation: operator command'));
+c.renderLiveTerminal(provenance,{});assert(c.LIVE_TERMINAL.pinned.text().includes('Activation: you, manually'));
 assert(c.filteredJournalRows(evidence,provenance,'programmatic test','time',true).length>0);
 console.log('PASS: request versus confirmed state, persisted/current control deduplication, manual/automatic/test/unknown provenance and grouped-source boundaries');
 
@@ -102,7 +102,7 @@ assert.equal(oldManual[0].action_source,'unknown','legacy manual API usage is no
 console.log('PASS: explicit transition direction and no human attribution guessed for legacy API calls');
 
 const programStop=c.journalRows(Object.assign({},status,{native_history:{events:[{sequence:90,time:now,state:'STOPPED',control_action:'stop',control_time:now-1,control_source:'programmatic'}]},accounting:{reliability:{events:[]}}}),null,now);
-assert(c.journalMessage(programStop.find(e=>e.state==='STOPPED'),status).includes('programmatic command'));
+assert(c.journalMessage(programStop.find(e=>e.state==='STOPPED'),status).includes('program command'));
 assert(c.journalMessage(programStop.find(e=>e.state==='AUTO-STOP-REQUESTED'),status).includes('deactivation requested'));
 console.log('PASS: programmatic deactivation request and confirmed stopped state carry separate truthful labels');
 

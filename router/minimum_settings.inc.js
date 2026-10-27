@@ -72,8 +72,8 @@ function renderMinimumSettings(inventory,status,getLatest){
   function field(title,node){node.setAttribute('aria-label',title);return E('label',{'class':'hv-wizard-field'},[E('span',{},title),node]);}
   host.appendChild(field(bi('Primary VPN client','Основной VPN-клиент'),source));
   host.appendChild(field(bi('Reserve VPN client','Резервный VPN-клиент'),target));
-  host.appendChild(E('label',{'class':'hv-wizard-field hv-wizard-toggle'},[consent,E('span',{},bi('Allow calls and sessions to reconnect when switching','Разрешить переподключение звонков и сессий при переключении'))]));
-  consent.setAttribute('aria-label',bi('Allow sessions to reconnect','Разрешить переподключение сессий'));
+  host.appendChild(E('label',{'class':'hv-wizard-field hv-wizard-toggle'},[consent,E('span',{},bi('Allow a brief drop of calls and downloads when switching','Разрешить короткий обрыв звонков и загрузок при переключении'))]));
+  consent.setAttribute('aria-label',bi('Allow a brief drop of calls and downloads when switching','Разрешить короткий обрыв звонков и загрузок при переключении'));
   var validation=E('p',{'role':'status','data-minimum-validation':'1'}),error=E('p',{'role':'alert','data-minimum-save-error':'1'}),progress=E('p',{'role':'status','aria-live':'polite','data-minimum-save-progress':'1'});
   host.appendChild(validation);host.appendChild(error);host.appendChild(progress);
   var save=E('button',{'type':'button','class':'cbi-button cbi-button-action','data-minimum-action':'save','click':function(){return session.reviewSave();}},bi('Save changes','Сохранить изменения'));
@@ -141,7 +141,7 @@ function renderMinimumSettings(inventory,status,getLatest){
     }},bi('Save selected pair','Сохранить выбранную пару'));
     ui.showModal(bi('Review changes','Проверьте изменения'),[
       E('p',{},bi('Primary: ','Основной: ')+name(reviewed.source)),E('p',{},bi('Reserve: ','Резервный: ')+name(reviewed.target)),
-      E('p',{},bi('Sessions may reconnect: ','Сессии могут переподключаться: ')+(reviewed.session_loss?bi('Allowed','Разрешено'):bi('Not allowed','Не разрешено'))),
+      E('p',{},bi('Brief drop of calls and downloads: ','Короткий обрыв звонков и загрузок: ')+(reviewed.session_loss?bi('Allowed','Разрешено'):bi('Not allowed','Не разрешено'))),
       E('p',{},bi('Other application settings and VPN keys are retained. Auto is not started.','Остальные настройки приложения и ключи VPN сохраняются. Auto не запускается.')),
       E('div',{'class':'hv-wizard-actions'},[E('button',{'type':'button','class':'cbi-button','click':function(){if(!session.busy)ui.hideModal();}},bi('Back','Назад')),confirm])
     ]);return Promise.resolve(false);

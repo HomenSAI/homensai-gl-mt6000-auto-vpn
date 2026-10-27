@@ -456,7 +456,7 @@ function journalHistoryDays(status){
 function renderChannelBadge(model){
   if(!model)return null;
   var main=bi('Main channel','Основной канал'),reserve=bi('Reserve channel','Резервный канал');
-  var label=model.phase==='confirmed'?bi('Confirmed transition: ','Подтверждённый переход: '):model.phase==='pending'?bi('Transition stage, awaiting confirmation: ','Этап перехода, ожидается подтверждение: '):model.phase==='failed'?bi('Connection failed: ','Ошибка соединения: '):bi('Connection recovered: ','Соединение восстановлено: ');
+  var label=model.phase==='confirmed'?bi('Confirmed transition: ','Подтверждённый переход: '):model.phase==='pending'?bi('Switching in progress: ','Идёт переключение: '):model.phase==='failed'?bi('Connection failed: ','Ошибка соединения: '):bi('Connection recovered: ','Соединение восстановлено: ');
   label+=model.from?(model.from==='source'?main:reserve)+' → '+(model.to==='source'?main:reserve):(model.to==='source'?main:reserve);
   var colors={source:'neutral',target:'neutral'};
   if(model.phase==='pending'){colors.source='pending';colors.target='pending';}
@@ -481,7 +481,7 @@ function journalChannelModel(entry){
 }
 function renderJournalChannelBadge(entry){return renderChannelBadge(journalChannelModel(entry));}
 function journalSourceLabel(source){
-  return source==='manual'?bi('operator command','оператор — вручную'):source==='automatic'?bi('automatic controller','контроллер — автоматически'):source==='test'?bi('programmatic test','тестовая программа — автоматически'):source==='programmatic'?bi('programmatic command','программная команда'):bi('source not recorded','источник не указан');
+  return source==='manual'?bi('you, manually','вы, вручную'):source==='automatic'?bi('Auto, automatically','Auto, автоматически'):source==='test'?bi('programmatic test','тестовая программа — автоматически'):source==='programmatic'?bi('program command','команда программы'):bi('source not recorded','источник не указан');
 }
 function journalToken(value,fallback){return typeof value==='string'&&/^[A-Za-z][A-Za-z0-9_-]{0,95}$/.test(value)?value.toUpperCase():fallback;}
 function journalLatencySample(raw,profile,eventTime){
@@ -625,7 +625,7 @@ function renderEventHistory(status){
     direction.textContent=EVENT_VIEW.desc?bi('Descending ↓','По убыванию ↓'):bi('Ascending ↑','По возрастанию ↑');
     more.textContent=(EVENT_VIEW.expanded?'▾ ':'▸ ')+(EVENT_VIEW.expanded?bi('Show 20 rows','Свернуть до 20 строк'):bi('More history','Остальная история'))+' · '+rows.length;more.setAttribute('aria-expanded',EVENT_VIEW.expanded?'true':'false');
     more.disabled=EVENT_VIEW.busy;
-    note.textContent=EVENT_VIEW.busy?bi('Reading saved history…','Чтение сохранённой истории…'):EVENT_VIEW.error||(!EVENT_VIEW.stored?bi('Showing the latest status snapshot. More/search reads all retained records; it does not create missing history.','Показан последний снимок событий. Раскрытие/поиск прочитает всю сохранённую историю; отсутствующие записи не создаются.'):bi('Search and sorting cover the full downloaded retained snapshot. Storage/count limits and unobserved gaps remain explicit.','Поиск и сортировка охватывают весь загруженный снимок за выбранный срок. Ограничения хранения и пропуски сохраняются.'));
+    note.textContent=EVENT_VIEW.busy?bi('Reading saved history…','Чтение сохранённой истории…'):EVENT_VIEW.error||(!EVENT_VIEW.stored?bi('Showing recent events. Press "More history" to see all.','Показаны последние события. Чтобы увидеть все, нажмите «Остальная история».'):bi('Search and sorting cover the full downloaded retained snapshot. Storage/count limits and unobserved gaps remain explicit.','Поиск и сортировка охватывают весь загруженный снимок за выбранный срок. Ограничения хранения и пропуски сохраняются.'));
     if(EVENT_VIEW.stored){
       var records=[EVENT_VIEW.stored.controller,EVENT_VIEW.stored.failures],limited=records.some(function(r){var s=r.summary||{};return r.storage_notice||s.details_dropped>0||s.detail_budget_dropped>0||s.weekly_detail_complete===false;});
       if(limited)note.textContent+=' '+bi('Some saved details are unavailable or were dropped by the storage limit. This is not a complete record of every event.','Часть сохранённых подробностей недоступна или удалена по лимиту хранилища. Это не полный список всех произошедших событий.');

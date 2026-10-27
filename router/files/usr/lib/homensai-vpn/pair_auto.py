@@ -9,6 +9,7 @@ import copy
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -94,6 +95,73 @@ def intent():
     return row
 
 
+# Settings changed outside the app (a tunnel renamed or reordered, a stock client tidied) must not leave Auto
+# off for good. The saved session is handed over to the current configuration automatically: its original record
+# is archived first, interface flags are never restored over the new configuration, and a fresh Start re-reads
+# everything. Bounded so that a persistent conflict still ends in a visible refusal.
+READOPT_CODES = ('PAIR-EXTERNAL-NETWORK-CHANGE', 'PAIR-EXTERNAL-CONFIG-CHANGE', 'PAIR-EXTERNAL-POLICY-CHANGE',
+                 'SOURCE-ORDER-MISMATCH')
+READOPT_LIMIT = 3
+
+
+def readopt_allowed(now):
+    from agent import RUNTIME, read_json
+    try:
+        ledger = read_json(RUNTIME / 'pair-readopt.json', {})
+    except (OSError, ValueError):
+        ledger = {}
+    events = ledger.get('events', []) if isinstance(ledger, dict) else []
+    events = [x for x in events if type(x) in (int, float) and math.isfinite(x) and 0 <= now - x < 900] if isinstance(events, list) else []
+    return events, len(events) < READOPT_LIMIT
+
+
+def release_session(state, code):
+    import native_switch as n
+    from agent import PERSIST, RUNTIME, atomic_json
+    now = time.time()
+    events, allowed = readopt_allowed(now)
+    if not allowed or n.journal_read().get('phase') not in (None, 'ROLLED-BACK'):
+        return False
+    path = paths()[1]
+    raw = path.read_bytes()
+    directory = PERSIST / 'session-recovery'
+    if directory.is_symlink():
+        raise ValueError('PAIR-STATE-UNVERIFIED')
+    directory.mkdir(mode=0o700, exist_ok=True)
+    archive = directory / ('pair-' + state['id'] + '-readopt-' + str(int(now)) + '.json')
+    fd = os.open(str(archive), os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0), 0o600)
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    if archive.read_bytes() != raw:
+        raise ValueError('PAIR-STATE-UNVERIFIED')
+    resolved = copy.deepcopy(state)
+    resolved.update(phase='STOPPED', owned=[], original_restored=False, recovery_error=None,
+                    operator_resolution={'reason': 'AUTOMATIC-EXTERNAL-CHANGE-READOPT', 'time': now, 'archive': archive.name,
+                                         'trigger': code, 'original_sha256': hashlib.sha256(raw).hexdigest(),
+                                         'retired_owned': state.get('owned', []), 'old_flags_restored': False})
+    save(resolved)
+    atomic_json(RUNTIME / 'pair-readopt.json', {'events': events + [now]})
+    return True
+
+
+def readopt_running(state, request_row, revision, code):
+    """A running session met a change made outside the app: adopt the new configuration and start again by itself."""
+    import native_switch as n
+    from auto_control import control_lock, revision_locked
+    from agent import RUNTIME, atomic_json
+    with control_lock():
+        current = intent()
+        if (revision_locked(RUNTIME) != revision or current.get('revision') != revision or current.get('mode') != 'on'
+                or current.get('id') != request_row.get('id') or not release_session(state, code)):
+            return False
+        atomic_json(paths()[0], {'mode': 'on', 'revision': revision, 'time': time.time(), 'id': uuid.uuid4().hex,
+                                 'request_source': current.get('request_source', 'unknown')})
+    n.publish({'state': 'ARMED', 'mode': 'continuous-pair', 'proof_scope': MODE, 'reason': 'PAIR-READOPTED', 'blockers': []})
+    return True
+
+
 def request(revision,request_source=None):
     from auto_control import control_lock, revision_locked
     from agent import RUNTIME, atomic_json
@@ -109,7 +177,13 @@ def request(revision,request_source=None):
             return {'accepted': False, 'blockers': ['PAIR-STATE-UNVERIFIED']}
         if state and state.get('phase') not in TERMINAL and not (
                 old.get('mode')=='on' and old.get('revision')==revision and old.get('id')==state.get('id')):
-            return {'accepted': False, 'blockers': ['PAIR-RECOVERY-REQUIRED']}
+            # A session held only because settings changed outside the app is handed over automatically.
+            try:
+                handed=state.get('phase')=='HELD' and state.get('recovery_error') in READOPT_CODES and release_session(state,state['recovery_error'])
+            except (OSError, ValueError, KeyError, TypeError):
+                handed=False
+            if not handed:
+                return {'accepted': False, 'blockers': ['PAIR-RECOVERY-REQUIRED']}
         if old.get('mode') == 'on' and old.get('revision') == revision:
             return {'accepted': True, 'queued': True, 'already_requested': True}
         from auto_control import normalize_request_source as source_label
@@ -646,6 +720,18 @@ def tick(backend, settings, revision):
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
         events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])
+        order = selection.get('order') or []
+        reserve_first = (selection.get('direction', 'first') == 'first' and selection.get('source_rule') in order
+                         and selection.get('target_rule') in order
+                         and order.index(selection['target_rule']) < order.index(selection['source_rule']))
+        if failed and healthy and reserve_first:
+            # The router already sends traffic through the reserve first (its VPN priority list was
+            # changed outside the app): there is nothing to switch, and Auto keeps watching.
+            n.publish({'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True,
+                       'certified': False, 'proof_scope': MODE, 'external_lan_verified': False,
+                       'source': selection['source']['id'], 'target': selection['target']['id'],
+                       'reason': 'RESERVE-ALREADY-FIRST', 'blockers': []})
+            return True
         if failed and healthy and permitted and dwell and not diagnosis.get('suppress_switch'):
             if state.get('manual_hold'):
                 state.pop('manual_hold',None);save(state)
@@ -669,6 +755,12 @@ def tick(backend, settings, revision):
     except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         try:pending = read_state()
         except (OSError, ValueError, KeyError, TypeError):pending = {}
+        if pending.get('phase') == 'RUNNING' and str(error) in READOPT_CODES and request_row.get('mode') == 'on':
+            try:
+                if readopt_running(pending, request_row, revision, str(error)):
+                    return True
+            except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
+                pass  # Falls back to the ordinary held state below.
         if pending.get('phase') == 'STARTING':
             try:
                 cleanup(backend, pending)

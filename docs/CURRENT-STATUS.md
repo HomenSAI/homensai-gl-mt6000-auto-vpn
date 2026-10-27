@@ -1,3 +1,51 @@
+## Alpha46 source: reset buttons, failure test, Go back / Сброс графиков, тест сбоя, «Вернуться назад»
+
+- Every chart and statistics card (latency, live and 2-hour switching, outage statistics, transition evidence, traffic, speed ranking) has Reset chart. The router saves the old data into a checksummed archive (/etc/homensai-vpn/stats-archive, newest 10 kept) and only then starts measuring from zero. The monitoring agent applies the reset in its own loop. The button reports success only after the router confirms; failures show a catalogued code (STATS-RESET-*).
+- The channel failure test is back on the Tests page (it was hidden in the hybrid build).
+- Every page ends with "Go back", which returns to the previous page and scroll position. The Auto lamp in the sidebar opens Automatic VPN failover.
+- A working spare channel is amber, neither green (in use) nor red (failed).
+- RESERVE-ALREADY-FIRST: when the GL priority list already puts the reserve first, Auto keeps running.
+- The 2-hour chart shows outages and blocks like the live chart. The latency table shows check losses.
+- The status RPC caches the slow diagnostic for 15 s.
+
+Source only until installed.
+
+Кнопка «Сброс графика» на всех графиках и статистике (с архивом), тест сбоя канала снова в «Тестах», «Вернуться назад» внизу страниц, лампа Auto ведёт к блоку Auto, рабочий запасной канал жёлтый.
+
+---
+
+## Alpha45 source: plain wording across the interface / Понятные надписи во всём интерфейсе
+
+Owner-approved rewrite of about 96 confusing labels (jargon such as identity, binding, metadata, planner, path confirmation, external LAN, bare "unknown"/"not confirmed") into plain statements, including error short names. Logic, codes and long help texts unchanged. Source only.
+
+Около 96 непонятных надписей заменены простыми формулировками по согласованию с владельцем.
+
+---
+
+## Alpha44 source: the Auto button sets everything up itself / Кнопка Auto настраивает всё сама
+
+Owner rule: the user presses Auto and does nothing else. Start now repairs failed router preparation that needs no restart (stock VPN boot, VPN autostart flags, hardware acceleration setting, SFE boot) with the same reviewed writer as the preparation buttons: the original value is preserved and the result read back; a restart-only fix still ends in a named refusal. Start refusals and a failed start are shown once in their own window, so the Auto card layout stays the same. A working channel is green everywhere (card and sidebar); with Auto off it reads "Ready for automatic mode". Source only.
+
+Кнопка Auto сама исправляет подготовку роутера, которой не нужна перезагрузка; ошибки запуска показываются отдельным окном; рабочий канал везде зелёный, без Auto — «Готов к работе в автомате».
+
+---
+
+## Alpha43 source: page no longer stops refreshing; defined states everywhere / Страница не зависает
+
+Alpha42 on the router threw "ids is not defined" in the delay panel whenever a channel had no successful check; the exception stopped every refresh, so pages stayed empty, cards showed "Status request failed" and diagnostics showed "unknown". Fixed with a regression test. Owner rule applied: no bare "unknown". Missing data always names its cause and catalogue code (STATUS-REQUEST-FAILED, MONITOR-DATA-STALE, VENDOR-OBSERVATION-PENDING); channel cards say plainly whether the VPN server connection is up and whether your internet goes through the channel; sidebar channel lamps show the real channel state (working green, unreliable or being checked yellow, failing or no data red, grey only when switched off in the router). Source only.
+
+Исправлено исключение панели задержек, из-за которого страница переставала обновляться и показывала «Ошибка получения статуса» и «неизвестно». Отсутствие данных всегда называет причину и код; лампы каналов показывают реальное состояние.
+
+---
+
+## Alpha42 source: Auto recovers by itself, no silent failures / Auto восстанавливается сам
+
+Owner requests after alpha41: renaming a tunnel switched Auto off and it did not return; Start gave no error; "no fresh measurement" and unclear diagnostics wording; the live chart showed an empty line when channels failed; the Auto button should sit level with the traffic light; the Readiness page waited forever; an error link did nothing. Changes: tunnel names no longer count as policy identity; a running session or a Start that meets a change made outside the app archives the old session and adopts the new settings by itself (at most three times in 15 minutes, never while the router is held on the reserve); the status now names the reason of a failed Start (`auto_control.failure`) and the Auto card shows its catalogued code with description and remedy; every channel shows its latest router check result (what failed, when) instead of "no measurement"; all comparisons with router timestamps use one router clock (a PC clock a few seconds behind no longer freezes "Waiting for the router"); plain wording for the router diagnostics with catalogue codes (VENDOR-REASON-UNOBSERVED, PAIR-EXTERNAL-*, PAIR-RECOVERY-REQUIRED, PAIR-READOPTED); the live chart draws "Auto blocked" and "no working channel"; the remedy link navigates inside the app; the Auto button is level with the traffic light; long labels wrap inside their card. Source only: not installed; the MT3000 runs alpha41 with its pair held (PAIR-EXTERNAL-POLICY-CHANGE).
+
+Auto сам принимает настройки, изменённые вне приложения; неудачный запуск показывает код, описание и решение; каналы показывают последнюю проверку; график показывает блокировку и отсутствие рабочих каналов; кнопка Auto вровень со светофором; страница «Готовность» не зависает при отставании часов ПК. Только исходник.
+
+---
+
 ## Alpha41 installed: channel reliability indicator / Индикатор надёжности канала
 
 Owner request: say why a channel shows a failure. A channel whose router checks failed in at least 20% of the cycles over the last 5 minutes now reads "Reliability problem: check loss N% (X of Y checks in 5 min)" with the new catalogue code CHANNEL-UNRELIABLE (meaning and remediation in the error table). A connected tunnel that mostly passes now but is unreliable is yellow, not green. The Tests page recommendation is computed from the loss statistics: keep traffic on the channel with lower loss, replace the unreliable server, and name the best measured alternative (at least 20 checks and 95% success) or say that a speed test is needed. This is the measured share of failed checks, not an ICMP packet-loss figure, and it changes no setting or route. Installed on the dedicated MT3000 with Auto ON; Auto switched to the working reserve because the primary lost packets. [Verification](VERIFICATION-ALPHA41-INSTALLED-2026-10-27.md).

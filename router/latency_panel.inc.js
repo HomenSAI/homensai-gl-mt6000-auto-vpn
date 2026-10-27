@@ -7,8 +7,21 @@ function latencyCurrent(status,inventory,now){
   var ids=rolePairIds(status,inventory,now),rows=Array.isArray(status.profiles)?status.profiles:[];
   return ids.map(function(id){var p=rows.find(function(p){return p&&p.id===id;});return p&&profileHealth(p,now).state==='healthy'&&p.vendor_state==='SETTLED'&&p.dns_ok===true&&Number.isInteger(p.https_success)&&p.https_success>=2&&Number.isFinite(p.rtt_ms)&&p.rtt_ms>=0&&p.rtt_ms<=600000?p:null;});
 }
+// What carries traffic when no switch is confirmed: a defined statement, never "not confirmed".
+function latencyRouteText(status){
+  var now=typeof routerWall==='function'?routerWall():Date.now()/1000;
+  if(!status||status.rpc_error||!Number.isFinite(status.time)){var c=typeof dataCause==='function'?dataCause(status,now):{code:'STATUS-REQUEST-FAILED',text:bi('the page got no answer from the router program','страница не получила ответ от программы на роутере')};return bi('Current route is not shown: ','Текущий маршрут не показан: ')+c.text+' ('+c.code+').';}
+  var on=((status||{}).auto_control||{}).requested==='on';
+  return on?bi('Auto is on; the router is confirming which channel carries traffic (a few seconds).','Auto включён; роутер подтверждает, какой канал несёт трафик (несколько секунд).')
+    :bi('Auto is off: traffic follows the VPN priority list of the router.','Auto выключен: трафик идёт по списку приоритетов VPN роутера.');
+}
 function latencyRecommendation(status,inventory,now){
   var rows=latencyCurrent(status,inventory,now);
+  if(rows.filter(Boolean).length===1){
+    // One channel works and the other fails: that is the recommendation, not a missing comparison.
+    var ids=rolePairIds(status,inventory,now),k=rows[0]?0:1,other=(status.profiles||[]).filter(function(p){return p&&p.id===ids[1-k];})[0];
+    return {index:k,single:true,text:(k===0?bi('Only the primary channel works now','Сейчас работает только основной канал'):bi('Only the reserve channel works now','Сейчас работает только резервный канал'))+' ('+rows[k].rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')+'). '+(k===0?bi('Reserve: ','Резервный: '):bi('Primary: ','Основной: '))+(typeof channelCheckText==='function'?channelCheckText(other,now):bi('check failed','проверка не прошла'))};
+  }
   if(rows.some(function(p){return !p;}))return {index:null,text:bi('A comparison needs fresh successful measurements for both channels.','Для сравнения нужны свежие успешные проверки обоих каналов.')};
   if(Math.abs(rows[0].rtt_ms-rows[1].rtt_ms)<.1)return {index:null,text:bi('The current measured delays are equal.','Сейчас измеренные задержки одинаковы.')};
   var index=rows[0].rtt_ms<rows[1].rtt_ms?0:1;
@@ -21,7 +34,7 @@ function renderLatencyRecommendation(status,inventory,context){
   var role=selected===ids[0]?bi('primary','основной'):selected===ids[1]?bi('reserve','резервный'):null;
   var body=[];
   function line(label,value){return E('p',{'class':'hv-recommendation-line'},[E('strong',{},label),String(value)]);}
-  if(recommend.index===null)body.push(E('p',{},recommend.text));
+  if(recommend.index===null||recommend.single)body.push(E('p',{},recommend.text));
   else{
     var chosen=current[recommend.index],other=current[1-recommend.index];
     var country=typeof countryName==='function'?countryName(chosen):typeof chosen.country==='string'?chosen.country:'';
@@ -38,7 +51,7 @@ function renderLatencyRecommendation(status,inventory,context){
     body.push(line(bi('Server: ','Сервер: '),name));
     body.push(line(bi('Connection address: ','Адрес подключения: '),endpoint));
   }
-  body.push(E('p',{},role?bi('Traffic currently uses the ','Сейчас трафик использует ')+role+bi(' channel.',' канал.'):bi('Current traffic channel is not confirmed.','Текущий канал трафика не подтверждён.')));
+  body.push(E('p',{},role?bi('Traffic currently uses the ','Сейчас трафик использует ')+role+bi(' channel.',' канал.'):latencyRouteText(status)));
   var key='latency-recommendation-'+(context||'default');
   var node=E('details',{'class':'hv-latency-recommendation','data-latency-recommendation':'1','data-latency-disclosure':key},[
     E('summary',{},bi('Recommendation by current delay','Рекомендация по текущей задержке')),
@@ -55,12 +68,14 @@ function latencyStatistics(rows,start,end){
     return {count:count,buckets:buckets,mean:count?total/count:null,min:min,max:max};
   });
 }
-function renderLatencyStatistics(rows,start,end){
+function renderLatencyStatistics(rows,start,end,status,inventory,now){
   var stats=latencyStatistics(rows,start,end);
+  var ids=status&&typeof rolePairIds==='function'?rolePairIds(status,inventory||{},now):[];
+  function loss(i){var p=status?(status.profiles||[]).filter(function(r){return r&&r.id===ids[i];})[0]:null,r=p&&typeof channelReliability==='function'?channelReliability(p,status,now):null;return r?Math.round(r.loss)+'% ('+r.bad+' '+bi('of','из')+' '+r.n+')':'—';}
   function ms(v){return v===null?'—':v.toFixed(1)+' '+bi('ms','мс');}
   return E('table',{'class':'table hv-latency-statistics','data-hv-no-sort':'1'},[
-    E('tr',{},[bi('Channel','Канал'),bi('Mean','Средняя'),bi('Minimum minute mean','Мин. за минуту'),bi('Maximum minute mean','Макс. за минуту'),bi('Successful checks','Успешных проверок')].map(function(t){return E('th',{'scope':'col'},t);})),
-    ...stats.map(function(s,i){return E('tr',{},[E('th',{'scope':'row'},i===0?bi('Primary','Основной'):bi('Reserve','Резервный')),E('td',{},ms(s.mean)),E('td',{},ms(s.min)),E('td',{},ms(s.max)),E('td',{},String(s.count))]);})]);
+    E('tr',{},[bi('Channel','Канал'),bi('Mean','Средняя'),bi('Minimum minute mean','Мин. за минуту'),bi('Maximum minute mean','Макс. за минуту'),bi('Successful checks','Успешных проверок'),bi('Check loss, last 5 min','Потери проверок за 5 мин')].map(function(t){return E('th',{'scope':'col'},t);})),
+    ...stats.map(function(s,i){return E('tr',{},[E('th',{'scope':'row'},i===0?bi('Primary','Основной'):bi('Reserve','Резервный')),E('td',{},ms(s.mean)),E('td',{},ms(s.min)),E('td',{},ms(s.max)),E('td',{},String(s.count)),E('td',{},loss(i))]);})]);
 }
 function latencyHistoryRows(status,inventory,now){
   var h=status.latency_history||{},ids=rolePairIds(status,inventory,now);
@@ -111,7 +126,7 @@ function renderLatencyPanel(status,inventory){
     if(start<now-LATENCY_HISTORY_SECONDS){start=now-LATENCY_HISTORY_SECONDS;end=start+LATENCY_VIEW.hours*3600;LATENCY_VIEW.end=end>=now?null:end;}
     while(plot.firstChild)plot.removeChild(plot.firstChild);
     plot.appendChild(renderLatencyGraph(history,start,end));var windowLabel=LATENCY_VIEW.hours>=24&&LATENCY_VIEW.hours%24===0?(LATENCY_VIEW.hours/24)+' '+bi('day(s)','сут'):LATENCY_VIEW.hours+' '+bi('hour(s)','ч');caption.textContent=windowLabel+' · '+new Date(start*1000).toLocaleString()+' — '+new Date(end*1000).toLocaleString();
-    while(statistics.firstChild)statistics.removeChild(statistics.firstChild);statistics.appendChild(renderLatencyStatistics(history,start,end));
+    while(statistics.firstChild)statistics.removeChild(statistics.firstChild);statistics.appendChild(renderLatencyStatistics(history,start,end,status,inventory,now));
     pan.max=String((LATENCY_HISTORY_HOURS-LATENCY_VIEW.hours)*60);pan.disabled=Number(pan.max)===0;pan.value=String(Math.max(0,Math.round((now-end)/60)));
   }
   draw();
@@ -119,13 +134,13 @@ function renderLatencyPanel(status,inventory){
   if(typeof rememberDisclosure==='function')rememberDisclosure(notes,'latency-statistics');
   var selectedId=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):null,roleIds=rolePairIds(status,inventory,now);
   var selected=selectedId&&selectedId===roleIds[0]?'source':selectedId&&selectedId===roleIds[1]?'target':null;
-  return E('section',{'class':'hv-chart-card','data-latency-panel':'1'},[
+  return E('section',{'class':'hv-chart-card','data-latency-panel':'1','data-stats-reset':'latency'},[
     E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),renderLatencyRecommendation(status,inventory,'channels'),
-    E('div',{'class':'hv-latency-values'},[0,1].map(function(i){return E('p',{},[E('strong',{},i===0?bi('Primary: ','Основной: '):bi('Reserve: ','Резервный: ')),current[i]?current[i].rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS'):bi('No fresh measurement','Нет свежего измерения')]);})),
+    E('div',{'class':'hv-latency-values'},[0,1].map(function(i){return E('p',{},[E('strong',{},i===0?bi('Primary: ','Основной: '):bi('Reserve: ','Резервный: ')),current[i]?current[i].rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS'):(typeof channelCheckText==='function'?channelCheckText((status.profiles||[]).filter(function(p){return p&&p.id===rolePairIds(status,inventory,now)[i];})[0],now):bi('No fresh measurement','Нет свежего измерения'))]);})),
     E('div',{'class':'hv-latency-series'},[
       E('span',{},[E('i',{'class':'hv-latency-sample','aria-hidden':'true'}),bi('Primary · solid line','Основной · сплошная линия')]),
       E('span',{},[E('i',{'class':'hv-latency-sample hv-latency-dashed','aria-hidden':'true'}),bi('Reserve · dashed line','Резервный · пунктирная линия')])]),
-    E('p',{'class':'hv-latency-current-route'},selected==='source'?bi('Currently in use: primary channel','Сейчас задействован основной канал'):selected==='target'?bi('Currently in use: reserve channel','Сейчас задействован резервный канал'):bi('Current channel: awaiting fresh router confirmation','Текущий канал: ожидается свежее подтверждение роутера')),
+    E('p',{'class':'hv-latency-current-route'},selected==='source'?bi('Currently in use: primary channel','Сейчас задействован основной канал'):selected==='target'?bi('Currently in use: reserve channel','Сейчас задействован резервный канал'):latencyRouteText(status)),
     plot,caption,E('div',{'class':'hv-latency-controls'},[
       E('label',{'class':'hv-latency-slider'},[hours,E('span',{},bi('Window: 1 hour–7 days','Период: 1 час–7 суток'))]),
       E('label',{'class':'hv-latency-slider'},[pan,E('span',{},bi('Browse the last 7 days','Просмотр последних 7 суток'))]),live]),statistics,

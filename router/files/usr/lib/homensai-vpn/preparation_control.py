@@ -302,7 +302,7 @@ def mutate(action,plan):
         sync_directory(directory)
 
 
-def apply(arguments):
+def apply(arguments,automatic=False):
     if (set(arguments)!={'action','revision','control_revision'} or type(arguments.get('action')) is not str
             or arguments['action'] not in ACTIONS or not isinstance(arguments['revision'],str)
             or not re.fullmatch('[a-f0-9]{64}',arguments['revision']) or not isinstance(arguments['control_revision'],str)
@@ -317,7 +317,7 @@ def apply(arguments):
             if plan['already_done']:
                 return {'applied':True,'verified':True,'already_done':True,'action':action,'code':'PREPARATION-VERIFIED','restart_required':plan['restart_required'],'auto_started':False}
             from rpc_throttle import allow
-            if not allow('preparation_apply',2):raise Refused('RPC-RATE-LIMIT')
+            if not automatic and not allow('preparation_apply',2):raise Refused('RPC-RATE-LIMIT')
             record={'action':action,'state':'PREPARED','time':time.time(),'board':plan['board'],'boot_id':plan['boot_id'],
                     'before':plan['before'],'revision':arguments['revision']}
             path=PERSIST/'preparation-changes'/(uuid.uuid4().hex+'.json')
@@ -338,6 +338,34 @@ def apply(arguments):
         # A durable PREPARED record deliberately survives an unconfirmed write.
         # Do not undo over a possible newer router edit or report a false PASS.
         return {'applied':False,'verified':False,'code':safe_code(error),'change_may_have_applied':attempted,'auto_started':False}
+
+
+# Pressing Auto is the owner's consent to the preparation it needs. Each failed check that can be
+# repaired without a router restart is fixed with the same reviewed writer as its button: the original
+# value is preserved first and the result is read back. A restart-only fix still ends in a named refusal.
+AUTO_ACTIONS={'PREP-STOCK-VPN-BOOT':'vpn-boot','PREP-SOURCE-AUTOSTART':'source-autostart','PREP-TARGET-AUTOSTART':'target-autostart',
+              'PREP-WGCLIENT1-AUTOSTART':'wg-autostart','PREP-OVPNCLIENT1-AUTOSTART':'ovpn-autostart','PREP-HNAT-CONFIG':'hnat','PREP-SFE-BOOT':'sfe-boot'}
+
+
+def auto_prepare(settings,control_revision):
+    from preparation_status import snapshot
+    repaired=[]
+    for _ in range(len(AUTO_ACTIONS)):
+        failed=[row.get('code') for row in snapshot(settings=settings).get('checks',[]) if row.get('state')!='pass']
+        todo=[code for code in failed if code in AUTO_ACTIONS and code not in repaired]
+        if not todo:return {'repaired':repaired,'code':None}
+        code=todo[0];action=AUTO_ACTIONS[code]
+        try:
+            with control_lock():
+                plan=context(action);plan['control_revision']=control_revision
+                revision=checksum(plan)
+        except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
+            return {'repaired':repaired,'code':safe_code(error)}
+        result=apply({'action':action,'revision':revision,'control_revision':control_revision},automatic=True)
+        if not result.get('applied'):return {'repaired':repaired,'code':result.get('code') or 'PREPARATION-WRITE-UNCONFIRMED'}
+        if result.get('restart_required'):return {'repaired':repaired+[code],'code':'PREPARATION-RESTART-REQUIRED'}
+        repaired.append(code)
+    return {'repaired':repaired,'code':None}
 
 
 def verify(action,plan):

@@ -1,7 +1,7 @@
 """Compact observed route intervals for the last 24 hours, never filled backwards."""
 import copy,math
 DAY=86400
-KINDS={'source','target','switching','unknown','off'}
+KINDS={'source','target','switching','unknown','off','blocked','down'}
 
 
 class RouteHistory:
@@ -47,8 +47,16 @@ def observed_route(status,now):
     state=native.get('state')
     if state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED'):return 'off'
     if state in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):return 'switching'
+    def failing(identifier):
+        profile=next((row for row in status.get('profiles',[]) if row.get('id')==identifier),None) if identifier else None
+        return bool(profile) and RouteHistory.stamp(profile.get('time')) and 0<=now-profile['time']<=90 and not (profile.get('code') is None and profile.get('dns_ok') is True and profile.get('https_success',0)>=2)
+    # Same states as the live chart: both channels failing is an outage of its own.
+    if native.get('source') and native.get('target') and native['source']!=native['target'] and failing(native['source']) and failing(native['target']):return 'down'
     role='target' if state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if state=='OBSERVING' and (native.get('certified') is True or native.get('mode')=='continuous-pair' and native.get('readiness_verified') is True) else None
+    # The route is drawn from fresh router data only; a failing selected channel still carries the route.
     if role:
         profile=next((row for row in status.get('profiles',[]) if row.get('id')==native.get(role)),None)
-        if profile and RouteHistory.stamp(profile.get('time')) and 0<=now-profile['time']<=90 and profile.get('code') is None and profile.get('dns_ok') is True and profile.get('https_success',0)>=2:return role
+        if profile and RouteHistory.stamp(profile.get('time')) and 0<=now-profile['time']<=90:return role
+        return 'unknown'
+    if state in ('BLOCKED','FAILED'):return 'blocked'
     return 'unknown'

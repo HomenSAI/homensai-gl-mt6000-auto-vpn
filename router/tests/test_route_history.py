@@ -27,9 +27,13 @@ class Tests(unittest.TestCase):
         native={'time':100,'state':'OBSERVING','source':'a','mode':'continuous-pair','readiness_verified':True}
         status={'native_failover':native,'profiles':[row]}
         self.assertEqual(observed_route(status,110),'source')
-        row['code']='VPN-003';self.assertEqual(observed_route(status,110),'unknown')
+        row['code']='VPN-003';self.assertEqual(observed_route(status,110),'source')
+        native['target']='b';status['profiles'].append({'id':'b','time':100,'code':'VPN-003'})
+        self.assertEqual(observed_route(status,110),'down')
+        status['profiles'].pop();row['code']=None
         self.assertEqual(observed_route(status,200),'unknown')
         native['state']='RESTORING';self.assertEqual(observed_route(status,110),'switching')
+        native['state']='BLOCKED';self.assertEqual(observed_route(status,110),'blocked')
 
     def test_corrupt_route_state_is_not_trusted(self):
         r=RouteHistory();r.observe('source',100);data=r.export();data['last']['kind']='bad'

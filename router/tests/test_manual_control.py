@@ -265,14 +265,15 @@ class ManualControlTests(unittest.TestCase):
         self.assertTrue(status['available'])
         self.assertTrue(status['reserve']['allowed'])
         self.assertFalse(status['primary']['allowed'])
-        self.assertEqual(self.writes, [])
+        # Only the short-lived display cache of the diagnostic is written; no request is queued.
+        self.assertEqual([w for w in self.writes if w != 'display-diagnostic.json'], [])
         self.certificate['vendor_identity'] = 'bad'
         self.assertIn('LAN-TRIAL-REQUIRED', manual.control_status()['reserve']['blockers'])
         self.settings['monitor_only'] = '1'
         self.backend.diagnostic.reset_mock()
         self.assertFalse(manual.control_status()['available'])
         self.backend.diagnostic.assert_not_called()
-        self.assertEqual(self.writes, [])
+        self.assertEqual([w for w in self.writes if w != 'display-diagnostic.json'], [])
 
     def test_pending_or_corrupt_queue_disables_controls(self):
         self.queued()

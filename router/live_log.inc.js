@@ -4,7 +4,7 @@ var liveLogTimer=null;
 function liveLampKind(profile,now){var s=profileHealth(profile,now).state;return s==='healthy'?'green':s==='checking'?'yellow':s==='failed'?'red':'grey';}
 function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateNames||{};
   if(typeof renderLiveTerminal==='function')return renderLiveTerminal(status,inventory);
-  var now=Date.now()/1000,interval=Number(((inventory||{}).settings||{}).interval)||10;
+  var now=(typeof routerWall==='function'?routerWall():Date.now()/1000),interval=Number(((inventory||{}).settings||{}).interval)||10;
   var fresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var light=autoLightModel(status,inventory||{},now);
   function lamp(kind,title){return E('span',{'class':'hv-live-lamp hv-live-lamp-'+kind,'role':'img','aria-label':title,'title':title});}
@@ -12,7 +12,7 @@ function renderLiveLog(status,rows,ns,inventory,stateNames){stateNames=stateName
   var counter=E('span',{'class':'hv-live-age'}),bar=E('span',{'class':'hv-live-bar-fill'}),next=E('span',{'class':'hv-live-next'});
   var head=E('div',{'class':'hv-live-head'},[E('span',{'class':'hv-live-dot hv-live-dot-'+(fresh?'on':'off'),'aria-hidden':'true'}),E('strong',{},fresh?bi('LIVE','В ЭФИРЕ'):bi('NO DATA','НЕТ ДАННЫХ')),counter,E('span',{'class':'hv-live-bar','aria-hidden':'true'},bar),next]);
   function tick(){
-    var t=Date.now()/1000,age=Number.isFinite(status.time)?Math.max(0,t-status.time):null;
+    var t=(typeof routerWall==='function'?routerWall():Date.now()/1000),age=Number.isFinite(status.time)?Math.max(0,t-status.time):null;
     counter.textContent=age==null?'':bi('updated '+Math.round(age)+' s ago','обновлено '+Math.round(age)+' с назад');
     var share=age==null?0:Math.min(1,age/interval);bar.style.width=Math.round(share*100)+'%';
     next.textContent=age==null?'':(age>=interval?bi('check is due…','проверка вот-вот…'):bi('next check in about '+Math.max(1,Math.round(interval-age))+' s','следующая проверка через ~'+Math.max(1,Math.round(interval-age))+' с'));

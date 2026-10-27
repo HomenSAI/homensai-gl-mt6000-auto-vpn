@@ -1,7 +1,14 @@
 /* Live selected-route timeline. It does not invent throughput or LAN health. */
 var autoLivePoints=[],autoLiveKey='',autoLiveContext=null,autoLivePollAdded=false,autoLiveCall=null;
-var AUTO_LIVE_COLORS={source:'#16a34a',target:'#2563eb',off:'#64748b'};
-function autoLiveSample(status,now){
+var AUTO_LIVE_COLORS={source:'#16a34a',target:'#2563eb',off:'#64748b',down:'#dc2626',blocked:'#9333ea'};
+// Both channels failing their router checks is a state of its own, never an empty line.
+function autoLiveBothDown(status,inventory,now){
+  var rows=(status||{}).profiles;if(!Array.isArray(rows)||!rows.length||!(Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90))return false;
+  var ids=typeof rolePairIds==='function'?rolePairIds(status,inventory||{},now):[];
+  if(ids.length!==2||!ids[0]||!ids[1]||ids[0]===ids[1])return false;
+  return ids.every(function(id){var p=rows.filter(function(r){return r&&r.id===id;})[0];return p&&Number.isFinite(p.time)&&now-p.time>=-5&&now-p.time<=90&&!(p.code==null&&p.dns_ok===true&&p.https_success>=2);});
+}
+function autoLiveSample(status,now,inventory){
   status=status||{};
   var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&!(status.speed_pause&&status.speed_pause.active)&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   var kind='unknown',state=String(ns.state||'UNKNOWN');
@@ -10,8 +17,10 @@ function autoLiveSample(status,now){
     else if(['COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE'].indexOf(state)>=0)kind='target';
     else if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(state)>=0)kind='switching';
     else if(['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(state)>=0)kind='off';
+    else if(['BLOCKED','FAILED'].indexOf(state)>=0)kind='blocked';
   }
-  return {time:now,stamp:valid?ns.time:null,kind:kind,state:state};
+  if(Number.isFinite(now)&&!status.rpc_error&&autoLiveBothDown(status,inventory,now))kind='down';
+  return {time:now,stamp:valid?ns.time:null,kind:kind,state:state,codes:Array.isArray(ns.blockers)?ns.blockers.slice(0,3):[]};
 }
 function autoLiveAppend(points,sample){
   var rows=points.slice(-599),last=rows[rows.length-1];
@@ -40,7 +49,7 @@ function autoLiveDisplayPoints(points){
     previous=point;return Object.assign({},point,{kind:kind});
   });
 }
-function autoLiveLabel(kind){return kind==='source'?bi('Primary selected','Выбран основной'):kind==='target'?bi('Reserve selected','Выбран резерв'):kind==='switching'?bi('Starting / switching / restoring','Запуск / переключение / восстановление'):kind==='off'?bi('Auto off','Auto выключен'):bi('No fresh confirmation','Нет свежего подтверждения');}
+function autoLiveLabel(kind){return kind==='source'?bi('Primary selected','Выбран основной'):kind==='target'?bi('Reserve selected','Выбран резерв'):kind==='switching'?bi('Starting / switching / restoring','Запуск / переключение / восстановление'):kind==='off'?bi('Auto off','Auto выключен'):kind==='down'?bi('No working channel: both channels fail the router checks','Нет работающего канала: оба канала не проходят проверки роутера'):kind==='blocked'?bi('Auto is blocked, the route is not being managed','Auto заблокирован, маршрутом никто не управляет'):bi('No fresh confirmation: Auto is not running or the data is old','Нет свежего подтверждения: Auto не работает или данные устарели');}
 function autoLiveSvg(tag,attributes,text){
   var node=document.createElementNS('http://www.w3.org/2000/svg',tag);
   Object.keys(attributes||{}).forEach(function(key){node.setAttribute(key,String(attributes[key]));});
@@ -51,14 +60,14 @@ function drawAutoLive(root,status,inventory){
   var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},ns=(status||{}).native_failover||{};
   var key=[settings.plan_source||ns.source||'',settings.plan_target||ns.target||''].join('|');
   if(key!==autoLiveKey){autoLivePoints=[];autoLiveKey=key;}
-  var sample=autoLiveSample(status,now);autoLivePoints=autoLiveAppend(autoLivePoints,sample);
+  var sample=autoLiveSample(status,now,inventory);autoLivePoints=autoLiveAppend(autoLivePoints,sample);
   var width=Math.max(280,Math.min(720,root.clientWidth||document.documentElement.clientWidth-80||720));
   var points=autoLiveDisplayPoints(autoLivePoints),from=Math.max(now-1800,Math.min(now-60,points.length?points[0].time:now-60)),span=now-from,left=width<480?88:122,right=width-16;
   var displayed=points.length?points[points.length-1]:sample;
   var x=function(t){return left+(t-from)/span*(right-left);};
   var y=function(kind){return kind==='source'?44:kind==='target'?91:132;};
   var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Live selected VPN route over time','Выбранный VPN-маршрут в реальном времени')});
-  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off','Выключено')]].forEach(function(row){var yy=y(row[0]);svg.appendChild(autoLiveSvg('line',{x1:left,y1:yy,x2:right,y2:yy,stroke:'#cbd5e1','stroke-dasharray':'3 5'}));svg.appendChild(autoLiveSvg('text',{x:6,y:yy+4,fill:'currentColor','font-size':12},row[1]));});
+  [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off / no channel','Выкл. / нет канала')]].forEach(function(row){var yy=y(row[0]);svg.appendChild(autoLiveSvg('line',{x1:left,y1:yy,x2:right,y2:yy,stroke:'#cbd5e1','stroke-dasharray':'3 5'}));svg.appendChild(autoLiveSvg('text',{x:6,y:yy+4,fill:'currentColor','font-size':12},row[1]));});
   autoLiveSegments(points).forEach(function(segment){if(segment.gap)return;var a=segment.a,b=segment.b;svg.appendChild(autoLiveSvg('path',{d:'M '+x(a.time)+' '+y(a.kind)+' H '+x(b.time)+' V '+y(b.kind),fill:'none',stroke:AUTO_LIVE_COLORS[segment.kind],'stroke-width':3}));});
   var lastRoute=null,changes=[];
   points.forEach(function(point){if(point.kind==='source'||point.kind==='target'){if(lastRoute&&lastRoute.kind!==point.kind)changes.push(point);lastRoute=point;}});
@@ -69,7 +78,7 @@ function drawAutoLive(root,status,inventory){
   root.appendChild(E('h3',{},bi('Live channel switching','Переключение каналов в реальном времени')));
   root.appendChild(E('p',{'class':'hv-auto-live-state'},autoLiveLabel(sample.kind)+' · '+new Date(now*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB')));
   root.appendChild(svg);
-  root.appendChild(E('p',{'class':'hv-muted'},bi('Green: primary · Blue: reserve · Grey: off. During a transition the last confirmed route is held until a new one is confirmed; missing observations leave a gap. Updated every 2 seconds while open. This shows confirmed route selection, not bandwidth or external-LAN verification.','Зелёный: основной · Синий: резерв · Серый: выключено. При переходе остаётся последний подтверждённый маршрут до подтверждения нового; отсутствие данных показано разрывом. Обновление каждые 2 секунды, пока страница открыта. График показывает подтверждённый выбор маршрута, а не скорость или проверку внешнего LAN.')));
+  root.appendChild(E('p',{'class':'hv-muted'},bi('Green: primary · Blue: reserve · Grey: off · Purple: Auto blocked · Red: no working channel. During a transition the last confirmed route is held until a new one is confirmed; missing observations leave a gap. Updated every 2 seconds while open. This shows confirmed route selection, not bandwidth or external-LAN verification.','Зелёный: основной · Синий: резерв · Серый: выключено · Фиолетовый: Auto заблокирован · Красный: нет работающего канала. При переходе остаётся последний подтверждённый маршрут до подтверждения нового; отсутствие данных показано разрывом. Обновление каждые 2 секунды, пока страница открыта. График показывает подтверждённый выбор маршрута, а не скорость или проверку внешнего LAN.')));
 }
 function renderAutoLive(status,inventory){
   var root=E('div',{'id':'hv-auto-live-chart','class':'hv-auto-live-chart'});
@@ -92,7 +101,7 @@ function autoDaySegments(history,now,hours){
   if(!history||!Array.isArray(history.segments)||!Number.isFinite(now))return [];
   var from=now-autoDayWindow(hours)*3600,last=null,previousEnd=null,rows=[];
   history.segments.slice(-4096).forEach(function(row){
-    if(!row||['source','target','off','unknown','switching'].indexOf(row.kind)<0||!Number.isFinite(row.start)||!Number.isFinite(row.end)||row.start>row.end||row.start>now||row.end>now+5){last=null;previousEnd=null;return;}
+    if(!row||['source','target','off','unknown','switching','blocked','down'].indexOf(row.kind)<0||!Number.isFinite(row.start)||!Number.isFinite(row.end)||row.start>row.end||row.start>now||row.end>now+5){last=null;previousEnd=null;return;}
     if(previousEnd!==row.start)last=null;
     var kind=row.kind==='switching'?last:row.kind;
     previousEnd=row.end;
@@ -133,7 +142,7 @@ function drawAutoFailures(plot,history,now,hours,width,left,right){
   plot.appendChild(svg);
   if(!data.totals.source&&!data.totals.target)plot.appendChild(E('p',{'class':'hv-muted'},bi('No failure episodes with saved channel roles in this window.','В этом окне пока нет отказов с сохранённой ролью.')));
   plot.appendChild(E('p',{'class':'hv-muted'},bi('One outage is counted once until recovery. Blue: primary. Orange: reserve. Hover over a bar for the recorded traffic route.','Один отказ считается один раз до восстановления. Синий — основной, оранжевый — резервный. Наведите на столбец, чтобы увидеть записанный маршрут.')));
-  if(!history||history.details_dropped||!Number.isFinite(history.since)||history.since>now-hours*3600)plot.appendChild(E('p',{'class':'hv-muted'},bi('Incomplete history: counts cover saved observations only; no observations is not proof of availability.','История неполная: учитываются только сохранённые наблюдения; их отсутствие не доказывает исправность.')));
+  if(!history||history.details_dropped||!Number.isFinite(history.since)||history.since>now-hours*3600)plot.appendChild(E('p',{'class':'hv-muted'},bi('Incomplete history: only what was saved is shown.','История неполная: показано только то, что сохранилось.')));
 }
 function renderAutoDay(status){
   var root=E('section',{'id':'hv-auto-day-chart','class':'hv-auto-live-chart hv-auto-day-chart'});
@@ -150,7 +159,7 @@ function renderAutoDay(status){
     var width=Math.max(280,Math.min(720,document.documentElement.clientWidth-80||720)),left=width<480?88:122,right=width-16;
     var from=now-span,x=function(t){return left+(t-from)/span*(right-left);},y=function(kind){return kind==='source'?44:kind==='target'?91:132;};
     var svg=autoLiveSvg('svg',{viewBox:'0 0 '+width+' 168',width:'100%',height:'168',role:'img','aria-label':bi('Saved selected VPN route over the last '+hours+' hours','Сохранённый VPN-маршрут за последние '+hours+' ч')});
-    [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off','Выключено')]].forEach(function(row){
+    [['source',bi('Primary','Основной')],['target',bi('Reserve','Резерв')],['off',bi('Off / no channel','Выкл. / нет канала')]].forEach(function(row){
       svg.appendChild(autoLiveSvg('line',{x1:left,x2:right,y1:y(row[0]),y2:y(row[0]),stroke:'#cbd5e1','stroke-dasharray':'3 5'}));
       svg.appendChild(autoLiveSvg('text',{x:6,y:y(row[0])+4,fill:'currentColor','font-size':12},row[1]));
     });

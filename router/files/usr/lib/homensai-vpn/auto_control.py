@@ -220,9 +220,13 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
         return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
-    from preparation_control import auto_blocker
+    from preparation_control import auto_blocker,auto_prepare
     preparation_reason=auto_blocker()
     if preparation_reason:return {'accepted':False,'blockers':[preparation_reason]}
+    # The Auto button sets up what it needs by itself; the owner does nothing else.
+    if trial_nonce is None:
+        prepared=auto_prepare(settings,control_revision)
+        if prepared.get('code'):return {'accepted':False,'blockers':[prepared['code']],'prepared':prepared.get('repaired',[])}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
         return pair_request(control_revision,request_source=source)
@@ -368,11 +372,23 @@ def public_status():
     except (OSError,ValueError):pair=None
     if pair and valid and pair.get('revision')==revision and pair.get('time',0)>stop:
         mode=pair['mode'];requested=max(requested,pair['time']);until=0
+    # Why the last Start did not take effect: the refusal code, so the page can always name it.
+    failure=None
+    code_rx=re.compile(r'[A-Z][A-Z0-9_-]{0,95}')
+    try:
+        if pair and valid and pair.get('mode')=='off' and pair.get('revision')==revision and isinstance(pair.get('failure_code'),str) and code_rx.fullmatch(pair['failure_code']):
+            failure={'code':pair['failure_code'],'time':pair['time'] if type(pair.get('time')) in (int,float) and math.isfinite(pair['time']) else 0}
+        else:
+            from pair_auto import read_state as pair_state
+            held=pair_state()
+            if valid and held.get('phase')=='HELD' and isinstance(held.get('recovery_error'),str) and code_rx.fullmatch(held['recovery_error']):
+                failure={'code':held['recovery_error'],'time':held.get('started',0) if type(held.get('started')) in (int,float) and math.isfinite(held['started']) else 0}
+    except (OSError,ValueError,KeyError,TypeError):failure=None
     context=action_context()
     origin=context.get('control_source','unknown') if valid and context.get('control_time')==max(requested,stop) else 'unknown'
     return {'requested':mode if valid else 'unknown','requested_at':max(requested,stop),
             'request_source':origin,'request_action':('start' if mode=='on' else 'stop' if mode=='off' else None) if valid else None,
             'activation_source':origin if mode=='on' else 'unknown',
-            'pair_phase':public_phase(),
+            'pair_phase':public_phase(),'failure':failure,
             'control_revision':revision,
             'until':until,'reboot_autostart':False,'return_result':return_result}

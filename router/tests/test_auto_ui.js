@@ -77,7 +77,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
     assert(typeof text==='string'&&text.length>20&&!/Unrecognised/.test(text),'no plain explanation for '+code);
     assert(context.AUTO_BLOCKERS[code].length===2&&/[А-Яа-я]/.test(context.AUTO_BLOCKERS[code][1]),'no Russian text for '+code);
   }
-  assert(/Unrecognised/.test(context.autoBlockerText('NOT-A-CODE')));
+  assert(/NOT-A-CODE/.test(context.autoBlockerText('NOT-A-CODE'))&&/Events and errors/.test(context.autoBlockerText('NOT-A-CODE')));
   assert(/Unrecognised/.test(context.autoBlockerText('constructor')),'prototype keys are not codes');
   console.log('PASS: '+codes.size+' controller blocker codes explained in EN and RU');
 }
@@ -135,7 +135,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   assert.equal(light({state:'BLOCKED',blockers:['HARDWARE-ACCELERATOR-UNVERIFIED']},{requested:'off'}).lamp,null);
   for(const requested of ['on','off']){
     const pending=light({state:'BLOCKED',blockers:['GUARD-RELEASE-UNCONFIRMED']},{requested});
-    assert.equal(pending.lamp,'red');assert(/not confirmed/.test(pending.title));
+    assert.equal(pending.lamp,'red');assert(/return has not finished/.test(pending.title));
     assert.equal(light({state:'RELEASE-PENDING'},{requested}).lamp,'red');
   }
   for(const state of ['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'])assert.equal(light({state}).lamp,null,state);

@@ -8,7 +8,7 @@ function startSteps(status,inventory,now){
     {key:'learn',done:learnDone(),title:bi('Take the 5-minute training','Пройти обучение на 5 минут'),hint:bi('What the system is, how to use it and what to do if the internet is gone.','Что это за система, как ею пользоваться и что делать, если пропал интернет.'),href:'#learn',action:bi('Open training','Открыть обучение')},
     {key:'monitor',done:monitor.key==='ok',title:bi('Monitoring is on','Мониторинг включён'),hint:bi('It starts by itself. Look at the Monitoring block at the top of this page: the lamp must be green. If it is not, press “Start monitoring” there.','Он запускается сам. Посмотрите на блок «Мониторинг» вверху этой страницы: лампа должна быть зелёной. Если нет, нажмите там «Запустить мониторинг».')},
     {key:'profiles',done:!!(settings.setup_complete&&settings.plan_source&&settings.plan_target),title:bi('Choose the primary and the reserve VPN','Выбрать основной и резервный VPN'),hint:bi('Primary is your preferred everyday VPN. Reserve is a different saved VPN used when the primary fails. Open the pair fields directly, or Settings → All application settings → 3 · Existing VPNs.','Основной — предпочитаемый VPN для обычной работы. Резервный — другой сохранённый VPN на случай отказа основного. Кнопка откроет нужные поля; они также доступны: «Настройки → Все настройки приложения → 3 · Существующие VPN».'),href:'#settings',action:bi('Choose the VPN pair','Выбрать пару VPN')},
-    {key:'auto',done:!!model.on,title:bi('Check the VPNs and start Auto','Проверить VPN и включить Auto'),hint:ready.ready?bi('Everything is ready: press the Auto button below.','Всё готово: нажмите кнопку Auto ниже.'):bi('The list under the Auto button shows what is still missing. A separate LAN test checks a real client; it is not required for prepared-MT3000 router-probed IPv4 mode.','Список под кнопкой Auto показывает, чего ещё не хватает. Отдельный LAN-тест проверяет реального клиента; для router-probed IPv4 на подготовленном MT3000 он не обязателен.')}
+    {key:'auto',done:!!model.on,title:bi('Check the VPNs and start Auto','Проверить VPN и включить Auto'),hint:ready.ready?bi('Everything is ready: press the Auto button below.','Всё готово: нажмите кнопку Auto ниже.'):bi('The list under the Auto button shows what is still missing. A separate LAN test checks a real client; it is not required for prepared-MT3000 router-probed IPv4 mode.','Список под кнопкой Auto показывает, чего ещё не хватает. Отдельный LAN-тест проверяет реального клиента; для проверки самого роутера на подготовленном MT3000 он не обязателен.')}
   ];
 }
 function renderSummary(status,inventory){
@@ -70,6 +70,78 @@ function goToSection(tab,id){
 }
 /* "Back" after following an error link: returns to the page and scroll position where the link was clicked. */
 var errorReturn=null,errorBackButton=null,errorBackTimer=null;
+/* "Reset chart" on every chart and statistics card. The router archives the old data first, then measures from zero. */
+var STATS_RESET_NAMES={latency:['latency chart and table','график и таблицу задержки'],auto:['switching charts and outage statistics','графики переключений и статистику сбоев'],traffic:['traffic chart and counters','график и счётчики трафика'],ranking:['speed tests and server ranking','тесты скорости и рейтинг серверов'],quality:['server quality statistics','статистику качества серверов'],speed:['speed test history','историю тестов скорости'],all:['all charts and statistics','все графики и статистику']};
+function statsResetError(code){
+  var node=typeof autoCodeNotice==='function'?autoCodeNotice(code):E('p',{},code);
+  if(typeof ui!=='undefined'&&ui&&typeof ui.showModal==='function')ui.showModal(bi('Reset did not complete','Сброс не выполнен'),[node,E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
+}
+function statsResetRun(scope,button){
+  var call=rpc.declare({object:'homensai-vpn',method:'stats_reset',params:['scope'],expect:{}}),status=rpc.declare({object:'homensai-vpn',method:'status',expect:{}});
+  button.disabled=true;var label=button.textContent;button.textContent=bi('Resetting…','Сбрасываю…');
+  function done(){button.disabled=false;button.textContent=label;}
+  return Promise.resolve(call(scope)).then(function(result){
+    if(!result||result.queued!==true){done();statsResetError(result&&result.code||'STATS-RESET-FAILED');return;}
+    var deadline=Date.now()+45000;
+    function wait(){
+      return Promise.resolve(status()).then(function(s){
+        var r=s&&s.stats_reset;
+        if(r&&r.nonce===result.nonce){
+          done();
+          if(r.done!==true){statsResetError(r.code||'STATS-RESET-FAILED');return;}
+          if((scope==='auto'||scope==='all')&&typeof autoLivePoints!=='undefined')autoLivePoints=[];
+          if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,E('p',{},bi('Reset done: the old data is archived on the router, measurements start again from zero.','Сброс выполнен: старые данные сохранены в архив на роутере, измерения начались заново.')),'info');
+          return;
+        }
+        if(Date.now()>deadline){done();statsResetError('STATS-RESET-UNCONFIRMED');return;}
+        return new Promise(function(resolve){setTimeout(resolve,3000);}).then(wait);
+      },function(){if(Date.now()>deadline){done();statsResetError('STATS-RESET-UNCONFIRMED');return;}return new Promise(function(resolve){setTimeout(resolve,3000);}).then(wait);});
+    }
+    return wait();
+  },function(){done();statsResetError('STATUS-REQUEST-FAILED');});
+}
+function statsResetButton(scope){
+  var name=STATS_RESET_NAMES[scope]||STATS_RESET_NAMES.all;
+  var button=E('button',{'type':'button','class':'cbi-button hv-stats-reset','data-stats-reset-button':scope,'click':function(event){
+    if(event&&event.preventDefault)event.preventDefault();
+    var self=event&&event.currentTarget||button;
+    if(typeof ui==='undefined'||!ui||typeof ui.showModal!=='function')return statsResetRun(scope,self);
+    ui.showModal(bi('Reset the chart?','Сбросить график?'),[
+      E('p',{},bi('This resets the ','Будет сброшено: ')+bi(name[0],name[1])+'. '+bi('The current data is first saved to an archive on the router (the last 10 resets are kept), then measurements start again from zero.','Текущие данные сначала сохраняются в архив на роутере (хранятся 10 последних сбросов), затем измерения начинаются заново с нуля.')),
+      E('div',{'class':'right'},[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),' ',
+        E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(){ui.hideModal();statsResetRun(scope,self);}},bi('Reset','Сбросить'))])]);
+  }},bi('Reset chart','Сброс графика'));
+  return button;
+}
+function attachStatsResets(root){
+  if(!root||typeof root.querySelectorAll!=='function')return 0;var added=0;
+  root.querySelectorAll('[data-stats-reset]').forEach(function(card){
+    if(card.querySelector('[data-stats-reset-button]'))return;
+    card.appendChild(E('div',{'class':'hv-stats-reset-row'},statsResetButton(card.getAttribute('data-stats-reset'))));added++;
+  });
+  return added;
+}
+/* "Go back" at the bottom of every page: the previous page and the scroll position where the owner was. */
+var PAGE_BACK_STACK=[],PAGE_BACK_GOING=false,pageBackButton=null;
+function pageBackRemember(page,y){
+  if(PAGE_BACK_GOING||typeof page!=='string'||!page)return;
+  var last=PAGE_BACK_STACK[PAGE_BACK_STACK.length-1];
+  if(last&&last.page===page)last.y=y;else PAGE_BACK_STACK.push({page:page,y:y});
+  if(PAGE_BACK_STACK.length>30)PAGE_BACK_STACK.shift();
+}
+function pageBackGo(){
+  var previous=PAGE_BACK_STACK.pop();if(!previous)return false;
+  var link=document.querySelector('[data-hv-tab="'+previous.page+'"]');if(!link){PAGE_BACK_STACK.push(previous);return false;}
+  PAGE_BACK_GOING=true;try{link.click();}finally{PAGE_BACK_GOING=false;}
+  setTimeout(function(){window.scrollTo(0,previous.y||0);},60);return true;
+}
+function pageBackPlace(root,page){
+  var host=root&&root.querySelector('[data-hv-page="'+page+'"]');if(!host)return null;
+  if(!pageBackButton)pageBackButton=E('button',{'type':'button','class':'cbi-button hv-page-back','click':function(){pageBackGo();}},bi('← Go back','← Вернуться назад'));
+  if(host.lastChild!==pageBackButton)host.appendChild(pageBackButton);
+  if(PAGE_BACK_STACK.length)pageBackButton.removeAttribute('hidden');else pageBackButton.setAttribute('hidden','');
+  return pageBackButton;
+}
 function hideErrorBack(){errorReturn=null;if(errorBackButton)errorBackButton.setAttribute('hidden','');if(errorBackTimer){clearInterval(errorBackTimer);errorBackTimer=null;}}
 function showErrorBack(){
   if(!document.querySelector('.hv-app')||!errorReturn)return;

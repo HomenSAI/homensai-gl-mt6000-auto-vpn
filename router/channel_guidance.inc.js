@@ -29,13 +29,13 @@ function splitRoleRows(rows,status,inventory,now){
   return {pair:pair,other:ordered.filter(function(p){return !pair.some(function(q){return p.id===q.id;});})};
 }
 function channelCardHosts(rows,status,inventory,cards){
-  var split=splitRoleRows(rows,status,inventory,Date.now()/1000),ids=split.pair.map(function(p){return p.id;}),other=E('div',{'class':'hv-server-grid'});
+  var split=splitRoleRows(rows,status,inventory,(typeof routerWall==='function'?routerWall():Date.now()/1000)),ids=split.pair.map(function(p){return p.id;}),other=E('div',{'class':'hv-server-grid'});
   var details=rememberDisclosure(E('details',{'class':'hv-channel-more','data-channel-more':'1'},[
     E('summary',{},bi('More VPN servers','Ещё VPN-серверы')+' ('+split.other.length+')'),other]),'channels-other');
   return {get:function(p){return ids.indexOf(p.id)>=0?cards:other;},finish:function(){if(split.other.length)cards.appendChild(details);}};
 }
 function roleDescription(p,status,inventory){
-  var ids=rolePairIds(status,inventory,Date.now()/1000),role=p&&p.id===ids[0]?bi('Primary channel','Основной канал'):p&&p.id===ids[1]?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
+  var ids=rolePairIds(status,inventory,(typeof routerWall==='function'?routerWall():Date.now()/1000)),role=p&&p.id===ids[0]?bi('Primary channel','Основной канал'):p&&p.id===ids[1]?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   return role;
 }
 function endpointText(p,now){
@@ -61,7 +61,7 @@ function currentCheckServerCell(p,now){
   return E('td',{},[E('strong',{},serverTitle(p)),E('br'),E('small',{'class':'hv-server-address'},endpointText(p,now))]);
 }
 function renderCompactCascade(status,inventory){
-  var now=Date.now()/1000,split=splitRoleRows(status.profiles||[],status,inventory||{},now),recommendation=reliabilityRecommendation(status,inventory||{},now);
+  var now=(typeof routerWall==='function'?routerWall():Date.now()/1000),split=splitRoleRows(status.profiles||[],status,inventory||{},now),recommendation=reliabilityRecommendation(status,inventory||{},now);
   function row(p){var use=channelDisplayUse(p,status,inventory||{});return E('div',{'class':'hv-cascade-item','data-profile':p.id},[
     E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'aria-hidden':'true'}),
     E('div',{},[E('strong',{},roleDescription(p,status,inventory||{})),E('p',{},serverTitle(p)),E('small',{},endpointText(p,now)),E('p',{},use.label)])]);}
@@ -84,7 +84,7 @@ function channelReliability(profile,status,now){
   return {n:rows.length,bad:bad,loss:loss,minutes:Math.round(RELIABILITY_WINDOW/60),unreliable:loss>=RELIABILITY_LIMIT};
 }
 function reliabilityText(r){
-  return bi('check loss ','потери проверок ')+Math.round(r.loss)+'% ('+r.bad+' '+bi('of ','из ')+r.n+' '+bi('checks in ','проверок за ')+r.minutes+' '+bi('min','мин')+')';
+  return bi('check loss ','потери проверок ')+Math.round(r.loss)+'% ('+r.bad+' '+bi('of ','из ')+r.n+' '+bi('in ','за ')+r.minutes+' '+bi('min','мин')+')';
 }
 function bestMeasuredAlternative(status,excludedIds){
   var rank=typeof dvRank==='function'?dvRank(status):{},best=null;
@@ -103,7 +103,7 @@ function reliabilityRecommendation(status,inventory,now){
   var rel=pair.map(function(p){return p?channelReliability(p,status,now):null;}),bad=rel.map(function(r){return !!(r&&r.unreliable);});
   if(!bad[0]&&!bad[1])return null;
   var best=bestMeasuredAlternative(status,ids),other=bad[0]?rel[1]:rel[0];
-  var tail=best?bi(' Best measured alternative: ',' Лучший по статистике кандидат: ')+serverTitle(best.p)+' ('+bi('success ','успех ')+Math.round(best.percent)+'% '+bi('over ','по ')+best.n+' '+bi('checks','проверкам')+').'
+  var tail=best?bi(' Best spare by statistics: ',' Лучший запасной по статистике: ')+serverTitle(best.p)+' ('+bi('success ','успех ')+Math.round(best.percent)+'% '+bi('over ','по ')+best.n+' '+bi('checks','проверкам')+').'
     :bi(' No other server has enough measurements yet: run a speed test in Tests.',' У других серверов пока мало измерений: запустите тест скорости в разделе «Тесты».');
   var text;
   if(bad[0]&&bad[1])text=bi('Both channels lose many checks (primary '+Math.round(rel[0].loss)+'%, reserve '+Math.round(rel[1].loss)+'%). Check the internet uplink first; then replace the worse server.','Оба канала теряют много проверок (основной '+Math.round(rel[0].loss)+'%, резерв '+Math.round(rel[1].loss)+'%). Сначала проверьте интернет-подключение роутера, затем замените худший сервер.');

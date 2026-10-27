@@ -48,7 +48,7 @@ function speedPanel(status,inventory,period,onPeriod){
   var ids=active.map(function(p){return p.id;});
   Object.keys(grouped).forEach(function(id){if(ids.indexOf(id)<0)ids.push(id);});
   ids=ids.map(function(id,i){return {id:id,i:i,time:grouped[id]&&grouped[id].last.time||0};}).sort(function(a,b){return b.time-a.time||a.i-b.i;}).map(function(row){return row.id;});
-  var section=E('section',{'class':'hv-chart-card hv-speed-panel'},[
+  var section=E('section',{'class':'hv-chart-card hv-speed-panel','data-stats-reset':'ranking'},[
     E('h3',{},bi('VPN server speed tests','Тесты скорости VPN-серверов')),
     E('p',{},bi('Tick the servers you want to measure and press “Test speed”. The same table fills in with the results. A test downloads and uploads a small amount of data through the VPN to Cloudflare; it is a sample of what the application sees, not an Ookla score. VPNs that are not connected cannot be ticked: this program never connects them.','Отметьте серверы, которые хотите измерить, и нажмите «Тестировать скорость». Эта же таблица заполнится результатами. Тест скачивает и отдаёт небольшой объём данных через VPN до Cloudflare; это выборочный результат на уровне приложения, а не оценка Ookla. Неподключённые VPN отметить нельзя: эта программа их не подключает.'))]);
   var table=E('table',{'class':'table hv-speed-table'},[]);

@@ -350,5 +350,71 @@ else:raise AssertionError('CLI/helper exceptions diverged')
         self.assertNotEqual(pair.config_digest('dhcp',after+b"\nconfig dnsmasq 'ovpnclient2'\n\toption disabled '1'\n",managed),pair.config_digest('dhcp',after,managed))
         self.assertNotEqual(pair.config_digest('dhcp',after.replace(b'4154',b'4155'),managed),pair.config_digest('dhcp',after,managed))
 
+    def held_session(self,code='PAIR-EXTERNAL-POLICY-CHANGE'):
+        pair.request(self.revision);self.state.update(id=pair.intent()['id'],phase='HELD',owned=[],recovery_error=code,started=1.0);pair.save(self.state)
+        with auto_control.control_lock():pair.stop_locked(self.revision)
+
+    def test_start_hands_over_a_session_held_only_by_an_outside_change(self):
+        self.held_session()
+        with patch.object(native,'journal_read',return_value={'phase':'ROLLED-BACK'}):
+            reply=pair.request(self.revision)
+        self.assertTrue(reply['accepted']);self.assertNotIn('blockers',reply)
+        saved=pair.read_state();self.assertEqual(saved['phase'],'STOPPED');self.assertEqual(saved['owned'],[])
+        self.assertEqual(saved['operator_resolution']['reason'],'AUTOMATIC-EXTERNAL-CHANGE-READOPT');self.assertFalse(saved['operator_resolution']['old_flags_restored'])
+        archives=list((self.persist/'session-recovery').glob('pair-'+self.state['id']+'-readopt-*.json'));self.assertEqual(len(archives),1)
+        self.assertEqual(json.loads(archives[0].read_text())['data']['phase'],'HELD')
+
+    def test_handover_never_applies_to_a_reserve_hold_unknown_codes_or_an_exhausted_budget(self):
+        for code,journal,events in (('PAIR-EXTERNAL-POLICY-CHANGE',{'phase':'HELD-ON-RESERVE'},[]),('PAIR-STATE-UNVERIFIED',{'phase':'ROLLED-BACK'},[]),('PAIR-EXTERNAL-POLICY-CHANGE',{'phase':'ROLLED-BACK'},[9990,9991,9992])):
+            with self.subTest(code=code,journal=journal,events=events):
+                (self.runtime/'pair-readopt.json').unlink(missing_ok=True)
+                for path in pair.paths():path.unlink(missing_ok=True)
+                if events:agent.atomic_json(self.runtime/'pair-readopt.json',{'events':events})
+                self.held_session(code)
+                with patch.object(native,'journal_read',return_value=journal),patch.object(pair.time,'time',return_value=10000):
+                    self.assertEqual(pair.request(self.revision)['blockers'],['PAIR-RECOVERY-REQUIRED'])
+                self.assertEqual(pair.read_state()['phase'],'HELD')
+
+    def test_running_session_adopts_a_change_made_outside_the_app_and_starts_again_by_itself(self):
+        pair.request(self.revision);first=pair.intent()['id'];self.state.update(id=first,phase='RUNNING',owned=[],started=1.0);pair.save(self.state)
+        backend=Mock();backend.order.return_value=(self.state['order'],self.state['policy_hash'])
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value='f'*64),patch.object(pair,'configs',return_value={}),patch.object(native,'publish')as publish:
+            self.assertTrue(pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision))
+        self.assertEqual(pair.read_state()['phase'],'STOPPED')
+        row=pair.intent();self.assertEqual(row['mode'],'on');self.assertNotEqual(row['id'],first);self.assertEqual(row['revision'],self.revision)
+        self.assertEqual(publish.call_args.args[0]['reason'],'PAIR-READOPTED')
+        # A persistent conflict is not retried forever: after the budget the ordinary held state returns.
+        for _ in range(pair.READOPT_LIMIT+1):
+            state=pair.read_state();pair.request(self.revision) if pair.intent().get('mode')!='on' else None
+            state.update(id=pair.intent()['id'],phase='RUNNING',owned=[]);pair.save(state)
+            with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value='f'*64),patch.object(pair,'configs',return_value={}),patch.object(native,'publish'):
+                pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision)
+        self.assertEqual(pair.read_state()['phase'],'HELD');self.assertEqual(pair.read_state()['recovery_error'],'PAIR-EXTERNAL-NETWORK-CHANGE')
+
+    def test_renaming_a_tunnel_does_not_change_the_policy_identity(self):
+        a={'.name':'cfg0592bd','.anonymous':True,'.type':'rule','name':'Tunnel 4','via':'ovpnclient2','enabled':'1','tunnel_id':'4192'}
+        b=dict(a,name='OpenVPN');c=dict(a,via='wgclient1')
+        self.assertEqual(native.policy_order([a]),native.policy_order([b]));self.assertEqual(native.policy_hash([a]),native.policy_hash([b]))
+        self.assertNotEqual(native.policy_hash([a]),native.policy_hash([c]))
+
+
+    def test_failed_start_and_held_session_name_their_code_in_the_public_status(self):
+        pair.request(self.revision);row=pair.intent();self.state.update(id=row['id'],phase='STOPPED');pair.save(self.state)
+        self.assertIsNone(auto_control.public_status()['failure'])
+        self.assertTrue(pair.fail_request(row,self.revision,ValueError('PAIR-EXTERNAL-POLICY-CHANGE')))
+        failure=auto_control.public_status()['failure'];self.assertEqual(failure['code'],'PAIR-EXTERNAL-POLICY-CHANGE');self.assertGreater(failure['time'],0)
+        for path in pair.paths():path.unlink(missing_ok=True)
+        self.state.update(phase='HELD',recovery_error='PAIR-EXTERNAL-NETWORK-CHANGE',started=5.0);pair.save(self.state)
+        self.assertEqual(auto_control.public_status()['failure']['code'],'PAIR-EXTERNAL-NETWORK-CHANGE')
+
+
+    def test_failed_primary_with_reserve_already_first_keeps_auto_running(self):
+        pair.request(self.revision);self.state['id']=pair.intent()['id'];pair.save(self.state)
+        selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64,'order':['t','s'],'source_rule':'s','target_rule':'t','direction':'first'}
+        backend=Mock();backend.diagnostic.return_value=([],selection);backend.order.return_value=(self.state['order'],self.state['policy_hash'])
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish')as publish,patch.object(native,'attempt')as attempt:
+            self.assertTrue(pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision))
+        attempt.assert_not_called();self.assertEqual(publish.call_args.args[0]['reason'],'RESERVE-ALREADY-FIRST');self.assertEqual(pair.intent()['mode'],'on')
+
 
 if __name__=='__main__':unittest.main()
