@@ -1,8 +1,84 @@
-## Alpha51 candidate: release checks and asserted page build / Проверки выпуска и сборки страницы
+## Alpha57 source candidate: minimal policy moves / Кандидат alpha57
+
+**0.9.1-alpha57-1**, dashboard132/ui98/help132. A correct order needs no UCI write/commit; an adjacent VPN swap needs one move and commit instead of six moves and commit. Every actual write retains fresh order/hash CAS, Stop revision and kernel fences; post-move, pre-commit and final checks remain. Parent/child diagnostics record bounded stage/type/file-line metadata without command arguments, stderr or exception text. The 50-second worker and 90-second transaction bounds are unchanged.
+
+All earlier unified three-site response, exact sums/rounding, role table, menu/hover/disclosure, footer, lazy-page and visible-refresh changes remain. Local PASS: **1122 application tests on each runtime without skips, 150 QA with two Windows-only skips, all 81 UI suites and privacy for 1463 public files**. Twelve new actual Lua/Linux reorder/CAS/Stop/budget cases and three safe-diagnostic cases are included. Two initial fixture failures (old no-op write expectation and a test-only global-scope leak) were corrected and both full runs repeated; production was unchanged. Exact CI, isolated build and physical manual/browser acceptance remain required. [Alpha56 actual failure](VERIFICATION-ALPHA56-2026-10-28.md) · [Formula](WEBSITE-RESPONSE.md).
+
+На выделенном MT3000 **alpha56**, Auto ON/RUNNING с подтверждённым резервом и ручным удержанием. Установка, Start, same-channel no-write и тесты трёх сайтов прошли. Настоящий переход на основной дважды безопасно откатился; alpha56 не выпущена как GitHub-релиз. Лимиты и защитные проверки не сбрасывались. В alpha57 убраны лишние записи; окончательная аппаратная приёмка ещё впереди.
+
+Публикация по выбору владельца: новая альфа плюс GitHub main, стабильный Latest v0.9.0. Task6 — отдельный документационный коммит после доставки без переустановки. MT6000 и Windows networking исключены.
+
+---
+
+## Alpha56 source candidate: bind manual policy observations / Кандидат alpha56
+
+**0.9.1-alpha56-1**, dashboard131/ui97/help131. Bind the validated current pair's process context before manual status, request, dispatch and held-reserve checks; bind the transaction context before legacy completion recovery. Reuse that backend for live order, settings and kernel evidence. Foreign fields/hashes, generation, Stop revision, quota and cooldown checks remain mandatory. The exact physical alpha55 comparison proved unbound mismatch and bound equality for the same live rules.
+
+The source retains the unified three-site response, exact sums/counts/rounding, fixed role table order, visible manual actions, explicit menu-to-top, current footer, lazy optional pages and visible-only refresh. [Measurement](WEBSITE-RESPONSE.md) · [Owner corrections](plans/OWNER-CORRECTIONS-2026-10-28.ru.md). Local PASS: **1107 application tests on each runtime without skips, 150 QA with two Windows-only skips, all 81 UI suites, privacy for 1454 public files**. Seven new cases use the actual Lua parser, Linux order/hash and FW3 attestation, including both directions, unchanged same-channel budget and foreign-change refusal. Immutable CI, isolated build and physical installation/manual/browser gates remain required.
+
+По последней проверке на выделенном MT3000 **alpha55**, Auto **RUNNING / OBSERVING** и действующие правила подтвердили основной канал после автоматического возврата. Оба VPN прошли полный тест трёх сайтов. Ручной API блокируется из-за отсутствующего контекста чтения правил, поэтому alpha55 не выпущена как GitHub-релиз. [Приёмка alpha55 и точные причины](VERIFICATION-ALPHA55-2026-10-28.md). Обе её зашифрованные копии сохранены.
+
+Владелец выбрал новую альфу с обновлением GitHub main; стабильный Latest остаётся v0.9.0. Primary MT6000 и Windows networking исключены. Task6 выполняется отдельным документационным коммитом после доставки без переустановки.
+
+---
+
+## Alpha55 source candidate: session fence and unified website response / Кандидат alpha55
+
+**0.9.1-alpha55-1**, dashboard130/ui96/help130. A current trial/revision fence keeps a historical closed activation journal from supplying old vendor-generation proof to a new session. Current-session bootstrap and existing COMMITTED/HELD behavior are retained.
+
+The owner's later choice adds one shared response metric for cards, tables, recommendations, graphs and statistics: the arithmetic mean of complete Google, Cloudflare and Wikipedia checks through each VPN. Timing covers fresh DNS, TCP, TLS and HTTP headers; it does not observe personal traffic or measure full browser rendering. Only 3/3 supplies a number; incomplete checks remain gaps with coverage. Old ICMP and health-probe HTTPS history are kept separate. [Formula and scope](WEBSITE-RESPONSE.md).
+
+Manual controls keep a visible action and a reason when blocked. The current-check table keeps configured primary first and reserve below, with Channel then Status columns. Every explicit sidebar click/reclick goes to the top; Back and error deep links retain their behavior. Live footer version must agree with the installed application. Tasks 4–5, earlier owner corrections, stock-derived identity and pre-write journal validation are retained.
+
+The final local source passed 1100 application tests on each runtime without skips, 150 QA tests (two explicit Windows-only skips), all 80 UI suites and privacy for all 1446 public files. Independent history/compatibility tests passed 69 cases on each runtime; actual Python history crossed the generated JavaScript factory in eight EN/RU cases. The main module is 872094 LF bytes versus alpha51 1248776, 30.16% smaller. Immutable CI, isolated build, backups, normal installation/Start, actual manual switching, final browser/performance acceptance and publication remain required.
+
+По последней физической проверке на выделенном MT3000 установлена **alpha54**, Auto **RUNNING / ON** через подтверждённый резерв, оба VPN проходили проверки. Полная приёмка Auto удержана старым закрытым журналом; alpha54 не опубликована. [Отчёт](VERIFICATION-ALPHA54-DEGRADED-2026-10-28.md). После всех проверок выбран выпуск новой альфы с обновлением GitHub main; стабильный Latest остаётся v0.9.0.
+
+---
+
+## Alpha54 source candidate: stock-derived identity and journal validation / Кандидат alpha54
+
+**0.9.1-alpha54-1**, dashboard129/ui95/help129. Main module 870003 bytes, **30.33% below alpha51**; Tasks 4–5 and all ten owner corrections are retained.
+
+Only the pinned selected no-override `options_in_used=0` derivation and IPv4-rule/non-rule section interleaving are normalized. Every field, duplicate, and relative order within each subsequence remains significant. Journal reader and writer share a pure validator; rollback validates live identity before recording it. The conditional alpha53 recovery requires an exact independent pre-alpha53 baseline, quiesced old writer, archived originals, durable CAS/descriptor, fresh verified reserve graph and ordinary guarded Stop. It never calls RTP or resets the budget.
+
+Local PASS: 1046 application tests without skips, 150 QA tests (two Windows-only skips), 77 UI suites and privacy for 1425 public files. Backend 1046 tests also passed separately on both runtimes; 25 stock-derived tests and 16 independent recovery scenarios passed on both. Immutable CI, isolated build, fresh backups, physical recovery/installation/Start, actual manual switching and native UI/performance acceptance remain required.
+
+На выделенном MT3000 установлена **alpha53**. Запрос Auto **OFF**, пара **HELD**, собственная VPN-блокировка сохранена; действующие правила подтверждают резерв. Alpha53 не опубликована. [Неудачная приёмка](VERIFICATION-ALPHA53-FAILED-2026-10-28.md). Старый baseline разобран actual libuci только в RAM с точным совпадением прежнего network identity, policy hash и порядка; открытые файлы не создавались. Эта проверка не заменяет допуск к восстановлению устройства.
+
+---
+
+## Alpha53 source candidate: cold-start runtime and failed-activation recovery / Кандидат alpha53
+
+**0.9.1-alpha53-1**, dashboard128/ui94/help128. Tasks 4–5 and the ten owner corrections are retained. The shipped main module is 870003 bytes versus alpha51 1248776 bytes, **30.33% smaller**.
+
+The pinned stock RTP script returns success without applying rules if its boot gate is missing. Alpha53 prepares only the exact known runtime prefix inside a guarded current command, without starting stock boot or other profiles; kernel readiness still requires actual readback. An inactive failed activation that changed no order can be closed only after bound policy, owner identity and the original missing-kernel fingerprint match, with an archived journal and CAS checks. Foreign state refuses recovery.
+
+Локально PASS: 1004 теста приложения без пропусков, 150 QA с двумя явными Windows-пропусками, 77 наборов UI и приватность 1413 публичных файлов. Серверные 1004 теста отдельно прошли на Python 3.11 и 3.9; 17 проверок подготовки и 13 независимых сценариев восстановления — на обеих средах. Один старый счётчик UI ожидал 44 описания вместо 45 после добавления кода; он исправлен с явной проверкой нового описания, весь UI повторно PASS. CI точного коммита ещё впереди. Далее обязательны отдельная сборка, копии, проверенное восстановление собственной неудачной записи, установка, Start, настоящее ручное переключение, браузерная приёмка и публикация.
+
+На выделенном MT3000 сейчас **alpha52**, по последней проверке **Auto OFF / STOPPED**, собственная защитная блокировка снята. Alpha52 прошла CI/установку, но запуск Auto отказал; её **не публиковали**. [Отказ и доказательства](VERIFICATION-ALPHA52-FAILED-2026-10-28.md). Журнал её неудачного применения сохранён для строгого восстановления перед обновлением. Успешные пробы отдельных VPN не являются подтверждением общего пути LAN.
+
+---
+
+## Alpha52 source candidate / Кандидат исходника alpha52
+
+Tasks 4–5 of the [work order](handoff/SOL-6.1-WORK-ORDER-2026-10-28.md), **0.9.1-alpha52-1**, dashboard127/ui93/help127, plus [ten owner corrections](plans/OWNER-CORRECTIONS-2026-10-28.ru.md):
+- Help, Training, full catalogue explanations and AI prompts load on first use. An eager code/title map keeps notices readable. Retry, deep links, search and return position are retained.
+- Each status poll rebuilds sidebar/shared Auto and the visible page; other pages are refreshed when opened. Pointer deferral, focus, scroll, outage clock and live timers are retained.
+- Manual selection is based on configured profile identities and fresh kernel marking rules, including a reserve-first initial order. Both directions, same-channel holds, Resume, original-session restoration and shared budgets have separate regression tests. Unknown or foreign rules refuse mutation.
+- ICMP Ping is measured through each selected VPN separately from HTTPS; it does not decide health or authorize switching. Sidebar/summary hit regions, Events menu-to-top, short reserve wording and responsive headers are corrected; duplicate VPN blocks are removed.
+
+Исходник ещё не установлен. Общая сборка и локальный прогон PASS: 975 тестов приложения без пропусков, 150 QA с двумя явными пропусками Windows-проверок, 77 наборов UI, приватность 1402 публичных файлов. Серверные 975 тестов также отдельно прошли на Python 3.11 и 3.9 без пропусков. Независимо пройдены 18 сценариев API/восстановления и шесть связок настоящая сохранённая история → UI/CSV на двух языках. Ранее общий прогон вернул FAIL в двух старых тестовых сценариях списания бюджета; они исправлены под фактический dispatch, правила лимита не ослаблены. Для alpha52 ещё нужны: CI точного коммита на двух средах, отдельная сборка с тем же хешем, копии до/после, установка, реальные переключения и браузерная проверка, публикация.
+
+Установленная alpha51 отдельно подтверждена ниже. Её отказ SOURCE-ORDER-MISMATCH и отсутствие штатных kernel-цепочек при проверке не скрываются успешными пробами отдельных VPN. Подтверждение новых правил маркировки будет ограничено новыми IPv4-потоками LAN без сохранённой VPN-метки; внешний клиент LAN, существующие соединения и IPv6 требуют отдельных испытаний.
+
+---
+
+## Alpha51 installed and published: release checks / Alpha51 установлена и опубликована
 
 Tasks 1–3 of the [work order](handoff/SOL-6.1-WORK-ORDER-2026-10-28.md): exact record-commit verification replaces a second CI run; CI covers tools, offline lab and executed Lua tests; dashboard patch anchors are asserted. The Task 3 conversion preserves generated page bytes (line endings ignored). Candidate image adds Lua/CJSON to the pinned Python 3.11 tools image without changing existing images.
 
-Кандидат alpha51: проверка записи пакета вместо повторного CI, проверки инструментов/стенда/Lua, проверка всех замен при сборке страницы. Полный CI, отдельная сборка, установка и публикация ещё не завершены. По последней передаче MT3000 работает на alpha50, Auto RUNNING; это пока не проверено в этой сессии.
+Alpha51 установлена на выделенный MT3000, процесс Auto RUNNING / OBSERVING. Полный CI двух сред, отдельная сборка с тем же хешем, проверка 89 файлов/HTTP/RPC, сохранности настроек и зашифрованных копий — PASS. [Публикация](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha51) и скачанные активы проверены; Gitea сохранена. [Доказательства и границы](VERIFICATION-ALPHA51-INSTALLED-2026-10-28.md). После доставки подтверждён отказ ручного переключения SOURCE-ORDER-MISMATCH и неверное определение выбранного канала; исправляется в alpha52. Общий путь LAN не подтверждён отдельными пробами туннелей.
 
 ---
 

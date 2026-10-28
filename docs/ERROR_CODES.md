@@ -1147,6 +1147,354 @@ VPN не подключён / VPN not connected
 
 **Action:** Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.
 
+## WEBSITE-*
+
+Подробность замера сайтов / Website measurement detail
+
+**RU:** Результат проверки сайтов или его архив не подтверждены. Эта подробность сама по себе не доказывает отказ VPN; старая метрика не подставляется.
+
+**EN:** A website result or its archive could not be verified. This detail alone does not establish a VPN failure; no older metric is substituted.
+
+**Что делать:** Дождитесь новой проверки. Сохраните код и посмотрите метод и историю ответов сайтов в «Помощи».
+
+**Action:** Wait for a fresh check. Preserve the code and inspect the website-response method and history in Help.
+
+## WEBSITE-IDENTITY-CHANGED
+
+Изменилась привязка VPN / VPN identity changed
+
+**RU:** Поколение или туннель замера не совпадает с показанным каналом. Старое значение не подставляется.
+
+**EN:** The measured VPN generation or tunnel no longer matches the displayed channel. No old value is substituted.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-DNS-FAILED
+
+Не прошёл DNS сайта / Website DNS failed
+
+**RU:** Имя одного из выбранных обычных сайтов не разрешилось через этот VPN. Это отдельный результат, не техническая проверка здоровья.
+
+**EN:** A selected ordinary website name could not be resolved through this VPN. This is separate from the technical health probes.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-HTTP-FAILED
+
+Не прошёл HTTP сайта / Website HTTP failed
+
+**RU:** Сайт не вернул ожидаемый HTTP-статус и полные заголовки. Полного среднего трёх сайтов нет.
+
+**EN:** The website did not return its expected HTTP status and complete headers. There is no complete three-site mean.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-TIMEOUT
+
+Истекло время ответа сайта / Website response timed out
+
+**RU:** Новая проверка сайта превысила ограниченное время. Отсутствующий замер не считается нулём миллисекунд.
+
+**EN:** A fresh website check exceeded its bounded deadline. Missing time is not a zero-millisecond response.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-TLS-FAILED
+
+Не прошёл TLS сайта / Website TLS failed
+
+**RU:** Новое HTTPS-соединение не смогло установить проверенный TLS с выбранным сайтом.
+
+**EN:** The fresh HTTPS connection could not establish verified TLS to the selected website.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-RESPONSE-FAILED
+
+Не получен ответ сайта / Website response failed
+
+**RU:** Отдельная проверка трёх сайтов не прошла. Она не даёт значение задержки и не меняет здоровье Auto или маршрутизацию.
+
+**EN:** The independent three-site check failed. It supplies no delay value and does not change Auto health or routing.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-UNAVAILABLE
+
+Замер сайтов недоступен / Website measurement unavailable
+
+**RU:** Свежего полного замера трёх сайтов с проверенной привязкой к VPN нет. ICMP и технический HTTPS его не заменяют.
+
+**EN:** No fresh complete identity-bound three-site result is available. ICMP and technical HTTPS times cannot replace it.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-PARTIAL
+
+Ответили не все сайты / Only some websites answered
+
+**RU:** Успешно ответили менее трёх выбранных сайтов. Показана полнота проверки; для среднего нужны все три.
+
+**EN:** Fewer than three selected websites answered successfully. Coverage is shown; an average requires all three.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-CHECK-PENDING
+
+Ожидается проверка сайтов / Website check pending
+
+**RU:** Фоновый замер трёх сайтов ещё выполняется. Открытие страницы не запускает дополнительный запрос.
+
+**EN:** The background three-site measurement is still being collected. Opening this page starts no extra request.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-NOT-SELECTED
+
+VPN вне измеряемой пары / VPN is outside the measured pair
+
+**RU:** Ограниченный замер трёх сайтов выполняется только для двух выбранных каналов. Страница не подключает другие профили.
+
+**EN:** Only the two selected VPN channels receive the bounded three-site measurement. No other profile is connected by this page.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-DATA-STALE
+
+Замер сайтов устарел / Website result is old
+
+**RU:** Исходное время завершения вышло за срок свежести. Повторная выдача кеша не обновляет замер.
+
+**EN:** The original completion time exceeds its freshness window. Publication of cached data does not renew a measurement.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-HISTORY-WRITE-FAILED
+
+История сайтов не сохранена / Website history was not saved
+
+**RU:** Отдельный архив ответов сайтов не удалось безопасно записать. Текущие проверки могут продолжаться; пропуски не дорисовываются.
+
+**EN:** The separate website-response archive could not be safely written. Current checks can continue; missing history stays empty.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-HISTORY-UNAVAILABLE
+
+История сайтов недоступна / Website history unavailable
+
+**RU:** Архив ответов сайтов или его контрольная сумма не подтверждены. Старая история технического HTTPS не подставляется.
+
+**EN:** The website-response archive or its checksum could not be verified. Old technical HTTPS history is not substituted.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## WEBSITE-HISTORY-PAIR-LIMIT
+
+Достигнут лимит пар истории / Website history pair limit reached
+
+**RU:** Ограниченный архив не может добавить ещё одну пару каналов в пределах лимита. Профили и старые значения не переименовываются.
+
+**EN:** The bounded archive cannot add another channel pair while preserving its limits. No profile or historical value is silently relabelled.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## KNOWN-STOCK-DERIVED-RECOVERY
+
+Служебные изменения учтены / Known stock changes reconciled
+
+**RU:** Остановленная неудачная операция сверена с точной проверенной копией и действующими служебными полями. Исходные журнал и состояние заархивированы, штатный защищённый Stop завершён. Это не выполненное переключение VPN и не разрешение принимать другие изменения.
+
+**EN:** The stopped failed operation was reconciled with the exact verified backup and current stock-derived fields. Original journal/state bytes were archived and ordinary guarded Stop completed. This is not a completed VPN switch or permission to accept other changes.
+
+**Что делать:** Завершите проверенное обновление и посмотрите свежий статус. Для Auto по-прежнему нужны штатные проверки готовности и разрешённый Старт. Сохраните доказательства неудачной операции.
+
+**Action:** Complete the reviewed update and inspect fresh status. Auto still needs its normal readiness checks and an explicit authorized Start. Keep the failed evidence.
+
+## RTP-BOOT-PRECONDITION-UNVERIFIED
+
+Не подтверждена штатная подготовка VPN / Router VPN runtime preparation is not confirmed
+
+**RU:** Штатному VPN-скрипту нужны известные временные каталоги и пустой служебный флаг. Не удалось подтвердить их подготовку, принадлежность или точный контракт прошивки. Успешное завершение скрипта само по себе не подтверждает наличие kernel-правил.
+
+**EN:** The pinned stock VPN script needs known runtime directories and an empty gate file before it can apply rules. Their preparation, ownership or exact firmware contract could not be confirmed. A successful script exit alone never proves that kernel rules exist.
+
+**Что делать:** Используйте проверенное обновление и штатный Старт. Приложение готовит только известные безопасные временные объекты в рамках текущей команды, затем проверяет действующие kernel-правила. Не запускайте полный штатный boot и не создавайте файлы поверх неизвестных путей вручную.
+
+**Action:** Use the reviewed update and normal Start procedure. The application prepares only the known safe runtime prefix under the current command, then checks actual kernel rules. Do not run full stock boot or create files over unknown paths manually.
+
+## KERNEL-POLICY-VERIFIED
+
+Правила выбора VPN проверены / Router VPN rules verified
+
+**RU:** Применённые правила меток пакетов и маршрутизации ядра соответствуют выбранным правилам VPN. Проверены только действующие правила; это не подтверждает доступ к интернету, итог переключения или независимую проверку клиента LAN.
+
+**EN:** The applied kernel packet-mark and routing rules match the selected VPN policy. This verifies the compiled rules only; it does not prove internet availability, a route-switch result or independent LAN-client acceptance.
+
+**Что делать:** Доступность связи и состояние Auto проверяйте по отдельным текущим результатам HTTPS/DNS и выбора канала. Для этого подтверждённого результата дополнительное изменение правил не нужно.
+
+**Action:** Use the separate current HTTPS/DNS and channel-selection results for connectivity and Auto state. No extra policy change is needed for this verified result.
+
+## KERNEL-POLICY-UNVERIFIED
+
+Действующие правила выбора VPN не подтверждены / Applied VPN selection rules are unverified
+
+**RU:** Действующие правила ядра не подтверждают ожидаемый выбор VPN для трафика. Подключение туннеля само по себе не доказывает, какой канал несёт трафик.
+
+**EN:** The current kernel rules do not confirm the expected VPN traffic selection. Tunnel connectivity alone cannot prove which channel carries traffic.
+
+**Что делать:** Проверьте текущие правила VPN и сохранённую причину отказа. Применяйте правила штатным проверенным способом и подтвердите результат перед повтором.
+
+**Action:** Inspect the current VPN policy and the recorded refusal. Use the normal reviewed policy application and verify its readback before retrying.
+
+## PAIR-POLICY-UNVERIFIED
+
+Правила основного и резервного VPN не подтверждены / Primary and reserve VPN policy is unverified
+
+**RU:** Приложение не может подтвердить соответствие выбранных основного и резервного VPN правилам роутера. Порядок списка не считается доказательством действующего маршрута.
+
+**EN:** The application cannot verify how the selected primary and reserve roles map to the router VPN rules. It does not assume that list order proves the active traffic route.
+
+**Что делать:** Проверьте выбранную пару и фактически применённые правила VPN. Сохраните причину отказа и повторяйте только после подтверждения привязки роутером.
+
+**Action:** Review the selected pair and the actual applied VPN policy. Keep the refusal evidence and retry only after the router confirms that binding.
+
+## MANUAL-ALREADY-SELECTED
+
+Этот канал уже выбран / This channel is already selected
+
+**RU:** Запрошенный канал уже выбран, его маршрут трафика проверен. Повторное переключение не нужно; этот результат не включает Auto.
+
+**EN:** The requested channel is already selected and its traffic path was verified. Another route switch is unnecessary; this result does not start Auto.
+
+**Что делать:** Продолжайте работу через подтверждённый канал. Дождитесь обновления состояния; не повторяйте переключение только ради изменения индикатора.
+
+**Action:** Continue using the verified channel. Wait for the current status to refresh; do not repeat a switch merely to change the indicator.
+
+## PING-FAILED
+
+Нет ответа ICMP / No ICMP reply
+
+**RU:** Отдельная ICMP-проверка через этот VPN не прошла. Это не меняет результаты HTTPS/DNS, выбранный маршрут или решение Auto.
+
+**EN:** The separate ICMP echo through this VPN did not complete successfully. This does not change its HTTPS/DNS health, selected route or Auto decision.
+
+**Что делать:** Дождитесь следующей Ping-проверки. Некоторые сети блокируют ICMP при работающем HTTPS; сравните отдельные результаты HTTPS/DNS.
+
+**Action:** Wait for the next Ping check. Some networks block ICMP even when HTTPS works; compare the independent HTTPS/DNS results.
+
+## PING-DATA-STALE
+
+ICMP-результат устарел / ICMP result is old
+
+**RU:** Сохранённый ICMP-результат старше допустимого срока. Прежние миллисекунды не показываются как текущее измерение.
+
+**EN:** The saved ICMP result is older than its permitted freshness window. Its old milliseconds are not shown as a current measurement.
+
+**Что делать:** Дождитесь фоновой проверки. Если данные остаются старыми, проверьте мониторинг и связь с роутером.
+
+**Action:** Wait for the next background check. If results remain old, inspect Monitoring and the router connection.
+
+## PING-CHECK-PENDING
+
+Ожидается ICMP-проверка / Waiting for an ICMP check
+
+**RU:** Текущее ICMP-измерение этого VPN ещё собирается. Миллисекунды не подставляются из HTTPS или прежнего подключения.
+
+**EN:** A current ICMP measurement for this VPN is still being collected. No milliseconds are invented from HTTPS or an earlier connection.
+
+**Что делать:** Дождитесь фоновой проверки: открытие страницы не отправляет дополнительный Ping-запрос.
+
+**Action:** Wait for the background check; opening the page sends no additional Ping request.
+
+## PING-UNAVAILABLE
+
+ICMP-измерение недоступно / ICMP measurement is unavailable
+
+**RU:** Для этого канала нет подтверждённого ICMP-измерения. Этот результат отделён от HTTPS/DNS и выбора канала трафика.
+
+**EN:** No verified ICMP measurement is available for this channel. The result is separate from HTTPS/DNS connectivity and traffic selection.
+
+**Что делать:** Проверьте мониторинг роутера и выбранную пару VPN. Не смешивайте этот результат с HTTPS/DNS; отсутствие Ping не считается измеренным отказом.
+
+**Action:** Inspect the router monitoring state and the selected VPN pair. Keep the HTTPS/DNS result separate; do not treat missing Ping as a measured outage.
+
+## PING-INACTIVE
+
+ICMP-проверка не выполняется / ICMP check is inactive
+
+**RU:** Этот VPN отключён или не подключён, поэтому текущее ICMP-измерение через него не выполняется.
+
+**EN:** This VPN is disabled or not connected, so no current ICMP measurement is taken through it.
+
+**Что делать:** Проверьте существующее VPN-подключение на роутере. Строка Ping не подключает туннель и не меняет Auto.
+
+**Action:** Review the existing VPN connection on the router. The Ping display does not connect a tunnel or change Auto.
+
+## PING-IDENTITY-CHANGED
+
+ICMP-результат относится к другому подключению / ICMP result belongs to another VPN connection
+
+**RU:** Изменились интерфейс, туннель или поколение VPN-подключения. Прежний ICMP-результат отброшен, а не приписан текущему подключению.
+
+**EN:** The VPN interface, tunnel or connection generation changed. The previous ICMP result is discarded instead of being attributed to the current connection.
+
+**Что делать:** Дождитесь, пока роутер подтвердит новое VPN-подключение и выполнит отдельную ICMP-проверку.
+
+**Action:** Wait until the router observes the new VPN connection and completes its own ICMP check.
+
+## PING-NOT-SELECTED
+
+VPN не входит в измеряемую пару / VPN is outside the measured pair
+
+**RU:** Фоновые ICMP-проверки выполняются для выбранных основного и резервного VPN. Этот профиль не входит в эту пару.
+
+**EN:** The background ICMP checks cover the selected primary and reserve VPNs. This profile is outside that pair.
+
+**Что делать:** Если вы хотели наблюдать этот VPN, проверьте выбранную пару. Открытие его информации не запускает проверку.
+
+**Action:** Review the selected pair if this is the VPN you intended to monitor. Opening its information does not start a probe.
+
+## UI-HELP-LOAD-FAILED
+
+Не удалось загрузить справку / Help could not be loaded
+
+**RU:** Не удалось загрузить модуль справки, обучения и каталога. Другие страницы продолжают работать.
+
+**EN:** The optional Help, Training and catalogue module could not be loaded. Other pages keep working.
+
+**Что делать:** Нажмите «Повторить». Если ошибка остаётся, обновите страницу и проверьте связь с роутером.
+
+**Action:** Press Retry. If the failure continues, reload the page and check the router connection.
+
 ## PUBLICATION-RECORD-SCOPE
 
 Запись выпуска отличается от проверенного исходника / Release record differs from the tested source
@@ -6472,6 +6820,54 @@ Auto работает / Auto running
 **Что делать:** Фактический результат операции ещё не проверен. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
 **Action:** The operation result has not been verified. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-CHANNEL-SELECTION
+
+Запись выбора канала / Channel selection record
+
+**RU:** Сохранённые направление и завершение описывают эту операцию. Сам этап контроллера не доказывает выбранный маршрут или доступность независимого клиента LAN.
+
+**EN:** The saved direction and completion describe this operation. A controller phase alone does not prove the selected route or independent LAN availability.
+
+**Что делать:** Роутер сохранил операцию выбора канала. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The router recorded a channel selection operation. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-POLICY-REAPPLY
+
+Повторное применение правил VPN / VPN rules applied again
+
+**RU:** Это применение правил, а не переключение канала или результат проверки интернета. Завершение и сохранённая причина проверки правил указываются отдельно.
+
+**EN:** This is a rule application, not a channel switch or an internet availability result. Completion and the saved policy reason are separate facts.
+
+**Что делать:** Роутер повторно применил правила VPN без изменения порядка каналов. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The router applied VPN rules without changing channel order. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-ROUTER-OBSERVATION
+
+Наблюдение состояния роутера / Router state observation
+
+**RU:** В этом наблюдении смена порядка каналов не записана. Используйте сохранённое подтверждение выбора на момент события; этап контроллера не считается новым переключением.
+
+**EN:** This observation did not record a channel-order change. Use the saved event-time selection evidence rather than interpreting the controller phase as a new switch.
+
+**Что делать:** Сохранено состояние управления роутера; переключение канала не заявлено. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** Router control state was recorded; no channel switch is claimed. Read the separate saved reason code if present; observation and a confirmed route change are different.
+
+## EVENT-DIRECTION-NOT-SAVED
+
+Направление перехода не сохранено / Switch direction not recorded
+
+**RU:** В событии нет корректно сохранённых исходного канала или назначения. Текущая пара и этап контроллера не используются для выдумывания направления.
+
+**EN:** The event lacks valid explicit source or destination metadata. The current pair and controller phase are not used to invent the missing direction.
+
+**Что делать:** Сохранённые данные не подтверждают направление этой операции. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+
+**Action:** The saved data does not establish the direction of this operation. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-VENDOR-WAIT
 

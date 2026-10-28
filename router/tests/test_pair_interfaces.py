@@ -49,7 +49,7 @@ class PairStartupTests(unittest.TestCase):
         self.assertEqual(pair.intent()['id'],current['id'])
 
     def test_already_connected_second_slot_is_not_reconnected(self):
-        selection={'source':{'interface':'wgclient1','protocol':'wireguard'},'target':{'interface':'ovpnclient2','protocol':'openvpn'},'process_bindings':None,'order':['a','b'],'hash':'c'*64}
+        selection={'source':{'id':'wireguard:peer_1','interface':'wgclient1','protocol':'wireguard'},'target':{'id':'openvpn:1_1','interface':'ovpnclient2','protocol':'openvpn'},'source_rule':'a','target_rule':'b','direction':'first','process_bindings':None,'order':['a','b'],'hash':'c'*64}
         managed=members.selection(selection);rows=[{'.name':name,'proto':proto,'auto':'0','disabled':'0','config':'existing'}for name,proto in managed.items()]
         backend=Mock()
         with patch.object(pair,'preflight',return_value=selection),patch.object(pair,'network',return_value=rows),patch.object(pair,'configs',return_value={}),patch.object(pair,'quiet'),patch.object(pair,'set_disabled') as write,patch.object(native,'forward_dispatch') as dispatch:

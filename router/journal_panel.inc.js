@@ -419,6 +419,10 @@ var JOURNAL_TYPES={
 JOURNAL_TYPES.CONFLICT={code:'EVENT-RECORD-CONFLICT',label:['Record data conflict','Ошибка данных записи'],message:['The saved event contains conflicting results','В сохранённом событии противоречивые результаты'],meaning:['Success and failure were both recorded. Do not treat this as a successful channel or confirmed switch; inspect the saved diagnostic data.','Одновременно записаны успех и ошибка. Это не считается успешной проверкой или подтверждённым переходом; проверьте сохранённые диагностические данные.'],level:'error'};
 Object.assign(JOURNAL_TYPES,{"CANCELLED": {"code": "EVENT-COMMAND-CANCELLED", "label": ["Command cancelled", "Команда отменена"], "message": ["The requested operation was cancelled", "Запрошенная операция отменена"], "meaning": ["Cancellation was recorded. The resulting route or cleanup still requires its own confirmation.", "Зафиксирована отмена. Итоговый маршрут или завершение очистки подтверждаются отдельно."], "level": "warning"}, "CLAIMED": {"code": "EVENT-COMMAND-ACCEPTED", "label": ["Command accepted", "Команда принята"], "message": ["The controller accepted the command for processing", "Контроллер принял команду в обработку"], "meaning": ["The worker accepted this command. It has not yet proved that the routing action completed.", "Исполнитель принял команду. Это ещё не доказывает завершение действия с маршрутом."], "level": "warning"}, "QUEUED": {"code": "EVENT-COMMAND-QUEUED", "label": ["Command queued", "Команда в очереди"], "message": ["The command is waiting in the queue", "Команда ожидает выполнения в очереди"], "meaning": ["Queue acceptance is separate from execution and verified completion.", "Принятие в очередь отличается от выполнения и подтверждённого завершения."], "level": "warning"}, "IDLE": {"code": "EVENT-CONTROLLER-IDLE", "label": ["Waiting for a command", "Ожидание команды"], "message": ["The operation handler is idle", "Исполнитель операций ожидает команду"], "meaning": ["This handler has no active operation. It does not alone prove that global Auto is off or either channel is unhealthy.", "У этого исполнителя нет активной операции. Это само по себе не доказывает выключение общего Auto или неисправность канала."], "level": "ok"}, "UNCONFIRMED": {"code": "EVENT-RESULT-NEEDS-VERIFICATION", "label": ["Verify the result", "Нужна проверка результата"], "message": ["The operation result has not been verified", "Фактический результат операции ещё не проверен"], "meaning": ["The saved data does not confirm actual completion. Inspect current state before repeating the action; do not invent successful routing.", "Сохранённые данные не подтверждают фактическое выполнение. Перед повтором сверьте текущее состояние; успешная маршрутизация не предполагается."], "level": "warning"}});
 JOURNAL_TYPES["HELD-ON-RESERVE"]=JOURNAL_TYPES["STOPPED-ON-RESERVE"];
+JOURNAL_TYPES.CHANNEL_SELECTION={code:'EVENT-CHANNEL-SELECTION',label:['Channel selection record','Запись выбора канала'],message:['The router recorded a channel selection operation','Роутер сохранил операцию выбора канала'],meaning:['The saved direction and completion describe this operation. A controller phase alone does not prove the selected route or independent LAN availability.','Сохранённые направление и завершение описывают эту операцию. Сам этап контроллера не доказывает выбранный маршрут или доступность независимого клиента LAN.'],level:'warning'};
+JOURNAL_TYPES.POLICY_REAPPLY={code:'EVENT-POLICY-REAPPLY',label:['VPN rules applied again','Повторное применение правил VPN'],message:['The router applied VPN rules without changing channel order','Роутер повторно применил правила VPN без изменения порядка каналов'],meaning:['This is a rule application, not a channel switch or an internet availability result. Completion and the saved policy reason are separate facts.','Это применение правил, а не переключение канала или результат проверки интернета. Завершение и сохранённая причина проверки правил указываются отдельно.'],level:'warning'};
+JOURNAL_TYPES.ROUTER_OBSERVATION={code:'EVENT-ROUTER-OBSERVATION',label:['Router state observation','Наблюдение состояния роутера'],message:['Router control state was recorded; no channel switch is claimed','Сохранено состояние управления роутера; переключение канала не заявлено'],meaning:['This observation did not record a channel-order change. Use the saved event-time selection evidence rather than interpreting the controller phase as a new switch.','В этом наблюдении смена порядка каналов не записана. Используйте сохранённое подтверждение выбора на момент события; этап контроллера не считается новым переключением.'],level:'ok'};
+JOURNAL_TYPES.DIRECTION_NOT_SAVED={code:'EVENT-DIRECTION-NOT-SAVED',label:['Switch direction not recorded','Направление перехода не сохранено'],message:['The saved data does not establish the direction of this operation','Сохранённые данные не подтверждают направление этой операции'],meaning:['The event lacks valid explicit source or destination metadata. The current pair and controller phase are not used to invent the missing direction.','В событии нет корректно сохранённых исходного канала или назначения. Текущая пара и этап контроллера не используются для выдумывания направления.'],level:'warning'};
 function journalCodeRow(code){
   if(typeof ERROR_ROWS==='undefined'||typeof code!=='string')return null;
   return ERROR_ROWS.find(function(r){return r[0]===code;})||ERROR_ROWS.find(function(r){return r[0].endsWith('*')&&code.indexOf(r[0].slice(0,-1))===0;})||null;
@@ -426,6 +430,14 @@ function journalCodeRow(code){
 JOURNAL_TYPES.STARTING={code:'EVENT-START-CONFIRMATION-PENDING',label:['Start awaiting confirmation','Запуск ожидает подтверждения'],message:['Start accepted; waiting for the controller','Запрос включения принят; ожидается подтверждение контроллера'],meaning:['The Start request is recorded while the previous stopped state is still visible. This is not another Stop command.','Запрос Start сохранён, пока ещё видно прежнее остановленное состояние. Это ожидание запуска, а не новая команда Stop.'],level:'warning'};
 JOURNAL_TYPES.VENDOR_WAIT={code:'EVENT-VENDOR-WAIT',label:['Waiting for router operation','Ожидание операции роутера'],message:['Waiting for the stock network operation or lock to clear','Ожидание завершения штатной сетевой операции или снятия её блокировки'],meaning:['A GL.iNet worker or lock was observed. The controller defers switching decisions until it clears; the record alone does not establish a VPN outage. The exact worker may not have been retained.','Обнаружен обработчик или блокировка GL.iNet. Контроллер временно откладывает решения о переключении; сама запись не подтверждает отказ VPN. Конкретный обработчик мог не сохраниться в истории.'],level:'warning'};
 function journalDefinition(entry){
+  var transition=savedTransition(entry);
+  if(transition.present){
+    if(transition.outcome==='refused')return Object.assign({},JOURNAL_TYPES.CHANNEL_SELECTION,{level:'warning'});
+    if(transition.reapply)return JOURNAL_TYPES.POLICY_REAPPLY;
+    if(transition.unchanged)return JOURNAL_TYPES.ROUTER_OBSERVATION;
+    if(!transition.to)return JOURNAL_TYPES.DIRECTION_NOT_SAVED;
+    return Object.assign({},JOURNAL_TYPES.CHANNEL_SELECTION,{level:transition.completed&&['committed','restored'].indexOf(transition.outcome)>=0?'ok':'warning'});
+  }
   if(entry.state==='BLOCKED'&&entry.code==='VENDOR-WORKER-BUSY')return JOURNAL_TYPES.VENDOR_WAIT;
   if((entry.state==='OK'||entry.code==='OK')&&(entry.state==='FAILURE'||entry.kind==='FAILURE'||entry.state==='OK'&&entry.code&&entry.code!=='OK'&&entry.level==='error'))return JOURNAL_TYPES.CONFLICT;
   if(entry.return_primary===true||entry.state==='ROLLED-BACK'&&entry.original_restored===true)return JOURNAL_TYPES.RETURNED;
@@ -433,7 +445,7 @@ function journalDefinition(entry){
   if(JOURNAL_TYPES[entry.kind])return JOURNAL_TYPES[entry.kind];
   if(entry.code==='OK')return JOURNAL_TYPES.OK;
   var r=journalCodeRow(entry.code||entry.state);
-  return r?{code:r[0],label:[r[2],r[3]],message:[r[2],r[3]],meaning:[r[4],r[5]],level:entry.level}:JOURNAL_TYPES.LEGACY;
+  return r?{code:r[0],label:[r[2],r[3]],message:[r[2],r[3]],meaning:[r[4]||'Open this code to load its detailed explanation.',r[5]||'Откройте этот код для загрузки подробного объяснения.'],level:entry.level}:JOURNAL_TYPES.LEGACY;
 }
 function journalStateText(entry){var t=journalDefinition(entry);return bi(t.label[0],t.label[1]);}
 function ensureJournalDictionary(){
@@ -468,6 +480,13 @@ function renderChannelBadge(model){
     circle('source','M',main),E('span',{'class':'hv-channel-arrow','aria-hidden':'true'},model.from?(reverse?'←':'→'):'·'),circle('target','R',reserve)]);
 }
 function journalChannelModel(entry){
+  var transition=savedTransition(entry);
+  if(transition.present){
+    if(!transition.to||!transition.changed||transition.unchanged||transition.reapply||transition.outcome==='refused')return null;
+    if(transition.completed&&['committed','restored'].indexOf(transition.outcome)>=0)return {phase:'confirmed',from:transition.from,to:transition.to};
+    if(!transition.completed&&['APPLYING','WAIT-CLIENT','ARMED','RESTORING'].indexOf(entry.state)>=0)return {phase:'pending',from:transition.from,to:transition.to};
+    return null;
+  }
   var pair=entry.source&&entry.target&&entry.source!==entry.target;
   if(pair&&['APPLYING','WAIT-CLIENT','ARMED'].indexOf(entry.state)>=0)return {phase:'pending',from:'source',to:'target'};
   if(pair&&entry.state==='RESTORING')return {phase:'pending',from:'target',to:'source'};
@@ -488,26 +507,42 @@ function journalLatencySample(raw,profile,eventTime){
   if(typeof profile!=='string'||!/^(openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$/.test(profile)||!raw||typeof raw!=='object'||raw.profile!==profile||raw.metric!=='https-rtt-ms'||!Number.isFinite(eventTime)||!Number.isFinite(raw.time)||raw.time<eventTime-90||raw.time>eventTime+5||!Number.isFinite(raw.rtt_ms)||raw.rtt_ms<0||raw.rtt_ms>600000||typeof raw.interface!=='string'||!/^(wgclient|ovpnclient)[0-9]{1,4}$/.test(raw.interface)||(profile.indexOf('wireguard:')===0)!==(raw.interface.indexOf('wgclient')===0)||typeof raw.generation!=='string'||!/^[a-f0-9]{32}$/.test(raw.generation))return null;
   return {profile:profile,metric:'https-rtt-ms',time:raw.time,rtt_ms:raw.rtt_ms,interface:raw.interface,generation:raw.generation};
 }
+function journalWebsiteSample(raw,profile,time){
+  if(typeof profile!=='string'||!/^(openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$/.test(profile)||!raw||raw.profile!==profile||raw.metric!==WEBSITE_METRIC||raw.target_set!==WEBSITE_TARGET_SET||['ok','partial','failed'].indexOf(raw.state)<0||!Number.isInteger(raw.successes)||raw.successes<0||raw.successes>3||raw.attempted!==3||!Number.isFinite(raw.time)||!Number.isFinite(time)||time-raw.time< -5||time-raw.time>45||typeof raw.interface!=='string'||!/^(wgclient|ovpnclient)[0-9]{1,4}$/.test(raw.interface)||(profile.indexOf('wireguard:')===0)!==(raw.interface.indexOf('wgclient')===0)||typeof raw.generation!=='string'||!/^[a-f0-9]{32}$/.test(raw.generation)||raw.vendor_tunnel_id!==(raw.interface.indexOf('wgclient')===0?'wireguard:':'openvpn:')+raw.interface||!Array.isArray(raw.site_ms)||raw.site_ms.length!==3||!raw.site_ms.every(function(v){return v===null||Number.isFinite(v)&&v>=0&&v<=6000;})||raw.site_ms.filter(function(v){return v!==null;}).length!==raw.successes)return null;
+  if(raw.successes===3){if(raw.state!=='ok'||!Number.isFinite(raw.avg_ms)||raw.avg_ms<0||raw.avg_ms>6000||Math.abs(raw.avg_ms-raw.site_ms.reduce(function(a,b){return a+b;},0)/3)>.051)return null;}
+  else if(raw.avg_ms!=null||raw.state!==(raw.successes?'partial':'failed'))return null;
+  return {rtt_ms:raw.successes===3?raw.avg_ms:null,time:raw.time,successes:raw.successes};
+}
 function journalLatencyText(entry){
-  var reverse=['RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0||entry.return_primary===true,profile=reverse?entry.source:entry.target;
+  var transition=savedTransition(entry),reverse=['RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0||entry.return_primary===true,profile=transition.present?(transition.changed&&!transition.reapply&&transition.to?entry[transition.to]:null):reverse?entry.source:entry.target;
+  if(entry.website_response){var web=journalWebsiteSample(entry.website_response,profile,entry.time);return web&&web.rtt_ms!==null?bi('Three-site response: ','Ответ трёх сайтов: ')+websiteMs(web.rtt_ms)+' '+bi('ms','мс'):bi('Three-site response: —','Ответ трёх сайтов: —')+(web?' · '+web.successes+'/3':'');}
   var sample=journalLatencySample(entry.latency,profile,entry.time);
-  return sample?bi('Delay: ','Задержка: ')+sample.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')+' · '+bi('measured ','замер ')+new Date(sample.time*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):bi('Delay: no saved measurement at this event','Задержка: нет сохранённого замера на момент события');
+  return sample?bi('Technical health HTTPS: ','Техническая HTTPS-проверка: ')+sample.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')+' · '+bi('measured ','замер ')+new Date(sample.time*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):bi('Delay: no saved measurement at this event','Задержка: нет сохранённого замера на момент события');
 }
-function journalCurrentLatency(p,status,now){
-  if(!p||status.rpc_error||status.error||!Number.isFinite(status.time)||status.time<now-90||status.time>now+5||p.vendor_state!=='SETTLED'||p.vendor_tunnel_id!==p.protocol+':'+p.interface||p.code!=null||p.dns_ok!==true||!Number.isInteger(p.https_success)||p.https_success<2)return null;
-  return journalLatencySample({profile:p.id,metric:'https-rtt-ms',time:p.time,rtt_ms:p.rtt_ms,interface:p.interface,generation:p.vendor_generation},p.id,now);
-}
+function journalCurrentLatency(p,status,now){var model=channelPingModel(p,status,now);return model.rtt_ms===null?null:{profile:p.id,metric:WEBSITE_METRIC,time:p.website_response.time,rtt_ms:model.rtt_ms,interface:p.interface,generation:p.vendor_generation};}
 function journalMessage(entry,status,hideCode){
   var t=journalDefinition(entry),text=bi(t.message[0],t.message[1]);
   var profiles=Array.isArray(status.profiles)?status.profiles:[],p=profiles.find(function(p){return p.id===entry.profile;});
   if(entry.code==='VPN-003'&&entry.probe)text=entry.probe.https_success>0?bi('HTTPS checks passed partially; some traffic is passing','HTTPS-проверки прошли частично; часть трафика проходит'):bi('HTTPS availability was not confirmed by this check','Эта проверка не подтвердила HTTPS-доступность');
   if(entry.state==='RECOVERY'||entry.kind==='RECOVERY')text=entry.role==='source'?bi('Connection restored on the primary channel','Соединение восстановлено на основном канале'):entry.role==='target'?bi('Connection restored on the reserve channel','Соединение восстановлено на резервном канале'):bi('Connection restored · channel was not saved in this record','Соединение восстановлено · канал не сохранён в этой записи');
   else if(entry.profile)text=(entry.role==='source'?bi('Primary channel','Основной канал'):entry.role==='target'?bi('Reserve channel','Резервный канал'):bi('VPN profile','VPN-профиль'))+' — '+text;
-  if(entry.state==='APPLYING')text=bi('Switch: primary → reserve','Переход: основной → резервный');
-  if(entry.state==='RESTORING')text=bi('Switch: reserve → primary','Переход: резервный → основной');
-  if(entry.return_primary)text=bi('Returned: reserve → primary','Возврат: резервный → основной');
-  var sourced=entry.origin==='control'||entry.action_source||['APPLYING','RESTORING','COMMITTED','ROLLED-BACK','STOPPED'].indexOf(entry.state)>=0;
-  var switching=entry.return_primary===true||['APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE','RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0;
+  var transition=savedTransition(entry);
+  if(transition.present){
+    var names={source:bi('primary','основной'),target:bi('reserve','резервный')},direction=transition.to?(transition.changed&&transition.from?names[transition.from]+' → '+names[transition.to]:names[transition.to]):null;
+    if(transition.outcome==='refused')text=bi('Channel selection request was refused','Запрос выбора канала отклонён')+(transition.to?' · '+names[transition.to]:'');
+    else if(transition.reapply)text=transition.completed&&transition.outcome==='policy-verified'?bi('VPN rules verified; channel order unchanged','Правила VPN проверены; порядок каналов не изменился'):bi('Applying VPN rules again; no channel switch is claimed','Повторное применение правил VPN; переключение канала не заявлено');
+    else if(transition.unchanged)text=bi('Router state observation; no channel switch recorded','Наблюдение состояния роутера; переключение канала не записано');
+    else if(!direction)text=bi('Switch direction was not saved; see the recorded reason','Направление перехода не сохранено; смотрите записанную причину');
+    else if(transition.completed&&transition.outcome==='restored')text=bi('Return confirmed: ','Возврат подтверждён: ')+direction;
+    else if(transition.completed&&transition.outcome==='committed')text=(transition.changed&&transition.from?bi('Switch confirmed: ','Переход подтверждён: '):bi('Channel selected: ','Выбран канал: '))+direction;
+    else text=(transition.changed&&transition.from?bi('Switch requested: ','Запрошен переход: '):bi('Channel selection requested: ','Запрошен выбор канала: '))+direction;
+  }else{
+    if(entry.state==='APPLYING')text=bi('Switch: primary → reserve','Переход: основной → резервный');
+    if(entry.state==='RESTORING')text=bi('Switch: reserve → primary','Переход: резервный → основной');
+    if(entry.return_primary)text=bi('Returned: reserve → primary','Возврат: резервный → основной');
+  }
+  var sourced=transition.present&&transition.changed||entry.origin==='control'||entry.action_source||['APPLYING','RESTORING','COMMITTED','ROLLED-BACK','STOPPED'].indexOf(entry.state)>=0;
+  var switching=transition.present?transition.changed&&!transition.reapply&&transition.outcome!=='refused':entry.return_primary===true||['APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE','RESTORING','ROLLED-BACK'].indexOf(entry.state)>=0;
   var code=!hideCode&&entry.code&&entry.code!=='OK'&&entry.code!==entry.state?' · '+entry.code:'';
   if(entry.probe){
     text+=' · HTTPS '+entry.probe.https_success+'/3 · '+(entry.probe.dns_ok===true?bi('DNS passed','DNS прошёл'):entry.probe.dns_ok===false?bi('DNS failed','DNS не прошёл'):bi('DNS result unavailable','Результат DNS не сохранён'));
@@ -574,10 +609,21 @@ function journalRows(status,stored,now){
       if(!actionSource&&state==='STOPPED'&&e.control_action==='stop')actionSource=['manual','test','programmatic'].indexOf(e.control_source)>=0?e.control_source:'unknown';
       if(!actionSource&&state==='STARTING'&&e.control_action==='start')actionSource=['manual','test','programmatic'].indexOf(e.control_source)>=0?e.control_source:'unknown';
       var returnPrimary=state==='STOPPED'&&Array.isArray(e.codes)&&e.codes.indexOf('OPERATOR-RETURN')>=0;
-      var delayProfile=(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
+      var transition=savedTransition(e),delayProfile=transition.present?(transition.changed&&!transition.reapply&&transition.to?pair[transition.to]:null):(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
       var role=['source','target'].indexOf(e.role)>=0?e.role:null;
       if(!role&&profile&&pair.source&&pair.target&&pair.source!==pair.target)role=profile===pair.source?'source':profile===pair.target?'target':null;
       var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0],probe:probe};
+      if(Object.prototype.hasOwnProperty.call(e,'website_response')){
+        record.website_response={};if(journalWebsiteSample(e.website_response,delayProfile,e.time)){['profile','metric','target_set','state','time','avg_ms','successes','attempted','interface','generation','vendor_tunnel_id'].forEach(function(k){record.website_response[k]=e.website_response[k];});record.website_response.site_ms=e.website_response.site_ms.slice();}
+      }
+      if(transition.present){
+        record.transition_metadata_present=true;
+        ['from_role','destination_role','before_policy_role'].forEach(function(key){if(e[key]==='source'||e[key]==='target')record[key]=e[key];});
+        ['from_profile_id','destination_profile_id'].forEach(function(key){if(typeof e[key]==='string'&&/^(openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$/.test(e[key]))record[key]=e[key];});
+        ['route_changed','transition_completed','activation_reapply'].forEach(function(key){if(typeof e[key]==='boolean')record[key]=e[key];});
+        if(['committed','restored','refused','policy-verified'].indexOf(e.transition_outcome)>=0)record.transition_outcome=e.transition_outcome;
+        record.return_primary=transition.completed&&transition.outcome==='restored'&&transition.to==='source';
+      }
       var definition=journalDefinition(record);if(!(definition.code==='EVENT-DETAILS-NOT-SAVED'&&record.level==='error'))record.level=definition.level||record.level;result.push(record);
     });
   });

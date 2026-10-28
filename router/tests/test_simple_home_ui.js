@@ -1,4 +1,4 @@
-const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const {website}=require('./website_fixture');
 class N{
  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs={...attrs};this.children=[].concat(children).flat().filter(v=>v!=null);this.disabled=attrs.disabled!=null;this.textContent='';this.classList={toggle:(name,on)=>{const list=new Set((this.attrs.class||'').split(/\s+/));if(on)list.add(name);else list.delete(name);this.attrs.class=Array.from(list).join(' ');}};}
  setAttribute(k,v){this.attrs[k]=String(v);}getAttribute(k){return this.attrs[k]??null;}
@@ -16,7 +16,8 @@ function fixture(language){
  vm.createContext(c);for(const f of ['ui_logic','auto_panel','manual_panel','simple_home_policy','simple_home_panel'])vm.runInContext(fs.readFileSync('router/'+f+'.inc.js','utf8'),c);
  c.statusNow=()=>now;
  const inventory={settings:{terms_version:'1',onboarding_complete:true,onboarding_version:1,setup_complete:true,native_session_loss:true,enabled:true,plan_source:'a',plan_target:'b'}};
- const base={time:1000,profiles:[{id:'a',name:'Primary name',protocol:'wireguard',host:'primary.example',time:1000,interface:'wgclient1',dns_ok:true,https_success:2,rtt_ms:420},{id:'b',name:'Reserve name',protocol:'openvpn',host:'reserve.example',time:1000,interface:'ovpnclient1',dns_ok:true,https_success:2,rtt_ms:670}],native_failover:{time:1000,state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,source:'a',target:'b',blockers:[]},auto_control:{requested:'on',pair_phase:'RUNNING',requested_at:900,control_revision:'a'.repeat(32)},channel_path:{time:1000,confirmed:true,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a'}};
+ const base={time:1000,profiles:[{id:'a',name:'Primary name',protocol:'wireguard',host:'primary.example',time:1000,interface:'wgclient1',dns_ok:true,https_success:2,rtt_ms:420},{id:'b',name:'Reserve name',protocol:'openvpn',host:'reserve.example',time:1000,interface:'ovpnclient1',dns_ok:true,https_success:2,rtt_ms:670}],native_failover:{time:1000,state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,source:'a',target:'b',blockers:[]},auto_control:{requested:'on',pair_phase:'RUNNING',requested_at:900,control_revision:'a'.repeat(32)},channel_path:{time:1000,confirmed:true,kernel_policy_verified:true,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',valid_for:15,checked_at:1000,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a'}};
+ base.profiles=base.profiles.map((p,i)=>website(p,i?67.8:42.1));
  return {c,inventory,base,calls,replies,setNow:v=>now=v,now:()=>now,menu:()=>menu,open:()=>menu++};
 }
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -45,7 +46,7 @@ for(const language of ['en','ru']){
  let clicked=0;const original=new N('button',{'class':'hv-auto-power','click':()=>clicked++}),control={querySelector:selector=>selector==='.hv-auto-power'?original:null};
  const card=c.renderSimpleHome(base,inventory,model,control,f.open),nodes=card.all(),power=nodes.find(n=>n.attrs['data-simple-home-auto']);
  assert.equal(f.calls.length,0,'Rendering performs no RPC');assert.equal(nodes.filter(n=>n.attrs['data-simple-home-auto']).length,1);
- assert.equal(nodes.filter(n=>n.attrs['data-simple-open-menu']).length,1);assert(card.text().includes('primary.example'));assert(card.text().includes('420'));
+ assert.equal(nodes.filter(n=>n.attrs['data-simple-open-menu']).length,1);assert(card.text().includes('primary.example'));assert(card.text().includes('42.1'));assert(!card.text().includes('420'),'Minimum never substitutes old technical RTT');
  const details=nodes.find(n=>n.tag==='details'&&n.attrs['data-home-details']==='channels');assert(details&&!details.attrs.open,'Addresses/RTT initially collapsed');
  const reserve=nodes.find(n=>n.attrs['data-simple-role']==='target');assert(!/hv-manual-red|failed|inactive/.test(reserve.attrs.class),'Healthy standby is not an error');
  power.click();assert.equal(clicked,1);assert.equal(f.menu(),0,'Command does not abandon Minimum');

@@ -160,7 +160,7 @@ def release(tx):
             else:begin_resume(row)
 
 
-def gate(role):
+def gate(role,quiescent=lambda:True):
     """Called at a loop boundary, outside any network transaction/control lock."""
     if not path().exists():return False
     try:
@@ -195,6 +195,14 @@ def gate(role):
                                if p.get('administrative_state')=='enabled'))
                 if ready or time.monotonic()>=row['resume_deadline']:
                     path().unlink();return False
+                return True
+            # The monitor may have bounded asynchronous probe sockets still in flight.
+            # Check under the same lock that grants the quiet-window acknowledgement.
+            try:ready=quiescent() is True
+            except Exception:ready=False
+            if not ready:
+                if role in row['acks']:
+                    row['acks'].pop(role);atomic_json(path(),row)
                 return True
             row['acks'][role]={'owner':current,'time':time.monotonic()};atomic_json(path(),row)
             return True

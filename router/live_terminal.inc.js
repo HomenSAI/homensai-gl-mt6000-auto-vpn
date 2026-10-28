@@ -91,7 +91,7 @@ function terminalPinned(now){
     return {p:p,use:use,index:index,rank:rank};
   }).sort(function(a,b){return a.rank-b.rank||a.index-b.index;}).forEach(function(row){
     var p=row.p,use=row.use,index=row.index;
-    var sample=journalCurrentLatency(p,status,now),delay=sample?sample.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS'):(typeof channelCheckText==='function'?channelCheckText(p,now):bi('No fresh measurement','Нет свежего измерения'));
+    var measurement=channelPingModel(p,status,now),delay=measurement.rtt_ms===null?'— · '+measurement.text:measurement.text;
     state.pinned.appendChild(line(use?use.kind:'grey',index===0?bi('Primary channel','Основной канал'):bi('Reserve channel','Резервный канал'),p?use.label+(use.code?' · '+use.code:'')+' · '+endpointText(p,now)+' · '+delay:bi('No VPN selected','VPN не выбран')));
   });
   state.followButton.textContent=state.following?bi('Newest records on top','Новые записи сверху'):bi('Return to live ↑','К текущим событиям ↑');state.followButton.setAttribute('aria-pressed',state.following?'true':'false');

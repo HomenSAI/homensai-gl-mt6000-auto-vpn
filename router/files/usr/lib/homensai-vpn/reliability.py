@@ -135,7 +135,12 @@ class Reliability:
             if pair is None and native.get('source')!=native.get('target'):
                 event['role']='source' if key==native.get('source') else 'target' if key==native.get('target') else 'unknown'
             native_state=native.get('state')
-            event['selected']='target' if native_state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if native_state=='OBSERVING' and (native.get('certified') is True or native.get('readiness_verified') is True) else 'off' if native_state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED') else 'unknown'
+            required=(native.get('mode')=='continuous-pair' or native.get('proof_scope')=='router-probed-ipv4' or native.get('transition_metadata_present') is True)
+            if required:
+                from channel_path import observed_pair_role
+                event['selected']='off' if native_state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED') else observed_pair_role(native,now) or 'unknown'
+            else:
+                event['selected']='target' if native_state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if native_state=='OBSERVING' and native.get('certified') is True else 'off' if native_state in ('STOPPED','DISABLED','EXPIRED','SERVICE-STOPPED') else 'unknown'
 
     def prune(self,now):
         d=self.data

@@ -46,6 +46,7 @@ function faultFixture(now){
   for(const reserve of [false,true]){
     m=make();c=m.c;fixture=faultFixture(now);fixture.inventory.settings.pair_auto_mode='router-probed-ipv4';
     fixture.status.auto_control={pair_phase:'RUNNING'};Object.assign(fixture.status.native_failover,{mode:'continuous-pair',proof_scope:'router-probed-ipv4',certified:false,readiness_verified:!reserve,state:reserve?'COMMITTED':'OBSERVING'});
+    fixture.status.channel_path={time:fixture.status.time,confirmed:true,kernel_policy_verified:true,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',valid_for:15,checked_at:fixture.status.time,source_profile_id:fixture.status.native_failover.source,target_profile_id:fixture.status.native_failover.target,active_profile_id:fixture.status.native_failover[reserve?'target':'source']};
     panel=c.faultPanel(fixture.status,fixture.inventory,()=>Promise.resolve());assert(c.faultCurrentBinding(fixture.status,fixture.inventory).ready);
     click(button(panel,'Simulate traffic failure'));run=button(m.modal,'Start transition test');work=click(run);
     assert.equal(m.calls[0].args[0],reserve?'wireguard:b':'openvpn:a');m.finish('fault_start',{accepted:true,code:'FAULT-ACTIVE'});await work;

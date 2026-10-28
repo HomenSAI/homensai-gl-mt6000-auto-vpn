@@ -40,9 +40,8 @@ for(const d of ['a','b','c']){
   assert(node.attrs.class.includes('hv-dv-'+d),d+' class');
   assert.equal(node.all().filter(n=>n===control).length,1,d+': the real Auto card is embedded exactly once');
   const text=node.text();
-  assert(/Germany/.test(text)&&/Netherlands/.test(text),d+': countries from the profile names');
-  if(d==='b')assert(/nordvpn\.com/.test(text),'Calm exposes the non-secret saved profile identity requested by the owner');
-  assert(node.all().some(n=>n.attrs&&n.attrs['data-profile']==='c'),d+': a profile that is not connected is still listed');
+  if(d!=='b'){assert(/Germany/.test(text)&&/Netherlands/.test(text),d+': countries from the profile names');assert(node.all().some(n=>n.attrs&&n.attrs['data-profile']==='c'),d+': a profile that is not connected is still listed');}
+  else{assert(!/Your VPNs/.test(text),'owner removed the complete duplicate VPN section');assert(!node.all().some(n=>n.attrs&&n.attrs['data-profile']),'Calm Overview has no duplicate channel cards');}
 }
 // A: strip, KPIs, servers with sparkline, recent events with codes.
 let a=render(ctx,'a',fixture()).node,t=a.text();
@@ -60,20 +59,7 @@ let b=render(ctx,'b',fixture()).node;t=b.text();
 for(const missing of [undefined,null,'invalid'])assert(render(ctx,missing,fixture()).node.attrs.class.includes('hv-dv-b'),'missing/invalid design renders Calm');
 assert(!/Your VPN works|on the reserve/.test(t),'the state block was removed');assert(!/What happens if/.test(t),'the what-if block was removed');assert(!/Last thing that happened/.test(t),'the last event block was removed');
 ['#statistics','#help','#learn','#events'].forEach(h=>assert(b.all().some(n=>n.tag==='a'&&n.attrs.href===h),'B link '+h));
-assert(b.all().some(n=>/hv-dv-flag/.test(n.attrs.class||'')&&n.text().trim()==='DE'));
-// The VPN list has a separate status column with a lamp per profile.
-const lampCol=b.all().filter(n=>/hv-dv-statuscol/.test(n.attrs.class||''));assert.equal(lampCol.length,3);
-{
-  const list=b.all().find(n=>n.attrs.class==='hv-dv-list');
-  assert.equal(list.children.filter(n=>n.attrs.class==='hv-dv-item').length,2,'only primary and reserve initially visible');
-  const more=list.children.find(n=>n.attrs['data-vpn-more']==='1');assert(more&&!more.attrs.open);
-  assert(b.text().includes('de1459.nordvpn.com.udp')&&b.text().includes('nl-ams-001'),'actual saved profile identities supplement countries');
-  more.open=true;more.listeners.toggle();
-  const refreshed=render(ctx,'b',fixture()).node;
-  assert.equal(refreshed.all().find(n=>n.attrs['data-vpn-more']==='1').attrs.open,'open','ordinary refresh retains expansion');
-  more.open=false;more.listeners.toggle();
-}
-assert(lampCol[0].all().some(n=>/hv-check-green/.test(n.attrs.class||'')),'working VPN: green lamp');assert(lampCol[1].all().some(n=>/hv-check-yellow/.test(n.attrs.class||'')),'healthy standby: amber ready lamp, same as the sidebar');assert(lampCol[2].all().some(n=>/hv-check-red/.test(n.attrs.class||'')),'known disconnected: red lamp');
+assert(!b.all().some(n=>/hv-dv-list|hv-dv-item|hv-vpn-more|hv-dv-statuscol/.test(n.attrs.class||'')),'entire duplicate Your VPNs block is absent, not just its title');
 // C: status line with real identifiers, latency chart, log with codes, server table, keys.
 const c=render(ctx,'c',fixture()).node;t=c.text();
 const tc=t.replace(/\s+/g,' ');assert(/ctrl OBSERVING/.test(tc)&&/auto (OFF|ON)/.test(tc)&&/ui dashboard/.test(tc));assert(/Event log/.test(t)&&/DNS-001/.test(t));
@@ -120,7 +106,7 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  const st=fixture({native_failover:{state:'OBSERVING',time:now,source:'a',target:'b',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true},
    auto_control:{requested:'on',requested_at:now-60,pair_phase:'RUNNING',control_revision:'a'.repeat(32)},
    manual_switch_control:{mode:'continuous-pair',time:now,available:true,control_revision:'a'.repeat(32),primary:{allowed:false,blockers:['RETURN-NOT-APPLICABLE']},reserve:{allowed:true,blockers:[]}},
-   channel_path:{time:now,confirmed:true,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a',transitioning:false},
+   channel_path:{time:now,confirmed:true,kernel_policy_verified:true,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',valid_for:15,checked_at:now,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a',transitioning:false},
    accounting:{reliability:{route_history:{segments:[{start:now-100,end:now,kind:'source'}]}}}});
  const inv={settings:{enabled:true,interval:10,plan_source:'a',plan_target:'b',pair_auto_mode:'router-probed-ipv4'},profiles:st.profiles};
  const card=actual.renderAutoControl(st,inv,()=>Promise.resolve()),nodes=card.all();
@@ -139,7 +125,7 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  assert(statistics.all().some(n=>n.attrs.id==='hv-auto-live-chart')&&statistics.all().some(n=>n.attrs.id==='hv-auto-day-chart'),'both graphs remain available together');
  const manual=nodes.find(n=>n.attrs['data-manual-controls']==='1');assert(manual&&card.children.includes(manual),'manual panel is a separate sibling');
  const choices=manual.all().filter(n=>n.tag==='button'&&n.attrs['data-manual-direction']!=='resume'&&n.attrs['data-manual-direction']);
- assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-yellow'),'working spare card is amber');assert(!choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
+ assert.equal(choices.length,2);assert(choices[0].attrs.class.includes('hv-manual-green'));assert(choices[1].attrs.class.includes('hv-manual-yellow'),'working spare card is amber');assert(choices[0].disabled);assert(choices[0].all().some(n=>n.attrs.class==='hv-manual-enable'&&/In use|Используется/.test(n.text())));assert(choices[1].all().some(n=>n.attrs.class==='hv-manual-enable'));
  assert.strictEqual(card.children[2],manual,'manual selection immediately follows compact disclosure headers');
  statistics.open=true;statistics.listeners.toggle();
  let redrawn=actual.renderAutoControl(st,inv,()=>Promise.resolve());assert.equal(redrawn.children[1].attrs.open,'open');assert.equal(redrawn.children[1].attrs.open,'open','ordinary redraw preserves expansion');

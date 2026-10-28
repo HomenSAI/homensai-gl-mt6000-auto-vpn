@@ -10,7 +10,8 @@ function faultCurrentBinding(status,inventory){
   var pairMode=settings.pair_auto_mode==='router-probed-ipv4';
   if(pairMode){
     var running=(status.auto_control||{}).pair_phase==='RUNNING';
-    var selected=native.state==='OBSERVING'&&native.readiness_verified===true?'source':native.state==='COMMITTED'?'target':null;
+    var path=typeof channelPathSelection==='function'?channelPathSelection(status,now,source&&source.id,target&&target.id):null;
+    var selected=path&&path.selected&&source&&path.selected===source.id?'source':path&&path.selected&&target&&path.selected===target.id?'target':null;
     ready=!!(fresh&&running&&selected&&healthy&&settings.native_session_loss===true&&native.mode==='continuous-pair'&&native.proof_scope==='router-probed-ipv4'&&source&&target&&native.source===source.id&&native.target===target.id&&coord&&coord.known&&coord.state==='READY'&&coord.code==='CROSS-TUNNEL-READY');
     if(selected==='target'){var original=source;source=target;target=original;}
   }

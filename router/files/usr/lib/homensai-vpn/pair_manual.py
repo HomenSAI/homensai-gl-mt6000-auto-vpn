@@ -71,6 +71,7 @@ def controls():
         state=pair.read_state();revision=current_revision(RUNTIME)
         if not active(state,pair.intent(),revision):return result
         result.update(available=True,control_revision=revision,hold=state.get('manual_hold'))
+        backend=n.Linux();n.bind_policy_context(backend,state)
         native=read_json(n.STATE,{});status=read_json(RUNTIME/'status.json',{});journal=n.journal_read();queued=read()
         if not isinstance(native,dict) or not isinstance(status,dict):raise ValueError('PAIR-MANUAL-STATE-UNVERIFIED')
         fresh=type(native.get('time')) in (int,float) and 0<=now-native['time']<=30
@@ -79,20 +80,32 @@ def controls():
         # Use the observed fixed pair's native IDs; final dispatch revalidates policy.
         source=native.get('source');target=native.get('target')
         primary=list(reasons);reserve=list(reasons)
-        if journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):primary.append('RETURN-NOT-APPLICABLE')
-        if journal.get('phase') not in (None,'ROLLED-BACK'):reserve.append('TRANSACTION-IN-PROGRESS')
+        general=state.get('policy_roles') is not None
+        if general:
+            from pair_policy import state_order_matches
+            if journal.get('phase') not in (None,'ROLLED-BACK','COMMITTED','HELD-ON-RESERVE') or not state_order_matches(state,journal,backend.order()):
+                primary.append('TRANSACTION-IN-PROGRESS');reserve.append('TRANSACTION-IN-PROGRESS')
+        else:
+            if journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):primary.append('RETURN-NOT-APPLICABLE')
+            if journal.get('phase') not in (None,'ROLLED-BACK'):reserve.append('TRANSACTION-IN-PROGRESS')
         if not healthy(status,source,now):primary.append('SOURCE-NOT-HEALTHY')
         if not healthy(status,target,now):reserve.append('PAIR-MANUAL-TARGET-UNHEALTHY')
         ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
         events=ledger.get('events')
         if events:
             from recovery_settings import normalized
-            policy=normalized(n.Linux().policy()['settings'])
+            policy=normalized(backend.policy()['settings'])
             events,permitted=pair.budget(events,now,policy['attempt_window']*60,policy['attempt_limit'])
         else:events,permitted=pair.budget(events,now)
-        if not permitted:reserve.append('PAIR-RATE-LIMIT')
+        kernel=backend.attest_policy() if general else {}
+        known=kernel.get('role') if kernel.get('verified') is True else None
+        if not permitted:
+            if known!='target':reserve.append('PAIR-RATE-LIMIT')
+            if general and known!='source':primary.append('PAIR-RATE-LIMIT')
         elif events:
-            if now-events[-1]<max(policy['cooldown'],policy['min_dwell']):reserve.append('PAIR-MANUAL-COOLDOWN')
+            if now-events[-1]<max(policy['cooldown'],policy['min_dwell']):
+                if known!='target':reserve.append('PAIR-MANUAL-COOLDOWN')
+                if general and known!='source':primary.append('PAIR-MANUAL-COOLDOWN')
         result.update(primary={'allowed':not primary,'blockers':primary},reserve={'allowed':not reserve,'blockers':reserve},
                       resume={'allowed':not reasons and state.get('manual_hold') in ('source','target'),'blockers':reasons},blockers=reasons)
         return result
@@ -107,7 +120,8 @@ def request(direction,revision,request_source=None):
     def refuse(code):return {'accepted':False,'queued':False,'completed':False,'blockers':[code]}
     if direction not in ('primary','reserve','resume') or not isinstance(revision,str) or not re.fullmatch('[a-f0-9]{32}',revision):return refuse('PAIR-MANUAL-FIELDS')
     try:
-        backend=n.Linux();settings=backend.policy()['settings']
+        backend=n.Linux();n.bind_policy_context(backend,pair.read_state())
+        settings=backend.policy()['settings']
         if settings.get('pair_auto_mode')!=pair.MODE:return refuse('PAIR-MODE-NOT-CONFIGURED')
         control=controls();choice=control.get(direction,{})
         if not control.get('available') or not choice.get('allowed'):return refuse((choice.get('blockers') or control.get('blockers') or ['PAIR-MANUAL-NOT-AVAILABLE'])[0])
@@ -163,14 +177,67 @@ def consume(backend,state,settings,revision):
         pair.require_running(revision)
         if row['direction']=='resume':
             with control_lock(RUNTIME):
-                pair.require_running(revision);state.pop('manual_hold',None);pair.save(state)
+                pair.require_running(revision);state.pop('manual_hold',None);state.pop('manual_selection',None);pair.save(state)
             finish('COMPLETED');return True
+        n.bind_policy_context(backend,state)
         blockers,selection=backend.diagnostic();expected=row['selection']
         if blockers:raise n.Refused(blockers[0])
         if any(selection.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity')) or any(selection[k]['id']!=expected.get(k) for k in ('source','target')):
             raise n.Refused('MANUAL-CONFIG-CHANGED')
         journal=n.journal_read()
-        if row['direction']=='reserve':
+        if state.get('policy_roles') is not None:
+            from pair_policy import metadata,proof,state_order_matches
+            if (proof(selection)!=state['policy_roles'] or journal.get('tx')!=expected.get('tx')
+                    or journal.get('phase') not in (None,'ROLLED-BACK','COMMITTED','HELD-ON-RESERVE')
+                    or not state_order_matches(state,journal,backend.order())):
+                raise n.Refused('MANUAL-CONFIG-CHANGED')
+            hold='source' if row['direction']=='primary' else 'target'
+            if backend.health(selection[hold]['id']) is not True:
+                raise n.Refused('SOURCE-NOT-HEALTHY' if hold=='source' else 'PAIR-MANUAL-TARGET-UNHEALTHY')
+            kernel=backend.attest_policy(selection)
+            if kernel.get('verified') is True and kernel.get('role')==hold:
+                from failure_diagnosis import profile_identity
+                if kernel.get('policy_hash')!=selection['hash'] or kernel.get('order')!=selection['order']:
+                    raise n.Refused('KERNEL-POLICY-UNVERIFIED')
+                selected={'request_id':row['id'],'role':hold,'order':list(selection['order']),'hash':selection['hash'],
+                          'vendor_identity':selection['vendor_identity'],'profiles':{key:profile_identity(selection[key]) for key in ('source','target')}}
+                if any(not isinstance(value,dict) for value in selected['profiles'].values()):raise n.Refused('PROFILE-IDENTITY-CHANGED')
+                with control_lock(RUNTIME):
+                    pair.require_running(revision);state['manual_hold']=hold;state['manual_hold_source']=row.get('request_source','unknown')
+                    pair.remember_selected(state,kernel)
+                    state['manual_selection']=selected;pair.save(state)
+                n.publish({'state':'OBSERVING','mode':'continuous-pair','proof_scope':pair.MODE,'source':expected['source'],'target':expected['target'],
+                           'reason':'MANUAL-ALREADY-SELECTED','manual':True,'readiness_verified':True,'kernel_policy_verified':True,'kernel_proof':kernel,
+                           'route_changed':False,'transition_completed':True,'transition_outcome':'policy-verified','transition_source':row.get('request_source','unknown')})
+                finish('COMPLETED','MANUAL-ALREADY-SELECTED');return True
+            if kernel.get('verified') is not True and kernel.get('repairable_missing') is not True:
+                raise n.Refused('KERNEL-POLICY-UNVERIFIED')
+            from recovery_settings import normalized
+            recovery=normalized(settings)
+            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+            events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+            if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
+            if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
+            until=pair.configure_lease(state);blockers,fresh=backend.diagnostic()
+            if blockers:raise n.Refused(blockers[0])
+            if (proof(fresh)!=state['policy_roles'] or any(fresh.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity'))
+                    or not state_order_matches(state,journal,backend.order())):raise n.Refused('MANUAL-CONFIG-CHANGED')
+            def charge_dispatched():
+                pair.require_running(revision);stamp=time.time();fresh_ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+                charged,allowed=pair.budget(fresh_ledger.get('events'),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
+                if not allowed:raise n.Refused('PAIR-RATE-LIMIT')
+                if charged and stamp-charged[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
+                atomic_json(PERSIST/'pair-auto-budget.json',{'events':charged+[stamp]})
+            n.attempt(backend,fresh,until,False,control_revision=revision,manual_request_id=row['id'],
+                      request_source=row.get('request_source'),pair_destination=hold,pair_session_order=state['order'],on_dispatch=charge_dispatched)
+            journal=n.journal_read();context=metadata(journal)
+            if (context is None or context['destination_role']!=hold or context['session_order']!=state['order']
+                    or journal.get('manual_request_id')!=row['id'] or journal.get('phase')!='HELD-ON-RESERVE'
+                    or not journal.get('confirmed') or backend.order()!=(journal['after'],journal['hash'])):
+                raise n.Refused('MANUAL-COMPLETION-UNVERIFIED')
+            kernel=backend.attest_policy(dict(fresh,order=list(journal['after'])))
+            if kernel.get('verified') is not True or kernel.get('role')!=hold:raise n.Refused('KERNEL-POLICY-UNVERIFIED')
+        elif row['direction']=='reserve':
             if journal.get('phase') not in (None,'ROLLED-BACK') or backend.order()!=(state['order'],state['policy_hash']):raise n.Refused('TRANSACTION-IN-PROGRESS')
             if backend.health(selection['target']['id']) is not True:raise n.Refused('PAIR-MANUAL-TARGET-UNHEALTHY')
             from recovery_settings import normalized
@@ -193,10 +260,19 @@ def consume(backend,state,settings,revision):
             if not handled or not _confirmed_return(record,read_json(n.return_result_path(),{}),n.journal_read(),backend.order(),time.time()):raise n.Refused('RETURN-UNCONFIRMED')
             hold='source'
         with control_lock(RUNTIME):
-            pair.require_running(revision);state['manual_hold']=hold;state['manual_hold_source']=row.get('request_source','unknown');pair.save(state)
-        n.publish({'state':'COMMITTED' if hold=='target' else 'ROLLED-BACK','mode':'continuous-pair','proof_scope':pair.MODE,
-                   'source':expected['source'],'target':expected['target'],'reason':'OPERATOR-MANUAL',
-                   'manual':True,'transition_source':row.get('request_source','unknown'),'original_restored':hold=='source'})
+            pair.require_running(revision);state.pop('manual_selection',None);state['manual_hold']=hold;state['manual_hold_source']=row.get('request_source','unknown')
+            if state.get('policy_roles') is not None:
+                from failure_diagnosis import profile_identity
+                pair.remember_selected(state,kernel)
+                state['manual_selection']={'request_id':row['id'],'role':hold,'order':list(journal['after']),'hash':journal['hash'],
+                                           'vendor_identity':fresh['vendor_identity'],'profiles':{key:profile_identity(fresh[key]) for key in ('source','target')}}
+            pair.save(state)
+        fields=n.pair_event_fields(journal,completed=True,outcome='committed') if state.get('policy_roles') is not None else {}
+        n.publish(dict(fields,state='COMMITTED' if hold=='target' else 'OBSERVING' if state.get('policy_roles') is not None else 'ROLLED-BACK',mode='continuous-pair',proof_scope=pair.MODE,
+                   source=expected['source'],target=expected['target'],reason='OPERATOR-MANUAL',manual=True,
+                   readiness_verified=state.get('policy_roles') is not None,kernel_policy_verified=state.get('policy_roles') is not None,
+                   kernel_proof=kernel if state.get('policy_roles') is not None else None,
+                   transition_source=row.get('request_source','unknown'),original_restored=backend.order()==(state['order'],state['policy_hash'])))
         finish('COMPLETED')
     except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
         code=str(error) if isinstance(error,n.Refused) and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'PAIR-MANUAL-UNCONFIRMED'
@@ -206,6 +282,54 @@ def consume(backend,state,settings,revision):
 
 def held_reserve(backend,state,journal,settings,status):
     import native_switch as n,pair_auto as pair
+    from pair_policy import metadata,current_role,state_order_matches
+    n.bind_policy_context(backend,state)
+    adopted=state.get('manual_selection')
+    if isinstance(adopted,dict) and state.get('manual_hold')==adopted.get('role'):
+        blockers,selection=backend.diagnostic()
+        if blockers:raise n.Refused(blockers[0])
+        kernel=backend.attest_policy(selection)
+        from failure_diagnosis import profile_identity
+        if kernel.get('verified') is not True:return False  # The supervisor may repair only wholly absent stock rules.
+        current=profile_identity(selection[adopted['role']]);expected=adopted['profiles'][adopted['role']]
+        if (kernel.get('role')!=adopted['role']
+                or backend.order()!=(adopted['order'],adopted['hash']) or current is None
+                or any(current.get(key)!=expected.get(key) for key in ('id','protocol','interface','vendor_tunnel_id'))):
+            raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
+        if backend.health(selection[adopted['role']]['id']) is not True:
+            state.pop('manual_hold',None);state.pop('manual_selection',None);pair.save(state);return False
+        if current!=expected:
+            adopted['profiles'][adopted['role']]=current;pair.save(state)
+        pair.resume_running(state)
+        n.publish({'state':'OBSERVING','reason':'PAIR-MANUAL-HOLD-RESERVE' if adopted['role']=='target' else 'PAIR-MANUAL-HOLD-PRIMARY',
+                   'manual':True,'source':selection['source']['id'],'target':selection['target']['id'],
+                   'readiness_verified':True,'kernel_policy_verified':True,'kernel_proof':kernel,'transition_source':state.get('manual_hold_source','unknown'),'mode':'continuous-pair','proof_scope':pair.MODE})
+        return True
+    context=metadata(journal)
+    if state.get('manual_hold') in ('source','target') and context is not None:
+        hold=state['manual_hold']
+        if (not journal.get('confirmed') or current_role(journal)!=hold
+                or not state_order_matches(state,journal,backend.order())):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
+        kernel=backend.attest_policy()
+        if kernel.get('verified') is not True:return False
+        from failure_diagnosis import resolve_pair,profile_identity,scoped_samples
+        from recovery_settings import normalized
+        from failover_plan import streak
+        now=time.time();interval=max(30,min(900,int(settings.get('interval',10))*3))
+        resolved=resolve_pair(status,settings,now,interval,max(30,min(600,int(settings.get('interval',10))*2)))
+        expected=journal.get('vendor_profiles',{}).get(hold);profile=resolved.get(hold)
+        if (resolved['coordination']['state']!='READY' or profile is None or profile.get('id')!=journal[hold]
+                or expected is None or profile_identity(profile)!=expected):
+            n.publish({'state':'BLOCKED','reason':'PROFILE-IDENTITY-CHANGED','blockers':['PROFILE-IDENTITY-CHANGED'],
+                       'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
+            return True
+        if streak(scoped_samples(status.get('samples',[]),profile),profile['id'],normalized(settings)['failures'],now,interval,False,profile):
+            state.pop('manual_hold',None);pair.save(state);return False
+        pair.resume_running(state)
+        n.publish({'state':'COMMITTED' if hold=='target' else 'OBSERVING','reason':'PAIR-MANUAL-HOLD-RESERVE' if hold=='target' else 'PAIR-MANUAL-HOLD-PRIMARY',
+                   'manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],
+                   'readiness_verified':True,'kernel_policy_verified':True,'kernel_proof':kernel,'mode':'continuous-pair','proof_scope':pair.MODE})
+        return True
     if state.get('manual_hold')!='target':return False
     if journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE') or not journal.get('confirmed') or backend.order()!=(journal['after'],journal['hash']):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
     from recovery_settings import normalized

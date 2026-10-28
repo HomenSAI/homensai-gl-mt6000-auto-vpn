@@ -1,7 +1,12 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const c={bi:x=>x};vm.createContext(c);vm.runInContext(fs.readFileSync('router/auto_live_chart.inc.js','utf8'),c);
+const c={bi:x=>x};vm.createContext(c);vm.runInContext(fs.readFileSync('router/ui_logic.inc.js','utf8'),c);vm.runInContext(fs.readFileSync('router/auto_live_chart.inc.js','utf8'),c);
 const status=(state,extra={})=>({time:100,native_failover:{state,time:100,...extra}});
-assert.equal(c.autoLiveSample(status('OBSERVING',{mode:'continuous-pair',readiness_verified:true}),101).kind,'source');
+assert.equal(c.autoLiveSample({...status('OBSERVING',{mode:'continuous-pair',readiness_verified:true,source:'a',target:'b'}),channel_path:{time:100,confirmed:true,kernel_policy_verified:true,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',valid_for:15,checked_at:100,source_profile_id:'a',target_profile_id:'b',active_profile_id:'a'}},101).kind,'source');
+assert.equal(c.autoLiveSample({...status('OBSERVING',{mode:'continuous-pair',readiness_verified:true,source:'a',target:'b'}),channel_path:{time:100,confirmed:true,kernel_policy_verified:true,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',valid_for:15,checked_at:100,source_profile_id:'a',target_profile_id:'b',active_profile_id:'b'}},101).kind,'target','a live timeline follows actual selection, not OBSERVING phase');
+assert.equal(c.autoLiveSample(status('OBSERVING',{mode:'continuous-pair',readiness_verified:true}),101).kind,'unknown','no green primary timeline without current kernel proof');
+const pairPath={time:100,checked_at:100,valid_for:15,mode:'continuous-pair',selection_proof:'fw3-kernel-marking',kernel_policy_verified:true,confirmed:true,source_profile_id:'a',target_profile_id:'b',active_profile_id:'b'};
+for(const state of ['STOPPED','DISABLED','EXPIRED']){const sample=c.autoLiveSample({...status(state,{mode:'continuous-pair',proof_scope:'router-probed-ipv4',source:'a',target:'b'}),channel_path:pairPath,auto_control:{requested:'off',pair_phase:'STOPPED'}},101);assert.equal(sample.kind,'off','known Auto OFF remains grey despite a known traffic route');assert.equal(sample.selected_profile_id,'b','separate route metadata is not erased by Auto OFF');}
+assert.equal(c.autoLiveSample({...status('ROLLED-BACK',{mode:'continuous-pair',proof_scope:'router-probed-ipv4',source:'a',target:'b'}),channel_path:pairPath,auto_control:{requested:'on',pair_phase:'RUNNING'}},101).kind,'target','a running pair after a restoration uses verified route data');
 assert.equal(c.autoLiveSample(status('COMMITTED'),101).kind,'target');
 assert.equal(c.autoLiveSample(status('RESTORING'),101).kind,'switching');
 assert.equal(c.autoLiveSample(status('STOPPED'),101).kind,'off');

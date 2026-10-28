@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha51'
+VERSION = '0.9.1-alpha57'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -588,7 +588,7 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
     return devices
 
 
-def checkpoint(accounting,latency=None):
+def checkpoint(accounting,latency=None,website_response=None):
     accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
     try:old = read_json(PERSIST/'checkpoint.json')
@@ -608,6 +608,10 @@ def checkpoint(accounting,latency=None):
         try:latency.save(PERSIST/'latency-history.json',atomic_json,time.time())
         except (OSError,ValueError):
             if latency.notice!='LATENCY-HISTORY-UNAVAILABLE':latency.notice='LATENCY-HISTORY-WRITE-FAILED'
+    if website_response is not None:
+        try:website_response.save(PERSIST/'website-response-history.json',atomic_json,time.time())
+        except (OSError,ValueError):
+            if website_response.notice!='WEBSITE-HISTORY-UNAVAILABLE':website_response.notice='WEBSITE-HISTORY-WRITE-FAILED'
 
 
 def restore():
@@ -699,6 +703,8 @@ def serve():
     events, samples, last_save = [], [], time.monotonic()
     from latency_history import LatencyHistory
     latency=LatencyHistory.load(PERSIST/'latency-history.json')
+    from website_response_history import WebsiteResponseHistory,technical_history_tail
+    website_history=WebsiteResponseHistory.load(PERSIST/'website-response-history.json')
     from telegram_report import deliver
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
@@ -719,10 +725,14 @@ def serve():
     speed_previous=None;speed_retention_check=0
     from vendor_observation import VendorObserver
     vendor_observer=VendorObserver()
+    from icmp_ping import PingSampler, public as ping_public
+    ping_sampler=PingSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    from website_response import WebsiteSampler,public as website_public
+    website_sampler=WebsiteSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
         from speed_pause import gate as speed_gate
-        if speed_gate('monitor'):
+        if speed_gate('monitor',quiescent=lambda:website_sampler.idle() and ping_sampler.idle()):
             time.sleep(1);continue
         from stats_reset import pending as reset_pending,apply as reset_apply,RESULT as RESET_RESULT
         reset_request=reset_pending(RUNTIME)
@@ -730,11 +740,11 @@ def serve():
             # Owner reset of charts/statistics: archived first, then the counters start again from zero.
             # A failing reset never stops monitoring, and the page always gets a coded result.
             try:
-                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json)
+                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history)
             except Exception:
                 reset_result={'nonce':reset_request['nonce'],'scope':reset_request['scope'],'time':time.time(),'done':False,'code':'STATS-RESET-FAILED'}
             try:
-                if reset_result.get('done'):checkpoint(accounting,latency);last_save=time.monotonic()
+                if reset_result.get('done'):checkpoint(accounting,latency,website_history);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
@@ -775,6 +785,13 @@ def serve():
                 storage_error = 'CLOCK-001'
             from reliability import failure_pair_context
             failure_pair=failure_pair_context(data,after_inventory)
+            # Optional ICMP latency is cached by a separate bounded worker. It never enters health/Auto decisions.
+            try:ping_sampler.apply(rows,failure_pair,time.time())
+            except Exception:
+                for row in rows:row['ping']=ping_public(row,'unavailable','PING-UNAVAILABLE')
+            try:website_sampler.apply(rows,failure_pair,time.time())
+            except Exception:
+                for row in rows:row['website_response']=website_public(row,'unavailable','WEBSITE-UNAVAILABLE')
             for row in rows:
                 row['role']='source' if row['id']==failure_pair.get('source') else 'target' if row['id']==failure_pair.get('target') else 'unknown'
             failure_context=read_json(RUNTIME/'native-status.json', {})
@@ -801,7 +818,7 @@ def serve():
                     measured_row=next((p for p in rows if p['id']==key),{})
                     events.append(dict({'time':time.time(),'profile':key,'role':role,'code':code or 'OK'},
                         **{k:measured_row[k]for k in('https_success','dns_ok','probe_checks')if k in measured_row},
-                        measurement_time=measured_row.get('time')))
+                        measurement_time=measured_row.get('time'),website_response=measured_row.get('website_response')))
             if storage_error:
                 events.append({'time': time.time(), 'code': storage_error})
             status = {'version': VERSION, 'mode': 'monitor', 'time': time.time(), 'profiles': rows,
@@ -819,7 +836,13 @@ def serve():
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',10)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             latency.observe(status,settings,time.time())
-            status['latency_history']=latency.public()
+            status['latency_history']=technical_history_tail(latency.public(),time.time())
+            try:
+                website_history.observe(status,settings,time.time())
+                status['website_response_history']=website_history.public(time.time())
+            except Exception:
+                from website_response import METRIC,TARGET_SET
+                status['website_response_history']={'metric':METRIC,'target_set':TARGET_SET,'rows':[],'coverage_rows':[],'notice':'WEBSITE-HISTORY-UNAVAILABLE'}
             native=status['native_failover']
             from reliability import active_controller
             from pair_auto import read_state as pair_state, intent as pair_intent
@@ -865,7 +888,7 @@ def serve():
             since_save=time.monotonic()-last_save
             if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
                 try:
-                    checkpoint(accounting,latency);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
+                    checkpoint(accounting,latency,website_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -884,6 +907,7 @@ def serve():
                 break
             if (RUNTIME/'stats-reset-request.json').exists():break
             time.sleep(1)
+    ping_sampler.close();website_sampler.close()
     try:
         from speed_test import cancel as cancel_speed
         cancel_speed()
@@ -895,12 +919,16 @@ def serve():
             try:telegram_collect(telegram_job)
             except Exception:pass
     try:
-        checkpoint(accounting,latency)
+        checkpoint(accounting,latency,website_history)
     except (OSError, ValueError):
         pass
 
 
 def trim_status_reply(status,limit=900000):
+    from website_response import METRIC
+    if isinstance(status.get('website_response_history'),dict) and status['website_response_history'].get('metric')==METRIC:
+        from website_response_history import technical_history_tail
+        if isinstance(status.get('latency_history'),dict):status['latency_history']=technical_history_tail(status['latency_history'],time.time())
     if len(json.dumps(status,ensure_ascii=True).encode())<=limit:return status
     for row in status.get('profiles',[]):
         for key in ('section','group_id','profile_id','device','mark','table','scope','lan_path_verified'):row.pop(key,None)

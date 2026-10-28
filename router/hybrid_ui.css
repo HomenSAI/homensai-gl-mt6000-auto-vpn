@@ -1,4 +1,26 @@
 /* Legacy expanded layout; the Minimum keeps its current separate card. */
+/* The hybrid keeps all twelve destinations; Calm's old prototype menu does not apply. */
+.hv-app.hv-hybrid-release[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="statistics"],.hv-app.hv-hybrid-release[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="learn"]{display:flex}
+/* Advanced rows retain their full hit boxes inside the sidebar scrollport. */
+@media(min-width:761px){
+ .hv-workspace .hv-sidebar>nav>.hv-advanced-links,.hv-workspace .hv-sidebar>nav>.hv-advanced-toggle{flex-shrink:0}
+}
+.hv-app.hv-workspace .hv-sidebar>nav [data-hv-tab]:hover,.hv-app.hv-workspace .hv-sidebar>nav [data-hv-tab]:focus-visible{background:color-mix(in srgb,var(--accent) 14%,var(--surface));color:var(--text);outline:2px solid var(--accent);outline-offset:-2px;cursor:pointer}
+/* Native summary owns the complete row, including its padding and marker. */
+.hv-app .hv-simple-details>summary,.hv-app [data-live-explanation="scope"]>summary{box-sizing:border-box;display:list-item;list-style-position:inside;width:100%;min-height:48px;padding:12px 16px;border:1px solid var(--line,#d9dfe5);border-radius:10px;cursor:pointer;touch-action:manipulation;line-height:1.5}
+.hv-app .hv-simple-details>summary:hover,.hv-app .hv-simple-details>summary:focus-visible,.hv-app [data-live-explanation="scope"]>summary:hover,.hv-app [data-live-explanation="scope"]>summary:focus-visible{background:color-mix(in srgb,var(--accent) 10%,var(--surface));border-color:var(--accent)}
+.hv-app .hv-channel-ping{display:block;min-width:0;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.4;margin:4px 0}
+.hv-app .hv-server-top>.hv-channel-ping{flex-basis:100%;text-align:left}
+/* Role and protocol keep whole words; the status has its own wrapping column. */
+.hv-app .hv-server-top{display:grid;grid-template-columns:minmax(min-content,1fr) minmax(0,1.2fr);align-items:start;gap:10px 14px}
+.hv-app .hv-channel-heading{display:flex;align-items:flex-start;gap:10px;min-width:0}
+.hv-app .hv-channel-heading>.hv-check-lamp{flex:none;margin-top:5px}
+.hv-app .hv-channel-heading-text{min-width:0}
+.hv-app .hv-channel-heading .hv-protocol,.hv-app .hv-channel-protocol{display:block;margin:0;white-space:normal;word-break:normal;overflow-wrap:normal;hyphens:none;line-height:1.35}
+.hv-app .hv-channel-protocol{font-size:14px;margin-top:3px}
+.hv-app .hv-server-top>.hv-route-badge{min-width:0;max-width:100%;width:100%;white-space:normal;word-break:normal;overflow-wrap:normal;hyphens:none;line-height:1.4;text-align:left}
+.hv-app .hv-server-top>.hv-channel-ping,.hv-app .hv-server-top>.hv-profile-detail{grid-column:1/-1}
+@media(max-width:760px){.hv-app .hv-server-top{grid-template-columns:minmax(0,1fr)}.hv-app .hv-server-top>.hv-route-badge{width:fit-content;max-width:100%}}
 .hv-preparation-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;min-width:0;max-width:100%}
 .hv-app .hv-preparation-actions .cbi-button{max-width:100%;min-width:0;height:auto!important;white-space:normal!important;overflow-wrap:anywhere;box-sizing:border-box}
 .hv-app[data-hv-active="home"] .hv-sidebar,.hv-app[data-hv-active="home"] .hv-page-header,.hv-app[data-hv-active="home"] .hv-settings{display:none!important}

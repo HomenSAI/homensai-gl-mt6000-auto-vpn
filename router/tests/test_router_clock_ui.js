@@ -17,7 +17,7 @@ const t0=Date.UTC(2026,9,27,13,31,29)/1000,base={id:'p',interface:'wgclient1',ti
 const text=p=>c.channelCheckText(Object.assign({},base,p),t0+5);
 assert(/HTTPS 0\/3/.test(text({code:'VPN-003',dns_ok:false,https_success:0}))&&/DNS не прошёл/.test(text({code:'VPN-003',dns_ok:false,https_success:0})));
 assert(/Проверка не прошла/.test(text({code:'VPN-003',dns_ok:true,https_success:1}))&&/HTTPS 1\/3/.test(text({code:'VPN-003',dns_ok:true,https_success:1})));
-assert(/876\.4 мс HTTPS/.test(text({code:null,dns_ok:true,https_success:2,rtt_ms:876.4})));
+assert(/Проверка пройдена: HTTPS 2\/3/.test(text({code:null,dns_ok:true,https_success:2,rtt_ms:876.4})));assert(!text({code:null,dns_ok:true,https_success:2,rtt_ms:876.4}).includes('876.4'),'technical health RTT is not a headline website response');
 assert(/Туннель не подключён/.test(text({code:'VPN-001'})));assert(/Туннель не подключён/.test(c.channelCheckText({id:'p',time:t0},t0)));
 assert(/с назад/.test(c.channelCheckText(Object.assign({},base,{code:'VPN-003',https_success:0}),t0+200)),'stale checks say how old they are');
 assert(/Первая проверка/.test(c.channelCheckText({id:'p'},t0)));

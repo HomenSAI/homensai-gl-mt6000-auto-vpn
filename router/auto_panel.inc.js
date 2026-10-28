@@ -16,9 +16,10 @@ function autoControlModel(status,now){
   var paused=!!status.speed_pause&&status.speed_pause.active===true&&status.speed_pause.auto_paused===true;
   var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var on=!paused&&fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED');
+  var runningPair=(ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair')&&intent.requested==='on'&&intent.pair_phase==='RUNNING';
+  var on=!paused&&fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
-  var off=fresh&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
+  var off=fresh&&!on&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
   var awaiting=fresh&&intent.requested_at>ns.time;
   return {fresh:fresh,on:on,paused:paused,transitioning:transitioning,off:off,awaiting:awaiting,
     stop:on||transitioning||intent.requested==='on'||['DEGRADED-ON-RESERVE','COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
@@ -28,9 +29,15 @@ function autoControlModel(status,now){
 function autoPathModel(status,source,target,now){
   var model=autoControlModel(status,now),ns=status.native_failover||{};
   var neutral={source:'neutral',target:'neutral',direction:'none',moving:false,selected:null};
+  var proof=channelPathSelection(status,now,source&&source.id,target&&target.id);
+  if(proof.authoritative){
+    var picked=source&&proof.selected===source.id?'source':target&&proof.selected===target.id?'target':null;
+    function tone(p,key){var h=p?profileHealth(p,now).state:'unknown';return h==='failed'?'failed':h==='inactive'?'inactive':h==='unknown'?'neutral':proof.moving||h==='checking'?'checking':picked===key?'healthy':picked?'ready':'neutral';}
+    return {source:tone(source,'source'),target:tone(target,'target'),direction:proof.moving?'forward':picked==='target'?'forward':'none',moving:proof.moving,selected:picked,code:proof.code};
+  }
   if(!model.fresh||model.off||model.awaiting)return neutral;
   if(source&&target&&source.id&&source.id===target.id)return neutral;
-  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true)?'source':null;
+  var selected=ns.state==='COMMITTED'||ns.state==='DEGRADED-ON-RESERVE'?'target':ns.state==='OBSERVING'&&ns.certified===true?'source':null;
   if(!selected&&!model.transitioning)return neutral;
   var destination=model.transitioning?(ns.state==='RESTORING'?'source':'target'):null;
   function color(p,key){
@@ -249,10 +256,14 @@ function autoLightModel(status,inventory,now){
     var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
-    if(state==='OBSERVING'&&ns.readiness_verified===true)return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
-    if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
+    if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
+      var route=channelPathSelection(status,now,ns.source,ns.target);
+      if(!route.selected)return out('unknown',bi('The traffic channel is not verified','Канал трафика не подтверждён'),bi('Waiting for verified router VPN rules.','Ждём подтверждения действующих правил VPN роутером.'),route.code||'KERNEL-POLICY-UNVERIFIED');
+      if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
+      return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
+    }
     var failedCode=blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
-    if(state==='STOPPED'&&!failedCode)return out('off',bi('Auto is off','Auto выключен'),scopeHint);
+    if(model.off&&!failedCode)return out('off',bi('Auto is off','Auto выключен'),scopeHint);
     return out('problem',bi('Auto needs attention','Auto требует внимания'),failedCode?autoBlockerText(failedCode):scopeHint,failedCode);
   }
   if(ns.proof_scope==='router-hosted-ipv4')return out('problem',bi('Checked by the router itself','Проверку делает сам роутер'),bi('This trial checks IPv4 forwarding with a client inside the router. It does not certify traffic from a separate LAN computer.','Этот тест проверяет пересылку IPv4 клиентом внутри роутера. Трафик отдельного компьютера LAN им не подтверждён.'));
@@ -281,7 +292,7 @@ function renderAutoLight(light,technicalCode){
   var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
     E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
-    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive and waiting to be switched on by Auto, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой и ожидает включения в режиме автомат, серый — ждём ответа роутера, красный — ошибка.')])]);
+    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow: Alive; you can switch to it manually, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — Живой, можно переключиться на него вручную, серый — ждём ответа роутера, красный — ошибка.')])]);
   return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 

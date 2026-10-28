@@ -10,7 +10,7 @@ for(const lang of ['en','ru']){
  const observers=[],c={E:(...a)=>new N(...a),bi:(en,ru)=>lang==='ru'?ru:en,locale:lang,Date,Intl,serverTitle:p=>p.name,
   MutationObserver:class{constructor(fn){this.fn=fn;}observe(){observers.push(this.fn);}}};
  c.document={createElementNS:(_ns,tag)=>new N(tag,{})};
- vm.createContext(c);for(const file of ['channel_guidance','speed_live','speed_table'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);
+ vm.createContext(c);for(const file of ['ui_logic','channel_guidance','speed_live','speed_table'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);
  const now=Date.now()/1000,profiles=Array.from({length:8},(_,i)=>({id:'vpn'+i,name:'Server '+i,interface:'wg'+i}));
  const results=profiles.map((p,i)=>({id:p.id,name:p.name,time:now-i,download:{mbps:100-i},upload:{mbps:50-i}}));
  const panel=c.speedPanel({profiles,speed_tests:{results}},{settings:{speed_enabled:true}},'latest',()=>{});
@@ -28,10 +28,11 @@ for(const lang of ['en','ru']){
  // Execute the actual ranking renderer with only its final host wrapped, as the builder does.
  const manifest=JSON.parse(fs.readFileSync('VERSION.json','utf8'));
  const built=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+manifest.application.ui_module+'.js','utf8');
- const start=built.indexOf("var ranking=E('table'"),newAnchor="addSearch('ranking',ranking);put('ranking',limitTableRows(ranking,5,'server-ranking-other'));",anchor=built.includes(newAnchor)?newAnchor:"addSearch('ranking',ranking);put('ranking',ranking);",end=built.indexOf(anchor,start)+anchor.length;
+ const rankingPage=built.includes('function ensureVisiblePage(key)')?'tests':'ranking';
+ const start=built.indexOf("var ranking=E('table'"),newAnchor="addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',limitTableRows(ranking,5,'server-ranking-other'));",anchor=built.includes(newAnchor)?newAnchor:"addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',ranking);",end=built.indexOf(anchor,start)+anchor.length;
  assert(start>=0&&end>start);c.ranked=profiles.map(p=>({p,r:{n:30,good:30,sum:300}}));c.cell=v=>new N('td',{},v);c.tr=x=>x;c.rankConfidence=n=>n;c.addSearch=()=>{};
  let output;c.put=(_,node)=>{output=node;};
- vm.runInContext(built.slice(start,end).replace(anchor,"addSearch('ranking',ranking);put('ranking',limitTableRows(ranking,5,'server-ranking-other'));"),c);
+ vm.runInContext(built.slice(start,end).replace(anchor,"addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',limitTableRows(ranking,5,'server-ranking-other'));"),c);
  const rank=check(output,8);rank.rows().forEach((row,i)=>row.hidden=i!==7);observers.forEach(fn=>fn());assert.equal(rank.visible().length,1);assert(rank.button.hidden,'search includes entries after the initial five');
  rank.rows().forEach(row=>row.hidden=false);rank.table.children=[rank.table.children[0],...rank.rows().reverse()];observers.forEach(fn=>fn());assert.equal(rank.visible().length,5,'sort reapplies limit to reordered rows');
  assert.equal(c.HV_DISCLOSURES['speed-other'],false);assert.equal(c.HV_DISCLOSURES['server-ranking-other'],false);

@@ -52,7 +52,12 @@ def observed_route(status,now):
         return bool(profile) and RouteHistory.stamp(profile.get('time')) and 0<=now-profile['time']<=90 and not (profile.get('code') is None and profile.get('dns_ok') is True and profile.get('https_success',0)>=2)
     # Same states as the live chart: both channels failing is an outage of its own.
     if native.get('source') and native.get('target') and native['source']!=native['target'] and failing(native['source']) and failing(native['target']):return 'down'
-    role='target' if state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if state=='OBSERVING' and (native.get('certified') is True or native.get('mode')=='continuous-pair' and native.get('readiness_verified') is True) else None
+    required=(native.get('mode')=='continuous-pair' or native.get('proof_scope')=='router-probed-ipv4' or native.get('transition_metadata_present') is True)
+    if required:
+        from channel_path import observed_pair_role
+        role=observed_pair_role(native,now)
+    else:
+        role='target' if state in ('COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE') else 'source' if state=='OBSERVING' and native.get('certified') is True else None
     # The route is drawn from fresh router data only; a failing selected channel still carries the route.
     if role:
         profile=next((row for row in status.get('profiles',[]) if row.get('id')==native.get(role)),None)

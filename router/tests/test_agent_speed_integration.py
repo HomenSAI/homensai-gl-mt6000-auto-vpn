@@ -20,6 +20,7 @@ class AgentIntegrationTests(unittest.TestCase):
             stack.enter_context(patch('auto_control.RUNTIME',path))
             stack.enter_context(patch('auto_control.PERSIST',path))
             stack.enter_context(patch.object(agent,'inventory',return_value=data))
+            stack.enter_context(patch('website_response.WebsiteSampler'))
             stack.enter_context(patch.object(agent,'restore',return_value=(agent.Accounting(),None)))
             stack.enter_context(patch.object(agent,'probe',return_value={'id':'wireguard:peer_1','time':1792000000,'code':None,'device':'wgclient1','dns_ok':True,'https_success':3,'rtt_ms':30}))
             stack.enter_context(patch.object(agent,'sample_counters'))

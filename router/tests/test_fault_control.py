@@ -19,15 +19,23 @@ class FaultTests(unittest.TestCase):
         import pair_auto as pair,pair_manual,auto_control
         from failure_diagnosis import profile_identity
         data,status,state,settings,selection,certificate=self.context()
+        from pair_policy import proof,transition,role
+        selection.update(source_rule='primary',target_rule='reserve',generic_rules=['primary','reserve'],order=['primary','reserve'])
         settings['pair_auto_mode']=pair.MODE
         state.update(state='COMMITTED' if reserve else 'OBSERVING',certified=False,readiness_verified=not reserve)
         owned={'phase':'RUNNING','id':'e'*32,'revision':'d'*32,'process_bindings':{},'network_identity':'network',
-               'protected':{'vpn':'config'},'order':['primary','reserve'],'policy_hash':'hash'}
+               'protected':{'vpn':'config'},'order':['primary','reserve'],'policy_hash':selection['hash'],'policy_roles':proof(selection)}
         requested={'mode':'on','id':'e'*32,'revision':'d'*32}
-        journal={'phase':'COMMITTED','confirmed':990,'control_revision':'d'*32,'after':['reserve','primary'],'hash':'hash',
+        journal={'phase':'COMMITTED','confirmed':990,'control_revision':'d'*32,'before':['primary','reserve'],'after':['reserve','primary'],'hash':selection['hash'],
                  'source':selection['source']['id'],'target':selection['target']['id'],
+                 'pair_transition':transition(selection,owned['order'],'target'),
                  'vendor_profiles':{k:profile_identity(selection[k]) for k in ('source','target')}} if reserve else {}
-        backend=MagicMock();backend.order.return_value=(journal['after'] if reserve else owned['order'],'hash')
+        backend=MagicMock();backend.order.return_value=(journal['after'] if reserve else owned['order'],selection['hash'])
+        def kernel(*args):
+            try:chosen=role(owned['policy_roles'],backend.order()[0])
+            except (ValueError,TypeError):return {'verified':False}
+            return {'verified':True,'role':chosen,'profile_id':selection[chosen]['id'],'policy_hash':selection['hash'],'order':backend.order()[0],'time':1000}
+        backend.attest_policy.side_effect=kernel
         with ExitStack() as stack:
             for obj,name,kwargs in ((pair,'read_state',{'return_value':owned}),(pair,'intent',{'return_value':requested}),
                     (pair,'network',{'return_value':{}}),(pair,'normalized_network',{'return_value':'network'}),
@@ -47,6 +55,21 @@ class FaultTests(unittest.TestCase):
                 wrong=dict(args,profile=selection['source' if reserve else 'target']['id'])
                 with self.assertRaisesRegex(fault.FaultError,'NOT-CURRENT'):
                     fault.eligibility(wrong,data,status,state,settings,selection,[],1000,{})
+
+    def test_pair_fault_uses_actual_kernel_role_even_when_native_phase_points_elsewhere(self):
+        for reserve in (False,True):
+            with self.pair_context(reserve) as ctx:
+                data,status,state,settings,selection,*_=ctx
+                state['state']='OBSERVING' if reserve else 'COMMITTED'
+                selected='target' if reserve else 'source'
+                self.assertEqual(fault.eligibility(dict(self.args(),profile=selection[selected]['id']),data,status,state,settings,selection,[],1000,{})[0]['id'],selection[selected]['id'])
+
+    def test_pair_fault_never_uses_display_ttl_or_phase_as_write_permission(self):
+        for mutation in (lambda p:p.update(verified=False),lambda p:p.update(time=994),lambda p:p.update(policy_hash='wrong'),lambda p:p.update(order=['foreign'])):
+            with self.pair_context(True) as ctx:
+                data,status,state,settings,selection,owned,requested,journal,backend=ctx
+                proof=backend.attest_policy();mutation(proof);backend.attest_policy.side_effect=None;backend.attest_policy.return_value=proof
+                with self.assertRaises(fault.FaultError):fault.eligibility(dict(self.args(),profile=selection['target']['id']),data,status,state,settings,selection,[],1000,{})
 
     def test_pair_fault_rejects_stopped_intent_changed_policy_and_unconfirmed_reserve(self):
         for case in ('stop','policy','unconfirmed','generation','health'):
@@ -70,7 +93,7 @@ class FaultTests(unittest.TestCase):
                 value={'phase':'ACTIVE','pair_mode':True,'started':980,'control_revision':'d'*32,
                        'fault_role':'source' if reserve else 'target',
                        'vendor_profiles':{k:profile_identity(selection[k]) for k in ('source','target')}}
-                def read(path,default=None):return state if path.name=='native-status.json' else status
+                def read(path,default=None):return {'revision':'d'*32} if path.name=='auto-control-revision.json' else state if path.name=='native-status.json' else status
                 with patch.object(fault,'read_json',side_effect=read):
                     self.assertTrue(fault.transition_confirmed(value,1000))
                     destination=1 if reserve else 0
@@ -177,7 +200,10 @@ class FaultTests(unittest.TestCase):
                     if apply_error:raise fault.FaultError('FAULT-TIMEOUT-RULE-FAILED')
                 if stop_at=='after_apply':stop()
         backend=MagicMock();backend.diagnostic.side_effect=diagnostic;backend.policy.return_value={'settings':settings}
-        backend.order.return_value=(['reserve','primary'] if pair_role=='target' else ['primary','reserve'],'hash')
+        backend.order.return_value=(['reserve','primary'] if pair_role=='target' else ['primary','reserve'],selection['hash'] if pair_role else 'hash')
+        if pair_role:
+            backend.attest_policy.side_effect=lambda *args:{'verified':True,'role':pair_role,'profile_id':selection[pair_role]['id'],
+                                                         'policy_hash':selection['hash'],'order':backend.order()[0],'time':1000}
         worker=MagicMock(pid=321);worker.poll.return_value=None if watchdog else 0
         with ExitStack() as stack:
             for obj,name,kwargs in ((fault,'control_lock',{'side_effect':lock}),(fault,'load',{'side_effect':lambda:copy.deepcopy(current[0])}),

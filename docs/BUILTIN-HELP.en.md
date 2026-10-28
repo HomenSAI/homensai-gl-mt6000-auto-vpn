@@ -78,7 +78,7 @@ Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after
 
 About these checks: two selected VPN channels; the router checks them itself, about every 10 seconds, through each tunnel.
 
-Lamp colours: green works in Auto; yellow is alive and waiting to be switched on by Auto; grey is waiting for the router's answer; red is an error, the channel does not work.
+Lamp colours: green works in Auto; yellow: Alive; you can switch to it manually; grey is waiting for the router's answer; red is an error, the channel does not work.
 
 No internet? Open the topic "No internet" below in Help for the recovery steps.
 
@@ -1198,6 +1198,31 @@ An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes fo
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Disable a blocking router setting here.
 A preparation reason offers a Disable button next to the menu link.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="website-response"></a>
+## Three-site response: method and history
+
+You want to understand the single displayed VPN response metric and gaps.
+
+Every selected VPN checks the same three ordinary HTTPS addresses: Google generate_204, Cloudflare cdn-cgi/trace and Wikipedia. Fresh DNS, TCP, TLS and all HTTP response headers are timed. This is not full webpage rendering, ICMP, or the separate technical DNS/HTTPS health probe.
+
+The displayed value is the arithmetic mean only when all three sites pass. A partial check shows coverage and no number; failures and timeouts are never zero and old metrics are never substituted. The value is fresh for at most45 seconds and is bound to the VPN generation.
+
+Statistics follow the selected graph window. Mean is weighted by complete three-site cycles; minimum and maximum describe observed minute means. Missing periods and incomplete checks are not filled.
+
+Storage follows the configured1–7 days. Older deleted measurements cannot be restored. Wide views sample markers; lines and statistics use retained measurements. History starts when recording begins and is saved at the configured checkpoint interval.
+
+Quality and ranking use these same complete website cycles. Resetting statistics sets a new counting boundary while preserving graph history. A lower mean is a recommendation, never permission to alter routes or enable Auto. Old event HTTPS measurements remain explicitly technical.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Three-site response: method and history.
+You want to understand the single displayed VPN response metric and gaps.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md

@@ -7,7 +7,7 @@ function freeze(v){if(v&&typeof v==='object'){Object.values(v).forEach(freeze);O
 const clock=1005,generation='a'.repeat(32),otherGeneration='b'.repeat(32);
 function sandbox(language='en'){
   const c={locale:language,E:(...args)=>new Node(...args),bi:(en,ru)=>language==='ru'?ru:en,Date:class extends Date{static now(){return clock*1000;}},localStorage:{getItem:()=>null},ownGet:(o,k)=>Object.hasOwn(o,k)?o[k]:undefined,errorCodeLink:code=>new Node('span',{},code)};
-  vm.createContext(c);vm.runInContext(fs.readFileSync('router/vendor_diagnostics.inc.js','utf8'),c);vm.runInContext(fs.readFileSync('router/analytics_panel.inc.js','utf8'),c);return c;
+  vm.createContext(c);for(const name of ['ui_logic','vendor_diagnostics','analytics_panel'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);return c;
 }
 function fixture(){
   const row=(id,protocol,tunnel,epoch)=>({id,protocol,interface:tunnel.split(':')[1],vendor_tunnel_id:tunnel,vendor_generation:epoch,vendor_state:'SETTLED',vendor_changed_at:970,time:1000,code:null,dns_ok:true,https_success:2,channel:'Same editable label',router_name:'DO-NOT-DISPLAY-provider.example',exit_ip:'DO-NOT-DISPLAY-exit',endpoint:'DO-NOT-DISPLAY-endpoint'});
@@ -21,12 +21,11 @@ const c=sandbox(),model=(s,i)=>c.vendorDiagnosticsModel(s,i,clock);
 let {status,inventory}=fixture(),m=model(freeze(status),freeze(inventory));
 assert.equal(m.groups.length,2);assert.equal(m.groups[0].health,'healthy');assert.equal(m.groups[0].state,'stable');assert(m.coordination.known);assert.equal(m.coordination.transition,'protocol');
 assert.equal(m.source,'openvpn:ovpnclient1');assert.equal(m.groups[0].current,'openvpn:a','shows the resolved current member, not saved stale chosen profile');
-for(const renderer of ['renderVendorChannels','renderVendorEvents']){
+for(const renderer of ['renderVendorEvents']){
   const node=c[renderer](status,inventory),body=text(node);assert(walk(node).some(n=>n.attrs['data-vendor-diagnostics']));
   assert(!body.includes('DO-NOT-DISPLAY'));assert(!walk(node).some(n=>n.tag==='button'),'observations have no mutating actions');
 }
-let body=text(c.renderVendorChannels(status,inventory));for(const label of ['Owner primary','Same editable label','openvpn:12','openvpn:ovpnclient1','VPN settings unchanged','Ready: if the primary fails, the reserve can take over','does not report why or how many times it tried','nothing is switched'])assert(body.includes(label),label);
-assert(body.includes('Server group'));assert(!body.includes('openvpn:old'),'stale selected member must not replace current resolved profile');
+let body=text(c.renderVendorChannels(status,inventory));assert.equal(body,'','the owner removed the complete VPN names disclosure');assert(!walk(c.renderVendorChannels(status,inventory)).some(n=>n.tag==='details'||n.attrs['data-vendor-diagnostics']),'no hidden replacement disclosure remains');
 // Same provider profile group and equal editable labels do not merge distinct configured tunnels.
 ({status,inventory}=fixture());const extra=clone(status.vendor_observation.groups[0]);Object.assign(extra,{id:'openvpn:ovpnclient2',profiles:['openvpn:c'],active_profiles:['openvpn:c'],current_profile:'openvpn:c'});status.vendor_observation.groups.push(extra);const third=clone(status.profiles[0]);Object.assign(third,{id:'openvpn:c',vendor_tunnel_id:extra.id});status.profiles.push(third);m=model(status,inventory);assert.equal(m.groups.length,3);assert.equal(m.groups[2].profileGroup,'openvpn:12');
 // A profile or kernel generation change invalidates old health. Two stable identity scans never prove exhausted retries.
@@ -46,7 +45,7 @@ for(const value of [Infinity,NaN,'1000',true,-1,1010]){({status,inventory}=fixtu
 for(const malformed of [null,{},[],{version:'1',time:1000,groups:[]},{version:2,time:1000,groups:[]},{version:1,time:1000,groups:{}}]){({status,inventory}=fixture());status.vendor_observation=malformed;assert.equal(model(status,inventory).available,false);assert.doesNotThrow(()=>c.renderVendorChannels(status,inventory));}
 // Recognized fresh application codes are known planner reasons, never evidence of vendor cause or route authorization.
 for(const code of ['VENDOR-SAME-TUNNEL','VENDOR-SETTLING','VENDOR-IDENTITY-UNKNOWN','OBSERVATION-STALE','PROFILE-IDENTITY-CHANGED','UPLINK-LINK-DOWN','PLAN-CONFIG']){
-  ({status,inventory}=fixture());Object.assign(status.failover_plan.coordination,{state:'HOLD',code,settle_until:1030});m=model(status,inventory);assert(m.coordination.known,code);assert(!text(c.renderVendorChannels(status,inventory)).includes('DO-NOT-DISPLAY'));assert(text(c.renderVendorChannels(status,inventory)).includes('does not report why or how many times it tried'));
+  ({status,inventory}=fixture());Object.assign(status.failover_plan.coordination,{state:'HOLD',code,settle_until:1030});m=model(status,inventory);assert(m.coordination.known,code);assert(!text(c.renderVendorChannels(status,inventory)).includes('DO-NOT-DISPLAY'));assert(c.vendorCoordinationText(m).length>0,'recognized coordination still has a source explanation');
 }
 for(const patch of [{version:2},{time:800},{code:'__proto__'},{code:'SECRET-UNREVIEWED'},{can_apply:true},{vendor_attempts_exhausted:true},{vendor_reason:'KNOWN'},{transition:'channel'},{source_tunnel:'wireguard:wgclient1'},{state:'HOLD'}]){({status,inventory}=fixture());Object.assign(status.failover_plan.coordination,patch);assert.equal(model(status,inventory).coordination.known,false,JSON.stringify(patch));}
 // Retained events are bounded and identify observations only. Raw reason/endpoint/secret fields are never rendered.
@@ -65,17 +64,18 @@ for(const language of ['en','ru']){
 }
 // A vendor member change keeps the saved tunnel anchor, updates every live display, and never revives the old member.
 const live=sandbox();Object.assign(live,{document:{createElementNS:(_,tag)=>new Node(tag)},chart:()=>new Node('svg',{},'Existing chart'),bytes:v=>String(v),UI_BUILD:'test',safeCode:code=>typeof code==='string'&&/^[A-Z][A-Z0-9-]+$/.test(code),L:{resource:p=>p},rpc:{declare:()=>()=>{throw Error('render dispatched an RPC');}},ui:{},setTimeout:()=>0});
-for(const file of ['ui_logic','fool_guard','auto_panel','country_panel','servers_panel','design_views'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),live);
+for(const file of ['ui_logic','fool_guard','auto_panel','country_panel','servers_panel','channel_guidance','latency_panel','design_views'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),live);
 ({status,inventory}=fixture());Object.assign(inventory.settings,{setup_complete:true,native_session_loss:true});Object.assign(status.native_failover,{certified:true,source:'openvpn:old',target:'wireguard:old'});
 status.profiles[0].name='New current server';status.profiles[1].name='Current reserve server';inventory.servers=[];
 assert.equal(live.vendorDisplayMember(status,inventory,'source',clock).id,'openvpn:a');assert.equal(live.vendorDisplaySelected(status,inventory,clock),'openvpn:a');
-assert(text(live.renderVendorChannels(status,inventory)).includes('New current server'),'unconfigured new member uses its valid public name');
+assert.equal(live.vendorDisplayMember(status,inventory,'source',clock).name,'New current server','current member identity stays available to the remaining cards');
 const readiness=live.autoReadiness(status,inventory,clock);assert(readiness.steps.find(step=>step.key==='profiles').done,'readiness follows current members through anchors');
 const control=live.renderAutoControl(status,inventory);assert(!text(control).includes('Choose in Settings'),'Auto diagram resolves both current members');
 for(const design of ['a','b','c']){
   const dm=live.dvModel(status,inventory,status.profiles,{rx:0,tx:0});assert.equal(dm.primary.id,'openvpn:a');assert.equal(dm.reserve.id,'wireguard:b');assert.equal(dm.selected,'openvpn:a');
-  const node=live.renderDesignOverview(design,{status,inventory,rows:status.profiles,month:{rx:0,tx:0},controlCard:control});assert(walk(node).some(n=>n.attrs['data-profile']==='openvpn:a'));assert(!text(node).includes('openvpn:old'));
-  if(design==='b')assert(text(walk(node).find(n=>n.attrs['data-profile']==='wireguard:b')).includes('Reserve channel'),'B role follows resolved reserve');
+  const node=live.renderDesignOverview(design,{status,inventory,rows:status.profiles,month:{rx:0,tx:0},controlCard:control});assert(!text(node).includes('openvpn:old'));
+  if(design==='b'){assert(!walk(node).some(n=>n.attrs['data-profile']),'owner removed duplicate VPN list from Calm Overview');assert.equal(walk(node).filter(n=>n===control).length,1,'Calm retains the resolved actual control');}
+  else assert(walk(node).some(n=>n.attrs['data-profile']==='openvpn:a'));
 }
 status.native_failover.state='COMMITTED';assert.equal(live.vendorDisplaySelected(status,inventory,clock),'wireguard:b');
 status.vendor_observation.groups[0].generation='c'.repeat(32);assert.equal(live.vendorDisplayMember(status,inventory,'source',clock),null,'anchored unknown identity never falls back to stale saved profile');assert.equal(live.dvModel(status,inventory,status.profiles,{rx:0,tx:0}).primary,null);
@@ -83,7 +83,7 @@ inventory.settings.plan_source_tunnel='bad-anchor';assert.equal(live.vendorDispl
 delete inventory.settings.plan_source_tunnel;inventory.settings.plan_source='openvpn:a';assert.equal(live.vendorDisplayMember(status,inventory,'source',clock).id,'openvpn:a','anchorless legacy display keeps its explicit profile selection');
 // Selected anchors remain visible even behind many other tunnel groups.
 ({status,inventory}=fixture());status.vendor_observation.groups=Array.from({length:39},(_,i)=>({id:'openvpn:spare'+i,protocol:'openvpn',profiles:[],active_profiles:[],state:'UNKNOWN',time:1000})).concat(status.vendor_observation.groups);
-const bounded=walk(c.renderVendorChannels(status,inventory)).filter(n=>n.attrs['data-vendor-tunnel']);assert.equal(bounded.length,32);assert.equal(bounded[0].attrs['data-vendor-tunnel'],inventory.settings.plan_source_tunnel);assert.equal(bounded[1].attrs['data-vendor-tunnel'],inventory.settings.plan_target_tunnel);
+assert.equal(c.vendorDisplayMember(status,inventory,'source',clock).id,'openvpn:a');assert.equal(c.vendorDisplayMember(status,inventory,'target',clock).id,'wireguard:b');assert.equal(text(c.renderVendorChannels(status,inventory)),'','many tunnel groups do not revive the removed disclosure');
 const builder=fs.readFileSync('router/build_sidebar_ui.py','utf8');for(const anchor of ['vendor_diagnostics.inc.js',"put('channels',renderVendorChannels(status,inventory));","put('events',renderVendorEvents(status,inventory));"])assert(builder.includes(anchor),anchor);
 assert(builder.includes('must_replace("put(\'tests\',renderDecisionExplanation(status));","")'));
 console.log('PASS: immutable vendor-tunnel identity vs labels/provider groups, current-generation health/freshness/unknown, bounded observed-change events, known read-only coordination vs unobserved cause, EN/RU and truthful held-reserve/return-policy/quorum decision explanation');

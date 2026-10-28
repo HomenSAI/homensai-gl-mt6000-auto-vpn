@@ -1,4 +1,4 @@
-const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const fs=require('fs'),vm=require('vm'),assert=require('assert');const {website}=require('./website_fixture');
 class N{
  constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children).flat().filter(n=>n!=null);this.scrollTop=0;this.clientHeight=100;this.offsetHeight=20;this._text='';}
  appendChild(n){const old=this.children.indexOf(n);if(old>=0)this.children.splice(old,1);this.children.push(n);return n;}insertBefore(n,before){if(n===before)return n;const old=this.children.indexOf(n);if(old>=0)this.children.splice(old,1);const i=this.children.indexOf(before);if(i<0)this.children.push(n);else this.children.splice(i,0,n);return n;}removeChild(n){this.children.splice(this.children.indexOf(n),1);}get firstChild(){return this.children[0]||null;}get lastChild(){return this.children[this.children.length-1]||null;}get scrollHeight(){return this.children.length*20;}
@@ -6,7 +6,7 @@ class N{
 }
 let now=100000,tick,intervals=0,rpcs=0;
 const c={locale:'en',bi:a=>a,E:(...a)=>new N(...a),Date,statusNow:()=>now,setTimeout:()=>0,setInterval:f=>{tick=f;intervals++;return 1;},clearInterval:()=>{},document:{body:{contains:()=>true}},rpc:{declare:()=>{rpcs++;throw Error('unexpected network action');}},safeCode:v=>typeof v==='string'&&/^[A-Z][A-Z0-9-]{1,95}$/.test(v),serverTitle:p=>p.name||p.id,endpointText:()=>'',rolePairIds:()=>['wireguard:peer_1','openvpn:1_1'],autoLightModel:()=>({key:'reserve',title:'Reserve confirmed'}),autoWorking:()=>true,channelDisplayUse:p=>({kind:p.id==='openvpn:1_1'?'green':'yellow',label:p.id==='openvpn:1_1'?'Working':'Waiting'})};
-vm.createContext(c);for(const file of ['journal_panel','live_terminal'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);
+vm.createContext(c);for(const file of ['ui_logic','journal_panel','live_terminal'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);c.statusNow=()=>now;
 const status={time:now,profiles:[{id:'wireguard:peer_1',name:'Primary'},{id:'openvpn:1_1',name:'Reserve'}],native_history:{events:[{sequence:1,time:now-10,state:'COMMITTED',target:'openvpn:1_1'}]},accounting:{reliability:{events:[{sequence:1,time:now-20,profile:'wireguard:peer_1',kind:'failure',code:'DNS-001'}]}}};
 const rows=c.journalRows(status,null,now);assert.equal(rows.length,2);assert.equal(c.filteredJournalRows(rows,status,'dns-001','time',true).length,1);assert.equal(c.filteredJournalRows(rows,status,'primary','time',true).length,1);
 assert(c.filteredJournalRows(rows,status,'','time',false)[0].time<rows[0].time,'date sorting covers all rows');
@@ -120,12 +120,12 @@ for(const changed of [{profile:'wireguard:peer_1'},{time:now},{rtt_ms:NaN},{gene
 const primarySample={profile:'wireguard:peer_1',metric:'https-rtt-ms',time:now-1,rtt_ms:12.3,interface:'wgclient1',generation:'a'.repeat(32)};
 const returned=c.journalRows(Object.assign({},latest,{native_history:{events:[{sequence:151,time:now,state:'STOPPED',source:'wireguard:peer_1',target:'openvpn:1_1',codes:['OPERATOR-RETURN'],latency:primarySample}]}}),null,now)[0];
 assert(c.journalMessage(returned,latest).includes('12.3 ms HTTPS'),'legacy return uses primary measurement');
-const currentProfile={id:'wireguard:peer_1',name:'Primary',protocol:'wireguard',interface:'wgclient1',vendor_tunnel_id:'wireguard:wgclient1',vendor_generation:'a'.repeat(32),vendor_state:'SETTLED',time:now,rtt_ms:12.3,dns_ok:true,https_success:2,code:null};
+const currentProfile=website({id:'wireguard:peer_1',name:'Primary',protocol:'wireguard',interface:'wgclient1',vendor_tunnel_id:'wireguard:wgclient1',vendor_generation:'a'.repeat(32),vendor_state:'SETTLED',time:now,rtt_ms:987.6,dns_ok:true,https_success:2,code:null},12.3);
 assert.equal(c.journalCurrentLatency(currentProfile,{time:now},now).rtt_ms,12.3);
 assert.equal(c.journalCurrentLatency(currentProfile,{time:now,rpc_error:'RPC-UNAVAILABLE'},now),null);
-assert.equal(c.journalCurrentLatency(Object.assign({},currentProfile,{time:now-100}),{time:now},now),null);
+assert.equal(c.journalCurrentLatency(Object.assign({},currentProfile,{website_response:{...currentProfile.website_response,time:now-100}}),{time:now},now),null);
 c.renderLiveTerminal(Object.assign({},status,{time:now,profiles:[currentProfile]}),{});
-assert(c.LIVE_TERMINAL.pinned.text().includes('12.3 ms HTTPS'));
+assert(c.LIVE_TERMINAL.pinned.text().includes('12.3 ms')&&!c.LIVE_TERMINAL.pinned.text().includes('987.6'));
 assert.equal(rpcs,0);
 console.log('PASS: immutable event-time delay, no backfill from live RTT, target/return direction validation and fresh pinned delay without additional probes');
 const recoveryStatus={time:now,profiles:[{id:'wireguard:peer_1',name:'Germany · WireGuard'}],accounting:{reliability:{events:[{sequence:100,time:now,kind:'RECOVERY',profile:'wireguard:peer_1',role:'target'}]}}};

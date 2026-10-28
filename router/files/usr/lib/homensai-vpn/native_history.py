@@ -17,6 +17,11 @@ WEEK=7*86400
 
 
 def transition_destination(value):
+    if value.get('route_changed') is False or value.get('activation_reapply') is True:return None,None
+    if value.get('transition_metadata_present') is True and 'destination_role' not in value:return None,None
+    if 'destination_role' in value or 'destination_profile_id' in value:
+        role=value.get('destination_role');identifier=value.get('destination_profile_id')
+        return (role,identifier) if role in ('source','target') and identifier==value.get(role) and isinstance(identifier,str) and PROFILE.fullmatch(identifier) else (None,None)
     role=('source' if value.get('state') in ('RESTORING','ROLLED-BACK') or value.get('state')=='STOPPED' and value.get('reason')=='OPERATOR-RETURN' else
           'target' if value.get('state') in ('APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE') else None)
     identifier=value.get(role) if role else None
@@ -52,6 +57,52 @@ def capture_transition_latency(value,status,binding,now):
             or any(p.get(k)!=binding.get(k) for k in ('id','protocol','interface','vendor_tunnel_id','vendor_generation'))):return None
     return clean_transition_latency({'profile':identifier,'metric':'https-rtt-ms','time':p.get('time'),'rtt_ms':p.get('rtt_ms'),
         'interface':p.get('interface'),'generation':p.get('vendor_generation')},value,now)
+
+
+def clean_website_response(raw,value,now):
+    """Saved event-time website sample; never reclassify historical technical RTT."""
+    from website_response import METRIC,TARGET_SET,MAX_MS,VALID_FOR,mean_ms
+    role,identifier=transition_destination(value)
+    if not identifier or not isinstance(raw,dict)or raw.get('profile')!=identifier or raw.get('metric')!=METRIC or raw.get('target_set')!=TARGET_SET:return None
+    stamp=raw.get('time');interface=raw.get('interface');generation=raw.get('generation');values=raw.get('site_ms')
+    if (type(stamp)not in(int,float)or not math.isfinite(stamp)or not 0<=now-stamp<=VALID_FOR
+            or not isinstance(interface,str)or not re.fullmatch(r'(?:wgclient|ovpnclient)[1-9][0-9]{0,3}',interface)
+            or identifier.startswith('wireguard:')!=interface.startswith('wgclient')
+            or raw.get('vendor_tunnel_id')!=('wireguard:'if interface.startswith('wgclient')else'openvpn:')+interface
+            or not isinstance(generation,str)or not re.fullmatch('[a-f0-9]{32}',generation)
+            or type(raw.get('attempted'))is not int or raw['attempted']!=3 or not isinstance(values,list)or len(values)!=3):return None
+    present=[]
+    for delay in values:
+        if delay is None:continue
+        if type(delay)not in(int,float)or not math.isfinite(delay)or not 0<=delay<=MAX_MS:return None
+        present.append(delay)
+    count=len(present);state='ok'if count==3 else'partial'if count else'failed';avg=raw.get('avg_ms')
+    if type(raw.get('successes'))is not int or raw['successes']!=count or raw.get('state')!=state:return None
+    if count==3:
+        if type(avg)not in(int,float)or not 0<=avg<=MAX_MS or avg!=mean_ms(present):return None
+    elif avg is not None:return None
+    saved={key:raw.get(key)for key in ('profile','metric','target_set','time','avg_ms','successes','attempted','state','interface','generation','vendor_tunnel_id')}
+    saved['site_ms']=list(values);return saved
+
+
+def capture_website_response(value,status,binding,now):
+    from website_response_history import measurement
+    from website_response import TARGETS
+    role,identifier=transition_destination(value)
+    if not identifier or not isinstance(status,dict)or not isinstance(binding,dict)or binding.get('id')!=identifier:return None
+    stamp=status.get('time')
+    if status.get('error')or status.get('rpc_error')or type(stamp)not in(int,float)or not 0<=now-stamp<=90:return None
+    rows=status.get('profiles',[])
+    if not isinstance(rows,list):return None
+    matched=[p for p in rows if isinstance(p,dict)and p.get('id')==identifier]
+    if len(matched)!=1:return None
+    profile=matched[0]
+    if any(profile.get(key)!=binding.get(key)for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')):return None
+    sample=measurement(profile,now)
+    if sample is None:return None
+    by_id={entry['id']:entry for entry in profile['website_response']['results']}
+    sample.update(profile=identifier,site_ms=[by_id[key]['elapsed_ms']for key,_,_,_ in TARGETS])
+    return clean_website_response(sample,value,now)
 
 
 class HistoryError(ValueError):
@@ -133,23 +184,29 @@ class History:
         """
         active=dict(data.get('active_attempt') or {})
         episode=dict(data.get('retry_episode') or {})
+        if item.get('route_changed') is False or item.get('activation_reapply') is True:
+            if item.get('transition_completed') is True and item.get('transition_outcome')=='refused' and active and all(not item.get(k) or item[k]==active.get(k) for k in ('source','target')):
+                item['attempt_id']=active['id'];item['retry_episode_id']=active['episode'];active['terminal']=True
+            return active,episode
         prepare=item['state']=='ARMED' and 'TRIAL-PASSED' not in item['codes']
-        starting=prepare or item['state']=='APPLYING'
+        restoring=item['state']=='RESTORING' and item.get('transition_metadata_present') is True and item.get('route_changed') is True
+        starting=prepare or item['state']=='APPLYING' or restoring and (not active or active.get('terminal'))
         prior=data['events'][-1]['state'] if data['events'] else None
         if starting and (not active or active.get('terminal') or
                          prior not in ('ARMED','APPLYING') or
                          active.get('source')!=item.get('source') or
                          active.get('target')!=item.get('target')):
             sequence=data['sequence']+1
-            if not episode or episode.get('closed') or episode.get('source')!=item.get('source') or episode.get('trial')!=item['trial']:
-                episode=dict(id=sequence,source=item.get('source'),trial=item['trial'],closed=False)
+            origin=item.get('from_profile_id',item.get('source'))
+            if not episode or episode.get('closed') or episode.get('source')!=origin or episode.get('trial')!=item['trial']:
+                episode=dict(id=sequence,source=origin,trial=item['trial'],closed=False)
             active=dict(id=sequence,episode=episode['id'],source=item.get('source'),
                         target=item.get('target'),terminal=False)
         if active and all(not item.get(k) or item[k]==active.get(k) for k in ('source','target')):
             item['attempt_id']=active['id'];item['retry_episode_id']=active['episode']
-            if item['state'] in ('COMMITTED','ROLLED-BACK','BLOCKED','STOPPED','EXPIRED','STOPPED-ON-RESERVE') or 'TRIAL-PASSED' in item['codes']:
+            if item.get('transition_completed') is True or item['state'] in ('COMMITTED','ROLLED-BACK','BLOCKED','STOPPED','EXPIRED','STOPPED-ON-RESERVE') or 'TRIAL-PASSED' in item['codes']:
                 active['terminal']=True
-            if item['state']=='COMMITTED' or 'TRIAL-PASSED' in item['codes']:
+            if item.get('transition_outcome') in ('committed','restored') or item['state']=='COMMITTED' or 'TRIAL-PASSED' in item['codes']:
                 episode['closed']=True
         return active,episode
     def counters(self,data,item):
@@ -165,19 +222,23 @@ class History:
             for total in (data.setdefault('totals',{}),data['months'].setdefault(month,{}),data.setdefault('days',{}).setdefault(day,{})):
                 total[metric]=total.get(metric,0)+1
             recorded.append(metric)
-        if state=='APPLYING':
+        actual=item.get('route_changed') is not False and item.get('activation_reapply') is not True and item.get('transition_outcome')!='refused'
+        if state=='APPLYING' and actual:
             add('attempts',identity)
             if item.get('manual'):add('manual_attempts',identity)
             elif not item['trial']:add('automatic_attempts',identity)
-        if state=='COMMITTED':
+        committed=(item.get('transition_completed') is True and item.get('transition_outcome')=='committed') or state=='COMMITTED' and 'transition_outcome' not in item
+        if committed and actual:
             new=identity>seen.get('committed',0)
             add('committed',identity)
             if new and not item['trial']:
                 add('manual_committed' if item.get('manual') else 'automatic_committed',identity)
                 kind=item.get('transition_kind')
                 if kind in ('server','channel','protocol'):add(kind+'_switches',identity)
+        if (actual and item.get('transition_completed') is True and item.get('transition_outcome') in ('committed','restored')
+                and item.get('from_role')=='target' and item.get('destination_role')=='source' and not item['trial']):add('returns',identity)
         if state=='ARMED' and 'TRIAL-PASSED' in item['codes']:add('trials_passed',identity)
-        if state=='ROLLED-BACK':
+        if (state=='ROLLED-BACK' or item.get('transition_completed') is True and item.get('transition_outcome')=='restored') and actual:
             add('rollbacks',identity)
             if item.get('original_restored') is True and ('PRIMARY-STABLY-RECOVERED' in item['codes'] or item.get('manual')):add('returns',identity)
         prior=data.get('counted_state')
@@ -254,8 +315,22 @@ class History:
         for key in ('source','target'):
             identifier=value.get(key)
             if isinstance(identifier,str) and PROFILE.fullmatch(identifier):item[key]=identifier
+        for key in ('from_role','destination_role','before_policy_role'):
+            if value.get(key) in ('source','target'):item[key]=value[key]
+        for role,key in (('from_role','from_profile_id'),('destination_role','destination_profile_id')):
+            identifier=value.get(key)
+            if value.get(role) in ('source','target') and identifier==value.get(value[role]) and isinstance(identifier,str) and PROFILE.fullmatch(identifier):item[key]=identifier
+        for key in ('route_changed','transition_completed','activation_reapply','transition_metadata_present'):
+            if type(value.get(key)) is bool:item[key]=value[key]
+        if value.get('transition_outcome') in ('committed','restored','refused','policy-verified'):item['transition_outcome']=value['transition_outcome']
+        for key in ('before_order','after_order','session_order','restored_order'):
+            order=value.get(key)
+            if isinstance(order,list) and 2<=len(order)<=400 and all(isinstance(x,str) and re.fullmatch('[A-Za-z0-9_]{1,64}',x) for x in order) and len(order)==len(set(order)):
+                item[key]=list(order)
         latency=clean_transition_latency(value.get('latency'),value,now)
         if latency is not None:item['latency']=latency
+        website=clean_website_response(value.get('website_response'),value,now)
+        if website is not None:item['website_response']=website
         kind=value.get('transition_kind')
         if kind in ('server','channel','protocol'):item['transition_kind']=kind
         raw=value.get('probe_evidence')
@@ -277,7 +352,7 @@ class History:
             if clean:item['phase_evidence']=clean
         active,episode=self.correlate(data,item)
         # A new RTT sample alone is not a controller transition or flash event.
-        key=hashlib.sha256(encoded({k:v for k,v in item.items() if k!='latency'})).hexdigest()
+        key=hashlib.sha256(encoded({k:v for k,v in item.items() if k not in ('latency','website_response')})).hexdigest()
         if key==data['last_key']:
             original_count=(len(data['events']),len(data.get('days',{})));self.prune(data,now)
             if legacy or (len(data['events']),len(data.get('days',{})))!=original_count:

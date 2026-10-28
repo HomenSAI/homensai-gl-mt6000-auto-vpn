@@ -68,9 +68,11 @@ function retainedTransitions(history){
     rows.push(open);open=null;
   }
   function identifier(value){return Number.isSafeInteger(value)&&value>0?value:null;}
-  function begin(e){open={id:identifier(e.attempt_id)||e.sequence,retry_episode_id:identifier(e.retry_episode_id),
+  function begin(e){var transition=savedTransition(e);open={id:identifier(e.attempt_id)||e.sequence,retry_episode_id:identifier(e.retry_episode_id),
     prepared_at:e.state==='ARMED'?e.time:null,applied_at:e.state==='APPLYING'?e.time:null,start:e.time,end:null,duration:null,
-    source:e.source||'unknown',target:e.target||'unknown',
+    pair_source:e.source||'unknown',pair_target:e.target||'unknown',
+    source:transition.present?(transition.from?e[transition.from]:'unknown'):e.source||'unknown',target:transition.present?(transition.to?e[transition.to]:'unknown'):e.target||'unknown',
+    source_role:transition.present?transition.from:'source',target_role:transition.present?transition.to:'target',transition_metadata_present:transition.present,
     kind:['server','channel','protocol'].indexOf(e.transition_kind)>=0?e.transition_kind:'unknown',
     trial:e.trial===true,outcome:'pending',phases:[],codes:[],probe_evidence:{}};}
   events.forEach(function(e){
@@ -80,17 +82,23 @@ function retainedTransitions(history){
     lastTime=e.time;
     if(last!==null&&e.sequence!==last+1)close('unknown',null,'missing-events');
     last=e.sequence;
+    var transition=savedTransition(e),refused=transition.present&&transition.completed&&transition.outcome==='refused';
+    if(transition.present&&(!transition.changed||transition.unchanged||transition.reapply)&&!refused)return;
+    var restoration=transition.present&&transition.completed&&transition.outcome==='restored';
+    if(restoration&&(!open||identifier(e.attempt_id)&&e.attempt_id!==open.id||e.source&&e.source!==open.pair_source||e.target&&e.target!==open.pair_target)){
+      close('unknown',null,'next-operation');begin(e);open.operation='restoration';open.applied_at=null;
+    }
     var trialPassed=(e.codes||[]).indexOf('TRIAL-PASSED')>=0;
     var starting=e.state==='APPLYING'||e.state==='ARMED'&&!trialPassed;
     if(starting){
       var same=open&&open.applied_at==null&&(e.state==='APPLYING'||!identifier(e.attempt_id)||identifier(e.attempt_id)===open.id)&&
-        (!e.attempt_id||e.attempt_id===open.id)&&(!e.source||e.source===open.source)&&(!e.target||e.target===open.target);
+        (!e.attempt_id||e.attempt_id===open.id)&&(!e.source||e.source===open.pair_source)&&(!e.target||e.target===open.pair_target);
       if(!same){close('unknown',null,'next-attempt');begin(e);}
       else if(e.state==='APPLYING'){open.applied_at=e.time;open.start=e.time;if(['server','channel','protocol'].indexOf(e.transition_kind)>=0)open.kind=e.transition_kind;}
     }
     if(!open)return;
     if(e.trial===true)open.trial=true;
-    if((identifier(e.attempt_id)&&e.attempt_id!==open.id)||(e.source&&e.source!==open.source)||(e.target&&e.target!==open.target)){close('unknown',null,'pair-changed');return;}
+    if((identifier(e.attempt_id)&&e.attempt_id!==open.id)||(e.source&&e.source!==open.pair_source)||(e.target&&e.target!==open.pair_target)){close('unknown',null,'pair-changed');return;}
     open.phases.push({state:e.state,time:e.time});
     (e.codes||[]).forEach(function(code){if(typeof code==='string'&&/^[A-Z0-9_-]{1,96}$/.test(code)&&open.codes.indexOf(code)<0)open.codes.push(code);});
     var evidence=e.probe_evidence||{};
@@ -100,17 +108,23 @@ function retainedTransitions(history){
       var phases=e.phase_evidence.filter(function(p){return p&&/^[A-Z0-9_-]{1,96}$/.test(p.phase)&&Number.isFinite(p.time)&&p.time<=e.time;});
       if(phases.length){open.phases=phases.map(function(p){return {state:p.phase,time:p.time};});if(open.phases[open.phases.length-1].state!==e.state)open.phases.push({state:e.state,time:e.time});}
     }
-    if(e.state==='COMMITTED')close('committed',e);
-    else if(trialPassed)close('trial_passed',e);
-    else if(e.state==='ROLLED-BACK')close('rolled_back',e);
-    else if(['BLOCKED','STOPPED','STOPPED-ON-RESERVE','EXPIRED'].indexOf(e.state)>=0)close('held',e);
+    if(transition.present&&transition.completed){
+      if(transition.outcome==='committed'&&transition.to)close('committed',e);
+      else if(transition.outcome==='restored'&&transition.to)close(open.operation==='restoration'?'restored':'rolled_back',e);
+      else if(transition.outcome==='refused')close('refused',e);
+      else close('unknown',e,'metadata-unverified');
+    }
+    else if(!transition.present&&e.state==='COMMITTED')close('committed',e);
+    else if(!transition.present&&trialPassed)close('trial_passed',e);
+    else if(!transition.present&&e.state==='ROLLED-BACK')close('rolled_back',e);
+    else if(!transition.present&&['BLOCKED','STOPPED','STOPPED-ON-RESERVE','EXPIRED'].indexOf(e.state)>=0)close('held',e);
   });
   close('pending',null);
   return rows;
 }
 
 function recoverySummary(rows,start,end){
-  var selected=rows.filter(function(r){return r.start>=start&&r.start<end;}),durations=[],known=0,committed=0,trialsPassed=0;
+  var selected=rows.filter(function(r){return r.start>=start&&r.start<end&&r.operation!=='restoration';}),durations=[],known=0,committed=0,trialsPassed=0;
   var streaks=Object.create(null),maxFailures=0;
   selected.slice().sort(function(a,b){return a.start-b.start;}).forEach(function(r){
     var outcome=r.end!=null&&r.end>=end?'pending':r.outcome;
@@ -142,12 +156,14 @@ function recoveryWindow(period,now,timezone){
   for(var i=0;i<3;i++)candidate=desired-(localEpoch(candidate)-candidate);
   return {start:candidate/1000,end:now,timezone:timezone};
 }
-function recoveryPreparation(row){return row.applied_at==null&&(!row.source||row.source==='unknown'||!row.target||row.target==='unknown');}
+function recoveryPreparation(row){return row.operation!=='restoration'&&row.applied_at==null&&(!row.source||row.source==='unknown'||!row.target||row.target==='unknown');}
 function recoveryOutcomeText(row){
   if(recoveryPreparation(row))return row.close_reason==='next-attempt'?bi('Preparation ended; a new attempt followed','Подготовка завершена; началась новая попытка'):row.close_reason?bi('Preparation record interrupted','Запись подготовки прервана'):bi('Waiting for the VPN pair and checks','Ожидание пары VPN и проверок');
-  if(row.outcome==='committed')return bi('Switch confirmed','Переключение подтверждено');
+  if(row.outcome==='committed')return row.transition_metadata_present?bi('Channel selection confirmed','Выбор канала подтверждён'):bi('Switch confirmed','Переключение подтверждено');
+  if(row.outcome==='refused')return bi('Request refused; no switch confirmed','Запрос отклонён; переключение не подтверждено');
+  if(row.outcome==='restored')return bi('VPN rule restoration confirmed','Восстановление правил VPN подтверждено');
   if(row.outcome==='trial_passed')return bi('Test passed; original channel restored','Тест пройден; исходный канал восстановлен');
-  if(row.outcome==='rolled_back')return bi('Returned to the original channel','Возврат на исходный канал');
+  if(row.outcome==='rolled_back')return row.transition_metadata_present?bi('VPN rule restoration confirmed','Восстановление правил VPN подтверждено'):bi('Returned to the original channel','Возврат на исходный канал');
   if(row.outcome==='held')return row.terminal_state==='STOPPED-ON-RESERVE'?bi('Reserve retained after Stop','После остановки оставлен резерв'):row.terminal_state==='BLOCKED'?bi('Switch blocked','Переключение заблокировано'):row.terminal_state==='EXPIRED'?bi('Attempt expired','Срок попытки истёк'):bi('Attempt stopped','Попытка остановлена');
   if(row.outcome==='pending')return bi('Awaiting completion confirmation','Ожидается подтверждение завершения');
   var reasons={'missing-events':['Result not recorded: missing history events','Результат не записан: пропуск событий истории'],'pair-changed':['Record interrupted by a VPN pair change','Запись прервана сменой пары VPN'],'clock-order':['Record interrupted by clock order mismatch','Запись прервана нарушением порядка времени'],'next-attempt':['Completion not recorded before the next attempt','Завершение не записано до следующей попытки']},reason=reasons[row.close_reason];
@@ -160,6 +176,7 @@ function recoveryChannelText(row,key,profiles,inventory){
   return channel+' · '+identity.server;
 }
 function recoveryEventRole(row,key){
+  if(row.transition_metadata_present){var role=row[key+'_role'];return role==='source'?bi('Primary channel','Основной канал'):role==='target'?bi('Reserve channel','Резервный канал'):null;}
   var valid=function(id){return typeof id==='string'&&/^(openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$/.test(id);};
   if(!valid(row.source)||!valid(row.target)||row.source===row.target)return null;
   return key==='source'?bi('Primary channel','Основной канал'):key==='target'?bi('Reserve channel','Резервный канал'):null;
@@ -191,7 +208,7 @@ function recoveryGroups(rows,profiles,start,end,inventory){
 }
 function recoveryTableWrap(table){return E('div',{'class':'hv-recovery-scroll'},table);}
 var exportSchemas={
-  ranking:['server','name','protocol','channel','latency_ms','state'],
+  ranking:['server','name','protocol','channel','latency_ms','metric','state'],
   traffic:['month','rx_bytes','tx_bytes','scope'],
   failures:['start_utc','source','target','source_role','target_role','outcome','codes','attempt_id','retry_episode_id'],
   transitions:['start_utc','source','target','source_role','target_role','kind','outcome','duration_seconds','trial','attempt_id','retry_episode_id','source_streak_met','reserve_streak_met','required_failures','required_successes']
@@ -205,11 +222,11 @@ function analyticsCSV(kind,rows){
 }
 function analyticsExportRows(kind,status,transitions){
   if(kind==='ranking')return (status.profiles||[]).map(function(p){return {server:p.id,name:p.name,protocol:p.protocol,channel:p.role==='source'?'primary':p.role==='target'?'reserve':p.channel,
-    latency_ms:p.rtt_ms,state:status.rpc_error?'unknown':profileHealth(p,(typeof routerWall==='function'?routerWall():Date.now()/1000)).state};});
+    latency_ms:channelPingModel(p,status,routerWall()).rtt_ms,metric:WEBSITE_METRIC,state:status.rpc_error?'unknown':profileHealth(p,(typeof routerWall==='function'?routerWall():Date.now()/1000)).state};});
   if(kind==='traffic')return Object.keys((status.accounting||{}).months||{}).sort().map(function(month){var r=status.accounting.months[month];return {month:month,rx_bytes:r.rx,tx_bytes:r.tx,scope:'Observed interface counters; partial collection; overhead included'};});
   var rows=kind==='failures'?transitions.filter(function(r){return ['rolled_back','held'].indexOf(r.outcome)>=0;}):transitions;
   return rows.map(function(r){return {start_utc:new Date(r.start*1000).toISOString(),source:r.source,target:r.target,kind:r.kind,
-    source_role:recoveryEventRole(r,'source')?'primary':null,target_role:recoveryEventRole(r,'target')?'reserve':null,
+    source_role:recoveryEventRole(r,'source')?(r.transition_metadata_present?(r.source_role==='source'?'primary':'reserve'):'primary'):null,target_role:recoveryEventRole(r,'target')?(r.transition_metadata_present?(r.target_role==='source'?'primary':'reserve'):'reserve'):null,
     outcome:r.outcome,duration_seconds:r.duration,trial:r.trial,codes:r.codes.join(' | '),attempt_id:r.id,retry_episode_id:r.retry_episode_id,
     source_streak_met:r.probe_evidence.source_streak_met,reserve_streak_met:r.probe_evidence.reserve_streak_met,
     required_failures:r.probe_evidence.required_failures,required_successes:r.probe_evidence.required_successes};});
@@ -221,6 +238,14 @@ function controllerTransitionMarks(events){
   (events||[]).slice().sort(function(a,b){return a.sequence-b.sequence;}).forEach(function(event){
     var id=event.attempt_id||event.sequence;
     if(event.trial)return;
+    var transition=savedTransition(event);
+    if(transition.present){
+      if(!transition.to||!transition.changed||transition.unchanged||transition.reapply||transition.outcome==='refused')return;
+      var forward=transition.from==='source'?1:transition.from==='target'?2:null,destination=transition.to==='source'?1:2;
+      if(transition.completed&&['committed','restored'].indexOf(transition.outcome)>=0){var terminal=id+':'+transition.outcome+':'+transition.to;if(!committed[terminal]){committed[terminal]=true;marks[event.sequence]={from:forward,to:destination,confirmed:true};}}
+      else if(!transition.completed&&['APPLYING','RESTORING'].indexOf(event.state)>=0){var pending=id+':'+event.state+':'+transition.to;if(!attempted[pending]){attempted[pending]=true;marks[event.sequence]={from:forward,to:destination,confirmed:false};}}
+      return;
+    }
     if(event.state==='APPLYING'&&!attempted[id]){attempted[id]=true;marks[event.sequence]={from:1,to:2,confirmed:false};}
     if(event.state==='COMMITTED'&&!committed[id]){committed[id]=true;marks[event.sequence]={from:1,to:2,confirmed:true};}
     if(event.state==='ROLLED-BACK'&&event.original_restored===true&&committed[id]&&!returned[id]){returned[id]=true;marks[event.sequence]={from:2,to:1,confirmed:true};}
@@ -229,8 +254,8 @@ function controllerTransitionMarks(events){
 }
 function renderTransitionBadge(event,marks){
   var mark=marks[event.sequence];if(!mark)return null;
-  if(typeof renderChannelBadge==='function')return renderChannelBadge({phase:mark.confirmed?'confirmed':'pending',from:mark.from===1?'source':'target',to:mark.to===1?'source':'target'});
-  var label=(mark.confirmed?bi('Confirmed switch: ','Подтверждённый переход: '):bi('Switch attempt: ','Попытка перехода: '))+mark.from+' → '+mark.to;
+  if(typeof renderChannelBadge==='function')return renderChannelBadge({phase:mark.confirmed?'confirmed':'pending',from:mark.from==null?null:mark.from===1?'source':'target',to:mark.to===1?'source':'target'});
+  var label=(mark.confirmed?bi('Confirmed switch: ','Подтверждённый переход: '):bi('Switch attempt: ','Попытка перехода: '))+(mark.from==null?'?':mark.from)+' → '+mark.to;
   return E('span',{'class':'hv-transition-badge'+(mark.confirmed?'':' hv-transition-pending'),'aria-label':label,'title':label},[
     E('span',{'class':'hv-transition-from','aria-hidden':'true'},String(mark.from)),E('span',{'aria-hidden':'true'},'→'),E('span',{'class':'hv-transition-to','aria-hidden':'true'},String(mark.to))]);
 }
@@ -361,7 +386,7 @@ function renderTransitionAnalytics(status,inventory){
 function renderDecisionExplanation(status,inventory){
   status=status||{};inventory=inventory||{};
   var explanation=status.decision_explanation||{},diagnosis=explanation.diagnosis||{},native=status.native_failover||{},settings=inventory.settings||{};
-  var now=Date.now()/1000;
+  var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
   var interval=Number(settings.interval),age=Number.isInteger(interval)&&interval>=10&&interval<=300?Math.max(30,interval*3):90;
   var fresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=0&&now-status.time<=age;
   var nativeFresh=fresh&&Number.isFinite(native.time)&&now-native.time>=0&&now-native.time<=30;
@@ -379,12 +404,21 @@ function renderDecisionExplanation(status,inventory){
     'OBSERVATION-UNKNOWN':['grey','There are not enough measurements yet.','Измерений пока недостаточно.']
   };
   var row=ownGet(seen,diagnosis.code)||seen['OBSERVATION-UNKNOWN'];if(!fresh)row=['grey','The router sends no fresh data right now.','Роутер сейчас не присылает свежих данных.'];
+  var selectedPath=channelPathSelection(status,now,native.source,native.target);
+  if(selectedPath.authoritative){
+    var selectedRow=(status.profiles||[]).find(function(profile){return profile.id===selectedPath.selected;}),health=selectedRow?profileHealth(selectedRow,now).state:'unknown';
+    row=!selectedPath.selected?['grey','The applied VPN traffic selection is not verified.','Действующий выбор VPN для трафика не подтверждён.']:health==='healthy'?seen['VPN-PROBE-HEALTHY']:health==='inactive'?seen['TUNNEL-DISCONNECTED']:health==='failed'?(selectedRow.code==='DNS-001'?seen['DNS-FAILED']:seen['HTTPS-FAILED']):seen['OBSERVATION-UNKNOWN'];
+  }
   var needFail=explanation.required_failures,needGood=explanation.required_successes;
   var failMet=fresh&&explanation.source_failure_streak_met===true,goodMet=fresh&&explanation.reserve_success_streak_met===true;
   function line(kind,title,text){return E('li',{'class':'hv-why-line'},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('div',{},[E('b',{},title),E('p',{},text)])]);}
   var state=native.state;
   var next;
   if(!fresh)next=bi('Current control and measurements are unknown. No switch or automatic return can be predicted from stale data.','Текущее управление и измерения неизвестны. По устаревшим данным нельзя предсказывать переключение или автоматический возврат.');
+  else if(selectedPath.authoritative){
+    if(!selectedPath.selected)next=bi('The traffic channel is not verified; wait for the router VPN rule check.','Канал трафика не подтверждён; дождитесь проверки действующих правил VPN роутером.')+' ('+(selectedPath.code||'KERNEL-POLICY-UNVERIFIED')+')';
+    else next=(selectedPath.selected===(status.channel_path||{}).source_profile_id?bi('The primary channel is selected.','Сейчас выбран основной канал.'):bi('The reserve channel is selected.','Сейчас выбран резервный канал.'))+' '+bi('Applied VPN rules are verified; HTTPS/DNS health and Auto enablement remain separate checks.','Действующие правила VPN проверены; результаты HTTPS/DNS и включение Auto проверяются отдельно.');
+  }
   else if((state==='STOPPED-ON-RESERVE'||state==='HELD-ON-RESERVE')&&!nativeFresh)next=bi('The last controller report retained the reserve after Stop, but current controller state is unknown. Review the explicit return control or a new validated trial; no automatic return is confirmed.','Последний отчёт контроллера указывал на сохранение резерва после остановки, но текущее состояние контроллера неизвестно. Проверьте отдельное действие возврата или новый подтверждённый тест; автоматический возврат не подтверждён.');
   else if(state==='STOPPED-ON-RESERVE'||state==='HELD-ON-RESERVE')next=bi('Auto is stopped with the reserve retained. Use the explicit “Return to primary” control, or a new validated trial. Stop does not promise an automatic return.','Auto остановлен с сохранением резерва. Используйте отдельное действие «Вернуться на основной» или новый подтверждённый тест. Остановка не обещает автоматического возврата.');
   else if((status.auto_control||{}).requested==='off'&&['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(state)>=0)next=bi('Stop was requested; recovery confirmation is still required. Review the Auto card and its explicit return control. No automatic return is confirmed.','Запрошена остановка; подтверждение восстановления ещё необходимо. Проверьте блок Auto и отдельное действие возврата. Автоматический возврат не подтверждён.');

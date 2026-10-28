@@ -5,6 +5,18 @@ function sidebarGeometry(height,top,header,width){
   var available=Math.max(80,Math.floor(height-Math.max(sticky,top)-12));
   return {mobile:false,top:sticky,height:available,tiny:available<320};
 }
+// Explicit menu clicks start at zero after the destination factory; Back and deep links keep their anchors.
+var SIDEBAR_MENU_SEQUENCE=0;
+function sidebarMenuViewport(event,root){
+  var sequence=++SIDEBAR_MENU_SEQUENCE;
+  if(typeof PAGE_BACK_GOING!=='undefined'&&PAGE_BACK_GOING||event&&event.isTrusted===false)return;
+  var target=event&&event.target,link=target&&typeof target.closest==='function'?target.closest('[data-hv-tab]'):null,nav=root&&root.querySelector('.hv-sidebar nav');
+  if(!link||!nav||!nav.contains(link))return;
+  var page=link.getAttribute('data-hv-tab');
+  if(typeof LAZY_HELP!=='undefined'){LAZY_HELP.pendingCode=null;LAZY_HELP.pendingTopic=null;}
+  function top(){if(sequence!==SIDEBAR_MENU_SEQUENCE||typeof pageKeyNow==='function'&&pageKeyNow()!==page)return;if(typeof resetPageViewport==='function')resetPageViewport(root,page);window.scrollTo(0,0);if(document.scrollingElement)document.scrollingElement.scrollTop=0;}
+  top();setTimeout(top,120);
+}
 function updateSidebarLayout(root,reveal){
   if(!root||!root.isConnected)return;
   var sidebar=root.querySelector('.hv-sidebar'),nav=sidebar&&sidebar.querySelector('nav');if(!nav)return;
@@ -22,6 +34,8 @@ function updateSidebarLayout(root,reveal){
 }
 function initSidebarLayout(root){
   var scheduled=false,reveal=false;
+  var menu=root.querySelector('.hv-sidebar nav');
+  if(menu&&!menu.hvMenuViewport){menu.hvMenuViewport=true;menu.addEventListener('click',function(event){sidebarMenuViewport(event,root);});}
   function schedule(event){reveal=reveal||!!(event&&event.type==='resize');if(scheduled)return;scheduled=true;requestAnimationFrame(function(){scheduled=false;var show=reveal;reveal=false;updateSidebarLayout(root,show);});}
   window.addEventListener('resize',schedule,{passive:true});window.addEventListener('scroll',schedule,{passive:true});
   if(window.ResizeObserver){var observer=new ResizeObserver(function(){schedule({type:'resize'});});document.querySelectorAll('.navbar,#fixture-banner').forEach(function(el){if(!root.contains(el))observer.observe(el);});var nav=root.querySelector('.hv-sidebar nav');if(nav)observer.observe(nav);}

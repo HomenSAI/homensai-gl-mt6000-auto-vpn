@@ -18,7 +18,7 @@ def _confirmed_return(record, result, journal, live_order, now):
         and journal.get('phase') == 'ROLLED-BACK'
         and journal.get('source') == record['source_id']
         and journal.get('target') == record['target_id']
-        and live_order == (journal.get('before'), journal.get('hash')))
+        and live_order == (journal.get('restored_order',journal.get('before')), journal.get('hash')))
 
 
 def _confirmed_reserve(record, journal, live_order):
@@ -126,7 +126,7 @@ def recover_pending(backend, runtime=None, persist=None):
     """Report interrupted claimed work; never replay it after supervisor death."""
     from agent import RUNTIME, read_json
     from manual_control import valid_record, publish_result
-    from native_switch import journal_read
+    from native_switch import journal_read,bind_policy_context
     runtime = RUNTIME if runtime is None else runtime
     # persist is accepted alongside runtime so the native caller supplies one
     # explicit scope; this read-only recovery needs only its existing journal.
@@ -134,6 +134,7 @@ def recover_pending(backend, runtime=None, persist=None):
     if not valid_record(record) or record['state'] not in ('CLAIMED','APPLYING','WAIT-CLIENT'):
         return
     journal = journal_read()
+    bind_policy_context(backend,journal)
     verified = _confirmed_reserve(record, journal, backend.order())
     publish_result(record['request_id'], 'COMPLETED' if verified else 'UNCONFIRMED',
         tx=journal.get('tx') if verified else None,

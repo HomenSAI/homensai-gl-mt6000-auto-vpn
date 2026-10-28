@@ -4,9 +4,10 @@ function fillSideStatus(host,status,inventory){
   var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=autoControlModel(status,now),id=identityModel(status);
   var monitorFresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   var light=typeof autoLightModel==='function'?autoLightModel(status,inventory,now):null;
-  var state=!model.fresh?'unknown':light&&typeof autoWorking==='function'?(autoWorking(light)?'on':light.key==='switching'?'unknown':'off'):(model.on||model.transitioning)?'on':'off';
+  var state=!model.fresh?'unknown':light&&typeof autoWorking==='function'?(autoWorking(light)?'on':light.key==='switching'||light.key==='unknown'?'unknown':'off'):(model.on||model.transitioning)?'on':'off';
   var autoText=state==='on'?bi('Auto ON','Auto вкл.'):state==='off'?bi('Auto OFF','Auto выкл.'):bi('Auto: no connection','Auto: нет связи');
   var autoHint=state==='on'?bi('Auto is on: it can switch to the reserve VPN.','Auto включён: он может переключить на резервный VPN.'):state==='off'?bi('Auto is off: nothing is switched, the program only watches.','Auto выключен: ничего не переключается, программа только наблюдает.'):bi('No fresh data from the router, so the state is not known.','Нет свежих данных от роутера, поэтому состояние неизвестно.');
+  if(state==='unknown'&&model.fresh&&light&&light.code){autoText=bi('Auto: route not verified','Auto: маршрут не подтверждён');autoHint=light.hint+' · '+light.code;}
   var monText=bi('Monitoring','Мониторинг');
   var monHint=monitorFresh?bi('Monitoring works: fresh data from the router.','Мониторинг работает: свежие данные от роутера.'):status.rpc_error?bi('The router does not answer.','Роутер не отвечает.'):bi('Monitoring is not sending data.','Мониторинг не присылает данные.');
   function lamp(kind,text,hint){return E('span',{'class':'hv-side-lamp','role':'status','title':hint},[E('span',{'class':'hv-auto-pill-knob hv-lamp-'+kind,'aria-hidden':'true'}),E('span',{'class':'hv-auto-pill-text'},text),E('span',{'class':'hv-visually-hidden'},' — '+hint)]);}
@@ -14,9 +15,7 @@ function fillSideStatus(host,status,inventory){
   var autoTitle=autoHint+' '+bi('Click to open Automatic VPN failover.','Нажмите, чтобы открыть «Автоматическое переключение VPN».');
   var autoLamp=E('span',{'class':'hv-side-lamp hv-side-lamp-link','role':'link','tabindex':'0','title':autoTitle,'click':openAuto,'keydown':openAuto},[E('span',{'class':'hv-auto-pill-knob hv-lamp-'+state,'aria-hidden':'true'}),E('span',{'class':'hv-auto-pill-text'},autoText),E('span',{'class':'hv-visually-hidden'},' — '+autoTitle)]);
   host.appendChild(E('div',{'class':'hv-side-lamps'},[autoLamp,lamp(monitorFresh?'on':'off',monText,monHint)]));
-  var path=status.channel_path||{},ns=status.native_failover||{},selected=null;
-  if(!status.rpc_error&&monitorFresh&&Number.isFinite(path.time)&&now-path.time>=-5&&now-path.time<=30&&path.confirmed===true)selected=path.active_profile_id;
-  else if(!path.time&&model.fresh)selected=selectedProfile(status,now);
+  var path=status.channel_path||{},ns=status.native_failover||{},selected=selectedProfile(status,now);
   var settings=(inventory||{}).settings||{},rows=status.profiles||[];
   function channel(role,label){
     var key=role==='source'?'source_profile_id':'target_profile_id',id=path[key]||ns[role]||settings['plan_'+role];
@@ -29,8 +28,9 @@ function fillSideStatus(host,status,inventory){
     else if(health==='failed'){color='off';why=typeof channelCheckText==='function'?channelCheckText(row,now):bi('router check failed','проверка роутера не прошла');}
     else if(rel&&rel.unreliable){color='switching';why=bi('works, but unreliable: ','работает, но ненадёжно: ')+reliabilityText(rel);}
     else if(health==='healthy'&&state==='unknown'){color='unknown';why=bi('waiting for the router\'s answer','ждём ответа роутера');}
-    else if(health==='healthy'&&state!=='on'){color='switching';why=role==='source'?bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат'):bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат');}
-    else if(health==='healthy'&&selected&&!active){color='switching';why=role==='source'?bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат'):bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат');}
+    else if(light&&light.key==='unknown'&&light.code){color='unknown';why=light.title+' · '+light.code;}
+    else if(health==='healthy'&&state!=='on'){color='switching';why=role==='source'?bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную'):bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную');}
+    else if(health==='healthy'&&selected&&!active){color='switching';why=role==='source'?bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную'):bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную');}
     else if(health==='healthy'&&active){color='on';why=bi('works in Auto and carries your traffic','работает в автомате и несёт ваш трафик');}
     else{color='unknown';why=bi('waiting for the router\'s answer','ждём ответа роутера');}
     return lamp(color,label,label+': '+why);
