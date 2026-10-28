@@ -114,7 +114,9 @@ def controls():
             events,permitted=pair.budget(events,now,policy['attempt_window']*60,policy['attempt_limit'])
         else:events,permitted=pair.budget(events,now)
         kernel=backend.attest_policy() if general else {}
-        known=kernel.get('role') if kernel.get('verified') is True else None
+        known=kernel.get('role') if kernel.get('verified') is True and kernel.get('role') in ('source','target') else None
+        if general and known is None and kernel.get('repairable_missing') is not True:
+            primary.append('KERNEL-POLICY-UNVERIFIED');reserve.append('KERNEL-POLICY-UNVERIFIED')
         if not permitted:
             if known!='target':reserve.append('PAIR-RATE-LIMIT')
             if general and known!='source':primary.append('PAIR-RATE-LIMIT')

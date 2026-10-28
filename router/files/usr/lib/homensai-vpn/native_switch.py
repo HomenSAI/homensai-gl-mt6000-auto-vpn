@@ -347,6 +347,10 @@ def validate_journal(value):
     if 'restore_before_order' in value:
         order=value['restore_before_order']
         if not isinstance(order,list) or len(order)!=len(before) or any(not isinstance(x,str) for x in order) or set(order)!=set(before):raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if any(key in value for key in ('restore_order_step','restore_proof_source','restore_order_origin')):
+        from rollback_recovery import validate_step
+        try:validate_step(value)
+        except (ValueError,TypeError,KeyError):raise Refused('JOURNAL-INTEGRITY-FAILED') from None
     if 'activation_reapply' in value and (value['activation_reapply'] is not True or value.get('pair_transition') is None
             or value.get('manual_request_id') is not None or before!=after):raise Refused('JOURNAL-INTEGRITY-FAILED')
     if value['phase'] not in ('ROLLED-BACK','RELEASE-PENDING'):
@@ -849,12 +853,22 @@ def rollback(backend,journal,reason,restore_order=None):
         if restore_order not in (journal['before'],pair_context['primary_order'],pair_context['session_order']):
             raise Refused('POLICY-IDENTITY-CHANGED')
         live_order,live_hash=backend.order()
-        if (live_hash!=journal['hash'] or live_order not in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order'))):
-            raise Refused('POLICY-IDENTITY-CHANGED')
+        if live_hash!=journal['hash']:raise Refused('POLICY-IDENTITY-CHANGED')
+        known_order=live_order in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order'))
         kernel_before=backend.attest_policy()
-        if not (kernel_before.get('verified') is True or kernel_before.get('repairable_missing') is True):
-            from rollback_recovery import authorize
-            resume_check,recovery_revision=authorize(backend,journal)
+        pending_step=journal.get('phase')=='RESTORING' and 'restore_order_step' in journal
+        if pending_step:
+            from rollback_recovery import order_allowed
+            if not order_allowed(journal,live_order):raise Refused('POLICY-IDENTITY-CHANGED')
+            same_graph=kernel_before.get('kernel_fingerprint')==journal.get('restore_kernel_fingerprint')
+            if not same_graph and not (kernel_before.get('verified') is True and live_order==journal.get('restore_target_order')
+                                       and journal.get('restore_rtp_dispatched') is True):raise Refused('KERNEL-POLICY-UNVERIFIED')
+        if (pending_step and same_graph or not known_order
+                or not (kernel_before.get('verified') is True or kernel_before.get('repairable_missing') is True)):
+            from rollback_recovery import authorize,promote_forward
+            if journal.get('phase') in ('APPLYING','WAIT-CLIENT'):
+                resume_check,recovery_revision=promote_forward(backend,journal,restore_order)
+            else:resume_check,recovery_revision=authorize(backend,journal)
         restore_fingerprint=kernel_before.get('kernel_fingerprint')
         if not isinstance(restore_fingerprint,str) or not re.fullmatch('[a-f0-9]{64}',restore_fingerprint):raise Refused('KERNEL-POLICY-UNVERIFIED')
         if resume_check is not None and restore_fingerprint!=journal['restore_kernel_fingerprint']:raise Refused('KERNEL-POLICY-UNVERIFIED')
@@ -862,6 +876,7 @@ def rollback(backend,journal,reason,restore_order=None):
         if backend.order()!=(live_order,live_hash):raise Refused('POLICY-IDENTITY-CHANGED')
         if resume_check is None:
             journal.update(restore_before_order=list(live_order),restore_before_verified=kernel_before.get('verified') is True)
+            for key in ('restore_order_step','restore_proof_source','restore_order_origin','restore_rtp_dispatched'):journal.pop(key,None)
         if journal.get('phase')=='ARMED' and not journal.get('pid') and restore_order==journal['before'] and backend.order()==(journal['before'],journal['hash']):
             journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time(),restored_order=list(restore_order))
             journal_write(journal);return
@@ -883,17 +898,25 @@ def rollback(backend,journal,reason,restore_order=None):
             raise Refused('KERNEL-POLICY-UNVERIFIED')
     def restore_command(args,timeout=5):
         restore_check()
+        if restore_fingerprint is not None:
+            from rollback_recovery import record_step
+            record_step(backend,journal,args)
+            restore_check()
         if args[0]=='/usr/bin/rtp2.sh':
             journal['restore_rtp_dispatched']=True;journal_write(journal)
         return (forward_dispatch(args,recovery_revision,timeout=timeout) if recovery_revision is not None
                 else command(args,timeout=timeout))
     order,fingerprint=backend.order()
-    if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order')):
+    if fingerprint!=journal['hash'] or resume_check is None and order not in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order')):
         abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
         raise Refused('EXTERNAL-POLICY-CHANGE-RELEASED')
     if restore_fingerprint is not None:
         restore_check()
         if order!=restore_order:backend.reorder(restore_order,before_write=restore_check,write_command=restore_command)
+        elif resume_check is not None and journal.get('restore_order_step') is not None:
+            # A killed writer may have finished its last UCI move but not the
+            # commit. Only a new recorded step authorizes this repeat commit.
+            restore_command(['uci','commit','route_policy'])
         restore_check()
         backend.apply(write_command=restore_command)
     else:

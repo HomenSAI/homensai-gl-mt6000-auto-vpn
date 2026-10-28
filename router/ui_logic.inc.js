@@ -5,7 +5,9 @@ function observationFresh(row,now){return !!row&&Number.isFinite(row.time)&&Numb
 // NTP changes and router reboots may move server_time backwards; old page callbacks retain their original provenance.
 var UI_STATUS_REQUEST_SEQUENCE=0,UI_STATUS_ORDER=new WeakMap();
 function uiStatusRequest(call){
-  var order=++UI_STATUS_REQUEST_SEQUENCE,promise=Promise.resolve().then(call).then(function(status){if(status&&typeof status==='object')UI_STATUS_ORDER.set(status,order);return status;});
+  var order=++UI_STATUS_REQUEST_SEQUENCE,tick=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now()/1000:Date.now()/1000;
+  // Charge the full request duration conservatively; transport cannot renew evidence TTLs.
+  var promise=Promise.resolve().then(call).then(function(status){if(status&&typeof status==='object'){UI_STATUS_ORDER.set(status,order);if(Number.isFinite(status.server_time))UI_STATUS_CLOCKS.set(status,{server:status.server_time,tick:tick});}return status;});
   UI_STATUS_ORDER.set(promise,order);return promise;
 }
 function uiStatusOrder(value){return value&&typeof value==='object'?UI_STATUS_ORDER.get(value)||0:0;}
@@ -22,7 +24,7 @@ var UI_OPERATION_REFRESH=function(){},UI_STATUS_REFRESH=function(){};
 function uiOperationRefresh(refresh){UI_OPERATION_REFRESH();if(refresh!==false)UI_STATUS_REFRESH();}
 function uiStateSignature(status,inventory,now){
   var light=autoLightModel(status,inventory,now),manual=manualControlModel(status,now),op=autoCommandOperation(status,now),path=channelPathSelection(status,now);
-  return JSON.stringify([light.key,light.title,light.code,op,manual.busy,manual.uncertain,manual.direction,manual.primary.allowed,manual.reserve.allowed,manual.hold,manual.resume.allowed,path.selected,path.code,path.moving,
+  return JSON.stringify([light.key,light.title,light.code,op,manual.busy,manual.uncertain,manual.direction,manual.primary.allowed,manual.reserve.allowed,manual.hold,manual.resume.allowed,path.selected,path.code,path.moving,Array.from(MANUAL_RESULT_SEEN.values()).map(function(t){return manualClockTick()-t<=300000;}),
     (status.profiles||[]).map(function(p){var ping=channelPingModel(p,status,now);return [p.id,profileHealth(p,now).state,ping.state,ping.code,ping.rtt_ms];})]);
 }
 var UI_STATUS_CLOCKS=new WeakMap();

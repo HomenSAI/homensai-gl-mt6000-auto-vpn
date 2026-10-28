@@ -103,6 +103,24 @@ async function main(){
     assert.strictEqual(c.uiNewestStatus(sameTime,c.uiStatusFailure(old,c.uiStatusOrder(p1))),sameTime,'timeout of an older RPC cannot mark a newer success as disconnected');
   }
   console.log('PASS: dispatch sequence fences stale callbacks, errors, same-time results and backwards router clocks');
+  for(const scenario of [{delay:100},{delay:24000},{delay:24000,zeroTick:true},{delay:24000,wallBack:true},{delay:24000,routerBack:true}]){
+    const {c,clock,status}=fixture();if(scenario.zeroTick)clock.tick=0;
+    const previous=await c.uiStatusRequest(()=>({server_time:2000}));c.statusNow(previous);
+    const stamp=scenario.routerBack?100:1000,s=status();s.server_time=s.time=s.channel_path.time=s.channel_path.checked_at=stamp;s.native_failover.time=stamp-10;s.observation_valid_for=900;
+    s.profiles.forEach((p,i)=>{p.time=stamp;p.observation_valid_for=900;p.vendor_state='SETTLED';p.vendor_generation='a'.repeat(32);p.vendor_tunnel_id=p.protocol+':'+p.interface;
+      p.website_response={metric:c.WEBSITE_METRIC,target_set:c.WEBSITE_TARGET_SET,state:'ok',avg_ms:100*(i+1),successes:3,attempted:3,time:stamp-25,valid_for:45,generation:p.vendor_generation,interface:p.interface,vendor_tunnel_id:p.vendor_tunnel_id,results:Object.keys(c.WEBSITE_URLS).map(id=>({id,url:c.WEBSITE_URLS[id],state:'ok',code:null,elapsed_ms:100*(i+1)}))};});
+    const original=JSON.stringify(s);let resolve;const pending=c.uiStatusRequest(()=>new Promise(done=>{resolve=done}));await Promise.resolve();
+    clock.tick+=scenario.delay;clock.wall+=scenario.wallBack?-600000:scenario.delay;resolve(s);const received=await pending,now=c.statusNow(received),slow=scenario.delay>15000;
+    assert(Math.abs(now-stamp-scenario.delay/1000)<1e-9,'status evidence ages during RPC transport, including a zero monotonic tick and backwards clocks');
+    assert.strictEqual(c.uiNewestStatus(previous,received),received);assert.equal(c.selectedProfile(received,now),slow?null:'a');assert.equal(c.autoControlModel(received,now).fresh,!slow);
+    received.profiles.forEach((p,i)=>assert.equal(c.channelPingModel(p,received,now).rtt_ms,slow?null:100*(i+1),'both 45-second website results expire while in transit'));
+    assert(c.observationFresh(received,now));assert.equal(JSON.stringify(received),original,'transport metadata does not rewrite router evidence');
+  }
+  {
+    const {c,clock,status}=fixture(),untracked={...status(),server_time:1000};
+    assert.equal(c.statusNow(untracked),1000,'an untracked initial/fixture snapshot retains the receipt-time fallback');clock.tick+=5000;assert.equal(c.statusNow(untracked),1005);
+  }
+  console.log('PASS: delayed replies consume kernel/controller/website TTLs, fast replies and untracked frames remain usable');
   for(const terminalTime of [100,1000]){
     const {c,status,inventory,replies}=fixture(),initial=status();initial.server_time=1000;
     const task=choice(c.renderManualSwitch(initial,inventory),'reserve').attrs.click();
@@ -127,6 +145,38 @@ async function main(){
     assert.equal(c.MANUAL_SWITCH_OPERATION.request_id,null);
   }
   console.log('PASS: matching manual terminal survives backwards router clock without accepting another request');
+  for(const state of ['CANCELLED','REFUSED','UNCONFIRMED']){
+    const {c,clock,status,inventory}=fixture();clock.tick=0;
+    const row={state,completed:false,request_id:'c'.repeat(32),direction:'reserve',requested_at:1000,updated_at:1000,code:'CONTROL-REVISION-STALE'},stopped={...status(),time:100,server_time:100,manual_switch:row};
+    assert(c.manualFailureResult(stopped,100).text().includes(row.code),'a cold tab must show a valid Stop/recovery outcome despite backwards router time');
+    for(const updated_at of [NaN,Infinity,-1,'1000'])assert.equal(c.manualFailureResult({...stopped,manual_switch:{...row,updated_at}},100),null,'a malformed timestamp cannot gain a clock-skew allowance');
+    for(const request_id of [null,'invalid',''])assert.equal(c.manualFailureResult({...stopped,manual_switch:{...row,request_id}},100),null,'clock-skew allowance needs a real request ID');
+    assert.equal(c.manualFailureResult({...stopped,manual_switch:{...row,completed:true}},100),null);
+    clock.tick=299999;assert(c.manualFailureResult(stopped,399));const beforeExpiry=c.uiStateSignature(stopped,inventory,399);clock.tick=300001;assert.equal(c.manualFailureResult(stopped,400),null,'clock-skew feedback expires after 300 monotonic seconds');
+    assert.notEqual(c.uiStateSignature(stopped,inventory,400),beforeExpiry,'the presentation heartbeat removes expired feedback without waiting for another RPC');
+    assert.equal(c.manualFailureResult(stopped,1000),null,'correcting the router clock again cannot revive expired feedback');
+    const other={...row,request_id:'d'.repeat(32)};assert(c.manualFailureResult({...stopped,manual_switch:other},100));assert.equal(c.manualFailureResult(stopped,100),null,'another request cannot renew the old result window');
+    c.MANUAL_SWITCH_OPERATION={direction:'reserve',request_id:'e'.repeat(32),baseline:1000,tick:clock.tick,t0:clock.wall};c.MANUAL_SWITCH_PENDING=true;
+    assert(c.manualControlModel(stopped,100).busy,'another request terminal never completes the local request');assert(!c.renderManualSwitch(stopped,inventory).all().some(n=>n.attrs['data-manual-diagnostic']==='last-request'));
+  }
+  {
+    const {c,clock,status}=fixture(),s={...status(),manual_switch:{state:'REFUSED',completed:false,request_id:'f'.repeat(32),updated_at:1000,code:'SOURCE-NOT-HEALTHY'}};
+    assert(c.manualFailureResult(s,1000));clock.tick+=299999;assert(c.manualFailureResult(s,100));clock.tick+=2;assert.equal(c.manualFailureResult(s,100),null,'a later clock step retains the first-observation deadline');
+    assert(c.manualFailureResult({...s,manual_switch:{...s.manual_switch,request_id:null,updated_at:100}},100),'a fresh local refusal without an accepted request ID retains its normal display');
+  }
+  console.log('PASS: Stop/recovery terminal feedback survives clock skew for a bounded monotonic window, including a cold tab');
+  {
+    const {c,status}=fixture(),saved={state:'REFUSED',completed:false,request_id:'c'.repeat(32),updated_at:1000,code:'SOURCE-NOT-HEALTHY'};c.MANUAL_SWITCH_FEEDBACK=saved;
+    let oldReply;const oldRequest=c.uiStatusRequest(()=>new Promise(resolve=>{oldReply=resolve}));await Promise.resolve();
+    const current=await c.uiStatusRequest(()=>({...status(),time:100,server_time:100,manual_switch:{state:'COMPLETED',completed:true,request_id:'d'.repeat(32),updated_at:100}}));
+    assert.equal(c.manualFailureResult(current,100),null,'a completed new request from another tab supersedes an old correlated refusal despite backwards time');
+    oldReply({...status(),server_time:1000,manual_switch:saved});const stale=await oldRequest;assert.strictEqual(c.uiNewestStatus(current,stale),current);
+    assert.equal(c.manualFailureResult(c.uiNewestStatus(current,stale),100),null,'a late old RPC cannot resurrect the superseded refusal');
+    const refused={...current,manual_switch:{...current.manual_switch,state:'REFUSED',completed:false,code:'PAIR-MANUAL-TARGET-UNHEALTHY'}};
+    assert(c.manualFailureResult(refused,100).text().includes('PAIR-MANUAL-TARGET-UNHEALTHY'),'the current backend refusal takes precedence over the old request');
+    for(const request_id of [null,'invalid',saved.request_id])assert(c.manualFailureResult({...current,manual_switch:{...current.manual_switch,request_id}},100).text().includes(saved.code),'missing, invalid or unchanged identity cannot displace known feedback using a backwards timestamp');
+    c.MANUAL_SWITCH_FEEDBACK={...saved,request_id:null};assert(c.manualFailureResult(current,1000).text().includes(saved.code),'a fresh local refusal without an accepted request ID remains visible');
+  }
   {
     const {c,status}=fixture(),reset=status();reset.time=reset.server_time=reset.native_failover.time=100;reset.auto_control.requested_at=990;
     assert(!c.autoControlModel(reset,100).awaiting,'correlated RUNNING pair survives a backwards clock');assert.equal(c.autoCommandOperation(reset,100),null);

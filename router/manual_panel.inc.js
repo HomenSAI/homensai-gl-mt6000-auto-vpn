@@ -1,5 +1,6 @@
 /* Explicit one-shot manual intent. Queue acknowledgements never select a route or enable Auto. */
 var MANUAL_SWITCH_PENDING=false,MANUAL_SWITCH_DIRECTION=null,MANUAL_SWITCH_OPERATION=null,MANUAL_SWITCH_FEEDBACK=null;
+var MANUAL_RESULT_SEEN=new Map();
 var MANUAL_TERMINAL_STATES=['COMPLETED','REFUSED','CANCELLED','UNCONFIRMED'];
 function manualClockTick(){return typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();}
 function manualOperationModel(status,now){
@@ -16,6 +17,13 @@ function manualOperationModel(status,now){
     uncertain:!!(op&&op.uncertain)||backendPending&&(!valid||!manualFresh(row.updated_at,now,90)),request:op||row};
 }
 function manualFresh(time,now,limit){return Number.isFinite(time)&&now-time>=-5&&now-time<=limit;}
+function manualResultFresh(row,now){
+  var stamp=row.updated_at,id=row.request_id,tick=manualClockTick();
+  if(!Number.isFinite(stamp)||stamp<0)return false;
+  var known=typeof id==='string'&&/^[a-f0-9]{32}$/.test(id),first=known?MANUAL_RESULT_SEEN.get(id):undefined;
+  if(known&&first===undefined){first=tick;MANUAL_RESULT_SEEN.set(id,first);}
+  return (!known||tick-first>=0&&tick-first<=300000)&&(manualFresh(stamp,now,300)||known&&stamp>now+5);
+}
 function manualHoldText(){return bi('Channel selected manually and held. Resume Auto restores normal selection; failover protection remains active.','Канал выбран вручную и удерживается. «Возобновить Auto» возвращает обычный автовыбор; защита при отказе сохраняется.');}
 function manualConfirmedPath(status,source,target,now){
   var neutral={source:'neutral',target:'neutral',direction:'none',moving:false,selected:null};
@@ -86,8 +94,8 @@ function manualRecordedResult(status,now){
   return E('p',{'data-manual-result':'already-selected'},[typeof errorCodeLink==='function'?errorCodeLink(request.code):request.code,' · ',bi('Last manual request: the channel was already selected and verified; no additional switch was needed.','Последний ручной запрос: канал уже был выбран и проверен; повторное переключение не потребовалось.')]);
 }
 function manualFailureResult(status,now){
-  var saved=MANUAL_SWITCH_FEEDBACK,current=status.manual_switch||{},row=saved&&(!Number.isFinite(current.updated_at)||current.updated_at<saved.updated_at)?saved:current;
-  if(['REFUSED','CANCELLED','UNCONFIRMED'].indexOf(row.state)<0||!manualFresh(row.updated_at,now,300))return null;
+  var saved=MANUAL_SWITCH_FEEDBACK,current=status.manual_switch||{},row=saved&&(!/^[a-f0-9]{32}$/.test(saved.request_id)||!/^[a-f0-9]{32}$/.test(current.request_id)||saved.request_id===current.request_id)&&(!Number.isFinite(current.updated_at)||current.updated_at<saved.updated_at)?saved:current;
+  if(['REFUSED','CANCELLED','UNCONFIRMED'].indexOf(row.state)<0||row.completed!==false||!manualResultFresh(row,now))return null;
   var code=typeof row.code==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(row.code)?row.code:'MANUAL-REQUEST-UNCONFIRMED';
   var label=row.state==='CANCELLED'?bi('Switch cancelled: ','Переключение отменено: '):row.state==='UNCONFIRMED'?bi('Switch result not confirmed: ','Результат переключения не подтверждён: '):bi('Switch refused: ','Переключение отклонено: ');
   return E('div',{'class':'hv-manual-error','data-manual-diagnostic':'last-request','role':'status'},[E('strong',{},label+code),E('p',{},manualReason([code]))]);

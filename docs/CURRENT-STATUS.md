@@ -1,3 +1,11 @@
+## Alpha59 source candidate: interrupted UCI and evidence age / Кандидат alpha59
+
+Current branch: **0.9.1-alpha59-1**, dashboard134/ui100/help134. Additional failures reproduced after the alpha58 review: delayed status renewed expired proof, clock-skew hid terminal explanations, known invalid kernel still enabled manual routing buttons, and interrupted multi-move UCI rollback lacked a durable step/commit checkpoint. [Current follow-up](handoff/SWITCHING-FOLLOWUP-2026-10-28.ru.md) · [Independent review prompt](handoff/SWITCHING-FINISH-PROMPT-2026-10-28.ru.md).
+
+Это кандидат без выпуска и установки. Предыдущие результаты ниже сохраняют свою версию и область. Основной TODO снова отсутствует в доступных GitHub refs; приватный физический стенд и точные утверждённые Docker images недоступны. Main, releases и устройства не изменены.
+
+---
+
 ## Alpha58 source candidate: switching recovery / Кандидат alpha58: восстановление переключений
 
 This branch contains **0.9.1-alpha58-1**, dashboard133/ui99/help133, for review and further acceptance. It is not a release or an installed-device receipt. No MT3000/MT6000 or Windows networking changes were made in this session. The latest historical installed version is alpha57; its present physical state has not been queried.
