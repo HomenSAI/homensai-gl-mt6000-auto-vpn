@@ -52,7 +52,8 @@ def main():
     package_hash=checked_receipt(json.loads(a.receipt.read_text(encoding='utf-8-sig')),a.source)
     checked_manifest(json.loads((ROOT/'VERSION.json').read_text(encoding='utf-8-sig')),package_hash,a.release)
     if a.release:
-        if not a.publish or not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+-alpha[0-9]+',a.release):raise ValueError('RELEASE-SCOPE')
+        # Alpha, beta and release-candidate tags; a plain version tag (final release) stays a separate owner decision.
+        if not a.publish or not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+-(?:alpha|beta|rc)[0-9]+',a.release):raise ValueError('RELEASE-SCOPE')
         if not a.artifact or not a.notes or not a.notes.is_file() or hashlib.sha256(a.artifact.read_bytes()).hexdigest()!=package_hash:raise ValueError('RELEASE-ARTIFACT-HASH')
         probe=subprocess.run(['gh','api','repos/'+REPOSITORY+'/git/ref/tags/'+a.release],cwd=ROOT,capture_output=True,text=True,timeout=60)
         if probe.returncode==0 and not a.resume:raise ValueError('RELEASE-TAG-EXISTS')

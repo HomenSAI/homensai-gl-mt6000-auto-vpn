@@ -34,12 +34,14 @@ function restorePageViewport(root,saved){
 }
 function rememberPageViewport(root,page){var saved=capturePageViewport(root,page);if(saved)pageViewportStates[page]=saved;return saved;}
 function revisitPageViewport(root,page){restorePageViewport(root,pageViewportStates[page]||{page:page,x:0,y:0,details:[]});}
+/* Focusable things a refresh may rebuild; restored by tag, aria-label and text. Text fields are not rebuilt under focus. */
+var PAGE_FOCUS_SELECTOR='button,a[href],summary,input[type=checkbox],input[type=radio],input[type=range],select';
 function restorePageControlFocus(pages,saved){
   if(!saved||!pages[saved.page])return;
   var page=pages[saved.page],node=saved.node;
   // Cached Help/training nodes are moved, not rebuilt. Restore the exact control,
   // rather than the first checkbox with the same empty text/aria-label.
-  if(!node||!page.contains(node))node=Array.from(page.querySelectorAll('button,input[type=checkbox],input[type=range],select')).find(function(el){return el.tagName===saved.tag&&el.getAttribute('aria-label')===saved.label&&el.textContent===saved.text;});
+  if(!node||!page.contains(node))node=Array.from(page.querySelectorAll(PAGE_FOCUS_SELECTOR)).find(function(el){return el.tagName===saved.tag&&el.getAttribute('aria-label')===saved.label&&el.textContent===saved.text;});
   if(node)node.focus({preventScroll:true});
 }
 function installViewportPersistence(root,getPage){

@@ -1,3 +1,19 @@
+## Alpha50 source: review batch 2, load and process / Разбор проекта, пакет 2: нагрузка и процесс
+
+Batch 2 of the full project review ([review](REVIEW-2026-10-28.md)):
+- The status call caches the parsed transition history in RAM, keyed by inode, size and mtime of both history files (W1).
+- Telegram delivery runs in its own thread, one at a time, on a copy of the pass; a report in flight at shutdown is finished and saved (W2).
+- Stop reads the router settings (Lua) before taking the control lock; a start for another trial since then gets the global latch (W7).
+- A hidden browser tab skips the 10-second status call and the 2-second live chart; it refreshes at once when shown (W3).
+- Keyboard focus is restored after the refresh on links, summaries and radios too; the Auto hint is a live region only when it changes (W4).
+- Unused cascade design modules are not shipped (W8). Installed-Size is the unpacked size (P7). Beta and rc tags can be published (P8).
+- CI rebuilds the page and fails on any difference from the committed files (P2). bump-version renames the UI module itself (P4).
+- CI archives and Gitea bundles are removed after success; failed runs keep them. The 15 GB folder was pruned with the owner's approval (P1).
+
+Пакет 2 разбора: меньше нагрузки на роутер, Telegram отдельно от проверок, Стоп без ожидания блокировки, скрытая вкладка не опрашивает роутер, фокус и экранный диктор, проверка сборки страницы в CI, служебная папка очищена.
+
+---
+
 ## Alpha49 source: review batch 1, robustness / Разбор проекта, пакет 1: надёжность
 
 Fixes the confirmed defects from the full project review ([review](REVIEW-2026-10-28.md)):

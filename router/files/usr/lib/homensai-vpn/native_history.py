@@ -325,6 +325,26 @@ class History:
                 'months':data['months'],'days':data.get('days',{}),'daily_since':data.get('daily_since'),'event_history_truncated':data['sequence']>min(100,len(data['events'])),'scope':'controller transitions; not LAN availability or router power-loss proof'}
 
 
-def read_public(directory):
-    try:return History(directory).public(now=time.time())
+def read_public(directory,cache=None):
+    """Public history. With a cache path (RAM), the parsed result is reused while both history files are unchanged.
+
+    The key is each file's inode, size and mtime (every write replaces the file, so the inode changes), the retention
+    setting and the hour, so pruning by age still happens. A missing or unreadable cache only costs one full read."""
+    try:
+        history=History(directory);now=time.time()
+        key=[history.detail_days,int(now//3600)]
+        for path in (history.path,history.backup):
+            try:info=os.lstat(str(path));key.append([info.st_ino,info.st_size,info.st_mtime_ns])
+            except FileNotFoundError:key.append(None)
+        if cache is not None:
+            try:
+                cache=Path(cache)
+                if not cache.is_symlink():
+                    cached=json.loads(cache.read_text(encoding='utf8'))
+                    if isinstance(cached,dict) and cached.get('key')==key and isinstance(cached.get('value'),dict):return cached['value']
+            except (OSError,ValueError):pass
+        value=history.public(now=now)
+        if cache is not None:
+            with contextlib.suppress(OSError,ValueError,HistoryError):atomic(cache,{'key':key,'value':value})
+        return value
     except (OSError,ValueError,KeyError,TypeError):return {'available':False,'error':'HISTORY-001'}

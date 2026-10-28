@@ -280,6 +280,15 @@ def stop(runtime=None,persist=None,request_source=None):
     from agent import command
     import json
     import subprocess
+    # Stop must never depend on reading the router settings: if they cannot be read, the trial named by
+    # the current start request is latched (an in-flight switch stops on any newer stop latch anyway).
+    unverified=False
+    try:
+        internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
+        trial=internal.get('settings',{}).get('native_trial')
+        if trial is not None and not isinstance(trial,str):raise ValueError('invalid trial')
+    except (OSError,ValueError,AttributeError,RecursionError,subprocess.SubprocessError):
+        trial=None;unverified=True
     with control_lock(runtime):
         revision_error=None
         try:revision_locked(runtime,rotate=True)
@@ -291,15 +300,9 @@ def stop(runtime=None,persist=None,request_source=None):
         try:request=read_json(runtime/'auto-control.json',{})
         except (OSError,ValueError):request={}
         if not isinstance(request,dict):request={}
-        # Stop must never depend on reading the router settings: if they cannot be read, the trial named by
-        # the current start request is latched (an in-flight switch stops on any newer stop latch anyway).
-        unverified=False
-        try:
-            internal=json.loads(command(['/usr/bin/lua','/usr/lib/homensai-vpn/native_policy.lua']))
-            trial=internal.get('settings',{}).get('native_trial')
-            if trial is not None and not isinstance(trial,str):raise ValueError('invalid trial')
-        except (OSError,ValueError,AttributeError,RecursionError,subprocess.SubprocessError):
-            trial=request.get('trial');unverified=True
+        if unverified:trial=request.get('trial')
+        # The settings were read before the lock; a start request for another trial since then gets the global latch.
+        changed=not unverified and request.get('trial') is not None and request.get('trial')!=trial
         # One durable write targets the current trial, including an in-flight worker.
         try:old=read_json(persist/'native-stop.json',{})
         except (OSError,ValueError):old={}
@@ -308,7 +311,7 @@ def stop(runtime=None,persist=None,request_source=None):
         previous = old.get('requested')
         requested = request.get('time',0)
         if type(requested) not in (int,float) or not math.isfinite(requested):requested=float('inf')
-        needs_global = unverified or not trial
+        needs_global = unverified or not trial or changed
         if (revision_error is None and not old.get('control_revision_failed')
                 and old and type(previous) in (int, float) and math.isfinite(previous) and previous > 0
                 and (old.get('all_trials') is True or not needs_global and old.get('trial') == trial)

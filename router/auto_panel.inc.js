@@ -282,7 +282,7 @@ function renderAutoLight(light,technicalCode){
     E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
     E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive and waiting to be switched on by Auto, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой и ожидает включения в режиме автомат, серый — ждём ответа роутера, красный — ошибка.')])]);
-  return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',{'role':'status','aria-live':'polite'},light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
+  return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
 // Reply of the Auto button: the code of the answer is shown as a link to its row in the error table, with its short meaning.
@@ -291,6 +291,9 @@ function autoCodeNotice(code,extra){
   return E('div',{},[E('p',{},[errorCodeLink(code),row?' · '+bi(row[2],row[3]):' · '+autoBlockerText(code),extra?' · '+extra:'']),renderAutoRemedy(code)].filter(Boolean));
 }
 var AUTO_FAILURE_SHOWN=null;
+/* A rebuilt live region is read again by screen readers; only a changed hint is marked live. */
+var AUTO_HINT_LAST=null;
+function autoHintLive(text){var changed=text!==AUTO_HINT_LAST;AUTO_HINT_LAST=text;return changed?{'role':'status','aria-live':'polite'}:{'aria-live':'off'};}
 function autoShowError(title,node){
   if(typeof ui!=='undefined'&&ui&&typeof ui.showModal==='function')ui.showModal(title,[node,E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
   else if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,node);

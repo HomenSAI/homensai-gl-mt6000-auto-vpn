@@ -21,10 +21,10 @@ import struct
 import subprocess
 import sys
 import time
-from threading import local
+from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha49'
+VERSION = '0.9.1-alpha50'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -703,6 +703,19 @@ def serve():
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
+    telegram_job=None;telegram_public=None
+    def telegram_collect(job):
+        # Applies a finished delivery: its saved state and its public answer. Runs only in the monitor thread.
+        nonlocal telegram_saved,telegram_notice,telegram_public
+        thread,holder,enabled=job
+        if 'result' not in holder:
+            telegram_public={'enabled':enabled,'code':'TELEGRAM-REPORT-UNAVAILABLE'};return
+        public,saved,_=holder['result']
+        if telegram_notice:public['storage_notice']=telegram_notice
+        if saved!=telegram_saved:
+            try:save_telegram_state(saved,PERSIST);telegram_notice=None
+            except (OSError,ValueError):public['storage_error']='TELEGRAM-STATE-WRITE-FAILED'
+        telegram_saved=saved;telegram_public=public
     speed_previous=None;speed_retention_check=0
     from vendor_observation import VendorObserver
     vendor_observer=VendorObserver()
@@ -817,7 +830,7 @@ def serve():
             if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time(),max_gap=settings['interval']*3):accounting.reliability.critical=True
             status['accounting']['reliability']=accounting.reliability.public()
             from native_history import read_public
-            status['native_history']=read_public(PERSIST)
+            status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()
@@ -827,18 +840,25 @@ def serve():
                 from speed_test import public_status as speed_status
                 status['speed_tests']=speed_status()
             except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
-            before_telegram=telegram_saved
             if telegram_notice=='TELEGRAM-STATE-CORRUPT':
                 status['telegram']={'enabled':bool(settings.get('telegram_enabled')),'code':telegram_notice}
             else:
-                try:
-                    status['telegram'],telegram_saved,delivered=deliver(dict(status,accounting=accounting.export()),telegram_saved,time.time())
-                    if telegram_notice:status['telegram']['storage_notice']=telegram_notice
-                    if telegram_saved!=before_telegram:
-                        try:save_telegram_state(telegram_saved,PERSIST);telegram_notice=None
-                        except (OSError,ValueError):status['telegram']['storage_error']='TELEGRAM-STATE-WRITE-FAILED'
-                except Exception:
-                    status['telegram']={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
+                # A slow Telegram send (up to 15 s per report) must not delay the next channel check: one delivery
+                # runs at a time in its own thread on a copy of this pass, and its result is applied here next pass.
+                if telegram_job is not None and not telegram_job[0].is_alive():
+                    telegram_collect(telegram_job);telegram_job=None
+                if telegram_job is None:
+                    try:
+                        holder={};snapshot=json.loads(json.dumps(dict(status,accounting=accounting.export())))
+                        saved_copy=json.loads(json.dumps(telegram_saved))
+                        def telegram_run(snapshot=snapshot,saved=saved_copy,holder=holder):
+                            try:holder['result']=deliver(snapshot,saved,time.time())
+                            except Exception:pass
+                        thread=Thread(target=telegram_run,name='telegram',daemon=True)
+                        telegram_job=(thread,holder,bool(settings.get('telegram_enabled')));thread.start()
+                    except Exception:
+                        telegram_job=None;telegram_public={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
+                status['telegram']=dict(telegram_public) if telegram_public else {'enabled':bool(settings.get('telegram_enabled'))}
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
@@ -868,6 +888,12 @@ def serve():
         from speed_test import cancel as cancel_speed
         cancel_speed()
     except (OSError,ValueError):pass
+    # A report being sent at shutdown finishes (bounded by its own timeouts) and its state is saved: no duplicate later.
+    if telegram_job is not None:
+        telegram_job[0].join(20)
+        if not telegram_job[0].is_alive():
+            try:telegram_collect(telegram_job)
+            except Exception:pass
     try:
         checkpoint(accounting,latency)
     except (OSError, ValueError):
@@ -1042,7 +1068,7 @@ def rpc(method):
             status['scan']=scan_public(RUNTIME,read_json)
             from native_history import read_public
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
-            status['native_history']=read_public(PERSIST)
+            status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()

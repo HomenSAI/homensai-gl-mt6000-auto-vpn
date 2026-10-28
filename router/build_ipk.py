@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '0.9.1-alpha49-1'
+VERSION = '0.9.1-alpha50-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 
@@ -64,6 +64,10 @@ def selected_ui(source):
     if controller.exists() and "view('"+target+"')" not in controller.read_text(encoding='utf8'):raise ValueError('PACKAGE-LEGACY-UI-MISMATCH')
     return name,stylesheet
 
+# Design work for a future multi-channel cascade: kept in the source tree with its tests, never imported by the
+# installed service, so it is not shipped to the router.
+NOT_SHIPPED=frozenset('usr/lib/homensai-vpn/'+name+'.py' for name in ('cascade_model','cascade_executor','candidate_runtime','configuration_migrations'))
+
 def selected_files(source=None):
     files = []
     source=Path(source) if source is not None else ROOT/'files'
@@ -72,6 +76,7 @@ def selected_files(source=None):
         if not path.is_file() or path.is_symlink() or '__pycache__' in path.parts:
             continue
         name = path.relative_to(source).as_posix()
+        if name in NOT_SHIPPED:continue
         ui_root='www/luci-static/resources/view/homensai-vpn/'
         if name.startswith(ui_root) and '/' not in name[len(ui_root):]:
             if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!=selected_js:continue
@@ -90,11 +95,13 @@ def build(output=None):
     destination.mkdir(parents=True, exist_ok=True)
     files = selected_files()
     data = archive(files)
+    # opkg reports Installed-Size as unpacked bytes, not the size of the compressed archive.
+    unpacked = sum(len(payload) for _, payload, _ in files)
     control = ('Package: %s\nVersion: %s\nArchitecture: all\n'
                'Maintainer: HomenSAI <info@homensai.com>\nLicense: MIT\n'
                'Depends: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle\n'
                'Description: HomenSAI VPN monitor; bounded controlled native trials; optional speed tests\n'
-               'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, len(data))).encode()
+               'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, unpacked)).encode()
     hooks=lifecycle_scripts()
     preinst=hooks['preinst'].encode();postinst=hooks['postinst'].encode();prerm=hooks['prerm'].encode()
     controls = archive([('control', control, 0o644), ('conffiles', b'/etc/config/homensai_vpn\n', 0o644),

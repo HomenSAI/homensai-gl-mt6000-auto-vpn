@@ -8,8 +8,8 @@
     "router/ai_prompt.inc.js": "81e17c50ba5f89b1395c47452b0553fad96c09925347d4d2818c5d88846d80ac",
     "router/analytics_panel.inc.js": "a0ddd2fceabf798ac46487e98018310fc9456e76aaf459f942b7119d49217ab2",
     "router/attribution_panel.inc.js": "964d74def761fbed089644ca68ed43d5dc2846b2faefabaf1052e9b61384b94b",
-    "router/auto_live_chart.inc.js": "f3e310c031cdedc8dcbd78a67c784f69840bfe60f1bcb7cc62b26a76f2bc69e6",
-    "router/auto_panel.inc.js": "bf4f83a50407b8957bf5cea6238174ec3fe73a4bbaf7d7a050ef96dc69e85f98",
+    "router/auto_live_chart.inc.js": "7bc7b5345c466f1768d987a770589d41b0cc20885aead3cfce108b1c65fa7c83",
+    "router/auto_panel.inc.js": "2d2a79a15693899efa97131ed1d38ffa681e9ecc3c4f7891350d4248175ee0b0",
     "router/channel_guidance.inc.js": "c6cd101273407541a97dee63fd65b9ab0ef90149184a1ad00fb52a3bedda0a15",
     "router/connectivity_panel.inc.js": "5faf5a21ab4452e8adf2b82f3dd8ff5b932c0541b70ed2c7d2646b54431ef02c",
     "router/country_panel.inc.js": "ae36846896491605967cca8246be84e0b48e3fbaed8f300e1573baaa1cec1530",
@@ -20,7 +20,7 @@
     "router/error_rows_extra.inc.js": "e7e8598bb6f2a50f4793e45eb6d7e007a0883444be0be0526b1701cd11eb4167",
     "router/error_table.inc.js": "5ab4c9ade767af4a46a6f7c9655499d8753859799f257dbcc73de8aa438ca7c9",
     "router/fault_panel.inc.js": "1de4618da58d0ba2231f891a8701c34f93ad12cccc7764d361398e8303832d33",
-    "router/files/usr/lib/homensai-vpn/agent.py": "c45fafae042c1dc525d2b18dbeeda32de5afdbccb85c5cd030eb61cbe8f68f7c",
+    "router/files/usr/lib/homensai-vpn/agent.py": "e17bcc163a4d7af14708054d46bd58ce218ba0175c1d125392f2af35de69bc3e",
     "router/fool_guard.inc.js": "1288a5e44e6ed75c079461380a767e2a0543362e1de52f0168a161df53f1c335",
     "router/help_panel.inc.js": "eb67f5336f0eddf6bd993458b9b70537a753194e61427f73447b171ad14bdfab",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -63,7 +63,7 @@
     "router/traffic_panel.inc.js": "6528c9d3659145bd3746ccc4b7976e249f3e10519864fdd354e6a6af04188138",
     "router/ui_logic.inc.js": "7413e1979cebde4989d0d29171874fd57ad55d412ffa0d93d479d93b973aeecf",
     "router/vendor_diagnostics.inc.js": "2277b1e9567540d7a5a0e4502bb260efac0cb5fc481c8e89c780b4cc6882e8a0",
-    "router/viewport_state.inc.js": "f22e0cf59cd626b97cf1c7f43c2b721e10eac1e97ed9f997aed6892bc682287e",
+    "router/viewport_state.inc.js": "42c3bbf8b69d69a0058ac089ed455ff05fc00a73c7adfa80d6ab1280bcdfdb1b",
     "scripts/sync-documentation.py": "94740b403ba7bd1ba0c5f737a8418e5157fa9a586d3f742f8d2b755e5ec2c700"
   },
   "outputs": {

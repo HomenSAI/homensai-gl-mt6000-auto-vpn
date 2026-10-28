@@ -75,6 +75,20 @@ def rewrite(old_version, old_package, new_version, new_package):
                 stream.write(updated)
 
 
+def next_ui(app):
+    """Each release ships its page under a new file name, so browsers never run a cached older page."""
+    build = ROOT/'router/build_sidebar_ui.py'
+    text = build.read_bytes().decode('utf-8')
+    old_js, old_css = app['ui_module'], app['ui_stylesheet']
+    js = re.fullmatch(r'dashboard([0-9]+)', old_js); css = re.fullmatch(r'ui([0-9]+)\.css', old_css)
+    if not js or not css or text.count("UI_MODULE='%s'" % old_js) != 1 or text.count("'%s'" % old_css) != 2:
+        raise SystemExit('UI-MODULE-NAME-UNVERIFIED: VERSION.json and router/build_sidebar_ui.py disagree')
+    new_js, new_css = 'dashboard%d' % (int(js.group(1))+1), 'ui%d.css' % (int(css.group(1))+1)
+    text = text.replace("UI_MODULE='%s'" % old_js, "UI_MODULE='%s'" % new_js).replace("'%s'" % old_css, "'%s'" % new_css)
+    build.write_bytes(text.encode('utf-8'))
+    return new_js, new_css
+
+
 def main(argv):
     data = load()
     app = data['application']
@@ -98,6 +112,8 @@ def main(argv):
     new_version = next_version(old_version)
     new_package = new_version+'-1'
     rewrite(old_version, old_package, new_version, new_package)
+    ui_module, ui_stylesheet = next_ui(app)
+    app.update(ui_module=ui_module, ui_stylesheet=ui_stylesheet)
     app.update(version=new_version, package_revision=1, package_version=new_package, release_tag='v'+new_version,
                artifact='homensai-auto-vpn_%s_all.ipk' % new_package, sha256='0'*64)
     MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')

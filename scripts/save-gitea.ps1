@@ -10,7 +10,7 @@ if ($branchName -notmatch '^(feature|fix|hotfix|backup)/[A-Za-z0-9._/-]+$') { th
 $dirty = & $gitExe -C $repoPath status --porcelain
 if ($dirty) { throw 'Commit or checkpoint the working changes first; this command saves committed, clean work only.' }
 $headSha = (& $gitExe -C $repoPath rev-parse "refs/heads/$branchName").Trim(); Assert-Exit 'Read branch SHA'
-foreach ($tagName in $Tags) { if ($tagName -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-(?:alpha|beta)[0-9]+)?$') { throw 'Unsupported release tag name' }; & $gitExe -C $repoPath show-ref --verify --quiet "refs/tags/$tagName"; Assert-Exit 'Verify local tag' }
+foreach ($tagName in $Tags) { if ($tagName -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(?:-(?:alpha|beta|rc)[0-9]+)?$') { throw 'Unsupported release tag name' }; & $gitExe -C $repoPath show-ref --verify --quiet "refs/tags/$tagName"; Assert-Exit 'Verify local tag' }
 $commonGit = (& $gitExe -C $repoPath rev-parse --git-common-dir).Trim(); Assert-Exit 'Read common Git directory'
 if (-not [IO.Path]::IsPathRooted($commonGit)) { $commonGit = Join-Path $repoPath $commonGit }
 $privateDir = Join-Path $commonGit 'handoff'
@@ -33,4 +33,7 @@ foreach ($tagName in $Tags) {
     $remoteTag = & docker exec -u node -w /workspace/gl-mt6000-alta-vpn local-codex git ls-remote --tags origin "refs/tags/$tagName"; Assert-Exit 'Verify primary tag'
     if (($remoteTag -split '\s+')[0] -ne $wanted) { throw 'Primary tag object mismatch' }
 }
-[PSCustomObject]@{Result='SAVED';Primary='Gitea';Branch=$branchName;Head=$headSha;GitHubPublished=$false;PrivateBundle=$bundlePath}
+# The bundle is the full history and recreatable from the repository; after a confirmed save it is removed. A failure keeps it.
+& docker exec -u node local-codex rm -f "/tmp/$transferName" | Out-Null
+Remove-Item -LiteralPath $bundlePath -Force
+[PSCustomObject]@{Result='SAVED';Primary='Gitea';Branch=$branchName;Head=$headSha;GitHubPublished=$false;PrivateBundle=$null}

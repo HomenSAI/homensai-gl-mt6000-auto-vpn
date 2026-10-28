@@ -28,6 +28,17 @@ def main():
     qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
     ui_count=0
     if not args.runtime_only:
+        # The shipped page is generated from router/*.inc.js; a fresh build must equal the committed files. Line endings
+        # are ignored: a Windows build writes CRLF and the package normalizes every text file to LF anyway.
+        outputs=[root/'router/files/usr/lib/lua/luci/controller/homensai_vpn.lua',root/'router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json']
+        ui=root/'router/files/www/luci-static/resources/view/homensai-vpn'
+        def snapshot():
+            files={str(path.relative_to(root)):path.read_bytes().replace(b'\r\n',b'\n') for path in ui.iterdir() if path.is_file()}
+            files.update({str(path.relative_to(root)):path.read_bytes().replace(b'\r\n',b'\n') for path in outputs if path.is_file()})
+            return files
+        before=snapshot();check([sys.executable,'router/build_sidebar_ui.py']);after=snapshot()
+        stale=sorted(name for name in set(before)|set(after) if before.get(name)!=after.get(name))
+        if stale:raise RuntimeError('CI-UI-BUILD-STALE: '+', '.join(stale))
         for path in sorted((root/'router/tests').glob('test_*ui*.js')):
             check(['node',str(path)])
             ui_count+=1

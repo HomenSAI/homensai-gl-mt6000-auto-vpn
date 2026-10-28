@@ -45,4 +45,6 @@ foreach($targetImage in @($Image,$RuntimeImage)){
 if($receipts[0].sha256 -ne $receipts[1].sha256){throw 'Package bytes differ between runtime matrices'}
 $receiptPath=Join-Path $privateDir "ci-$sourceSha-$runId.receipt.json"
 [IO.File]::WriteAllText($receiptPath,(ConvertTo-Json -InputObject $receipts -Depth 5),(New-Object System.Text.UTF8Encoding($false)))
+# The archive is recreatable from the commit; after PASS only the receipt and manifest stay. A failed run keeps it as evidence.
+Remove-Item -LiteralPath $archivePath -Force
 [PSCustomObject]@{Result='PASS';Source=$sourceSha;PackageSHA256=$receipts[0].sha256;Receipt=$receiptPath;RouterAccess=$false}

@@ -87,7 +87,7 @@ function renderAutoLive(status,inventory){
     autoLivePollAdded=true;
     poll.add(function(){
       var node=document.getElementById('hv-auto-live-chart');
-      if(!node||!node.getClientRects().length)return Promise.resolve();
+      if(!node||!node.getClientRects().length||typeof document!=='undefined'&&document.hidden)return Promise.resolve();
       if(!autoLiveCall)autoLiveCall=rpc.declare({object:'homensai-vpn',method:'auto_live',expect:{}});
       return autoLiveCall().then(function(live){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,live,autoLiveContext.inventory);}).catch(function(){if(document.getElementById('hv-auto-live-chart')===node)drawAutoLive(node,{rpc_error:true},autoLiveContext.inventory);});
     },2);
