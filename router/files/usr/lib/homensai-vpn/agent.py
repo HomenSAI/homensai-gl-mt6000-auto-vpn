@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha57'
+VERSION = '0.9.1-alpha58'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -750,6 +750,7 @@ def serve():
             except (OSError,ValueError):pass
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         started = time.monotonic()
+        published_status=None
         try:
             data = inventory()
             settings = data['settings']
@@ -826,6 +827,8 @@ def serve():
                       'capabilities': {'native_apply': False, 'reason': 'GL.iNet worker/firewall transaction is not device-validated'},
                       'scope': 'IPv4 router-originated HTTPS/DNS, not LAN/IPv6 validation',
                       'storage_error': storage_error}
+            from observation_freshness import attach as attach_observation_freshness
+            attach_observation_freshness(status,settings)
             status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
             status['vendor_observation']=vendor_observation
             status['package']=package_version()
@@ -884,6 +887,7 @@ def serve():
                 status['telegram']=dict(telegram_public) if telegram_public else {'enabled':bool(settings.get('telegram_enabled'))}
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
+            published_status=status
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
             since_save=time.monotonic()-last_save
             if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
@@ -894,6 +898,7 @@ def serve():
             events = events[-1000:]
         except Exception:
             # Any failure of one pass is reported and retried; the monitor process itself keeps running.
+            published_status=None
             try:
                 atomic_json(RUNTIME/'status.json', {'version': VERSION, 'mode': 'monitor', 'error': 'SYSTEM-001', 'time': time.time()})
                 finish_scan(RUNTIME,read_json,atomic_json,scan_id,'SCAN-MEASUREMENT-FAILED')
@@ -906,6 +911,17 @@ def serve():
             if request.exists() and not request.is_symlink():
                 break
             if (RUNTIME/'stats-reset-request.json').exists():break
+            if published_status is not None:
+                try:
+                    from website_publication import publish_completed
+                    published_status=publish_completed(published_status,failure_pair,settings,
+                        website_sampler,website_history,
+                        lambda value:atomic_json(RUNTIME/'status.json',value),
+                        lambda:read_json(RUNTIME/'native-status.json',{}),time.time())
+                except (OSError,ValueError,TypeError,KeyError):
+                    # An optional measurement must not stop health monitoring;
+                    # leave the last published snapshot intact and retry later.
+                    pass
             time.sleep(1)
     ping_sampler.close();website_sampler.close()
     try:
@@ -1100,14 +1116,14 @@ def rpc(method):
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()
-            from manual_control import public_status as manual_status, control_status
+            from manual_control import control_status
             from channel_path import public_status as path_status
-            from pair_manual import controls as pair_controls,public as pair_status
+            from pair_manual import controls as pair_controls,public_for_status
             pair_control=pair_controls()
-            if pair_control.get('available'):
-                status['manual_switch_control']=pair_control;status['manual_switch']=pair_status()
-            else:
-                status['manual_switch']=manual_status();status['manual_switch_control']=control_status()
+            use_pair,status['manual_switch']=public_for_status(status['native_failover'],available=pair_control.get('available',False))
+            status['manual_switch_control']=pair_control if use_pair else control_status()
+            from observation_freshness import attach as attach_observation_freshness
+            attach_observation_freshness(status)
             status['channel_path']=path_status(status)
             try:
                 from speed_test import public_status as speed_status

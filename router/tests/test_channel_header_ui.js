@@ -10,8 +10,8 @@ for(const language of ['en','ru']){
  const profile={id:'reserve',interface:'ovpnclient1',time:1000,dns_ok:true,https_success:2,code:null},status={time:1000,native_failover:{state:'OBSERVING',time:1000}};
  const model={now:1001,selected:'primary',settings:{plan_source:'primary',plan_target:'reserve'}};
  const use=c.dvChannelUse(profile,model,status);
- assert.equal(use.label,language==='ru'?'Запасной канал: Живой, можно переключиться на него вручную':'Reserve channel: Alive; you can switch to it manually','full role-prefixed label remains available outside the badge');
- assert.equal(use.badgeLabel,language==='ru'?'Живой, можно переключиться на него вручную':'Alive; you can switch to it manually','compact badge comes from an explicit model field');
+ assert.equal(use.label,language==='ru'?'Запасной канал: Живой':'Reserve channel: Alive','full role-prefixed label remains available outside the badge');
+ assert.equal(use.badgeLabel,language==='ru'?'Живой':'Alive','compact badge comes from an explicit model field');
  c.channelDisplayUse=()=>use;
  const header=c.renderChannelHeader(profile,status,{}),role=header.all().find(n=>n.attrs.class==='hv-protocol'),protocol=header.all().find(n=>n.attrs.class==='hv-channel-protocol'),badge=header.all().find(n=>String(n.attrs.class).startsWith('hv-route-badge'));
  assert.equal(role.text(),language==='ru'?'Резервный канал':'Reserve channel','the complete role is a separate text node');assert.equal(protocol.text(),'OpenVPN');assert.equal(badge.text(),use.badgeLabel);

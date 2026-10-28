@@ -107,6 +107,7 @@ def apply(source):
     body="""    function draw(status){
       var refreshViewport=rememberPageViewport(appRoot||panel,activeTab);
       try {
+      if(typeof uiNewestStatus==='function')status=uiNewestStatus(deferredStatus||homeLatest,status);
       if(pointerHeld){deferredStatus=status;updateConnectivityCheck(status);return;}
       homeLatest=status;
       var controlFocus=panel.contains(document.activeElement)&&document.activeElement.matches(PAGE_FOCUS_SELECTOR)?{node:document.activeElement,page:(document.activeElement.closest('[data-hv-page]')||{dataset:{hvPage:activeTab}}).dataset.hvPage,label:document.activeElement.getAttribute('aria-label'),text:document.activeElement.textContent,tag:document.activeElement.tagName}:null;
@@ -131,6 +132,7 @@ AUTO
 FACTORIES
       };
       showPage(activeTab);
+      if(typeof uiStateSignature==='function')hybridUiState=uiStateSignature(status,inventory,statusNow(status));
       restorePageControlFocus(pages,controlFocus);
       if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}
       } finally {if(refreshViewport&&refreshViewport.page===activeTab)restorePageViewport(appRoot||panel,refreshViewport);}

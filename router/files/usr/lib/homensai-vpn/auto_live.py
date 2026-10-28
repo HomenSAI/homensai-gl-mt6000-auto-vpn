@@ -27,6 +27,8 @@ def snapshot():
     stamp=monitor.get('time')
     result={'time':stamp if type(stamp)in(int,float)and math.isfinite(stamp)and 0<=stamp<=now+5 else None,
             'server_time':now,'native_failover':clean}
+    from observation_freshness import cached as observation_window
+    result['observation_valid_for']=observation_window(monitor)
     def bounded(path,limit=65536):
         if path.is_symlink():raise ValueError()
         if not path.exists():return {}
@@ -64,7 +66,7 @@ def snapshot():
     profiles=monitor.get('profiles')
     for p in (profiles if isinstance(profiles,list) else [])[:8]:
         if not isinstance(p,dict)or not isinstance(p.get('id'),str)or len(p['id'])>96:continue
-        row={'id':p['id']}
+        row={'id':p['id'],'observation_valid_for':result['observation_valid_for']}
         for key in ('time','https_success'):
             if type(p.get(key))in(int,float)and math.isfinite(p[key]):row[key]=p[key]
         code=p.get('code')
@@ -72,6 +74,8 @@ def snapshot():
         row['dns_ok']=p['dns_ok']if type(p.get('dns_ok'))is bool else None
         rows.append(row)
     result['profiles']=rows
+    from pair_manual import public_for_status
+    _,result['manual_switch']=public_for_status(native)
     blockers=native.get('blockers')
     if isinstance(blockers,list):clean['blockers']=[b for b in blockers[:8] if isinstance(b,str)and re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',b)]
     from speed_pause import public as pause_status

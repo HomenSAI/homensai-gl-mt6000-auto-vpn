@@ -297,6 +297,13 @@ def stop(runtime=None,persist=None,request_source=None):
             # Same serialized Stop cancels preparation and all later hops.
             marker=read_json(runtime/'auto-control-revision.json',{}).get('revision','unverified')
             atomic_json(runtime/'pair-auto-control.json',{'mode':'off','revision':marker,'time':time.time(),'request_source':normalize_request_source(request_source)})
+        # The stopped pair no longer consumes its queue. Cancel the exact
+        # pending command now; a corrupt result file must never prevent Stop.
+        try:
+            from pair_manual import terminalize_pending_locked
+            terminalize_pending_locked('CANCELLED','CONTROL-REVISION-STALE',runtime=runtime)
+        except (OSError,ValueError,TypeError,KeyError):
+            pass
         try:request=read_json(runtime/'auto-control.json',{})
         except (OSError,ValueError):request={}
         if not isinstance(request,dict):request={}

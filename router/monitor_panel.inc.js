@@ -8,7 +8,7 @@ function monitorStartedRecently(now){
 function monitorLightModel(status,inventory,now,recent){
   var settings=(inventory||{}).settings||{},enabled=settings.enabled===true;
   var age=Number.isFinite(status.time)?now-status.time:Infinity;
-  var fresh=!status.rpc_error&&!status.error&&age>=-5&&age<=90;
+  var fresh=!status.rpc_error&&!status.error&&(typeof observationFresh==='function'?observationFresh(status,now):age>=-5&&age<=90);
   function out(key,lamp,icon,title,hint,code){return {key:key,lamp:lamp,icon:icon,title:title,hint:hint,code:code||null,enabled:enabled};}
   if(!status.rpc_error&&status.speed_pause&&status.speed_pause.active&&status.speed_pause.monitor_paused)return out('transition','yellow','Ⅱ',bi('Monitoring paused for speed test','Мониторинг на паузе для теста скорости'),bi('A fresh check runs after the test, before Auto continues.','После теста выполнится свежая проверка, затем продолжит работу Auto.'));
   if(status.rpc_error)return out('problem','red','!',bi('Cannot read the monitor','Не удаётся прочитать мониторинг'),bi('The page could not get the status from the router. Reload the page and sign in again; see Help → “The page is old, empty or says the monitor is not running”.','Страница не смогла получить статус от роутера. Обновите страницу и войдите снова; см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».'),'RPC-UNAVAILABLE');

@@ -23,7 +23,8 @@ class Hardening(unittest.TestCase):
         self.directory=Path(self.stack.enter_context(tempfile.TemporaryDirectory()))
         for name,value in {'RUNTIME':self.directory,'PERSIST':self.directory,'JOURNAL':self.directory/'journal','STATE':self.directory/'state'}.items():
             self.stack.enter_context(patch.object(native,name,value))
-            if name in ('RUNTIME','PERSIST'):self.stack.enter_context(patch.object(agent,name,value))
+            if name in ('RUNTIME','PERSIST'):
+                for module in (agent,auto_control):self.stack.enter_context(patch.object(module,name,value))
 
     def test_missing_journal_is_distinct_from_invalid_existing_json(self):
         self.assertEqual(native.journal_read(),{})

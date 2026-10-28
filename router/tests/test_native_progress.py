@@ -10,6 +10,7 @@ from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn'))
 import agent
+import auto_control
 import native_switch as native
 from test_native_switch import Backend
 
@@ -63,7 +64,8 @@ class NativeProgressTests(unittest.TestCase):
                     'STATE':root/'state','CERT':root/'cert','ATTEMPTS':root/'attempts',
                     'PREPARE':root/'prepare','JOURNAL_ALARM':root/'alarm'}.items():
                 stack.enter_context(patch.object(native,key,path))
-                if key in ('RUNTIME','PERSIST'):stack.enter_context(patch.object(agent,key,path))
+                if key in ('RUNTIME','PERSIST'):
+                    for module in (agent,auto_control):stack.enter_context(patch.object(module,key,path))
             stack.enter_context(patch.object(native,'STOP',False))
             journal={'phase':'ROLLED-BACK','before':backend.current[:],
                      'after':list(reversed(backend.current)),'hash':backend.fingerprint}

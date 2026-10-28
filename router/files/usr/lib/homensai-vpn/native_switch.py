@@ -44,6 +44,7 @@ PREPARE=PERSIST/'acceleration-prepare.json'
 SAFE=re.compile(r'^[A-Za-z0-9_]{1,64}$')
 STOP=False
 PROOF_SCOPE='external-lan'
+RECOVERY_PHASES={'ARMED','APPLYING','WAIT-CLIENT','RESTORING','RELEASE-PENDING'}
 
 
 class Refused(Exception):
@@ -337,6 +338,10 @@ def validate_journal(value):
         try:metadata(value)
         except (ValueError,TypeError,KeyError):raise Refused('JOURNAL-INTEGRITY-FAILED') from None
     if 'kernel_before_fingerprint' in value and (not isinstance(value['kernel_before_fingerprint'],str) or not re.fullmatch('[a-f0-9]{64}',value['kernel_before_fingerprint'])):raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'restore_kernel_fingerprint' in value and (not isinstance(value['restore_kernel_fingerprint'],str)
+            or not re.fullmatch('[a-f0-9]{64}',value['restore_kernel_fingerprint'])
+            or value.get('pair_transition') is None or 'restore_before_order' not in value or 'restore_target_order' not in value):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
     for key in ('forward_policy_touched','rtp_dispatched','kernel_before_verified','restore_before_verified'):
         if key in value and type(value[key]) is not bool:raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'restore_before_order' in value:
@@ -787,13 +792,14 @@ class Linux:
     def recovery_ready(self,identifier,settings):
         from recovery_settings import normalized,stable_success
         from failure_diagnosis import resolve_pair,scoped_samples
+        from observation_freshness import valid_for,settle_for
         policy=normalized(settings)
         status=read_json(RUNTIME/'status.json',{})
-        interval=int(settings.get('interval',10))
-        pair=resolve_pair(status,settings,time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
+        age=valid_for(settings)
+        pair=resolve_pair(status,settings,time.time(),age,settle_for(settings))
         row=next((pair[role] for role in ('source','target') if pair[role] and pair[role]['id']==identifier),None)
         return (pair['coordination']['state']=='READY' and row is not None
-                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time(),max(30,min(900,interval*3)))
+                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time(),age)
                 and self.health(identifier) is True)
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
@@ -815,7 +821,7 @@ def rollback(backend,journal,reason,restore_order=None):
             from activation_recovery import finalize
             finalize(backend,read_state(),journal,allow_stopping=True)
             return
-    restore_fingerprint=None
+    restore_fingerprint=None;resume_check=None;recovery_revision=None
     if (journal.get('pair_transition') is not None and journal.get('rtp_dispatched') is False
             and journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING')):
         # The kernel may now be foreign. Undo only our UCI ordering; never invoke RTP when
@@ -847,15 +853,19 @@ def rollback(backend,journal,reason,restore_order=None):
             raise Refused('POLICY-IDENTITY-CHANGED')
         kernel_before=backend.attest_policy()
         if not (kernel_before.get('verified') is True or kernel_before.get('repairable_missing') is True):
-            raise Refused('KERNEL-POLICY-UNVERIFIED')
+            from rollback_recovery import authorize
+            resume_check,recovery_revision=authorize(backend,journal)
         restore_fingerprint=kernel_before.get('kernel_fingerprint')
         if not isinstance(restore_fingerprint,str) or not re.fullmatch('[a-f0-9]{64}',restore_fingerprint):raise Refused('KERNEL-POLICY-UNVERIFIED')
+        if resume_check is not None and restore_fingerprint!=journal['restore_kernel_fingerprint']:raise Refused('KERNEL-POLICY-UNVERIFIED')
+        if backend.kernel_fingerprint()!=restore_fingerprint:raise Refused('KERNEL-POLICY-UNVERIFIED')
         if backend.order()!=(live_order,live_hash):raise Refused('POLICY-IDENTITY-CHANGED')
-        journal.update(restore_before_order=list(live_order),restore_before_verified=kernel_before.get('verified') is True)
+        if resume_check is None:
+            journal.update(restore_before_order=list(live_order),restore_before_verified=kernel_before.get('verified') is True)
         if journal.get('phase')=='ARMED' and not journal.get('pid') and restore_order==journal['before'] and backend.order()==(journal['before'],journal['hash']):
             journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time(),restored_order=list(restore_order))
             journal_write(journal);return
-        journal.update(restore_target_order=list(restore_order),phase='RESTORING')
+        journal.update(restore_target_order=list(restore_order),phase='RESTORING',restore_kernel_fingerprint=restore_fingerprint)
         journal_write(journal)  # Recovery resumes the recorded target, never an invented historical before.
         fields=pair_event_fields(journal,restoring=True,restore_order=restore_order)
         publish(dict(fields,state='RESTORING',reason=reason,source=journal['source'],target=journal['target'],proof_scope=journal.get('proof_scope','router-probed-ipv4')))
@@ -868,13 +878,15 @@ def rollback(backend,journal,reason,restore_order=None):
     backend.guard()
     def restore_check():
         if restore_fingerprint is None:return
+        if resume_check is not None:resume_check()
         if backend.order()[1]!=journal['hash'] or backend.kernel_fingerprint()!=restore_fingerprint:
             raise Refused('KERNEL-POLICY-UNVERIFIED')
     def restore_command(args,timeout=5):
         restore_check()
         if args[0]=='/usr/bin/rtp2.sh':
             journal['restore_rtp_dispatched']=True;journal_write(journal)
-        return command(args,timeout=timeout)
+        return (forward_dispatch(args,recovery_revision,timeout=timeout) if recovery_revision is not None
+                else command(args,timeout=timeout))
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order')):
         abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
@@ -1048,12 +1060,13 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     """
     from recovery_settings import normalized
     from failure_diagnosis import resolve_pair,profile_identity
+    from observation_freshness import valid_for,settle_for
     recovery=normalized(settings)
-    age=max(30,min(900,int(settings.get('interval',10))*3))
+    age=valid_for(settings)
     selection_settings=dict(settings)
     for role in ('source','target'):
         if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
-    pair=resolve_pair(status,selection_settings,now,age,max(30,min(600,int(settings.get('interval',10))*2)))
+    pair=resolve_pair(status,selection_settings,now,age,settle_for(settings))
     proofs=journal.get('vendor_profiles',{})
     target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
     if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
@@ -1391,10 +1404,13 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     publish_transition({'state':'ARMED','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
     require_control_revision(control_revision)
     journal_write(journal)
-    require_control_revision(control_revision)
     from auto_control import control_lock
     process=None
     try:
+        # A Stop after the durable ARMED write belongs to the same cleanup as
+        # a refused spawn. Otherwise no child exists, yet the journal stays
+        # open forever and blocks every later manual/automatic transition.
+        require_control_revision(control_revision)
         with control_lock(RUNTIME):
             require_control_revision(control_revision)
             process=subprocess.Popen([sys.executable,__file__,'apply',tx],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
@@ -1552,6 +1568,10 @@ def serve():
         bind_policy_context(backend,journal)
         PROOF_SCOPE=journal.get('proof_scope','external-lan')
         if PROOF_SCOPE not in('external-lan','router-hosted-ipv4','router-probed-ipv4'):raise Refused('JOURNAL-INTEGRITY-FAILED')
+        # Revoke volatile intent before any recovery can fail or retry. The
+        # independent supervisor restores owned work; it never resumes Auto.
+        from pair_auto import fence_recovery
+        fence_recovery()
         if journal.get('phase')=='RELEASE-PENDING':
             abandon(backend,journal,journal.get('reason','EXTERNAL-POLICY-CHANGE'))
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
@@ -1607,6 +1627,16 @@ def serve():
                 data=backend.policy(); settings=data['settings']
                 from pair_auto import tick as pair_tick
                 if pair_tick(backend,settings,decision_revision):
+                    # tick() is synchronous: a transaction still open after it
+                    # returns has no active owner in this supervisor. Do not
+                    # swallow it in the pair HELD loop. procd restarts this
+                    # process and the bounded, guarded recovery above runs.
+                    pending=journal_read()
+                    if pending.get('phase') in RECOVERY_PHASES:
+                        fence_recovery()
+                        from pair_auto import publish_failure
+                        publish_failure('PAIR-RECOVERY-REQUIRED')
+                        return
                     time.sleep(2);continue
                 until=deadline(settings.get('native_until'))
                 from native_proof import requested,matches
@@ -1695,12 +1725,13 @@ def serve():
                     publish({'state':'BLOCKED','blockers':['TRIAL-ATTEMPT-LIMIT']});time.sleep(5);continue
                 status=read_json(RUNTIME/'status.json',{})
                 from failure_diagnosis import diagnose
-                diagnosis=diagnose(status,selection['source']['id'],time.time())
+                diagnosis=diagnose(status,selection['source']['id'],time.time(),settings)
                 if diagnosis.get('suppress_switch'):
                     publish({'state':'BLOCKED','blockers':[diagnosis['code']],'reason':diagnosis['code'],'source':selection['source']['id'],'target':selection['target']['id'],'certified':False,'next_action':diagnosis.get('next_action')});time.sleep(5);continue
                 from recovery_settings import normalized
+                from observation_freshness import valid_for
                 recovery=normalized(settings)
-                age=max(30,min(900,int(settings.get('interval',10))*3))
+                age=valid_for(settings)
                 failures=streak(status.get('samples',[]),selection['source']['id'],recovery['failures'],time.time(),age,False,selection['source'])
                 healthy=streak(status.get('samples',[]),selection['target']['id'],recovery['successes'],time.time(),age,True,selection['target'])
                 certificate=read_json(CERT,{})
@@ -1724,7 +1755,9 @@ def serve():
                 try:publish(failure)
                 except Refused:atomic_json(STATE,dict(failure,history_error='HISTORY-001'))
                 pending=journal_read()
-                if 'GUARD-RETAINED' in reason or pending.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT'):return
+                if 'GUARD-RETAINED' in reason or pending.get('phase') in RECOVERY_PHASES:
+                    fence_recovery()
+                    return
             time.sleep(5)
         active=journal_read()
         if active.get('phase')=='COMMITTED':

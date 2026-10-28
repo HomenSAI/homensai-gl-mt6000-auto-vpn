@@ -45,7 +45,9 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
-  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
+  if(status.rpc_error||status.error||!observationFresh(status,m.now)){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
+  var pending=typeof manualOperationModel==='function'?manualOperationModel(status,m.now):null;
+  if(pending&&pending.busy&&(primary||reserve)){result.kind='grey';result.state='switching';result.label=pending.uncertain?bi('Request not confirmed','Запрос не подтверждён'):bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
   var rel=typeof channelReliability==='function'&&profile.interface&&profile.code!=='VPN-001'?channelReliability(profile,status,m.now):null;
   if(h.state==='failed'){
     result.kind='red';result.state='failed';
@@ -59,15 +61,15 @@ function dvChannelUse(profile,m,status){
   var ns=status.native_failover||{};
   if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='grey';result.state='switching';result.label=bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
   var autoRuns=!m.light||typeof autoWorking!=='function'||autoWorking(m.light);
-  if(h.state==='healthy'&&!autoRuns){result.kind='yellow';result.state='ready';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_target?bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную'):bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную');}
+  if(h.state==='healthy'&&!autoRuns){result.kind='yellow';result.state='ready';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_target?bi('Reserve channel: Alive','Запасной канал: Живой'):bi('Primary channel: Alive','Основной канал: Живой');}
   else if(h.state==='healthy'){
     if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
-    else if(m.selected){result.kind='yellow';result.state='standby';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_source?bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную'):bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_source?bi('Primary channel: Alive','Основной канал: Живой'):bi('Reserve channel: Alive','Запасной канал: Живой');}
     else{result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer which channel carries traffic','Ждём ответа роутера, какой канал несёт трафик');}
   }
   if(h.state==='unknown'){result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer','Ждём ответа роутера');}
   if(h.state==='healthy'&&rel&&rel.unreliable){result.kind='yellow';result.label=bi('Works, but reliability problem: ','Работает, но проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
-  if((result.state==='ready'||result.state==='standby')&&!result.reliability)result.badgeLabel=primary||reserve?bi('Alive; you can switch to it manually','Живой, можно переключиться на него вручную'):bi('Works; Auto does not use it','Работает; Auto его не использует');
+  if((result.state==='ready'||result.state==='standby')&&!result.reliability)result.badgeLabel=primary||reserve?bi('Alive','Живой'):bi('Works; Auto does not use it','Работает; Auto его не использует');
   return result;
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}

@@ -1,3 +1,30 @@
+// Monitor cadence is backend-derived; controller heartbeats, kernel proof and website results keep their own TTLs.
+function observationValidFor(row){var n=row&&row.observation_valid_for;return Number.isFinite(n)&&n>=30&&n<=900?n:90;}
+function observationFresh(row,now){return !!row&&Number.isFinite(row.time)&&Number.isFinite(now)&&now-row.time>=-5&&now-row.time<=observationValidFor(row);}
+// Order every status RPC by its browser dispatch sequence, never by the router's wall clock.
+// NTP changes and router reboots may move server_time backwards; old page callbacks retain their original provenance.
+var UI_STATUS_REQUEST_SEQUENCE=0,UI_STATUS_ORDER=new WeakMap();
+function uiStatusRequest(call){
+  var order=++UI_STATUS_REQUEST_SEQUENCE,promise=Promise.resolve().then(call).then(function(status){if(status&&typeof status==='object')UI_STATUS_ORDER.set(status,order);return status;});
+  UI_STATUS_ORDER.set(promise,order);return promise;
+}
+function uiStatusOrder(value){return value&&typeof value==='object'?UI_STATUS_ORDER.get(value)||0:0;}
+function uiStatusFailure(current,order){
+  var failed=Object.assign({},current,{rpc_error:'RPC-UNAVAILABLE',server_time:typeof routerWall==='function'?routerWall():Date.now()/1000});
+  UI_STATUS_ORDER.set(failed,order);return failed;
+}
+function uiNewestStatus(current,next){
+  if(!current||current===next||!next)return next||current;
+  var before=uiStatusOrder(current),after=uiStatusOrder(next);
+  return before&&(!after||after<before)?current:next;
+}
+var UI_OPERATION_REFRESH=function(){},UI_STATUS_REFRESH=function(){};
+function uiOperationRefresh(refresh){UI_OPERATION_REFRESH();if(refresh!==false)UI_STATUS_REFRESH();}
+function uiStateSignature(status,inventory,now){
+  var light=autoLightModel(status,inventory,now),manual=manualControlModel(status,now),op=autoCommandOperation(status,now),path=channelPathSelection(status,now);
+  return JSON.stringify([light.key,light.title,light.code,op,manual.busy,manual.uncertain,manual.direction,manual.primary.allowed,manual.reserve.allowed,manual.hold,manual.resume.allowed,path.selected,path.code,path.moving,
+    (status.profiles||[]).map(function(p){var ping=channelPingModel(p,status,now);return [p.id,profileHealth(p,now).state,ping.state,ping.code,ping.rtt_ms];})]);
+}
 var UI_STATUS_CLOCKS=new WeakMap();
 var UI_CLOCK_SKEW=0;
 // Router time as the browser sees it; a PC clock a few seconds off must not turn fresh data into "waiting".
@@ -27,7 +54,7 @@ function channelPingModel(p,status,now){
   var x=p&&p.website_response,n=x&&Number.isInteger(x.successes)&&x.successes>=0&&x.successes<=3?x.successes:0;
   function no(state,code){return {state:state,code:code,rtt_ms:null,successes:n,text:bi('No complete three-site check','Нет полной проверки трёх сайтов')+' · '+n+'/3'};}
   if(!status||status.rpc_error||status.error)return no('unavailable','STATUS-REQUEST-FAILED');
-  if(!Number.isFinite(now)||!Number.isFinite(status.time)||now-status.time< -5||now-status.time>90)return no('stale','MONITOR-DATA-STALE');
+  if(!observationFresh(status,now))return no('stale','MONITOR-DATA-STALE');
   if(!p||!p.interface||p.administrative_state==='disabled')return no('inactive','WEBSITE-UNAVAILABLE');
   if(!x)return no('checking','WEBSITE-CHECK-PENDING');
   if(x.metric!==WEBSITE_METRIC||x.target_set!==WEBSITE_TARGET_SET||p.vendor_state!=='SETTLED'||typeof p.vendor_generation!=='string'||!/^[a-f0-9]{32}$/.test(p.vendor_generation)||x.generation!==p.vendor_generation||x.interface!==p.interface||typeof p.vendor_tunnel_id!=='string'||p.vendor_tunnel_id!==p.protocol+':'+p.interface||x.vendor_tunnel_id!==p.vendor_tunnel_id)return no('checking','WEBSITE-IDENTITY-CHANGED');
@@ -42,7 +69,9 @@ function channelPingModel(p,status,now){
 }
 function renderChannelPing(profile,status,now){
   var model=channelPingModel(profile,status,now),detail=bi('Mean response of Google, Cloudflare and Wikipedia, all 3 required. Fresh DNS+TCP+TLS+HTTP headers; not a full page.','Средний ответ Google, Cloudflare и Wikipedia, нужны все 3. Новый DNS+TCP+TLS+HTTP-заголовки, не полная страница.')+' '+model.text+(model.code?' · '+model.code:'');
-  return E('small',{'class':'hv-channel-ping','data-ping-state':model.state,'data-latency-metric':WEBSITE_METRIC,'data-latency-state':model.state,'data-coverage':model.successes+'/3','title':detail,'aria-label':detail},model.rtt_ms==null?'—':model.text);
+  var labels={checking:bi('Checking','Проверяется'),stale:bi('Check is out of date','Проверка устарела'),partial:bi('Incomplete check','Неполная проверка'),failed:bi('Check failed','Проверка не прошла'),inactive:bi('Tunnel is off','Туннель отключён'),unavailable:bi('No current result','Нет актуального результата')};
+  var shown=model.rtt_ms==null?'— · '+(labels[model.state]||labels.unavailable)+' · '+model.successes+'/3':model.text;
+  return E('small',{'class':'hv-channel-ping','data-ping-state':model.state,'data-latency-metric':WEBSITE_METRIC,'data-latency-state':model.state,'data-coverage':model.successes+'/3','title':detail,'aria-label':detail},shown);
 }
 function websiteSamples(status,inventory){
   var h=status.website_response_history||{},out=[];
@@ -56,13 +85,13 @@ function websiteQuality(status){
 var UI_DATA_CAUSE=null;
 function dataCause(status,now){
   if(!status||status.rpc_error)return {code:'STATUS-REQUEST-FAILED',text:bi('the page got no answer from the router program','страница не получила ответ от программы на роутере')};
-  if(!Number.isFinite(status.time)||now-status.time>90)return {code:'MONITOR-DATA-STALE',text:bi('the router has not sent fresh data'+(Number.isFinite(status.time)?' for '+Math.round(now-status.time)+' s':''),'роутер не присылает свежие данные'+(Number.isFinite(status.time)?' уже '+Math.round(now-status.time)+' с':''))};
+  if(!observationFresh(status,now))return {code:'MONITOR-DATA-STALE',text:bi('the router has not sent fresh data'+(Number.isFinite(status.time)?' for '+Math.round(now-status.time)+' s':''),'роутер не присылает свежие данные'+(Number.isFinite(status.time)?' уже '+Math.round(now-status.time)+' с':''))};
   return {code:'VENDOR-OBSERVATION-PENDING',text:bi('the monitor has not finished observing this channel yet (up to a minute after a start or change)','мониторинг ещё не закончил наблюдение этого канала (до минуты после запуска или изменения)')};
 }
 function dataCauseText(prefix){var c=UI_DATA_CAUSE||dataCause(null,0);return (prefix||bi('Not available: ','Нет данных: '))+c.text+' ('+c.code+')';}
 function profileHealth(profile,now){
   if(!profile.interface||profile.administrative_state==='disabled')return {state:'inactive',label:bi('Inactive','Неактивен')};
-  if(!Number.isFinite(profile.time)||now-profile.time< -5||now-profile.time>90)return {state:'unknown',label:bi('Check data unavailable','Нет данных проверки')};
+  if(!observationFresh(profile,now))return {state:'unknown',label:bi('Check data unavailable','Нет данных проверки')};
   if(['CHECK-001','CHECK-LIMIT'].indexOf(profile.code)>=0)return {state:'checking',label:bi('Checking','Проверяется')};
   if(profile.code)return {state:'failed',label:bi('Failed','Сбой')};
   if(profile.dns_ok===true&&profile.https_success>=2)return {state:'healthy',label:bi('Healthy','Работает')};
@@ -75,7 +104,7 @@ function channelPathSelection(status,now,sourceId,targetId){
   var result={authoritative:authoritative,selected:null,moving:false,code:authoritative?'KERNEL-POLICY-UNVERIFIED':null};
   if(!authoritative)return result;
   if(status.rpc_error||status.error){result.code='STATUS-REQUEST-FAILED';return result;}
-  if(!Number.isFinite(status.time)||now-status.time< -5||now-status.time>90){result.code='MONITOR-DATA-STALE';return result;}
+  if(!observationFresh(status,now)){result.code='MONITOR-DATA-STALE';return result;}
   if(!path||typeof path!=='object'||Array.isArray(path))return result;
   if(required&&(path.mode!=='continuous-pair'||path.selection_proof!=='fw3-kernel-marking'||!Number.isFinite(path.valid_for)||path.valid_for<=0||path.valid_for>15||!Number.isFinite(path.checked_at)||path.time!==path.checked_at))return result;
   var maxAge=required?path.valid_for:30;

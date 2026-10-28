@@ -103,11 +103,13 @@ def resolve_pair(status,settings,now,max_age=90,settle_seconds=60):
         return refuse('UPLINK-LINK-DOWN','HOLD')
     coordination.update(state='READY',code='CROSS-TUNNEL-READY');return result
 
-def diagnose(status,source,now):
+def diagnose(status,source,now,settings=None):
+    from observation_freshness import valid_for,cached
+    age=valid_for(settings) if settings is not None else cached(status)
     result={'code':'OBSERVATION-UNKNOWN','suppress_switch':True,'scope':'current profile router probes; channel retry exhaustion and LAN confirmation unverified'}
-    if not isinstance(status,dict) or status.get('error') or not fresh(status.get('time'),now):return dict(result,code='OBSERVATION-STALE')
+    if not isinstance(status,dict) or status.get('error') or not fresh(status.get('time'),now,age):return dict(result,code='OBSERVATION-STALE')
     uplink=status.get('uplink_observation',{})
-    if isinstance(uplink,dict) and uplink.get('state')=='DOWN' and fresh(uplink.get('time'),now):
+    if isinstance(uplink,dict) and uplink.get('state')=='DOWN' and fresh(uplink.get('time'),now,age):
         return dict(result,code='UPLINK-LINK-DOWN',suppress_switch=True,next_action='Restore configured uplink; do not cycle VPN reserves.')
     profiles=status.get('profiles',[])
     if not isinstance(profiles,list):return result
@@ -115,7 +117,7 @@ def diagnose(status,source,now):
     if len(rows)!=1:return result
     row=rows[0]
     if not row.get('interface'):return dict(result,code='TUNNEL-DISCONNECTED')
-    if not fresh(row.get('time'),now):return dict(result,code='OBSERVATION-STALE')
+    if not fresh(row.get('time'),now,age):return dict(result,code='OBSERVATION-STALE')
     code=row.get('code')
     if code=='VENDOR-IDENTITY-CHANGED':return dict(result,code='PROFILE-IDENTITY-CHANGED')
     if row.get('vendor_state')=='PENDING':return dict(result,code='VENDOR-SETTLING')
@@ -135,10 +137,11 @@ def explain(status,settings,now):
     from recovery_settings import normalized
     recovery=normalized(settings);interval=settings.get('interval',10)
     valid_interval=type(interval) is int and 10<=interval<=300
-    age=max(30,min(900,interval*3)) if valid_interval else 90
-    pair=resolve_pair(status,settings,now,age,max(30,min(600,interval*2)) if valid_interval else 60)
+    from observation_freshness import valid_for,settle_for
+    age=valid_for(settings)
+    pair=resolve_pair(status,settings,now,age,settle_for(settings))
     source=pair['source'];target=pair['target'];ready=valid_interval and pair['coordination']['state']=='READY'
-    return dict(diagnosis=diagnose(status,source['id'] if source else settings.get('plan_source',''),now),
+    return dict(diagnosis=diagnose(status,source['id'] if source else settings.get('plan_source',''),now,settings),
                 source=source['id'] if source else settings.get('plan_source',''),
                 target=target['id'] if target else settings.get('plan_target',''),coordination=pair['coordination'],
                 required_failures=recovery['failures'],required_successes=recovery['successes'],

@@ -45,14 +45,14 @@ def plan(status, settings, now):
     from failure_diagnosis import diagnose,resolve_pair
     interval=settings.get('interval',10)
     valid_interval=type(interval) is int and 10<=interval<=300
-    age=max(30,min(900,interval*3)) if valid_interval else 90
-    settle=max(30,min(600,interval*2)) if valid_interval else 60
+    from observation_freshness import valid_for,settle_for
+    age=valid_for(settings);settle=settle_for(settings)
     pair=resolve_pair(status,settings,now,age,settle)
     result.update(configured_source=source,configured_target=target,coordination=pair['coordination'])
     source_row=pair['source'];target_row=pair['target']
     if source_row:result['source']=source=source_row['id']
     if target_row:result['target']=target=target_row['id']
-    diagnosis=diagnose(status,source,now)
+    diagnosis=diagnose(status,source,now,settings)
     result['diagnosis']=diagnosis
     if settings.get('plan_enabled') is not True:
         return dict(result,state='DISABLED')

@@ -1,3 +1,13 @@
+## Alpha58 source candidate: switching recovery / Кандидат alpha58: восстановление переключений
+
+This branch contains **0.9.1-alpha58-1**, dashboard133/ui99/help133, for review and further acceptance. It is not a release or an installed-device receipt. No MT3000/MT6000 or Windows networking changes were made in this session. The latest historical installed version is alpha57; its present physical state has not been queried.
+
+Исправления, воспроизведения и оставшиеся обязательные проверки: [рабочий отчёт](handoff/SWITCHING-REPAIR-2026-10-28.ru.md). [Задание для продолжения](handoff/SWITCHING-FINISH-PROMPT-2026-10-28.ru.md) сохраняет различие между тестами исходника, отдельным ядром Linux/OpenWrt и выделенным MT3000.
+
+Указанный владельцем `docs/handoff/TODO-CLAUDE-SWITCHING-2026-10-28.ru.md` не найден в полученных ветках и истории GitHub. Его содержание не реконструируется по названию. Выпуск и установка заблокированы до получения задания и выполнения всех его обязательных проверок; отсутствие приватного runbook также не позволяет выполнять физическую приёмку. SHA256 пакета в VERSION.json остаётся нулевым маркером невыпущенного кандидата.
+
+---
+
 ## Alpha57 installed and published / Alpha57 установлена и опубликована
 
 **0.9.1-alpha57-1**, dashboard132/ui98/help132. [GitHub prerelease](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha57), downloaded IPK/checksum, GitHub main and Gitea verified. Stable Latest remains v0.9.0 by the owner's selected release type.

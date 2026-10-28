@@ -14,13 +14,14 @@ function autoWindowDeadline(intent,settings){
 function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
   var paused=!!status.speed_pause&&status.speed_pause.active===true&&status.speed_pause.auto_paused===true;
-  var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
-  var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var runningPair=(ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair')&&intent.requested==='on'&&intent.pair_phase==='RUNNING';
-  var on=!paused&&fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
+  var monitorFresh=typeof observationFresh==='function'?observationFresh(status,now):Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
+  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
+  var pairScope=ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair';
+  var pairPermitsOn=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0,runningPair=pairScope&&pairPermitsOn;
+  var on=!paused&&fresh&&(!pairScope||pairPermitsOn)&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
-  var off=fresh&&!on&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
-  var awaiting=fresh&&intent.requested_at>ns.time;
+  var off=fresh&&!on&&(['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0||pairScope&&intent.requested==='off'&&intent.pair_phase==='STOPPED');
+  var awaiting=fresh&&intent.requested_at>ns.time&&!(pairScope&&(pairPermitsOn||intent.requested==='off'&&intent.pair_phase==='STOPPED'));
   return {fresh:fresh,on:on,paused:paused,transitioning:transitioning,off:off,awaiting:awaiting,
     stop:on||transitioning||intent.requested==='on'||['DEGRADED-ON-RESERVE','COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
     returned:off&&ns.original_restored===true,
@@ -250,15 +251,25 @@ function autoLightModel(status,inventory,now){
   var sessionRuns=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&!model.awaiting;
   function out(key,title,hint,code,running){return {running:running===true,key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
+  var command=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null;
+  if(command==='starting'||command==='stopping')return out('switching',command==='starting'?bi('Turning Auto on…','Включение Auto…'):bi('Turning Auto off…','Выключение Auto…'),bi('Waiting for the router to confirm the command.','Ждём подтверждения команды роутером.'));
+  if(command==='unconfirmed')return out('unknown',bi('Auto command is not confirmed','Команда Auto не подтверждена'),bi('The router has not confirmed completion. Refreshing its state; Stop remains available.','Роутер не подтвердил завершение. Обновляем его состояние; Stop остаётся доступен.'),'AUTO-CONTROL-UNCONFIRMED');
   if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
+    var manual=typeof manualOperationModel==='function'?manualOperationModel(status,now):null;
+    if(manual&&manual.busy)return out(manual.uncertain?'unknown':'switching',manual.uncertain?bi('Manual request is not confirmed','Ручной запрос не подтверждён'):manual.direction==='resume'?bi('Resuming Auto','Возобновление Auto'):bi('Switching channel','Переключение канала'),manual.uncertain?bi('Waiting for the result from the router. Stop remains available.','Ждём результат от роутера. Stop остаётся доступен.'):bi('Waiting for the router to confirm the manual request.','Ждём подтверждения ручного запроса роутером.'),manual.uncertain?'MANUAL-REQUEST-UNCONFIRMED':null,sessionRuns&&!manual.uncertain&&manual.direction!=='resume');
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
     if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
       var route=channelPathSelection(status,now,ns.source,ns.target);
       if(!route.selected)return out('unknown',bi('The traffic channel is not verified','Канал трафика не подтверждён'),bi('Waiting for verified router VPN rules.','Ждём подтверждения действующих правил VPN роутером.'),route.code||'KERNEL-POLICY-UNVERIFIED');
+      var active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
+      if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
+      if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'));
+      if(['source','target'].indexOf((status.manual_switch_control||{}).hold)>=0)return Object.assign(out('off',bi('Channel held manually','Канал удерживается вручную'),manualHoldText()),{hold:true});
+      if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
@@ -288,11 +299,11 @@ function autoWorking(light){return !!light&&(light.key==='ok'||light.key==='rese
 function renderAutoLight(light,technicalCode){
   var working=autoWorking(light);
   var lamps=[E('span',{'class':'hv-lamp hv-lamp-red'+(working?'':' hv-lamp-lit'),'aria-hidden':'true'}),E('span',{'class':'hv-lamp hv-lamp-green'+(working?' hv-lamp-lit':''),'aria-hidden':'true'})];
-  var housing=E('div',{'class':'hv-light hv-light-two hv-light-'+(working?'on':'off'),'role':'img','aria-label':working?bi('Automatic switching works','Автопереключение работает'):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
+  var housing=E('div',{'class':'hv-light hv-light-two hv-light-'+(working?'on':'off'),'role':'img','aria-label':light.hold?light.title:working?bi('Automatic switching works','Автопереключение работает'):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
   var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
     E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
-    E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
-    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow: Alive; you can switch to it manually, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — Живой, можно переключиться на него вручную, серый — ждём ответа роутера, красный — ошибка.')])]);
+    E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),light.hold?manualHoldText():bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
+    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive; the button shows whether switching is available, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой, доступность переключения показана на кнопке, серый — ждём ответа роутера, красный — ошибка.')])]);
   return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
@@ -310,9 +321,11 @@ function autoShowError(title,node){
   else if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,node);
 }
 var autoRequestBusy=false,autoStopBusy=false,autoStartPending=false;
-var autoCommandPending=null,autoControlRefresh=function(){};
+var autoCommandPending=null,autoCommandUnconfirmed=null,autoCommandSequence=0,autoObservedOperation=null,autoControlRefresh=function(){};
 /* Countdown on the Auto button: the expected time is the median of the last measured starts/stops in this browser. */
 var AUTO_COUNTDOWN=null,AUTO_COUNTDOWN_TIMER=null,AUTO_COUNTDOWN_NODES=null,AUTO_DURATION_KEY='hv-auto-durations';
+function autoClockTick(){return typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();}
+function autoElapsedMs(value){return Math.max(0,Number.isFinite(value.tick)?autoClockTick()-value.tick:Date.now()-value.t0);}
 function autoDurations(){try{var v=JSON.parse(window.localStorage.getItem(AUTO_DURATION_KEY)||'{}');return v&&typeof v==='object'?v:{};}catch(error){return {};}}
 function autoDurationEstimate(kind){
   var rows=(autoDurations()[kind]||[]).filter(function(n){return Number.isFinite(n)&&n>0&&n<600;}).sort(function(a,b){return a-b;});
@@ -327,27 +340,27 @@ function autoDurationRecord(kind,seconds){
 }
 function autoCountdownText(){
   if(!AUTO_COUNTDOWN)return '';
-  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000;
+  var left=AUTO_COUNTDOWN.estimate-autoElapsedMs(AUTO_COUNTDOWN)/1000;
   return left>0?Math.ceil(left)+bi(' s',' с'):'+'+Math.floor(-left)+bi(' s',' с');
 }
 function autoCountdownTick(){
   var n=AUTO_COUNTDOWN_NODES;if(!n)return;
   function hide(on){if(on){if(n.root.setAttribute)n.root.setAttribute('hidden','');}else if(n.root.removeAttribute)n.root.removeAttribute('hidden');}
   if(!AUTO_COUNTDOWN){hide(true);return;}
-  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000,part=Math.max(0,Math.min(1,left/AUTO_COUNTDOWN.estimate));
+  var left=AUTO_COUNTDOWN.estimate-autoElapsedMs(AUTO_COUNTDOWN)/1000,part=Math.max(0,Math.min(1,left/AUTO_COUNTDOWN.estimate));
   hide(false);n.text.textContent=autoCountdownText();
   if(n.root.style&&n.root.style.setProperty)n.root.style.setProperty('--hv-countdown',String(part));
   if(n.root.classList&&n.root.classList.toggle)n.root.classList.toggle('hv-auto-countdown-over',left<=0);
 }
 function autoCountdownBegin(kind){
   if(AUTO_COUNTDOWN&&AUTO_COUNTDOWN.kind===kind)return;
-  AUTO_COUNTDOWN={kind:kind,t0:Date.now(),estimate:autoDurationEstimate(kind)};
+  AUTO_COUNTDOWN={kind:kind,t0:Date.now(),tick:autoClockTick(),estimate:autoDurationEstimate(kind)};
   if(!AUTO_COUNTDOWN_TIMER&&typeof setInterval==='function')AUTO_COUNTDOWN_TIMER=setInterval(autoCountdownTick,250);
   autoCountdownTick();
 }
 function autoCountdownEnd(success){
   if(!AUTO_COUNTDOWN)return;
-  if(success)autoDurationRecord(AUTO_COUNTDOWN.kind,(Date.now()-AUTO_COUNTDOWN.t0)/1000);
+  if(success)autoDurationRecord(AUTO_COUNTDOWN.kind,autoElapsedMs(AUTO_COUNTDOWN)/1000);
   AUTO_COUNTDOWN=null;if(AUTO_COUNTDOWN_TIMER&&typeof clearInterval==='function'){clearInterval(AUTO_COUNTDOWN_TIMER);AUTO_COUNTDOWN_TIMER=null;}
   autoCountdownTick();
 }
@@ -359,13 +372,20 @@ function autoCommandOperation(status,now){
     var done=autoCommandPending.stop?terminal:terminal||phase==='RUNNING'&&model.on&&!model.awaiting&&!model.transitioning;
     var legacyDone=!phase&&!model.awaiting&&!model.transitioning&&
       (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
-    if(done||legacyDone)autoCommandPending=null;
+    if(done||legacyDone){autoCommandPending=null;autoCommandUnconfirmed=null;}
   }
-  if(autoCommandPending&&Number.isFinite(autoCommandPending.t0)&&Date.now()-autoCommandPending.t0>Math.max(120000,2000*autoDurationEstimate(autoCommandPending.stop?'stop':'start'))){
-    autoCommandPending=null;
-    if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNCONFIRMED'));
+  if(autoCommandPending&&Number.isFinite(autoCommandPending.t0)&&autoElapsedMs(autoCommandPending)>Math.max(120000,2000*autoDurationEstimate(autoCommandPending.stop?'stop':'start'))){
+    autoCommandUnconfirmed=autoCommandPending;autoCommandUnconfirmed.observed=model.fresh&&autoCommandPending.acknowledged&&intent.requested_at>autoCommandPending.baseline;autoCommandUnconfirmed.baseline=Math.max(autoCommandUnconfirmed.baseline||0,intent.requested_at||0);autoCommandPending=null;autoStopBusy=false;autoRequestBusy=false;autoStartPending=false;
   }
+  if(autoCommandUnconfirmed&&model.fresh&&(intent.requested_at>autoCommandUnconfirmed.baseline||autoCommandUnconfirmed.observed&&intent.requested_at===autoCommandUnconfirmed.baseline&&!model.awaiting&&!model.transitioning&&['FAILED','STOPPED','HELD','RUNNING'].indexOf(phase)>=0))autoCommandUnconfirmed=null;
   if(autoCommandPending)return autoCommandPending.stop?'stopping':'starting';
+  if(autoCommandUnconfirmed)return 'unconfirmed';
+  var observed=phase==='STARTING'&&!failedStart?'starting':phase==='STOPPING'?'stopping':null;
+  if(observed){
+    var observedKey=observed+':'+intent.requested_at;
+    if(!autoObservedOperation||autoObservedOperation.key!==observedKey)autoObservedOperation={key:observedKey,t0:Date.now(),tick:autoClockTick()};
+    if(autoElapsedMs(autoObservedOperation)>120000)return 'unconfirmed';
+  }else autoObservedOperation=null;
   if(phase==='STARTING')return failedStart?null:'starting';
   if(phase==='STOPPING')return 'stopping';
   if(phase==='UNKNOWN')return 'unknown';
@@ -387,7 +407,7 @@ function renderAutoPowerControl(status,inventory){
   }
   function syncButton(){
     currentControl();
-    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;
     button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');
       // The button shows "on" only when Auto is confirmed working and no command is still pending.
@@ -395,26 +415,26 @@ function renderAutoPowerControl(status,inventory){
       button.classList.toggle('hv-auto-lit-on',confirmedOn);button.classList.toggle('hv-auto-lit-off',!confirmedOn);}
     AUTO_COUNTDOWN_NODES=countdownNodes;
     if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
-    else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn:!nowOn);}
+    else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn&&model.fresh&&!model.awaiting:model.fresh&&model.off&&!model.awaiting&&!intent.failure&&(intent.pair_phase==='STOPPED'||!intent.pair_phase&&ns.original_restored===true));}
     button.setAttribute('data-auto-operation',operation||'idle');
-    var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
+    var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unconfirmed'?bi('Command not confirmed · press to stop','Команда не подтверждена · нажмите для остановки'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
     actionLabel.textContent=operation?label+(AUTO_COUNTDOWN?' '+bi('about ','примерно ')+autoDurationEstimate(AUTO_COUNTDOWN.kind)+bi(' s',' с'):''):stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
     currentControl();
-    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
-    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false,t0:Date.now()};autoCountdownBegin(stop?'stop':'start');
-    if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
+    var command={sequence:++autoCommandSequence,stop:stop,baseline:intent.requested_at||0,acknowledged:false,t0:Date.now(),tick:autoClockTick()};autoCommandPending=command;autoCommandUnconfirmed=null;autoObservedOperation=null;autoCountdownBegin(stop?'stop':'start');
+    if(stop){autoStopBusy=true;autoRequestBusy=false;autoStartPending=false;}else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();if(typeof uiOperationRefresh==='function')uiOperationRefresh(false);
     var call=rpc.declare({object:'homensai-vpn',method:stop?'native_stop':'native_start',params:stop?['request_source']:['control_revision','request_source'],expect:{}});
     return (stop?call('manual'):call(controlRevision,'manual')).then(function(result){
-      if(autoCommandPending&&autoCommandPending.stop===stop){if(autoRequestAcknowledged(result,stop))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
+      if(autoCommandSequence!==command.sequence)return;if(autoCommandPending===command){if(autoRequestAcknowledged(result,stop))command.acknowledged=true;else autoCommandPending=null;}
       if(!stop&&result&&result.accepted===false&&(result.code==='CONTROL-REVISION-STALE'||Array.isArray(result.blockers)&&result.blockers.indexOf('CONTROL-REVISION-STALE')>=0)){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
       if(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9-]{2,95}$/.test(result.code)&&(result.accepted===false||result.queued===false))ui.addNotification(null,autoCodeNotice(result.code,result.settings_unverified?bi('router settings could not be read','настройки роутера не прочитаны'):''));
       else if(result&&result.accepted===false){autoShowError(bi('Auto did not start','Auto не запустился'),E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},[code+' · '+autoBlockerText(code),renderAutoRemedy(code)].filter(Boolean));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
-    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop){if(stop)autoCommandPending=null;else autoCommandPending.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
+    }).catch(function(){if(autoCommandSequence!==command.sequence)return;if(autoCommandPending===command){if(stop){autoCommandPending=null;autoCommandUnconfirmed=command;}else command.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(autoCommandSequence!==command.sequence)return;if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();if(typeof uiOperationRefresh==='function')uiOperationRefresh();});
   }},[E('span',{'class':'hv-power-symbol','aria-hidden':'true'}),countdown]);
   autoControlRefresh=syncButton;syncButton();
   return {button:button,actionLabel:actionLabel,model:model,light:light};

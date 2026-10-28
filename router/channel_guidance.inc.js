@@ -42,7 +42,7 @@ function roleDescription(p,status,inventory){
 }
 function endpointText(p,now){
   var e=p&&p.server_endpoint;
-  if(!e||typeof e!=='object'||e.source!=='live-kernel-peer'||p.vendor_state!=='SETTLED'||!Number.isFinite(p.time)||now-p.time< -5||now-p.time>90||typeof p.interface!=='string'||!/^(wgclient|ovpnclient)[0-9]{1,4}$/.test(p.interface)||e.profile!==p.id||e.interface!==p.interface||!Number.isFinite(e.time)||now-e.time< -5||now-e.time>90||typeof e.host!=='string'||!/^[A-Fa-f0-9.:-]{1,100}$/.test(e.host)||!Number.isInteger(e.port)||e.port<1||e.port>65535||['tcp','udp'].indexOf(e.transport)<0)return bi('Server address: not observed','Адрес сервера: не получен');
+  if(!e||typeof e!=='object'||e.source!=='live-kernel-peer'||p.vendor_state!=='SETTLED'||!observationFresh(p,now)||typeof p.interface!=='string'||!/^(wgclient|ovpnclient)[0-9]{1,4}$/.test(p.interface)||e.profile!==p.id||e.interface!==p.interface||!Number.isFinite(e.time)||now-e.time< -5||now-e.time>observationValidFor(p)||typeof e.host!=='string'||!/^[A-Fa-f0-9.:-]{1,100}$/.test(e.host)||!Number.isInteger(e.port)||e.port<1||e.port>65535||['tcp','udp'].indexOf(e.transport)<0)return bi('Server address: not observed','Адрес сервера: не получен');
   var host=e.host.indexOf(':')>=0?'['+e.host+']':e.host;
   return bi('Server: ','Сервер: ')+host+':'+e.port+' · '+e.transport.toUpperCase();
 }
