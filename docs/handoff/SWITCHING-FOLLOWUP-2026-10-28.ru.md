@@ -20,11 +20,25 @@
 
 ## Область дополнительной проверки
 
-Новый delayed-status сценарий воспроизведён настоящим Chromium на asset alpha58. Итоговый alpha59 dashboard имеет **879458 байт**, SHA256 `ec7f62847a5ea87d6fbcd995a4088d2d282bb3826e0d9504519e0e081d7181a0`, проходит прежний предел 879512,2 байта. Первый целевой браузерный прогон прошёл 12/12 assertions; после дополнительной правки cross-tab feedback итоговый asset проверяется отдельно: полный экран, боковая панель, «Минимум», оба отклика, отсутствие переключающих RPC и ошибок JavaScript. Он использует явный synthetic RPC overlay и не является новым подтверждением физического VPN.
+Новый delayed-status сценарий воспроизведён настоящим Chromium на asset alpha58. Итоговый alpha59 dashboard имеет **879458 байт**, SHA256 `ec7f62847a5ea87d6fbcd995a4088d2d282bb3826e0d9504519e0e081d7181a0`, проходит прежний предел 879512,2 байта. Финальный прогон прошёл **16/16 assertions**: полный экран, боковая панель, «Минимум», оба отклика, cross-tab terminal feedback и отсутствие ошибок JavaScript. Он включает прежние 12 checks, поэтому числа 12 и 16 не суммируются. Использован явный synthetic RPC overlay: один настоящий ручной click завершён внутри fixture, команд backend/ядру — 0. Это не новое подтверждение физического VPN. [Финальный браузерный отчёт](../../qa/evidence/switching-2026-10-28/followup/browser-delayed-status-alpha59-complete-final.json).
 
-Воспроизведение rollback дополнено настоящими дочерними процессами и SIGKILL после первого и последнего UCI moves. Проверяется неизменность настоящего гостевого ядра QEMU/OpenWrt и последующее выполнение production recovery. UCI/vendor compiler/guard/health в этом стенде остаются адаптерами; эта граница не должна исчезнуть из машинного отчёта. Старые 20 model-filesystem crash cases относятся к своему lab helper и не подменяют этот новый сценарий.
+Baseline rollback дополнен настоящими дочерними процессами и SIGKILL после первого и последнего UCI moves. Оба исходных сценария завершились FAIL, сохранив журналы и неизменённые настоящие правила QEMU/OpenWrt. UCI/vendor compiler/guard/health остаются адаптерами. **Три финальных независимых повтора на исправленном исходнике не выполнены:** два исходных crash cases и forward-proof promotion с обрывом после последнего обратного move. QA-сессия была прервана автоматической проверкой сервиса с сообщением о возможном киберриске; эти проверки записаны как NOT_VERIFIED, а не PASS или новый продуктовый FAIL. [Запись о прерывании](../../qa/evidence/switching-2026-10-28/followup/qa-service-interruption.json). Старые 20 model-filesystem crash cases относятся к своему lab helper и не подменяют этот сценарий. Собственный QEMU после проверки PID/executable/диска завершён; физические роутеры не затронуты.
 
-Окончательные новые backend результаты, immutable offline matrix, package hash и перечень evidence будут закреплены отдельной записью после замораживания исходника. Предыдущие 1178 application tests на Python 3.9/3.11 и 70 browser/kernel assertions остаются доказательствами alpha58, а не автоматически нового исходника.
+## Итоговая проверка исходника
+
+**LOCAL_SOURCE_PASS_RELEASE_BLOCKED.** Полный runner выполнен на immutable local commit `6a64145aa089119de6829765ac110a7bf87a01d4`, tree `cac532be5014aa18f3881aaa159f81cfbface72d`. В GitHub точный tree сохранён как [snapshot ddff8651](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/commit/ddff865174e77bed8b1b8c217ed9a5d6fe62b115). Различаются metadata коммита и SHA, а не проверенные файлы.
+
+| Проверка | Python 3.11.17 | Python 3.9.25 |
+|---|---:|---:|
+| Application tests | 1203 PASS, 0 skips | 1203 PASS, 0 skips |
+| QA tests | 148 PASS, 2 PowerShell skips | 148 PASS, 2 PowerShell skips |
+| Tools / lab / Lua | 20 / 60 / 13 PASS | 20 / 60 / 13 PASS |
+| UI / Node lab suites | 82 / 2 PASS | Не запускаются в runtime-only режиме |
+| Две сборки в каждой среде | Совпали | Тот же SHA256 |
+
+Пакет локальной проверки: `homensai-auto-vpn_0.9.1-alpha59-1_all.ipk`, **980660 байт**, SHA256 `f491fe7a184c0e7c1a09925b241b489300a9902804a45775d8442c80456bf1ca`. Product fingerprint `7d8547165f1dea5a587637b81156d3ee021d9b9d4e0fd3fc8e412169dcb57b95`. SHA256 в VERSION.json остаётся нулевым маркером невыпущенного кандидата. [Машинная сводка и точные границы](../../qa/evidence/switching-2026-10-28/followup/verification-summary.json) связывают receipts, baseline, новые 23 focused recovery tests, manual tests, браузер и незавершённые проверки.
+
+Последующее сохранение отчётов и reproduction scripts не меняет product files, но не является разрешённым узким release-record коммитом. Предыдущие 1178 application tests и 70 browser/kernel assertions сохраняют область alpha58; они не объявляются повторёнными на alpha59. Новые application и UI результаты выше относятся к точному исходнику alpha59.
 
 ## Незакрытые условия выпуска
 

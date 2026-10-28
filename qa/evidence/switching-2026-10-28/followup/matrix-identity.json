@@ -1,0 +1,20 @@
+{
+  "source": "6a64145aa089119de6829765ac110a7bf87a01d4",
+  "tree": "cac532be5014aa18f3881aaa159f81cfbface72d",
+  "files": 1565,
+  "archive_sha256": "417d0dde0b19868f5a24877617a6a8ae2038764d0e46d527ffb3272488cf14de",
+  "version": {
+    "version": "0.9.1-alpha59",
+    "package_revision": 1,
+    "package_version": "0.9.1-alpha59-1",
+    "release_tag": "v0.9.1-alpha59",
+    "ui_module": "dashboard134",
+    "ui_stylesheet": "ui100.css",
+    "artifact": "homensai-auto-vpn_0.9.1-alpha59-1_all.ipk",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "source_fingerprint": "7d8547165f1dea5a587637b81156d3ee021d9b9d4e0fd3fc8e412169dcb57b95",
+    "ui_lazy_modules": [
+      "homensai-vpn/help134.js"
+    ]
+  }
+}

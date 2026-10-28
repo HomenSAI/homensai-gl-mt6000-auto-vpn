@@ -1,0 +1,25 @@
+test_foreign_kernel_blocks_both_public_choices_before_queueing (test_pair_manual_bound_context.BoundManualContext.test_foreign_kernel_blocks_both_public_choices_before_queueing) ... 
+  test_foreign_kernel_blocks_both_public_choices_before_queueing (test_pair_manual_bound_context.BoundManualContext.test_foreign_kernel_blocks_both_public_choices_before_queueing) (direction='primary') ... FAIL
+  test_foreign_kernel_blocks_both_public_choices_before_queueing (test_pair_manual_bound_context.BoundManualContext.test_foreign_kernel_blocks_both_public_choices_before_queueing) (direction='reserve') ... FAIL
+test_unverified_kernel_does_not_prevent_releasing_manual_hold (test_pair_manual_bound_context.BoundManualContext.test_unverified_kernel_does_not_prevent_releasing_manual_hold) ... ok
+
+======================================================================
+FAIL: test_foreign_kernel_blocks_both_public_choices_before_queueing (test_pair_manual_bound_context.BoundManualContext.test_foreign_kernel_blocks_both_public_choices_before_queueing) (direction='primary')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_pair_manual_bound_context.py", line 231, in test_foreign_kernel_blocks_both_public_choices_before_queueing
+    self.assertFalse(control[direction]['allowed'])
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_foreign_kernel_blocks_both_public_choices_before_queueing (test_pair_manual_bound_context.BoundManualContext.test_foreign_kernel_blocks_both_public_choices_before_queueing) (direction='reserve')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_pair_manual_bound_context.py", line 231, in test_foreign_kernel_blocks_both_public_choices_before_queueing
+    self.assertFalse(control[direction]['allowed'])
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.099s
+
+FAILED (failures=2)

@@ -1,0 +1,9 @@
+{
+  "scope": "only owned disposable QEMU guest",
+  "pid": 155351,
+  "physical_router_access": false,
+  "executable": "/workspace/scratch/bebc33966e94/qa-qemu/root/usr/bin/qemu-system-x86_64",
+  "disk": "/workspace/scratch/bebc33966e94/qa-qemu/openwrt.img",
+  "action": "SIGTERM to verified own guest PID; no physical router or host network changes",
+  "process_exists_after": false
+}
