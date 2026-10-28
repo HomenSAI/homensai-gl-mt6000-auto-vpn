@@ -1,21 +1,29 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard125'
+UI_MODULE='dashboard126'
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
-source=source.replace('return view.extend({',(Path(__file__).parent/'fool_guard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("var locale = localStorage.getItem('homensai-vpn-language') || 'en';", """var savedLanguage='en';
+def must_replace(old,new,expected=1,limit=None):
+    """Apply a dashboard patch only when all intended anchors are present."""
+    global source
+    actual=source.count(old)
+    if actual!=expected:
+        raise ValueError('Sidebar anchor count: expected %d, got %d: %s' % (expected,actual,old[:100]))
+    source=source.replace(old,new) if limit is None else source.replace(old,new,limit)
+
+must_replace('return view.extend({',(Path(__file__).parent/'fool_guard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("var locale = localStorage.getItem('homensai-vpn-language') || 'en';","""var savedLanguage='en';
 try { savedLanguage=localStorage.getItem('homensai-vpn-language')||'en'; } catch(e) {}
 var requestedLanguage=new URLSearchParams(window.location.search).get('lang');
 var locale=(requestedLanguage||savedLanguage)==='ru'?'ru':'en';""")
-source=source.replace('ui11.css','ui13.css').replace('ui12.css','ui13.css')
-source=source.replace('Автоматическое изменение маршрутов пока недоступно.','Контролируемое переключение требует клиентской проверки.')
-source=source.replace('Automatic route switching is unavailable.','Controlled failover requires client verification.')
+must_replace('ui12.css','ui13.css')
+must_replace('Автоматическое изменение маршрутов пока недоступно.','Контролируемое переключение требует клиентской проверки.',expected=2)
+must_replace('Automatic route switching is unavailable.','Controlled failover requires client verification.')
 
 anchor="    var panel=E('div',{'class':'hv-panel'}),self=this,period='day';"
 assert anchor in source
-source=source.replace(anchor,anchor+"""
+must_replace(anchor,anchor+"""
     var appRoot=null,settingsHost=null,heading=null,sideState=null,versionBadge=null,pages={},sortStates={},searchTerms={};
     var tabs=[['overview','◉',bi('Overview','Обзор')],['channels','⇄',bi('Channels and servers','Каналы и серверы')],['statistics','▥',bi('Statistics','Статистика')],['traffic','◷',bi('Monthly traffic','Трафик за месяц')],['services','▣',bi('Service monitor','Монитор служб')],['events','≡',bi('Events and errors','События и ошибки')],['settings','⚙',bi('Settings','Настройки')]];
     function routerVpnUrl(){return resolveRouterVpnUrl(window.location.href,window.HOMENSAI_PREVIEW_ROUTER_ORIGIN);}
@@ -53,7 +61,7 @@ source=source.replace(anchor,anchor+"""
       put(key,input);filter();
     }
 """)
-source=source.replace('      while(panel.firstChild)panel.removeChild(panel.firstChild);','      while(panel.firstChild)panel.removeChild(panel.firstChild);pages={};')
+must_replace('      while(panel.firstChild)panel.removeChild(panel.firstChild);','      while(panel.firstChild)panel.removeChild(panel.firstChild);pages={};')
 
 replacements={
 "panel.appendChild(E('h3',{},tr(\"Подключённые VPN-серверы\")))":"put('channels',E('h3',{},tr(\"Подключённые VPN-серверы\")))",
@@ -74,20 +82,20 @@ replacements={
 }
 for old,new in replacements.items():
     assert old in source,old
-    source=source.replace(old,new)
+    must_replace(old,new)
 # Remaining top-level content is the real-data overview.
-source=source.replace("panel.appendChild(E(","put('overview',E(")
-source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};", """var ns=status.native_failover||{state:'SERVICE-STOPPED'};
+must_replace("panel.appendChild(E(","put('overview',E(",expected=4)
+must_replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};","""var ns=status.native_failover||{state:'SERVICE-STOPPED'};
       var stateNames={'OBSERVING':bi('Automatic monitoring','Автоматический контроль'),'ARMED':bi('Ready','Готов'),'COMMITTED':bi('Reserve confirmed','Резерв подтверждён'),'STOPPED':bi('Stopped','Остановлен'),'DISABLED':bi('Disabled','Выключен'),'EXPIRED':bi('Window ended','Окно завершено'),'WAIT-CLIENT':bi('Waiting for client','Ожидание клиента'),'APPLYING':bi('Switching','Переключение'),'BLOCKED':bi('Blocked','Заблокирован')};
       var stale=!ns.time||Date.now()/1000-ns.time>30;
       put('overview',E('section',{'class':'hv-chart-card hv-control-summary'},[E('h3',{},bi('Automatic failover','Автоматическое переключение')),E('strong',{'class':stale?'hv-warn':'hv-control-state'},stale?bi('Controller status is stale','Статус контроллера устарел'):(stateNames[ns.state]||ns.state||bi('Unknown','Неизвестно'))),E('p',{},bi('Code: ','Код: ')+(ns.state||'UNKNOWN')),E('p',{},bi('Primary: ','Основной: ')+((rows.filter(function(p){return p.id===(inventory.settings||{}).plan_source;})[0]||{}).name||'—')),E('p',{},bi('Reserve: ','Резерв: ')+((rows.filter(function(p){return p.id===(inventory.settings||{}).plan_target;})[0]||{}).name||'—')),E('p',{},bi('Updated: ','Обновлено: ')+(ns.time?new Date(ns.time*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}):'—')),E('button',{'type':'button','class':'cbi-button','click':function(){window.location.hash='settings';showPage('settings');}},bi('Controls and setup','Управление и настройка'))]));
       if(versionBadge)versionBadge.textContent='v'+(status.version||'unknown');
       if(sideState)sideState.textContent=status.error?bi('Monitor unavailable','Монитор недоступен'):bi('Router monitor online','Монитор роутера доступен');
 """)
-source=source.replace("E('strong',{},ns.state||'UNKNOWN')","E('strong',{},stateNames[ns.state]||ns.state||'UNKNOWN')")
-source=source.replace("      var terminal=E('pre',{},[]);", """      put('services',E('p',{},bi('Times are from the router measurements. A connected interface alone is not proof of internet access.','Время берётся из измерений роутера. Подключённый интерфейс сам по себе не доказывает доступность интернета.')));
+must_replace("E('strong',{},ns.state||'UNKNOWN')","E('strong',{},stateNames[ns.state]||ns.state||'UNKNOWN')")
+must_replace("      var terminal=E('pre',{},[]);","""      put('services',E('p',{},bi('Times are from the router measurements. A connected interface alone is not proof of internet access.','Время берётся из измерений роутера. Подключённый интерфейс сам по себе не доказывает доступность интернета.')));
       var terminal=E('pre',{},[E('div',{},[E('span',{'class':'hv-log-time'},status.time?new Date(status.time*1000).toLocaleTimeString():'—'),E('strong',{},'  HomenS.AI monitor: '),badge(status.error)]),E('div',{},[E('span',{'class':'hv-log-time'},ns.time?new Date(ns.time*1000).toLocaleTimeString():'—'),E('strong',{},'  Auto VPN: '),stateNames[ns.state]||ns.state||'UNKNOWN'])]);""")
-source=source.replace("    }\n    draw(data[1]);", "      sortableTables();showPage(activeTab);\n    }\n    draw(data[1]);")
+must_replace("    }\n    draw(data[1]);","      sortableTables();showPage(activeTab);\n    }\n    draw(data[1]);")
 
 bottom=source.index('    return m.render().then(function(form)')
 source=source[:bottom]+"""    return m.render().then(function(formNode){
@@ -112,116 +120,112 @@ source=source[:bottom]+"""    return m.render().then(function(formNode){
   }
 });
 """
-source=source.replace("active.forEach(function(p)", "active.sort(function(a,b){return Number(!!a.code)-Number(!!b.code);}).forEach(function(p)")
-source=source.replace("      while(panel.firstChild)", "      var focused=panel.contains(document.activeElement)&&document.activeElement.classList.contains('hv-search')?{key:document.activeElement.closest('[data-hv-page]').dataset.hvPage,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;\n      while(panel.firstChild)")
-source=source.replace("sortableTables();showPage(activeTab);", "sortableTables();showPage(activeTab);if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}")
+must_replace("active.forEach(function(p)","active.sort(function(a,b){return Number(!!a.code)-Number(!!b.code);}).forEach(function(p)")
+must_replace("      while(panel.firstChild)","      var focused=panel.contains(document.activeElement)&&document.activeElement.classList.contains('hv-search')?{key:document.activeElement.closest('[data-hv-page]').dataset.hvPage,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;\n      while(panel.firstChild)")
+must_replace("sortableTables();showPage(activeTab);","sortableTables();showPage(activeTab);if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}")
 source='\n'.join(line for line in source.splitlines() if "put('overview',E('section',{'class':'hv-chart-card hv-control-summary'}" not in line)
-source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};", "var ns=status.native_failover||{state:'SERVICE-STOPPED'};\n      var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);pages.overview.insertBefore(controlCard,pages.overview.firstChild);")
-source=source.replace('return view.extend({',(Path(__file__).parent/'manual_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_live_chart.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("      showPage(activeTab);window.addEventListener", "      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);\n      showPage(activeTab);window.addEventListener")
-source=source.replace("telegramChat.datatype='integer'","telegramChat.datatype='string'")
-source=source.replace("var appRoot=null,settingsHost", "var lastGoodStatus=data[1];\n    var appRoot=null,settingsHost")
-source=source.replace("function draw(status){", "function draw(status){\n      if(!status.rpc_error)lastGoodStatus=status;")
-source=source.replace("poll.add(function(){return statusCall().then(draw).catch(function(){draw({error:'SERVICE-STOPPED'});});},10);", "poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);")
-source=source.replace("statusCall().catch(function(){return {error:'SERVICE-STOPPED'};})", "statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};})")
-source=source.replace("data[1].error?bi('Monitor unavailable','Монитор недоступен')", "data[1].rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):data[1].error?bi('Monitor unavailable','Монитор недоступен')")
-source=source.replace("sideState.textContent=status.error?", "sideState.textContent=status.rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):status.error?")
-source=source.replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};", "var ns=status.native_failover||{state:'UNKNOWN'};")
-source=source.replace("if(status.error)put('overview',E('p',{},badge(status.error)));", "if(status.rpc_error)put('overview',E('p',{'class':'alert-message warning'},'RPC-UNAVAILABLE: displaying last known measurements. Connectivity and service state are unconfirmed.'));\n      if(status.error)put('overview',E('p',{},badge(status.error)));")
-source=source.replace('return view.extend({',(Path(__file__).parent/'speed_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("period='day';", "period='day',speedPeriod='week';")
-source=source.replace("      sortableTables();showPage(activeTab);", "      put('ranking',speedPanel(status,inventory,speedPeriod,function(value){speedPeriod=value;draw(status);}));\n      sortableTables();showPage(activeTab);")
-source=source.replace("      settingsHost.insertBefore", "      settingsHost.appendChild(speedSettings(inventory));\n      settingsHost.insertBefore")
-source=source.replace("cell(new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))","E('td',{'data-sort-value':event.time},new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))")
-source=source.replace('return view.extend({',(Path(__file__).parent/'traffic_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("      sortableTables();showPage(activeTab);", "      put('traffic',trafficHistoryPanel(status.accounting||{}));\n      sortableTables();showPage(activeTab);")
+must_replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};","var ns=status.native_failover||{state:'SERVICE-STOPPED'};\n      var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);pages.overview.insertBefore(controlCard,pages.overview.firstChild);")
+must_replace('return view.extend({',(Path(__file__).parent/'manual_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_live_chart.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("      showPage(activeTab);window.addEventListener","      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);\n      showPage(activeTab);window.addEventListener")
+must_replace("telegramChat.datatype='integer'","telegramChat.datatype='string'")
+must_replace("var appRoot=null,settingsHost","var lastGoodStatus=data[1];\n    var appRoot=null,settingsHost")
+must_replace("function draw(status){","function draw(status){\n      if(!status.rpc_error)lastGoodStatus=status;")
+must_replace("poll.add(function(){return statusCall().then(draw).catch(function(){draw({error:'SERVICE-STOPPED'});});},10);","poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);")
+must_replace("statusCall().catch(function(){return {error:'SERVICE-STOPPED'};})","statusCall().catch(function(){return {rpc_error:'RPC-UNAVAILABLE'};})")
+must_replace("data[1].error?bi('Monitor unavailable','Монитор недоступен')","data[1].rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):data[1].error?bi('Monitor unavailable','Монитор недоступен')")
+must_replace("sideState.textContent=status.error?","sideState.textContent=status.rpc_error?bi('Status RPC unavailable','RPC статуса недоступен'):status.error?")
+must_replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};","var ns=status.native_failover||{state:'UNKNOWN'};")
+must_replace("if(status.error)put('overview',E('p',{},badge(status.error)));","if(status.rpc_error)put('overview',E('p',{'class':'alert-message warning'},'RPC-UNAVAILABLE: displaying last known measurements. Connectivity and service state are unconfirmed.'));\n      if(status.error)put('overview',E('p',{},badge(status.error)));")
+must_replace('return view.extend({',(Path(__file__).parent/'speed_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("period='day';","period='day',speedPeriod='week';")
+must_replace("      sortableTables();showPage(activeTab);","      put('ranking',speedPanel(status,inventory,speedPeriod,function(value){speedPeriod=value;draw(status);}));\n      sortableTables();showPage(activeTab);")
+must_replace("      settingsHost.insertBefore","      settingsHost.appendChild(speedSettings(inventory));\n      settingsHost.insertBefore")
+must_replace("cell(new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))","E('td',{'data-sort-value':event.time},new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}))")
+must_replace('return view.extend({',(Path(__file__).parent/'traffic_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("      sortableTables();showPage(activeTab);","      put('traffic',trafficHistoryPanel(status.accounting||{}));\n      sortableTables();showPage(activeTab);")
 old="var monthKeys=Object.keys((status.accounting||{}).months||{}).sort(),month=monthKeys.length?(status.accounting.months[monthKeys[monthKeys.length-1]]):null;"
 assert old in source
-source=source.replace(old,"var currentMonth=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit'}).format(new Date()),month=((status.accounting||{}).months||{})[currentMonth]||null;")
+must_replace(old,"var currentMonth=new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Berlin',year:'numeric',month:'2-digit'}).format(new Date()),month=((status.accounting||{}).months||{})[currentMonth]||null;")
 old="Object.keys(p.days||{}).forEach(function(day){"
 assert old in source
-source=source.replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).forEach(function(k){totals[k]=p.periods[period][k]||0;});}else Object.keys(p.days||{}).forEach(function(day){")
-source=source.replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
-source=source.replace('?build=060-alpha1','?build=070-alpha10')
-source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
+must_replace(old,"if(p.periods&&p.periods[period]){Object.keys(totals).forEach(function(k){totals[k]=p.periods[period][k]||0;});}else Object.keys(p.days||{}).forEach(function(day){")
+must_replace("day.slice(0,7)!==today.slice(0,7)","day.slice(0,7)!==today.slice(0,7)||day>today")
+must_replace('?build=060-alpha1','?build=070-alpha10')
+must_replace("      settingsHost.appendChild(speedSettings(inventory));","      settingsHost.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service','Служба мониторинга')),E('p',{},bi('Enables measurement only. Stop Auto mode and finish rollback before disabling the monitor. Actual service state is confirmed by fresh measurements.','Включает только измерения. Перед отключением остановите авторежим и дождитесь отката. Работа службы подтверждается свежими измерениями.')),E('button',{'type':'button','class':'cbi-button','click':function(ev){ev.target.disabled=true;return rpc.declare({object:'homensai-vpn',method:'monitor_control',params:['enabled'],expect:{}})(!(inventory.settings||{}).enabled).then(function(result){ui.addNotification(null,E('p',{},result.code||'MONITOR-UNKNOWN'));if(result.accepted)window.location.reload();}).catch(function(){ui.addNotification(null,E('p',{},'MONITOR-RPC-UNCONFIRMED'));}).finally(function(){ev.target.disabled=false;});}},(inventory.settings||{}).enabled?bi('Stop monitor','Остановить мониторинг'):bi('Start monitor','Запустить мониторинг'))]));\n      settingsHost.appendChild(speedSettings(inventory));")
 import json
-source=source.replace('return view.extend({','var RECOVERY_PRESETS='+json.dumps(json.loads((Path(__file__).parent/'files/usr/lib/homensai-vpn/recovery_presets.json').read_text(encoding='utf8')),sort_keys=True)+';\nreturn view.extend({')
-source=source.replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
-source=source.replace("['statistics','▥'", "['tests','⏻',bi('Operator tests','Операторские тесты')],['statistics','▥'")
-source=source.replace('return view.extend({',(Path(__file__).parent/'fault_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("      sortableTables();showPage(activeTab);", "      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));\n      sortableTables();showPage(activeTab);")
+must_replace('return view.extend({','var RECOVERY_PRESETS='+json.dumps(json.loads((Path(__file__).parent/'files/usr/lib/homensai-vpn/recovery_presets.json').read_text(encoding='utf8')),sort_keys=True)+';\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'recovery_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("      settingsHost.appendChild(speedSettings(inventory));","      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){recoveryWizard(inventory);}},bi('Recovery setup wizard','Мастер восстановления')));\n      settingsHost.appendChild(speedSettings(inventory));")
+must_replace("['statistics','▥'","['tests','⏻',bi('Operator tests','Операторские тесты')],['statistics','▥'")
+must_replace('return view.extend({',(Path(__file__).parent/'fault_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("      sortableTables();showPage(activeTab);","      put('tests',faultPanel(status,inventory,function(){return statusCall().then(draw);}));\n      sortableTables();showPage(activeTab);")
 old="return m.render().then(function(formNode){"
 assert old in source
-source=source.replace(old,"return Promise.resolve(E('p',{},bi('Use the setup wizards below. Settings are validated before saving; stored tokens are never loaded into this page.','Используйте мастера ниже. Настройки проверяются до сохранения; сохранённые токены не загружаются на эту страницу.'))).then(function(formNode){")
-source=source.replace('return view.extend({','return view.extend({\n  handleSave:null,handleSaveApply:null,handleReset:null,',1)
-source=source.replace("      settingsHost.appendChild(speedSettings(inventory));", "      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring and history retention','Мониторинг и хранение истории')));\n      settingsHost.appendChild(speedSettings(inventory));")
+must_replace(old,"return Promise.resolve(E('p',{},bi('Use the setup wizards below. Settings are validated before saving; stored tokens are never loaded into this page.','Используйте мастера ниже. Настройки проверяются до сохранения; сохранённые токены не загружаются на эту страницу.'))).then(function(formNode){")
+must_replace('return view.extend({','return view.extend({\n  handleSave:null,handleSaveApply:null,handleReset:null,')
+must_replace("      settingsHost.appendChild(speedSettings(inventory));","      settingsHost.appendChild(E('button',{'type':'button','class':'cbi-button','click':function(){monitorPreferences(inventory);}},bi('Monitoring and history retention','Мониторинг и хранение истории')));\n      settingsHost.appendChild(speedSettings(inventory));")
 start=source.index("    var inventory=data[0],m=new form.Map")
 end=source.index("    var panel=E('div',{'class':'hv-panel'})",start)
 source=source[:start]+"    var inventory=data[0];\n"+source[end:]
-source=source.replace("'require form';",'')
-source=source.replace("var setup=!configured||new URLSearchParams(window.location.search).get('setup')==='telegram';", "var setup=new URLSearchParams(window.location.search).get('setup')==='telegram';")
-source=source.replace('return view.extend({',(Path(__file__).parent/'inventory_reliable.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("'require form';",'')
+must_replace("var setup=!configured||new URLSearchParams(window.location.search).get('setup')==='telegram';","var setup=new URLSearchParams(window.location.search).get('setup')==='telegram';")
+must_replace('return view.extend({',(Path(__file__).parent/'inventory_reliable.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 old="inventoryCall().catch(function(){return {profiles:[]};})"
 assert old in source
-source=source.replace(old,'loadInventory(0)')
-source=source.replace("object:'homensai-vpn',", "object:'homensai-vpn',reject:true,")
-source=source.replace("      sortableTables();showPage(activeTab);", "      if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));\n      sortableTables();showPage(activeTab);")
-source=source.replace("settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}", "settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'}")
-source=source.replace('return view.extend({',(Path(__file__).parent/'ui_logic.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("active.sort(function(a,b){return Number(!!a.code)-Number(!!b.code);}).forEach", "sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach")
-source=source.replace("'class':'hv-server '+(p.code?'hv-degraded':'')", "'class':'hv-server hv-health-'+profileHealth(p,Date.now()/1000).state,'data-profile':p.id,'data-health':profileHealth(p,Date.now()/1000).state")
-source=source.replace('badge(p.code)','healthBadge(p)')
-source=source.replace("sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000)","sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000)")
-source=source.replace("E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-protocol'}", "E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-server-lamp hv-lamp-'+profileHealth(p,Date.now()/1000).state,'role':'img','aria-label':profileHealth(p,Date.now()/1000).label,'title':profileHealth(p,Date.now()/1000).label}),E('span',{'class':'hv-protocol'}")
+must_replace(old,'loadInventory(0)')
+must_replace("object:'homensai-vpn',","object:'homensai-vpn',reject:true,",expected=25)
+must_replace("      sortableTables();showPage(activeTab);","      if(inventory.error)put('overview',E('p',{'class':'alert-message warning','role':'alert'},'RPC-INVENTORY-UNAVAILABLE: configuration is unknown. Reload after RPC recovery; empty defaults are not saved.'));\n      sortableTables();showPage(activeTab);")
 
-source=source.replace("var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');", "var headers=table.querySelectorAll('tr:first-child th'),tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+':'+Array.from(headers).map(function(th){return th.textContent;}).join('|');")
-source=source.replace("var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;", "return compareTableValues(a.value,b.value,direction)||a.i-b.i;")
-source=source.replace('return view.extend({',(Path(__file__).parent/'analytics_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);", "var controlCard=renderAutoControl(status,inventory);put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));")
-source=source.replace("put('events',historyPanel)", "put('events',historyPanel);put('events',renderTransitionAnalytics(status))")
-source=source.replace('ui13.css','ui15.css')
-source=source.replace('put(\'channels\',E(\'h3\',{},tr("Подключённые VPN-серверы")))',"put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')))")
-source=source.replace('return view.extend({',(Path(__file__).parent/'router_link.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("p.channel+' · '+p.interface","(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён'))")
-source=source.replace("Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'")
-source=source.replace("if(!active.length)cards.appendChild", "if(!rows.length)cards.appendChild")
-source=source.replace("healthy=active.filter(function(p){return !p.code;})","healthy=active.filter(function(p){return profileHealth(p,Date.now()/1000).state==='healthy';})")
-source=source.replace("cell(p.rtt_ms)","cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)")
+must_replace('return view.extend({',(Path(__file__).parent/'ui_logic.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("active.sort(function(a,b){return Number(!!a.code)-Number(!!b.code);}).forEach","sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach")
+must_replace("'class':'hv-server '+(p.code?'hv-degraded':'')","'class':'hv-server hv-health-'+profileHealth(p,Date.now()/1000).state,'data-profile':p.id,'data-health':profileHealth(p,Date.now()/1000).state")
+must_replace('badge(p.code)','healthBadge(p)',expected=3)
+must_replace("sortServerCards(active,selectedProfile(status,Date.now()/1000),Date.now()/1000)","sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000)")
+must_replace("E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-protocol'}","E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-server-lamp hv-lamp-'+profileHealth(p,Date.now()/1000).state,'role':'img','aria-label':profileHealth(p,Date.now()/1000).label,'title':profileHealth(p,Date.now()/1000).label}),E('span',{'class':'hv-protocol'}")
+
+must_replace("var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');","var headers=table.querySelectorAll('tr:first-child th'),tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+':'+Array.from(headers).map(function(th){return th.textContent;}).join('|');")
+must_replace("var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;","return compareTableValues(a.value,b.value,direction)||a.i-b.i;")
+must_replace('return view.extend({',(Path(__file__).parent/'analytics_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);","var controlCard=renderAutoControl(status,inventory);put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));")
+must_replace("put('events',historyPanel)","put('events',historyPanel);put('events',renderTransitionAnalytics(status))")
+must_replace('ui13.css','ui15.css')
+must_replace('put(\'channels\',E(\'h3\',{},tr("Подключённые VPN-серверы")))',"put('channels',vpnSetupCard());put('channels',E('h3',{},bi('Connected VPN server','Подключённый VPN-сервер')))")
+must_replace('return view.extend({',(Path(__file__).parent/'router_link.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("p.channel+' · '+p.interface","(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён'))")
+must_replace("Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'")
+must_replace("if(!active.length)cards.appendChild","if(!rows.length)cards.appendChild")
+must_replace("healthy=active.filter(function(p){return !p.code;})","healthy=active.filter(function(p){return profileHealth(p,Date.now()/1000).state==='healthy';})")
+must_replace("cell(p.rtt_ms)","cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)")
 # Approved interaction/visual review: request-correlated checks and explicit actions.
-source=source.replace('return view.extend({',(Path(__file__).parent/'connectivity_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'connectivity_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 old="E('button',{'type':'button','class':'btn hv-test','click':function(){return scanCall().then(function(){return statusCall().then(draw);}).catch(function(){ui.addNotification(null,E('p',{},bi('Probe request failed. See service status.','Запрос проверки не прошёл. Смотрите состояние службы.')));});}},bi('Probe now','Проверить сейчас'))"
 assert old in source
-source=source.replace(old,"renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
-source=source.replace('function draw(status){','function draw(status){\n      updateConnectivityCheck(status);')
-source=source.replace("      if(heading)heading.textContent=", "      if(appRoot){appRoot.querySelectorAll('.hv-connectivity-control').forEach(function(node){node.hidden=key!=='overview';});}\n      if(heading)heading.textContent=")
-source=source.replace("bi('Configure VPN','Настроить VPN')", "bi('Open router VPN settings ↗','Открыть настройки VPN роутера ↗')")
-source=source.replace("bi('Operator tests','Операторские тесты')", "bi('Diagnostics','Диагностика')")
-source=source.replace("E('div',{'class':'hv-server-top'},", "E('div',{'class':'hv-server-top'},")
-source=source.replace("healthBadge(p)]", "healthBadge(p),E('span',{'class':'hv-profile-detail'},bi('Connection: ','Подключение: ')+(p.interface?bi('Connected','Подключён'):bi('Inactive','Неактивен'))+' · '+bi('Traffic: ','Трафик: ')+(selectedProfile(status,Date.now()/1000)===p.id?bi('Selected','Выбран'):bi('Not confirmed as selected','Выбор не подтверждён'))+' · '+bi('Priority: ','Приоритет: ')+(p.priority||100))]",1)
+must_replace(old,"renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
+must_replace('function draw(status){','function draw(status){\n      updateConnectivityCheck(status);')
+must_replace("      if(heading)heading.textContent=","      if(appRoot){appRoot.querySelectorAll('.hv-connectivity-control').forEach(function(node){node.hidden=key!=='overview';});}\n      if(heading)heading.textContent=")
+must_replace("bi('Configure VPN','Настроить VPN')","bi('Open router VPN settings ↗','Открыть настройки VPN роутера ↗')")
+must_replace("bi('Operator tests','Операторские тесты')","bi('Diagnostics','Диагностика')")
 
-source=source.replace("put('overview',renderCascadePath(status));","put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));")
-source=source.replace("var appRoot=null,settingsHost", "var pointerHeld=false,deferredStatus=null;\n    var appRoot=null,settingsHost")
-source=source.replace("function draw(status){", "function draw(status){\n      if(pointerHeld){deferredStatus=status;updateConnectivityCheck(status);return;}\n      var controlFocus=panel.contains(document.activeElement)&&document.activeElement.matches('button,input[type=checkbox],select')?{page:(document.activeElement.closest('[data-hv-page]')||{dataset:{hvPage:activeTab}}).dataset.hvPage,label:document.activeElement.getAttribute('aria-label'),text:document.activeElement.textContent,tag:document.activeElement.tagName}:null;")
-source=source.replace("      if(inventory.error)put('overview'", "      if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}\n      if(inventory.error)put('overview'")
-source=source.replace("      showPage(activeTab);window.addEventListener", "      panel.addEventListener('pointerdown',function(){pointerHeld=true;});\n      ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});\n      showPage(activeTab);window.addEventListener")
+must_replace("healthBadge(p)]","healthBadge(p),E('span',{'class':'hv-profile-detail'},bi('Connection: ','Подключение: ')+(p.interface?bi('Connected','Подключён'):bi('Inactive','Неактивен'))+' · '+bi('Traffic: ','Трафик: ')+(selectedProfile(status,Date.now()/1000)===p.id?bi('Selected','Выбран'):bi('Not confirmed as selected','Выбор не подтверждён'))+' · '+bi('Priority: ','Приоритет: ')+(p.priority||100))]",expected=2,limit=1)
 
-source=source.replace("put('overview',planning);","put('tests',planning);")
-source=source.replace('return view.extend({',(Path(__file__).parent/'sidebar_layout.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("if(!validTab(key))key='overview';activeTab=key;", "var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;")
-source=source.replace("if(heading)heading.textContent=", "if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      if(heading)heading.textContent=")
-source=source.replace("E('nav',{'aria-label':bi('VPN sections','Разделы VPN')}", "E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')}")
-source=source.replace('      return appRoot;', '      initSidebarLayout(appRoot);\n      return appRoot;')
+must_replace("put('overview',renderCascadePath(status));","put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));")
+must_replace("var appRoot=null,settingsHost","var pointerHeld=false,deferredStatus=null;\n    var appRoot=null,settingsHost")
+must_replace("function draw(status){","function draw(status){\n      if(pointerHeld){deferredStatus=status;updateConnectivityCheck(status);return;}\n      var controlFocus=panel.contains(document.activeElement)&&document.activeElement.matches('button,input[type=checkbox],select')?{page:(document.activeElement.closest('[data-hv-page]')||{dataset:{hvPage:activeTab}}).dataset.hvPage,label:document.activeElement.getAttribute('aria-label'),text:document.activeElement.textContent,tag:document.activeElement.tagName}:null;")
+must_replace("      if(inventory.error)put('overview'","      if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}\n      if(inventory.error)put('overview'")
+must_replace("      showPage(activeTab);window.addEventListener","      panel.addEventListener('pointerdown',function(){pointerHeld=true;});\n      ['pointerup','pointercancel'].forEach(function(event){window.addEventListener(event,function(){if(!pointerHeld)return;setTimeout(function(){pointerHeld=false;if(deferredStatus){var next=deferredStatus;deferredStatus=null;draw(next);}},0);});});\n      showPage(activeTab);window.addEventListener")
 
-source=source.replace('return view.extend({',(Path(__file__).parent/'incident_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-source=source.replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
-source=source.replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status,inventory));")
+must_replace("put('overview',planning);","put('tests',planning);")
+must_replace('return view.extend({',(Path(__file__).parent/'sidebar_layout.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("if(!validTab(key))key='overview';activeTab=key;","var oldTab=activeTab;if(!validTab(key))key='overview';activeTab=key;")
+must_replace("if(heading)heading.textContent=","if(appRoot)updateSidebarLayout(appRoot,oldTab!==key);\n      if(heading)heading.textContent=")
+must_replace("E('nav',{'aria-label':bi('VPN sections','Разделы VPN')}","E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')}")
+must_replace('      return appRoot;','      initSidebarLayout(appRoot);\n      return appRoot;')
+
+must_replace('return view.extend({',(Path(__file__).parent/'incident_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'readiness_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace("['settings','⚙'","['readiness','✓',bi('System readiness','Готовность системы')],['settings','⚙'")
+must_replace("put('overview',renderDecisionExplanation(status));","put('overview',renderDecisionExplanation(status));put('readiness',renderReadiness(status,inventory));")
 # Settings page: one grouped Setup card instead of scattered wizard buttons; one blocker dictionary.
-def must_replace(old,new):
-    global source
-    assert old in source,old[:80]
-    source=source.replace(old,new,1)
 must_replace("E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Monitor service'","E('section',{'class':'hv-chart-card hv-card-monitor'},[E('h3',{},bi('Monitor service'")
 must_replace('return view.extend({',(Path(__file__).parent/'setup_guides.inc.js').read_text(encoding='utf8')+(Path(__file__).parent/'monitor_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("['tests','⏻',bi('Diagnostics','Диагностика')]","['tests','⏻',bi('Tests','Тесты')]")
@@ -259,14 +263,14 @@ reorganizer = """      (function(){
       })();
 """
 must_replace("      panel.addEventListener('pointerdown',function(){pointerHeld=true;});", reorganizer+"      panel.addEventListener('pointerdown',function(){pointerHeld=true;});")
-source=source.replace('070-alpha10','080-alpha8')
+must_replace('070-alpha10','080-alpha8')
 # Overview copy: one calm monitoring note; Telegram has its own tile, so only a real error is shown.
 note_old='tr("Мониторинг активен. Состояние нативного контроллера показано ниже. Проверки роутера не подтверждают путь LAN-клиента; испытание требует отдельного клиентского подтверждения.")'
 assert note_old in source
-source=source.replace(note_old,"bi('Monitoring is active. Router checks show tunnel health only; they do not prove the path of a computer on the LAN. Auto switching is confirmed separately by the LAN helper.','Мониторинг работает. Проверки роутера показывают только состояние туннелей и не доказывают путь компьютера в LAN. Автопереключение подтверждается отдельно LAN-помощником.')")
+must_replace(note_old,"bi('Monitoring is active. Router checks show tunnel health only; they do not prove the path of a computer on the LAN. Auto switching is confirmed separately by the LAN helper.','Мониторинг работает. Проверки роутера показывают только состояние туннелей и не доказывают путь компьютера в LAN. Автопереключение подтверждается отдельно LAN-помощником.')")
 telegram_old="var tg=status.telegram||{};put('overview',E('p',{},'Telegram: '+(tg.enabled?(tg.code||(tr(\"включён · интервал \")+tg.interval_minutes+tr(\" мин · последняя отправка \")+(tg.last_sent?new Date(tg.last_sent*1000).toLocaleString():tr(\"ожидается\")))):tr(\"отключён\"))));"
 assert telegram_old in source
-source=source.replace(telegram_old,"var tg=status.telegram||{};if(tg.enabled&&tg.code)put('overview',E('p',{'class':'alert-message warning'},'Telegram: '+tg.code));")
+must_replace(telegram_old,"var tg=status.telegram||{};if(tg.enabled&&tg.code)put('overview',E('p',{'class':'alert-message warning'},'Telegram: '+tg.code));")
 # Simpler Overview and navigation: details move to Diagnostics / Service monitor; admin pages sit behind "Advanced".
 import re as _r
 must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
@@ -323,7 +327,7 @@ must_replace("put('tests',renderDecisionExplanation(status));","")
 # The old dry-run table is not a live certification display. Reuse the real
 # readiness page and the current test's own prerequisites instead.
 # Current display selection follows a trusted saved tunnel when firmware changes its member.
-source=source.replace('selectedProfile(status,Date.now()/1000)','vendorDisplaySelected(status,inventory,Date.now()/1000)')
+must_replace('selectedProfile(status,Date.now()/1000)','vendorDisplaySelected(status,inventory,Date.now()/1000)',expected=2)
 # Idle/active check control moves to the left of the page header, under the subtitle.
 must_replace("E('div',{'class':'hv-page-actions'},[versionBadge,language,renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})])","E('div',{'class':'hv-page-actions'},[versionBadge,language])")
 must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.')))","(subtitle=E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))),renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})")
@@ -356,8 +360,8 @@ for _old,_new_en,_new_ru in COPY:
 from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
-    source=source.replace(': "'+_old+'"',': "'+_new+'"')
-source=source.replace('ui15.css','ui91.css')
+    must_replace(': "'+_old+'"',': "'+_new+'"')
+must_replace('ui15.css','ui92.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -458,10 +462,10 @@ must_replace("'data-health':profileHealth(p,Date.now()/1000).state}","'data-heal
 must_replace('function checkLampCell(p){','function checkLampCell(p,status,inventory){')
 must_replace('checkLampCell(p),cell(serverTitle(p))','checkLampCell(p,status,inventory),cell(serverTitle(p))')
 must_replace("var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';\n  return E('td',{'class':'hv-check-status'", "var use=channelDisplayUse(p,status,inventory),kind=use.kind;h.label=use.label;\n  return E('td',{'class':'hv-check-status'")
-source=source.replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select')
+must_replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select',expected=2)
 must_replace("?{page:(document.activeElement.closest", "?{node:document.activeElement,page:(document.activeElement.closest")
 must_replace("if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],input[type=range],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}","restorePageControlFocus(pages,controlFocus);")
-source=source.replace('renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})','renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory)')
+must_replace('renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})','renderConnectivityCheck(data[1],function(){return statusCall().then(draw);},inventory)')
 # Owner follow-up: fixed roles and bounded disclosures, without routing writes.
 must_replace('Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.','The terminal shows real router observations. A separate optional LAN-helper test checks what a client sees; it is not required for prepared router-probed Auto mode.')
 must_replace('Мониторинг включён. Проверки выполняет сам роутер и показывают, работает ли каждый VPN; они не доказывают, что видит компьютер в вашей сети. Это отдельно подтверждает LAN-помощник перед включением Auto.','Терминал показывает реальные наблюдения роутера. Отдельный необязательный LAN-тест проверяет связь клиента; для подготовленного router-probed авторежима он не обязателен.')
@@ -480,7 +484,7 @@ must_replace("sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.
 must_replace("cell(serverTitle(p)),cell(p.channel),cell(protocolLabel(p))", "cell(serverTitle(p)),cell(roleDescription(p,status,inventory)),cell(protocolLabel(p))")
 must_replace("checkLampCell(p,status,inventory),cell(serverTitle(p)),cell(roleDescription(p,status,inventory))", "checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000),cell(roleDescription(p,status,inventory))")
 must_replace("E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён')))","E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{'class':'hv-server-address'},endpointText(p,Date.now()/1000)),E('p',{},roleDescription(p,status,inventory))")
-source=source.replace("renderCascadePath(status))","renderCascadePath(status,inventory))")
+must_replace("renderCascadePath(status))","renderCascadePath(status,inventory))")
 must_replace("E('small',{},'HomenS.AI Style 1.14.3'),",'')
 
 # Overview tools belong to the first Auto card; retain the same RPC and freshness renderers.
@@ -499,7 +503,7 @@ must_replace("put('services',renderLiveLog(status,rows,ns,inventory,stateNames))
       if(typeof rememberDisclosure==='function')rememberDisclosure(terminalExplanation,'live-terminal-explanation');
       put('services',terminalExplanation);""")
 
-source=source.replace('renderTransitionAnalytics(status)', 'renderTransitionAnalytics(status,inventory)')
+must_replace('renderTransitionAnalytics(status)','renderTransitionAnalytics(status,inventory)')
 
 # Keep the LuCI dependency directives first. Scope the child guard to this module,
 # covering every page/modal without modifying LuCI globals or meaningful text.
@@ -509,7 +513,7 @@ from simple_home_patch import apply as apply_simple_home
 source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
-source=source.replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui91.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+(root/'ui92.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

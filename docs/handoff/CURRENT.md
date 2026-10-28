@@ -1,3 +1,9 @@
+## Alpha51 candidate / Alpha51 кандидат
+
+Tasks 1–3 of the [28 October work order](SOL-6.1-WORK-ORDER-2026-10-28.md) are being validated. Full frozen dual-runtime CI, isolated matching build, encrypted before/after backups, dedicated MT3000 install verification and publication remain required. Router last reported alpha50 / Auto RUNNING; no current-session device result yet. [Status](../CURRENT-STATUS.md) · [Review](../REVIEW-2026-10-28.md). Root executor alone holds the private router lock.
+
+---
+
 ## Alpha50 source / Alpha50 исходник
 
 See [status](../CURRENT-STATUS.md). MT3000 runs alpha49 with Auto on. Alpha50 = batch 2 of the full review (router load, Telegram beside the monitor, Stop outside the lock, hidden-tab polling, focus and screen-reader fixes, CI page-build check, automatic UI module rename in bump-version, CI/Gitea archives removed after success). Remaining items: docs/REVIEW-2026-10-28.md.

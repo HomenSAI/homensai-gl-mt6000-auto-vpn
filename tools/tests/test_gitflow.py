@@ -1,6 +1,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,7 @@ flow=importlib.util.module_from_spec(spec);spec.loader.exec_module(flow)
 
 def git(path,*args):return subprocess.check_output(['git','-C',str(path),*args],stderr=subprocess.DEVNULL).decode().strip()
 
+@unittest.skipUnless(shutil.which('git'),'Git integration is covered by the full Python 3.11 CI image')
 class WorkflowTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory(prefix='homensai-gitflow-test-');self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)

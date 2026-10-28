@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Image = 'local-dev-tools:installed', [string]$CheckCommand = '')
+param([string]$Image = 'homensai-vpn-python311:local', [string]$CheckCommand = '')
 $ErrorActionPreference = 'Stop'
 $repoPath = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 & docker image inspect $Image --format '{{.Id}}'

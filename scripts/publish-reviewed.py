@@ -14,8 +14,8 @@ URL='https://github.com/'+REPOSITORY+'.git'
 ROOT=Path(__file__).resolve().parents[1]
 
 
-def run(*args,input=None):
-    reply=subprocess.run(args,cwd=ROOT,input=input,capture_output=True,text=True,check=True,timeout=180)
+def run(*args,input=None,timeout=180):
+    reply=subprocess.run(args,cwd=ROOT,input=input,capture_output=True,text=True,check=True,timeout=timeout)
     return reply.stdout.strip()
 
 
@@ -25,13 +25,81 @@ def checked_receipt(value,source):
         if not isinstance(row,dict):raise ValueError('PUBLICATION-CI-ROW')
         if row.get('result')!='PASS' or row.get('source')!=source:raise ValueError('PUBLICATION-CI-SOURCE')
         if not re.fullmatch('[a-f0-9]{64}',row.get('sha256','')):raise ValueError('PUBLICATION-CI-HASH')
+        if type(row.get('runtime_only')) is not bool:raise ValueError('PUBLICATION-CI-RUNTIMES')
     if value[0]['sha256']!=value[1]['sha256']:raise ValueError('PUBLICATION-CI-PACKAGE-MISMATCH')
     if {row.get('runtime_only') for row in value}!={True,False}:raise ValueError('PUBLICATION-CI-RUNTIMES')
+    for row in value:
+        if row.get('runtime_only') is False:
+            count=row.get('lua_tests')
+            if row.get('lua_available') is not True or type(count) is not int or count<=0:
+                raise ValueError('PUBLICATION-CI-LUA')
     return value[0]['sha256']
 
 
 def save(branch):
-    run('C:/Program Files/PowerShell/7/pwsh.exe','-NoProfile','-File',str(ROOT/'scripts/save-gitea.ps1'),'-Branch',branch)
+    run('C:/Program Files/PowerShell/7/pwsh.exe','-NoProfile','-File',str(ROOT/'scripts/save-gitea.ps1'),'-Branch',branch,timeout=1800)
+
+
+def git_blob(commit,path):
+    return subprocess.run(['git','show',commit+':'+path],cwd=ROOT,capture_output=True,
+                          check=True,timeout=180).stdout
+
+
+def checked_record_commit(parent,source,package_hash):
+    """Prove that a direct child only records the package already tested in parent."""
+    def refuse():raise ValueError('PUBLICATION-RECORD-SCOPE')
+    try:
+        if run('git','rev-list','--parents','-n','1',source).split()!=[source,parent]:refuse()
+        # main() requires source == HEAD; still prove the CI source belongs to that branch.
+        run('git','merge-base','--is-ancestor',parent,'HEAD')
+        before=json.loads(git_blob(parent,'VERSION.json').decode('utf-8-sig'))
+        after=json.loads(git_blob(source,'VERSION.json').decode('utf-8-sig'))
+        app=checked_manifest(after,package_hash)
+        artifact=app.get('artifact','')
+        version=app.get('version','')
+        if (not re.fullmatch(r'homensai-auto-vpn_[0-9]+\.[0-9]+\.[0-9]+-(?:alpha|beta|rc)[0-9]+-[0-9]+_all\.ipk',artifact)
+                or app.get('package_version')!=artifact[len('homensai-auto-vpn_'):-len('_all.ipk')]
+                or app.get('release_tag')!='v'+version):refuse()
+        old_app=before.get('application')
+        if not isinstance(old_app,dict) or 'sha256' not in old_app or old_app['sha256']==package_hash:refuse()
+        old_app['sha256']=package_hash
+        if before!=after:refuse()
+        package_path='releases/'+artifact
+        notes_path='releases/'+app['release_tag']+'.md'
+        expected={'VERSION.json':'M','router-test-kit/02-install.sh':'M',package_path:'A',
+                  package_path+'.sha256':'A',notes_path:'A'}
+        fields=run('git','diff','--name-status','--no-renames','-z',parent,source).split('\0')
+        if fields[-1:]==['']:fields.pop()
+        if len(fields)!=2*len(expected):refuse()
+        changes={fields[index+1]:fields[index] for index in range(0,len(fields),2)}
+        if changes!=expected:refuse()
+        package=git_blob(source,package_path)
+        if hashlib.sha256(package).hexdigest()!=package_hash:refuse()
+        checksum=git_blob(source,package_path+'.sha256').decode('utf-8')
+        if not re.fullmatch(re.escape(package_hash)+r' [ *]'+re.escape(artifact)+r'\r?\n?',checksum):refuse()
+        scripts=[git_blob(commit,'router-test-kit/02-install.sh').decode('utf-8')
+                 for commit in (parent,source)]
+        wanted={'EXPECTED_SHA':package_hash,'EXPECTED_SIZE':str(len(package))}
+        for key,value in wanted.items():
+            pattern=r'^'+key+r'=([^\n]*)$'
+            matches=[re.findall(pattern,script,re.MULTILINE) for script in scripts]
+            if any(len(items)!=1 for items in matches) or matches[1][0]!=value:refuse()
+            scripts=[re.sub(pattern,key+'=<recorded>',script,flags=re.MULTILINE) for script in scripts]
+        if scripts[0]!=scripts[1]:refuse()
+    except (KeyError,TypeError,ValueError,UnicodeError,subprocess.CalledProcessError):
+        raise ValueError('PUBLICATION-RECORD-SCOPE') from None
+
+
+def checked_source_receipt(value,source):
+    """Accept exact-source CI, or its narrowly verified package-record child."""
+    if not isinstance(value,list) or len(value)!=2:raise ValueError('PUBLICATION-CI-MATRIX')
+    ci_source=value[0].get('source') if isinstance(value[0],dict) else None
+    if ci_source==source:return checked_receipt(value,source),source
+    if not isinstance(ci_source,str) or not re.fullmatch('[a-f0-9]{40}',ci_source):
+        raise ValueError('PUBLICATION-CI-SOURCE')
+    package_hash=checked_receipt(value,ci_source)
+    checked_record_commit(ci_source,source,package_hash)
+    return package_hash,ci_source
 
 
 def checked_manifest(data,package_hash,release=None):
@@ -49,7 +117,7 @@ def main():
     if not re.fullmatch('[a-f0-9]{40}',a.source):p.error('SOURCE-SHA')
     if run('git','status','--porcelain'):raise ValueError('PUBLICATION-DIRTY')
     if run('git','rev-parse','HEAD')!=a.source:raise ValueError('PUBLICATION-NONCURRENT-SOURCE')
-    package_hash=checked_receipt(json.loads(a.receipt.read_text(encoding='utf-8-sig')),a.source)
+    package_hash,ci_source=checked_source_receipt(json.loads(a.receipt.read_text(encoding='utf-8-sig')),a.source)
     checked_manifest(json.loads((ROOT/'VERSION.json').read_text(encoding='utf-8-sig')),package_hash,a.release)
     if a.release:
         # Alpha, beta and release-candidate tags; a plain version tag (final release) stays a separate owner decision.
@@ -75,7 +143,7 @@ def main():
         public=run('git','commit-tree',tree,'-p',parent,input='Reviewed local snapshot '+a.source+'\n\nDual-runtime CI package SHA256 '+package_hash+'\n')
         branch='feature/github-publication-'+public[:12]
         run('git','update-ref','refs/heads/'+branch,public,'0'*40);save(branch)
-        ledger={'source':a.source,'public':public,'parent':parent,'tree':tree,'package_sha256':package_hash,'gitea_saved':True,'github_published':False,'planned_release':a.release,'notes_sha256':hashlib.sha256(a.notes.read_bytes()).hexdigest() if a.release else None}
+        ledger={'source':a.source,'ci_source':ci_source,'record_commit_verified':ci_source!=a.source,'public':public,'parent':parent,'tree':tree,'package_sha256':package_hash,'gitea_saved':True,'github_published':False,'planned_release':a.release,'notes_sha256':hashlib.sha256(a.notes.read_bytes()).hexdigest() if a.release else None}
         receipt=private/('publication-'+public+'.json')
     def persist(value):
         pending=receipt.with_suffix('.pending')

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([string]$Image='local-dev-tools:installed',
+param([string]$Image='homensai-vpn-python311:local',
       [string]$RuntimeImage='homensai-vpn-python39:local', [switch]$InjectFailure, [string]$SourceCommit='')
 $ErrorActionPreference='Stop'
 $repoPath=(Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path

@@ -1147,6 +1147,30 @@ VPN не подключён / VPN not connected
 
 **Action:** Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.
 
+## PUBLICATION-RECORD-SCOPE
+
+Запись выпуска отличается от проверенного исходника / Release record differs from the tested source
+
+**RU:** Запись выпуска содержит изменения вне разрешённых файлов либо не подтверждены родительский коммит или хеш пакета.
+
+**EN:** The release record contains changes outside the allowed package record, or its parent or package hash could not be verified.
+
+**Что делать:** Запустите полный CI на этом коммите либо создайте прямой дочерний коммит только с проверенным пакетом, контрольной суммой, новыми заметками выпуска и соответствующими полями хеша и размера.
+
+**Action:** Run the full CI on this commit, or create a direct child record containing only the verified package, checksum, new release notes and matching hash and size fields.
+
+## PUBLICATION-CI-LUA
+
+Квитанция CI не подтверждает проверку Lua / The CI receipt does not prove Lua tests ran
+
+**RU:** Квитанция среды проверки инструментов не подтверждает наличие Lua и выполнение хотя бы одного теста с Lua.
+
+**EN:** The tools runtime receipt does not confirm Lua availability and at least one completed Lua-backed test.
+
+**Что делать:** Используйте проверенный образ CI с Lua и lua-cjson, повторите проверки обеих сред и сохраните неудачную квитанцию.
+
+**Action:** Use the reviewed CI image with Lua and lua-cjson, run both runtime checks again, and keep the failed receipt as evidence.
+
 ## SPEED-PAUSE-UNVERIFIED
 
 Не удалось проверить паузу / Pause could not be verified

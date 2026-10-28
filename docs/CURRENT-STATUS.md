@@ -1,3 +1,11 @@
+## Alpha51 candidate: release checks and asserted page build / Проверки выпуска и сборки страницы
+
+Tasks 1–3 of the [work order](handoff/SOL-6.1-WORK-ORDER-2026-10-28.md): exact record-commit verification replaces a second CI run; CI covers tools, offline lab and executed Lua tests; dashboard patch anchors are asserted. The Task 3 conversion preserves generated page bytes (line endings ignored). Candidate image adds Lua/CJSON to the pinned Python 3.11 tools image without changing existing images.
+
+Кандидат alpha51: проверка записи пакета вместо повторного CI, проверки инструментов/стенда/Lua, проверка всех замен при сборке страницы. Полный CI, отдельная сборка, установка и публикация ещё не завершены. По последней передаче MT3000 работает на alpha50, Auto RUNNING; это пока не проверено в этой сессии.
+
+---
+
 ## Alpha50 source: review batch 2, load and process / Разбор проекта, пакет 2: нагрузка и процесс
 
 Batch 2 of the full project review ([review](REVIEW-2026-10-28.md)):
