@@ -12,10 +12,10 @@ async function main(){
  assert(/Auto power button/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));assert(/may have been stored/.test(c.manualReason(['MANUAL-REQUEST-UNCONFIRMED'])));assert(/not certify|not passed/.test(c.manualReason(['MT3000-MANUAL-ADAPTER-NOT-CERTIFIED'])));assert(/integration/.test(c.manualReason(['FW3-INCLUDE-CONTRACT-UNVERIFIED'])));
  const english=c.bi;c.bi=(_en,ru)=>ru;assert(/аварийную остановку/.test(c.manualReason(['MANUAL-STOP-AUTO-FIRST'])));c.bi=english;
  for(const code of ['__proto__','constructor','PRIVATE_SENTINEL'])assert(!c.manualReason([code]).includes(code),'unknown codes never echo untrusted text');
- let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');assert(/Spare.*working/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
+ let s=status();assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');assert(/alive and waiting/.test(tone(s,'target').text));assert(!/failed|does not work/.test(tone(s,'target').text));
  s.manual_switch={state:'QUEUED',updated_at:999,target_id:'b'};assert.equal(tone(s,'source').color,'green','queue never swaps route colors');assert.equal(tone(s,'target').color,'yellow');
  s.manual_switch.state='COMPLETED';assert.equal(tone(s,'target').color,'yellow','completion record alone never selects route');
- s.channel_path.transitioning=true;assert.equal(tone(s,'source').color,'yellow');assert.equal(tone(s,'target').color,'yellow');
+ s.channel_path.transitioning=true;assert.equal(tone(s,'source').color,'grey','switching: waiting for the router');assert.equal(tone(s,'target').color,'grey');
  s.channel_path.transitioning=false;s.channel_path.active_profile_id='b';assert.equal(tone(s,'source').color,'yellow');assert.equal(tone(s,'target').color,'green','fresh backend route confirmation swaps lamps');
  for(const edit of [s=>s.time=800,s=>s.rpc_error='RPC-FAILED',s=>s.channel_path.time=800,s=>s.channel_path.confirmed=false,s=>s.channel_path.active_profile_id='unknown',s=>s.channel_path.source_profile_id='other']){s=status();edit(s);assert.equal(tone(s,'source').color,'grey');assert.equal(tone(s,'target').color,'grey');}
  s=status();assert.equal(tone(s,'source',{...profiles[0],time:800}).color,'grey');assert.equal(tone(s,'source',{...profiles[0],code:'DNS-001'}).color,'red');assert(/connectivity failed/.test(tone(s,'source',{...profiles[0],code:'DNS-001'}).text));

@@ -1,10 +1,13 @@
 """MIT. Bounded persistent native transition history; no keys, tokens or exit IPs."""
+import contextlib
+import fcntl
 import hashlib
 import json
 import math
 import os
 from pathlib import Path
 import re
+import tempfile
 import time
 
 CODE=re.compile(r'^[A-Z0-9_-]{1,96}$')
@@ -62,11 +65,15 @@ def encoded(value):
 def atomic(path,value):
     path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
     if path.is_symlink() or path.parent.is_symlink():raise HistoryError('HISTORY-PATH')
-    pending=path.with_name(path.name+'.pending')
-    fd=os.open(str(pending),os.O_WRONLY|os.O_CREAT|os.O_TRUNC|getattr(os,'O_NOFOLLOW',0),0o600)
-    with os.fdopen(fd,'wb') as stream:
-        stream.write(encoded(value));stream.flush();os.fsync(stream.fileno())
-    os.replace(str(pending),str(path))
+    # A unique temporary name per writer: two writers can never truncate each other's file.
+    fd,pending=tempfile.mkstemp(dir=str(path.parent),prefix='.'+path.name+'.',suffix='.pending')
+    try:
+        with os.fdopen(fd,'wb') as stream:
+            stream.write(encoded(value));stream.flush();os.fsync(stream.fileno())
+        os.replace(pending,str(path))
+    except BaseException:
+        with contextlib.suppress(OSError):os.unlink(pending)
+        raise
     fd=os.open(str(path.parent),os.O_RDONLY|os.O_DIRECTORY)
     try:os.fsync(fd)
     finally:os.close(fd)
@@ -207,13 +214,27 @@ class History:
         cutoff=time.strftime('%Y-%m-%d',time.localtime(max(0,now-self.detail_days*86400)))
         for retired in list(data.get('days',{})):
             if retired<cutoff:del data['days'][retired]
+    @contextlib.contextmanager
+    def locked(self):
+        """One lock for every writer of the history (supervisor transitions and the owner's statistics reset)."""
+        self.path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+        lock=self.path.with_name('native-history.lock')
+        if lock.is_symlink():raise HistoryError('HISTORY-PATH')
+        fd=os.open(str(lock),os.O_CREAT|os.O_RDWR|getattr(os,'O_NOFOLLOW',0),0o600)
+        try:
+            fcntl.flock(fd,fcntl.LOCK_EX)
+            yield
+        finally:
+            os.close(fd)
     def record(self,value,now=None):
+        with self.locked():return self._record(value,now)
+    def _record(self,value,now=None):
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
         data=self.load()
         legacy=data.get('counter_version')!=2
         self.migrate(data)
-        if data['last_time'] is not None and now<data['last_time']:raise HistoryError('HISTORY-CLOCK-BACKWARD')
+        if data['last_time'] is not None and now<data['last_time']:now=data['last_time']
         state=value.get('state','UNKNOWN')
         if not isinstance(state,str) or not CODE.fullmatch(state):raise HistoryError('HISTORY-STATE')
         codes=value.get('blockers',[])[:16]

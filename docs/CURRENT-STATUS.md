@@ -1,3 +1,18 @@
+## Alpha49 source: review batch 1, robustness / Разбор проекта, пакет 1: надёжность
+
+Fixes the confirmed defects from the full project review ([review](REVIEW-2026-10-28.md)):
+- Statistics reset archives (written and read back) before any on-disk reset and returns a coded result instead of stopping monitoring.
+- Transition history: one lock for all writers, unique temporary files; atomic_json uses unique temporary files too.
+- A history or certificate write failure after COMMITTED is reported as history_error instead of rolling traffic back.
+- A session that already ran returns from HELD to RUNNING after a fully verified tick; one more error no longer switches Auto off.
+- A clock stepped backwards is clamped in the history and the retry budget.
+- Outage checkpoints are written at most once a minute. The archive is bounded at 12 MB.
+- UI: "Auto works" means confirmed running; channel cards and the Auto card follow the colour rule; a route switch inside running Auto is not "Turning Auto on"; unanswered commands expire (AUTO-CONTROL-UNCONFIRMED); render errors are UI-RENDER-FAILED, not router outages; during an outage the page clock keeps running; other VPNs are not called primary/reserve.
+
+Исправлены подтверждённые ошибки из полного разбора проекта: сохранность данных при сбросе, блокировки, отсутствие отката после переключения, восстановление после случайной ошибки, перевод часов, износ флеш-памяти, правдивые состояния в интерфейсе.
+
+---
+
 ## Alpha48 source: one colour rule, fewer texts / Одно правило цветов, меньше текста
 
 - Owner colour rule for every channel lamp and card: green = works in Auto; yellow = alive and waiting to be switched on by Auto (also when Auto is off); grey = waiting for the router's answer (no fresh data, check running, switch pending); red = error, does not work.

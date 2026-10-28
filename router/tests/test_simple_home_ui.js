@@ -38,6 +38,10 @@ for(const language of ['en','ru']){
  blocked.auto_control.requested='on';blocked.auto_control.pair_phase='STARTING';c.autoCommandPending={stop:false,acknowledged:true,baseline:900};
  assert.equal(c.autoCommandOperation(blocked,1000),null,'fresh explicit BLOCKED never hides behind Starting');
  assert.equal(c.simpleHomeModel(blocked,inventory,1000).state,'error');
+ const moving=clone(base);moving.native_failover.state='APPLYING';moving.auto_control.requested='on';moving.auto_control.pair_phase='RUNNING';c.autoCommandPending=null;
+ assert.equal(c.autoCommandOperation(moving,1000),null,'a route switch inside running Auto is not Turning Auto on');
+ c.autoCommandPending={stop:false,acknowledged:true,baseline:5000,t0:Date.now()-10*60*1000};
+ assert.equal(c.autoCommandOperation(base,1000),null,'a command without an answer is released after its deadline');assert.equal(c.autoCommandPending,null);
  let clicked=0;const original=new N('button',{'class':'hv-auto-power','click':()=>clicked++}),control={querySelector:selector=>selector==='.hv-auto-power'?original:null};
  const card=c.renderSimpleHome(base,inventory,model,control,f.open),nodes=card.all(),power=nodes.find(n=>n.attrs['data-simple-home-auto']);
  assert.equal(f.calls.length,0,'Rendering performs no RPC');assert.equal(nodes.filter(n=>n.attrs['data-simple-home-auto']).length,1);

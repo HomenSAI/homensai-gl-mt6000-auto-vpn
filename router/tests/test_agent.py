@@ -69,7 +69,7 @@ class NativeTests(unittest.TestCase):
             agent.atomic_json(p, {'safe': 1})
             self.assertEqual(agent.read_json(p), {'safe': 1})
             self.assertEqual(p.stat().st_mode & 0o777, 0o600)
-            self.assertFalse(p.with_name('state.json.pending').exists())
+            self.assertEqual([x.name for x in Path(d).iterdir()], ['state.json'], 'no temporary file is left')
 
     def test_storage_rejects_final_symlink(self):
         with tempfile.TemporaryDirectory() as d:
@@ -83,8 +83,9 @@ class NativeTests(unittest.TestCase):
             target = Path(d)/'target';target.write_text('original')
             p = Path(d)/'state.json'
             p.with_name('state.json.pending').symlink_to(target)
-            with self.assertRaises(OSError):agent.atomic_json(p, {})
-            self.assertEqual(target.read_text(), 'original')
+            agent.atomic_json(p, {'safe': 2})
+            self.assertEqual(target.read_text(), 'original', 'a planted temporary-name symlink is never followed')
+            self.assertEqual(agent.read_json(p), {'safe': 2})
 
     def test_counter_delta_and_reset(self):
         a = agent.Accounting()

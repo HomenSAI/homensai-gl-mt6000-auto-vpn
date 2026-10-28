@@ -1903,6 +1903,66 @@ Auto заново прочитал изменённые настройки / Aut
 
 **Action:** Wait up to a minute; the result appears by itself.
 
+## AUTO-CONTROL-UNCONFIRMED
+
+Auto не подтвердил команду / Auto did not confirm the command
+
+**RU:** Страница отправила «Старт» или «Стоп», но роутер не сообщил результат за две минуты. Кнопка снова доступна, можно повторить.
+
+**EN:** The page sent Start or Stop, but the router did not report the result within two minutes. The button is released so you can try again.
+
+**Что делать:** Посмотрите на лампу Auto и состояние через минуту. Если ничего не изменилось, нажмите кнопку ещё раз; если повторяется, проверьте, что мониторинг запущен («Настройки»).
+
+**Action:** Check the Auto lamp and the status in a minute. If nothing changed, press the button again; if it repeats, check that monitoring is running (Settings).
+
+## UI-ACTION-FAILED
+
+Страница не смогла выполнить действие / The page could not finish the action
+
+**RU:** Страница отправила запрос, но он не прошёл до ответа роутера (связь пропала или ошибка страницы). Это нажатие ничего не изменило.
+
+**EN:** The page sent a request, but it failed before the router answered (connection lost or a page error). Nothing was changed by this press.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и повторите действие.
+
+**Action:** Reload the page (Ctrl+F5) and repeat the action.
+
+## UI-RENDER-FAILED
+
+Часть страницы не удалось показать / Part of the page could not be drawn
+
+**RU:** Роутер ответил, но одна часть страницы не отрисовалась; остальная страница работает.
+
+**EN:** The router answered, but one part of the page failed while drawing; the rest of the page keeps working.
+
+**Что делать:** Обновите страницу (Ctrl+F5). Если повторяется, отправьте код и снимок экрана разработчику.
+
+**Action:** Reload the page (Ctrl+F5). If it repeats, send the code and a screenshot to the developer.
+
+## MANUAL-SWITCH-UNCONFIRMED
+
+Ручное переключение не подтверждено / Manual switch not confirmed
+
+**RU:** Роутер не подтвердил ручное переключение и не назвал другой причины. Маршрут остаётся таким, как сообщает роутер.
+
+**EN:** The router did not confirm the manual switch and gave no other reason. The route stays as the router reports it.
+
+**Что делать:** Дождитесь следующей проверки роутера (около 10 секунд) и при необходимости нажмите канал ещё раз.
+
+**Action:** Wait for the next router check (about 10 seconds) and press the channel again if needed.
+
+## STATS-RESET-ARCHIVE-UNVERIFIED
+
+Архив не прочитался обратно / Archive could not be read back
+
+**RU:** Роутер записал архив старых данных, но проверка чтением не совпала, поэтому ничего не сброшено.
+
+**EN:** The router wrote the archive of the old data, but reading it back did not match, so it reset nothing.
+
+**Что делать:** Проверьте свободное место на роутере и снова нажмите «Сброс графика».
+
+**Action:** Check free space on the router and press Reset chart again.
+
 ## STATS-RESET-FIELDS
 
 Запрос сброса не принят / Reset request not accepted

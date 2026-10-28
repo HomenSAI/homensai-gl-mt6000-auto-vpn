@@ -248,8 +248,9 @@ def budget(events, now, window=900, limit=3):
     """Configurable rolling limit; retain 15 minutes, and never reset on Start."""
     if (not isinstance(events, list) or len(events) > 16 or type(now) not in (int, float)
             or not math.isfinite(now) or any(type(x) not in (int, float) or not math.isfinite(x)
-                                           or x < 0 or x > now for x in events)):
+                                           or x < 0 for x in events)):
         raise ValueError('PAIR-BUDGET-UNVERIFIED')
+    events = [min(x, now) for x in events]
     if type(window)is not int or not 60<=window<=900 or type(limit)is not int or not 1<=limit<=10:
         raise ValueError('PAIR-BUDGET-UNVERIFIED')
     # Keep the whole maximum window so later policy changes cannot erase attempts.
@@ -541,6 +542,7 @@ def begin(backend, settings, request):
                 pass  # The running supervisor retries within its bounded budget.
             quiet(45,request['revision'])
     state['phase'] = 'RUNNING'
+    state['ran'] = True
     require_running(request['revision'])
     backend.guard(backend.devices(), control_revision=request['revision'])
     save(state)
@@ -603,6 +605,14 @@ def recover(backend):
         publish_failure(error)
         return False
     return True
+
+
+def resume_running(state):
+    """A session held by a transient error returns to RUNNING once a full tick verified network, configs and policy."""
+    if state.get('phase') == 'HELD' and state.get('ran') is True:
+        state['phase'] = 'RUNNING'
+        state.pop('recovery_error', None)
+        save(state)
 
 
 def publish_failure(error):
@@ -699,6 +709,7 @@ def tick(backend, settings, revision):
                                'source':journal['source'],'target':journal['target'],
                                'original_restored':True,'mode':'continuous-pair','proof_scope':MODE})
             else:
+                resume_running(state)
                 n.publish({'state': 'COMMITTED' if decision['action'] == 'OBSERVE' else 'DEGRADED-ON-RESERVE',
                            'source': journal['source'], 'target': journal['target'], 'mode': 'continuous-pair',
                            'proof_scope': MODE, 'reason': decision['reason'], 'blockers': []})
@@ -711,6 +722,7 @@ def tick(backend, settings, revision):
             return True
         if backend.order() != (state['order'], state['policy_hash']):
             raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
+        resume_running(state)
         now = time.time()
         recovery = normalized(settings)
         age = max(30, min(900, int(settings.get('interval', 10)) * 3))
@@ -770,7 +782,8 @@ def tick(backend, settings, revision):
                 save(pending)
         # A failed Start before durable acquisition has no STARTING state to
         # finish. Consume its exact request; a newer Stop/Start cannot be lost.
-        if pending.get('phase') in (None,'STOPPED','FAILED','HELD') and request_row.get('mode')=='on':
+        # A session that already ran is not switched off by one more error: it stays HELD and resumes by itself.
+        if (pending.get('phase') in (None,'STOPPED','FAILED') or pending.get('phase')=='HELD' and not pending.get('ran')) and request_row.get('mode')=='on':
             fail_request(request_row,revision,error)
         # Leave unverified ownership intact. Stop is independent of this code.
         publish_failure(error)

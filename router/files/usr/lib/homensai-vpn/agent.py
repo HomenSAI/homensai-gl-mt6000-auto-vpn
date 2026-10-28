@@ -24,7 +24,7 @@ import time
 from threading import local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha48'
+VERSION = '0.9.1-alpha49'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -100,14 +100,22 @@ def atomic_json(path, value):
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if path.parent.is_symlink() or path.is_symlink():
         raise ValueError('symlink storage refused')
-    pending = path.with_name(path.name + '.pending')
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_NOFOLLOW', 0)
-    fd = os.open(str(pending), flags, 0o600)
-    with os.fdopen(fd, 'w', encoding='utf-8') as stream:
-        json.dump(value, stream, ensure_ascii=True, allow_nan=False, separators=(',', ':'))
-        stream.flush()
-        os.fsync(stream.fileno())
-    os.replace(str(pending), str(path))
+    # A unique, exclusively created temporary file per writer (mode 0600): concurrent writers of the same
+    # file cannot truncate each other's data, and a planted symlink is never followed.
+    import tempfile
+    fd, pending = tempfile.mkstemp(dir=str(path.parent), prefix='.' + path.name + '.', suffix='.pending')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            json.dump(value, stream, ensure_ascii=True, allow_nan=False, separators=(',', ':'))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(pending, str(path))
+    except BaseException:
+        try:
+            os.unlink(pending)
+        except OSError:
+            pass
+        raise
     directory = os.open(str(path.parent), os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(directory)
@@ -677,6 +685,9 @@ def monitor_poll_interval(settings, now=None):
         return normal
 
 
+CRITICAL_SAVE_SPACING=60
+
+
 def serve():
     RUNTIME.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock = os.open(str(RUNTIME/'agent.lock'), os.O_CREAT|os.O_RDWR|getattr(os, 'O_NOFOLLOW', 0), 0o600)
@@ -704,11 +715,16 @@ def serve():
         reset_request=reset_pending(RUNTIME)
         if reset_request:
             # Owner reset of charts/statistics: archived first, then the counters start again from zero.
-            accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json)
+            # A failing reset never stops monitoring, and the page always gets a coded result.
+            try:
+                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json)
+            except Exception:
+                reset_result={'nonce':reset_request['nonce'],'scope':reset_request['scope'],'time':time.time(),'done':False,'code':'STATS-RESET-FAILED'}
             try:
                 if reset_result.get('done'):checkpoint(accounting,latency);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
-            atomic_json(RUNTIME/RESET_RESULT,reset_result)
+            try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
+            except (OSError,ValueError):pass
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         started = time.monotonic()
         try:
@@ -826,15 +842,19 @@ def serve():
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
-            if accounting.reliability.critical or time.monotonic()-last_save >= settings['checkpoint']:
+            since_save=time.monotonic()-last_save
+            if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
                 try:
                     checkpoint(accounting,latency);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
-        except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
-            atomic_json(RUNTIME/'status.json', {'version': VERSION, 'mode': 'monitor', 'error': 'SYSTEM-001', 'time': time.time()})
-            finish_scan(RUNTIME,read_json,atomic_json,scan_id,'SCAN-MEASUREMENT-FAILED')
+        except Exception:
+            # Any failure of one pass is reported and retried; the monitor process itself keeps running.
+            try:
+                atomic_json(RUNTIME/'status.json', {'version': VERSION, 'mode': 'monitor', 'error': 'SYSTEM-001', 'time': time.time()})
+                finish_scan(RUNTIME,read_json,atomic_json,scan_id,'SCAN-MEASUREMENT-FAILED')
+            except Exception:pass
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
         while not STOP and time.monotonic()-started < monitor_poll_interval(settings):

@@ -1013,6 +1013,12 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     def publish_transition(value):
         value=dict(value,transition_source=normalize_request_source(request_source) if manual_request_id is not None else 'test' if trial else 'automatic')
         publish(value)
+    def publish_committed(value):
+        # After the journal says COMMITTED the switch is done: a history write failure (full flash, corrupt
+        # history) is reported as history_error and must never roll traffic back onto the failed channel.
+        try:publish_transition(value)
+        except (Refused,OSError,ValueError,KeyError,TypeError):
+            atomic_json(STATE,dict(value,time=time.time(),history_error='HISTORY-001'))
     cause='OPERATOR-TRIAL' if trial else 'SOURCE-FAILED' if probe_evidence and probe_evidence.get('source_streak_met') is True else 'SOURCE-HEALTH-UNKNOWN'
     if manual_request_id is not None:cause='OPERATOR-MANUAL'
 
@@ -1100,15 +1106,16 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                     with control_lock(RUNTIME):
                         require_control_revision(control_revision)
                         journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL',reserve_healthy=True);journal_write(journal)
-                    publish_transition({'state':'STOPPED-ON-RESERVE','reason':'OPERATOR-MANUAL','source':journal['source'],'target':journal['target'],
+                    publish_committed({'state':'STOPPED-ON-RESERVE','reason':'OPERATOR-MANUAL','source':journal['source'],'target':journal['target'],
                              'original_restored':False,'reserve_healthy':True,'trial':False,'tx':tx})
                     return
                 if trial and not finish_committed(backend,journal,'TRIAL-PASSED'):return
                 require_control_revision(control_revision)
-                atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
+                try:atomic_json(CERT,{'hash':selection['hash'],'source':selection['source']['id'],
                                  'target':selection['target']['id'],'direction':selection['direction'],'settings_hash':selection.get('settings_hash'),
                                  'vendor_identity':selection['vendor_identity'],'proof_scope':PROOF_SCOPE,'time':time.time(),'until':until})
-                publish_transition({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
+                except (OSError,ValueError):pass  # without the certificate the next start runs a new trial; traffic stays switched
+                publish_committed({'state':'ARMED' if trial else 'COMMITTED','tx':tx,'source':journal['source'],'target':journal['target'],
                                   'until':until,'trial':trial,'phase_evidence':journal.get('phase_evidence',[]),'transition_kind':transition_kind(selection['source'],selection['target']),'reason':'TRIAL-PASSED' if trial else 'CLIENT-CONFIRMED','guard':'VPN-only; IPv6 forwarded traffic blocked'})
                 return
             time.sleep(1)

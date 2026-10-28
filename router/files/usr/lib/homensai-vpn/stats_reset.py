@@ -11,6 +11,7 @@ RUNTIME=Path('/var/run/homensai-vpn')
 PERSIST=Path('/etc/homensai-vpn')
 SCOPES=('latency','auto','traffic','quality','speed','ranking','all')
 ARCHIVE_KEEP=10
+ARCHIVE_BYTES=12*1024*1024
 REQUEST='stats-reset-request.json'
 RESULT='stats-reset-result.json'
 
@@ -51,28 +52,36 @@ def archive(persist,scope,payload,now,writer):
     name='%d-%s.json'%(int(now),scope)
     writer(folder/name,{'schema':1,'scope':scope,'time':now,'data':payload,'sha256':checksum(payload)})
     saved=sorted(p for p in folder.glob('*.json') if re.fullmatch(r'[0-9]+-[a-z]+\.json',p.name))
-    for old in saved[:-ARCHIVE_KEEP]:
-        try:old.unlink()
+    # Bounded on flash: at most ARCHIVE_KEEP archives and ARCHIVE_BYTES in total; the newest one is always kept.
+    def size(p):
+        try:return p.stat().st_size
+        except OSError:return 0
+    while len(saved)>1 and (len(saved)>ARCHIVE_KEEP or sum(size(p) for p in saved)>ARCHIVE_BYTES):
+        try:saved.pop(0).unlink()
         except OSError:pass
     return name
 
 
-def reset_native_history(persist,writer,now):
+def reset_native_history(persist,writer,now,before=None):
     """Counters and events start again; correlation metadata of a running attempt is kept."""
     from native_history import History
-    history=History(persist);data=history.load();old=copy.deepcopy(data)
-    history.migrate(data)
-    data.update({'events':[],'months':{},'days':{},'totals':{},'counted':{},'daily_since':now,'returns_since':now,
-                 'detail_budget_dropped':0,'counter_accuracy':'reset by the owner','legacy_months':{}})
-    for key in ('counted_state','counted_reason'):data.pop(key,None)
-    writer(history.path,history.envelope(data));writer(history.backup,history.envelope(data))
+    history=History(persist)
+    with history.locked():
+        data=history.load();old=copy.deepcopy(data)
+        if before is not None:before(old)
+        history.migrate(data)
+        data.update({'events':[],'months':{},'days':{},'totals':{},'counted':{},'daily_since':now,'returns_since':now,
+                     'detail_budget_dropped':0,'counter_accuracy':'reset by the owner','legacy_months':{}})
+        for key in ('counted_state','counted_reason'):data.pop(key,None)
+        writer(history.path,history.envelope(data));writer(history.backup,history.envelope(data))
     return old
 
 
-def reset_speed_history(writer):
+def reset_speed_history(writer,before=None):
     from speed_test import HISTORY,load_history,control_lock
     with control_lock():
         data=load_history();old=copy.deepcopy(data)
+        if before is not None:before(old)
         data['results']=[];data['history_truncated']=0
         envelope={'schema':1,'data':data,'sha256':checksum(data)}
         writer(HISTORY.with_name('speed-history.backup.json'),envelope);writer(HISTORY,envelope)
@@ -93,10 +102,24 @@ def apply(value,accounting,latency,now,writer,persist=None):
         if 'auto' in parts:payload['reliability']=exported.get('reliability')
         if 'traffic' in parts:payload['traffic']={k:exported.get(k) for k in ('months','days','wan','gaps')}
         if 'quality' in parts:payload['quality']={k:exported.get(k) for k in ('quality','activity')}
-        if 'auto' in parts:payload['native_history']=reset_native_history(persist,writer,now)
-        if 'speed' in parts:payload['speed']=reset_speed_history(writer)
+        from native_history import History
+        from speed_test import load_history
+        if 'auto' in parts:
+            history=History(persist)
+            with history.locked():payload['native_history']=history.load()
+        if 'speed' in parts:payload['speed']=load_history()
         name=archive(persist,scope,payload,now,writer)
-    except (OSError,ValueError,KeyError,TypeError) as error:
+        saved=json.loads((Path(persist)/'stats-archive'/name).read_text(encoding='utf8'))
+        if saved.get('sha256')!=checksum(saved.get('data')):raise ValueError('STATS-RESET-ARCHIVE-UNVERIFIED')
+        # The files are reset under their own locks; anything recorded after the archive is archived too.
+        def extra(key):
+            def keep(current):
+                if current!=payload.get(key):
+                    archive(persist,scope+'late',{key:current},now,writer)
+            return keep
+        if 'auto' in parts:reset_native_history(persist,writer,now,before=extra('native_history'))
+        if 'speed' in parts:reset_speed_history(writer,before=extra('speed'))
+    except Exception as error:
         code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'STATS-RESET-FAILED'
         return accounting,latency,{'nonce':value['nonce'],'scope':scope,'time':now,'done':False,'code':code}
     if 'latency' in parts:latency=LatencyHistory()

@@ -70,6 +70,13 @@ function goToSection(tab,id){
 }
 /* "Back" after following an error link: returns to the page and scroll position where the link was clicked. */
 var errorReturn=null,errorBackButton=null,errorBackTimer=null;
+/* A drawing error is shown as its own catalogued code, at most once a minute; the rest of the page keeps working. */
+var UI_RENDER_FAILED_AT=0;
+function uiRenderFailed(error){
+  if(typeof console!=='undefined'&&console.error)console.error('UI-RENDER-FAILED',error);
+  if(Date.now()-UI_RENDER_FAILED_AT<60000)return;UI_RENDER_FAILED_AT=Date.now();
+  if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,typeof autoCodeNotice==='function'?autoCodeNotice('UI-RENDER-FAILED'):E('p',{},'UI-RENDER-FAILED'));
+}
 /* "Reset chart" on every chart and statistics card. The router archives the old data first, then measures from zero. */
 var STATS_RESET_NAMES={latency:['latency chart and table','график и таблицу задержки'],auto:['switching charts and outage statistics','графики переключений и статистику сбоев'],traffic:['traffic chart and counters','график и счётчики трафика'],ranking:['speed tests and server ranking','тесты скорости и рейтинг серверов'],quality:['server quality statistics','статистику качества серверов'],speed:['speed test history','историю тестов скорости'],all:['all charts and statistics','все графики и статистику']};
 function statsResetError(code){

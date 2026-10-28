@@ -41,6 +41,10 @@ def apply(source):
     replace("if(activeTab==='home'&&!simpleHomeModel(homeLatest,inventory,statusNow(homeLatest)).showCard)showPage(startLanding(homeLatest,inventory));", "if(activeTab==='home'){var timed=simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));var key=JSON.stringify([timed.state,timed.title,timed.summary,timed.selectedRole,timed.targetHealth.state]);if(key!==hybridRenderedState)draw(homeLatest);}")
     replace("'class':'hv-app hv-workspace','data-hv-design':currentDesign()", "'class':'hv-app hv-workspace hv-hybrid-release','data-hv-design':currentDesign()")
     replace("E('nav',{'tabindex':'0','aria-label':bi('VPN sections','Разделы VPN')},links)","E('nav',{'id':'hv-expanded-nav','aria-label':bi('VPN sections','Разделы VPN')},links)")
+    # A page error is not "the router does not answer": render failures get their own code, and during a real
+    # outage the page clock keeps running, so old measurements turn grey instead of looking fresh.
+    replace("poll.add(function(){return statusCall().then(draw).catch(function(){draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE'}));});},10);",
+            "poll.add(function(){return statusCall().then(function(fresh){try{draw(fresh);}catch(error){uiRenderFailed(error);}},function(){try{draw(Object.assign({},lastGoodStatus,{rpc_error:'RPC-UNAVAILABLE',server_time:typeof routerWall==='function'?routerWall():Date.now()/1000}));}catch(error){uiRenderFailed(error);}});},10);")
     # The owner asked for the channel failure test on the Tests page again (27 Oct 2026).
     # "Go back" at the bottom of every page returns to the previous page and its scroll position.
     replace("      key=hybridPage(key);placeHybridControls(key);","      key=hybridPage(key);placeHybridControls(key);\n      if(activeTab&&key!==activeTab)pageBackRemember(activeTab,window.pageYOffset||0);")

@@ -39,7 +39,8 @@ class Tests(unittest.TestCase):
         kept,allowed=pair.budget(events,400)
         self.assertEqual(kept,events);self.assertFalse(allowed)
         self.assertEqual(pair.budget(events,1000),([200,300],True))
-        for bad in ([401],[True],[float('nan')],None,[-1]):
+        self.assertEqual(pair.budget([401],400)[0],[400],'a future attempt (clock stepped back) counts as now');
+        for bad in ([True],[float('nan')],None,[-1]):
             with self.assertRaises(ValueError):pair.budget(bad,400)
 
     def test_custom_window_preserves_attempts_for_later_policy_changes(self):

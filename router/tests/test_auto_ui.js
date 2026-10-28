@@ -115,7 +115,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
   // Return to the primary is offered on the Auto card whenever traffic is on the reserve, including a committed reserve.
   assert(src.includes("STOPPED-ON-RESERVE','DEGRADED-ON-RESERVE','COMMITTED'].indexOf(ns.state)>=0"));
   // Auto power remains two-state; channel boxes delegate confirmation/transition freshness to the shared route model.
-  assert(context.autoWorking({key:'ok'})&&context.autoWorking({key:'reserve'})&&context.autoWorking({key:'switching'}));
+  assert(context.autoWorking({key:'ok'})&&context.autoWorking({key:'reserve'})&&context.autoWorking({key:'switching',running:true}));assert(!context.autoWorking({key:'switching'}),'a pending start or a pause is not working Auto');
   for(const key of ['off','problem','unknown',undefined])assert(!context.autoWorking({key}),String(key));
   assert(src.includes("hv-auto-lit-on")&&src.includes("hv-auto-lit-off"),'the round button is green when Auto works, red when it does not');
   assert(src.includes("manualChannelTone(p,key,path")&&src.includes("'Press to turn Auto off'"));

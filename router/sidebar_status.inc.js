@@ -3,7 +3,8 @@ function fillSideStatus(host,status,inventory){
   while(host.firstChild)host.removeChild(host.firstChild);
   var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=autoControlModel(status,now),id=identityModel(status);
   var monitorFresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
-  var state=!model.fresh?'unknown':(model.on||model.transitioning)?'on':'off';
+  var light=typeof autoLightModel==='function'?autoLightModel(status,inventory,now):null;
+  var state=!model.fresh?'unknown':light&&typeof autoWorking==='function'?(autoWorking(light)?'on':light.key==='switching'?'unknown':'off'):(model.on||model.transitioning)?'on':'off';
   var autoText=state==='on'?bi('Auto ON','Auto вкл.'):state==='off'?bi('Auto OFF','Auto выкл.'):bi('Auto: no connection','Auto: нет связи');
   var autoHint=state==='on'?bi('Auto is on: it can switch to the reserve VPN.','Auto включён: он может переключить на резервный VPN.'):state==='off'?bi('Auto is off: nothing is switched, the program only watches.','Auto выключен: ничего не переключается, программа только наблюдает.'):bi('No fresh data from the router, so the state is not known.','Нет свежих данных от роутера, поэтому состояние неизвестно.');
   var monText=bi('Monitoring','Мониторинг');
@@ -27,6 +28,7 @@ function fillSideStatus(host,status,inventory){
     else if(health==='inactive'){color='off';why=bi('switched off in the router','выключен в роутере');}
     else if(health==='failed'){color='off';why=typeof channelCheckText==='function'?channelCheckText(row,now):bi('router check failed','проверка роутера не прошла');}
     else if(rel&&rel.unreliable){color='switching';why=bi('works, but unreliable: ','работает, но ненадёжно: ')+reliabilityText(rel);}
+    else if(health==='healthy'&&state==='unknown'){color='unknown';why=bi('waiting for the router\'s answer','ждём ответа роутера');}
     else if(health==='healthy'&&state!=='on'){color='switching';why=role==='source'?bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат'):bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат');}
     else if(health==='healthy'&&selected&&!active){color='switching';why=role==='source'?bi('Primary channel: alive and waiting to be switched on by Auto','Основной канал: живой и ожидает включения в режиме автомат'):bi('Reserve channel: alive and waiting to be switched on by Auto','Запасной канал: живой и ожидает включения в режиме автомат');}
     else if(health==='healthy'&&active){color='on';why=bi('works in Auto and carries your traffic','работает в автомате и несёт ваш трафик');}

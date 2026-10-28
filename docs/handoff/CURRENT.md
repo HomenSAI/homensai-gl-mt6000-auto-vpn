@@ -1,3 +1,9 @@
+## Alpha49 source / Alpha49 исходник
+
+See [status](../CURRENT-STATUS.md). MT3000 runs alpha48 with Auto on. Alpha49 = batch 1 of the full review (data safety, locks, no rollback after commit, transient-error recovery, clock steps, flash wear, UI state truth). Remaining review items: docs/REVIEW-2026-10-28.md. Preserve live state.
+
+---
+
 ## Alpha48 source / Alpha48 исходник
 
 See [status](../CURRENT-STATUS.md). MT3000 runs alpha47. Alpha48 is UI only: owner colour rule (green/yellow/grey/red), texts removed or moved to Help, floating Go back, Statistics under Advanced. Preserve live state.

@@ -240,14 +240,15 @@ var AUTO_LIGHTS=[
 function autoLightModel(status,inventory,now){
   var model=autoControlModel(status,now),ns=status.native_failover||{},intent=status.auto_control||{},state=ns.state;
   var blockers=(Array.isArray(ns.blockers)?ns.blockers:[]).filter(function(code){return AUTO_LAN_ONLY.indexOf(code)<0;});
-  function out(key,title,hint,code){return {key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
+  var sessionRuns=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&!model.awaiting;
+  function out(key,title,hint,code,running){return {running:running===true,key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
   if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
   if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
-    if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint);
+    if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
     if(state==='OBSERVING'&&ns.readiness_verified===true)return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
     var failedCode=blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
@@ -272,7 +273,7 @@ function autoLightModel(status,inventory,now){
 }
 // The card's lamp has two states only: green = automatic switching is working (watching, switching or holding the
 // reserve), red = it is not (off, blocked, needs attention or no fresh data). The detailed state stays in the text.
-function autoWorking(light){return ['ok','switching','reserve'].indexOf(light&&light.key)>=0;}
+function autoWorking(light){return !!light&&(light.key==='ok'||light.key==='reserve'||light.key==='switching'&&light.running===true);}
 function renderAutoLight(light,technicalCode){
   var working=autoWorking(light);
   var lamps=[E('span',{'class':'hv-lamp hv-lamp-red'+(working?'':' hv-lamp-lit'),'aria-hidden':'true'}),E('span',{'class':'hv-lamp hv-lamp-green'+(working?' hv-lamp-lit':''),'aria-hidden':'true'})];
@@ -280,7 +281,7 @@ function renderAutoLight(light,technicalCode){
   var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
     E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
-    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve below: green carries your traffic and works, red does not carry traffic or does not work.',' Основной и Резерв ниже: зелёный пропускает ваш трафик и работает, красный трафик не пропускает или не работает.')])]);
+    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive and waiting to be switched on by Auto, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой и ожидает включения в режиме автомат, серый — ждём ответа роутера, красный — ошибка.')])]);
   return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',{'role':'status','aria-live':'polite'},light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
@@ -346,11 +347,16 @@ function autoCommandOperation(status,now){
       (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
     if(done||legacyDone)autoCommandPending=null;
   }
+  if(autoCommandPending&&Number.isFinite(autoCommandPending.t0)&&Date.now()-autoCommandPending.t0>Math.max(120000,2000*autoDurationEstimate(autoCommandPending.stop?'stop':'start'))){
+    autoCommandPending=null;
+    if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNCONFIRMED'));
+  }
   if(autoCommandPending)return autoCommandPending.stop?'stopping':'starting';
   if(phase==='STARTING')return failedStart?null:'starting';
   if(phase==='STOPPING')return 'stopping';
   if(phase==='UNKNOWN')return 'unknown';
-  if(model.awaiting||model.transitioning)return intent.requested==='off'?'stopping':'starting';
+  if(model.awaiting)return intent.requested==='off'?'stopping':'starting';
+  if(model.transitioning)return intent.requested==='off'?'stopping':['RUNNING','HELD'].indexOf(phase)>=0?null:'starting';
   return null;
 }
 function renderAutoPowerControl(status,inventory){
@@ -385,7 +391,7 @@ function renderAutoPowerControl(status,inventory){
     currentControl();
     var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
-    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false};autoCountdownBegin(stop?'stop':'start');
+    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false,t0:Date.now()};autoCountdownBegin(stop?'stop':'start');
     if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
     var call=rpc.declare({object:'homensai-vpn',method:stop?'native_stop':'native_start',params:stop?['request_source']:['control_revision','request_source'],expect:{}});
     return (stop?call('manual'):call(controlRevision,'manual')).then(function(result){
@@ -409,7 +415,7 @@ function renderAutoControl(status,inventory,refresh){
   var pathLabels={neutral:bi('No recent check','Нет свежей проверки'),healthy:bi('Active traffic path','Активный путь трафика'),ready:bi('Ready for automatic mode','Готов к работе в автомате'),inactive:bi('Tunnel not connected','Туннель не подключён'),failed:bi('Connectivity failed','Ошибка доступности'),checking:bi('Checking…','Идёт проверка…')};
   // Channel selection is separate from probe health: an idle healthy reserve is not a failure.
   function nodeTone(p,key){
-    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
+    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),autoWorking(light));
     return {color:'grey',text:bi('No recent check','Нет свежей проверки'),carrier:false};
   }
   function box(p,label,key){var state=path[key],tone=nodeTone(p,key);var attributes={'class':'hv-auto-node hv-node-two hv-node-'+tone.color+(tone.carrier?' hv-node-carrier':''),'data-path-node':key,'data-path-state':state,'data-node-tone':tone.color};
@@ -438,9 +444,9 @@ function renderAutoControl(status,inventory,refresh){
       if(autoRequestBusy||autoStopBusy)return;return guardedAction(returnButton,function(){autoRequestBusy=true;
       return rpc.declare({object:'homensai-vpn',method:'native_return',expect:{}})().then(function(result){
         if(result&&result.accepted===false)ui.addNotification(null,E('p',{},(result.code||'RETURN-REFUSED')+' · '+autoBlockerText(result.code)));
-        else if(!autoRequestAcknowledged(result,false))ui.addNotification(null,E('p',{},'AUTO-CONTROL-UNVERIFIED: no confirmed acceptance; check controller state.'));
+        else if(!autoRequestAcknowledged(result,false))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
         else ui.addNotification(null,E('p',{},bi('Return requested. The router checks the primary first and reports the result here.','Возврат запрошен. Роутер сначала проверит основной и покажет результат здесь.')));
-      }).catch(function(){ui.addNotification(null,E('p',{},'AUTO-CONTROL-FAILED: no confirmed response; check controller state.'));}).finally(function(){autoRequestBusy=false;});},{key:'auto-return'});
+      }).catch(function(){ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){autoRequestBusy=false;});},{key:'auto-return'});
     }},bi('Return to primary','Вернуться на основной')),'auto-return');
     holdReturn=E('details',{'class':'hv-auto-hold'},[E('summary',{},bi('Legacy-mode recovery','Восстановление прежнего режима')),returnButton,autoNoInternetLink(),answerText?E('p',{'role':'status'},answerText):null].filter(Boolean));
   }
