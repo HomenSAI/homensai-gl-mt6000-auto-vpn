@@ -1,0 +1,363 @@
+{
+  "scope": "Real Chromium and actual generated dashboard; synthetic status and RPC overlays for deterministic presentation/timer checks. No native controller/kernel command is issued by these tests.",
+  "checks": [
+    {
+      "name": "full Auto reports selected reserve failure",
+      "passed": true
+    },
+    {
+      "name": "sidebar describes the actual problem without claiming Auto OFF",
+      "passed": true
+    },
+    {
+      "name": "selected failed reserve is red",
+      "passed": true
+    },
+    {
+      "name": "Minimum requires attention for the same selected reserve",
+      "passed": true
+    },
+    {
+      "name": "Minimum exposes both complete and partial responses",
+      "passed": true
+    },
+    {
+      "name": "real Stop click begins a visible estimate",
+      "passed": true
+    },
+    {
+      "name": "independent browser heartbeat ends expired countdown",
+      "passed": true
+    },
+    {
+      "name": "timeout stays unconfirmed and Stop remains usable",
+      "passed": true
+    },
+    {
+      "name": "unconfirmed timeout does not train successful durations",
+      "passed": true
+    },
+    {
+      "name": "clock-step test starts pending request",
+      "passed": true
+    },
+    {
+      "name": "exact terminal ID clears pending across backwards router clock",
+      "passed": true
+    },
+    {
+      "name": "clock correction selects only the freshly proved reserve",
+      "passed": true
+    },
+    {
+      "name": "no browser script exceptions",
+      "passed": true
+    }
+  ],
+  "steps": [
+    {
+      "name": "degraded-full",
+      "dom": {
+        "full": [
+          "! The selected VPN channel has failed"
+        ],
+        "side": [
+          {
+            "text": "The selected VPN channel has failed\n— Auto is watching the route, but the selected channel has failed its connection check. Click to open Automatic VPN failover.",
+            "title": "Auto is watching the route, but the selected channel has failed its connection check. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-red"
+          }
+        ],
+        "operation": [],
+        "power": [
+          {
+            "operation": "idle",
+            "disabled": false,
+            "label": "Stop auto mode",
+            "countdownVisible": false
+          }
+        ],
+        "durations": null
+      }
+    },
+    {
+      "name": "degraded-minimum",
+      "dom": {
+        "full": [
+          "! The selected VPN channel has failed"
+        ],
+        "side": [
+          {
+            "text": "The selected VPN channel has failed — Auto is watching the route, but the selected channel has failed its connection check. Click to open Automatic VPN failover.",
+            "title": "Auto is watching the route, but the selected channel has failed its connection check. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [
+          {
+            "state": "error",
+            "text": "Auto VPN\nNeeds attention\nThe selected VPN channel has failed\nPress to turn Auto off\n\nAuto is watching the route, but the selected channel has failed its connection check.\n\nReserve channel\nUnavailable\nPrimary response\n110.0 ms\nReserve response\n— · Incomplete check · 2/3\nConnection details\nAdvanced menu →\n\nOverview · channels · checks · settings"
+          }
+        ],
+        "responses": [
+          {
+            "text": "110.0 ms",
+            "state": "ok",
+            "coverage": "3/3"
+          },
+          {
+            "text": "— · Incomplete check · 2/3",
+            "state": "partial",
+            "coverage": "2/3"
+          }
+        ],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-red"
+          }
+        ],
+        "operation": [],
+        "power": [
+          {
+            "operation": "idle",
+            "disabled": false,
+            "label": "Stop auto mode",
+            "countdownVisible": false
+          }
+        ],
+        "durations": null
+      }
+    },
+    {
+      "name": "stop-pending",
+      "dom": {
+        "full": [
+          "⟳ Turning Auto off…"
+        ],
+        "side": [
+          {
+            "text": "Turning Auto off…\n— Waiting for the router to confirm the command. Click to open Automatic VPN failover.",
+            "title": "Waiting for the router to confirm the command. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "operation": [
+          "pending"
+        ],
+        "power": [
+          {
+            "operation": "stopping",
+            "disabled": true,
+            "label": "Turning Auto off…",
+            "countdownVisible": true
+          }
+        ],
+        "durations": null
+      }
+    },
+    {
+      "name": "stop-unconfirmed",
+      "dom": {
+        "full": [
+          "? Auto command is not confirmed"
+        ],
+        "side": [
+          {
+            "text": "Auto: no connection\n— No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "title": "No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "operation": [
+          "pending"
+        ],
+        "power": [
+          {
+            "operation": "unconfirmed",
+            "disabled": false,
+            "label": "Command not confirmed · press to stop",
+            "countdownVisible": false
+          }
+        ],
+        "durations": null
+      }
+    },
+    {
+      "name": "clock-step-pending",
+      "dom": {
+        "full": [
+          "⟳ Switching channel"
+        ],
+        "side": [
+          {
+            "text": "Switching channel\n— Waiting for the router to confirm the manual request. Click to open Automatic VPN failover.",
+            "title": "Waiting for the router to confirm the manual request. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "operation": [
+          "pending"
+        ],
+        "power": [
+          {
+            "operation": "idle",
+            "disabled": false,
+            "label": "Stop auto mode",
+            "countdownVisible": false
+          }
+        ],
+        "durations": null
+      }
+    },
+    {
+      "name": "clock-step-completed",
+      "dom": {
+        "full": [
+          "⇄ Working on the reserve"
+        ],
+        "side": [
+          {
+            "text": "Auto ON\n— Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "title": "Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-green"
+          }
+        ],
+        "operation": [],
+        "power": [
+          {
+            "operation": "idle",
+            "disabled": false,
+            "label": "Stop auto mode",
+            "countdownVisible": false
+          }
+        ],
+        "durations": null
+      }
+    }
+  ],
+  "errors": [],
+  "identity": {
+    "mode": "actual-python-manual-api-lua-parser-native-transaction-and-qemu-kernel",
+    "generated_dashboard_sha256": "03e96e9e78d340b99b6184e6a842572e5bea12dafcce58696dc75666152fc786",
+    "kernel": "Actual OpenWrt21.02.7/kernel5.4.238/iproute5.11/iptables1.8.7 via private serial",
+    "device": "Disposable x86/64 QEMU; synthetic UCI inventory/vendor RTP compiler/tunnel health/worker launch; not physical GL.iNet",
+    "epoch": 1792750000,
+    "version": "0.9.1-alpha58",
+    "repository_commit": "708639c7bd52271b18a980f5985833c16e585a35",
+    "python_source_sha256": {
+      "pair_manual.py": "7394cb30b72c7aac64098eb51e85d3f4995bebb4f314d6972e567e28371d411a",
+      "pair_auto.py": "b7e7ebfdf5d5b8e78e59094d3360c396e7ebd354c6e3231ee840abe88975dea0",
+      "native_switch.py": "ed69cea17499c67d7c5c30c79ddb6ce57cec2a125f4f7c955301ef2a59d69298",
+      "channel_path.py": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192",
+      "kernel_policy.py": "81b313c1c6580adff95fe1ed04108d6a2f2ecb7fc87fa18bb94276fd1b2747ae",
+      "pair_policy.py": "74a7ba58d029e41bfadbb0bcd1eba07b104a9b68f3693c2dce7ca2728e300c27",
+      "recovery_settings.py": "d48b157ac07251962fc0a4768838caa2a87344d53323f7583b961fddac05dca9",
+      "failure_diagnosis.py": "2e1d5e4c40b058e54ab5ed73ddd6c7427f64c2ff184024fa7debcf919557b336",
+      "failover_plan.py": "e685207bfe023480d1fc99dae41d509e17d8cc5da5f3036e78e4c0b0559a5b7e",
+      "auto_control.py": "b69db49beea25d357ac00a89ce3b7ccb93b350c9404df08d02b5f4d9b5c5047c",
+      "manual_control.py": "28e923582ef74169a47600bce88cc52306f9f42c4962b8b541653aeb8b48ae63",
+      "manual_dispatch.py": "091071d51d4a7716a1742d7c88f6fcde629f6d403376a68fdbc7da0c0ef746d1",
+      "agent.py": "9fc04f4b1b771f98de4eb9347e65b1a75b127473691b50b8c9e5e95f2ea3e3d9",
+      "website_response.py": "da6f070e1c265b0fc26dfa14ffc80ee724b43a1339af12e12bc37ba1cc466013",
+      "website_publication.py": "c9f1286b608c0bae17a4ab0f039d54193b1428045c3b7262d95ec27a26fb1ffa",
+      "rollback_recovery.py": "e1d40c0dd213d4fce6503d59fd38e7cd67a8495d0609e3c4da3a642a9b490408"
+    },
+    "isolation": {
+      "etc_readonly": true,
+      "run_readonly": true,
+      "mount_namespace": "mnt:[4026532206]",
+      "effective_capabilities": "0000000000000000"
+    }
+  },
+  "browser": "156.0.8078.73",
+  "verdict": "PASS"
+}

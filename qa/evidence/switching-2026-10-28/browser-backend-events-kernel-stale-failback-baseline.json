@@ -1,0 +1,1881 @@
+{
+  "identity": {
+    "mode": "actual-python-manual-api-lua-parser-native-transaction-and-qemu-kernel",
+    "generated_dashboard_sha256": "25ffbabfe829d83b17664df60323d1662e6447ef9de0a4624d7e6c26ab43d981",
+    "kernel": "Actual OpenWrt21.02.7/kernel5.4.238/iproute5.11/iptables1.8.7 via private serial",
+    "device": "Disposable x86/64 QEMU; synthetic UCI inventory/vendor RTP compiler/tunnel health/worker launch; not physical GL.iNet",
+    "epoch": 1792750000,
+    "version": "0.9.1-alpha58",
+    "python_source_sha256": {
+      "pair_manual.py": "d5e3b609f0747c06067b27e6f1a09e49b01a9346725980ba498c0ee0587fdedb",
+      "pair_auto.py": "f9634dc504b44ca53382476ee452b70ed88f3b2f1eab46c69ebbf5b05b333736",
+      "native_switch.py": "c5953e84b8a543c20d9e9467d81e4771dbeebb2836608a675c3a80171e995c91",
+      "channel_path.py": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192"
+    }
+  },
+  "events": [
+    {
+      "kind": "native-publish",
+      "time": 1792750000,
+      "value": {
+        "before_policy_role": "source",
+        "destination_role": "target",
+        "destination_profile_id": "openvpn:40354_2020",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": false,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "source",
+        "from_profile_id": "wireguard:peer_2002",
+        "transition_kind": "protocol",
+        "state": "ARMED",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "trial": false,
+        "reason": "SOURCE-FAILED",
+        "phase_evidence": [],
+        "probe_evidence": {
+          "source_streak_met": true,
+          "reserve_streak_met": true,
+          "required_failures": 3,
+          "required_successes": 2
+        },
+        "transition_source": "automatic",
+        "time": 1792750000
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750000,
+      "value": {
+        "before_policy_role": "source",
+        "destination_role": "target",
+        "destination_profile_id": "openvpn:40354_2020",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": false,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "source",
+        "from_profile_id": "wireguard:peer_2002",
+        "transition_kind": "protocol",
+        "state": "APPLYING",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "trial": false,
+        "reason": "SOURCE-FAILED",
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          }
+        ],
+        "probe_evidence": {
+          "source_streak_met": true,
+          "reserve_streak_met": true,
+          "required_failures": 3,
+          "required_successes": 2
+        },
+        "transition_source": "automatic",
+        "time": 1792750000
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750000,
+      "value": {
+        "before_policy_role": "source",
+        "destination_role": "target",
+        "destination_profile_id": "openvpn:40354_2020",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": false,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "source",
+        "from_profile_id": "wireguard:peer_2002",
+        "transition_kind": "protocol",
+        "state": "WAIT-CLIENT",
+        "tx": "671f900c2d64435da4ebf52223f373fc",
+        "expected_exit": "9.9.9.9",
+        "deadline": 1792750090,
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "trial": false,
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          },
+          {
+            "phase": "APPLYING",
+            "time": 1792750000
+          },
+          {
+            "phase": "WAIT-CLIENT",
+            "time": 1792750000
+          }
+        ],
+        "requires": "LAN client DNS/HTTPS and exit IP confirmation; no confirmation means rollback",
+        "transition_source": "automatic",
+        "time": 1792750000
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750000,
+      "value": {
+        "before_policy_role": "source",
+        "destination_role": "target",
+        "destination_profile_id": "openvpn:40354_2020",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": true,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "source",
+        "from_profile_id": "wireguard:peer_2002",
+        "transition_kind": "protocol",
+        "transition_outcome": "committed",
+        "state": "COMMITTED",
+        "tx": "671f900c2d64435da4ebf52223f373fc",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "until": 1792750180,
+        "trial": false,
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          },
+          {
+            "phase": "APPLYING",
+            "time": 1792750000
+          },
+          {
+            "phase": "WAIT-CLIENT",
+            "time": 1792750000
+          },
+          {
+            "phase": "COMMITTED",
+            "time": 1792750000
+          }
+        ],
+        "reason": "CLIENT-CONFIRMED",
+        "guard": "VPN-only; IPv6 forwarded traffic blocked",
+        "readiness_verified": true,
+        "kernel_policy_verified": true,
+        "kernel_proof": {
+          "verified": true,
+          "role": "target",
+          "profile_id": "openvpn:40354_2020",
+          "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+          "order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+          "time": 1792750000,
+          "kernel_fingerprint": "541a1a063eb4d7a49948344e0e62b640dc5c4f9cb1093821169af56685dcd257"
+        },
+        "transition_source": "automatic",
+        "time": 1792750000
+      }
+    },
+    {
+      "kind": "auto-tick",
+      "time": 1792750000,
+      "controlled_primary": "failed",
+      "result": {
+        "handled": true,
+        "status": {
+          "version": "0.9.1-alpha58",
+          "time": 1792750000,
+          "profiles": [
+            {
+              "id": "wireguard:peer_2002",
+              "interface": "wgclient1",
+              "protocol": "wireguard",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749880,
+              "time": 1792750000,
+              "code": "VPN-003",
+              "dns_ok": true,
+              "https_success": 0,
+              "kernel_binding": {
+                "code": null,
+                "mark": 4096,
+                "table": "1001",
+                "device": "wgclient1",
+                "ifindex": 10
+              },
+              "name": "Synthetic WireGuard primary",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 110.0,
+                "time": 1792750000,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 100,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 110,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 120,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "wgclient1",
+                "vendor_tunnel_id": "wireguard:wgclient1",
+                "generation": "9a09de092d3ec36994c19b16d16d9c16"
+              }
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "interface": "ovpnclient2",
+              "protocol": "openvpn",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749880,
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "kernel_binding": {
+                "code": null,
+                "mark": 45056,
+                "table": "1012",
+                "device": "ovpnclient2",
+                "ifindex": 11
+              },
+              "name": "Synthetic OpenVPN reserve",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 210.0,
+                "time": 1792750000,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 200,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 210,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 220,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "ovpnclient2",
+                "vendor_tunnel_id": "openvpn:ovpnclient2",
+                "generation": "53c363a654b170424eb86021b4c7cb88"
+              }
+            }
+          ],
+          "samples": [
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792750000,
+              "code": "VPN-003",
+              "dns_ok": true,
+              "https_success": 0,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792749985,
+              "code": "VPN-003",
+              "dns_ok": true,
+              "https_success": 0,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792749970,
+              "code": "VPN-003",
+              "dns_ok": true,
+              "https_success": 0,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792749985,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792749970,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            }
+          ],
+          "native_failover": {
+            "before_policy_role": "source",
+            "destination_role": "target",
+            "destination_profile_id": "openvpn:40354_2020",
+            "before_order": [
+              "global",
+              "default",
+              "gl_process_vpn",
+              "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+              "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+            ],
+            "after_order": [
+              "global",
+              "default",
+              "gl_process_vpn",
+              "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+              "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+            ],
+            "session_order": [
+              "global",
+              "default",
+              "gl_process_vpn",
+              "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+              "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+            ],
+            "route_changed": true,
+            "transition_completed": true,
+            "activation_reapply": false,
+            "transition_metadata_present": true,
+            "from_role": "source",
+            "from_profile_id": "wireguard:peer_2002",
+            "transition_kind": "protocol",
+            "transition_outcome": "committed",
+            "state": "COMMITTED",
+            "tx": "671f900c2d64435da4ebf52223f373fc",
+            "source": "wireguard:peer_2002",
+            "target": "openvpn:40354_2020",
+            "until": 1792750180,
+            "trial": false,
+            "phase_evidence": [
+              {
+                "phase": "ARMED",
+                "time": 1792750000
+              },
+              {
+                "phase": "APPLYING",
+                "time": 1792750000
+              },
+              {
+                "phase": "WAIT-CLIENT",
+                "time": 1792750000
+              },
+              {
+                "phase": "COMMITTED",
+                "time": 1792750000
+              }
+            ],
+            "reason": "CLIENT-CONFIRMED",
+            "guard": "VPN-only; IPv6 forwarded traffic blocked",
+            "readiness_verified": true,
+            "kernel_policy_verified": true,
+            "kernel_proof": {
+              "verified": true,
+              "role": "target",
+              "profile_id": "openvpn:40354_2020",
+              "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+              "order": [
+                "global",
+                "default",
+                "gl_process_vpn",
+                "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+                "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+              ],
+              "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+              "time": 1792750000,
+              "kernel_fingerprint": "541a1a063eb4d7a49948344e0e62b640dc5c4f9cb1093821169af56685dcd257"
+            },
+            "transition_source": "automatic",
+            "time": 1792750000,
+            "mode": "continuous-pair",
+            "proof_scope": "router-probed-ipv4"
+          },
+          "auto_control": {
+            "requested": "on",
+            "requested_at": 1792749990,
+            "control_revision": "8ccba198812242688a8de9da554fb6d3",
+            "pair_phase": "RUNNING"
+          },
+          "events": [],
+          "native_history": {
+            "available": false,
+            "events": []
+          },
+          "speed_tests": {
+            "results": []
+          },
+          "vendor_observation": {
+            "version": 1,
+            "time": 1792750000,
+            "groups": [
+              {
+                "id": "wireguard:wgclient1",
+                "protocol": "wireguard",
+                "current_profile": "wireguard:peer_2002",
+                "profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "active_profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "generation": "9a09de092d3ec36994c19b16d16d9c16",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749880,
+                "time": 1792750000
+              },
+              {
+                "id": "openvpn:ovpnclient2",
+                "protocol": "openvpn",
+                "current_profile": "openvpn:40354_2020",
+                "profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "active_profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "generation": "53c363a654b170424eb86021b4c7cb88",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749880,
+                "time": 1792750000
+              }
+            ]
+          },
+          "channel_path": {
+            "time": 1792750000,
+            "confirmed": true,
+            "active_profile_id": "openvpn:40354_2020",
+            "source_profile_id": "wireguard:peer_2002",
+            "target_profile_id": "openvpn:40354_2020",
+            "transitioning": false,
+            "scope": "new IPv4 LAN catch-all marking; Internet health is separate; no external-client proof",
+            "mode": "continuous-pair",
+            "selection_proof": "fw3-kernel-marking",
+            "valid_for": 15,
+            "checked_at": 1792750000,
+            "kernel_policy_verified": true,
+            "code": null,
+            "configured_profile_id": "openvpn:40354_2020"
+          },
+          "manual_switch_control": {
+            "available": true,
+            "mode": "continuous-pair",
+            "time": 1792750000,
+            "control_revision": "8ccba198812242688a8de9da554fb6d3",
+            "hold": null,
+            "observation_valid_for": 90,
+            "primary": {
+              "allowed": false,
+              "blockers": [
+                "SOURCE-NOT-HEALTHY",
+                "PAIR-MANUAL-COOLDOWN"
+              ]
+            },
+            "reserve": {
+              "allowed": true,
+              "blockers": []
+            },
+            "resume": {
+              "allowed": false,
+              "blockers": []
+            },
+            "blockers": []
+          },
+          "manual_switch": {
+            "state": "IDLE",
+            "completed": false
+          }
+        },
+        "applications_before": 1,
+        "applications_after": 2
+      },
+      "journal": {
+        "tx": "671f900c2d64435da4ebf52223f373fc",
+        "phase": "COMMITTED",
+        "before": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "deadline": 1792750090,
+        "monotonic_deadline": 38683.798493838,
+        "lease_monotonic_until": 38773.79849386215,
+        "trial": false,
+        "trial_nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "pid": 39794,
+        "started": 1792750000,
+        "vendor_identity": "32defb53abeea870d7eeff18ab78cc2e3b10200760d2e8d305c7c00d8d9a94dc",
+        "process_bindings": {
+          "wgclient1": 4096,
+          "ovpnclient2": 45056
+        },
+        "proof_scope": "router-probed-ipv4",
+        "control_revision": "8ccba198812242688a8de9da554fb6d3",
+        "vendor_profiles": {
+          "source": {
+            "id": "wireguard:peer_2002",
+            "protocol": "wireguard",
+            "interface": "wgclient1",
+            "vendor_tunnel_id": "wireguard:wgclient1",
+            "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+          },
+          "target": {
+            "id": "openvpn:40354_2020",
+            "protocol": "openvpn",
+            "interface": "ovpnclient2",
+            "vendor_tunnel_id": "openvpn:ovpnclient2",
+            "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+          }
+        },
+        "pair_transition": {
+          "source_rule": "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "target_rule": "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "direction": "first",
+          "generic_rules": [
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "source_id": "wireguard:peer_2002",
+          "target_id": "openvpn:40354_2020",
+          "destination_role": "target",
+          "before_policy_role": "source",
+          "session_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "primary_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+          ]
+        },
+        "kernel_before_fingerprint": "de72e0ff9b71998ff0ea078a59388faeedc193d837d2c224f44882f846d239ee",
+        "kernel_before_verified": true,
+        "forward_policy_touched": true,
+        "rtp_dispatched": true,
+        "transition_source": "automatic",
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          },
+          {
+            "phase": "APPLYING",
+            "time": 1792750000
+          },
+          {
+            "phase": "WAIT-CLIENT",
+            "time": 1792750000
+          },
+          {
+            "phase": "COMMITTED",
+            "time": 1792750000
+          }
+        ],
+        "expected_exit": "9.9.9.9",
+        "confirmed": 1792750000
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750000,
+      "value": {
+        "state": "COMMITTED",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "mode": "continuous-pair",
+        "proof_scope": "router-probed-ipv4",
+        "readiness_verified": true,
+        "kernel_policy_verified": true,
+        "kernel_proof": {
+          "verified": true,
+          "role": "target",
+          "profile_id": "openvpn:40354_2020",
+          "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+          "order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+          "time": 1792750000,
+          "kernel_fingerprint": "541a1a063eb4d7a49948344e0e62b640dc5c4f9cb1093821169af56685dcd257"
+        },
+        "reason": "CLIENT-CONFIRMED",
+        "blockers": [],
+        "time": 1792750000
+      }
+    },
+    {
+      "kind": "auto-tick",
+      "time": 1792750000,
+      "controlled_primary": "healthy",
+      "result": {
+        "handled": true,
+        "status": {
+          "version": "0.9.1-alpha58",
+          "time": 1792750000,
+          "profiles": [
+            {
+              "id": "wireguard:peer_2002",
+              "interface": "wgclient1",
+              "protocol": "wireguard",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749880,
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "kernel_binding": {
+                "code": null,
+                "mark": 4096,
+                "table": "1001",
+                "device": "wgclient1",
+                "ifindex": 10
+              },
+              "name": "Synthetic WireGuard primary",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 110.0,
+                "time": 1792750000,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 100,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 110,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 120,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "wgclient1",
+                "vendor_tunnel_id": "wireguard:wgclient1",
+                "generation": "9a09de092d3ec36994c19b16d16d9c16"
+              }
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "interface": "ovpnclient2",
+              "protocol": "openvpn",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749880,
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "kernel_binding": {
+                "code": null,
+                "mark": 45056,
+                "table": "1012",
+                "device": "ovpnclient2",
+                "ifindex": 11
+              },
+              "name": "Synthetic OpenVPN reserve",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 210.0,
+                "time": 1792750000,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 200,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 210,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 220,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "ovpnclient2",
+                "vendor_tunnel_id": "openvpn:ovpnclient2",
+                "generation": "53c363a654b170424eb86021b4c7cb88"
+              }
+            }
+          ],
+          "samples": [
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792749985,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792749970,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792750000,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792749985,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792749970,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            }
+          ],
+          "native_failover": {
+            "state": "COMMITTED",
+            "source": "wireguard:peer_2002",
+            "target": "openvpn:40354_2020",
+            "mode": "continuous-pair",
+            "proof_scope": "router-probed-ipv4",
+            "readiness_verified": true,
+            "kernel_policy_verified": true,
+            "kernel_proof": {
+              "verified": true,
+              "role": "target",
+              "profile_id": "openvpn:40354_2020",
+              "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+              "order": [
+                "global",
+                "default",
+                "gl_process_vpn",
+                "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+                "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+              ],
+              "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+              "time": 1792750000,
+              "kernel_fingerprint": "541a1a063eb4d7a49948344e0e62b640dc5c4f9cb1093821169af56685dcd257"
+            },
+            "reason": "CLIENT-CONFIRMED",
+            "blockers": [],
+            "time": 1792750000
+          },
+          "auto_control": {
+            "requested": "on",
+            "requested_at": 1792749990,
+            "control_revision": "8ccba198812242688a8de9da554fb6d3",
+            "pair_phase": "RUNNING"
+          },
+          "events": [],
+          "native_history": {
+            "available": false,
+            "events": []
+          },
+          "speed_tests": {
+            "results": []
+          },
+          "vendor_observation": {
+            "version": 1,
+            "time": 1792750000,
+            "groups": [
+              {
+                "id": "wireguard:wgclient1",
+                "protocol": "wireguard",
+                "current_profile": "wireguard:peer_2002",
+                "profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "active_profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "generation": "9a09de092d3ec36994c19b16d16d9c16",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749880,
+                "time": 1792750000
+              },
+              {
+                "id": "openvpn:ovpnclient2",
+                "protocol": "openvpn",
+                "current_profile": "openvpn:40354_2020",
+                "profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "active_profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "generation": "53c363a654b170424eb86021b4c7cb88",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749880,
+                "time": 1792750000
+              }
+            ]
+          },
+          "channel_path": {
+            "time": 1792750000,
+            "confirmed": true,
+            "active_profile_id": "openvpn:40354_2020",
+            "source_profile_id": "wireguard:peer_2002",
+            "target_profile_id": "openvpn:40354_2020",
+            "transitioning": false,
+            "scope": "new IPv4 LAN catch-all marking; Internet health is separate; no external-client proof",
+            "mode": "continuous-pair",
+            "selection_proof": "fw3-kernel-marking",
+            "valid_for": 15,
+            "checked_at": 1792750000,
+            "kernel_policy_verified": true,
+            "code": null,
+            "configured_profile_id": "openvpn:40354_2020"
+          },
+          "manual_switch_control": {
+            "available": true,
+            "mode": "continuous-pair",
+            "time": 1792750000,
+            "control_revision": "8ccba198812242688a8de9da554fb6d3",
+            "hold": null,
+            "observation_valid_for": 90,
+            "primary": {
+              "allowed": false,
+              "blockers": [
+                "PAIR-MANUAL-COOLDOWN"
+              ]
+            },
+            "reserve": {
+              "allowed": true,
+              "blockers": []
+            },
+            "resume": {
+              "allowed": false,
+              "blockers": []
+            },
+            "blockers": []
+          },
+          "manual_switch": {
+            "state": "IDLE",
+            "completed": false
+          }
+        },
+        "applications_before": 2,
+        "applications_after": 2
+      },
+      "journal": {
+        "tx": "671f900c2d64435da4ebf52223f373fc",
+        "phase": "COMMITTED",
+        "before": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "deadline": 1792750090,
+        "monotonic_deadline": 38683.798493838,
+        "lease_monotonic_until": 38773.79849386215,
+        "trial": false,
+        "trial_nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "pid": 39794,
+        "started": 1792750000,
+        "vendor_identity": "32defb53abeea870d7eeff18ab78cc2e3b10200760d2e8d305c7c00d8d9a94dc",
+        "process_bindings": {
+          "wgclient1": 4096,
+          "ovpnclient2": 45056
+        },
+        "proof_scope": "router-probed-ipv4",
+        "control_revision": "8ccba198812242688a8de9da554fb6d3",
+        "vendor_profiles": {
+          "source": {
+            "id": "wireguard:peer_2002",
+            "protocol": "wireguard",
+            "interface": "wgclient1",
+            "vendor_tunnel_id": "wireguard:wgclient1",
+            "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+          },
+          "target": {
+            "id": "openvpn:40354_2020",
+            "protocol": "openvpn",
+            "interface": "ovpnclient2",
+            "vendor_tunnel_id": "openvpn:ovpnclient2",
+            "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+          }
+        },
+        "pair_transition": {
+          "source_rule": "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "target_rule": "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "direction": "first",
+          "generic_rules": [
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "source_id": "wireguard:peer_2002",
+          "target_id": "openvpn:40354_2020",
+          "destination_role": "target",
+          "before_policy_role": "source",
+          "session_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "primary_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+          ]
+        },
+        "kernel_before_fingerprint": "de72e0ff9b71998ff0ea078a59388faeedc193d837d2c224f44882f846d239ee",
+        "kernel_before_verified": true,
+        "forward_policy_touched": true,
+        "rtp_dispatched": true,
+        "transition_source": "automatic",
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          },
+          {
+            "phase": "APPLYING",
+            "time": 1792750000
+          },
+          {
+            "phase": "WAIT-CLIENT",
+            "time": 1792750000
+          },
+          {
+            "phase": "COMMITTED",
+            "time": 1792750000
+          }
+        ],
+        "expected_exit": "9.9.9.9",
+        "confirmed": 1792750000
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750061.0,
+      "value": {
+        "before_policy_role": "target",
+        "destination_role": "source",
+        "destination_profile_id": "wireguard:peer_2002",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": false,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "target",
+        "from_profile_id": "openvpn:40354_2020",
+        "transition_kind": "protocol",
+        "state": "RESTORING",
+        "mode": "continuous-pair",
+        "proof_scope": "router-probed-ipv4",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "reason": "PRIMARY-STABLY-RECOVERED",
+        "blockers": [],
+        "time": 1792750061.0
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750061.0,
+      "value": {
+        "before_policy_role": "target",
+        "destination_role": "source",
+        "destination_profile_id": "wireguard:peer_2002",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": false,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "target",
+        "from_profile_id": "openvpn:40354_2020",
+        "transition_kind": "protocol",
+        "state": "RESTORING",
+        "reason": "PRIMARY-STABLY-RECOVERED",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "proof_scope": "router-probed-ipv4",
+        "time": 1792750061.0
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750061.0,
+      "value": {
+        "before_policy_role": "target",
+        "destination_role": "source",
+        "destination_profile_id": "wireguard:peer_2002",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": true,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "target",
+        "from_profile_id": "openvpn:40354_2020",
+        "transition_kind": "protocol",
+        "restored_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "transition_outcome": "restored",
+        "state": "ROLLED-BACK",
+        "reason": "PRIMARY-STABLY-RECOVERED",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "proof_scope": "router-probed-ipv4",
+        "kernel_proof": {
+          "verified": true,
+          "role": "source",
+          "profile_id": "wireguard:peer_2002",
+          "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+          "order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+          ],
+          "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+          "time": 1792750061.0,
+          "kernel_fingerprint": "de72e0ff9b71998ff0ea078a59388faeedc193d837d2c224f44882f846d239ee"
+        },
+        "original_restored": false,
+        "time": 1792750061.0
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750061.0,
+      "value": {
+        "before_policy_role": "target",
+        "destination_role": "source",
+        "destination_profile_id": "wireguard:peer_2002",
+        "before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "after_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "session_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "route_changed": true,
+        "transition_completed": true,
+        "activation_reapply": false,
+        "transition_metadata_present": true,
+        "from_role": "target",
+        "from_profile_id": "openvpn:40354_2020",
+        "transition_kind": "protocol",
+        "restored_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "transition_outcome": "restored",
+        "state": "ROLLED-BACK",
+        "reason": "PRIMARY-STABLY-RECOVERED",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "original_restored": false,
+        "mode": "continuous-pair",
+        "proof_scope": "router-probed-ipv4",
+        "kernel_proof": {
+          "verified": true,
+          "role": "source",
+          "profile_id": "wireguard:peer_2002",
+          "policy_hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+          "order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+          ],
+          "scope": "new IPv4 LAN catch-all marking; no external-client proof",
+          "time": 1792750061.0,
+          "kernel_fingerprint": "de72e0ff9b71998ff0ea078a59388faeedc193d837d2c224f44882f846d239ee"
+        },
+        "time": 1792750061.0
+      }
+    },
+    {
+      "kind": "native-publish",
+      "time": 1792750061.0,
+      "value": {
+        "state": "BLOCKED",
+        "mode": "continuous-pair",
+        "proof_scope": "router-probed-ipv4",
+        "original_restored": false,
+        "blockers": [
+          "SOURCE-NOT-HEALTHY"
+        ],
+        "time": 1792750061.0,
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020"
+      }
+    },
+    {
+      "kind": "auto-tick",
+      "time": 1792750061.0,
+      "controlled_primary": "healthy",
+      "result": {
+        "handled": true,
+        "status": {
+          "version": "0.9.1-alpha58",
+          "time": 1792750061.0,
+          "profiles": [
+            {
+              "id": "wireguard:peer_2002",
+              "interface": "wgclient1",
+              "protocol": "wireguard",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749941.0,
+              "time": 1792750061.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "kernel_binding": {
+                "code": null,
+                "mark": 4096,
+                "table": "1001",
+                "device": "wgclient1",
+                "ifindex": 10
+              },
+              "name": "Synthetic WireGuard primary",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 110.0,
+                "time": 1792750061.0,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 100,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 110,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 120,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "wgclient1",
+                "vendor_tunnel_id": "wireguard:wgclient1",
+                "generation": "9a09de092d3ec36994c19b16d16d9c16"
+              }
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "interface": "ovpnclient2",
+              "protocol": "openvpn",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88",
+              "vendor_state": "SETTLED",
+              "vendor_changed_at": 1792749941.0,
+              "time": 1792750061.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "kernel_binding": {
+                "code": null,
+                "mark": 45056,
+                "table": "1012",
+                "device": "ovpnclient2",
+                "ifindex": 11
+              },
+              "name": "Synthetic OpenVPN reserve",
+              "website_response": {
+                "metric": "websites-https-mean-ms-v1",
+                "target_set": "google-cloudflare-wikipedia-v1",
+                "definition": "DNS + TCP + TLS + complete HTTP headers; fresh connection; router-originated",
+                "state": "ok",
+                "code": null,
+                "avg_ms": 210.0,
+                "time": 1792750061.0,
+                "valid_for": 45,
+                "successes": 3,
+                "attempted": 3,
+                "results": [
+                  {
+                    "id": "google",
+                    "url": "https://www.google.com/generate_204",
+                    "state": "ok",
+                    "elapsed_ms": 200,
+                    "http_status": 204,
+                    "code": null
+                  },
+                  {
+                    "id": "cloudflare",
+                    "url": "https://www.cloudflare.com/cdn-cgi/trace",
+                    "state": "ok",
+                    "elapsed_ms": 210,
+                    "http_status": 200,
+                    "code": null
+                  },
+                  {
+                    "id": "wikipedia",
+                    "url": "https://www.wikipedia.org/",
+                    "state": "ok",
+                    "elapsed_ms": 220,
+                    "http_status": 200,
+                    "code": null
+                  }
+                ],
+                "interface": "ovpnclient2",
+                "vendor_tunnel_id": "openvpn:ovpnclient2",
+                "generation": "53c363a654b170424eb86021b4c7cb88"
+              }
+            }
+          ],
+          "samples": [
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792750061.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792750046.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "wireguard:peer_2002",
+              "time": 1792750031.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "wgclient1",
+              "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792750061.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792750046.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            },
+            {
+              "id": "openvpn:40354_2020",
+              "time": 1792750031.0,
+              "code": null,
+              "dns_ok": true,
+              "https_success": 2,
+              "interface": "ovpnclient2",
+              "vendor_tunnel_id": "openvpn:ovpnclient2",
+              "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+            }
+          ],
+          "native_failover": {
+            "state": "BLOCKED",
+            "mode": "continuous-pair",
+            "proof_scope": "router-probed-ipv4",
+            "original_restored": false,
+            "blockers": [
+              "SOURCE-NOT-HEALTHY"
+            ],
+            "time": 1792750061.0,
+            "source": "wireguard:peer_2002",
+            "target": "openvpn:40354_2020"
+          },
+          "auto_control": {
+            "requested": "on",
+            "requested_at": 1792749990,
+            "control_revision": "8ccba198812242688a8de9da554fb6d3",
+            "pair_phase": "HELD"
+          },
+          "events": [],
+          "native_history": {
+            "available": false,
+            "events": []
+          },
+          "speed_tests": {
+            "results": []
+          },
+          "vendor_observation": {
+            "version": 1,
+            "time": 1792750061.0,
+            "groups": [
+              {
+                "id": "wireguard:wgclient1",
+                "protocol": "wireguard",
+                "current_profile": "wireguard:peer_2002",
+                "profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "active_profiles": [
+                  "wireguard:peer_2002"
+                ],
+                "generation": "9a09de092d3ec36994c19b16d16d9c16",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749941.0,
+                "time": 1792750061.0
+              },
+              {
+                "id": "openvpn:ovpnclient2",
+                "protocol": "openvpn",
+                "current_profile": "openvpn:40354_2020",
+                "profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "active_profiles": [
+                  "openvpn:40354_2020"
+                ],
+                "generation": "53c363a654b170424eb86021b4c7cb88",
+                "state": "SETTLED",
+                "stable_samples": 2,
+                "changed_at": 1792749941.0,
+                "time": 1792750061.0
+              }
+            ]
+          },
+          "channel_path": {
+            "time": null,
+            "confirmed": false,
+            "active_profile_id": null,
+            "source_profile_id": null,
+            "target_profile_id": null,
+            "transitioning": false,
+            "scope": "verified live router policy selection; Internet health is separate",
+            "mode": "continuous-pair",
+            "selection_proof": "fw3-kernel-marking",
+            "valid_for": 15,
+            "checked_at": null,
+            "kernel_policy_verified": false,
+            "code": "KERNEL-POLICY-UNVERIFIED"
+          },
+          "manual_switch_control": {
+            "available": false,
+            "mode": "continuous-pair",
+            "time": 1792750061.0
+          },
+          "manual_switch": {
+            "state": "IDLE",
+            "completed": false
+          }
+        },
+        "applications_before": 2,
+        "applications_after": 3
+      },
+      "journal": {
+        "tx": "671f900c2d64435da4ebf52223f373fc",
+        "phase": "ROLLED-BACK",
+        "before": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "after": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "hash": "5a1d48bdd575c188469b4f04b5f0d407d1871d6d54136edffff3976b974a4804",
+        "source": "wireguard:peer_2002",
+        "target": "openvpn:40354_2020",
+        "deadline": 1792750090,
+        "monotonic_deadline": 38683.798493838,
+        "lease_monotonic_until": 38773.79849386215,
+        "trial": false,
+        "trial_nonce": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "pid": 39794,
+        "started": 1792750000,
+        "vendor_identity": "32defb53abeea870d7eeff18ab78cc2e3b10200760d2e8d305c7c00d8d9a94dc",
+        "process_bindings": {
+          "wgclient1": 4096,
+          "ovpnclient2": 45056
+        },
+        "proof_scope": "router-probed-ipv4",
+        "control_revision": "8ccba198812242688a8de9da554fb6d3",
+        "vendor_profiles": {
+          "source": {
+            "id": "wireguard:peer_2002",
+            "protocol": "wireguard",
+            "interface": "wgclient1",
+            "vendor_tunnel_id": "wireguard:wgclient1",
+            "vendor_generation": "9a09de092d3ec36994c19b16d16d9c16"
+          },
+          "target": {
+            "id": "openvpn:40354_2020",
+            "protocol": "openvpn",
+            "interface": "ovpnclient2",
+            "vendor_tunnel_id": "openvpn:ovpnclient2",
+            "vendor_generation": "53c363a654b170424eb86021b4c7cb88"
+          }
+        },
+        "pair_transition": {
+          "source_rule": "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "target_rule": "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "direction": "first",
+          "generic_rules": [
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "source_id": "wireguard:peer_2002",
+          "target_id": "openvpn:40354_2020",
+          "destination_role": "target",
+          "before_policy_role": "source",
+          "session_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+          ],
+          "primary_order": [
+            "global",
+            "default",
+            "gl_process_vpn",
+            "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+            "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+          ]
+        },
+        "kernel_before_fingerprint": "de72e0ff9b71998ff0ea078a59388faeedc193d837d2c224f44882f846d239ee",
+        "kernel_before_verified": true,
+        "forward_policy_touched": true,
+        "rtp_dispatched": true,
+        "transition_source": "automatic",
+        "phase_evidence": [
+          {
+            "phase": "ARMED",
+            "time": 1792750000
+          },
+          {
+            "phase": "APPLYING",
+            "time": 1792750000
+          },
+          {
+            "phase": "WAIT-CLIENT",
+            "time": 1792750000
+          },
+          {
+            "phase": "COMMITTED",
+            "time": 1792750000
+          },
+          {
+            "phase": "RESTORING",
+            "time": 1792750061.0
+          },
+          {
+            "phase": "ROLLED-BACK",
+            "time": 1792750061.0
+          }
+        ],
+        "expected_exit": "9.9.9.9",
+        "confirmed": 1792750000,
+        "restore_before_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e"
+        ],
+        "restore_before_verified": true,
+        "restore_target_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ],
+        "restore_kernel_fingerprint": "541a1a063eb4d7a49948344e0e62b640dc5c4f9cb1093821169af56685dcd257",
+        "restore_rtp_dispatched": true,
+        "reason": "PRIMARY-STABLY-RECOVERED",
+        "finished": 1792750061.0,
+        "restored_order": [
+          "global",
+          "default",
+          "gl_process_vpn",
+          "a_f446a8329c437859ec1400fe042f01e1dcea083d7e9006bc496d2d17bf7e",
+          "a_48951f18810fad0af487c524ec94ae23acc25f073bc3d9a50a5c0a546ba9"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+PASS: queued/unknown/cancelled/recovered manual lifecycle, consistent immediate lamps, typed terminal correlation, truthful channel state and cadence EN/RU
+PASS: dispatch sequence fences stale callbacks, errors, same-time results and backwards router clocks
+AssertionError [ERR_ASSERTION]: the exact terminal request ID remains authoritative after the router clock moves backwards
+    at main (/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_switching_lifecycle_ui.js:92:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

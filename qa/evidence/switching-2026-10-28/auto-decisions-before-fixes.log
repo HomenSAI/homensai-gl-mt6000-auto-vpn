@@ -1,0 +1,37 @@
+test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300 (test_auto_decision_regressions.Decisions.test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300) ... FAIL
+test_long_cadence_expires_after_900_seconds (test_auto_decision_regressions.Decisions.test_long_cadence_expires_after_900_seconds) ... ok
+test_short_cadence_rejects_age_31_and_future_health (test_auto_decision_regressions.Decisions.test_short_cadence_rejects_age_31_and_future_health) ... 
+  test_short_cadence_rejects_age_31_and_future_health (test_auto_decision_regressions.Decisions.test_short_cadence_rejects_age_31_and_future_health) (age=31) ... FAIL
+test_verified_failback_finishes_one_decision_without_second_attempt (test_auto_decision_regressions.Decisions.test_verified_failback_finishes_one_decision_without_second_attempt) ... FAIL
+
+======================================================================
+FAIL: test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300 (test_auto_decision_regressions.Decisions.test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_auto_decision_regressions.py", line 88, in test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300
+    self.assertEqual(native.journal_read().get('phase'),'COMMITTED',self.case.publish.call_args.args[0])
+AssertionError: None != 'COMMITTED' : {'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True, 'certified': False, 'proof_scope': 'router-probed-ipv4', 'external_lan_verified': False, 'source': 'wireguard:peer_3', 'target': 'openvpn:1_2', 'vendor_identity': 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 'kernel_proof': {'verified': True, 'repairable_missing': False, 'role': 'source', 'profile_id': 'wireguard:peer_3', 'order': ['s', 't'], 'policy_hash': 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc', 'time': 1792750000, 'kernel_fingerprint': '38f4df8ff3b51e4367fc4109875e13ab5f97e8b1a45482c3cedf3e1669511a1c'}, 'kernel_policy_verified': True, 'source_failures': True, 'reserve_healthy': True, 'reason': 'OBSERVATION-STALE', 'blockers': []}
+
+======================================================================
+FAIL: test_short_cadence_rejects_age_31_and_future_health (test_auto_decision_regressions.Decisions.test_short_cadence_rejects_age_31_and_future_health) (age=31)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_auto_decision_regressions.py", line 102, in test_short_cadence_rejects_age_31_and_future_health
+    self.assertEqual(self.case.publish.call_args.args[0]['reason'],'OBSERVATION-STALE')
+AssertionError: 'PAIR-WATCHING' != 'OBSERVATION-STALE'
+- PAIR-WATCHING
++ OBSERVATION-STALE
+
+
+======================================================================
+FAIL: test_verified_failback_finishes_one_decision_without_second_attempt (test_auto_decision_regressions.Decisions.test_verified_failback_finishes_one_decision_without_second_attempt)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_auto_decision_regressions.py", line 69, in test_verified_failback_finishes_one_decision_without_second_attempt
+    self.assertEqual(self.attempt.call_count,1,'restored primary cannot dispatch another pair_return')
+AssertionError: 2 != 1 : restored primary cannot dispatch another pair_return
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.153s
+
+FAILED (failures=3)

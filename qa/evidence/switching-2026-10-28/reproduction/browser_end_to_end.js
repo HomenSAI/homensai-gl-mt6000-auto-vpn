@@ -1,0 +1,86 @@
+const fs=require('fs'),{chromium}=require(process.env.QA_PLAYWRIGHT||(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES?process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright':'playwright'));
+const ROOT=(process.env.QA_OUTPUT||__dirname),LABEL=process.env.QA_LABEL||'kernel-postfix';
+const report={scope:'Real Chromium manual/Resume clicks -> production queue/native child/CAS; actual Auto tick/streak/diagnosis/recovery_ready -> disposable OpenWrt FW3 kernel. Synthetic UCI/vendor/tunnel probes/worker launch; readonly host filesystem; not physical-router acceptance.',steps:[],checks:[],errors:[]};
+function check(name,passed){report.checks.push({name,passed:!!passed});}
+(async()=>{
+ const browser=await chromium.launch({executablePath:(process.env.QA_CHROMIUM||require('path').join(__dirname,'../qa-browsers/chrome-linux64/chrome')),headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ let page;
+ try{
+  report.browser=browser.version();page=await browser.newPage({viewport:{width:1440,height:1200}});
+  page.on('pageerror',e=>report.errors.push(e.message));
+  const first=await (await page.request.get('http://127.0.0.1:'+(process.env.QA_HTTP_PORT||18988)+'/__qa/state')).json();
+  await page.addInitScript(epoch=>{window.__qaEpoch=epoch;Date.now=()=>window.__qaEpoch*1000;localStorage.setItem('homensai-vpn-design','b');localStorage.setItem('homensai-vpn-theme','light');localStorage.setItem('homensai-vpn-language','en');},first.status.time);
+  await page.goto('http://127.0.0.1:'+(process.env.QA_HTTP_PORT||18988)+'/#overview',{waitUntil:'networkidle'});
+  const button=dir=>page.locator('[data-manual-direction="'+dir+'"]').filter({visible:true}).first();
+  const snapshot=async(name,shot=true)=>{
+   const state=await page.evaluate(()=>__qaSnapshot());
+   const dom=await page.evaluate(()=>({manual:[...document.querySelectorAll('[data-manual-direction]')].map(n=>({direction:n.dataset.manualDirection,disabled:n.disabled,class:n.className,selected:n.dataset.selected,text:n.innerText})),diagnostics:[...document.querySelectorAll('[data-manual-diagnostic]')].map(n=>n.innerText),text:document.body.innerText,calls:fixtureCalls.filter(c=>c.method==='pair_manual')}));
+   const item={name,state,dom};report.steps.push(item);fs.writeFileSync(ROOT+'/browser-e2e-'+LABEL+'.json',JSON.stringify(report,null,2));
+   if(shot)await page.screenshot({path:ROOT+'/browser-e2e-'+LABEL+'-'+name+'.png',fullPage:true});return item;
+  };
+  const post=async(path,value=[])=>{const result=await page.request.post('http://127.0.0.1:'+(process.env.QA_HTTP_PORT||18988)+'/__qa/'+path,{data:value});if(!result.ok())throw Error(path+': HTTP'+result.status());return result.json();};
+  const poll=()=>page.evaluate(()=>fixturePoll());
+  const advance=async seconds=>{const state=await post('advance',{seconds});await page.evaluate(epoch=>window.__qaEpoch=epoch,state.epoch);await poll();};
+  const initial=await snapshot('initial');
+  check('both channel responses shown',initial.dom.manual.some(c=>c.text.includes('110.0 ms'))&&initial.dom.manual.some(c=>c.text.includes('210.0 ms')));
+  const target=initial.state.status.channel_path.active_profile_id===initial.state.status.channel_path.source_profile_id?'reserve':'primary';
+  let releaseAck,gotAck;const ackSeen=new Promise(resolve=>gotAck=resolve),ackGate=new Promise(resolve=>releaseAck=resolve);
+  await page.route('**/__qa/rpc/pair_manual',async route=>{const response=await route.fetch();gotAck();await ackGate;await route.fulfill({response});},{times:1});
+  await button(target).click();await ackSeen;
+  const pending=await snapshot('awaiting-ack');
+  check('immediate click keeps both cards gray',pending.dom.manual.every(c=>c.class.includes('hv-manual-grey')));
+  check('queue does not change actual kernel',pending.state.model_kernel.role===initial.state.model_kernel.role);
+  releaseAck();await page.waitForTimeout(100);await poll();
+  const queued=await snapshot('queued');
+  check('accepted request stays queued',queued.state.status.manual_switch.state==='QUEUED');
+  check('pending cards remain disabled',queued.dom.manual.every(c=>c.disabled));
+  await post('consume');await poll();const done=await snapshot('completed-first');
+  check('first actual transaction completed',done.state.status.manual_switch.state==='COMPLETED');
+  check('completed request ID matches browser request',done.state.status.manual_switch.request_id===queued.state.status.manual_switch.request_id);
+  check('first actual kernel role changes',done.state.model_kernel.verified&&done.state.model_kernel.role!==initial.state.model_kernel.role);
+  check('cooldown has no promise of immediately available action',done.dom.manual.filter(c=>c.selected==='false').every(c=>c.disabled&&!/you can switch to it manually|Switch to this channel/.test(c.text)));
+  await advance(61);
+  const back=target==='primary'?'reserve':'primary';await button(back).click();await page.waitForTimeout(100);await poll();
+  const secondQueued=await snapshot('queued-return',false);
+  await post('consume');await poll();const returned=await snapshot('completed-return');
+  check('reverse actual transaction completed',returned.state.status.manual_switch.state==='COMPLETED');
+  check('reverse request ID matches',returned.state.status.manual_switch.request_id===secondQueued.state.status.manual_switch.request_id);
+  check('actual kernel returns to original role',returned.state.model_kernel.verified&&returned.state.model_kernel.role===initial.state.model_kernel.role);
+  check('two actual forwards consume two budget entries',returned.state.budget.events?.length===2);
+  await advance(61);await post('capture');
+  await page.route('**/__qa/rpc/pair_manual',async route=>{await route.fetch();await route.abort('failed');},{times:1});
+  await button(target).click();await page.waitForTimeout(250);await post('replay',{count:1});await poll();
+  const lost=await snapshot('lost-ack');
+  check('lost ACK with old status keeps buttons disabled',lost.dom.manual.every(c=>c.disabled));
+  check('lost ACK is visibly unconfirmed',/not confirmed|не подтверждён/.test(lost.dom.text));
+  check('lost ACK did reach actual backend queue',lost.state.status.manual_switch.state==='QUEUED');
+  await post('recover');await poll();const recovered=await snapshot('recovered');
+  check('interrupted queue recovers to non-success terminal',recovered.state.status.manual_switch.state==='UNCONFIRMED');
+  check('recovery never replays forward or charges budget',recovered.state.budget.events?.length===2&&recovered.state.model_kernel.role===initial.state.model_kernel.role);
+  check('recovery result is visible',/Switch result not confirmed|Результат переключения не подтверждён/.test(recovered.dom.text));
+  check('matching terminal unlocks next action',recovered.dom.manual.some(c=>c.direction===target&&!c.disabled));
+  const resumeBefore=await snapshot('before-resume',false);await button('resume').click();await page.waitForTimeout(100);await poll();
+  const resumeQueued=await snapshot('resume-queued',false);await post('consume');await poll();const resumed=await snapshot('resume-completed');
+  check('real browser Resume queues exact resume request',resumeQueued.state.status.manual_switch.direction==='resume'&&resumeQueued.state.status.manual_switch.state==='QUEUED');
+  check('Resume completes matching request and clears hold',resumed.state.status.manual_switch.state==='COMPLETED'&&resumed.state.status.manual_switch.request_id===resumeQueued.state.status.manual_switch.request_id&&!resumed.state.pair.manual_hold);
+  check('Resume never applies route or charges budget',resumed.state.kernel_applications.length===resumeBefore.state.kernel_applications.length&&resumed.state.budget.events.length===2&&resumed.state.model_kernel.role===initial.state.model_kernel.role);
+  await post('auto_tick',{primary:'failed'});await poll();const failedOver=await snapshot('automatic-failover');
+  check('controlled primary failure automatically selects actual reserve kernel',failedOver.state.model_kernel.verified&&failedOver.state.model_kernel.role==='target'&&failedOver.state.journal.phase==='COMMITTED');
+  check('Auto forward charges the third attempt and remains running',failedOver.state.budget.events.length===3&&failedOver.state.pair.phase==='RUNNING');
+  await post('auto_tick',{primary:'healthy'});await poll();const early=await snapshot('automatic-dwell',false);
+  check('Auto respects minimum dwell before healthy return',early.state.model_kernel.role==='target'&&early.state.kernel_applications.length===failedOver.state.kernel_applications.length);
+  await advance(61);await post('auto_tick',{primary:'healthy'});await poll();const restored=await snapshot('automatic-failback');
+  check('automatic failback restores actual primary kernel once',restored.state.model_kernel.verified&&restored.state.model_kernel.role==='source'&&restored.state.kernel_applications.length===failedOver.state.kernel_applications.length+1);
+  check('automatic failback leaves running controller without false blockers',restored.state.pair.phase==='RUNNING'&&['ROLLED-BACK','OBSERVING'].includes(restored.state.status.native_failover.state)&&!(restored.state.status.native_failover.blockers||[]).length);
+  check('automatic restoration preserves forward attempt budget',restored.state.budget.events.length===3&&restored.state.journal.phase==='ROLLED-BACK'&&JSON.stringify(restored.state.journal.restored_order)===JSON.stringify(restored.state.model_order));
+  await post('auto_tick',{primary:'healthy'});await poll();const watching=await snapshot('automatic-watching',false);
+  check('following healthy tick stays observing without extra kernel apply',watching.state.status.native_failover.state==='OBSERVING'&&watching.state.pair.phase==='RUNNING'&&watching.state.kernel_applications.length===restored.state.kernel_applications.length);
+  await post('auto_tick',{primary:'failed'});await poll();const limited=await snapshot('automatic-budget-limited',false);
+  check('exhausted Auto budget never dispatches a fourth forward',limited.state.budget.events.length===3&&limited.state.model_kernel.role==='source'&&limited.state.kernel_applications.length===restored.state.kernel_applications.length&&limited.state.status.native_failover.reason==='PAIR-RATE-LIMIT');
+  check('host etc and run were read-only with no effective capabilities',initial.state.identity.isolation.etc_readonly&&initial.state.identity.isolation.run_readonly&&/^0+$/.test(initial.state.identity.isolation.effective_capabilities));
+  check('no script exceptions',report.errors.length===0);
+  report.verdict=report.checks.every(c=>c.passed)?'PASS':'FAIL';
+  console.log(JSON.stringify({verdict:report.verdict,checks:report.checks,errors:report.errors,identity:initial.state.identity},null,2));
+ }catch(e){report.failure={name:e.name,message:e.message};report.verdict='FAIL';console.error(e);if(page)await page.screenshot({path:ROOT+'/browser-e2e-'+LABEL+'-failed.png',fullPage:true}).catch(()=>{});process.exitCode=1;}
+ finally{fs.writeFileSync(ROOT+'/browser-e2e-'+LABEL+'.json',JSON.stringify(report,null,2));await browser.close();}
+})()

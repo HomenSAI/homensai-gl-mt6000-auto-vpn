@@ -1,0 +1,11 @@
+{
+  "time_utc": "2026-10-28T20:49:29.898808+00:00",
+  "qa_http_bridge": "stopped after server finally/fixture cleanup",
+  "guest_package_http_server": "stopped",
+  "qemu_pid": 24275,
+  "qemu_process_exists": false,
+  "qemu_shutdown": "guest sync then poweroff; recorded PID/executable/scratch disk/private serial verified before shutdown",
+  "physical_router_access": "none",
+  "host_certificate_unchanged_since_incident": true,
+  "host_certificate_action": "metadata/hash verification only, no deletion or move"
+}

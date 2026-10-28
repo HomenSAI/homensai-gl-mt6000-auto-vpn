@@ -1,0 +1,17 @@
+test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300 (test_auto_decision_regressions.Decisions.test_auto_uses_age_100_failure_and_healthy_reserve_with_interval_300) ... ok
+test_legacy_manual_hold_releases_when_selected_channel_has_valid_failure_streak (test_auto_decision_regressions.Decisions.test_legacy_manual_hold_releases_when_selected_channel_has_valid_failure_streak) ... ok
+test_long_cadence_expires_after_900_seconds (test_auto_decision_regressions.Decisions.test_long_cadence_expires_after_900_seconds) ... ok
+test_lost_final_kernel_attestation_cannot_publish_successful_return (test_auto_decision_regressions.Decisions.test_lost_final_kernel_attestation_cannot_publish_successful_return) ... ok
+test_malformed_cadence_still_fails_actual_linux_diagnostic_before_forward (test_auto_decision_regressions.Decisions.test_malformed_cadence_still_fails_actual_linux_diagnostic_before_forward) ... ok
+test_native_supervisor_passes_configured_cadence_into_its_decision (test_auto_decision_regressions.Decisions.test_native_supervisor_passes_configured_cadence_into_its_decision) ... ok
+test_plan_and_explanation_agree_with_configured_health_age (test_auto_decision_regressions.Decisions.test_plan_and_explanation_agree_with_configured_health_age) ... ok
+test_primary_fails_fresh_return_check_without_another_attempt_in_same_tick (test_auto_decision_regressions.Decisions.test_primary_fails_fresh_return_check_without_another_attempt_in_same_tick) ... ok
+test_short_cadence_rejects_age_31_and_future_health (test_auto_decision_regressions.Decisions.test_short_cadence_rejects_age_31_and_future_health) ... ok
+test_verified_failback_finishes_one_decision_without_second_attempt (test_auto_decision_regressions.Decisions.test_verified_failback_finishes_one_decision_without_second_attempt) ... ok
+test_cached_cadence_and_explicit_settings_have_the_same_boundaries (test_auto_decision_regressions.DiagnosisCadence.test_cached_cadence_and_explicit_settings_have_the_same_boundaries) ... ok
+test_invalid_interval_does_not_inherit_a_longer_cached_ttl (test_auto_decision_regressions.DiagnosisCadence.test_invalid_interval_does_not_inherit_a_longer_cached_ttl) ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 0.363s
+
+OK
