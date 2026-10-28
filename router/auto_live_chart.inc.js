@@ -12,15 +12,20 @@ function autoLiveSample(status,now,inventory){
   status=status||{};
   var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&!(status.speed_pause&&status.speed_pause.active)&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   var kind='unknown',state=String(ns.state||'UNKNOWN');
+  var path=typeof channelPathSelection==='function'?channelPathSelection(status,now,ns.source,ns.target):{authoritative:ns.mode==='continuous-pair',selected:null,moving:false,code:ns.mode==='continuous-pair'?'KERNEL-POLICY-UNVERIFIED':null};
   if(valid){
-    if(state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))kind='source';
+    var intent=status.auto_control||{},pairRunning=intent.requested==='on'&&intent.pair_phase==='RUNNING';
+    if(['DISABLED','STOPPED','EXPIRED'].indexOf(state)>=0||state==='ROLLED-BACK'&&!pairRunning)kind='off';
+    else if(path.authoritative)kind=path.moving?'switching':path.selected?(path.selected===(status.channel_path||{}).source_profile_id?'source':'target'):state==='BLOCKED'||state==='FAILED'?'blocked':'unknown';
+    else if(state==='OBSERVING'&&ns.certified===true)kind='source';
     else if(['COMMITTED','DEGRADED-ON-RESERVE','STOPPED-ON-RESERVE'].indexOf(state)>=0)kind='target';
     else if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(state)>=0)kind='switching';
     else if(['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(state)>=0)kind='off';
     else if(['BLOCKED','FAILED'].indexOf(state)>=0)kind='blocked';
   }
   if(Number.isFinite(now)&&!status.rpc_error&&autoLiveBothDown(status,inventory,now))kind='down';
-  return {time:now,stamp:valid?ns.time:null,kind:kind,state:state,codes:Array.isArray(ns.blockers)?ns.blockers.slice(0,3):[]};
+  var codes=Array.isArray(ns.blockers)?ns.blockers.slice(0,3):[];if(path.code&&codes.indexOf(path.code)<0)codes.push(path.code);
+  return {time:now,stamp:valid?ns.time:null,kind:kind,state:state,selected_profile_id:path.selected,codes:codes};
 }
 function autoLiveAppend(points,sample){
   var rows=points.slice(-599),last=rows[rows.length-1];

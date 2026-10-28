@@ -7,6 +7,12 @@ const src=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-
 const prefix=src.slice(0,src.lastIndexOf('return view.extend({'));
 const ctx={window:{localStorage:{getItem(){return null},setItem(){}},HomenS:{},location:{search:'',href:'http://x/',hash:''}},document:{createElement:()=>({}),addEventListener(){}},localStorage:{getItem(){return null}},E:()=>({}),URLSearchParams,URL,Intl,console,L:{},rpc:{declare:()=>()=>0},ui:{},poll:{},view:{extend:o=>o}};
 vm.createContext(ctx);vm.runInContext(prefix,ctx);
+// Eager titles cover notices immediately; the optional module contains the full explanations.
+if(ctx.LAZY_HELP_NAME){
+ const module=fs.readFileSync('router/files/www/luci-static/resources/'+ctx.LAZY_HELP_NAME.replace(/\./g,'/')+'.js','utf8');
+ ctx.baseclass={extend:value=>value};
+ vm.runInContext('(function(){'+module+'})()',ctx).create(ctx.lazyHelpContext());
+}
 const dir='router/files/usr/lib/homensai-vpn';
 const rx=/['"]([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+)['"]/g;
 const skip=c=>/^(SHA-|UTF-|X-|HTTP-)/.test(c);

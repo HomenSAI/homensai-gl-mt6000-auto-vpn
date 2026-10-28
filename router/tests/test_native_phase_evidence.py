@@ -18,7 +18,7 @@ class Backend:
 
 class NativePhaseTests(unittest.TestCase):
     def journal(self):
-        return dict(phase='ARMED',before=['a','b'],after=['b','a'],hash='a'*64)
+        return dict(phase='ARMED',tx='fixture',source='wireguard:peer_1',target='openvpn:2_3',trial_nonce='fixture',started=0,deadline=1000,before=['a','b'],after=['b','a'],hash='a'*64)
 
     def test_phase_timeline_is_bounded_and_rollback_calls_are_unchanged(self):
         with tempfile.TemporaryDirectory() as directory,patch.object(native,'JOURNAL',Path(directory)/'journal'):

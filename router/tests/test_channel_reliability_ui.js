@@ -14,6 +14,7 @@ const inventory={settings:{plan_source:primary.id,plan_target:reserve.id}};
 const status={profiles:[primary,reserve,spare,weak],time:now-2,server_time:now,samples:[...samples(primary,9,30),...samples(reserve,30,30)],
   accounting:{quality:{[spare.id]:{buckets:{a:{n:200,success:198,rtt_sum:200*300}}},[weak.id]:{buckets:{a:{n:200,success:150,rtt_sum:200*200}}},[reserve.id]:{buckets:{a:{n:100,success:100,rtt_sum:100*400}}}}}};
 
+status.website_response_history={metric:'websites-https-mean-ms-v1',target_set:'google-cloudflare-wikipedia-v1',profile_statistics:{[spare.id]:{metric:'websites-https-mean-ms-v1',target_set:'google-cloudflare-wikipedia-v1',cycles:200,complete:198,sum_ms:60000},[weak.id]:{metric:'websites-https-mean-ms-v1',target_set:'google-cloudflare-wikipedia-v1',cycles:200,complete:150,sum_ms:40000},[reserve.id]:{metric:'websites-https-mean-ms-v1',target_set:'google-cloudflare-wikipedia-v1',cycles:100,complete:100,sum_ms:40000}}};
 // Loss share is measured over the retained window; too few samples give no verdict.
 const r=c.channelReliability(primary,status,now);
 assert.equal(r.n,30);assert.equal(r.bad,21);assert.equal(Math.round(r.loss),70);assert.equal(r.unreliable,true);
@@ -38,7 +39,7 @@ const down=Object.assign({},primary,{code:'VPN-001'});assert(!c.channelDisplayUs
 const rec=c.reliabilityRecommendation(status,inventory,now);
 assert.equal(rec.code,'CHANNEL-UNRELIABLE');
 assert(rec.text.includes('Держите трафик на резерве (потери 0%)'),rec.text);assert(rec.text.includes('de2000')&&rec.text.includes('99%'),rec.text);assert(!rec.text.includes('ua90'),'below the success floor');
-const none=c.reliabilityRecommendation(Object.assign({},status,{accounting:{quality:{}}}),inventory,now);assert(none.text.includes('мало измерений'),none.text);
+const none=c.reliabilityRecommendation(Object.assign({},status,{website_response_history:{}}),inventory,now);assert(none.text.includes('мало измерений'),none.text);
 assert.equal(c.reliabilityRecommendation(Object.assign({},status,{samples:samples(primary,30,30).concat(samples(reserve,30,30))}),inventory,now),null,'no recommendation when both are reliable');
 const both=c.reliabilityRecommendation(Object.assign({},status,{samples:[...samples(primary,9,30),...samples(reserve,12,30)]}),inventory,now);assert(both.text.includes('Оба канала'),both.text);
 const reserveBad=c.reliabilityRecommendation(Object.assign({},status,{samples:[...samples(primary,30,30),...samples(reserve,9,30)]}),inventory,now);assert(reserveBad.text.includes('резервного канала')&&reserveBad.text.includes('Держите трафик на основном'),reserveBad.text);

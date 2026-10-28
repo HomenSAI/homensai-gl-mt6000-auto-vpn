@@ -113,8 +113,9 @@ class NativeTests(unittest.TestCase):
             self.assertEqual(native.journal_read(),value)
             envelope=json.loads(native.JOURNAL.read_text());envelope['data']['after']=['a','a'];native.JOURNAL.write_text(json.dumps(envelope))
             with self.assertRaisesRegex(native.Refused,'INTEGRITY'):native.journal_read()
-            native.journal_write({'before':['a','b'],'after':['a','a']})
-            with self.assertRaisesRegex(native.Refused,'ORDER'):native.journal_read()
+            native.journal_write(value)
+            with self.assertRaisesRegex(native.Refused,'ORDER'):native.journal_write({'before':['a','b'],'after':['a','a']})
+            self.assertEqual(native.journal_read(),value)
 
     def test_external_writer_never_overwritten_and_never_holds_the_lan(self):
         b=Backend();b.fingerprint='changed'
@@ -139,7 +140,7 @@ class NativeTests(unittest.TestCase):
 
     def _held(self,b):
         before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
-        return {'phase':'HELD-ON-RESERVE','tx':'a'*32,'started':0,'before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'trial':True},before
+        return {'phase':'HELD-ON-RESERVE','tx':'a'*32,'started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'trial':True},before
 
     def test_operator_return_leaves_held_reserve_when_source_is_fresh(self):
         b=Backend();journal,before=self._held(b)
@@ -174,14 +175,14 @@ class NativeTests(unittest.TestCase):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
         answers=iter([None,False,True]);b.health=lambda identifier:next(answers) if identifier==b.profiles[0]['id'] else True
         b.recovery_ready=lambda *a:False   # no monitor history after a restart
-        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        journal={'phase':'COMMITTED','tx':'fixture','started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'):
             self.assertTrue(native.finish_committed(b,journal,'TRIAL-PASSED'));self.assertEqual(b.current,before)
 
     def test_passed_trial_with_unhealthy_source_holds_after_bounded_retries(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
         seen=[];b.health=lambda identifier:(seen.append(identifier),identifier==b.profiles[1]['id'])[1]
-        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        journal={'phase':'COMMITTED','tx':'fixture','started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
             self.assertFalse(native.finish_committed(b,journal,'TRIAL-PASSED'))
             self.assertEqual(seen.count(b.profiles[0]['id']),native.RETURN_CHECKS);self.assertEqual(b.current,after)
@@ -202,7 +203,7 @@ class NativeTests(unittest.TestCase):
     def test_expiry_never_restores_onto_failed_source(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
         b.health=lambda identifier: identifier==b.profiles[1]['id']
-        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'expected_exit':'9.9.9.9',
+        journal={'phase':'COMMITTED','tx':'fixture','started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id'],'expected_exit':'9.9.9.9',
                  'tx':'fixture','trial_nonce':'test','started':time.time(),'deadline':time.time()+60}
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
             self.assertFalse(native.finish_committed(b,journal,'TRIAL-ENDED'))
@@ -212,14 +213,14 @@ class NativeTests(unittest.TestCase):
 
     def test_expiry_restores_only_when_source_is_freshly_healthy(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after
-        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        journal={'phase':'COMMITTED','tx':'fixture','started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'JOURNAL',Path(d)/'journal'):
             self.assertTrue(native.finish_committed(b,journal,'TRIAL-ENDED'))
             self.assertEqual(b.current,before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
 
     def test_unknown_source_and_reserve_do_not_claim_connectivity(self):
         b=Backend();before=b.current[:];after=before[:];after[-2],after[-1]=after[-1],after[-2];b.current=after;b.health=lambda _:None
-        journal={'phase':'COMMITTED','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
+        journal={'phase':'COMMITTED','tx':'fixture','started':0,'deadline':1000,'trial_nonce':'fixture','before':before,'after':after,'hash':b.fingerprint,'source':b.profiles[0]['id'],'target':b.profiles[1]['id']}
         with tempfile.TemporaryDirectory() as d,patch.object(native,'PERSIST',Path(d)),patch.object(native,'STATE',Path(d)/'status'),patch.object(native,'JOURNAL',Path(d)/'journal'):
             self.assertFalse(native.finish_committed(b,journal,'CLIENT-STOP'))
             self.assertFalse(json.loads(native.STATE.read_text())['reserve_healthy'])

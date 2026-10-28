@@ -239,7 +239,7 @@ class NativeTests(unittest.TestCase):
                 real_write(path,value)
                 if path.name=='status.json':agent.STOP=True
             agent.STOP=False
-            with patch('auto_control.RUNTIME',runtime),patch('auto_control.PERSIST',persist),patch.object(agent,'RUNTIME',runtime),patch.object(agent,'PERSIST',persist),patch.object(agent,'inventory',return_value=inv),patch.object(agent,'probe',return_value=result),patch.object(agent,'sample_counters'),patch.object(agent,'atomic_json',side_effect=write):
+            with patch('website_response.WebsiteSampler'),patch('auto_control.RUNTIME',runtime),patch('auto_control.PERSIST',persist),patch.object(agent,'RUNTIME',runtime),patch.object(agent,'PERSIST',persist),patch.object(agent,'inventory',return_value=inv),patch.object(agent,'probe',return_value=result),patch.object(agent,'sample_counters'),patch.object(agent,'atomic_json',side_effect=write):
                 agent.serve()
             status=json.loads((runtime/'status.json').read_text())
             self.assertEqual(status['mode'],'monitor')

@@ -2,11 +2,19 @@ const fs=require('fs'),assert=require('assert');
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const selected=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
 const source=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+selected+'.js','utf8');
+const lazy=/LAZY_HELP_NAME='([^']+)'/.exec(source);
+const shipped=source+(lazy?fs.readFileSync('router/files/www/luci-static/resources/'+lazy[1].replace(/\./g,'/')+'.js','utf8'):'');
 assert(source.includes('hv-hybrid-release'),'selected module uses restored expanded shell');
 assert(!source.includes('function minimumComposePages('),'five-section replacement is not applied to expanded pages');
 for(const key of ['start','overview','channels','tests','statistics','traffic','services','events','readiness','settings','learn','help'])assert(source.includes("['"+key+"',"),'restored legacy destination '+key);
-for(const token of ['function simpleHomeModel(','data-simple-open-menu','function placeHybridControls(','hybridControls={power:','data-preparation-action','function learnKeepViewport('])assert(source.includes(token),'retained behavior '+token);
+for(const token of ['function simpleHomeModel(','data-simple-open-menu','function placeHybridControls(','hybridControls={power:','data-preparation-action','function learnKeepViewport('])assert(shipped.includes(token),'retained behavior '+token);
 assert(!source.includes('return renderOnboardingGate(inventory,data[1])'),'incomplete wizard cannot hide the new Minimum');
 assert(source.includes("if(setup||validTab(requestedTab)&&requestedTab!=='home')homeMenuRequested=true"),'explicit old overview URL survives reload');
 assert(source.includes('var powerParent=power&&power.parentNode'),'one existing actual control reparented rather than cloned');
+const hybridCss=fs.readFileSync('router/hybrid_ui.css','utf8').replace(/\/\*[\s\S]*?\*\//g,'');
+for(const key of ['statistics','learn']){
+ const selector='.hv-app.hv-hybrid-release[data-hv-design="b"] .hv-sidebar>nav [data-hv-tab="'+key+'"]';
+ const rules=Array.from(hybridCss.matchAll(/([^{}]+)\{([^{}]*)\}/g)).filter(row=>row[1].split(',').some(part=>part.trim()===selector));
+ assert(rules.some(row=>/(?:^|;)\s*display\s*:\s*flex\s*(?:;|$)/.test(row[2])),'Calm hybrid makes its '+key+' destination visible; a DOM link alone is insufficient');
+}
 console.log('PASS: selected hybrid module retains twelve legacy expanded destinations, current unconditional Minimum, one shared control, settings/training and preparation actions');

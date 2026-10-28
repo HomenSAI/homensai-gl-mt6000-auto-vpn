@@ -1,6 +1,7 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard126'
+UI_MODULE='dashboard132'
+from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
 source=(root/'dashboard16.js').read_text(encoding='utf8')
@@ -44,9 +45,9 @@ must_replace(anchor,anchor+"""
       panel.querySelectorAll('table').forEach(function(table,index){
         var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');
         function applySort(column,direction){
-          var entries=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1).map(function(row,i){return {row:row,i:i,value:row.children[column]?(row.children[column].getAttribute('data-sort-value')||row.children[column].textContent||''):''};});
+          var entries=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1).map(function(row,i){return {row:row,i:i,role:Number(row.getAttribute('data-channel-rank')||0),value:row.children[column]?(row.children[column].getAttribute('data-sort-value')||row.children[column].textContent||''):''};});
           function unknown(v){return !v||/^(—|No data|Нет данных)$/.test(v.trim());}
-          entries.sort(function(a,b){if(unknown(a.value)!==unknown(b.value))return unknown(a.value)?1:-1;var x=a.value.trim(),y=b.value.trim(),nx=Number(x.replace(/%$/,'')),ny=Number(y.replace(/%$/,''));var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;});
+          entries.sort(function(a,b){if(a.role!==b.role)return a.role-b.role;if(unknown(a.value)!==unknown(b.value))return unknown(a.value)?1:-1;var x=a.value.trim(),y=b.value.trim(),nx=Number(x.replace(/%$/,'')),ny=Number(y.replace(/%$/,''));var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;});
           entries.forEach(function(entry){table.appendChild(entry.row);});
           headers.forEach(function(th,i){th.setAttribute('aria-sort',i===column?(direction==='asc'?'ascending':'descending'):'none');});
           sortStates[tableKey]={column:column,direction:direction};
@@ -334,7 +335,7 @@ must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in 
 # The shared subtitle can be followed by an absent connectivity widget. Never render that null child.
 must_replace("renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})]),E('div',{'class':'hv-page-actions'}", "renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'}")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
-must_replace('return view.extend({',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('help_panel',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
 must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp(inventory)));")
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
@@ -361,7 +362,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui92.css',expected=3)
+must_replace('ui15.css','ui98.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -371,7 +372,7 @@ menu_source,menu_count=re.subn(r'homensai-vpn/dashboard[0-9]+','homensai-vpn/'+U
 assert menu_count==1,'current dashboard menu path'
 menu.write_text(menu_source,encoding='utf8')
 # Interactive training page: lesson cards, quiz, score.
-must_replace('return view.extend({',(Path(__file__).parent/'learn_scenes.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('learn_scenes',(Path(__file__).parent/'learn_scenes.inc.js').read_text(encoding='utf8'))+'\n'+lazy_marked('learn_panel',(Path(__file__).parent/'learn_panel.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
 must_replace("['help','?',bi('Help','Помощь')]];","['learn','🎓',bi('Training','Обучение')],['help','?',bi('Help','Помощь')]];")
 must_replace("['overview','channels','statistics','settings','help'].map(tabLink)","['overview','channels','statistics','settings','help','learn'].map(tabLink)")
 must_replace("  help:['What to do when something is wrong.'","  learn:['A short interactive training: what the system is, how to use it and what to do when something goes wrong.','Короткое интерактивное обучение: что это за система, как ею пользоваться и что делать, если что-то пошло не так.'],\n  help:['What to do when something is wrong.'")
@@ -388,8 +389,8 @@ must_replace("""metric(tr("Трафик месяца"),month?bytes(month.rx+mont
 must_replace("+(p.channel||'default')+' · '+(p.interface||bi('Not connected'","+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected'")
 must_replace("planning.appendChild(E('code',{},(fp.blockers||[]).join(' · ')));","planning.appendChild(renderPlanBlockers(fp.blockers||[],status));")
 must_replace("planning.appendChild(renderPlanBlockers(fp.blockers||[],status));","planning.appendChild(E('p',{},[E('a',{'href':'#readiness'},bi('Current system readiness','Текущая готовность системы')),bi('. Each test below checks its own current prerequisites before starting.','. Каждый тест ниже проверяет свои текущие условия перед запуском.')]));")
-must_replace('return view.extend({',(Path(__file__).parent/'error_rows_extra.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-must_replace('return view.extend({',(Path(__file__).parent/'error_table.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('error_rows_extra',(Path(__file__).parent/'error_rows_extra.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('error_table',(Path(__file__).parent/'error_table.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
 must_replace("      sortableTables();showPage(activeTab);","      put('statistics',renderMonitorInfo(status,inventory));put('events',errorTable||(errorTable=renderErrorTable()));\n      sortableTables();showPage(activeTab);")
 # Page design A/B/C: chosen in Settings, stored in this browser, applied before the page is shown.
 must_replace('return view.extend({',(Path(__file__).parent/'design_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
@@ -442,6 +443,7 @@ import localize_tables
 source=localize_tables.apply(source)
 import sidebar_patch
 source=sidebar_patch.apply(source)
+must_replace("fillSideStatus(sideState,status,inventory);","fillSideStatus(sideState,status,inventory);refreshAttribution(status);")
 must_replace("initSidebarLayout(appRoot);installErrorLinks(appRoot);","initSidebarLayout(appRoot);installErrorLinks(appRoot);installModalStyle();installTopButton(appRoot);installDesignKeys(appRoot,tabs.map(function(t){return t[0];}),function(k){window.location.hash=k;showPage(k);});")
 fool_css='\n.hv-fool-field .hv-fool-hint,.hv-fool-field .hv-fool-error{display:block;margin-top:.3rem}.hv-fool-error{color:#c32938}.hv-fool-error:empty{display:none}.hv-fool-invalid{border-color:#c32938!important;outline:1px solid #c32938}\n'
 must_replace('return view.extend({',(Path(__file__).parent/'viewport_state.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
@@ -483,6 +485,9 @@ must_replace("addSearch('ranking',ranking);put('ranking',ranking);","addSearch('
 must_replace("sortServerCards(rows,selectedProfile(status,Date.now()/1000),Date.now()/1000).forEach(function(p){table.appendChild", "currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild")
 must_replace("cell(serverTitle(p)),cell(p.channel),cell(protocolLabel(p))", "cell(serverTitle(p)),cell(roleDescription(p,status,inventory)),cell(protocolLabel(p))")
 must_replace("checkLampCell(p,status,inventory),cell(serverTitle(p)),cell(roleDescription(p,status,inventory))", "checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000),cell(roleDescription(p,status,inventory))")
+must_replace("checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000),cell(roleDescription(p,status,inventory))","currentCheckRoleCell(p,status,inventory),checkLampCell(p,status,inventory),currentCheckServerCell(p,Date.now()/1000)")
+must_replace("[bi('Status','Статус'),tr(\"Сервер\"),tr(\"Канал\")","[tr(\"Канал\"),bi('Status','Статус'),tr(\"Сервер\")")
+must_replace("currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild(E('tr',{'class':'tr'},","currentCheckOrderedRows(rows,status,inventory,Date.now()/1000).forEach(function(p){table.appendChild(E('tr',{'class':'tr','data-channel-rank':String(currentCheckRole(p,status,inventory,routerWall()))},")
 must_replace("E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{},(customName(p)?customName(p)+' · ':'')+bi('Group: ','Группа: ')+(p.channel||'default')+' · '+(p.interface||bi('Not connected','Не подключён')))","E('h4',{'class':'hv-server-country'},countryLabel(p)),E('p',{'class':'hv-server-address'},endpointText(p,Date.now()/1000)),E('p',{},roleDescription(p,status,inventory))")
 must_replace("renderCascadePath(status))","renderCascadePath(status,inventory))")
 must_replace("E('small',{},'HomenS.AI Style 1.14.3'),",'')
@@ -514,6 +519,26 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui92.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui98.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+from lazy_help_build import split as split_lazy_help
+source=split_lazy_help(source,UI_MODULE)
+# All headline delay/quality surfaces use the same complete three-site metric.
+must_replace("chart(status.samples||[],active)","chart(websiteSamples(status,inventory),active)")
+must_replace("cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)","cell(renderChannelPing(p,status,statusNow(status)))")
+must_replace("profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","renderChannelPing(p,status,statusNow(status))")
+must_replace('tr("HTTPS, мс")','bi("Response, ms","Ответ, мс")')
+must_replace('tr("Средняя HTTPS-задержка")','bi("Mean three-site response","Средний ответ трёх сайтов")')
+must_replace("(item.r.sum/item.r.good).toFixed(1)","websiteMs(item.r.sum/item.r.good)")
+must_replace("var samples=status.samples||[],rank={};samples.forEach(function(s){var r=rank[s.id]||(rank[s.id]={n:0,good:0,sum:0});if(s.code!=='CHECK-001'&&s.code!=='SYSTEM-001'){r.n++;if(!s.code){r.good++;r.sum+=s.rtt_ms||0;}}});", "var samples=websiteSamples(status,inventory),rank=websiteQuality(status);")
+must_replace("Object.keys((status.accounting||{}).quality||{}).forEach(function(id){var q=status.accounting.quality[id],r={n:0,good:0,sum:0};Object.keys(q.buckets||{}).forEach(function(k){var b=q.buckets[k];r.n+=b.n;r.good+=b.success;r.sum+=b.rtt_sum;});rank[id]=r;});", "")
+
+from visible_refresh_patch import apply as apply_visible_refresh
+source=apply_visible_refresh(source)
+# The frozen legacy chart declaration is overwritten by the final renderer.
+_dead_chart="function chart(samples,rows){\n  var colors="
+assert source.count(_dead_chart)==1 and source.count('function chart(samples,rows){')==2,'DEAD-CHART-COUNT'
+_dead_start=source.index(_dead_chart);_dead_end=source.index('\nfunction histogram(',_dead_start)
+source=source[:_dead_start]+source[_dead_end+1:]
+assert source.count('function chart(samples,rows){')==1 and 'var CHART_COLORS=' in source,'FINAL-CHART-COUNT'
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

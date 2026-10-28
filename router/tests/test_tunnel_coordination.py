@@ -178,9 +178,15 @@ class TunnelCoordination(unittest.TestCase):
         def before_write():
             checks.append(True)
             if len(checks)==2:raise native.Refused('CLIENT-STOP')
-        with patch.object(router,'policy',return_value=backend.data),patch.object(native,'command') as command:
+        desired=list(backend.selection['order']);desired[-2],desired[-1]=desired[-1],desired[-2]
+        def execute(args):
+            if args[:2]==['uci','reorder']:
+                section,index=args[2].split('=',1);section=section.split('.',1)[1]
+                rows=backend.data['sections'];row=next(row for row in rows if row['.name']==section)
+                rows.remove(row);rows.insert(int(index),row)
+        with patch.object(router,'policy',return_value=backend.data),patch.object(native,'command',side_effect=execute) as command:
             with self.assertRaisesRegex(native.Refused,'CLIENT-STOP'):
-                router.reorder(backend.selection['order'],before_write=before_write)
+                router.reorder(desired,before_write=before_write)
         self.assertEqual(len(checks),2);self.assertEqual(command.call_count,1)
         self.assertEqual(command.call_args.args[0][:2],['uci','reorder'])
 

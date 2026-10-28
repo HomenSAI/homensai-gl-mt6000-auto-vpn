@@ -88,17 +88,21 @@ def reset_speed_history(writer,before=None):
     return old
 
 
-def apply(value,accounting,latency,now,writer,persist=None):
+def apply(value,accounting,latency,now,writer,persist=None,website_response=None):
     """Runs inside the agent. Returns (accounting, latency, result); the caller saves a checkpoint."""
     from agent import Accounting
     from latency_history import LatencyHistory
     from reliability import Reliability
     persist=PERSIST if persist is None else Path(persist)
     scope=value['scope'];parts=('latency','auto','traffic','quality','speed') if scope=='all' else ('speed','quality') if scope=='ranking' else (scope,)
+    if (website_response is not None and ('latency' in parts or 'quality' in parts)
+            and website_response.notice=='WEBSITE-HISTORY-UNAVAILABLE'):
+        return accounting,latency,{'nonce':value['nonce'],'scope':scope,'time':now,'done':False,'code':'WEBSITE-HISTORY-UNAVAILABLE'}
     payload={}
     try:
         exported=accounting.export()
         if 'latency' in parts:payload['latency']=copy.deepcopy(latency.data)
+        if website_response is not None and ('latency' in parts or 'quality' in parts):payload['website_response']=copy.deepcopy(website_response.data)
         if 'auto' in parts:payload['reliability']=exported.get('reliability')
         if 'traffic' in parts:payload['traffic']={k:exported.get(k) for k in ('months','days','wan','gaps')}
         if 'quality' in parts:payload['quality']={k:exported.get(k) for k in ('quality','activity')}
@@ -123,6 +127,9 @@ def apply(value,accounting,latency,now,writer,persist=None):
         code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'STATS-RESET-FAILED'
         return accounting,latency,{'nonce':value['nonce'],'scope':scope,'time':now,'done':False,'code':code}
     if 'latency' in parts:latency=LatencyHistory()
+    if website_response is not None:
+        if 'latency' in parts:website_response.clear(now)
+        elif 'quality' in parts:website_response.clear_statistics(now)
     if 'auto' in parts:
         accounting.reliability=Reliability(None);accounting.reliability.critical=True
     if 'traffic' in parts:

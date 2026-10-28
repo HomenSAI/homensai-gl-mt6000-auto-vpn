@@ -16,12 +16,14 @@ function roleOrderedRows(rows,status,inventory,now){
   var ids=rolePairIds(status,inventory,now);
   return rows.map(function(p,i){var role=ids.indexOf(p.id);return {p:p,i:i,rank:role<0?2:role};}).sort(function(a,b){return a.rank-b.rank||a.i-b.i;}).map(function(row){return row.p;});
 }
+function currentCheckRole(p,status,inventory,now){var n=rolePairIds(status,inventory,now).indexOf(p.id);return n<0?2:n;}
+function currentCheckRoleCell(p,status,inventory){var n=currentCheckRole(p,status,inventory,routerWall());return E('td',{'data-channel-role':['source','target','other'][n],'data-sort-value':String(n)},roleDescription(p,status,inventory));}
 function currentCheckOrderedRows(rows,status,inventory,now){
   return roleOrderedRows(rows,status,inventory,now).map(function(p,i){
     var use=typeof channelDisplayUse==='function'?channelDisplayUse(p,status,inventory):{state:'unknown',kind:'grey'};
     var rank=use.state==='selected'&&use.kind==='green'?0:use.state==='standby'?1:['checking','switching'].indexOf(use.state)>=0?2:use.state==='unknown'?3:4;
-    return {p:p,index:i,rank:rank};
-  }).sort(function(a,b){return a.rank-b.rank||a.index-b.index;}).map(function(row){return row.p;});
+    return {p:p,index:i,rank:rank,role:currentCheckRole(p,status,inventory,now)};
+  }).sort(function(a,b){return a.role-b.role||a.rank-b.rank||a.index-b.index;}).map(function(row){return row.p;});
 }
 function splitRoleRows(rows,status,inventory,now){
   var ids=rolePairIds(status,inventory,now),ordered=roleOrderedRows(rows,status,inventory,now),pair=ordered.filter(function(p){return ids.indexOf(p.id)>=0;});

@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT/'VERSION.json'
 SOURCE_DIRS = ('router/files',)
-SOURCE_GLOBS = ('router/*.inc.js', 'router/*.py', 'router/*.css', 'router/*.lua')
+SOURCE_GLOBS = ('router/*.inc.js', 'router/*.py', 'router/*.css', 'router/*.lua', 'qa/export_lazy_titles.js', 'qa/export_documentation.js')
 SKIP_PARTS = {'__pycache__', 'dist', 'tests'}
 # Files that carry the version as a literal (everything else, such as docs and release notes, is written by hand at release time).
 LITERAL_FILES = ('router/Makefile', 'router/build_ipk.py', 'router/files/usr/lib/homensai-vpn/agent.py',
@@ -120,6 +120,11 @@ def main(argv):
     # The page shows the version it was built with: rebuild it, then record the fingerprint of the rebuilt source.
     subprocess.run([sys.executable, str(ROOT/'router/build_sidebar_ui.py')], check=True, stdout=subprocess.DEVNULL)
     data = load()
+    # The builder derives the optional module name from the freshly advanced dashboard number.
+    lazy_name='help'+ui_module.removeprefix('dashboard')+'.js'
+    if not (ROOT/'router/files/www/luci-static/resources/homensai-vpn'/lazy_name).is_file():
+        raise SystemExit('UI-LAZY-MODULE-MISSING')
+    data['application']['ui_lazy_modules']=['homensai-vpn/'+lazy_name]
     data['application']['source_fingerprint'] = fingerprint(new_version, new_package)
     MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')
     print('VERSION-BUMPED %s -> %s (package %s); sha256 is recorded after the package build' % (old_version, new_version, new_package))

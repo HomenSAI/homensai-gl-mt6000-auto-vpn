@@ -3,7 +3,7 @@ class N{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this
 async function main(){
  const now=100000,events=Array.from({length:130},(_,i)=>({sequence:i+1,time:now-130+i,state:i===0?'SPECIAL-OLD-EVENT':'OBSERVING'})),methods=[];
  const c={locale:'en',bi:a=>a,E:(...a)=>new N(...a),Date,statusNow:()=>now,safeCode:v=>typeof v==='string'&&/^[A-Z][A-Z0-9-]+$/.test(v),serverTitle:p=>p.name||p.id,rpc:{declare:spec=>{methods.push(spec.method);return async(kind,after,until)=>{const rows=kind==='controller'?events:[],fixed=rows.length,selected=rows.filter(r=>r.sequence>after).slice(0,100);return {kind,until:fixed,events:selected,next_after:selected.length?selected[selected.length-1].sequence:after,has_more:!!selected.length&&selected[selected.length-1].sequence<fixed,summary:{sequence:fixed},as_of:now};};}}};
- vm.createContext(c);for(const file of ['analytics_panel','journal_panel'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);
+ vm.createContext(c);for(const file of ['ui_logic','analytics_panel','journal_panel'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);c.statusNow=()=>now;
  const status={profiles:[],native_history:{events:events.slice(-10)},accounting:{reliability:{events:[]}}};
  let root=c.renderEventHistory(status);assert.equal(root.all().filter(n=>n.tag==='tbody')[0].children.length,10);
  const search=root.all().find(n=>n.attrs.type==='search');search.attrs.input({target:{value:'SPECIAL-OLD-EVENT'}});

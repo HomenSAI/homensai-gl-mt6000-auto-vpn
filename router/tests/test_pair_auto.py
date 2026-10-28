@@ -58,7 +58,7 @@ class Tests(unittest.TestCase):
         backend=Mock();backend.diagnostic.return_value=([],selection);backend.order.return_value=(self.state['order'],self.state['policy_hash'])
         agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[9800,9900]})
         settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5'}
-        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt')as attempt,patch.object(pair,'configure_lease',return_value=20000):
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt',side_effect=lambda *args,**kwargs:kwargs['on_dispatch']())as attempt,patch.object(pair,'configure_lease',return_value=20000):
             with patch.object(pair.time,'time',return_value=10000):pair.tick(backend,settings,self.revision)
             attempt.assert_not_called()
             with patch.object(pair.time,'time',return_value=10201):pair.tick(backend,settings,self.revision)
@@ -175,8 +175,8 @@ class Tests(unittest.TestCase):
 
     def test_profile_ownership_is_durable_before_each_activation(self):
         request={'id':'a'*32,'revision':self.revision}
-        selection={'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'},
-                   'process_bindings':None,'order':['a','b'],'hash':'c'*64}
+        selection={'source':{'id':'wireguard:peer_1','interface':'wgclient1'},'target':{'id':'openvpn:1_1','interface':'ovpnclient1'},
+                   'source_rule':'a','target_rule':'b','direction':'first','process_bindings':None,'order':['a','b'],'hash':'c'*64}
         rows=[{'.name':k,'proto':v,'auto':'0','disabled':'1','config':'selected'}for k,v in pair.INTERFACES.items()]
         changed=[]
         def write(state,interface,value,revision):
@@ -193,8 +193,8 @@ class Tests(unittest.TestCase):
 
     def test_stop_between_profile_starts_prevents_second_activation(self):
         request={'id':'a'*32,'revision':self.revision}
-        selection={'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'},
-                   'process_bindings':None,'order':['a','b'],'hash':'c'*64}
+        selection={'source':{'id':'wireguard:peer_1','interface':'wgclient1'},'target':{'id':'openvpn:1_1','interface':'ovpnclient1'},
+                   'source_rule':'a','target_rule':'b','direction':'first','process_bindings':None,'order':['a','b'],'hash':'c'*64}
         rows=[{'.name':k,'proto':v,'auto':'0','disabled':'1','config':'selected'}for k,v in pair.INTERFACES.items()]
         backend=Mock()
         with patch.object(pair,'preflight',return_value=selection),patch.object(pair,'network',return_value=rows),patch.object(pair,'configs',return_value={}),patch.object(pair,'quiet'),patch.object(pair,'set_disabled')as write,patch.object(native,'forward_dispatch',side_effect=lambda *a,**k:auto_control.current_revision(rotate=True)):
@@ -206,7 +206,7 @@ class Tests(unittest.TestCase):
         selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64}
         backend=Mock();backend.diagnostic.return_value=([],selection)
         backend.order.return_value=(self.state['order'],self.state['policy_hash'])
-        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt')as attempt,patch.object(pair,'configure_lease',return_value=20000):
+        with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt',side_effect=lambda *args,**kwargs:kwargs['on_dispatch']())as attempt,patch.object(pair,'configure_lease',return_value=20000):
             for stamp in (10000,10300,10600,10900,10901):
                 with patch.object(pair.time,'time',return_value=stamp):pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision)
         # At the exact window boundary the oldest attempt expires. A new
@@ -301,8 +301,8 @@ else:raise AssertionError('CLI/helper exceptions diverged')
 
     def test_start_brings_up_an_enabled_but_stopped_client_and_restores_it_on_stop(self):
         request={'id':'a'*32,'revision':self.revision}
-        selection={'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'},
-                   'process_bindings':None,'order':['a','b'],'hash':'c'*64}
+        selection={'source':{'id':'wireguard:peer_1','interface':'wgclient1'},'target':{'id':'openvpn:1_1','interface':'ovpnclient1'},
+                   'source_rule':'a','target_rule':'b','direction':'first','process_bindings':None,'order':['a','b'],'hash':'c'*64}
         rows=[{'.name':k,'proto':v,'auto':'0','disabled':'0','config':'selected'}for k,v in pair.INTERFACES.items()]
         status={'wgclient1':{'up':True},'ovpnclient1':{'up':False,'pending':False}}
         def ubus(args,timeout=5):return json.dumps(status[args[2].rsplit('.',1)[1]]).encode()

@@ -78,7 +78,8 @@ def main():
         outputs=[root/'router/files/usr/lib/lua/luci/controller/homensai_vpn.lua',root/'router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json']
         ui=root/'router/files/www/luci-static/resources/view/homensai-vpn'
         def snapshot():
-            files={str(path.relative_to(root)):path.read_bytes().replace(b'\r\n',b'\n') for path in ui.iterdir() if path.is_file()}
+            lazy=root/'router/files/www/luci-static/resources/homensai-vpn'
+            files={str(path.relative_to(root)):path.read_bytes().replace(b'\r\n',b'\n') for folder in (ui,lazy) if folder.exists() for path in folder.iterdir() if path.is_file()}
             files.update({str(path.relative_to(root)):path.read_bytes().replace(b'\r\n',b'\n') for path in outputs if path.is_file()})
             return files
         before=snapshot();check([sys.executable,'router/build_sidebar_ui.py']);after=snapshot()

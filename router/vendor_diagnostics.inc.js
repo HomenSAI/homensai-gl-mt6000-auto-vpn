@@ -78,19 +78,25 @@ function vendorDisplayMember(status,inventory,role,now,legacyId){
   return rows.length===1?rows[0]:null;
 }
 function vendorDisplaySelected(status,inventory,now){
+  if(typeof channelPathSelection==='function'){
+    var source=vendorDisplayMember(status,inventory,'source',now),target=vendorDisplayMember(status,inventory,'target',now);
+    var proof=channelPathSelection(status,now,source&&source.id,target&&target.id);
+    if(proof.authoritative)return proof.selected;
+  }
   var route=(status||{}).channel_path;
-  if(route){if(!(status||{}).rpc_error&&vendorFresh((status||{}).time,now,90)&&vendorFresh(route.time,now,30)&&route.confirmed===true&&(route.active_profile_id===route.source_profile_id||route.active_profile_id===route.target_profile_id))return route.active_profile_id;return null;}
+  if(route)return null;
   var native=(status||{}).native_failover||{},role=null;
+  if(native.mode==='continuous-pair'||native.proof_scope==='router-probed-ipv4')return null;
   if((status||{}).rpc_error||!vendorFresh(native.time,now,30))return null;
   if(['COMMITTED','DEGRADED-ON-RESERVE'].indexOf(native.state)>=0)role='target';
-  else if(native.state==='OBSERVING'&&(native.certified===true||native.mode==='continuous-pair'&&native.readiness_verified===true))role='source';
+  else if(native.state==='OBSERVING'&&native.certified===true)role='source';
   var row=role?vendorDisplayMember(status,inventory,role,now,native[role]):null;
   return row?row.id:null;
 }
 function vendorLamp(tone,label){return E('span',{},[E('span',{'class':'hv-check-lamp hv-check-'+({healthy:'green',failed:'red',pending:'yellow'}[tone]||'grey'),'aria-hidden':'true'}),label]);}
 function vendorIdentityText(group){return group.state==='stable'?bi('VPN settings unchanged','Настройки VPN не менялись'):group.state==='pending'?bi('The router is still checking VPN settings (up to a minute)','Роутер ещё проверяет настройки VPN (до минуты)'):(typeof dataCauseText==='function'?dataCauseText(bi('Configuration not observed: ','Конфигурация не получена: ')):bi('Configuration not observed','Конфигурация не получена'));}
 function vendorCoordinationText(model){var row=model.coordination.known?VENDOR_COORDINATION_TEXT[model.coordination.code]:null;return row?bi(row[0],row[1]):(typeof dataCauseText==='function'?dataCauseText(bi('No plan yet: ','Плана пока нет: ')):bi('No plan yet','Плана пока нет'));}
-function vendorDetailsLink(){return E('a',{'href':'#channels','click':function(event){if(typeof goToSection==='function'){event.preventDefault();goToSection('channels','hv-vendor-observation');}}},bi('VPNs on the router and your names','VPN на роутере и ваши названия'));}
+function vendorDetailsLink(){return E('a',{'href':'#channels'},bi('Channels and servers','Каналы и серверы'));}
 function renderProbeChecks(profile,now){
   if(!profile||!Array.isArray(profile.probe_checks)||!profile.probe_checks.length||!vendorFresh(profile.time,now,90))return null;
   var n=profile.https_success,headline=Number.isInteger(n)?n>=2?bi('Availability threshold met','Условие доступности выполнено'):n>0?bi('Partial HTTPS availability','Частичная HTTPS-доступность'):bi('HTTPS availability not confirmed','HTTPS-доступность не подтверждена'):bi('No saved HTTPS count','Число HTTPS-ответов не сохранено');
@@ -98,25 +104,8 @@ function renderProbeChecks(profile,now){
   var rows=profile.probe_checks.slice(0,3).filter(function(r){return r&&['one.one.one.one','dns.google','dns.quad9.net'].indexOf(r.target)>=0&&names[r.result];});
   return E('details',{'class':'hv-probe-details','data-probe-profile':profile.id},[E('summary',{},(profile.name||profile.id)+' · '+headline+(Number.isInteger(n)?' · HTTPS '+n+'/3':'')),E('p',{},profile.dns_ok===true?bi('DNS check passed.','DNS-проверка прошла.'):profile.dns_ok===false?bi('DNS check failed.','DNS-проверка не прошла.'):bi('DNS result not recorded.','Результат DNS не сохранён.')),E('ul',{},rows.map(function(r){return E('li',{},r.target+' · '+bi.apply(null,names[r.result])+(Number.isInteger(r.http_status)?' · HTTP '+r.http_status:''));})),E('p',{},bi('An error at a check endpoint does not by itself prove complete loss of VPN traffic.','Ошибка проверочного адреса сама по себе не доказывает полное отсутствие трафика через VPN.'))]);
 }
-function renderVendorChannels(status,inventory){
-  var m=vendorDiagnosticsModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
-  function value(label,text){return E('p',{},[E('strong',{},label+': '),String(text)]);}
-  function anchor(id){var group=m.groups.filter(function(g){return g.id===id;})[0];return id?(id+' · '+bi('current VPN profile: ','текущий VPN-профиль: ')+(group&&group.current||(typeof dataCauseText==='function'?dataCauseText(bi('not received: ','не получен: ')):bi('not received','не получен')))):bi('Not chosen: no saved tunnel for this role (Channels and servers)','Не выбран: для этой роли не сохранён туннель («Каналы и серверы»)');}
-  var body=[E('summary',{},bi('VPNs on the router and your names','VPN на роутере и ваши названия')),E('p',{},bi('The router reports which VPN profile is in each tunnel. Server groups and your channel names are only for convenience.','Роутер сообщает, какой VPN-профиль стоит в каждом туннеле. Группы серверов и ваши названия каналов нужны только для удобства.')),value(bi('Selected source tunnel','Выбранный основной туннель'),anchor(m.source)),value(bi('Selected reserve tunnel','Выбранный резервный туннель'),anchor(m.target))];
-  var probeDetails=(status.profiles||[]).map(function(p){return renderProbeChecks(p,typeof statusNow==='function'?statusNow(status):Date.now()/1000);}).filter(Boolean);if(probeDetails.length)body.push(E('details',{'class':'hv-probe-summary'},[E('summary',{},bi('HTTPS/DNS check details','Подробности проверок HTTPS/DNS'))].concat(probeDetails)));
-  if(!m.source||!m.target)body.push(E('p',{},[bi('Choose a VPN profile for each required tunnel in Settings and save. ','Выберите VPN-профиль для каждого нужного туннеля в настройках и сохраните. '),E('a',{'href':'#settings'},bi('Open Settings','Открыть настройки'))]));
-  if(!m.groups.length)body.push(E('p',{},bi('The router has not reported which VPN profile is in use yet. Your channel names cannot replace this.','Роутер ещё не сообщил, какой VPN-профиль используется. Ваши названия каналов это не заменяют.')));
-  m.groups.slice().sort(function(a,b){function rank(g){return g.id===m.source?0:g.id===m.target?1:2;}return rank(a)-rank(b);}).slice(0,32).forEach(function(g){
-    var health=g.health==='healthy'?bi('Healthy router HTTPS/DNS probe','Успешная проверка HTTPS/DNS с роутера'):g.health==='failed'?bi('Router probe failed','Проверка с роутера не прошла'):(typeof dataCauseText==='function'?dataCauseText(bi('No check result: ','Нет результата проверки: ')):bi('No check result','Нет результата проверки'));
-    body.push(E('section',{'data-vendor-tunnel':g.id,'data-vendor-state':g.state,'data-vendor-health':g.health,'style':'border-top:1px solid currentColor;padding-top:8px;margin-top:12px;min-width:0;overflow-wrap:anywhere'},[
-      E('h4',{},vendorProtocol(g.protocol)+' · '+g.id),E('p',{},vendorLamp(g.state==='pending'?'pending':'unknown',vendorIdentityText(g))),value(bi('Current VPN profile on the router','Текущий VPN-профиль на роутере'),g.current?g.name+' · '+g.current:(typeof dataCauseText==='function'?dataCauseText(bi('Not received: ','Не получен: ')):bi('Not received','Не получен'))),value(bi('Server group','Группа серверов'),g.profileGroup||bi('Not reported by the router','Роутер не сообщил')),value(bi('Your channel name','Ваше название канала'),g.labels.join(', ')||bi('No name saved','Название не сохранено')),E('p',{},vendorLamp(g.health,health)),E('p',{'data-vendor-reason':'unobserved'},[bi('The stock firmware picks the server inside a channel itself and does not report why or how many times it tried. The app does not see this and does not need to: it only checks whether the channel works now.','Штатная прошивка сама выбирает сервер внутри канала и не сообщает, почему и сколько раз пыталась. Приложение этого не видит и не должно: оно проверяет только, работает ли канал сейчас.'),' · ',typeof errorCodeLink==='function'?errorCodeLink('VENDOR-REASON-UNOBSERVED'):'VENDOR-REASON-UNOBSERVED'])]));
-  });
-  if(m.groups.length>32)body.push(E('p',{},bi('Showing the first 32 VPNs.','Показаны первые 32 VPN.')));
-  body.push(E('p',{'data-app-coordination':m.coordination.code||'UNKNOWN'},[E('strong',{},m.coordination.known?bi('Switching plan: ','План переключения: '):bi('Switching plan (not clear yet): ','План переключения (пока не ясен): ')),vendorCoordinationText(m)].concat(m.coordination.code&&typeof errorCodeLink==='function'?[' · ',errorCodeLink(m.coordination.code)]:[])));
-  if(m.coordination.settleUntil)body.push(value(bi('The router checks VPN settings until (Europe/Berlin)','Роутер проверяет настройки VPN до (Europe/Berlin)'),new Date(m.coordination.settleUntil*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})));
-  body.push(E('p',{},bi('Preview only: shows what Auto would do; nothing is switched.','Только показ: здесь видно, что сделал бы Auto, но ничего не переключается.')));
-  return E('details',{'class':'hv-chart-card','id':'hv-vendor-observation','data-vendor-diagnostics':'channels','style':'min-width:0;overflow-wrap:anywhere'},body);
-}
+// Owner removed this complete disclosure from Channels; keep the builder call harmless.
+function renderVendorChannels(){return E([]);}
 function renderVendorEvents(status,inventory){
   var m=vendorDiagnosticsModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),names={'VENDOR-PROFILE-CHANGED':bi('VPN profile changed','VPN-профиль изменился'),'VENDOR-BINDING-CHANGED':bi('VPN settings changed','Настройки VPN изменились'),'VENDOR-BINDING-UNKNOWN':bi('VPN profile changed or removed on the router','VPN-профиль изменён или удалён на роутере'),'VENDOR-FIRST-OBSERVATION':bi('VPN seen for the first time','VPN замечен впервые')};
   var content=m.events.length?E('ol',{},m.events.map(function(event){return E('li',{'data-vendor-event':event.code},[E('strong',{},names[event.code]),E('span',{},' · '+new Date(event.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'})+' · '+event.tunnel),E('p',{},(event.before||'—')+' → '+(event.after||'—')),E('small',{},bi('Reason for the change was not observed.','Причина смены не наблюдалась.'))]);})):E('p',{},bi('No recorded profile identity changes yet. This does not prove that the firmware made no attempts.','Записей о смене конфигурации профиля пока нет. Это не доказывает отсутствие попыток штатной прошивки.'));

@@ -7,7 +7,8 @@ def apply(source):
     inc = (Path(__file__).parent / 'sidebar_status.inc.js').read_text(encoding='utf8')
     assert source.count('return view.extend({') >= 1
     source = source.replace('return view.extend({', inc + '\nreturn view.extend({', 1)
-    prompt = (Path(__file__).parent / 'ai_prompt.inc.js').read_text(encoding='utf8')
+    from lazy_help_build import marked
+    prompt = marked('ai_prompt',(Path(__file__).parent / 'ai_prompt.inc.js').read_text(encoding='utf8'))
     source = source.replace('return view.extend({', prompt + '\nreturn view.extend({', 1)
     chart_inc = (Path(__file__).parent / 'latency_chart.inc.js').read_text(encoding='utf8')
     source = source.replace('return view.extend({', chart_inc + '\nreturn view.extend({', 1)

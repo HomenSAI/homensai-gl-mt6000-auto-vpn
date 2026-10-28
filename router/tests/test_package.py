@@ -81,6 +81,23 @@ class PackageTests(unittest.TestCase):
                 names=[Path(name).name for name in archive.getnames() if archive.getmember(name).isfile()]
             self.assertEqual(sorted(name for name in names if name.endswith(('.js','.css','.ps1'))),['client-test.ps1','dashboard997.js','ui997.css'])
 
+    def test_only_referenced_versioned_lazy_module_is_shipped_and_missing_refuses(self):
+        import json
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);assets=root/'www/luci-static/resources/view/homensai-vpn';assets.mkdir(parents=True)
+            menu=root/'usr/share/luci/menu.d/luci-app-homensai-vpn.json';menu.parent.mkdir(parents=True)
+            menu.write_text(json.dumps({'admin/services/homensai-vpn':{'action':{'path':'homensai-vpn/dashboard997'}}}))
+            script=assets/'dashboard997.js';script.write_text("load('ui997.css');var LAZY_HELP_NAME='homensai-vpn.help997';")
+            (assets/'ui997.css').write_text('css')
+            with self.assertRaisesRegex(ValueError,'LAZY-UI-MISSING'):builder.selected_files(root)
+            lazy=root/'www/luci-static/resources/homensai-vpn';lazy.mkdir(parents=True)
+            (lazy/'help997.js').write_text('current');(lazy/'help996.js').write_text('retired')
+            selected=[name for name,payload,mode in builder.selected_files(root)]
+            self.assertIn('www/luci-static/resources/homensai-vpn/help997.js',selected)
+            self.assertNotIn('www/luci-static/resources/homensai-vpn/help996.js',selected)
+            script.write_text("load('ui997.css');var LAZY_HELP_NAME='homensai-vpn.help997';var LAZY_HELP_NAME='homensai-vpn.help996';")
+            with self.assertRaisesRegex(ValueError,'LAZY-UI-AMBIGUOUS'):builder.selected_files(root)
+
     def test_reproducible_ipk_and_permissions(self):
         with tempfile.TemporaryDirectory() as d:
             first=builder.build(d).read_bytes();second=builder.build(d).read_bytes()

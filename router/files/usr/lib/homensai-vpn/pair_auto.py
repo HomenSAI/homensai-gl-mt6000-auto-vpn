@@ -76,6 +76,30 @@ def read_state():
         raise ValueError('PAIR-STATE-UNVERIFIED')
     if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
+    if 'policy_roles' in data:
+        from pair_policy import validate
+        try:validate(data['policy_roles'],data.get('order'))
+        except (ValueError,TypeError):raise ValueError('PAIR-STATE-UNVERIFIED') from None
+    if 'selected_policy' in data:
+        selected=data['selected_policy']
+        from pair_policy import role
+        if (not isinstance(selected,dict) or set(selected)!={'role','order','hash','since'}
+                or selected.get('hash')!=data.get('policy_hash') or selected.get('role') not in ('source','target')
+                or type(selected.get('since')) not in (int,float) or not math.isfinite(selected['since']) or selected['since']<=0
+                or role(data.get('policy_roles'),selected.get('order'))!=selected['role']):raise ValueError('PAIR-STATE-UNVERIFIED')
+    if 'manual_selection' in data:
+        from failure_diagnosis import profile_identity
+        selected=data['manual_selection']
+        if (not isinstance(selected,dict) or set(selected)!={'request_id','role','order','hash','vendor_identity','profiles'}
+                or not isinstance(selected.get('request_id'),str) or not re.fullmatch('[a-f0-9]{32}',selected['request_id'])
+                or selected.get('role') not in ('source','target') or selected['role']!=data.get('manual_hold')
+                or not isinstance(selected.get('order'),list) or selected['hash']!=data.get('policy_hash')
+                or len(selected['order'])!=len(data.get('order',[])) or set(selected['order'])!=set(data['order'])
+                or not isinstance(selected.get('vendor_identity'),str) or not re.fullmatch('[a-f0-9]{64}',selected['vendor_identity'])
+                or not isinstance(selected.get('profiles'),dict) or set(selected['profiles'])!={'source','target'}
+                or any(not isinstance(selected['profiles'][key],dict) or profile_identity(selected['profiles'][key])!=selected['profiles'][key]
+                       for key in ('source','target'))):
+            raise ValueError('PAIR-STATE-UNVERIFIED')
     return data
 
 
@@ -315,7 +339,8 @@ def normalized_network(data, interfaces=None):
         elif isinstance(name, str) and ORPHAN_CLIENT.fullmatch(name) and row.get('disabled') == '1':
             continue
         rows.append(row)
-    return checksum(rows)
+    from stock_derived import network_partition
+    return checksum(network_partition(rows))
 
 
 # The stock client adds exit bookkeeping options to a firewall zone while a
@@ -519,6 +544,8 @@ def begin(backend, settings, request):
                  network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(managed), owned=[],
                  before_flags={name: row['disabled'] for name, row in selected.items()},
                  process_bindings=selection['process_bindings'], order=selection['order'], policy_hash=selection['hash'])
+    from pair_policy import proof
+    state['policy_roles']=proof(selection)
     save(state)  # Durable ownership precedes any network write.
     backend.guard()
     for role in ('source', 'target'):
@@ -549,21 +576,34 @@ def begin(backend, settings, request):
     return state
 
 
-def cleanup(backend, state):
+def cleanup(backend, state, stop_revision=None):
     import native_switch as n
     from pair_interfaces import state as state_interfaces
     managed=state_interfaces(state)
     backend.use_process_bindings(state.get('process_bindings'))
     journal = n.journal_read()
+    from pair_policy import metadata,role,state_order_matches
+    context=metadata(journal)
+    if context is not None and (context['session_order']!=state['order'] or journal.get('hash')!=state['policy_hash']):
+        raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
+    state['phase']='STOPPING';save(state)  # Route restoration does not complete interface ownership cleanup.
+    if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
+        if journal.get('activation_reapply') is True and journal.get('before')==journal.get('after'):
+            from activation_recovery import finalize
+            finalize(backend,state,journal,allow_stopping=True)
+        else:raise ValueError('PAIR-RECOVERY-REQUIRED')
     if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
-        if not n.finish_committed(backend, journal, 'PAIR-STOPPED'):
+        finished=(n.finish_committed(backend,journal,'PAIR-STOPPED',restore_order=state['order']) if context is not None
+                  else n.finish_committed(backend,journal,'PAIR-STOPPED'))
+        if not finished:
             state['phase'] = 'HELD'
             save(state)
             return False
+    elif context is not None and state_order_matches(state,journal,backend.order()) and backend.order()!=(state['order'],state['policy_hash']):
+        if backend.recovery_ready(journal[role(context,state['order'])],backend.policy()['settings']) is not True:raise ValueError('PAIR-RECOVERY-REQUIRED')
+        n.rollback(backend,journal,'PAIR-STOPPED',restore_order=state['order'])
     if backend.order() != (state['order'], state['policy_hash']):
         raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
-    state['phase'] = 'STOPPING'
-    save(state)
     for interface in reversed(state['owned']):
         # Never stop a profile after an external identity/configuration change.
         if normalized_network(network(),managed) != state['network_identity']:
@@ -577,9 +617,14 @@ def cleanup(backend, state):
         set_disabled(state, interface, state['before_flags'][interface])
         if Path('/sys/class/net', interface).exists():
             raise ValueError('PAIR-PROFILE-STOP-UNVERIFIED')
-    backend.unguard()
-    state['phase'] = 'STOPPED'
-    save(state)
+    if stop_revision is None:
+        backend.unguard();state['phase']='STOPPED';save(state)
+    else:
+        from auto_control import control_lock
+        with control_lock():
+            n.require_control_revision(stop_revision)
+            if intent().get('mode')!='off' or intent().get('revision')!=stop_revision:raise n.Refused('CLIENT-STOP')
+            backend.unguard();state['phase']='STOPPED';save(state)
     return True
 
 
@@ -613,6 +658,77 @@ def resume_running(state):
         state['phase'] = 'RUNNING'
         state.pop('recovery_error', None)
         save(state)
+
+
+def remember_selected(state,kernel):
+    if (kernel.get('verified') is not True or kernel.get('role') not in ('source','target')
+            or kernel.get('policy_hash')!=state.get('policy_hash') or type(kernel.get('time')) not in (int,float)):
+        raise ValueError('KERNEL-POLICY-UNVERIFIED')
+    from pair_policy import role
+    if role(state['policy_roles'],kernel.get('order'))!=kernel['role']:raise ValueError('KERNEL-POLICY-UNVERIFIED')
+    old=state.get('selected_policy',{})
+    if old.get('role')==kernel['role'] and old.get('hash')==kernel['policy_hash'] and old.get('order')==kernel['order']:return False
+    state['selected_policy']={'role':kernel['role'],'order':list(kernel['order']),'hash':kernel['policy_hash'],'since':kernel['time']}
+    save(state);return True
+
+
+def charge_attempt(settings,revision):
+    from agent import PERSIST,read_json,atomic_json
+    from recovery_settings import normalized
+    import native_switch as n
+    require_running(revision);now=time.time();policy=normalized(settings)
+    events,allowed=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),now,policy['attempt_window']*60,policy['attempt_limit'])
+    if not allowed or events and now-events[-1]<max(policy['cooldown'],policy['min_dwell']):raise n.Refused('PAIR-RATE-LIMIT')
+    atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
+
+
+def reapply_missing_policy(backend,state,settings,revision,journal,observed=None):
+    """A valid ON intent may repair absent compiled rules, without changing policy order."""
+    if state.get('policy_roles') is None:return False
+    import native_switch as n
+    requested=intent()
+    if requested.get('mode')!='on' or requested.get('revision')!=revision or requested.get('id')!=state.get('id'):
+        raise n.Refused('CLIENT-STOP')
+    from pair_policy import proof,role,state_order_matches
+    from recovery_settings import normalized
+    from agent import PERSIST,read_json,atomic_json
+    blockers,selection=backend.diagnostic()
+    if blockers or not selection:
+        identity=state['policy_roles']
+        n.publish({'state':'BLOCKED','mode':'continuous-pair','proof_scope':MODE,'source':identity['source_id'],'target':identity['target_id'],
+                   'blockers':blockers or ['PAIR-POLICY-UNVERIFIED'],'readiness_verified':False,'kernel_policy_verified':False})
+        return True
+    if proof(selection)!=state['policy_roles'] or not state_order_matches(state,journal,backend.order()):
+        raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
+    kernel=backend.attest_policy(selection)
+    if kernel.get('verified') is True:
+        remember_selected(state,kernel)
+        if observed is not None:observed.update(selection=selection,kernel=kernel)
+        return False
+    if kernel.get('repairable_missing') is not True:
+        n.publish({'state':'BLOCKED','reason':'KERNEL-POLICY-UNVERIFIED','blockers':['KERNEL-POLICY-UNVERIFIED'],
+                   'source':selection['source']['id'],'target':selection['target']['id'],'mode':'continuous-pair','proof_scope':MODE})
+        return True
+    destination=role(state['policy_roles'],selection['order'])
+    if state.get('manual_hold') not in (None,destination):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
+    recovery=normalized(settings);now=time.time()
+    events,allowed=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+    if not allowed or events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):
+        n.publish({'state':'BLOCKED','reason':'KERNEL-POLICY-UNVERIFIED','blockers':['KERNEL-POLICY-UNVERIFIED','PAIR-RATE-LIMIT'],
+                   'source':selection['source']['id'],'target':selection['target']['id'],'mode':'continuous-pair','proof_scope':MODE})
+        return True
+    until=configure_lease(state)
+    def charge_dispatched():
+        require_running(revision);stamp=time.time()
+        charged,permitted=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
+        if not permitted or charged and stamp-charged[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-RATE-LIMIT')
+        atomic_json(PERSIST/'pair-auto-budget.json',{'events':charged+[stamp]})
+    require_running(revision)
+    n.attempt(backend,selection,until,False,control_revision=revision,pair_destination=destination,
+              pair_session_order=state['order'],pair_reapply=True,on_dispatch=charge_dispatched)
+    # Success was kernel-attested inside the child and again before COMMITTED.
+    resume_running(state)
+    return True
 
 
 def publish_failure(error):
@@ -696,23 +812,37 @@ def tick(backend, settings, revision):
         status = read_json(RUNTIME / 'status.json', {})
         from pair_manual import consume as consume_manual,held_reserve
         if consume_manual(backend,state,settings,revision):return True
-        if held_reserve(backend,state,journal,settings,status):return True
         if revive(backend,state,revision,journal,rows):return True
-        if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
+        if held_reserve(backend,state,journal,settings,status):return True
+        observed={}
+        if reapply_missing_policy(backend,state,settings,revision,journal,observed):return True
+        kernel=observed.get('kernel')
+        from pair_policy import current_role,state_order_matches
+        applied_target=(journal.get('phase') in ('COMMITTED','HELD-ON-RESERVE')
+                        or journal.get('activation_reapply') is True and journal.get('phase')=='ROLLED-BACK'
+                        and journal.get('trial_nonce')==state['id']
+                        and journal.get('control_revision')==state['revision']==revision)
+        if applied_target and current_role(journal)!='source':
             decision = n.committed_recovery_decision(backend, journal, settings, status.get('samples', []), time.time(), status)
             if decision['action'] == 'RESTORE-PRIMARY':
-                n.publish({'state': 'RESTORING', 'mode': 'continuous-pair', 'proof_scope': MODE,
-                           'source': journal['source'], 'target': journal['target'],
-                           'reason': decision['reason'], 'blockers': []})
+                from pair_policy import metadata
+                context=metadata(journal)
+                progress=dict(journal,restore_before_order=list(kernel['order']),restore_before_verified=True) if kernel else journal
+                fields=n.pair_event_fields(progress,restoring=True,restore_order=context['primary_order']) if context else {}
+                n.publish(dict(fields,state='RESTORING',mode='continuous-pair',proof_scope=MODE,
+                               source=journal['source'],target=journal['target'],reason=decision['reason'],blockers=[]))
                 if n.finish_committed(backend, journal, decision['reason']):
-                    n.publish({'state':'ROLLED-BACK','reason':decision['reason'],
-                               'source':journal['source'],'target':journal['target'],
-                               'original_restored':True,'mode':'continuous-pair','proof_scope':MODE})
+                    final_kernel=backend.attest_policy() if context else None
+                    fields=n.pair_event_fields(journal,completed=True,outcome='restored',restoring=True) if context else {}
+                    n.publish(dict(fields,state='ROLLED-BACK',reason=decision['reason'],source=journal['source'],target=journal['target'],
+                                   original_restored=backend.order()==(state['order'],state['policy_hash']),mode='continuous-pair',proof_scope=MODE,kernel_proof=final_kernel))
             else:
                 resume_running(state)
-                n.publish({'state': 'COMMITTED' if decision['action'] == 'OBSERVE' else 'DEGRADED-ON-RESERVE',
+                n.publish({'state': ('OBSERVING' if journal.get('activation_reapply') else 'COMMITTED') if decision['action']=='OBSERVE' else 'DEGRADED-ON-RESERVE',
                            'source': journal['source'], 'target': journal['target'], 'mode': 'continuous-pair',
-                           'proof_scope': MODE, 'reason': decision['reason'], 'blockers': []})
+                           'proof_scope':MODE,'readiness_verified':bool(kernel and kernel.get('verified') is True),
+                           'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),'kernel_proof':kernel,
+                           'reason':'PAIR-WATCHING' if journal.get('activation_reapply') and decision['action']=='OBSERVE' else decision['reason'],'blockers':[]})
                 return True
         blockers, selection = backend.diagnostic()
         if blockers:
@@ -720,7 +850,7 @@ def tick(backend, settings, revision):
             n.publish({'state': 'ARMED'if preparing else'BLOCKED', 'mode': 'continuous-pair', 'proof_scope': MODE,
                        'reason':'PAIR-WAITING-PROBES'if preparing else None,'blockers': blockers})
             return True
-        if backend.order() != (state['order'], state['policy_hash']):
+        if not state_order_matches(state,journal,backend.order()):
             raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
         resume_running(state)
         now = time.time()
@@ -732,6 +862,15 @@ def tick(backend, settings, revision):
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
         events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])
+        if (kernel and kernel.get('role')=='target' and not state.get('manual_hold') and recovery['return_policy']=='healthy_primary'
+                and now-state.get('selected_policy',{}).get('since',now)>=recovery['min_dwell']
+                and permitted and dwell and backend.recovery_ready(selection['source']['id'],settings) is True):
+            until=configure_lease(state)
+            blockers,fresh=backend.diagnostic()
+            if blockers:raise ValueError('PAIR-READINESS-CHANGED')
+            n.attempt(backend,fresh,until,False,control_revision=revision,pair_destination='source',pair_return=True,
+                      pair_session_order=state['order'],on_dispatch=lambda:charge_attempt(settings,revision))
+            return True
         order = selection.get('order') or []
         reserve_first = (selection.get('direction', 'first') == 'first' and selection.get('source_rule') in order
                          and selection.get('target_rule') in order
@@ -742,12 +881,11 @@ def tick(backend, settings, revision):
             n.publish({'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True,
                        'certified': False, 'proof_scope': MODE, 'external_lan_verified': False,
                        'source': selection['source']['id'], 'target': selection['target']['id'],
-                       'reason': 'RESERVE-ALREADY-FIRST', 'blockers': []})
+                       'reason':'RESERVE-ALREADY-FIRST','blockers':[],'kernel_proof':kernel,'kernel_policy_verified':bool(kernel and kernel.get('verified') is True)})
             return True
         if failed and healthy and permitted and dwell and not diagnosis.get('suppress_switch'):
             if state.get('manual_hold'):
                 state.pop('manual_hold',None);save(state)
-            atomic_json(PERSIST / 'pair-auto-budget.json', {'events': events + [now]})
             until = configure_lease(state)
             blockers, selection = backend.diagnostic()
             if blockers:
@@ -755,12 +893,13 @@ def tick(backend, settings, revision):
             n.attempt(backend, selection, until, False,
                       probe_evidence={'source_streak_met': True, 'reserve_streak_met': True,
                                       'required_failures': recovery['failures'], 'required_successes': recovery['successes']},
-                      control_revision=revision)
+                      control_revision=revision,pair_session_order=state['order'],on_dispatch=lambda:charge_attempt(settings,revision))
         else:
             n.publish({'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True,
                        'certified': False, 'proof_scope': MODE, 'external_lan_verified': False,
                        'source': selection['source']['id'], 'target': selection['target']['id'],
-                       'vendor_identity':selection.get('vendor_identity'),
+                       'vendor_identity':selection.get('vendor_identity'),'kernel_proof':kernel,
+                       'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),
                        'source_failures': failed, 'reserve_healthy': healthy,
                        'reason': 'PAIR-RATE-LIMIT' if not permitted else diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-MANUAL-HOLD-PRIMARY' if state.get('manual_hold')=='source' else 'PAIR-WATCHING',
                        'blockers': []})

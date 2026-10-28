@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '0.9.1-alpha51-1'
+VERSION = '0.9.1-alpha57-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 
@@ -72,11 +72,22 @@ def selected_files(source=None):
     files = []
     source=Path(source) if source is not None else ROOT/'files'
     selected_js,selected_css=selected_ui(source)
+    lazy_root='www/luci-static/resources/homensai-vpn/'
+    lazy_selected=set()
+    if selected_js:
+        script=(source/'www/luci-static/resources/view/homensai-vpn'/selected_js).read_text(encoding='utf8')
+        references=set(re.findall(r"\bLAZY_HELP_NAME='(homensai-vpn\.help[0-9]+)'",script))
+        for reference in references:
+            name=reference.split('.')[-1]+'.js';path=source/lazy_root/name
+            if not path.is_file() or path.is_symlink():raise ValueError('PACKAGE-LAZY-UI-MISSING')
+            lazy_selected.add(name)
+        if 'LAZY_HELP_NAME=' in script and len(references)!=1:raise ValueError('PACKAGE-LAZY-UI-AMBIGUOUS')
     for path in source.rglob('*'):
         if not path.is_file() or path.is_symlink() or '__pycache__' in path.parts:
             continue
         name = path.relative_to(source).as_posix()
         if name in NOT_SHIPPED:continue
+        if name.startswith(lazy_root) and '/' not in name[len(lazy_root):] and re.fullmatch(r'help[0-9]+\.js',path.name) and path.name not in lazy_selected:continue
         ui_root='www/luci-static/resources/view/homensai-vpn/'
         if name.startswith(ui_root) and '/' not in name[len(ui_root):]:
             if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!=selected_js:continue

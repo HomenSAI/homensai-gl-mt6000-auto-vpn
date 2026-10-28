@@ -191,18 +191,19 @@ def pair_fault_role(native,selection,now):
             or any(configs.get(k)!=v for k,v in state['protected'].items() if k!='route_policy')):
         raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     journal=n.journal_read()
-    if native.get('state')=='COMMITTED':
-        if (journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE') or not journal.get('confirmed')
-                or journal.get('control_revision')!=revision or backend.order()!=(journal.get('after'),journal.get('hash'))
-                or any(journal.get(k)!=selection[k]['id'] for k in ('source','target'))
-                or any(journal.get('vendor_profiles',{}).get(k)!=profile_identity(selection[k]) for k in ('source','target'))):
-            raise FaultError('FAULT-IDENTITY-UNVERIFIED')
-        return 'target'
-    if (native.get('state')!='OBSERVING' or native.get('readiness_verified') is not True
-            or journal.get('phase') not in (None,'ROLLED-BACK')
-            or backend.order()!=(state['order'],state['policy_hash'])):
+    from pair_policy import state_order_matches
+    kernel=backend.attest_policy(selection);role=kernel.get('role');stamp=kernel.get('time')
+    if (kernel.get('verified') is not True or role not in ('source','target')
+            or type(stamp) not in (int,float) or not 0<=now-stamp<=5
+            or kernel.get('profile_id')!=selection[role]['id'] or kernel.get('policy_hash')!=selection['hash']
+            or kernel.get('order')!=backend.order()[0] or not state_order_matches(state,journal,backend.order())):
         raise FaultError('FAULT-IDENTITY-UNVERIFIED')
-    return 'source'
+    if journal.get('phase') in ('COMMITTED','HELD-ON-RESERVE') and (not journal.get('confirmed')
+            or journal.get('control_revision')!=revision
+            or any(journal.get(k)!=selection[k]['id'] for k in ('source','target'))
+            or any(journal.get('vendor_profiles',{}).get(k)!=profile_identity(selection[k]) for k in ('source','target'))):
+        raise FaultError('FAULT-IDENTITY-UNVERIFIED')
+    return role
 
 
 def testing_profile(identifier):
@@ -238,14 +239,15 @@ def _transition_confirmed(value,now):
     if (profile_identity(row)!=roles[destination] or row.get('time',0)<value['started']
             or not healthy(status,roles[destination]['id'],now)):return False
     state=pair.read_state();backend=n.Linux();backend.use_process_bindings(state.get('process_bindings'))
-    journal=n.journal_read()
-    if destination=='target':
-        return (native.get('state')=='COMMITTED' and journal.get('phase') in ('COMMITTED','HELD-ON-RESERVE')
-                and bool(journal.get('confirmed')) and journal.get('control_revision')==value['control_revision']
-                and all(journal.get('vendor_profiles',{}).get(k)==roles[k] for k in ('source','target'))
-                and backend.order()==(journal.get('after'),journal.get('hash')))
-    return (native.get('state') in ('OBSERVING','ROLLED-BACK') and journal.get('phase')=='ROLLED-BACK'
-            and backend.order()==(state['order'],state['policy_hash']))
+    from pair_manual import active
+    from pair_policy import state_order_matches
+    require_revision(value['control_revision'])
+    if not active(state,pair.intent(),value['control_revision']):return False
+    journal=n.journal_read();kernel=backend.attest_policy();stamp=kernel.get('time')
+    return (kernel.get('verified') is True and kernel.get('role')==destination and kernel.get('profile_id')==roles[destination]['id']
+            and type(stamp) in (int,float) and value['started']<=stamp<=now and now-stamp<=5
+            and state_order_matches(state,journal,backend.order()) and kernel.get('order')==backend.order()[0]
+            and kernel.get('policy_hash')==state['policy_hash'])
 
 
 def require_revision(expected):

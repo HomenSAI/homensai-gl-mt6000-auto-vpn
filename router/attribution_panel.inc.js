@@ -15,3 +15,10 @@ function attributionVersionWarning(status){
   if(!model.pageOld&&!model.packageMismatch)return null;
   return E('span',{'class':'hv-attribution-warn'},[helpLink('stale',bi('Page and router versions differ: press Ctrl+F5 (details)','Версии страницы и роутера различаются: нажмите Ctrl+F5 (подробнее)'))]);
 }
+
+function refreshAttribution(status){
+  var root=typeof document!=='undefined'&&typeof document.querySelector==='function'?document.querySelector('[data-hv-attribution]'):null;if(!root)return;
+  var version=root.querySelector('.hv-attribution-version');if(version)version.textContent=identityLine(status||{});
+  var old=root.querySelector('.hv-attribution-warn'),warning=attributionVersionWarning(status);
+  if(old&&!warning)old.parentNode.removeChild(old);else if(!old&&warning)root.appendChild(warning);
+}

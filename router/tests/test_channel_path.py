@@ -69,14 +69,39 @@ class ChannelPathTests(unittest.TestCase):
 
 
     def test_pair_policy_selection_is_independent_of_internet_health(self):
-        state={'phase':'RUNNING','order':['r1','r2'],'policy_hash':'h'}
-        self.status['native_failover'].update(state='OBSERVING',source='openvpn:a',target='wireguard:b')
+        from pair_policy import proof,transition
+        selection={'source_rule':'r1','target_rule':'r2','direction':'first','order':['r1','r2'],
+                   'source':{'id':'openvpn:1_1'},'target':{'id':'wireguard:peer_2'}}
+        state={'phase':'RUNNING','order':['r1','r2'],'policy_hash':'h','policy_roles':proof(selection)}
+        self.status['native_failover'].update(state='OBSERVING',source='openvpn:1_1',target='wireguard:peer_2')
         self.status['profiles'][0]['code']='DNS-001'
         result=pair_snapshot(self.status,state,{},(['r1','r2'],'h'),self.now)
-        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'openvpn:a')
-        result=pair_snapshot(self.status,state,self.journal,self.order,self.now)
-        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'wireguard:b')
+        self.assertFalse(result['confirmed']);self.assertEqual(result['configured_profile_id'],'openvpn:1_1','configuration alone is not applied route proof')
+        self.journal.update(source='openvpn:1_1',target='wireguard:peer_2')
+        self.journal['pair_transition']=transition(selection,state['order'],'target')
+        kernel={'verified':True,'role':'target','profile_id':'wireguard:peer_2','order':['r2','r1'],'policy_hash':'h','time':self.now}
+        result=pair_snapshot(self.status,state,self.journal,self.order,self.now,kernel=kernel)
+        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'wireguard:peer_2')
         self.assertIn('Internet health is separate',result['scope'])
+
+    def test_reserve_first_baseline_cannot_be_reported_as_primary_or_as_kernel_proof(self):
+        from pair_policy import proof
+        selection={'source_rule':'r1','target_rule':'r2','direction':'first','order':['r2','r1'],
+                   'source':{'id':'openvpn:1_1'},'target':{'id':'wireguard:peer_2'}}
+        state={'phase':'RUNNING','order':['r2','r1'],'policy_hash':'h','policy_roles':proof(selection)}
+        self.status['native_failover'].update(state='OBSERVING',source='openvpn:1_1',target='wireguard:peer_2')
+        result=pair_snapshot(self.status,state,{},(['r2','r1'],'h'),self.now)
+        self.assertEqual(result['configured_profile_id'],'wireguard:peer_2');self.assertFalse(result['confirmed']);self.assertIsNone(result['active_profile_id'])
+        kernel={'verified':True,'role':'target','profile_id':'wireguard:peer_2','order':['r2','r1'],'policy_hash':'h','time':self.now}
+        result=pair_snapshot(self.status,state,{},(['r2','r1'],'h'),self.now,kernel=kernel)
+        self.assertTrue(result['confirmed']);self.assertEqual(result['active_profile_id'],'wireguard:peer_2')
+        kernel['role']='source'
+        self.assertFalse(pair_snapshot(self.status,state,{},(['r2','r1'],'h'),self.now,kernel=kernel)['confirmed'])
+
+    def test_historical_pair_state_without_role_proof_is_not_primary_selection(self):
+        state={'phase':'RUNNING','order':['r2','r1'],'policy_hash':'h'}
+        self.status['native_failover'].update(state='OBSERVING',source='openvpn:a',target='wireguard:b')
+        self.assertFalse(pair_snapshot(self.status,state,{},(['r2','r1'],'h'),self.now)['confirmed'])
 
     def test_pair_external_order_or_stale_state_never_invents_selection(self):
         state={'phase':'RUNNING','order':['r1','r2'],'policy_hash':'h'}

@@ -40,6 +40,36 @@ class Tests(unittest.TestCase):
         row=pause.load();stamp=row['resume_time']+.1
         agent.atomic_json(self.root/'status.json',{'time':stamp,'profiles':[{'administrative_state':'enabled','time':stamp}]})
 
+    def test_monitor_ack_waits_for_both_async_samplers_and_withdraws_an_old_ack(self):
+        from website_response import WebsiteSampler
+        from icmp_ping import PingSampler
+        website=WebsiteSampler(lambda:{},lambda _:{});ping=PingSampler(lambda:{},lambda _:{})
+        website.worker=object();original=(self.root/'pair-auto-control.json').read_bytes()
+        self.lease(acks={'monitor':{'owner':self.owners['monitor'],'time':time.monotonic()}})
+        with patch.object(pause,'identity',return_value=self.owners['monitor']),patch.object(pause,'alive',return_value=True):
+            callback=lambda:website.idle() and ping.idle()
+            self.assertTrue(pause.gate('monitor',quiescent=callback));self.assertNotIn('monitor',pause.load()['acks'])
+            website.worker=None;ping.worker=object()
+            self.assertTrue(pause.gate('monitor',quiescent=callback));self.assertNotIn('monitor',pause.load()['acks'])
+            ping.worker=None
+            self.assertTrue(pause.gate('monitor',quiescent=callback));self.assertEqual(pause.load()['acks']['monitor']['owner'],self.owners['monitor'])
+        self.assertEqual((self.root/'pair-auto-control.json').read_bytes(),original)
+
+    def test_quiescence_check_holds_the_control_lock_and_unknown_state_cannot_ack(self):
+        import fcntl
+        self.lease()
+        def callback():
+            with (self.root/'auto-control.lock').open('rb') as stream:
+                with self.assertRaises(BlockingIOError):fcntl.flock(stream.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+            raise OSError('simulated unavailable worker state')
+        with patch.object(pause,'identity',return_value=self.owners['monitor']),patch.object(pause,'alive',return_value=True):
+            self.assertTrue(pause.gate('monitor',quiescent=callback));self.assertNotIn('monitor',pause.load()['acks'])
+
+    def test_resume_does_not_wait_for_a_new_quiescence_ack(self):
+        self.lease(phase='RESUMING',resume_time=time.time(),resume_deadline=time.monotonic()+25)
+        with patch.object(pause,'identity',return_value=self.owners['monitor']),patch.object(pause,'alive',return_value=True):
+            self.assertFalse(pause.gate('monitor',quiescent=lambda:False))
+
     def test_waits_for_both_safe_points_then_monitor_resumes_before_auto(self):
         job={'tx':self.tx,'monotonic_deadline':time.monotonic()+70};done=threading.Event();errors=[]
         def acquire():

@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 for(const language of ['en','ru']){
  const c={bi:(en,ru)=>language==='ru'?ru:en,E:(tag,attrs={},children=[])=>({tag,attrs,children}),Date,locale:language,window:{},safeCode:v=>typeof v==='string'&&/^[A-Z][A-Z0-9-]+$/.test(v),serverTitle:p=>p.name||p.id};vm.createContext(c);
- for(const name of ['auto_panel','summary_panel','readiness_panel','error_rows_extra','error_table','journal_panel'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);
+ for(const name of ['ui_logic','auto_panel','summary_panel','readiness_panel','error_rows_extra','error_table','journal_panel'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);
  const id='openvpn:1_2',sample={id,time:1000,code:'VPN-003',https_success:1,dns_ok:true};
  const event={profile:id,time:1004,measurement_time:1000,code:'VPN-003',https_success:1,dns_ok:true,role:'target',probe_checks:[{target:'dns.quad9.net',result:'http-unsupported',http_status:505}]};
  const status={profiles:[{id,name:'Reserve'}],samples:[sample],events:[event],accounting:{reliability:{events:[{profile:id,time:1000,kind:'FAILURE',code:'VPN-003',role:'target',sequence:1}]}}};
