@@ -1,27 +1,21 @@
-## Alpha24 quiz position / Позиция чекбоксов
-
-Internal training buttons preserve scroll and meaningful focus through grading, navigation, results, retries, scenes and Help course toggles. Installed on MT3000; AutoONconfirmedreserve.57UI suites and exact dual-runtime CI passed. [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA25-2026-10-25.md). Native browser clicks unverified.
-
-## Alpha24 quiz position / Позиция чекбоксов
-
-Training checkbox selection preserves DOM, question, scroll and focus, including polling. Installed on MT3000; AutoONconfirmedreserve.56UI suites and exact dual-runtime CI passed. [GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA24-2026-10-25.md). Native browser clicks unverified.
-
-## Alpha23 live speed / Текущая скорость
-
-Measured download/upload graphs for primary and reserve,1s lightweight updates. Installed and verified with an actual bounded two-VPN test on MT3000; AutoONconfirmedreserve. [GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA23-2026-10-25.md). Native browser visual unverified.
-
-## Alpha22 combined owner batch / Общая партия
-
-All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) — published; four assets per service downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
-
 # HomenS.AI Auto VPN
 
 [Русский](README.ru.md) · [English](README.md)
 
-Current **0.9.1-alpha21** is installed on dedicatedMT3000, AutoON/confirmedreserve. Simplified access follows enabled Auto independently of setup markers; off state has a red shortcut and setup tooltip. [Verification](docs/VERIFICATION-ALPHA21-2026-10-25.md) · [Delivered state](docs/CURRENT-STATUS.md). Stable0.9.0 unchanged.
+HomenS.AI Auto VPN watches two existing OpenVPN or WireGuard connections on a GL.iNet router. It checks whether the internet works through each connection, switches to a verified reserve when the primary fails, and follows the selected rule for returning to the primary. It also shows check history, traffic, speed measurements, Help and interactive training.
 
-Monitor an existing OpenVPN/WireGuard pair and switch a verified route. Eight lessons include interactive diagrams with playback, pause and step controls.
+Author and copyright holder: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
-[Guide](docs/CURRENT-STATE.en.md) · [Install](docs/INSTALL.en.md) · [Latest changes RU→EN](docs/LATEST-CHANGES.md) · [Documentation index](docs/DOCUMENTATION-INDEX.md) · [VM audit](docs/handoff/VM-AUDIT-2026-10-24.md)
+The documented continuous Auto setup is the dedicated **GL-MT3000 with GL.iNet firmware 4.11.0**. Continuous mode on the MT6000 has not been accepted. The package architecture `all` does not qualify other hardware or firmware.
 
-Experimental software; MIT License. [Terms RU](DISCLAIMER.ru.md) · [Terms EN](DISCLAIMER.md). Switching can interrupt sessions. Prepared MT3000/4.11.0 continuous Auto has separate hardware evidence; MT6000 continuous mode and external LAN/IPv6 acceptance are not established. Private keys, tokens and backups stay outside Git.
+Choose an explicitly named version from [GitHub Releases](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases). Download its `.ipk` and checksum from that release. The router-test-kit is in the source archive for the same tag. Follow the [installation guide](docs/INSTALL.en.md): identify the intended router, verify an encrypted backup, stop Auto before upgrading, check the package hash, install the application and verify it. The `.ipk` is an application package, not router firmware. First-run terms are accepted by the person using it.
+
+In the application, choose the primary and reserve VPNs and review the switching rules. Auto starts only through its control and the current readiness checks. While Auto is running, the router checks both channels; a failed primary triggers a guarded switch only after the reserve passes its checks. Stop ends automatic operation through the normal recovery procedure. Switching can interrupt an existing connection.
+
+Router-probed IPv4 checks and actual switching have dedicated MT3000 evidence. That does not establish external LAN-client acceptance, a 24-hour soak, recovery after a power cut, IPv6 acceptance or MT6000 continuous mode. The [current status](docs/CURRENT-STATUS.md) distinguishes source changes, tests, installed versions and published releases.
+
+Website response is the mean of the same three Google, Cloudflare and Wikipedia checks through each VPN, shared by cards, graphs and statistics. A number requires all 3/3 responses; incomplete checks show a gap and coverage. Timing includes fresh DNS, TCP, TLS and HTTP headers, not full page rendering. These are router-originated test requests, without observing personal traffic. [Formula and measurement scope](docs/WEBSITE-RESPONSE.md).
+
+[Current guide](docs/CURRENT-STATE.en.md) · [Built-in Help](docs/BUILTIN-HELP.en.md) · [Training](docs/TRAINING.en.md) · [Error codes and remedies](docs/ERROR_CODES.md) · [Documentation index](docs/DOCUMENTATION-INDEX.md)
+
+Release history is in the [release notes](releases) and dated verification reports. [MIT License](LICENSE) · [Terms](DISCLAIMER.md).

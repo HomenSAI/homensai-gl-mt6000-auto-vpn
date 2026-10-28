@@ -1,27 +1,21 @@
-## Alpha24 quiz position / Позиция чекбоксов
-
-Internal training buttons preserve scroll and meaningful focus through grading, navigation, results, retries, scenes and Help course toggles. Installed on MT3000; AutoONconfirmedreserve.57UI suites and exact dual-runtime CI passed. [GitHub alpha25](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) · [Gitea alpha25](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha25) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA25-2026-10-25.md). Native browser clicks unverified.
-
-## Alpha24 quiz position / Позиция чекбоксов
-
-Training checkbox selection preserves DOM, question, scroll and focus, including polling. Installed on MT3000; AutoONconfirmedreserve.56UI suites and exact dual-runtime CI passed. [GitHub alpha24](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) · [Gitea alpha24](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha24) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA24-2026-10-25.md). Native browser clicks unverified.
-
-## Alpha23 live speed / Текущая скорость
-
-Measured download/upload graphs for primary and reserve,1s lightweight updates. Installed and verified with an actual bounded two-VPN test on MT3000; AutoONconfirmedreserve. [GitHub alpha23](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) · [Gitea alpha23](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha23) — published; four assets each downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA23-2026-10-25.md). Native browser visual unverified.
-
-## Alpha22 combined owner batch / Общая партия
-
-All13changes installed on dedicated MT3000; AutoONconfirmedreserve.54UI suites and exact dual-runtime CI passed. [GitHub alpha22](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) · [Gitea alpha22](http://127.0.0.1:8796/localadmin/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.1-alpha22) — published; four assets per service downloaded and SHA256verified. [Verification](docs/VERIFICATION-ALPHA22-2026-10-25.md). Native browser visual unverified.
-
 # HomenS.AI Auto VPN
 
 [Русский](README.ru.md) · [English](README.md)
 
-Текущая **0.9.1-alpha21** установлена на MT3000, Auto включён на резерве. Упрощённый интерфейс доступен при включённом Auto независимо от отметок мастера; при выключенном режиме кнопка красная с подсказкой. [Отчёт](docs/VERIFICATION-ALPHA21-2026-10-25.md) · [Состояние](docs/CURRENT-STATUS.md).
+HomenS.AI Auto VPN следит за двумя существующими подключениями OpenVPN или WireGuard на роутере GL.iNet. Приложение проверяет доступ к интернету через каждый канал, переходит на проверенный резерв при отказе основного и возвращается по выбранному правилу. Также доступны история проверок, трафик, измерение скорости, справка и интерактивное обучение.
 
-Приложение для наблюдения за существующей парой OpenVPN/WireGuard и переключения подтверждённого маршрута. Восемь уроков содержат интерактивные схемы с запуском, паузой и пошаговым просмотром.
+Автор и правообладатель: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
-[Руководство](docs/CURRENT-STATE.ru.md) · [Установка](docs/INSTALL.ru.md) · [Последние изменения RU→EN](docs/LATEST-CHANGES.md) · [Documentation index](docs/DOCUMENTATION-INDEX.md) · [VM audit](docs/handoff/VM-AUDIT-2026-10-24.md)
+Непрерывный Auto проверен для описанной конфигурации выделенного **GL-MT3000 с прошивкой GL.iNet 4.11.0**. Непрерывный режим на MT6000 приёмку не прошёл. Обозначение архитектуры пакета `all` не подтверждает поддержку другого оборудования или прошивки.
 
-Experimental software; MIT License. [Terms RU](DISCLAIMER.ru.md) · [Terms EN](DISCLAIMER.md). Switching can interrupt sessions. Prepared MT3000/4.11.0 continuous Auto has separate hardware evidence; MT6000 continuous mode and external LAN/IPv6 acceptance are not established. Private keys, tokens and backups stay outside Git.
+Выберите конкретную версию в [релизах GitHub](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases). Скачайте её `.ipk` и контрольную сумму из того же релиза. Набор router-test-kit находится в архиве исходников по тому же тегу. Следуйте [инструкции установки](docs/INSTALL.ru.md): определите нужный роутер, проверьте зашифрованную резервную копию, выключите Auto перед обновлением, сверьте хеш пакета, установите приложение и проверьте результат. `.ipk` — пакет приложения, а не прошивка роутера. Условия при первом запуске принимает сам человек.
+
+В приложении выберите основной и резервный VPN, проверьте правила переключения. Auto запускается своей кнопкой после проверки текущей готовности. Во время работы роутер проверяет оба канала; при отказе основного переход выполняется только после успешной проверки резерва. Стоп завершает автоматическую работу со штатным восстановлением. Переключение может прервать текущее соединение.
+
+Проверки IPv4 самим роутером и реальные переключения подтверждены отдельными испытаниями на MT3000. Это не подтверждает приёмку внешнего клиента LAN, суточный прогон, восстановление после отключения питания, IPv6 или непрерывный режим MT6000. [Текущее состояние](docs/CURRENT-STATUS.md) отдельно описывает исходник, тесты, установленную версию и опубликованные релизы.
+
+Отклик сайтов — среднее трёх одинаковых проверок Google, Cloudflare и Wikipedia через каждый VPN; этот показатель един для карточек, графиков и статистики. Число появляется только при 3/3 ответах; неполная проверка показывает пропуск и полноту замера. Время включает новый DNS, TCP, TLS и HTTP-заголовки, а не отрисовку полной страницы. Это проверочные запросы роутера, без наблюдения за личным трафиком. [Формула и границы измерения](docs/WEBSITE-RESPONSE.md).
+
+[Актуальное руководство](docs/CURRENT-STATE.ru.md) · [Встроенная справка](docs/BUILTIN-HELP.ru.md) · [Обучение](docs/TRAINING.ru.md) · [Коды ошибок и решения](docs/ERROR_CODES.md) · [Указатель документации](docs/DOCUMENTATION-INDEX.md)
+
+История изменений находится в [примечаниях к релизам](releases) и датированных отчётах проверки. [Лицензия MIT](LICENSE) · [Условия использования](DISCLAIMER.ru.md).
