@@ -1,5 +1,8 @@
 // Monitor cadence is backend-derived; controller heartbeats, kernel proof and website results keep their own TTLs.
-function observationValidFor(row){var n=row&&row.observation_valid_for;return Number.isFinite(n)&&n>=30&&n<=900?n:90;}
+// Display tolerance on top of the router's freshness window: probe time (6 s) + UI poll (10 s) + a slow status call.
+// Normal data must never blink to "stale"; a really stopped monitor still shows as stale within a minute.
+var UI_DISPLAY_GRACE=25;
+function observationValidFor(row){var n=row&&row.observation_valid_for;return (Number.isFinite(n)&&n>=30&&n<=900?n:90)+UI_DISPLAY_GRACE;}
 function observationFresh(row,now){return !!row&&Number.isFinite(row.time)&&Number.isFinite(now)&&now-row.time>=-5&&now-row.time<=observationValidFor(row);}
 // Order every status RPC by its browser dispatch sequence, never by the router's wall clock.
 // NTP changes and router reboots may move server_time backwards; old page callbacks retain their original provenance.

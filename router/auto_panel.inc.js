@@ -17,7 +17,7 @@ function autoControlModel(status,now){
   var monitorFresh=typeof observationFresh==='function'?observationFresh(status,now):Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   // The controller does not republish while it waits for its worker; its transition phase stays current until the bounded deadline.
   var live=typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).live;
-  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&(now-ns.time<=30||live);
+  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&(now-ns.time<=30+UI_DISPLAY_GRACE||live);
   var pairScope=ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair';
   var pairPermitsOn=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0,runningPair=pairScope&&pairPermitsOn;
   var on=!paused&&fresh&&(!pairScope||pairPermitsOn)&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);

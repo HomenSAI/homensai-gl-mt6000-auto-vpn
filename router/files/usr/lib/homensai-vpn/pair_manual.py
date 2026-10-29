@@ -75,6 +75,32 @@ def public_for_status(native=None,available=False):
     return use_pair,pair_result if use_pair else legacy
 
 
+ATTEST_CACHE_SECONDS=15
+
+
+def attested(backend,journal):
+    """Kernel attestation for the status poll, reused for 15 s in RAM.
+
+    A full attestation costs ~5 s of CPU on the MT3000 and the UI polls every
+    10 s; repeating it made the status call slow enough for the page to show
+    stale data. Only the button availability uses it; every manual dispatch
+    re-attests from scratch. A changed journal or policy order misses the cache.
+    """
+    from agent import RUNTIME,read_json,atomic_json
+    path=RUNTIME/'pair-manual-kernel-cache.json'
+    key=[journal.get('tx'),journal.get('phase'),list(backend.order())]
+    now=time.monotonic()
+    try:
+        row=read_json(path,{})
+        if (isinstance(row,dict) and row.get('key')==key and type(row.get('at')) in (int,float)
+                and 0<=now-row['at']<ATTEST_CACHE_SECONDS and isinstance(row.get('kernel'),dict)):return row['kernel']
+    except (OSError,ValueError):pass
+    kernel=backend.attest_policy()
+    try:atomic_json(path,{'key':key,'at':now,'kernel':{k:kernel.get(k) for k in ('verified','role','repairable_missing','code')}})
+    except (OSError,ValueError,TypeError):pass
+    return kernel
+
+
 def controls():
     from agent import RUNTIME,PERSIST,read_json
     from auto_control import current_revision
@@ -113,9 +139,12 @@ def controls():
             policy=normalized(settings)
             events,permitted=pair.budget(events,now,policy['attempt_window']*60,policy['attempt_limit'])
         else:events,permitted=pair.budget(events,now)
-        kernel=backend.attest_policy() if general else {}
+        # During a transaction the buttons are blocked anyway; a full diagnostic
+        # and attestation per UI poll (~7 s of CPU) would only slow the switch.
+        busy_switch='TRANSACTION-IN-PROGRESS' in primary
+        kernel=attested(backend,journal) if general and not busy_switch else {}
         known=kernel.get('role') if kernel.get('verified') is True and kernel.get('role') in ('source','target') else None
-        if general and known is None and kernel.get('repairable_missing') is not True:
+        if general and not busy_switch and known is None and kernel.get('repairable_missing') is not True:
             primary.append('KERNEL-POLICY-UNVERIFIED');reserve.append('KERNEL-POLICY-UNVERIFIED')
         if not permitted:
             if known!='target':reserve.append('PAIR-RATE-LIMIT')

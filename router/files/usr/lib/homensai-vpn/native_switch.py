@@ -4,6 +4,7 @@ Separate procd supervisor; does not start profiles, edit keys, or disable Kill S
 Only two adjacent, unrestricted, already connected VPN rules may exchange order.
 No automatic use before an externally confirmed trial. Unknown prerequisites block.
 """
+import copy
 import fcntl
 import hashlib
 import http.client
@@ -136,6 +137,7 @@ def publish(value):
 RETURN_CHECKS=6
 # Owner decision (18 Oct 2026): a full LAN block for an unreadable journal happens once; a rollback that failed twice is not retried.
 ROLLBACK_FAILURE_LIMIT=2
+ACCELERATION_TTL=60;ACCELERATION_CACHE={}  # per process: hnat runtime state read
 # Switch transaction budget (seconds), sized from the dedicated MT3000
 # (alpha57 native history, 28 Oct 2026, seconds from ARMED): successful
 # switches reached rtp-dispatch at about +35 and WAIT-CLIENT at +47.5..+52.1;
@@ -565,6 +567,15 @@ class Linux:
                 values.append({'id':profile['id'],'order':index,'protocol':profile.get('protocol')})
         return values
     def acceleration(self):
+        # The hook_toggle read printks ("hook is disabled now!") and costs two
+        # dmesg runs; every switch used to repeat it 5-10 times. The vendor
+        # hnat_enable setting itself is still read live by diagnostic().
+        cached=ACCELERATION_CACHE.get('value')
+        if cached is not None and 0<=time.monotonic()-ACCELERATION_CACHE['time']<ACCELERATION_TTL:return copy.deepcopy(cached)
+        value=self._acceleration()
+        ACCELERATION_CACHE.update(value=copy.deepcopy(value),time=time.monotonic())
+        return value
+    def _acceleration(self):
         loaded=[m for m in ('mtkhnat','mtk_hnat','shortcut_fe','fast_classifier') if Path('/sys/module',m).exists()]
         try:kernel_before=command(['dmesg']).decode(errors='replace')
         except (OSError,ValueError,subprocess.SubprocessError):kernel_before=None
@@ -955,7 +966,8 @@ def rollback(backend,journal,reason,restore_order=None):
         raise Refused('ROLLBACK-UNVERIFIED')
     if journal.get('pair_transition') is not None:
         from pair_policy import role
-        blockers,current=backend.diagnostic()
+        from rollback_recovery import settled
+        blockers,current=settled(backend)  # after a reboot/restart the pair needs ~30 s to settle
         proof=backend.attest_policy(current) if not blockers and current else {}
         if proof.get('verified') is not True or proof.get('role')!=role(pair_context,restore_order):
             backend.guard(backend.devices())
@@ -1250,13 +1262,13 @@ def child(tx):
         output=forward_dispatch(args,journal['control_revision'],timeout)
         if args[0]=='/usr/bin/rtp2.sh':apply_progress(tx,'rtp-returned')
         return output
-    # Every reorder write runs before_write() itself; the duplicate proof that
-    # used to precede the first move is gone (one diagnostic less pre-RTP). The
-    # apply boundary keeps its proof: a foreign graph after our UCI moves must
-    # refuse before the vendor rebuild even when apply() has no UCI sync write.
+    # Every write (reorder, commit, UCI sync and the vendor rtp2 dispatch) runs
+    # before_write() itself inside write_command, so a foreign graph after our
+    # UCI moves still refuses before the vendor rebuild without a separate
+    # proof here (one full diagnostic, ~6 s on the MT3000, less pre-RTP).
     apply_progress(tx,'reorder')
     backend.reorder(journal['after'],write_command=write_command)
-    before_write();apply_progress(tx,'apply')
+    apply_progress(tx,'apply')
     backend.apply(write_command=write_command)
     if journal.get('pair_transition') is not None:
         apply_progress(tx,'verify-diagnostic')
