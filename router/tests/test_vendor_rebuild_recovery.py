@@ -43,6 +43,7 @@ class VendorRebuildRecovery(unittest.TestCase):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
         self.lock=Path(temporary.name)/'rtp2.lock'
         case.enter(patch.object(recovery,'VENDOR_LOCK',str(self.lock)))
+        case.enter(patch.object(recovery,'SETTLE_SECONDS',0))  # settle waits are tested explicitly
         case.enter(patch.object(pair,'firewall_bytes',side_effect=lambda:self.fw))
         case.enter(patch.object(pair,'configs',side_effect=lambda interfaces=None:
             {'firewall':pair.config_digest('firewall',self.fw),'wireguard':self.wireguard}))
@@ -177,6 +178,29 @@ class VendorRebuildRecovery(unittest.TestCase):
             for profile in self.case.profiles:profile['vendor_generation']='e'*32
             self.case.profiles[0][field]=value
             with self.subTest(field=field):self.refused_without_writes()
+
+    def unsettled(self,calls):
+        """The monitor was just restarted: the first diagnostics are not ready yet."""
+        real=self.backend.diagnostic;count=[0]
+        def diagnostic():
+            count[0]+=1
+            return (['VENDOR-SETTLING'],None) if count[0]<=calls else real()
+        self.case.enter(patch.object(self.backend,'diagnostic',side_effect=diagnostic))
+        now=[0.0];settled=recovery.settled
+        self.case.enter(patch.object(recovery,'settled',side_effect=lambda backend:settled(backend,clock=lambda:now[0],
+            sleep=lambda seconds:now.__setitem__(0,now[0]+seconds))))
+        self.case.enter(patch.object(recovery,'SETTLE_SECONDS',90))
+        return count
+
+    def test_supervisor_restart_waits_for_the_monitor_to_settle_before_any_write(self):
+        original=self.interrupted();count=self.unsettled(5)
+        n.rollback(self.backend,n.journal_read(),'SUPERVISOR-RECOVERY')
+        self.assertGreater(count[0],5);self.assert_recovered(original)
+
+    def test_a_pair_that_never_settles_refuses_before_any_write(self):
+        self.interrupted();count=self.unsettled(10**6)
+        self.refused_without_writes()
+        self.assertLessEqual(count[0],32)  # bounded: 90 s at a 3 s poll
 
     def test_credential_change_refuses_before_any_write(self):
         self.interrupted();self.wireguard='d'*64;self.refused_without_writes()

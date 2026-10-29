@@ -212,6 +212,7 @@ VENDOR_LOCK='/tmp/run/rtp2.lock'
 RECOVERY_RTP_TIMEOUT=90  # supervisor recovery: no parent kills it; still bounded
 ALLOWED_STALE_LOCK=[None]  # set only while a vendor-rebuild proof reads diagnostics
 STABLE_PROFILE=('id','protocol','interface','vendor_tunnel_id')  # profile identity without the monitor epoch
+SETTLE_SECONDS=90;SETTLE_POLL=3  # monitor settle after a restart is 30 s at the 10 s interval
 
 
 def vendor_lock_pid():
@@ -252,6 +253,22 @@ def vendor_rebuild_applies(backend,journal):
     # intermediate (flushed, no TUNNEL route chain, no LAN MARK) qualifies.
     return (interrupted_vendor_rtp(journal) and backend.kernel_fingerprint()!=journal.get('kernel_before_fingerprint')
             and unrouted_kernel())
+
+
+def settled(backend,clock=None,sleep=None):
+    """diagnostic(), waiting a bounded time while it is only not ready yet.
+
+    A supervisor restart (upgrade, reboot) also restarts the monitor, which
+    renews every vendor generation; the pair stays unsettled for ~30 s. Nothing
+    is written while waiting; the caller decides on the last reading.
+    """
+    import time
+    clock=clock or time.monotonic;sleep=sleep or time.sleep
+    until=clock()+SETTLE_SECONDS
+    while True:
+        blockers,current=backend.diagnostic()
+        if not blockers and isinstance(current,dict) or clock()>=until:return blockers,current
+        sleep(SETTLE_POLL)
 
 
 def unrouted_kernel():
@@ -322,7 +339,7 @@ def rebuild(backend,journal,reason,target):
         try:lock[0]=vendor_lock_pid()
         except (OSError,ValueError):refuse('VENDOR-WORKER-BUSY')
         ALLOWED_STALE_LOCK[0]=lock[0]
-        try:blockers,current=backend.diagnostic()
+        try:blockers,current=settled(backend)
         finally:ALLOWED_STALE_LOCK[0]=None
         if (blockers or not isinstance(current,dict) or proof(current)!=state['policy_roles']
                 or current.get('hash')!=journal['hash']
@@ -408,7 +425,7 @@ def rebuild(backend,journal,reason,target):
         except (n.Refused,OSError,ValueError):pass
         refuse(code)
     if backend.order()!=(target,journal['hash']):failed()
-    blockers,current=backend.diagnostic()
+    blockers,current=settled(backend)
     kernel_proof=backend.attest_policy(current) if not blockers and current else {}
     if kernel_proof.get('verified') is not True or kernel_proof.get('role')!=role(context,target):failed()
     if backend.guard_exists() is not True:failed()
