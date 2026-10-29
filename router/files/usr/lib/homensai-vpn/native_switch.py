@@ -891,6 +891,8 @@ def rollback(backend,journal,reason,restore_order=None):
         live_order,live_hash=backend.order()
         if live_hash!=journal['hash']:raise Refused('POLICY-IDENTITY-CHANGED')
         known_order=live_order in (journal['before'],journal['after'],journal.get('restored_order'),journal.get('restore_target_order'))
+        from rollback_recovery import vendor_settled
+        vendor_settled(backend)  # a moving vendor graph is a transient, not a reason to give up
         kernel_before=backend.attest_policy()
         pending_step=journal.get('phase')=='RESTORING' and 'restore_order_step' in journal
         if pending_step:

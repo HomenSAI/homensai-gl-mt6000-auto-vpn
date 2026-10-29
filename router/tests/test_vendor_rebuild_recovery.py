@@ -378,3 +378,22 @@ class LiveIncidentGraph(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class VendorSettled(unittest.TestCase):
+    """Rollback proofs wait (bounded) for GL hotplug/firewall reloads to finish on the MT3000."""
+    def run_with(self,fingerprints,board='mt3000'):
+        now=[0.0];backend=type('B',(),{})();values=iter(fingerprints)
+        backend.kernel_fingerprint=lambda:next(values,fingerprints[-1])
+        with patch('native_platform.wait_quiet',return_value=None):
+            recovery.vendor_settled(backend,clock=lambda:now[0],sleep=lambda s:now.__setitem__(0,now[0]+s),board=board)
+        return now[0]
+
+    def test_waits_until_two_equal_kernel_readings(self):
+        self.assertEqual(self.run_with(['a','b','c','c']),9.0)
+
+    def test_a_graph_that_never_settles_is_bounded(self):
+        self.assertLessEqual(self.run_with([str(i) for i in range(1000)]),recovery.VENDOR_SETTLE_SECONDS+recovery.VENDOR_SETTLE_POLL)
+
+    def test_other_boards_do_not_wait(self):
+        self.assertEqual(self.run_with(['a','b'],board='mt6000'),0.0)
