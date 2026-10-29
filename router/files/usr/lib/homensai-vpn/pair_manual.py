@@ -44,13 +44,13 @@ def active(state,intent,revision):
             and state.get('id')==intent.get('id') and state.get('revision')==intent.get('revision')==revision)
 
 
-def healthy(status,identifier,now):
+def healthy(status,identifier,now,valid_for=90):
     profiles=status.get('profiles',[])
     if not isinstance(profiles,list):return False
     for row in profiles:
         if isinstance(row,dict) and row.get('id')==identifier:
             stamp=row.get('time')
-            return type(stamp) in (int,float) and math.isfinite(stamp) and 0<=now-stamp<=90 and row.get('code') is None and row.get('dns_ok') is True and row.get('https_success',0)>=2
+            return type(stamp) in (int,float) and math.isfinite(stamp) and 0<=now-stamp<=valid_for and row.get('code') is None and row.get('dns_ok') is True and row.get('https_success',0)>=2
     return False
 
 
@@ -60,6 +60,45 @@ def public():
     if not row:return {'state':'IDLE','completed':False}
     return {'state':row['state'],'direction':row['direction'],'request_id':row['id'],
             'requested_at':row['requested'],'updated_at':row['updated'],'request_source':row.get('request_source','unknown'),'completed':row['state']=='COMPLETED','code':row['code']}
+
+
+def public_for_status(native=None,available=False):
+    """Keep the last pair outcome visible even when Stop disables its buttons."""
+    from manual_control import public_status
+    pair_result=public();legacy=public_status()
+    native=native if isinstance(native,dict) else {}
+    def requested(row):
+        value=row.get('requested_at')
+        return value if type(value) in (int,float) and math.isfinite(value) else -1
+    use_pair=(available or native.get('mode')=='continuous-pair'
+              or requested(pair_result)>=0 and requested(pair_result)>=requested(legacy))
+    return use_pair,pair_result if use_pair else legacy
+
+
+ATTEST_CACHE_SECONDS=15
+
+
+def attested(backend,journal):
+    """Kernel attestation for the status poll, reused for 15 s in RAM.
+
+    A full attestation costs ~5 s of CPU on the MT3000 and the UI polls every
+    10 s; repeating it made the status call slow enough for the page to show
+    stale data. Only the button availability uses it; every manual dispatch
+    re-attests from scratch. A changed journal or policy order misses the cache.
+    """
+    from agent import RUNTIME,read_json,atomic_json
+    path=RUNTIME/'pair-manual-kernel-cache.json'
+    key=[journal.get('tx'),journal.get('phase'),list(backend.order())]
+    now=time.monotonic()
+    try:
+        row=read_json(path,{})
+        if (isinstance(row,dict) and row.get('key')==key and type(row.get('at')) in (int,float)
+                and 0<=now-row['at']<ATTEST_CACHE_SECONDS and isinstance(row.get('kernel'),dict)):return row['kernel']
+    except (OSError,ValueError):pass
+    kernel=backend.attest_policy()
+    try:atomic_json(path,{'key':key,'at':now,'kernel':{k:kernel.get(k) for k in ('verified','role','repairable_missing','code')}})
+    except (OSError,ValueError,TypeError):pass
+    return kernel
 
 
 def controls():
@@ -72,6 +111,9 @@ def controls():
         if not active(state,pair.intent(),revision):return result
         result.update(available=True,control_revision=revision,hold=state.get('manual_hold'))
         backend=n.Linux();n.bind_policy_context(backend,state)
+        from observation_freshness import valid_for as observation_window
+        settings=backend.policy()['settings'];valid_for=observation_window(settings)
+        result['observation_valid_for']=valid_for
         native=read_json(n.STATE,{});status=read_json(RUNTIME/'status.json',{});journal=n.journal_read();queued=read()
         if not isinstance(native,dict) or not isinstance(status,dict):raise ValueError('PAIR-MANUAL-STATE-UNVERIFIED')
         fresh=type(native.get('time')) in (int,float) and 0<=now-native['time']<=30
@@ -88,17 +130,22 @@ def controls():
         else:
             if journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):primary.append('RETURN-NOT-APPLICABLE')
             if journal.get('phase') not in (None,'ROLLED-BACK'):reserve.append('TRANSACTION-IN-PROGRESS')
-        if not healthy(status,source,now):primary.append('SOURCE-NOT-HEALTHY')
-        if not healthy(status,target,now):reserve.append('PAIR-MANUAL-TARGET-UNHEALTHY')
+        if not healthy(status,source,now,valid_for):primary.append('SOURCE-NOT-HEALTHY')
+        if not healthy(status,target,now,valid_for):reserve.append('PAIR-MANUAL-TARGET-UNHEALTHY')
         ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
         events=ledger.get('events')
         if events:
             from recovery_settings import normalized
-            policy=normalized(backend.policy()['settings'])
+            policy=normalized(settings)
             events,permitted=pair.budget(events,now,policy['attempt_window']*60,policy['attempt_limit'])
         else:events,permitted=pair.budget(events,now)
-        kernel=backend.attest_policy() if general else {}
-        known=kernel.get('role') if kernel.get('verified') is True else None
+        # During a transaction the buttons are blocked anyway; a full diagnostic
+        # and attestation per UI poll (~7 s of CPU) would only slow the switch.
+        busy_switch='TRANSACTION-IN-PROGRESS' in primary
+        kernel=attested(backend,journal) if general and not busy_switch else {}
+        known=kernel.get('role') if kernel.get('verified') is True and kernel.get('role') in ('source','target') else None
+        if general and not busy_switch and known is None and kernel.get('repairable_missing') is not True:
+            primary.append('KERNEL-POLICY-UNVERIFIED');reserve.append('KERNEL-POLICY-UNVERIFIED')
         if not permitted:
             if known!='target':reserve.append('PAIR-RATE-LIMIT')
             if general and known!='source':primary.append('PAIR-RATE-LIMIT')
@@ -145,11 +192,24 @@ def request(direction,revision,request_source=None):
     except (OSError,ValueError,KeyError,TypeError,n.Refused,subprocess.SubprocessError):return refuse('PAIR-MANUAL-REQUEST-UNCONFIRMED')
 
 
-def recover():
-    from agent import atomic_json
-    row=read()
+def terminalize_pending_locked(result,code,runtime=None):
+    """Caller holds the control lock. Terminal outcomes are never rewritten."""
+    from agent import RUNTIME,atomic_json,read_json
+    if result not in ('CANCELLED','UNCONFIRMED') or code not in ('CONTROL-REVISION-STALE','PAIR-MANUAL-RECOVERED'):
+        raise ValueError('PAIR-MANUAL-STATE-UNVERIFIED')
+    target=(RUNTIME if runtime is None else runtime)/'pair-manual-control.json'
+    row=read_json(target,{})
+    if row and not valid(row):raise ValueError('PAIR-MANUAL-STATE-UNVERIFIED')
     if row and row['state'] in PENDING:
-        row.update(state='UNCONFIRMED',updated=max(time.time(),row['requested']),code='PAIR-MANUAL-RECOVERED');atomic_json(path(),row)
+        row.update(state=result,updated=max(time.time(),row['requested']),code=code);atomic_json(target,row)
+        return True
+    return False
+
+
+def recover():
+    from auto_control import control_lock
+    with control_lock():
+        terminalize_pending_locked('UNCONFIRMED','PAIR-MANUAL-RECOVERED')
 
 
 def consume(backend,state,settings,revision):
@@ -160,7 +220,13 @@ def consume(backend,state,settings,revision):
     if not row or row['state'] not in PENDING:return False
     with control_lock(RUNTIME):
         row=read()
-        if not row or row['state']!='QUEUED':return False
+        if not row or row['state'] not in PENDING:return False
+        if row['state']=='CLAIMED':
+            # Only this serialized supervisor claims requests and dispatch is
+            # synchronous. A claim seen on the next tick was interrupted; it
+            # is never permission to replay the action or keep buttons busy.
+            terminalize_pending_locked('UNCONFIRMED','PAIR-MANUAL-RECOVERED')
+            return True
         reason=None
         if revision_locked(RUNTIME)!=row['revision'] or row['pair']!=state['id']:reason='CONTROL-REVISION-STALE'
         elif not row['requested']<=time.time()<=row['requested']+60:reason='PAIR-MANUAL-EXPIRED'
@@ -170,7 +236,7 @@ def consume(backend,state,settings,revision):
     def finish(result,code=None):
         with control_lock(RUNTIME):
             current=read()
-            if not current or current['id']!=row['id']:return
+            if not current or current['id']!=row['id'] or current['state'] not in PENDING:return
             if revision_locked(RUNTIME)!=revision:result='CANCELLED';code='CONTROL-REVISION-STALE'
             current.update(state=result,code=code,updated=max(time.time(),row['requested']));atomic_json(path(),current)
     try:
@@ -283,6 +349,7 @@ def consume(backend,state,settings,revision):
 def held_reserve(backend,state,journal,settings,status):
     import native_switch as n,pair_auto as pair
     from pair_policy import metadata,current_role,state_order_matches
+    from observation_freshness import valid_for,settle_for
     n.bind_policy_context(backend,state)
     adopted=state.get('manual_selection')
     if isinstance(adopted,dict) and state.get('manual_hold')==adopted.get('role'):
@@ -315,15 +382,15 @@ def held_reserve(backend,state,journal,settings,status):
         from failure_diagnosis import resolve_pair,profile_identity,scoped_samples
         from recovery_settings import normalized
         from failover_plan import streak
-        now=time.time();interval=max(30,min(900,int(settings.get('interval',10))*3))
-        resolved=resolve_pair(status,settings,now,interval,max(30,min(600,int(settings.get('interval',10))*2)))
+        now=time.time();age=valid_for(settings)
+        resolved=resolve_pair(status,settings,now,age,settle_for(settings))
         expected=journal.get('vendor_profiles',{}).get(hold);profile=resolved.get(hold)
         if (resolved['coordination']['state']!='READY' or profile is None or profile.get('id')!=journal[hold]
                 or expected is None or profile_identity(profile)!=expected):
             n.publish({'state':'BLOCKED','reason':'PROFILE-IDENTITY-CHANGED','blockers':['PROFILE-IDENTITY-CHANGED'],
                        'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
             return True
-        if streak(scoped_samples(status.get('samples',[]),profile),profile['id'],normalized(settings)['failures'],now,interval,False,profile):
+        if streak(scoped_samples(status.get('samples',[]),profile),profile['id'],normalized(settings)['failures'],now,age,False,profile):
             state.pop('manual_hold',None);pair.save(state);return False
         pair.resume_running(state)
         n.publish({'state':'COMMITTED' if hold=='target' else 'OBSERVING','reason':'PAIR-MANUAL-HOLD-RESERVE' if hold=='target' else 'PAIR-MANUAL-HOLD-PRIMARY',
@@ -337,15 +404,15 @@ def held_reserve(backend,state,journal,settings,status):
     from failover_plan import streak
     row=next((p for p in status.get('profiles',[]) if p.get('id')==journal['target']),None)
     recovery=normalized(settings);now=time.time()
-    age=max(30,min(900,int(settings.get('interval',10))*3))
-    resolved=resolve_pair(status,settings,now,age,max(30,min(600,int(settings.get('interval',10))*2)))
+    age=valid_for(settings)
+    resolved=resolve_pair(status,settings,now,age,settle_for(settings))
     expected=journal.get('vendor_profiles',{}).get('target')
     verified=(resolved['coordination']['state']=='READY' and resolved['target'] is not None
               and resolved['target']['id']==journal['target'] and (expected is None or profile_identity(resolved['target'])==expected))
     if not verified:
         n.publish({'state':'DEGRADED-ON-RESERVE','reason':'RESERVE-IDENTITY-UNKNOWN','manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],'mode':'continuous-pair','proof_scope':pair.MODE})
         return True
-    failed=row and streak(scoped_samples(status.get('samples',[]),row),row['id'],recovery['failures'],now,90,False,row)
+    failed=row and streak(scoped_samples(status.get('samples',[]),row),row['id'],recovery['failures'],now,age,False,row)
     if failed:
         state.pop('manual_hold',None);pair.save(state);return False
     n.publish({'state':'COMMITTED','reason':'PAIR-MANUAL-HOLD-RESERVE','manual':True,'transition_source':state.get('manual_hold_source','unknown'),'source':journal['source'],'target':journal['target'],

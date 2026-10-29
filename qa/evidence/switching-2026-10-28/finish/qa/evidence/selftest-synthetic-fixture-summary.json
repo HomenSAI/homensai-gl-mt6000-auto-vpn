@@ -1,0 +1,598 @@
+{
+  "scope": "SYNTHETIC loopback LuCI imitation + exact generated dashboard; validates the recorder only",
+  "dashboard": "dashboard134.js",
+  "dashboard_sha256": "ec7f62847a5ea87d6fbcd995a4088d2d282bb3826e0d9504519e0e081d7181a0",
+  "script_sha256": "9a9541d8020a7b0dbe3a69288a468186701bd49f65b10a17cf70100ef3fe04a7",
+  "results": [
+    {
+      "name": "01-dry-run-to-reserve",
+      "action": "to-reserve",
+      "expected": {
+        "verdict": "NOT-RUN",
+        "outcome": "DRY-RUN-PRECONDITION-OK",
+        "exit": 2,
+        "commands": 0
+      },
+      "got": {
+        "exit": 2,
+        "verdict": "NOT-RUN",
+        "outcome": "DRY-RUN-PRECONDITION-OK",
+        "commands": 0,
+        "active": "source",
+        "hold": null,
+        "correlation": null,
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action"
+        ],
+        "precondition_reasons": [],
+        "chain": {},
+        "timeline_rows": 0,
+        "seconds": 30
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "02-refuse-to-primary-when-primary-selected",
+      "action": "to-primary",
+      "expected": {
+        "verdict": "NOT-RUN",
+        "outcome": "NOT-RUN-PRECONDITION",
+        "exit": 2,
+        "commands": 0
+      },
+      "got": {
+        "exit": 2,
+        "verdict": "NOT-RUN",
+        "outcome": "NOT-RUN-PRECONDITION",
+        "commands": 0,
+        "active": "source",
+        "hold": null,
+        "correlation": null,
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "FAIL precondition matches action"
+        ],
+        "precondition_reasons": [
+          "EXPECTED-RESERVE-SELECTED:dom=primary",
+          "BUTTON-DISABLED:primary"
+        ],
+        "chain": {},
+        "timeline_rows": 0,
+        "seconds": 37
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "03-to-reserve",
+      "action": "to-reserve",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "target",
+        "hold": "target"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "target",
+        "hold": "target",
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS status role equals requested direction after COMPLETED",
+          "PASS UI selected channel equals status role at end",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9281,
+          "rpc_sent_ms": 9300,
+          "rpc_ack_ms": 9375,
+          "first_queued_ms": 9764,
+          "ui_pending_first_ms": 10324,
+          "first_claimed_ms": 12775,
+          "first_transitioning_ms": 15760,
+          "first_completed_ms": 18772,
+          "terminal_ms": 18772,
+          "terminal_state": "COMPLETED",
+          "ui_selected_target_ms": 19462
+        },
+        "timeline_rows": 11,
+        "seconds": 48
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "04-reselect-current-reserve",
+      "action": "reselect-current",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "NO-COMMAND-SENT",
+        "exit": 0,
+        "commands": 0,
+        "active": "target"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "NO-COMMAND-SENT",
+        "commands": 0,
+        "active": "target",
+        "hold": "target",
+        "correlation": null,
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS disabled selected card sends no pair_manual RPC",
+          "PASS kernel-selected role unchanged in status",
+          "PASS UI still selects the same channel",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9697,
+          "ui_selected_target_ms": 10735
+        },
+        "timeline_rows": 12,
+        "seconds": 45
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "05-resume",
+      "action": "resume",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "target",
+        "hold": null
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "target",
+        "hold": null,
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS resume cleared manual hold",
+          "PASS resume did not change the kernel-selected role",
+          "PASS hold banner gone in UI at end",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 12167,
+          "rpc_sent_ms": 12188,
+          "rpc_ack_ms": 12461,
+          "first_queued_ms": 13106,
+          "ui_pending_first_ms": 13233,
+          "first_claimed_ms": 15426,
+          "first_completed_ms": 18414,
+          "terminal_ms": 18414,
+          "terminal_state": "COMPLETED"
+        },
+        "timeline_rows": 8,
+        "seconds": 47
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "06-to-primary",
+      "action": "to-primary",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "source",
+        "hold": "source"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "source",
+        "hold": "source",
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS status role equals requested direction after COMPLETED",
+          "PASS UI selected channel equals status role at end",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9708,
+          "rpc_sent_ms": 9725,
+          "rpc_ack_ms": 9812,
+          "first_queued_ms": 10099,
+          "ui_pending_first_ms": 10760,
+          "first_claimed_ms": 15361,
+          "first_transitioning_ms": 15361,
+          "first_completed_ms": 19021,
+          "terminal_ms": 19021,
+          "terminal_state": "COMPLETED",
+          "ui_selected_target_ms": 20687
+        },
+        "timeline_rows": 8,
+        "seconds": 50
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "07-resume-again",
+      "action": "resume",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "source",
+        "hold": null
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "source",
+        "hold": null,
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS resume cleared manual hold",
+          "PASS resume did not change the kernel-selected role",
+          "PASS hold banner gone in UI at end",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 10874,
+          "rpc_sent_ms": 10884,
+          "rpc_ack_ms": 10953,
+          "first_queued_ms": 10971,
+          "ui_pending_first_ms": 11906,
+          "first_claimed_ms": 15167,
+          "first_completed_ms": 18164,
+          "terminal_ms": 18164,
+          "terminal_state": "COMPLETED"
+        },
+        "timeline_rows": 9,
+        "seconds": 46
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "08-refused-at-rpc",
+      "action": "to-reserve",
+      "expected": {
+        "verdict": "FAIL",
+        "outcome": "REFUSED-AT-RPC",
+        "exit": 1,
+        "commands": 1,
+        "active": "source"
+      },
+      "got": {
+        "exit": 1,
+        "verdict": "FAIL",
+        "outcome": "REFUSED-AT-RPC",
+        "commands": 1,
+        "active": "source",
+        "hold": null,
+        "correlation": null,
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 11911,
+          "rpc_sent_ms": 11925,
+          "rpc_refused_ms": 12007
+        },
+        "timeline_rows": 20,
+        "seconds": 57
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "10-snapshot-hook-to-reserve",
+      "action": "to-reserve",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "target",
+        "hold": "target"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "target",
+        "hold": "target",
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS status role equals requested direction after COMPLETED",
+          "PASS UI selected channel equals status role at end",
+          "PASS kernel snapshot after the observation parsed",
+          "PASS product kernel fingerprint readable before and after",
+          "PASS kernel fingerprint and UCI order changed",
+          "PASS router pair-manual-control.json holds this request_id as COMPLETED",
+          "PASS router status.json active profile equals requested role",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 10125,
+          "rpc_sent_ms": 10137,
+          "rpc_ack_ms": 10216,
+          "first_queued_ms": 10236,
+          "ui_pending_first_ms": 11161,
+          "first_claimed_ms": 12874,
+          "first_transitioning_ms": 15884,
+          "first_completed_ms": 21092,
+          "terminal_ms": 21092,
+          "terminal_state": "COMPLETED",
+          "ui_selected_target_ms": 22534
+        },
+        "timeline_rows": 13,
+        "seconds": 49
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "11-snapshot-hook-reselect-current",
+      "action": "reselect-current",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "NO-COMMAND-SENT",
+        "exit": 0,
+        "commands": 0,
+        "active": "target"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "NO-COMMAND-SENT",
+        "commands": 0,
+        "active": "target",
+        "hold": "target",
+        "correlation": null,
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS disabled selected card sends no pair_manual RPC",
+          "PASS kernel-selected role unchanged in status",
+          "PASS UI still selects the same channel",
+          "PASS kernel snapshot after the observation parsed",
+          "PASS product kernel fingerprint readable before and after",
+          "PASS kernel rules, mangle and UCI route_policy unchanged",
+          "PASS pair budget not charged",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9758,
+          "ui_selected_target_ms": 10782
+        },
+        "timeline_rows": 10,
+        "seconds": 42
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "12-snapshot-hook-resume",
+      "action": "resume",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 1,
+        "active": "target",
+        "hold": null
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 1,
+        "active": "target",
+        "hold": null,
+        "correlation": "ack",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS resume cleared manual hold",
+          "PASS resume did not change the kernel-selected role",
+          "PASS hold banner gone in UI at end",
+          "PASS kernel snapshot after the observation parsed",
+          "PASS product kernel fingerprint readable before and after",
+          "PASS kernel rules, mangle and UCI route_policy unchanged",
+          "PASS pair budget not charged",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9784,
+          "rpc_sent_ms": 9797,
+          "rpc_ack_ms": 9871,
+          "first_queued_ms": 9977,
+          "ui_pending_first_ms": 10825,
+          "first_claimed_ms": 12973,
+          "first_completed_ms": 15972,
+          "terminal_ms": 15972,
+          "terminal_state": "COMPLETED"
+        },
+        "timeline_rows": 8,
+        "seconds": 44
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    },
+    {
+      "name": "13-lost-ack-to-primary",
+      "action": "to-primary",
+      "expected": {
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "exit": 0,
+        "commands": 2,
+        "active": "source",
+        "correlation": "/^status-fence/"
+      },
+      "got": {
+        "exit": 0,
+        "verdict": "PASS",
+        "outcome": "COMPLETED",
+        "commands": 2,
+        "active": "source",
+        "hold": "source",
+        "correlation": "status-fence (RPC answered REFUSED, but backend queued a new request for this direction: possible duplicate POST delivery)",
+        "password_leaked": false,
+        "session_leaked": false,
+        "checks": [
+          "PASS precondition matches action",
+          "PASS no other app command RPC (native_start/native_stop/...) was sent",
+          "PASS exactly one pair_manual RPC (both tabs)",
+          "PASS RPC args: direction/request_source/revision match the clicked state",
+          "PASS RPC sent by the actor tab within 5 s of the click",
+          "PASS request_id correlated",
+          "PASS terminal result observed for the same request_id within timeout",
+          "PASS no green selected target while request pending/unknown",
+          "PASS no enabled switch button while request pending (duplicate guard)",
+          "PASS status role equals requested direction after COMPLETED",
+          "PASS UI selected channel equals status role at end",
+          "PASS no Chromium page errors"
+        ],
+        "precondition_reasons": [],
+        "chain": {
+          "click_ms": 9085,
+          "rpc_sent_ms": 9097,
+          "rpc_refused_ms": 9175,
+          "first_queued_ms": 9705,
+          "ui_pending_first_ms": 10124,
+          "first_claimed_ms": 12726,
+          "first_transitioning_ms": 15705,
+          "first_completed_ms": 18713,
+          "terminal_ms": 18713,
+          "terminal_state": "COMPLETED",
+          "ui_selected_target_ms": 19186
+        },
+        "timeline_rows": 11,
+        "seconds": 46
+      },
+      "passed": true,
+      "fails": [],
+      "stderr": ""
+    }
+  ],
+  "only": null,
+  "verdict": "PASS"
+}

@@ -42,9 +42,14 @@ class ReviewRegressions(unittest.TestCase):
             reorder(order,**kwargs)
             if kwargs.get('write_command') is not None:foreign[0]=True
         self.backend.reorder.side_effect=changed
+        dispatched=[]
+        def apply(write_command=None):
+            # Like the real apply(): the vendor rebuild is always a fenced write.
+            write_command(['/usr/bin/rtp2.sh','not_reload_network'],timeout=n.RTP_TIMEOUT);dispatched.append(True)
+        self.backend.apply.side_effect=apply
         answer=manual.request('primary',self.revision);self.assertTrue(answer['accepted'])
         manual.consume(self.backend,pair.read_state(),self.settings,self.revision)
-        self.assertEqual(manual.public()['state'],'REFUSED');self.backend.apply.assert_not_called()
+        self.assertEqual(manual.public()['state'],'REFUSED');self.assertEqual(dispatched,[])
         self.assertTrue(foreign[0]);self.assertEqual(self.current,['t','s']);self.assertFalse(n.journal_read()['rtp_dispatched'])
 
     def test_automatic_predispatch_diagnostic_refusal_does_not_charge_budget(self):

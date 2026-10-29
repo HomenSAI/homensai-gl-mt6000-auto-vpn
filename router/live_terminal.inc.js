@@ -77,7 +77,7 @@ function terminalAppend(entry,deferRender){
   state.restorePending=true;terminalRestoreView();return true;
 }
 function terminalPinned(now){
-  var state=LIVE_TERMINAL,status=state.frame||{},inventory=state.inventory||{},rows=status.profiles||[],fresh=!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
+  var state=LIVE_TERMINAL,status=state.frame||{},inventory=state.inventory||{},rows=status.profiles||[],fresh=!status.rpc_error&&!status.error&&observationFresh(status,now);
   while(state.pinned.firstChild)state.pinned.removeChild(state.pinned.firstChild);
   state.clock.textContent=terminalTime(now);
   function line(kind,name,text){return E('div',{'class':'hv-terminal-status'},[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('strong',{},name),E('span',{},text)]);}

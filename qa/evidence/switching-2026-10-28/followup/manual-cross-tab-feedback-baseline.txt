@@ -1,0 +1,15 @@
+PASS: queued/unknown/cancelled/recovered manual lifecycle, consistent immediate lamps, typed terminal correlation, truthful channel state and cadence EN/RU
+PASS: Resume Auto renders only for manual hold, obeys backend gates, shares pending/correlation and never changes a route optimistically EN/RU
+PASS: dispatch sequence fences stale callbacks, errors, same-time results and backwards router clocks
+PASS: delayed replies consume kernel/controller/website TTLs, fast replies and untracked frames remain usable
+PASS: matching manual terminal survives backwards router clock without accepting another request
+PASS: Stop/recovery terminal feedback survives clock skew for a bounded monotonic window, including a cold tab
+AssertionError [ERR_ASSERTION]: a completed new request from another tab supersedes an old correlated refusal despite backwards time
+    at main (/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_switching_lifecycle_ui.js:172:12) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [N],
+  expected: null,
+  operator: '==',
+  diff: 'simple'
+}

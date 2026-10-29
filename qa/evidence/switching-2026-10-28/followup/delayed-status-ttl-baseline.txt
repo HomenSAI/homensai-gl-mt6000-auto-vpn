@@ -1,0 +1,12 @@
+PASS: queued/unknown/cancelled/recovered manual lifecycle, consistent immediate lamps, typed terminal correlation, truthful channel state and cadence EN/RU
+PASS: Resume Auto renders only for manual hold, obeys backend gates, shares pending/correlation and never changes a route optimistically EN/RU
+PASS: dispatch sequence fences stale callbacks, errors, same-time results and backwards router clocks
+AssertionError [ERR_ASSERTION]: status evidence ages during RPC transport, including a zero monotonic tick and backwards clocks
+    at main (/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_switching_lifecycle_ui.js:114:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

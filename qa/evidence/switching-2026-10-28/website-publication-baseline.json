@@ -1,0 +1,18 @@
+{
+  "source": "2b10976cb5686cab149f66c237b1b51c32775cc0",
+  "reproduced": true,
+  "health_interval": 300,
+  "completed_website_checks": [
+    3,
+    3
+  ],
+  "published_before_next_health_scan": [
+    "checking",
+    "checking"
+  ],
+  "published_at_next_health_scan": [
+    "stale",
+    "stale"
+  ],
+  "scope": "real sampler/cache, deterministic network measurements; no real VPN or kernel"
+}

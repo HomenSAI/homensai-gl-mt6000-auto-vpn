@@ -109,8 +109,9 @@ class NativeWorkerBudget(unittest.TestCase):
         self.assertEqual(self.case.commands,[])
 
     def wait_budget(self,spent):
-        # The declared 90-second whole transaction is not silently extended.
-        # Current policy caps the apply child at 50; profiling may justify a separate reviewed policy change.
+        # The declared 90-second whole transaction is not silently extended;
+        # the parent waits for it (plus a short grace) so it never SIGKILLs a
+        # running vendor rtp2.sh. The child refuses an RTP it cannot finish.
         clock=[100.0];waits=[];process=self.case.process
         def spawn(args,**kwargs):
             result=process(args,**kwargs)
@@ -125,15 +126,33 @@ class NativeWorkerBudget(unittest.TestCase):
                       on_dispatch=lambda:clock.__setitem__(0,100.0+spent))
         return waits,n.journal_read()
 
-    def test_worker_wait_cap_uses_the_shorter_remaining_journal_budget(self):
-        waits,journal=self.wait_budget(70)
-        self.assertEqual(waits,[20.0]);self.assertEqual(journal['monotonic_deadline'],190.0)
-        self.assertEqual(n.journal_read()['deadline'],NOW+90)
+    def test_worker_wait_uses_the_remaining_journal_budget_and_refuses_unfinishable_rtp(self):
+        # Pre-RTP work of 50 s leaves 70 s: less than RTP_TIMEOUT plus post-RTP checks.
+        with self.assertRaisesRegex(n.Refused,'TRANSACTION-EXPIRED'):self.wait_budget(50)
+        journal=n.journal_read()
+        self.assertEqual(journal['monotonic_deadline'],100.0+n.TRANSACTION_SECONDS);self.assertEqual(journal['deadline'],NOW+n.TRANSACTION_SECONDS)
+        self.assertFalse(any(args[0]=='/usr/bin/rtp2.sh' for args in self.case.commands))
+        self.assertIsNot(journal.get('rtp_dispatched'),True)
+        self.assertEqual(journal['phase'],'ROLLED-BACK')
 
-    def test_worker_wait_cap_is_not_silently_increased_to_the_entire_transaction(self):
+    def test_realistic_mt3000_pre_rtp_of_40_seconds_still_dispatches_and_is_never_killed_early(self):
+        waits,journal=self.wait_budget(40)
+        self.assertEqual(waits,[n.TRANSACTION_SECONDS-40.0+n.WORKER_WAIT_GRACE])
+        self.assertGreaterEqual(waits[0],n.RTP_DISPATCH_RESERVE)
+        self.assertEqual(sum(args[0]=='/usr/bin/rtp2.sh' for args in self.case.commands),1)
+
+    def test_worker_wait_never_ends_before_the_child_rtp_and_quiet_budget(self):
         waits,journal=self.wait_budget(0)
-        self.assertEqual(waits,[50]);self.assertEqual(journal['monotonic_deadline'],190.0)
-        self.assertEqual(journal['deadline'],NOW+90)
+        self.assertEqual(waits,[n.TRANSACTION_SECONDS+n.WORKER_WAIT_GRACE]);self.assertEqual(journal['monotonic_deadline'],220.0)
+        self.assertEqual(journal['deadline'],NOW+120)
+        self.assertEqual(sum(args[0]=='/usr/bin/rtp2.sh' for args in self.case.commands),1)
 
+    def test_budget_constants_fit_measured_mt3000_timings(self):
+        # Measured: rtp-dispatch about 35 s after ARMED, WAIT-CLIENT 47.5..52.1 s.
+        self.assertEqual(n.TRANSACTION_SECONDS,120)
+        self.assertEqual(n.RTP_DISPATCH_RESERVE,n.RTP_TIMEOUT+n.POST_RTP_SECONDS)
+        self.assertGreaterEqual(n.POST_RTP_SECONDS,20+5)  # vendor quiet wait plus attestation
+        self.assertGreaterEqual(n.TRANSACTION_SECONDS-n.RTP_DISPATCH_RESERVE,40)
+        self.assertGreater(n.TRANSACTION_SECONDS,52.1)
 
 if __name__=='__main__':unittest.main()

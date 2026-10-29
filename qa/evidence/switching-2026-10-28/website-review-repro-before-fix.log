@@ -1,0 +1,30 @@
+test_expired_cached_success_does_not_revive_after_clock_moves_backwards (__main__.Review.test_expired_cached_success_does_not_revive_after_clock_moves_backwards) ... FAIL
+test_transient_history_failure_retries_same_completed_measurement (__main__.Review.test_transient_history_failure_retries_same_completed_measurement) ... FAIL
+
+======================================================================
+FAIL: test_expired_cached_success_does_not_revive_after_clock_moves_backwards (__main__.Review.test_expired_cached_success_does_not_revive_after_clock_moves_backwards)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/website-review-repro.py", line 39, in test_expired_cached_success_does_not_revive_after_clock_moves_backwards
+    self.assertEqual([p['website_response']['state'] for p in self.case.status['profiles']],['stale','stale'])
+AssertionError: Lists differ: ['ok', 'ok'] != ['stale', 'stale']
+
+First differing element 0:
+'ok'
+'stale'
+
+- ['ok', 'ok']
++ ['stale', 'stale']
+
+======================================================================
+FAIL: test_transient_history_failure_retries_same_completed_measurement (__main__.Review.test_transient_history_failure_retries_same_completed_measurement)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/website-review-repro.py", line 30, in test_transient_history_failure_retries_same_completed_measurement
+    self.assertEqual(len(calls),2,'a finished live result must not suppress retry of failed history publication')
+AssertionError: 1 != 2 : a finished live result must not suppress retry of failed history publication
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.013s
+
+FAILED (failures=2)

@@ -108,6 +108,27 @@ def parse_mangle(text):
     return chains
 
 
+def unrouted(text):
+    """True when no LAN packet can get a route mark: what rtp2.sh leaves after its
+    flush but before it recreated any TUNNEL route chain. Nothing to preserve."""
+    chains=parse_mangle(text)
+    if any(name.startswith('TUNNEL') for name in chains):return False
+    pending=['PREROUTING'];seen=set()
+    while pending:
+        chain=pending.pop()
+        if chain in seen:continue
+        seen.add(chain)
+        for tokens in chains.get(chain,[]):
+            for flag in ('-j','-g'):
+                if flag in tokens:
+                    index=tokens.index(flag)
+                    if index+1>=len(tokens):return False
+                    target=tokens[index+1]
+                    if target=='MARK' or target.startswith('TUNNEL'):return False
+                    if target in chains:pending.append(target)
+    return True
+
+
 def rule_bindings(selection,marks,ip_rules):
     if not isinstance(ip_rules,list) or len(ip_rules)>400:raise ValueError('KERNEL-POLICY-UNVERIFIED')
     if any(not isinstance(row,dict) or type(row.get('priority')) is not int for row in ip_rules):raise ValueError('KERNEL-POLICY-UNVERIFIED')

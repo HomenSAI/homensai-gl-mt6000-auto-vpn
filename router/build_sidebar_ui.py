@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard132'
+UI_MODULE='dashboard139'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -362,7 +362,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui98.css',expected=3)
+must_replace('ui15.css','ui105.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -519,13 +519,14 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui98.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui105.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
 must_replace("chart(status.samples||[],active)","chart(websiteSamples(status,inventory),active)")
 must_replace("cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)","cell(renderChannelPing(p,status,statusNow(status)))")
 must_replace("profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","renderChannelPing(p,status,statusNow(status))")
+must_replace("E('strong',{},renderChannelPing(p,status,statusNow(status))),E('span',{},tr(\" мс · HTTPS\"))","E('strong',{},renderChannelPing(p,status,statusNow(status)))")
 must_replace('tr("HTTPS, мс")','bi("Response, ms","Ответ, мс")')
 must_replace('tr("Средняя HTTPS-задержка")','bi("Mean three-site response","Средний ответ трёх сайтов")')
 must_replace("(item.r.sum/item.r.good).toFixed(1)","websiteMs(item.r.sum/item.r.good)")
@@ -540,5 +541,14 @@ assert source.count(_dead_chart)==1 and source.count('function chart(samples,row
 _dead_start=source.index(_dead_chart);_dead_end=source.index('\nfunction histogram(',_dead_start)
 source=source[:_dead_start]+source[_dead_end+1:]
 assert source.count('function chart(samples,rows){')==1 and 'var CHART_COLORS=' in source,'FINAL-CHART-COUNT'
+# The older speedPanel/trafficHistoryPanel declarations (speed_panel.inc.js, traffic_panel.inc.js) are
+# superseded in the same module scope by speed_table.inc.js/traffic_chart.inc.js; they were shipped dead.
+_dead_panels=source.index('function speedPanel(status,inventory,period,onPeriod){')
+_dead_panels_end=source.index('\nvar RECOVERY_PRESETS=',_dead_panels)
+_dead_text=source[_dead_panels:_dead_panels_end]
+assert source.count('function speedPanel(status,inventory,period,onPeriod){')==2 and source.count('function trafficHistoryPanel(accounting){')==2,'DEAD-PANEL-COUNT'
+assert [line.split('(')[0] for line in _dead_text.split('\n') if line.startswith('function ')]==['function speedPanel','function trafficHistoryPanel'],'DEAD-PANEL-SPAN'
+source=source[:_dead_panels]+source[_dead_panels_end+1:]
+assert source.count('function speedPanel(')==1 and source.count('function trafficHistoryPanel(')==1,'FINAL-PANEL-COUNT'
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

@@ -5,7 +5,7 @@ const now=100,primary={id:'a',interface:'wgclient1',time:99,dns_ok:true,https_su
 const model={now,primary,reserve,selected:'a',settings:{plan_source:'a',plan_target:'b'}};
 const status={time:99,native_failover:{state:'OBSERVING',time:99}};
 assert.equal(c.dvChannelUse(primary,model,status).kind,'green');assert.equal(c.dvChannelUse(primary,model,status).role,'Primary channel');
-assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Reserve channel: Alive; you can switch to it manually');
+assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Live; manual switching is unavailable now','without router manual-control evidence a live channel promises no manual switch');
 assert.equal(c.dvChannelUse({...reserve,interface:null},model,status).kind,'red');
 assert.equal(c.dvChannelUse({...primary,code:'DNS-001'},model,status).kind,'red');
 assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'grey','no router answer is grey: waiting for the router');
@@ -36,7 +36,7 @@ console.log('PASS: primary/reserve and at most one green, yellow standby/red dis
  assert.equal(c.statusNow(frame),1000);
  const row={id:'p',interface:'wgclient1',time:999,dns_ok:true,https_success:2};
  assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'green');
- monotonic=92000;assert.equal(c.statusNow(frame),1092);
+ monotonic=92000+(c.UI_DISPLAY_GRACE||0)*1000;assert.equal(c.statusNow(frame),1092+(c.UI_DISPLAY_GRACE||0));
  assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'grey','an old frame still expires: waiting for the router (grey)');
  delete c.Date;delete c.performance;
 }

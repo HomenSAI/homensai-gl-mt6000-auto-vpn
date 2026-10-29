@@ -1,0 +1,502 @@
+LIFECYCLE-AUTO-DISABLE-FAILED
+======================================================================
+ERROR: test_release_pending_restart_only_retries_cleanup_and_blocks_lifecycle (test_audit_hardening.Hardening)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_audit_hardening.py", line 159, in test_release_pending_restart_only_retries_cleanup_and_blocks_lifecycle
+    with self.assertRaisesRegex(native.Refused,'GUARD-RELEASE-UNCONFIRMED'):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_alarm_ends_when_the_journal_is_closed_and_the_supervisor_restarts_normally (test_failure_matrix.Matrix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 264, in test_alarm_ends_when_the_journal_is_closed_and_the_supervisor_restarts_normally
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_failing_rollback_keeps_the_transaction_for_supervisor_recovery (test_failure_matrix.Matrix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 180, in test_failing_rollback_keeps_the_transaction_for_supervisor_recovery
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_one_failed_rollback_still_recovers_on_the_next_start (test_failure_matrix.Matrix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 286, in test_one_failed_rollback_still_recovers_on_the_next_start
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_restart_after_commit_with_foreign_change_releases_the_guard (test_failure_matrix.Matrix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 214, in test_restart_after_commit_with_foreign_change_releases_the_guard
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_restart_in_every_unfinished_phase_restores_the_original_route (test_failure_matrix.Matrix) (phase='ARMED')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 208, in test_restart_in_every_unfinished_phase_restores_the_original_route
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_restart_in_every_unfinished_phase_restores_the_original_route (test_failure_matrix.Matrix) (phase='APPLYING')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 208, in test_restart_in_every_unfinished_phase_restores_the_original_route
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_restart_in_every_unfinished_phase_restores_the_original_route (test_failure_matrix.Matrix) (phase='WAIT-CLIENT')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 208, in test_restart_in_every_unfinished_phase_restores_the_original_route
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_restart_in_every_unfinished_phase_restores_the_original_route (test_failure_matrix.Matrix) (phase='RESTORING')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 208, in test_restart_in_every_unfinished_phase_restores_the_original_route
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_rollback_that_fails_twice_is_given_up_without_new_full_blocks (test_failure_matrix.Matrix)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_failure_matrix.py", line 273, in test_rollback_that_fails_twice_is_given_up_without_new_full_blocks
+    with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='attempts', raw='null')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='attempts', raw='[]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='attempts', raw='{"until":2000,"count":"three","trial":"test","time":1000}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='attempts', raw='{"until":NaN,"count":1,"trial":"test","time":1000}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='return', raw='null')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='return', raw='[]')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='return', raw='{"until":2000,"count":"three","trial":"test","time":1000}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop (test_native_progress.NativeProgressTests) (kind='return', raw='{"until":NaN,"count":1,"trial":"test","time":1000}')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 102, in test_enabled_supervisor_reports_blocked_without_forward_writes_or_crash_loop
+    published,unused,calls=self.run_corrupt(kind,raw)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_explicit_return_and_committed_expiry_do_not_depend_on_progress_ack (test_native_progress.NativeProgressTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 121, in test_explicit_return_and_committed_expiry_do_not_depend_on_progress_ack
+    returned,journal,calls=self.run_corrupt(kind='return',mode='return')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_stop_and_expiry_remain_serviceable_with_corrupt_progress (test_native_progress.NativeProgressTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 107, in test_stop_and_expiry_remain_serviceable_with_corrupt_progress
+    stopped,unused,calls=self.run_corrupt(mode='stop')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_trusted_pending_journal_recovers_before_progress_refusal (test_native_progress.NativeProgressTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 115, in test_trusted_pending_journal_recovers_before_progress_refusal
+    published,journal,unused=self.run_corrupt(mode='pending')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_progress.py", line 88, in run_corrupt
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_attempt_limit_blocks_before_new_worker (test_native_supervisor.SupervisorTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 54, in test_attempt_limit_blocks_before_new_worker
+    self.assertEqual(self.run_once(mode='limit')[0]['blockers'],['TRIAL-ATTEMPT-LIMIT'])
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 44, in run_once
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_cooldown_observes_even_when_failure_and_reserve_streaks_pass (test_native_supervisor.SupervisorTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 57, in test_cooldown_observes_even_when_failure_and_reserve_streaks_pass
+    value=self.run_once(mode='cooldown')[0]
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 44, in run_once
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_expiry_is_explicit_and_does_not_start_a_new_attempt (test_native_supervisor.SupervisorTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 61, in test_expiry_is_explicit_and_does_not_start_a_new_attempt
+    self.assertEqual(self.run_once(expired=True)[0]['state'],'EXPIRED')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 44, in run_once
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+======================================================================
+ERROR: test_stop_latch_removes_only_owned_guard_after_verified_restore (test_native_supervisor.SupervisorTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 51, in test_stop_latch_removes_only_owned_guard_after_verified_restore
+    self.assertEqual(self.run_once()[0]['state'],'STOPPED')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/tests/test_native_supervisor.py", line 44, in run_once
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/native_switch.py", line 1572, in serve
+    fence_recovery()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/pair_auto.py", line 636, in fence_recovery
+    with control_lock():
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/contextlib.py", line 119, in __enter__
+    return next(self.gen)
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/router/files/usr/lib/homensai-vpn/auto_control.py", line 86, in control_lock
+    directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/lib/python3.9/pathlib.py", line 1251, in mkdir
+    self._accessor.mkdir(self, mode)
+OSError: [Errno 30] Read-only file system: '/var/run/homensai-vpn'
+
+----------------------------------------------------------------------
+Ran 1158 tests in 18.163s
+
+FAILED (errors=25)
+
+LIFECYCLE-AUTO-DISABLED
+/tmp/tmpywah3scc/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 977661 bytes 04f4e2eed29253beaca48f19d0d32c8d89e812cbf97b5e1ed18fdade8eee4f47
+/tmp/tmpnecdq3_5/out/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 4442 bytes 290712ec6a12ee8f61f45542859526ef579622ae42fa02aa455191b22a0a9a69
+/tmp/tmp3mjejmsi/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 977661 bytes 04f4e2eed29253beaca48f19d0d32c8d89e812cbf97b5e1ed18fdade8eee4f47
+/tmp/tmp3mjejmsi/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 977661 bytes 04f4e2eed29253beaca48f19d0d32c8d89e812cbf97b5e1ed18fdade8eee4f47
+/tmp/tmppf0a_o8h/out/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 4656 bytes 8f0c2c780f68c8ee7183f41cb9f4f11b6f49b38bd6446b9116d8fadef7fe281d
+/tmp/tmph8tmfehh/package/homensai-auto-vpn_0.9.1-alpha58-1_all.ipk 977661 bytes 04f4e2eed29253beaca48f19d0d32c8d89e812cbf97b5e1ed18fdade8eee4f47
+
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/qa/run_offline_ci.py", line 114, in <module>
+    if __name__=='__main__':main()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/qa/run_offline_ci.py", line 51, in main
+    application=check([sys.executable,'-m','unittest','discover','-s','router/tests','-q'])
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate39/qa/run_offline_ci.py", line 48, in check
+    raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
+RuntimeError: CI-CHECK-FAILED: exit=1 command=/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/bin/python3 -m unittest discover -s router/tests -q

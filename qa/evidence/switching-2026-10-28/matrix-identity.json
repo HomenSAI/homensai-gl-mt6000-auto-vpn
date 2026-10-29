@@ -1,0 +1,21 @@
+{
+  "source": "959e6d255c83ae91798be4a525141d0445961834",
+  "product_commit": "3a3b5949a3d2186d087307163f703b79cfcea93c",
+  "tree": "b33f88cccb352706d433183198b95683f4eea32e",
+  "files": 1480,
+  "archive_sha256": "ef39be6cdf36359771e846975f91e21e48ccb984541e9485019545fe585d2fca",
+  "version": {
+    "version": "0.9.1-alpha58",
+    "package_revision": 1,
+    "package_version": "0.9.1-alpha58-1",
+    "release_tag": "v0.9.1-alpha58",
+    "ui_module": "dashboard133",
+    "ui_stylesheet": "ui99.css",
+    "artifact": "homensai-auto-vpn_0.9.1-alpha58-1_all.ipk",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "source_fingerprint": "eda8182a6baca5209714c007b8850d7fff6d6c1411ff450707783600901c68fe",
+    "ui_lazy_modules": [
+      "homensai-vpn/help133.js"
+    ]
+  }
+}

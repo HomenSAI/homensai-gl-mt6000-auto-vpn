@@ -18,7 +18,7 @@ function vendorFresh(stamp,now,age){return typeof stamp==='number'&&Number.isFin
 function vendorDiagnosticsModel(status,inventory,now){
   if(typeof dataCause==='function')UI_DATA_CAUSE=dataCause(status,now);
   status=status&&typeof status==='object'?status:{};inventory=inventory&&typeof inventory==='object'?inventory:{};
-  var settings=inventory.settings||{},interval=Number(settings.interval),age=Number.isInteger(interval)&&interval>=10&&interval<=300?Math.max(30,interval*3):90;
+  var settings=inventory.settings||{},interval=Number(settings.interval),age=Number.isFinite(status.observation_valid_for)?observationValidFor(status):Number.isInteger(interval)&&interval>=10&&interval<=300?Math.max(30,interval*3):90;
   var observation=status.vendor_observation,available=!!observation&&observation.version===1&&Array.isArray(observation.groups);
   var fresh=available&&!status.rpc_error&&!status.error&&vendorFresh(status.time,now,age)&&vendorFresh(observation.time,now,age);
   var profiles=Array.isArray(status.profiles)?status.profiles.slice(0,400):[],metadata=Array.isArray(inventory.servers)?inventory.servers.slice(0,400):[],profileMap=Object.create(null),metadataMap=Object.create(null);
@@ -98,7 +98,7 @@ function vendorIdentityText(group){return group.state==='stable'?bi('VPN setting
 function vendorCoordinationText(model){var row=model.coordination.known?VENDOR_COORDINATION_TEXT[model.coordination.code]:null;return row?bi(row[0],row[1]):(typeof dataCauseText==='function'?dataCauseText(bi('No plan yet: ','Плана пока нет: ')):bi('No plan yet','Плана пока нет'));}
 function vendorDetailsLink(){return E('a',{'href':'#channels'},bi('Channels and servers','Каналы и серверы'));}
 function renderProbeChecks(profile,now){
-  if(!profile||!Array.isArray(profile.probe_checks)||!profile.probe_checks.length||!vendorFresh(profile.time,now,90))return null;
+  if(!profile||!Array.isArray(profile.probe_checks)||!profile.probe_checks.length||!vendorFresh(profile.time,now,observationValidFor(profile)))return null;
   var n=profile.https_success,headline=Number.isInteger(n)?n>=2?bi('Availability threshold met','Условие доступности выполнено'):n>0?bi('Partial HTTPS availability','Частичная HTTPS-доступность'):bi('HTTPS availability not confirmed','HTTPS-доступность не подтверждена'):bi('No saved HTTPS count','Число HTTPS-ответов не сохранено');
   var names={'ok':['Passed','Прошла'],'http-unsupported':['Check endpoint uses an incompatible HTTP version','Несовместимая версия HTTP у проверочного адреса'],'http-error':['HTTP error from check endpoint','Ошибка HTTP проверочного адреса'],'timeout':['Check endpoint did not respond in time','Проверочный адрес не ответил в срок'],'tls-error':['TLS validation or connection error','Ошибка TLS-проверки или соединения'],'transport-error':['Check request transport error','Сетевая ошибка проверочного запроса'],'invalid-response':['Response did not pass validation','Ответ не прошёл проверку'],'unknown':['Details not recorded','Подробности не сохранены']};
   var rows=profile.probe_checks.slice(0,3).filter(function(r){return r&&['one.one.one.one','dns.google','dns.quad9.net'].indexOf(r.target)>=0&&names[r.result];});

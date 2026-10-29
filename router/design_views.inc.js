@@ -45,7 +45,9 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
-  if(status.rpc_error||!Number.isFinite(status.time)||m.now-status.time< -5||m.now-status.time>90){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
+  if(status.rpc_error||status.error||!observationFresh(status,m.now)){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
+  var pending=typeof manualOperationModel==='function'?manualOperationModel(status,m.now):null;
+  if(pending&&pending.busy&&(primary||reserve)){result.kind='grey';result.state='switching';result.label=pending.uncertain?bi('Request not confirmed','Запрос не подтверждён'):bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
   var rel=typeof channelReliability==='function'&&profile.interface&&profile.code!=='VPN-001'?channelReliability(profile,status,m.now):null;
   if(h.state==='failed'){
     result.kind='red';result.state='failed';
@@ -59,15 +61,15 @@ function dvChannelUse(profile,m,status){
   var ns=status.native_failover||{};
   if(['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0&&Number.isFinite(ns.time)&&m.now-ns.time>=0&&m.now-ns.time<=30){result.kind='grey';result.state='switching';result.label=bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
   var autoRuns=!m.light||typeof autoWorking!=='function'||autoWorking(m.light);
-  if(h.state==='healthy'&&!autoRuns){result.kind='yellow';result.state='ready';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_target?bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную'):bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную');}
+  if(h.state==='healthy'&&!autoRuns){result.kind='yellow';result.state='ready';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):channelAliveText(m.settings&&profile.id===m.settings.plan_target?'reserve':'primary',status,m.now);}
   else if(h.state==='healthy'){
     if(m.selected===profile.id){result.kind='green';result.state='selected';result.label=bi('Working','Работает');}
-    else if(m.selected){result.kind='yellow';result.state='standby';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):m.settings&&profile.id===m.settings.plan_source?bi('Primary channel: Alive; you can switch to it manually','Основной канал: Живой, можно переключиться на него вручную'):bi('Reserve channel: Alive; you can switch to it manually','Запасной канал: Живой, можно переключиться на него вручную');}
+    else if(m.selected){result.kind='yellow';result.state='standby';result.label=m.settings&&profile.id!==m.settings.plan_source&&profile.id!==m.settings.plan_target?bi('Other VPN: works, Auto does not use it','Другой VPN: работает, Auto его не использует'):channelAliveText(m.settings&&profile.id===m.settings.plan_source?'primary':'reserve',status,m.now);}
     else{result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer which channel carries traffic','Ждём ответа роутера, какой канал несёт трафик');}
   }
   if(h.state==='unknown'){result.kind='grey';result.state='waiting';result.label=bi('Waiting for the router\'s answer','Ждём ответа роутера');}
   if(h.state==='healthy'&&rel&&rel.unreliable){result.kind='yellow';result.label=bi('Works, but reliability problem: ','Работает, но проблема с надёжностью: ')+reliabilityText(rel);result.code='CHANNEL-UNRELIABLE';result.reliability=rel;}
-  if((result.state==='ready'||result.state==='standby')&&!result.reliability)result.badgeLabel=primary||reserve?bi('Alive; you can switch to it manually','Живой, можно переключиться на него вручную'):bi('Works; Auto does not use it','Работает; Auto его не использует');
+  if((result.state==='ready'||result.state==='standby')&&!result.reliability)result.badgeLabel=primary||reserve?result.label:bi('Works; Auto does not use it','Работает; Auto его не использует');
   return result;
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
@@ -80,9 +82,9 @@ function channelDisplayUse(profile,status,inventory){
 function renderChannelHeader(profile,status,inventory){
   var use=channelDisplayUse(profile,status,inventory);
   return E('div',{'class':'hv-server-top'},[E('div',{'class':'hv-channel-heading'},[dvChannelLamp(use),E('div',{'class':'hv-channel-heading-text'},[E('strong',{'class':'hv-protocol'},use.role),E('span',{'class':'hv-channel-protocol'},protocolLabel(profile))])]),
-    E('span',{'class':'hv-route-badge hv-route-'+use.kind+(use.reliability?' hv-route-badge-long':''),'data-route-state':use.state},(use.badgeLabel||use.label)+(safeCode(use.code)?' · '+use.code:safeCode(profile.code)?' · '+profile.code:'')),
+    E('span',{'class':'hv-route-badge hv-route-'+use.kind+(use.reliability||String(use.badgeLabel||use.label).length>24?' hv-route-badge-long':''),'data-route-state':use.state},(use.badgeLabel||use.label)+(safeCode(use.code)?' · '+use.code:safeCode(profile.code)?' · '+profile.code:'')),
     typeof renderChannelPing==='function'?renderChannelPing(profile,status,typeof statusNow==='function'?statusNow(status):Date.now()/1000):null,
-    E('span',{'class':'hv-profile-detail'},(use.code==='STATUS-REQUEST-FAILED'||use.code==='MONITOR-DATA-STALE')?bi('The page shows nothing as working until the router answers again. Reload the page (Ctrl+F5); if it repeats, check Monitoring in Settings.','Пока роутер не ответит, страница ничего не считает рабочим. Обновите страницу (Ctrl+F5); если повторяется, проверьте мониторинг в «Настройках».'):(profile.interface?bi('VPN server connection: established','Соединение с VPN-сервером: установлено'):bi('VPN server connection: none','Соединение с VPN-сервером: нет'))+' · '+(use.state==='selected'?bi('your internet goes through this channel','ваш интернет идёт через этот канал'):use.state==='standby'?bi('spare channel, your internet does not use it now','запасной канал, ваш интернет сейчас через него не идёт'):use.state==='failed'?bi('router checks fail: internet through this channel does not work','проверки роутера не проходят: интернет через этот канал не работает'):use.state==='switching'?bi('the route is being switched','маршрут переключается'):use.kind==='green'?bi('internet works through it; it takes over as soon as Auto is on','интернет через него работает; включится в работу, как только вы включите Auto'):bi('waiting for the first router check','ждём первую проверку роутера')))]);
+    E('span',{'class':'hv-profile-detail'},(use.code==='STATUS-REQUEST-FAILED'||use.code==='MONITOR-DATA-STALE')?bi('The page shows nothing as working until the router answers again. Reload the page (Ctrl+F5); if it repeats, check Monitoring in Settings.','Пока роутер не ответит, страница ничего не считает рабочим. Обновите страницу (Ctrl+F5); если повторяется, проверьте мониторинг в «Настройках».'):(profile.interface?bi('VPN server connection: established','Соединение с VPN-сервером: установлено'):bi('VPN server connection: none','Соединение с VPN-сервером: нет'))+' · '+(use.state==='selected'?bi('your internet goes through this channel','ваш интернет идёт через этот канал'):use.state==='standby'?bi('spare channel, your internet does not use it now','запасной канал, ваш интернет сейчас через него не идёт'):use.state==='failed'?bi('router checks fail: internet through this channel does not work','проверки роутера не проходят: интернет через этот канал не работает'):use.state==='switching'?bi('the route is being switched','маршрут переключается'):use.state==='ready'?bi('internet works through it; it takes over as soon as Auto is on','интернет через него работает; включится в работу, как только вы включите Auto'):profileHealth(profile,typeof statusNow==='function'?statusNow(status):Date.now()/1000).state==='healthy'?bi('router checks pass','проверки роутера проходят'):bi('waiting for the router check','ждём проверку роутера')))]);
 }
 function dvCodes(codes){codes=codes.filter(safeCode);return codes.length?E('code',{'class':'hv-dv-code'},codes.join(' · ')):null;}
 // One model for all designs: what the page says about the system right now.
@@ -97,6 +99,7 @@ function dvModel(status,inventory,rows,month){
   else if(light.key==='problem'){tone='bad';headline=light.title;}
   else if(light.key==='reserve'){tone='warn';headline=bi('Working on the reserve','Работаю на резерве');}
   else if(counts.working===counts.connected){tone='ok';headline=bi('Everything works.','Всё работает.');}
+  else if(counts.working===0&&counts.stale){tone='off';headline=bi('Waiting for fresh router data.','Ждём свежие данные роутера.');}
   else if(counts.working===0){tone='bad';headline=bi('No VPN works right now.','Сейчас ни один VPN не работает.');}
   else{tone='warn';headline=bi('Some VPNs do not work.','Часть VPN не работает.');}
   var age=Number.isFinite(status.time)?Math.max(0,Math.round(now-status.time)):null;
@@ -110,7 +113,7 @@ function dvCard(title,children,cls){return E('section',{'class':'hv-dv-card'+(cl
 
 /* ---------- A · Control room ---------- */
 function dvServerRows(status,rows,m){
-  var sorted=sortServerCards(rows,m.selected,m.now);
+  var sorted=sortServerCards(rows,m.selected,m.now,[m.primary&&m.primary.id,m.reserve&&m.reserve.id]);
   if(!sorted.length)return E('p',{'class':'hv-dv-empty'},bi('No VPN profiles found on the router.','На роутере не найдено VPN-профилей.'));
   return E('div',{'class':'hv-dv-rows'},sorted.map(function(p){
     var h=profileHealth(p,m.now),use=dvChannelUse(p,m,status),r=m.rank[p.id],pct=dvPercent(r);
@@ -169,10 +172,10 @@ function renderDesignC(ctx,m){
   dvEvents(ctx.status,ctx.rows,10).forEach(function(e){lines.push({time:e.time,kind:'warn',text:e.text,codes:e.codes});});
   lines.sort(function(a,b){return b.time-a.time;});
   var log=dvCard(bi('Event log','Журнал'),[lines.length?E('div',{'class':'hv-dv-log'},lines.slice(0,10).map(function(l){return dvLogLine(l.time,l.kind,l.text,l.codes);})):E('p',{'class':'hv-dv-empty'},bi('No checks recorded yet.','Проверок пока нет.'))],'hv-dv-logcard');
-  var head=['St','Server','Proto','Group','Websites ms','Passed','Checks','Confidence'].map(function(h,i){return E('th',{'scope':'col','class':i>=4&&i<=6?'n':null},[bi(h,{'St':'Ст.','Server':'Сервер','Proto':'Прот.','Group':'Группа','Websites ms':'Сайты, мс','Passed':'Успех','Checks':'Проверок','Confidence':'Достоверность'}[h])]);});
-  var body=sortServerCards(ctx.rows,m.selected,m.now).map(function(p){
+  var head=['Channel','Status','Proto','Group','Websites ms','Passed','Checks','Confidence'].map(function(h,i){return E('th',{'scope':'col','class':i>=4&&i<=6?'n':null},[bi(h,{'Channel':'Канал','Status':'Статус','Proto':'Прот.','Group':'Группа','Websites ms':'Сайты, мс','Passed':'Успех','Checks':'Проверок','Confidence':'Достоверность'}[h])]);});
+  var body=sortServerCards(ctx.rows,m.selected,m.now,[m.primary&&m.primary.id,m.reserve&&m.reserve.id]).map(function(p){
     var h=profileHealth(p,m.now),use=dvChannelUse(p,m,ctx.status),r=m.rank[p.id]||{n:0},mark=use.label;
-    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id,'data-route-state':use.state},[E('td',{'class':'hv-dv-st'},[dvChannelLamp(use),mark]),E('td',{},[countryName(p)||customName(p)||'—',E('small',{},use.role)]),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
+    return E('tr',{'class':m.selected===p.id?'hv-dv-active':null,'data-profile':p.id,'data-route-state':use.state},[E('td',{'data-channel-role':use.role},[E('b',{},use.role),E('small',{},countryName(p)||customName(p)||'—')]),E('td',{'class':'hv-dv-st'},[dvChannelLamp(use),mark]),E('td',{},p.protocol==='wireguard'?'wg':'ovpn'),E('td',{},p.channel||'—'),
       E('td',{'class':'n'},renderChannelPing(p,ctx.status,m.now)),E('td',{'class':'n'},dvPercentText(dvPercent(r))),E('td',{'class':'n'},String(r.n||0)),E('td',{},dvConfidence(r.n||0))]);});
   var table=dvCard(bi('Servers','Серверы'),[E('div',{'class':'hv-dv-tablewrap'},E('table',{},[E('thead',{},E('tr',{},head)),E('tbody',{},body)]))],'hv-dv-servers');
   var keys=E('div',{'class':'hv-dv-keys'},[E('span',{},[E('kbd',{},'1'),'–',E('kbd',{},'9'),bi('sections','разделы')]),E('span',{},[E('kbd',{},'/'),bi('search','поиск')]),E('span',{},bi('Error codes are links to the error table','Коды ошибок — ссылки на таблицу ошибок'))]);

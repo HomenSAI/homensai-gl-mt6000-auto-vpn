@@ -5,7 +5,8 @@ vm.runInContext(fs.readFileSync('router/auto_panel.inc.js','utf8'),context);
 const model=(ns,intent={})=>context.autoControlModel({native_failover:ns,auto_control:intent,time:1000},1000);
 assert.equal(model({state:'OBSERVING',certified:true,time:999}).on,true);
 assert.equal(model({state:'OBSERVING',certified:false,time:999}).on,false);
-assert.equal(model({state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,certified:false,time:999}).on,true);
+assert.equal(model({state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,certified:false,time:999},{requested:'on',pair_phase:'RUNNING'}).on,true);
+assert.equal(model({state:'OBSERVING',mode:'continuous-pair',proof_scope:'router-probed-ipv4',readiness_verified:true,certified:false,time:999}).on,false,'a pair needs current ON intent as well as its controller state');
 assert.equal(model({state:'OBSERVING',mode:'continuous-pair',readiness_verified:false,certified:false,time:999}).on,false);
 assert.equal(model({state:'COMMITTED',time:900}).on,false);
 assert.equal(model({state:'COMMITTED',time:1100}).on,false);
@@ -151,7 +152,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
     assert(['off','unknown','ok','switching','reserve','problem'].includes(l.key));
     assert(l.lamp===null||['green','yellow','orange','red'].includes(l.lamp));
     assert(typeof l.title==='string'&&l.title.length>3&&typeof l.hint==='string'&&l.hint.length>10);
-    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30&&!rpc);
+    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30+(context.UI_DISPLAY_GRACE||0)&&!rpc);
   }
   assert(combos>=800);
   // The button carries no status colour class any more.

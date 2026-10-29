@@ -1,0 +1,18 @@
+{
+  "verdict": "FAIL",
+  "scope": "Actual generated dashboard133 before Resume UI correction; real Chromium DOM after manual switching and recovered lost ACK",
+  "dashboard_sha256": "8ab9fa0a263769da9a774ec773aeb900521ea535edb27892112cc0a5e6145655",
+  "manual_hold": "source",
+  "backend_resume_control": {
+    "allowed": true,
+    "blockers": []
+  },
+  "rendered_manual_directions": [
+    "primary",
+    "reserve"
+  ],
+  "ui_resume_control_present": false,
+  "source_evidence": "baseline-browser-e2e-before-resume.json/recovered",
+  "final_acceptance": false,
+  "note": "Baseline discovery before readonly-host isolation, not an acceptance run."
+}

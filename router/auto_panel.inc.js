@@ -14,13 +14,16 @@ function autoWindowDeadline(intent,settings){
 function autoControlModel(status,now){
   var ns=status.native_failover||{}, intent=status.auto_control||{};
   var paused=!!status.speed_pause&&status.speed_pause.active===true&&status.speed_pause.auto_paused===true;
-  var monitorFresh=Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
-  var fresh=!status.rpc_error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
-  var runningPair=(ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair')&&intent.requested==='on'&&intent.pair_phase==='RUNNING';
-  var on=!paused&&fresh&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
+  var monitorFresh=typeof observationFresh==='function'?observationFresh(status,now):Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
+  // The controller does not republish while it waits for its worker; its transition phase stays current until the bounded deadline.
+  var live=typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).live;
+  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&(now-ns.time<=30+(typeof UI_DISPLAY_GRACE==='number'?UI_DISPLAY_GRACE:0)||live);
+  var pairScope=ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair';
+  var pairPermitsOn=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0,runningPair=pairScope&&pairPermitsOn;
+  var on=!paused&&fresh&&(!pairScope||pairPermitsOn)&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
   var transitioning=fresh&&['ARMED','APPLYING','WAIT-CLIENT','RESTORING'].indexOf(ns.state)>=0;
-  var off=fresh&&!on&&['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0;
-  var awaiting=fresh&&intent.requested_at>ns.time;
+  var off=fresh&&!on&&(['DISABLED','STOPPED','EXPIRED','ROLLED-BACK'].indexOf(ns.state)>=0||pairScope&&intent.requested==='off'&&intent.pair_phase==='STOPPED');
+  var awaiting=fresh&&intent.requested_at>ns.time&&!(pairScope&&(pairPermitsOn||intent.requested==='off'&&intent.pair_phase==='STOPPED'));
   return {fresh:fresh,on:on,paused:paused,transitioning:transitioning,off:off,awaiting:awaiting,
     stop:on||transitioning||intent.requested==='on'||['DEGRADED-ON-RESERVE','COMMITTED','ARMED','APPLYING','WAIT-CLIENT','RESTORING','STOPPED-ON-RESERVE'].indexOf(ns.state)>=0,
     returned:off&&ns.original_restored===true,
@@ -81,7 +84,7 @@ var AUTO_BLOCKERS={
   "LAN-TRIAL-REQUIRED":["This selected client-confirmed mode requires its matching LAN trial. Prepared continuous router-probed mode does not use this certificate.", "Выбранному клиентскому режиму нужен соответствующий LAN-тест. Подготовленный непрерывный router-probed режим этот сертификат не использует."],
   "BOUNDED-DEADLINE-REQUIRED":["A bounded window is missing/expired for the selected trial. Verify actual recovery and time before a new authorized run.", "Для выбранного теста нет действующего ограниченного окна. До нового разрешённого запуска проверьте фактическое восстановление и время."],
   'SESSION-LOSS-NOT-ACCEPTED':['Confirm in Settings that a short reconnection of calls and sessions is acceptable.','Подтвердите в настройках, что кратковременный разрыв звонков и сессий допустим.'],
-  'TRANSACTION-IN-PROGRESS':['A switch is already in progress. Wait for it to finish or press Stop.','Переключение уже идёт. Дождитесь окончания или нажмите «Стоп».'],
+  'TRANSACTION-IN-PROGRESS':['An unfinished switch record is open on the router. If a switch is running, wait for it or press Stop; without a running switch, recovery is needed.','На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или нажмите «Стоп»; без выполняющегося переключения нужно восстановление.'],
   "TRIAL-ATTEMPT-LIMIT":["The trial attempt budget is exhausted. Preserve failures and respect the budget/cooldown; never reset a nonce or ledger to bypass it.", "Бюджет попыток теста исчерпан. Сохраните отказы и соблюдайте бюджет/паузу; не сбрасывайте nonce или журнал ради обхода."],
   'UNSUPPORTED-BOARD':['Native switching requires a verified GL-MT6000 or GL-MT3000 firmware profile. Choosing a model does not bypass these checks.','Нативное переключение требует проверенного профиля прошивки GL-MT6000 или GL-MT3000. Выбор модели не отменяет эти проверки.'],
   'UNSUPPORTED-FIRMWARE':['Switching is verified only for GL.iNet firmware 4.11.0.','Переключение проверено только для прошивки GL.iNet 4.11.0.'],
@@ -157,8 +160,11 @@ var AUTO_REMEDIES={
     title:['Review the current VPN pair','Проверьте текущую пару VPN'],path:['Advanced menu → Settings → Primary and reserve VPN','Расширенное меню → Настройки → Основной и резервный VPN'],
     text:['The selected channel was removed, rebound or is not supported by this controller. Review the actual tunnel bindings in GL.iNet → VPN → VPN Dashboard, then explicitly save a supported pair here. On the prepared MT3000 mode these are wgclient1 and ovpnclient1; a server catalogue entry is not a second tunnel.','Выбранный канал удалён, перепривязан или не поддерживается этим контроллером. Проверьте привязки в GL.iNet → VPN → VPN Dashboard, затем явно сохраните здесь поддерживаемую пару. Для подготовленного режима MT3000 это wgclient1 и ovpnclient1; запись каталога серверов не является вторым туннелем.'],route:'#settings'},
   'recovery':{
-    title:['Settings were changed outside the app','Настройки изменены вне приложения'],path:['Overview → Auto button','Обзор → кнопка Auto'],
-    text:['The router settings no longer match the saved Auto session, for example a tunnel was renamed or reordered in the stock page. Auto keeps your changes: when you press Start it archives the old session and adopts the new settings by itself, nothing has to be reconciled by hand. If it refuses again within 15 minutes, the settings are still changing: finish editing and press Start once more.','Настройки роутера отличаются от сохранённой сессии Auto, например в штатной панели переименовали или переставили туннель. Auto сохраняет ваши изменения: при нажатии Start он сам архивирует старую сессию и принимает новые настройки, вручную ничего согласовывать не нужно. Если в течение 15 минут отказ повторяется, настройки ещё меняются: закончите правки и нажмите Start ещё раз.'],route:'#settings'}
+    title:['Router configuration differs from the saved session','Конфигурация роутера отличается от сохранённой сессии'],path:['Overview → Auto button','Обзор → кнопка Auto'],
+    text:['A protected router setting no longer matches the saved Auto session. Who or what changed it is not established: an edit in the stock panel and the stock router services can both change it. When you press Start, Auto archives the old session and adopts the current settings by itself. If it refuses again within 15 minutes, the settings are still changing: wait and press Start once more.','Защищённая настройка роутера не совпадает с сохранённой сессией Auto. Кто или что её изменил, не установлено: её могут менять и правка в штатной панели, и штатные службы роутера. При нажатии Start Auto сам архивирует старую сессию и примет текущие настройки. Если в течение 15 минут отказ повторяется, настройки ещё меняются: подождите и нажмите Start ещё раз.'],route:'#settings'},
+  'unfinished':{
+    title:['Unfinished switch needs recovery','Незавершённое переключение требует восстановления'],path:['Events and errors → this code','События и ошибки → этот код'],
+    text:['A previous switch or Auto session did not finish and is not running. Its journal and safety guard are kept; the traffic channel is not verified. Start and manual switching are refused until recovery completes, so repeated presses do not help. This is not a sign that you changed settings.','Предыдущее переключение или сессия Auto не завершились и не выполняются. Журнал и защита сохранены; канал трафика не подтверждён. Start и ручное переключение отклоняются до завершения восстановления, поэтому повторные нажатия не помогут. Это не признак того, что вы меняли настройки.'],route:'#events',label:['Open events','Открыть события']}
 };
 AUTO_REMEDIES.preparation={title:['Complete router preparation','Завершите подготовку роутера'],path:['System readiness → Persistent router preparation','Готовность системы → Постоянная подготовка роутера'],text:['Open the preparation table, find the failed row and follow its instructions. A failed boot or runtime check remains separate from the hardware acceleration switch.','Откройте таблицу подготовки, найдите непрошедший пункт и выполните его инструкцию. Ошибки автозапуска и работающих модулей проверяются отдельно от переключателя аппаратного ускорения.'],route:'#readiness'};
 ['wgclient1','ovpnclient1'].forEach(function(name){AUTO_REMEDIES['autostart-'+name]={title:['Review '+name+' startup','Проверьте автозапуск '+name],path:['LuCI → Network → Interfaces → '+name+' → Edit → General Setup','LuCI → Сеть → Интерфейсы → '+name+' → Изменить → Основные настройки'],text:['After stopping Auto and verifying completed recovery, clear Bring up on boot for this interface, then Save & Apply. Auto manages its startup separately. This is a startup check, not a hardware acceleration failure.','После остановки Auto и подтверждённого завершения восстановления снимите Bring up on boot («Поднимать при загрузке») у этого интерфейса, затем Save & Apply («Сохранить и применить»). Auto управляет запуском отдельно. Это проверка автозапуска, а не ошибка аппаратного ускорения.'],route:'/cgi-bin/luci/admin/network/network'};});
@@ -175,7 +181,8 @@ function autoRemedyKey(code){
   if(code==='FLOW-OFFLOAD-ENABLED')return 'offload';
   if(code==='PAIR-PREPARATION-REQUIRED'||/^PREP-/.test(code||''))return 'preparation';
   if(['SOURCE-RESERVE-NOT-CONFIGURED','VENDOR-IDENTITY-UNKNOWN','PROFILE-IDENTITY-CHANGED','RESERVE-NOT-CONNECTED','EXISTING-TUNNEL-BINDING-UNVERIFIED','PAIR-PROFILES-UNVERIFIED'].indexOf(code)>=0)return 'pair';
-  if(/^PAIR-(EXTERNAL-|RECOVERY-REQUIRED|STATE-UNVERIFIED)/.test(code||''))return 'recovery';
+  if(/^PAIR-(RECOVERY-REQUIRED|STATE-UNVERIFIED)$/.test(code||'')||code==='JOURNAL-INTEGRITY-FAILED'||code==='SWITCH-RESULT-UNCONFIRMED')return 'unfinished';
+  if(/^PAIR-EXTERNAL-/.test(code||''))return 'recovery';
   return null;
 }
 function autoRemedyHref(guide){
@@ -187,7 +194,7 @@ function autoRemedyHref(guide){
 }
 function renderAutoRemedy(code){
   var g=AUTO_REMEDIES[autoRemedyKey(code)];if(!g)return null;
-  var nodes=[E('strong',{},bi(g.title[0],g.title[1])),E('p',{},bi(g.path[0],g.path[1])),E('p',{},bi(g.text[0],g.text[1])),E('a',{'href':autoRemedyHref(g),'class':'cbi-button','target':g.route.charAt(0)==='#'?null:'_blank','rel':'noopener noreferrer','click':function(event){if(g.route.charAt(0)==='#'&&typeof minimumNavigate==='function'&&minimumNavigate){event.preventDefault();minimumNavigate(g.route.slice(1));}}},bi('Open settings','Открыть настройки'))];
+  var nodes=[E('strong',{},bi(g.title[0],g.title[1])),E('p',{},bi(g.path[0],g.path[1])),E('p',{},bi(g.text[0],g.text[1])),E('a',{'href':autoRemedyHref(g),'class':'cbi-button','target':g.route.charAt(0)==='#'?null:'_blank','rel':'noopener noreferrer','click':function(event){if(g.route.charAt(0)==='#'&&typeof minimumNavigate==='function'&&minimumNavigate){event.preventDefault();minimumNavigate(g.route.slice(1));}}},bi((g.label||['Open settings'])[0],(g.label||[0,'Открыть настройки'])[1]))];
   if(g.docs)nodes.push(E('p',{},E('a',{'href':g.docs,'target':'_blank','rel':'noopener noreferrer'},bi('GL.iNet instructions','Инструкция GL.iNet'))));
   if(typeof renderPreparationButtons==='function'){var preparationButtons=renderPreparationButtons(code);if(preparationButtons)nodes.splice(1,0,preparationButtons);}
   if(autoRemedyKey(code)==='acceleration')nodes.push(E('p',{},bi('If it is already off but the check still fails, open System readiness → Persistent router preparation for the exact failed check. Saved configuration and loaded runtime acceleration are checked separately.','Если уже выключено, а ошибка остаётся, откройте «Готовность системы → Постоянная подготовка роутера»: там указан конкретный непрошедший пункт. Сохранённые настройки и фактически работающее ускорение проверяются отдельно.')));
@@ -198,7 +205,7 @@ function renderAutoRemedy(code){
 });
 AUTO_REMEDIES.restart={title:['Router restart required','Нужна перезагрузка роутера'],path:['LuCI → System → Reboot','LuCI → Система → Перезагрузка'],text:['The boot/acceleration setting is saved and verified. Restart this router deliberately, then wait for fresh preparation checks before a separate Auto Start. The preparation button never reboots the router itself.','Настройка автозапуска/ускорения сохранена и проверена. Отдельно перезагрузите этот роутер, дождитесь новых проверок подготовки и затем явно запустите Auto. Кнопка подготовки сама роутер не перезагружает.'],route:'/cgi-bin/luci/admin/system/reboot'};
 AUTO_BLOCKERS['PREPARATION-RESTART-REQUIRED']=AUTO_REMEDIES.restart.title.slice();
-AUTO_BLOCKERS['PREPARATION-RECOVERY-REQUIRED']=AUTO_REMEDIES.recovery.title.slice();
+AUTO_BLOCKERS['PREPARATION-RECOVERY-REQUIRED']=['A preparation change needs recovery','Изменение подготовки требует восстановления'];
 ['source','target'].forEach(function(role){
  var primary=role==='source',key=primary?'sourceboot':'targetboot';
  AUTO_REMEDIES[key]={title:primary?['Disable primary VPN boot startup','Отключите автозапуск основного VPN']:['Disable reserve VPN boot startup','Отключите автозапуск резервного VPN'],path:['LuCI → Network → Interfaces → selected '+(primary?'primary':'reserve')+' VPN → Edit → General Setup','LuCI → Сеть → Интерфейсы → выбранный '+(primary?'основной':'резервный')+' VPN → Изменить → Основные настройки'],text:['Disable Bring up on boot for the selected client. Auto manages startup separately; the current connection is preserved.','Выключите «Поднимать при загрузке» для выбранного клиента. Auto управляет запуском отдельно; текущее подключение сохраняется.'],route:'/cgi-bin/luci/admin/network/network'};
@@ -250,15 +257,27 @@ function autoLightModel(status,inventory,now){
   var sessionRuns=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&!model.awaiting;
   function out(key,title,hint,code,running){return {running:running===true,key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
     icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
+  var command=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null;
+  if(command==='starting'||command==='stopping')return out('switching',command==='starting'?bi('Turning Auto on…','Включение Auto…'):bi('Turning Auto off…','Выключение Auto…'),bi('Waiting for the router to confirm the command.','Ждём подтверждения команды роутером.'));
+  if(command==='unconfirmed')return out('unknown',bi('Auto command is not confirmed','Команда Auto не подтверждена'),bi('The router has not confirmed completion. Refreshing its state; Stop remains available.','Роутер не подтвердил завершение. Обновляем его состояние; Stop остаётся доступен.'),'AUTO-CONTROL-UNCONFIRMED');
   if(model.paused)return out('switching',bi('Auto paused for speed test','Auto на паузе для теста скорости'),bi('Background checks are paused. They resume before Auto; a manual Stop stays in force.','Фоновые проверки приостановлены. Они возобновятся перед Auto; ручной Stop сохраняет силу.'));
-  if(!model.fresh)return out('unknown',bi('No data from the router','Нет данных от роутера'),bi('The status is missing or old. Open Settings and make sure the monitor is running.','Статус отсутствует или устарел. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
+  var manual=typeof manualOperationModel==='function'?manualOperationModel(status,now):null,recovery=typeof uiRecoveryModel==='function'&&!(manual&&manual.busy&&!manual.uncertain)?uiRecoveryModel(status,now):null;
+  if(recovery)return out('problem',recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'),uiRecoveryText(recovery),recovery.code);
+  if(!model.fresh)return out('unknown',status.rpc_error||status.error?bi('No connection to the router program','Нет связи с программой роутера'):bi('Controller state is out of date','Состояние контроллера устарело'),status.rpc_error||status.error?bi('The page gets no answer from the router program.','Страница не получает ответ от программы роутера.'):bi('The router answers, but the Auto controller has not reported a current state. Open Settings and make sure the monitor is running.','Роутер отвечает, но контроллер Auto не сообщил актуальное состояние. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
     if(model.awaiting)return out('switching',bi('Starting or stopping Auto','Запуск или остановка Auto'),scopeHint);
+    if(model.transitioning&&typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).state==='RECOVERING')return out('switching',bi('Recovery after an interrupted switch','Восстановление после прерванного переключения'),bi('The previous route is being restored; the channel is not verified yet.','Возвращается прежний маршрут; канал ещё не подтверждён.'),'TRANSACTION-IN-PROGRESS');
+    if(manual&&manual.busy)return out(manual.uncertain?'unknown':'switching',manual.uncertain?bi('Manual request is not confirmed','Ручной запрос не подтверждён'):manual.direction==='resume'?bi('Resuming Auto','Возобновление Auto'):bi('Switching channel','Переключение канала'),manual.uncertain?bi('Waiting for the result from the router. Stop remains available.','Ждём результат от роутера. Stop остаётся доступен.'):bi('Waiting for the router to confirm the manual request.','Ждём подтверждения ручного запроса роутером.'),manual.uncertain?'MANUAL-REQUEST-UNCONFIRMED':null,sessionRuns&&!manual.uncertain&&manual.direction!=='resume');
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
     if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
       var route=channelPathSelection(status,now,ns.source,ns.target);
       if(!route.selected)return out('unknown',bi('The traffic channel is not verified','Канал трафика не подтверждён'),bi('Waiting for verified router VPN rules.','Ждём подтверждения действующих правил VPN роутером.'),route.code||'KERNEL-POLICY-UNVERIFIED');
+      var active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
+      if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
+      if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'));
+      if(['source','target'].indexOf((status.manual_switch_control||{}).hold)>=0)return Object.assign(out('off',bi('Channel held manually','Канал удерживается вручную'),manualHoldText()),{hold:true});
+      if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
@@ -269,7 +288,7 @@ function autoLightModel(status,inventory,now){
   if(ns.proof_scope==='router-hosted-ipv4')return out('problem',bi('Checked by the router itself','Проверку делает сам роутер'),bi('This trial checks IPv4 forwarding with a client inside the router. It does not certify traffic from a separate LAN computer.','Этот тест проверяет пересылку IPv4 клиентом внутри роутера. Трафик отдельного компьютера LAN им не подтверждён.'));
   if(model.awaiting)return out('switching',intent.requested==='off'?bi('Stopping Auto','Auto останавливается'):bi('Starting Auto','Auto запускается'),bi('Waiting for the router to confirm. The lamp changes when it does.','Ожидается подтверждение роутера. Лампа изменится, когда оно придёт.'));
   if(state==='RESTORING')return out('switching',bi('Returning to the previous route','Возврат на прежний маршрут'),bi('The router is putting the original route back and checking it.','Роутер возвращает исходный маршрут и проверяет его.'));
-  if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),bi('The router is changing the route and waits for a LAN computer to confirm it. This takes up to 90 seconds.','Роутер меняет маршрут и ждёт подтверждения от компьютера в LAN. Это занимает до 90 секунд.'));
+  if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),bi('The router is changing the route and waits for a LAN computer to confirm it. This takes up to 2 minutes.','Роутер меняет маршрут и ждёт подтверждения от компьютера в LAN. Это занимает до 2 минут.'));
   if(state==='OBSERVING'&&ns.certified===true)return out('ok',bi('Auto is on','Auto включён'),bi('Watching the primary. If it fails, the router switches to the reserve after a LAN computer confirms the new route.','Следит за основным. При его отказе роутер переключится на резерв после подтверждения нового маршрута компьютером в LAN.'));
   if(state==='COMMITTED')return out('reserve',bi('Working on the reserve','Работаю на резерве'),bi('The reserve route is selected. Primary health is shown separately; return depends on policy, fresh evidence and operator hold.','Выбран резервный маршрут. Исправность основного показана отдельно; возврат зависит от политики, свежих данных и ручного удержания.'));
   if(state==='DEGRADED-ON-RESERVE')return out('problem',bi('The reserve is failing too','Резерв тоже не работает'),bi('The selected reserve has problems. Check both VPNs; any return must satisfy the current mode, saved policy and fresh primary readiness.','На выбранном резерве есть проблемы. Проверьте оба VPN; возврат должен соответствовать текущему режиму, политике и свежей готовности основного.'));
@@ -288,11 +307,11 @@ function autoWorking(light){return !!light&&(light.key==='ok'||light.key==='rese
 function renderAutoLight(light,technicalCode){
   var working=autoWorking(light);
   var lamps=[E('span',{'class':'hv-lamp hv-lamp-red'+(working?'':' hv-lamp-lit'),'aria-hidden':'true'}),E('span',{'class':'hv-lamp hv-lamp-green'+(working?' hv-lamp-lit':''),'aria-hidden':'true'})];
-  var housing=E('div',{'class':'hv-light hv-light-two hv-light-'+(working?'on':'off'),'role':'img','aria-label':working?bi('Automatic switching works','Автопереключение работает'):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
+  var housing=E('div',{'class':'hv-light hv-light-two hv-light-'+(working?'on':'off'),'role':'img','aria-label':light.hold?light.title:working?bi('Automatic switching works','Автопереключение работает'):bi('Automatic switching does not work','Автопереключение не работает')},lamps);
   var legend=E('ul',{'class':'hv-light-legend','aria-label':bi('What the lamps mean','Что означают лампы')},[
     E('li',{'class':working?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
-    E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
-    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow: Alive; you can switch to it manually, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — Живой, можно переключиться на него вручную, серый — ждём ответа роутера, красный — ошибка.')])]);
+    E('li',{'class':working?'':'hv-legend-current'},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),light.hold?manualHoldText():bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
+    E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive; the button shows whether switching is available, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой, доступность переключения показана на кнопке, серый — ждём ответа роутера, красный — ошибка.')])]);
   return E('div',{'class':'hv-light-block'},[housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')+technicalCode,light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null].filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
@@ -310,9 +329,11 @@ function autoShowError(title,node){
   else if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,node);
 }
 var autoRequestBusy=false,autoStopBusy=false,autoStartPending=false;
-var autoCommandPending=null,autoControlRefresh=function(){};
+var autoCommandPending=null,autoCommandUnconfirmed=null,autoCommandSequence=0,autoObservedOperation=null,autoControlRefresh=function(){};
 /* Countdown on the Auto button: the expected time is the median of the last measured starts/stops in this browser. */
 var AUTO_COUNTDOWN=null,AUTO_COUNTDOWN_TIMER=null,AUTO_COUNTDOWN_NODES=null,AUTO_DURATION_KEY='hv-auto-durations';
+function autoClockTick(){return typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now():Date.now();}
+function autoElapsedMs(value){return Math.max(0,Number.isFinite(value.tick)?autoClockTick()-value.tick:Date.now()-value.t0);}
 function autoDurations(){try{var v=JSON.parse(window.localStorage.getItem(AUTO_DURATION_KEY)||'{}');return v&&typeof v==='object'?v:{};}catch(error){return {};}}
 function autoDurationEstimate(kind){
   var rows=(autoDurations()[kind]||[]).filter(function(n){return Number.isFinite(n)&&n>0&&n<600;}).sort(function(a,b){return a-b;});
@@ -325,29 +346,29 @@ function autoDurationRecord(kind,seconds){
   var all=autoDurations();all[kind]=(Array.isArray(all[kind])?all[kind]:[]).concat([Math.round(seconds*10)/10]).slice(-5);
   try{window.localStorage.setItem(AUTO_DURATION_KEY,JSON.stringify(all));}catch(error){}
 }
+// The ring shows measured elapsed time only; an estimate is never presented as the router's deadline.
+var AUTO_CONFIRM_SECONDS=120;
 function autoCountdownText(){
   if(!AUTO_COUNTDOWN)return '';
-  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000;
-  return left>0?Math.ceil(left)+bi(' s',' с'):'+'+Math.floor(-left)+bi(' s',' с');
+  var seconds=Math.floor(autoElapsedMs(AUTO_COUNTDOWN)/1000);return Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2);
 }
 function autoCountdownTick(){
   var n=AUTO_COUNTDOWN_NODES;if(!n)return;
   function hide(on){if(on){if(n.root.setAttribute)n.root.setAttribute('hidden','');}else if(n.root.removeAttribute)n.root.removeAttribute('hidden');}
   if(!AUTO_COUNTDOWN){hide(true);return;}
-  var left=AUTO_COUNTDOWN.estimate-(Date.now()-AUTO_COUNTDOWN.t0)/1000,part=Math.max(0,Math.min(1,left/AUTO_COUNTDOWN.estimate));
+  var left=AUTO_CONFIRM_SECONDS-autoElapsedMs(AUTO_COUNTDOWN)/1000,part=Math.max(0,Math.min(1,left/AUTO_CONFIRM_SECONDS));
   hide(false);n.text.textContent=autoCountdownText();
   if(n.root.style&&n.root.style.setProperty)n.root.style.setProperty('--hv-countdown',String(part));
   if(n.root.classList&&n.root.classList.toggle)n.root.classList.toggle('hv-auto-countdown-over',left<=0);
 }
 function autoCountdownBegin(kind){
   if(AUTO_COUNTDOWN&&AUTO_COUNTDOWN.kind===kind)return;
-  AUTO_COUNTDOWN={kind:kind,t0:Date.now(),estimate:autoDurationEstimate(kind)};
-  if(!AUTO_COUNTDOWN_TIMER&&typeof setInterval==='function')AUTO_COUNTDOWN_TIMER=setInterval(autoCountdownTick,250);
+  AUTO_COUNTDOWN={kind:kind,t0:Date.now(),tick:autoClockTick(),estimate:autoDurationEstimate(kind)};
   autoCountdownTick();
 }
 function autoCountdownEnd(success){
   if(!AUTO_COUNTDOWN)return;
-  if(success)autoDurationRecord(AUTO_COUNTDOWN.kind,(Date.now()-AUTO_COUNTDOWN.t0)/1000);
+  if(success)autoDurationRecord(AUTO_COUNTDOWN.kind,autoElapsedMs(AUTO_COUNTDOWN)/1000);
   AUTO_COUNTDOWN=null;if(AUTO_COUNTDOWN_TIMER&&typeof clearInterval==='function'){clearInterval(AUTO_COUNTDOWN_TIMER);AUTO_COUNTDOWN_TIMER=null;}
   autoCountdownTick();
 }
@@ -359,13 +380,20 @@ function autoCommandOperation(status,now){
     var done=autoCommandPending.stop?terminal:terminal||phase==='RUNNING'&&model.on&&!model.awaiting&&!model.transitioning;
     var legacyDone=!phase&&!model.awaiting&&!model.transitioning&&
       (autoCommandPending.stop?model.off:model.on||model.off||model.color==='error');
-    if(done||legacyDone)autoCommandPending=null;
+    if(done||legacyDone){autoCommandPending=null;autoCommandUnconfirmed=null;}
   }
-  if(autoCommandPending&&Number.isFinite(autoCommandPending.t0)&&Date.now()-autoCommandPending.t0>Math.max(120000,2000*autoDurationEstimate(autoCommandPending.stop?'stop':'start'))){
-    autoCommandPending=null;
-    if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNCONFIRMED'));
+  if(autoCommandPending&&Number.isFinite(autoCommandPending.t0)&&autoElapsedMs(autoCommandPending)>Math.max(120000,2000*autoDurationEstimate(autoCommandPending.stop?'stop':'start'))){
+    autoCommandUnconfirmed=autoCommandPending;autoCommandUnconfirmed.observed=model.fresh&&autoCommandPending.acknowledged&&intent.requested_at>autoCommandPending.baseline;autoCommandUnconfirmed.baseline=Math.max(autoCommandUnconfirmed.baseline||0,intent.requested_at||0);autoCommandPending=null;autoStopBusy=false;autoRequestBusy=false;autoStartPending=false;
   }
+  if(autoCommandUnconfirmed&&model.fresh&&(intent.requested_at>autoCommandUnconfirmed.baseline||autoCommandUnconfirmed.observed&&intent.requested_at===autoCommandUnconfirmed.baseline&&!model.awaiting&&!model.transitioning&&['FAILED','STOPPED','HELD','RUNNING'].indexOf(phase)>=0))autoCommandUnconfirmed=null;
   if(autoCommandPending)return autoCommandPending.stop?'stopping':'starting';
+  if(autoCommandUnconfirmed)return 'unconfirmed';
+  var observed=phase==='STARTING'&&!failedStart?'starting':phase==='STOPPING'?'stopping':null;
+  if(observed){
+    var observedKey=observed+':'+intent.requested_at;
+    if(!autoObservedOperation||autoObservedOperation.key!==observedKey)autoObservedOperation={key:observedKey,t0:Date.now(),tick:autoClockTick()};
+    if(autoElapsedMs(autoObservedOperation)>120000)return 'unconfirmed';
+  }else autoObservedOperation=null;
   if(phase==='STARTING')return failedStart?null:'starting';
   if(phase==='STOPPING')return 'stopping';
   if(phase==='UNKNOWN')return 'unknown';
@@ -387,7 +415,7 @@ function renderAutoPowerControl(status,inventory){
   }
   function syncButton(){
     currentControl();
-    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;
     button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');
       // The button shows "on" only when Auto is confirmed working and no command is still pending.
@@ -395,26 +423,30 @@ function renderAutoPowerControl(status,inventory){
       button.classList.toggle('hv-auto-lit-on',confirmedOn);button.classList.toggle('hv-auto-lit-off',!confirmedOn);}
     AUTO_COUNTDOWN_NODES=countdownNodes;
     if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
-    else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn:!nowOn);}
+    else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn&&model.fresh&&!model.awaiting:model.fresh&&model.off&&!model.awaiting&&!intent.failure&&(intent.pair_phase==='STOPPED'||!intent.pair_phase&&ns.original_restored===true));}
     button.setAttribute('data-auto-operation',operation||'idle');
-    var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
+    var label=operation==='starting'?bi('Turning Auto on…','Включение Auto…'):operation==='stopping'?bi('Turning Auto off…','Выключение Auto…'):operation==='unconfirmed'?bi('Command not confirmed · press to stop','Команда не подтверждена · нажмите для остановки'):operation==='unknown'?bi('Awaiting controller state…','Ожидание состояния контроллера…'):stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим');
     button.setAttribute('aria-label',label);button.setAttribute('aria-busy',operation?'true':'false');
-    actionLabel.textContent=operation?label+(AUTO_COUNTDOWN?' '+bi('about ','примерно ')+autoDurationEstimate(AUTO_COUNTDOWN.kind)+bi(' s',' с'):''):stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
+    var recovery=!operation&&!stop&&typeof uiRecoveryModel==='function'?uiRecoveryModel(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000):null;
+    actionLabel.textContent=operation?label+' ':recovery?bi('Start is refused until recovery completes · ','Start отклоняется до завершения восстановления · ')+recovery.code:stop?bi('Press to turn Auto off','Нажмите, чтобы выключить Auto'):bi('Press to turn Auto on','Нажмите, чтобы включить Auto');
+    // Manual and automatic switches use the same live stage/timer as Start and Stop.
+    var timed=operation||typeof uiOperationTimerText==='function'&&uiOperationTimerText(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000);
+    if(timed&&typeof uiTimerNode==='function'&&actionLabel.appendChild){if(!operation)actionLabel.textContent+=' · ';actionLabel.appendChild(uiTimerNode(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000));}
   }
   var button=E('button',{'type':'button','class':'hv-auto-power hv-auto-neutral'+(autoWorking(light)?' hv-auto-lit-on':' hv-auto-lit-off')+(model.stop?' hv-auto-armed':''),'aria-label':model.stop?bi('Stop auto mode','Выключить авторежим'):bi('Start auto mode','Включить авторежим'),'aria-pressed':model.on?'true':'false','disabled':(model.stop?autoStopBusy:autoRequestBusy||autoStopBusy||(inventory.error||!model.fresh))?'':null,'click':function(){
     currentControl();
-    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
+    var operation=autoCommandOperation(status,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),stop=model.stop||autoStartPending||operation==='starting'||operation==='unconfirmed'||!model.fresh;if(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||!monitorReady))return;
     if(!stop&&(typeof controlRevision!=='string'||!/^[0-9a-f]{32}$/.test(controlRevision))){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
-    autoCommandPending={stop:stop,baseline:intent.requested_at||0,acknowledged:false,t0:Date.now()};autoCountdownBegin(stop?'stop':'start');
-    if(stop)autoStopBusy=true;else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();
+    var command={sequence:++autoCommandSequence,stop:stop,baseline:intent.requested_at||0,acknowledged:false,t0:Date.now(),tick:autoClockTick()};autoCommandPending=command;autoCommandUnconfirmed=null;autoObservedOperation=null;autoCountdownBegin(stop?'stop':'start');
+    if(stop){autoStopBusy=true;autoRequestBusy=false;autoStartPending=false;}else{autoRequestBusy=true;autoStartPending=true;}autoControlRefresh();if(typeof uiOperationRefresh==='function')uiOperationRefresh(false);
     var call=rpc.declare({object:'homensai-vpn',method:stop?'native_stop':'native_start',params:stop?['request_source']:['control_revision','request_source'],expect:{}});
     return (stop?call('manual'):call(controlRevision,'manual')).then(function(result){
-      if(autoCommandPending&&autoCommandPending.stop===stop){if(autoRequestAcknowledged(result,stop))autoCommandPending.acknowledged=true;else autoCommandPending=null;}
+      if(autoCommandSequence!==command.sequence)return;if(autoCommandPending===command){if(autoRequestAcknowledged(result,stop))command.acknowledged=true;else autoCommandPending=null;}
       if(!stop&&result&&result.accepted===false&&(result.code==='CONTROL-REVISION-STALE'||Array.isArray(result.blockers)&&result.blockers.indexOf('CONTROL-REVISION-STALE')>=0)){ui.addNotification(null,autoCodeNotice('CONTROL-REVISION-STALE'));window.location.reload();return;}
       if(result&&typeof result.code==='string'&&/^[A-Z][A-Z0-9-]{2,95}$/.test(result.code)&&(result.accepted===false||result.queued===false))ui.addNotification(null,autoCodeNotice(result.code,result.settings_unverified?bi('router settings could not be read','настройки роутера не прочитаны'):''));
       else if(result&&result.accepted===false){autoShowError(bi('Auto did not start','Auto не запустился'),E('div',{},[autoCodeNotice('AUTO-START-REFUSED'),E('ul',{},(result.blockers||[]).map(function(code){return E('li',{},[code+' · '+autoBlockerText(code),renderAutoRemedy(code)].filter(Boolean));}))]));}
       else if(!autoRequestAcknowledged(result,stop))ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-UNVERIFIED'));
-    }).catch(function(){if(autoCommandPending&&autoCommandPending.stop===stop){if(stop)autoCommandPending=null;else autoCommandPending.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();});
+    }).catch(function(){if(autoCommandSequence!==command.sequence)return;if(autoCommandPending===command){if(stop){autoCommandPending=null;autoCommandUnconfirmed=command;}else command.acknowledged=true;}ui.addNotification(null,autoCodeNotice('AUTO-CONTROL-FAILED'));}).finally(function(){if(autoCommandSequence!==command.sequence)return;if(stop)autoStopBusy=false;else{autoRequestBusy=false;autoStartPending=false;}autoControlRefresh();if(typeof uiOperationRefresh==='function')uiOperationRefresh();});
   }},[E('span',{'class':'hv-power-symbol','aria-hidden':'true'}),countdown]);
   autoControlRefresh=syncButton;syncButton();
   return {button:button,actionLabel:actionLabel,model:model,light:light};
@@ -429,7 +461,7 @@ function renderAutoControl(status,inventory,refresh){
   var pathLabels={neutral:bi('No recent check','Нет свежей проверки'),healthy:bi('Active traffic path','Активный путь трафика'),ready:bi('Ready for automatic mode','Готов к работе в автомате'),inactive:bi('Tunnel not connected','Туннель не подключён'),failed:bi('Connectivity failed','Ошибка доступности'),checking:bi('Checking…','Идёт проверка…')};
   // Channel selection is separate from probe health: an idle healthy reserve is not a failure.
   function nodeTone(p,key){
-    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),autoWorking(light));
+    if(typeof manualChannelTone==='function')return manualChannelTone(p,key,path,(typeof statusNow==='function'?statusNow(status):Date.now()/1000),autoWorking(light),status);
     return {color:'grey',text:bi('No recent check','Нет свежей проверки'),carrier:false};
   }
   function box(p,label,key){var state=path[key],tone=nodeTone(p,key);var attributes={'class':'hv-auto-node hv-node-two hv-node-'+tone.color+(tone.carrier?' hv-node-carrier':''),'data-path-node':key,'data-path-state':state,'data-node-tone':tone.color};
@@ -477,7 +509,7 @@ function renderAutoControl(status,inventory,refresh){
     try{shownKey=window.sessionStorage.getItem('homensai-vpn-auto-failure');}catch(e){shownKey=AUTO_FAILURE_SHOWN;}
     if(shownKey!==failureKey&&AUTO_FAILURE_SHOWN!==failureKey){
       AUTO_FAILURE_SHOWN=failureKey;try{window.sessionStorage.setItem('homensai-vpn-auto-failure',failureKey);}catch(e){}
-      ui.showModal(bi('Auto did not start','Auto не запустился'),[E('p',{},bi('Reason:','Причина:')),autoCodeNotice(failureInfo),E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
+      ui.showModal(typeof UI_RECOVERY_CODES!=='undefined'&&UI_RECOVERY_CODES.indexOf(failureInfo)>=0?bi('Recovery needed','Нужно восстановление'):bi('Auto did not start','Auto не запустился'),[E('p',{},bi('Reason:','Причина:')),autoCodeNotice(failureInfo),E('div',{'class':'right'},E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Close','Закрыть')))]);
     }
   }
   var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoWorking(light)?'on':'off'),'role':'status'},autoWorking(light)?bi('Auto works','Auto работает'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode)]),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?renderConnectivityCheck(status,refresh,inventory):null].filter(Boolean)),holdReturn,checklist,pairMode?null:E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: every automatic switch must be confirmed by the LAN helper running on a computer, otherwise the router rolls back.','Экспериментально: каждое автоматическое переключение должно подтверждаться LAN-помощником на компьютере, иначе роутер откатится.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));

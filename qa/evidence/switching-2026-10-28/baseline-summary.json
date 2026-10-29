@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "baseline_commit": "2b10976cb5686cab149f66c237b1b51c32775cc0",
+  "initial_candidate_commit": "304302ffe8b4b30590cabeddbd95c7e5237238d6",
+  "baseline_application_tests": 1122,
+  "baseline_application_result": "PASS",
+  "baseline_skips": 0,
+  "baseline_selected_regressions": {
+    "cases": 7,
+    "failures": 6,
+    "errors": 1,
+    "reproduced": 7,
+    "scope": "Real journal, control locks and production state machine; deterministic router/process/kernel adapters.",
+    "test_only_adjustment": "Copied current test modules into an exact baseline archive and removed the unused observation_freshness import; no baseline production changes.",
+    "cases_details": [
+      {
+        "case": "stop_after_durable_arm_before_spawn",
+        "observed": "ARMED journal remains without worker"
+      },
+      {
+        "case": "supervisor_hands_stranded_pair_journal_to_recovery",
+        "observed": "Second pair tick instead of independent recovery"
+      },
+      {
+        "case": "stop_cancels_queued_manual_once",
+        "observed": "QUEUED remains after Stop"
+      },
+      {
+        "case": "supported_long_interval_keeps_healthy_choices",
+        "observed": "Both healthy manual choices blocked at age100, interval300"
+      },
+      {
+        "case": "orphan_claim_is_terminalized_without_replay",
+        "observed": "CLAIMED left unresolved"
+      },
+      {
+        "case": "recovery_revokes_intent_before_rollback_failure",
+        "observed": "Intent remains ON after failed recovery"
+      },
+      {
+        "case": "retry_after_uci_restore_and_failed_rtp",
+        "observed": "Own unchanged pre-RTP kernel rejected as KERNEL-POLICY-UNVERIFIED"
+      }
+    ]
+  },
+  "initial_candidate_new_regressions": {
+    "cases": 36,
+    "result": "PASS",
+    "scope": "Same isolated environment; before final UI/website/diagnostic review corrections."
+  },
+  "initial_matrix_errors": {
+    "count": 25,
+    "kind": "test fixture isolation",
+    "cause": "Four older fixtures did not redirect auto_control.RUNTIME/PERSIST to their own temporary paths; read-only /run correctly refused writes. Product code was not weakened to fix tests."
+  },
+  "namespace": "Separate user/mount/network namespaces; empty read-only /run; read-only /etc; isolated loopback; actual Lua5.1/CJSON.",
+  "files": {
+    "baseline-applications.log": {
+      "sha256": "ac9dc5fbca0e47bb6817712f11135b84ff988ca80a8daca4fbf99ed32d050e70",
+      "bytes": 989
+    },
+    "baseline-regressions.log": {
+      "sha256": "bb31b48789b0838660743b27009cadac4d71b1dccd2ed5a1353ba5afba59ff4b",
+      "bytes": 8125
+    },
+    "website-publication-baseline.json": {
+      "sha256": "8baf6a4fb6924c5c8eb149fdfcda0ea8b6d03ede07149593a46fbc4259a24095",
+      "bytes": 393
+    },
+    "candidate-initial-new-regressions.log": {
+      "sha256": "15a2989450acd756e774c8f5e1ea9bc524bee029c3b20cb5a189e6e97098f81d",
+      "bytes": 6626
+    },
+    "candidate-initial-python311-fixture-failed.log": {
+      "sha256": "d44f52e799e8116393b60a94016bf99e42a52e891d59193c9aac92b745685de8",
+      "bytes": 46659
+    },
+    "candidate-initial-python39-fixture-failed.log": {
+      "sha256": "0aa5d1d5a547a003694dd6816d1bd340b799043589608926f14b96c880b5a2be",
+      "bytes": 42250
+    },
+    "website-review-repro-before-fix.log": {
+      "sha256": "a4ecc6a99cec920e5a6e35281524a7a76bde1191dda47f2f476e93574fa1d16e",
+      "bytes": 1927
+    },
+    "manual-clock-step-baseline.txt": {
+      "sha256": "640443f3b76db30cc4709dfd73e0734f8a65c45e583a82ce083b8bbcc8dd90b3",
+      "bytes": 611
+    },
+    "manual-clock-step-future-baseline.txt": {
+      "sha256": "d496fc38394dd7b8da6248155271215d879472eb6045ee3da87ddcc3a538b15a",
+      "bytes": 611
+    }
+  }
+}

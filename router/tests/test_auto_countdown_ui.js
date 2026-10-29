@@ -12,10 +12,12 @@ assert.equal(c.autoDurationEstimate('start'),30);assert.equal(c.autoDurationEsti
 assert.deepEqual(JSON.parse(store['hv-auto-durations']).start,[40,14,13,90,15]);
 assert.equal(c.autoDurationEstimate('start'),15);
 c.autoDurationRecord('start',-1);c.autoDurationRecord('start',9999);assert.equal(JSON.parse(store['hv-auto-durations']).start.length,5,'impossible durations are ignored');
-// Text counts down and then shows the overrun instead of stopping at zero.
+// The ring shows measured elapsed time only: a browser estimate is never presented as a remaining router deadline.
 vm.runInContext("AUTO_COUNTDOWN={kind:'start',t0:Date.now(),estimate:15}",c);
-assert.equal(c.autoCountdownText(),'15 s');clock+=6200;assert.equal(c.autoCountdownText(),'9 s');clock+=12000;assert.equal(c.autoCountdownText(),'+3 s');
-console.log('PASS: Auto countdown uses measured durations and shows the overrun');
+assert.equal(c.autoCountdownText(),'0:00');clock+=6200;assert.equal(c.autoCountdownText(),'0:06');clock+=72000;assert.equal(c.autoCountdownText(),'1:18','no "+N s" overrun of a fake estimate');
+assert(!/estimate-autoElapsed|about |примерно /.test(src.slice(src.indexOf('function autoCountdownText'),src.indexOf('function renderAutoControl'))),'no estimate-based countdown or "about N s" text');
+assert(!src.includes('setInterval(autoCountdownTick'),'the Auto ring has no private timer; the shared page heartbeat drives it');
+console.log('PASS: Auto timer shows measured elapsed time; durations are only recorded, never shown as a deadline');
 
 const f={bi:(en)=>en,countryName:p=>p.country,protocolLabel:p=>p.protocol==='wireguard'?'WireGuard':'OpenVPN'};vm.createContext(f);
 const fp=fs.readFileSync('router/fault_panel.inc.js','utf8');vm.runInContext(fp.slice(fp.indexOf('function faultChannelName'),fp.indexOf('function faultPanel(')),f);

@@ -23,7 +23,8 @@ class Hardening(unittest.TestCase):
         self.directory=Path(self.stack.enter_context(tempfile.TemporaryDirectory()))
         for name,value in {'RUNTIME':self.directory,'PERSIST':self.directory,'JOURNAL':self.directory/'journal','STATE':self.directory/'state'}.items():
             self.stack.enter_context(patch.object(native,name,value))
-            if name in ('RUNTIME','PERSIST'):self.stack.enter_context(patch.object(agent,name,value))
+            if name in ('RUNTIME','PERSIST'):
+                for module in (agent,auto_control):self.stack.enter_context(patch.object(module,name,value))
 
     def test_missing_journal_is_distinct_from_invalid_existing_json(self):
         self.assertEqual(native.journal_read(),{})
@@ -138,7 +139,7 @@ class Hardening(unittest.TestCase):
         native.journal_write(base)
         self.assertEqual(native.journal_read()['tx'],'current')
         changes=[{'pid':True},{'pid':-1},{'pid':'12'},{'rollback_failures':'bad'},
-                 {'rollback_failures':3},{'trial':'false'},{'source':{}},{'target':base['source']},
+                 {'rollback_failures':3},{'rollback_package':''},{'rollback_package':'0.9 bad'},{'rollback_package':7},{'trial':'false'},{'source':{}},{'target':base['source']},
                  {'deadline':9},{'after':['a','a']}]
         changes.extend({name:None} for name in ('tx','source','target','trial_nonce','started','deadline'))
         for edit in changes:

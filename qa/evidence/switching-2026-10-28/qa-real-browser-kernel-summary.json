@@ -1,0 +1,166 @@
+{
+  "verdict": "LOCAL_QA_PASS_RELEASE_BLOCKED",
+  "application_version": "0.9.1-alpha58",
+  "head_at_summary": "3a3b5949a3d2186d087307163f703b79cfcea93c",
+  "validation": [
+    {
+      "name": "real_kernel_parser",
+      "status": "PASS",
+      "passed": 9,
+      "assertions": 9,
+      "evidence": "qemu-kernel-final.json",
+      "scope": "Real disposable OpenWrt21.02.7 x86/64 kernel5.4.238 + iptables1.8.7; synthetic FW3 pair; actual product kernel_policy.attest; not GL.iNet/RTP/hardware acceptance"
+    },
+    {
+      "name": "browser_backend_kernel",
+      "status": "PASS",
+      "passed": 33,
+      "assertions": 33,
+      "evidence": "browser-e2e-kernel-final.json",
+      "scope": "Real Chromium manual/Resume clicks -> production queue/native child/CAS; actual Auto tick/streak/diagnosis/recovery_ready -> disposable OpenWrt FW3 kernel. Synthetic UCI/vendor/tunnel probes/worker launch; readonly host filesystem; not physical-router acceptance."
+    },
+    {
+      "name": "browser_presentation",
+      "status": "PASS",
+      "passed": 13,
+      "assertions": 13,
+      "evidence": "browser-presentation-final.json",
+      "scope": "Real Chromium and actual generated dashboard; synthetic status and RPC overlays for deterministic presentation/timer checks. No native controller/kernel command is issued by these tests."
+    },
+    {
+      "name": "auto_foreign_kernel",
+      "status": "PASS",
+      "passed": 6,
+      "assertions": 6,
+      "evidence": "auto-foreign-kernel-final.json",
+      "scope": "Actual pair_auto.tick and attestor refusal for a deliberately injected foreign PREROUTING mark in the marked disposable OpenWrt guest; no physical router"
+    },
+    {
+      "name": "copy_only_browser_smoke",
+      "status": "PASS",
+      "passed": 9,
+      "assertions": 9,
+      "evidence": "browser-copy-final.json",
+      "scope": "Targeted copy-only asset recheck: actual Chromium render/click -> production manual queue/consume/native child -> disposable QEMU kernel. Full prior matrix remains separately identified by its asset hash."
+    }
+  ],
+  "total_assertions": 70,
+  "all_recorded_backend_hashes_match_current": true,
+  "assets": {
+    "full_functional_and_presentation": {
+      "repository_commit": "708639c7bd52271b18a980f5985833c16e585a35",
+      "dashboard_sha256": "03e96e9e78d340b99b6184e6a842572e5bea12dafcce58696dc75666152fc786",
+      "scope": "33 full browser/controller/kernel assertions plus 13 explicitly synthetic presentation assertions"
+    },
+    "copy_only_recheck": {
+      "repository_commit": "3a3b5949a3d2186d087307163f703b79cfcea93c",
+      "dashboard_sha256": "6f6a44c98b638adb312300a4e10ddba4d8c92907beaa21efff7ee891af586779",
+      "scope": "One neutral Auto instruction changed; targeted real render/click and actual QEMU transaction rechecked. Entire functional matrix was not rerun on this text-only asset."
+    }
+  },
+  "host_isolation": {
+    "etc_readonly": true,
+    "run_readonly": true,
+    "mount_namespace": "mnt:[4026532206]",
+    "effective_capabilities": "0000000000000000"
+  },
+  "backend_source_sha256": {
+    "pair_manual.py": "7394cb30b72c7aac64098eb51e85d3f4995bebb4f314d6972e567e28371d411a",
+    "pair_auto.py": "b7e7ebfdf5d5b8e78e59094d3360c396e7ebd354c6e3231ee840abe88975dea0",
+    "native_switch.py": "ed69cea17499c67d7c5c30c79ddb6ce57cec2a125f4f7c955301ef2a59d69298",
+    "channel_path.py": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192",
+    "kernel_policy.py": "81b313c1c6580adff95fe1ed04108d6a2f2ecb7fc87fa18bb94276fd1b2747ae",
+    "pair_policy.py": "74a7ba58d029e41bfadbb0bcd1eba07b104a9b68f3693c2dce7ca2728e300c27",
+    "recovery_settings.py": "d48b157ac07251962fc0a4768838caa2a87344d53323f7583b961fddac05dca9",
+    "failure_diagnosis.py": "2e1d5e4c40b058e54ab5ed73ddd6c7427f64c2ff184024fa7debcf919557b336",
+    "failover_plan.py": "e685207bfe023480d1fc99dae41d509e17d8cc5da5f3036e78e4c0b0559a5b7e",
+    "auto_control.py": "b69db49beea25d357ac00a89ce3b7ccb93b350c9404df08d02b5f4d9b5c5047c",
+    "manual_control.py": "28e923582ef74169a47600bce88cc52306f9f42c4962b8b541653aeb8b48ae63",
+    "manual_dispatch.py": "091071d51d4a7716a1742d7c88f6fcde629f6d403376a68fdbc7da0c0ef746d1",
+    "agent.py": "9fc04f4b1b771f98de4eb9347e65b1a75b127473691b50b8c9e5e95f2ea3e3d9",
+    "website_response.py": "da6f070e1c265b0fc26dfa14ffc80ee724b43a1339af12e12bc37ba1cc466013",
+    "website_publication.py": "c9f1286b608c0bae17a4ab0f039d54193b1428045c3b7262d95ec27a26fb1ffa",
+    "rollback_recovery.py": "e1d40c0dd213d4fce6503d59fd38e7cd67a8495d0609e3c4da3a642a9b490408"
+  },
+  "blocked_gates": [
+    {
+      "gate": "required_handoff",
+      "status": "BLOCKED",
+      "reason": "docs/handoff/TODO-CLAUDE-SWITCHING-2026-10-28.ru.md is absent from available worktree and all Git-ref history; no replacement obligations were invented.",
+      "evidence": "qa-environment-and-handoff.json"
+    },
+    {
+      "gate": "canonical_immutable_docker_python39_python311_ci",
+      "status": "BLOCKED",
+      "reason": "Approved immutable Docker runtimes not executed in this QA environment. Separate local interpreter checks do not replace this gate."
+    },
+    {
+      "gate": "physical_mt3000_private_executor",
+      "status": "BLOCKED",
+      "reason": "Private runbook/executor and physical target are unavailable. No physical router was contacted."
+    },
+    {
+      "gate": "physical_vendor_firmware_and_lan_acceptance",
+      "status": "BLOCKED",
+      "reason": "Real vendor RTP/procd/worker behavior, real VPN/LAN DNS/HTTPS/exit, reboot/power-cut and normal package installation require the approved physical-device workflow."
+    },
+    {
+      "gate": "release_and_installation",
+      "status": "BLOCKED",
+      "reason": "No release/tag/package installation is authorized before the required missing handoff and mandatory device/CI gates are satisfied."
+    }
+  ],
+  "independent_findings": [
+    {
+      "case": "accepted manual request plus older status redraw",
+      "baseline": "FAIL: second real click sent another RPC before the first terminal result",
+      "evidence": "browser-race-baseline.json",
+      "final": "PASS: sticky request correlation and lost-ACK recovery in browser-backend-kernel scenario"
+    },
+    {
+      "case": "manual hold had no Resume UI",
+      "baseline": "FAIL: resume.allowed=true but only primary/reserve buttons rendered",
+      "evidence": "browser-resume-missing-baseline.json",
+      "final": "PASS: actual Resume click clears hold without apply or budget change"
+    },
+    {
+      "case": "Auto failback reused stale reserve kernel proof",
+      "baseline": "FAIL: real kernel restored primary but controller entered HELD/BLOCKED SOURCE-NOT-HEALTHY",
+      "evidence": "auto-api-kernel-stale-failback-baseline.json",
+      "final": "PASS: one restoration, RUNNING/ROLLED-BACK then OBSERVING without another apply"
+    },
+    {
+      "case": "DEGRADED sidebar incorrectly claimed Auto OFF",
+      "baseline": "Found in actual shared model; UI agent preserved failing regression",
+      "final": "PASS: full/Minimum/sidebar agree on the selected-channel problem"
+    },
+    {
+      "case": "Auto-on page still instructed the user to turn Auto on",
+      "baseline": "Found in actual post-failback screenshot",
+      "final": "PASS: final neutral instruction rendered and real click transaction passed on new asset"
+    }
+  ],
+  "scope_limits": [
+    "Disposable OpenWrt x86/64 kernel, not physical GL-MT3000 firmware.",
+    "UCI/vendor RTP compilation, tunnel health and worker launch are synthetic adapters. Native child code executes within the fixture, not a separate procd process.",
+    "Raw guest netfilter/IP policy is real; no external LAN-client packet path or actual VPN endpoint is certified.",
+    "Presentation timer/clock/degraded cases use explicit synthetic RPC/status overlays."
+  ],
+  "infrastructure_incident": "qa-isolation-incident.json",
+  "release_eligible": false,
+  "screenshots": [
+    "browser-copy-final.png",
+    "browser-presentation-final-degraded-minimum.png"
+  ],
+  "cleanup": {
+    "time_utc": "2026-10-28T20:49:29.898808+00:00",
+    "qa_http_bridge": "stopped after server finally/fixture cleanup",
+    "guest_package_http_server": "stopped",
+    "qemu_pid": 24275,
+    "qemu_process_exists": false,
+    "qemu_shutdown": "guest sync then poweroff; recorded PID/executable/scratch disk/private serial verified before shutdown",
+    "physical_router_access": "none",
+    "host_certificate_unchanged_since_incident": true,
+    "host_certificate_action": "metadata/hash verification only, no deletion or move"
+  }
+}

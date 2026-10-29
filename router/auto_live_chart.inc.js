@@ -3,14 +3,14 @@ var autoLivePoints=[],autoLiveKey='',autoLiveContext=null,autoLivePollAdded=fals
 var AUTO_LIVE_COLORS={source:'#16a34a',target:'#2563eb',off:'#64748b',down:'#dc2626',blocked:'#9333ea'};
 // Both channels failing their router checks is a state of its own, never an empty line.
 function autoLiveBothDown(status,inventory,now){
-  var rows=(status||{}).profiles;if(!Array.isArray(rows)||!rows.length||!(Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90))return false;
+  var rows=(status||{}).profiles;if(!Array.isArray(rows)||!rows.length||!observationFresh(status,now))return false;
   var ids=typeof rolePairIds==='function'?rolePairIds(status,inventory||{},now):[];
   if(ids.length!==2||!ids[0]||!ids[1]||ids[0]===ids[1])return false;
-  return ids.every(function(id){var p=rows.filter(function(r){return r&&r.id===id;})[0];return p&&Number.isFinite(p.time)&&now-p.time>=-5&&now-p.time<=90&&!(p.code==null&&p.dns_ok===true&&p.https_success>=2);});
+  return ids.every(function(id){var p=rows.filter(function(r){return r&&r.id===id;})[0];return p&&observationFresh(p,now)&&!(p.code==null&&p.dns_ok===true&&p.https_success>=2);});
 }
 function autoLiveSample(status,now,inventory){
   status=status||{};
-  var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&!(status.speed_pause&&status.speed_pause.active)&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
+  var ns=(status||{}).native_failover||{},valid=Number.isFinite(now)&&!status.rpc_error&&!(status.speed_pause&&status.speed_pause.active)&&observationFresh(status,now)&&Number.isFinite(ns.time)&&now-ns.time>=-5&&now-ns.time<=30;
   var kind='unknown',state=String(ns.state||'UNKNOWN');
   var path=typeof channelPathSelection==='function'?channelPathSelection(status,now,ns.source,ns.target):{authoritative:ns.mode==='continuous-pair',selected:null,moving:false,code:ns.mode==='continuous-pair'?'KERNEL-POLICY-UNVERIFIED':null};
   if(valid){

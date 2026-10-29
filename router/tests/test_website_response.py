@@ -96,7 +96,7 @@ class RequestTiming(unittest.TestCase):
         value,sock=self.measured()
         self.assertEqual(value['elapsed_ms'],200.0);self.assertEqual(value['state'],'ok');self.assertEqual(value['http_status'],200)
         self.assertIn(b'GET /cdn-cgi/trace HTTP/1.1',sock.sent[0]);self.assertIn(W.USER_AGENT.encode(),sock.sent[0])
-        self.assertTrue(all(0<t<=3 for t in sock.timeouts))
+        self.assertTrue(all(0<t<=W.HOST_SECONDS for t in sock.timeouts))  # one site budget, no 3 s per-operation cap
 
     def test_tls_failure_redirect_wrong_status_and_oversized_headers_never_become_zero_samples(self):
         value,_=self.measured(context_error=ssl.SSLError('PRIVATE_SENTINEL'))

@@ -1,0 +1,386 @@
+{
+  "time_utc": "2026-10-28T22:20:45.105990+00:00",
+  "head": "32b26f62f0c8db587bac065eae1c7e6d31404b44",
+  "scope": "Read-only local filesystem/tool availability and prior evidence provenance audit; no physical router, registry, container daemon or guest was contacted.",
+  "isolation": {
+    "etc_readonly": true,
+    "run_readonly": true,
+    "effective_capabilities": "0000000000000000"
+  },
+  "prior_evidence": {
+    "backend_modules": [
+      {
+        "module": "pair_manual.py",
+        "recorded_sha256": "7394cb30b72c7aac64098eb51e85d3f4995bebb4f314d6972e567e28371d411a",
+        "current_worktree_sha256": "d9381b3bed4e3226fb0069861eb0e31030b3014775faa4bfe525fb8850909230",
+        "current_worktree_match": false,
+        "committed_head_sha256": "7394cb30b72c7aac64098eb51e85d3f4995bebb4f314d6972e567e28371d411a",
+        "committed_head_match": true
+      },
+      {
+        "module": "pair_auto.py",
+        "recorded_sha256": "b7e7ebfdf5d5b8e78e59094d3360c396e7ebd354c6e3231ee840abe88975dea0",
+        "current_worktree_sha256": "b7e7ebfdf5d5b8e78e59094d3360c396e7ebd354c6e3231ee840abe88975dea0",
+        "current_worktree_match": true,
+        "committed_head_sha256": "b7e7ebfdf5d5b8e78e59094d3360c396e7ebd354c6e3231ee840abe88975dea0",
+        "committed_head_match": true
+      },
+      {
+        "module": "native_switch.py",
+        "recorded_sha256": "ed69cea17499c67d7c5c30c79ddb6ce57cec2a125f4f7c955301ef2a59d69298",
+        "current_worktree_sha256": "ed69cea17499c67d7c5c30c79ddb6ce57cec2a125f4f7c955301ef2a59d69298",
+        "current_worktree_match": true,
+        "committed_head_sha256": "ed69cea17499c67d7c5c30c79ddb6ce57cec2a125f4f7c955301ef2a59d69298",
+        "committed_head_match": true
+      },
+      {
+        "module": "channel_path.py",
+        "recorded_sha256": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192",
+        "current_worktree_sha256": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192",
+        "current_worktree_match": true,
+        "committed_head_sha256": "05e9c1cf0e0bcde4aa57a91a713cf433df6f3e19787c4f67140ff53ebab87192",
+        "committed_head_match": true
+      },
+      {
+        "module": "kernel_policy.py",
+        "recorded_sha256": "81b313c1c6580adff95fe1ed04108d6a2f2ecb7fc87fa18bb94276fd1b2747ae",
+        "current_worktree_sha256": "81b313c1c6580adff95fe1ed04108d6a2f2ecb7fc87fa18bb94276fd1b2747ae",
+        "current_worktree_match": true,
+        "committed_head_sha256": "81b313c1c6580adff95fe1ed04108d6a2f2ecb7fc87fa18bb94276fd1b2747ae",
+        "committed_head_match": true
+      },
+      {
+        "module": "pair_policy.py",
+        "recorded_sha256": "74a7ba58d029e41bfadbb0bcd1eba07b104a9b68f3693c2dce7ca2728e300c27",
+        "current_worktree_sha256": "74a7ba58d029e41bfadbb0bcd1eba07b104a9b68f3693c2dce7ca2728e300c27",
+        "current_worktree_match": true,
+        "committed_head_sha256": "74a7ba58d029e41bfadbb0bcd1eba07b104a9b68f3693c2dce7ca2728e300c27",
+        "committed_head_match": true
+      },
+      {
+        "module": "recovery_settings.py",
+        "recorded_sha256": "d48b157ac07251962fc0a4768838caa2a87344d53323f7583b961fddac05dca9",
+        "current_worktree_sha256": "d48b157ac07251962fc0a4768838caa2a87344d53323f7583b961fddac05dca9",
+        "current_worktree_match": true,
+        "committed_head_sha256": "d48b157ac07251962fc0a4768838caa2a87344d53323f7583b961fddac05dca9",
+        "committed_head_match": true
+      },
+      {
+        "module": "failure_diagnosis.py",
+        "recorded_sha256": "2e1d5e4c40b058e54ab5ed73ddd6c7427f64c2ff184024fa7debcf919557b336",
+        "current_worktree_sha256": "2e1d5e4c40b058e54ab5ed73ddd6c7427f64c2ff184024fa7debcf919557b336",
+        "current_worktree_match": true,
+        "committed_head_sha256": "2e1d5e4c40b058e54ab5ed73ddd6c7427f64c2ff184024fa7debcf919557b336",
+        "committed_head_match": true
+      },
+      {
+        "module": "failover_plan.py",
+        "recorded_sha256": "e685207bfe023480d1fc99dae41d509e17d8cc5da5f3036e78e4c0b0559a5b7e",
+        "current_worktree_sha256": "e685207bfe023480d1fc99dae41d509e17d8cc5da5f3036e78e4c0b0559a5b7e",
+        "current_worktree_match": true,
+        "committed_head_sha256": "e685207bfe023480d1fc99dae41d509e17d8cc5da5f3036e78e4c0b0559a5b7e",
+        "committed_head_match": true
+      },
+      {
+        "module": "auto_control.py",
+        "recorded_sha256": "b69db49beea25d357ac00a89ce3b7ccb93b350c9404df08d02b5f4d9b5c5047c",
+        "current_worktree_sha256": "b69db49beea25d357ac00a89ce3b7ccb93b350c9404df08d02b5f4d9b5c5047c",
+        "current_worktree_match": true,
+        "committed_head_sha256": "b69db49beea25d357ac00a89ce3b7ccb93b350c9404df08d02b5f4d9b5c5047c",
+        "committed_head_match": true
+      },
+      {
+        "module": "manual_control.py",
+        "recorded_sha256": "28e923582ef74169a47600bce88cc52306f9f42c4962b8b541653aeb8b48ae63",
+        "current_worktree_sha256": "28e923582ef74169a47600bce88cc52306f9f42c4962b8b541653aeb8b48ae63",
+        "current_worktree_match": true,
+        "committed_head_sha256": "28e923582ef74169a47600bce88cc52306f9f42c4962b8b541653aeb8b48ae63",
+        "committed_head_match": true
+      },
+      {
+        "module": "manual_dispatch.py",
+        "recorded_sha256": "091071d51d4a7716a1742d7c88f6fcde629f6d403376a68fdbc7da0c0ef746d1",
+        "current_worktree_sha256": "091071d51d4a7716a1742d7c88f6fcde629f6d403376a68fdbc7da0c0ef746d1",
+        "current_worktree_match": true,
+        "committed_head_sha256": "091071d51d4a7716a1742d7c88f6fcde629f6d403376a68fdbc7da0c0ef746d1",
+        "committed_head_match": true
+      },
+      {
+        "module": "agent.py",
+        "recorded_sha256": "9fc04f4b1b771f98de4eb9347e65b1a75b127473691b50b8c9e5e95f2ea3e3d9",
+        "current_worktree_sha256": "9fc04f4b1b771f98de4eb9347e65b1a75b127473691b50b8c9e5e95f2ea3e3d9",
+        "current_worktree_match": true,
+        "committed_head_sha256": "9fc04f4b1b771f98de4eb9347e65b1a75b127473691b50b8c9e5e95f2ea3e3d9",
+        "committed_head_match": true
+      },
+      {
+        "module": "website_response.py",
+        "recorded_sha256": "da6f070e1c265b0fc26dfa14ffc80ee724b43a1339af12e12bc37ba1cc466013",
+        "current_worktree_sha256": "da6f070e1c265b0fc26dfa14ffc80ee724b43a1339af12e12bc37ba1cc466013",
+        "current_worktree_match": true,
+        "committed_head_sha256": "da6f070e1c265b0fc26dfa14ffc80ee724b43a1339af12e12bc37ba1cc466013",
+        "committed_head_match": true
+      },
+      {
+        "module": "website_publication.py",
+        "recorded_sha256": "c9f1286b608c0bae17a4ab0f039d54193b1428045c3b7262d95ec27a26fb1ffa",
+        "current_worktree_sha256": "c9f1286b608c0bae17a4ab0f039d54193b1428045c3b7262d95ec27a26fb1ffa",
+        "current_worktree_match": true,
+        "committed_head_sha256": "c9f1286b608c0bae17a4ab0f039d54193b1428045c3b7262d95ec27a26fb1ffa",
+        "committed_head_match": true
+      },
+      {
+        "module": "rollback_recovery.py",
+        "recorded_sha256": "e1d40c0dd213d4fce6503d59fd38e7cd67a8495d0609e3c4da3a642a9b490408",
+        "current_worktree_sha256": "e1d40c0dd213d4fce6503d59fd38e7cd67a8495d0609e3c4da3a642a9b490408",
+        "current_worktree_match": true,
+        "committed_head_sha256": "e1d40c0dd213d4fce6503d59fd38e7cd67a8495d0609e3c4da3a642a9b490408",
+        "committed_head_match": true
+      }
+    ],
+    "all_16_committed_backend_hashes_match": true,
+    "all_16_current_worktree_backend_hashes_match": false,
+    "worktree_changes_in_progress": [
+      "M router/files/usr/lib/homensai-vpn/pair_manual.py",
+      " M router/manual_panel.inc.js",
+      " M router/tests/test_pair_manual_bound_context.py",
+      " M router/tests/test_switching_lifecycle_ui.js",
+      " M router/ui_logic.inc.js",
+      "?? router/tests/test_rollback_order_steps.py"
+    ],
+    "dashboard_sha256": "6f6a44c98b638adb312300a4e10ddba4d8c92907beaa21efff7ee891af586779",
+    "dashboard_matches_final_copy_smoke": true,
+    "changes_since_copy_smoke": [
+      "docs/handoff/SWITCHING-REPAIR-2026-10-28.ru.md",
+      "qa/documentation-generated.json",
+      "qa/evidence/switching-2026-10-28/auto-api-kernel-stale-failback-baseline.json",
+      "qa/evidence/switching-2026-10-28/auto-decision-regressions-final.log",
+      "qa/evidence/switching-2026-10-28/auto-decisions-before-fixes.log",
+      "qa/evidence/switching-2026-10-28/auto-foreign-kernel-final.json",
+      "qa/evidence/switching-2026-10-28/backend-final-python311-targeted.log",
+      "qa/evidence/switching-2026-10-28/backend-final-python39-targeted-retry.log",
+      "qa/evidence/switching-2026-10-28/backend-final-python39-targeted.log",
+      "qa/evidence/switching-2026-10-28/baseline-applications.log",
+      "qa/evidence/switching-2026-10-28/baseline-browser-e2e-before-resume.json",
+      "qa/evidence/switching-2026-10-28/baseline-regressions.log",
+      "qa/evidence/switching-2026-10-28/baseline-summary.json",
+      "qa/evidence/switching-2026-10-28/browser-backend-events-copy-final.json",
+      "qa/evidence/switching-2026-10-28/browser-backend-events-kernel-final.json",
+      "qa/evidence/switching-2026-10-28/browser-backend-events-kernel-stale-failback-baseline.json",
+      "qa/evidence/switching-2026-10-28/browser-copy-final.json",
+      "qa/evidence/switching-2026-10-28/browser-copy-final.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-automatic-failback.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-automatic-failover.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-awaiting-ack.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-completed-first.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-completed-return.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-initial.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-lost-ack.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-queued.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-recovered.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final-resume-completed.png",
+      "qa/evidence/switching-2026-10-28/browser-e2e-kernel-final.json",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-clock-step-completed.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-clock-step-pending.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-degraded-full.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-degraded-minimum.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-stop-pending.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final-stop-unconfirmed.png",
+      "qa/evidence/switching-2026-10-28/browser-presentation-final.json",
+      "qa/evidence/switching-2026-10-28/browser-race-baseline.json",
+      "qa/evidence/switching-2026-10-28/browser-resume-missing-baseline.json",
+      "qa/evidence/switching-2026-10-28/candidate-initial-new-regressions.log",
+      "qa/evidence/switching-2026-10-28/candidate-initial-python311-fixture-failed.log",
+      "qa/evidence/switching-2026-10-28/candidate-initial-python39-fixture-failed.log",
+      "qa/evidence/switching-2026-10-28/manual-clock-step-baseline.txt",
+      "qa/evidence/switching-2026-10-28/manual-clock-step-future-baseline.txt",
+      "qa/evidence/switching-2026-10-28/matrix-identity.json",
+      "qa/evidence/switching-2026-10-28/matrix-initial-python311-host-state-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-initial-python39-host-state-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-manifest.json",
+      "qa/evidence/switching-2026-10-28/matrix-python311-generated-manifest-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-python311-incomplete-etc-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-python311-receipt.json",
+      "qa/evidence/switching-2026-10-28/matrix-python311.log",
+      "qa/evidence/switching-2026-10-28/matrix-python39-generated-manifest-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-python39-incomplete-etc-failed.log",
+      "qa/evidence/switching-2026-10-28/matrix-python39-receipt.json",
+      "qa/evidence/switching-2026-10-28/matrix-python39.log",
+      "qa/evidence/switching-2026-10-28/qa-cleanup.json",
+      "qa/evidence/switching-2026-10-28/qa-environment-and-handoff.json",
+      "qa/evidence/switching-2026-10-28/qa-isolation-incident.json",
+      "qa/evidence/switching-2026-10-28/qa-real-browser-kernel-summary.json",
+      "qa/evidence/switching-2026-10-28/qemu-kernel-final.json",
+      "qa/evidence/switching-2026-10-28/real-child-crash-baseline.json",
+      "qa/evidence/switching-2026-10-28/reproduction/README.md",
+      "qa/evidence/switching-2026-10-28/reproduction/auto_api_probe.py",
+      "qa/evidence/switching-2026-10-28/reproduction/auto_foreign_kernel.py",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_backend.py",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_copy_smoke.js",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_end_to_end.js",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_kernel_fixture.py",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_presentation.js",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_probe.js",
+      "qa/evidence/switching-2026-10-28/reproduction/browser_race.js",
+      "qa/evidence/switching-2026-10-28/reproduction/openwrt-package-manifest.json",
+      "qa/evidence/switching-2026-10-28/reproduction/prepare_qemu.py",
+      "qa/evidence/switching-2026-10-28/reproduction/qa_config.py",
+      "qa/evidence/switching-2026-10-28/reproduction/qemu_kernel_roundtrip.py",
+      "qa/evidence/switching-2026-10-28/reproduction/qemu_launch.py",
+      "qa/evidence/switching-2026-10-28/reproduction/qemu_serial.py",
+      "qa/evidence/switching-2026-10-28/reproduction/run_isolated.sh",
+      "qa/evidence/switching-2026-10-28/reproduction/summarize_evidence.py",
+      "qa/evidence/switching-2026-10-28/verification-summary.json",
+      "qa/evidence/switching-2026-10-28/website-publication-baseline.json",
+      "qa/evidence/switching-2026-10-28/website-review-repro-before-fix.log"
+    ]
+  },
+  "required_handoff": {
+    "path": "docs/handoff/TODO-CLAUDE-SWITCHING-2026-10-28.ru.md",
+    "exists": false,
+    "history": []
+  },
+  "physical_gate": {
+    "status": "BLOCKED",
+    "private_directory_exists": false,
+    "active_executor_exists": false,
+    "contact_attempts": 0
+  },
+  "pinned_docker_gate": {
+    "status": "BLOCKED",
+    "runner": "scripts/offline-ci.ps1",
+    "runtime_entrypoint": "qa/run_offline_ci.py",
+    "runner_sha256": "34ec8f28eb9efdbb68e3b1996ad7598625870a81b0a13affa1d47c8b4b241342",
+    "runtime_entrypoint_sha256": "d8dc06859e0c6b5976c175ec33db8fcc389397be9c5192a17ce1baf7761f311f",
+    "required_isolation": [
+      "immutable committed source archive",
+      "--pull=never",
+      "--network=none",
+      "--read-only",
+      "--cap-drop=ALL",
+      "--security-opt=no-new-privileges",
+      "--user=65534:65534",
+      "--pids-limit=128",
+      "--memory=512m",
+      "--cpus=2",
+      "bounded private /work and /tmp tmpfs",
+      "matching package SHA256 from both runtimes"
+    ],
+    "image_inputs": {
+      "full_tag": "homensai-vpn-python311:local",
+      "runtime_tag": "homensai-vpn-python39:local",
+      "reviewed_python39_image_id": "sha256:077393380406ae72cf73ce67ed8b0352e10ff7827330b1241631010d6112f150",
+      "reviewed_tools_image_id": "sha256:0b4418ddd722b07b92fe44d180df10fe252e105cd85ff830040e77b0fb34e3a7",
+      "python39_base_manifest": "python:3.9.15-slim-bullseye@sha256:ffc6cb648d6993e7c90abb95c2481eb688a6842dfac29bf19e3755454632daa2",
+      "python311_recipe": "qa/runtime-python311/Dockerfile",
+      "python39_recipe": "qa/runtime-python39/Dockerfile"
+    },
+    "local_runtime_availability": {
+      "binaries": {
+        "docker": null,
+        "dockerd": null,
+        "dockerd-rootless.sh": null,
+        "rootlesskit": null,
+        "podman": null,
+        "crun": null,
+        "runc": null,
+        "containerd": null,
+        "nerdctl": null,
+        "buildah": null,
+        "skopeo": null,
+        "fuse-overlayfs": null,
+        "slirp4netns": null,
+        "newuidmap": null,
+        "newgidmap": null,
+        "pwsh": null,
+        "unshare": "/usr/bin/unshare",
+        "bwrap": "/usr/bin/bwrap"
+      },
+      "paths": {
+        "/var/run/docker.sock": {
+          "exists": false,
+          "writable": false
+        },
+        "/run/docker.sock": {
+          "exists": false,
+          "writable": false
+        },
+        "/run/podman/podman.sock": {
+          "exists": false,
+          "writable": false
+        },
+        "/run/user/0/docker.sock": {
+          "exists": false,
+          "writable": false
+        },
+        "/run/user/0/podman/podman.sock": {
+          "exists": false,
+          "writable": false
+        },
+        "/var/lib/docker": {
+          "exists": false,
+          "writable": false
+        },
+        "/var/lib/containers": {
+          "exists": false,
+          "writable": false
+        },
+        "/dev/fuse": {
+          "exists": false,
+          "writable": false
+        },
+        "/sys/fs/cgroup/cgroup.controllers": {
+          "exists": true,
+          "writable": false
+        },
+        "/sys/fs/cgroup/cgroup.subtree_control": {
+          "exists": true,
+          "writable": false
+        }
+      },
+      "docker_environment_configured": false,
+      "/sys/fs/cgroup/cgroup.controllers": "cpuset cpu io memory hugetlb pids",
+      "/sys/fs/cgroup/cgroup.subtree_control": "",
+      "/proc/self/uid_map": "0          0          1",
+      "/proc/self/gid_map": "0          0          1"
+    },
+    "findings": [
+      "No Docker/Podman/OCI executable, daemon socket, or standard image store exists in the current environment. A separate read-only host-view check confirmed absence outside the execution sandbox too.",
+      "The cgroup filesystem is not writable and no delegated controller subtree is configured; reviewed CPU/memory/PID container limits cannot be claimed enforced by an ad hoc extracted-Python run.",
+      "The Python3.11 recipe composes two already-local reviewed images; their exact bytes are not available here. The Python3.9 recipe has an unpinned apt-get install step, so rebuilding from the public base is not proof of the previously approved final image.",
+      "The orchestration script hardcodes a Windows Git path and PowerShell is absent. Porting the launcher would also require review; it does not solve missing approved image bytes."
+    ],
+    "safe_completion_prerequisite": "Use the existing approved runner with its exact images, or first supply SHA-verified docker-save/OCI exports and a reviewed isolated runtime capable of every required resource/UID/network/rootfs flag. A new rootless daemon/VM was not installed without those inputs.",
+    "not_performed": [
+      "system Docker/Podman installation",
+      "/etc/subuid or /etc/subgid edits",
+      "cgroup writes",
+      "daemon or registry probing",
+      "container runs with substitute images",
+      "claiming portable Python as approved Docker CI"
+    ]
+  },
+  "baseline_crash_scope": {
+    "evidence": "real-child-crash-baseline.json",
+    "script": "lab/test_process_crash.py",
+    "actual": [
+      "a separate helper process receives SIGKILL",
+      "atomic JSON writes/fsync/rename occur on disk"
+    ],
+    "synthetic": [
+      "kernel is a JSON file",
+      "recovery chooses primary/backup in test code",
+      "no production native_switch.child, rollback recovery, UCI or real kernel graph is executed"
+    ],
+    "remaining_risk": "Backend review is investigating a concrete partial UCI move crash; any new production-process/kernel run is recorded separately."
+  },
+  "previous_host_certificate": {
+    "action": "Read-only metadata/hash verification; never modified, removed, or moved.",
+    "exists": true,
+    "bytes": 396,
+    "mtime_utc": "2026-10-28T20:29:07.324541+00:00",
+    "sha256": "773aaf1eeb8c289b8a3b46d8a12d282a0fbcd41f04c108df8831c00331b0cb3b",
+    "matches_previous_incident": true
+  },
+  "release_eligible": false
+}

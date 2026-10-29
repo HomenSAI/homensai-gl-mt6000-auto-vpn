@@ -25,6 +25,11 @@ import time
 
 ACTIVE={'OBSERVING','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'}
 STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
+# Upgrade only: an unfinished journal whose worker is provably gone. The new
+# supervisor's guarded recovery owns it after the restart; nothing here touches
+# the journal, the guard or the pair ownership record.
+INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
+APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
 
 
 def finite(value):
@@ -32,27 +37,34 @@ def finite(value):
     except OverflowError:return False
 
 
-def stop_acknowledged(status,transaction,intent,stopped):
+def closed(status,transaction,interrupted=False):
+    return (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True
+            or interrupted is True and transaction.get('phase') in INTERRUPTED)
+
+
+def stop_acknowledged(status,transaction,intent,stopped,interrupted=False):
     requested=intent.get('time');stop=stopped.get('requested');stamp=status.get('time')
     return (intent.get('mode')=='on' and isinstance(intent.get('trial'),str) and bool(intent['trial'])
             and stopped.get('trial')==intent['trial'] and finite(requested) and finite(stop)
-            and finite(stamp) and requested<=stop<=stamp and status.get('state') in STOPPED
-            and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+            and finite(stamp) and requested<=stop<=stamp
+            and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+            and closed(status,transaction,interrupted))
 
 
-def assess(settings,status,transaction,intent,stopped):
+def assess(settings,status,transaction,intent,stopped,interrupted=False):
     if any(not isinstance(row,dict) for row in (settings,status,transaction,intent,stopped)):
         return 'LIFECYCLE-STATE-UNVERIFIED'
     flag=settings.get('native_enabled',False)
     if not (type(flag) is bool or flag is None or isinstance(flag,str) and flag in ('0','1','')):return 'LIFECYCLE-CONFIG-UNVERIFIED'
     if status and not isinstance(status.get('state'),str):return 'LIFECYCLE-STATE-UNVERIFIED'
-    acknowledged=stop_acknowledged(status,transaction,intent,stopped)
+    acknowledged=stop_acknowledged(status,transaction,intent,stopped,interrupted)
     legacy_ack=False
     if isinstance(settings.get('native_trial'),str) and settings['native_trial']:
         stop=stopped.get('requested');stamp=status.get('time');request_time=intent.get('time',0)
         legacy_ack=(stopped.get('trial')==settings['native_trial'] and finite(stop) and finite(stamp)
-                    and finite(request_time) and request_time<=stop<=stamp and status.get('state') in STOPPED
-                    and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+                    and finite(request_time) and request_time<=stop<=stamp
+                    and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+                    and closed(status,transaction,interrupted))
     requested=intent.get('mode')=='on'
     # A known private trial mismatch invalidates a historical request. Public
     # inventory omits this field and therefore takes the conservative ack path.
@@ -61,7 +73,10 @@ def assess(settings,status,transaction,intent,stopped):
     if status.get('state') in ACTIVE or status.get('state')=='STOPPED-ON-RESERVE' or status.get('guard')=='closed':
         return 'LIFECYCLE-STOP-AUTO-FIRST'
     if status and status.get('state') not in STOPPED|{'BLOCKED'}:return 'LIFECYCLE-STATE-UNVERIFIED'
-    if transaction and transaction.get('phase')!='ROLLED-BACK':return 'LIFECYCLE-JOURNAL-ACTIVE'
+    if transaction and transaction.get('phase')!='ROLLED-BACK':
+        # Upgrade exception: proven-dead worker, reported BLOCKED/STOPPED controller.
+        if not (interrupted is True and transaction.get('phase') in INTERRUPTED
+                and status.get('state') in STOPPED|{'BLOCKED'}):return 'LIFECYCLE-JOURNAL-ACTIVE'
     if flag in (True,'1') and not legacy_ack or requested and not acknowledged:return 'LIFECYCLE-STOP-AUTO-FIRST'
     return None
 
@@ -99,12 +114,24 @@ def read_dict(path):
     return row
 
 
-def snapshot(root=Path('/')):
+def apply_worker_alive(root):
+    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return True
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
+        except OSError:return True
+        if APPLY_CHILD in command:return True
+    return False
+
+
+def snapshot(root=Path('/'),upgrade=False):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     pair=read_dict(runtime/'pair-auto-control.json')
     owned=read_dict(persist/'pair-auto-state.json')
-    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
-        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
+    if pair.get('mode')=='on':raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)
@@ -121,6 +148,11 @@ def snapshot(root=Path('/')):
                 or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
                 or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    phase=owned.get('data',{}).get('phase') if owned else None
+    # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
+    if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'
     if config.is_symlink():raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
@@ -134,6 +166,7 @@ def snapshot(root=Path('/')):
             reply=subprocess.run(['/sbin/uci','-q','get','homensai_vpn.main.'+key],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
             if reply.returncode not in (0,1):raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
+    if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
 
 
@@ -156,10 +189,14 @@ def control_lock():
 
 
 def main(action):
-    if action not in ('check','prepare'):raise SystemExit('LIFECYCLE-ACTION')
+    # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
+    # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
+    # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
+    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
     try:
         with control_lock():
-            code=assess(*snapshot())
+            # Removal ('check') never uses the interrupted-journal exception.
+            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -169,7 +206,7 @@ def main(action):
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print('LIFECYCLE-READY' if action=='check' else 'LIFECYCLE-AUTO-DISABLED')
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
@@ -205,6 +242,11 @@ import time
 
 ACTIVE={'OBSERVING','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'}
 STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
+# Upgrade only: an unfinished journal whose worker is provably gone. The new
+# supervisor's guarded recovery owns it after the restart; nothing here touches
+# the journal, the guard or the pair ownership record.
+INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
+APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
 
 
 def finite(value):
@@ -212,27 +254,34 @@ def finite(value):
     except OverflowError:return False
 
 
-def stop_acknowledged(status,transaction,intent,stopped):
+def closed(status,transaction,interrupted=False):
+    return (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True
+            or interrupted is True and transaction.get('phase') in INTERRUPTED)
+
+
+def stop_acknowledged(status,transaction,intent,stopped,interrupted=False):
     requested=intent.get('time');stop=stopped.get('requested');stamp=status.get('time')
     return (intent.get('mode')=='on' and isinstance(intent.get('trial'),str) and bool(intent['trial'])
             and stopped.get('trial')==intent['trial'] and finite(requested) and finite(stop)
-            and finite(stamp) and requested<=stop<=stamp and status.get('state') in STOPPED
-            and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+            and finite(stamp) and requested<=stop<=stamp
+            and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+            and closed(status,transaction,interrupted))
 
 
-def assess(settings,status,transaction,intent,stopped):
+def assess(settings,status,transaction,intent,stopped,interrupted=False):
     if any(not isinstance(row,dict) for row in (settings,status,transaction,intent,stopped)):
         return 'LIFECYCLE-STATE-UNVERIFIED'
     flag=settings.get('native_enabled',False)
     if not (type(flag) is bool or flag is None or isinstance(flag,str) and flag in ('0','1','')):return 'LIFECYCLE-CONFIG-UNVERIFIED'
     if status and not isinstance(status.get('state'),str):return 'LIFECYCLE-STATE-UNVERIFIED'
-    acknowledged=stop_acknowledged(status,transaction,intent,stopped)
+    acknowledged=stop_acknowledged(status,transaction,intent,stopped,interrupted)
     legacy_ack=False
     if isinstance(settings.get('native_trial'),str) and settings['native_trial']:
         stop=stopped.get('requested');stamp=status.get('time');request_time=intent.get('time',0)
         legacy_ack=(stopped.get('trial')==settings['native_trial'] and finite(stop) and finite(stamp)
-                    and finite(request_time) and request_time<=stop<=stamp and status.get('state') in STOPPED
-                    and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+                    and finite(request_time) and request_time<=stop<=stamp
+                    and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+                    and closed(status,transaction,interrupted))
     requested=intent.get('mode')=='on'
     # A known private trial mismatch invalidates a historical request. Public
     # inventory omits this field and therefore takes the conservative ack path.
@@ -241,7 +290,10 @@ def assess(settings,status,transaction,intent,stopped):
     if status.get('state') in ACTIVE or status.get('state')=='STOPPED-ON-RESERVE' or status.get('guard')=='closed':
         return 'LIFECYCLE-STOP-AUTO-FIRST'
     if status and status.get('state') not in STOPPED|{'BLOCKED'}:return 'LIFECYCLE-STATE-UNVERIFIED'
-    if transaction and transaction.get('phase')!='ROLLED-BACK':return 'LIFECYCLE-JOURNAL-ACTIVE'
+    if transaction and transaction.get('phase')!='ROLLED-BACK':
+        # Upgrade exception: proven-dead worker, reported BLOCKED/STOPPED controller.
+        if not (interrupted is True and transaction.get('phase') in INTERRUPTED
+                and status.get('state') in STOPPED|{'BLOCKED'}):return 'LIFECYCLE-JOURNAL-ACTIVE'
     if flag in (True,'1') and not legacy_ack or requested and not acknowledged:return 'LIFECYCLE-STOP-AUTO-FIRST'
     return None
 
@@ -279,12 +331,24 @@ def read_dict(path):
     return row
 
 
-def snapshot(root=Path('/')):
+def apply_worker_alive(root):
+    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return True
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
+        except OSError:return True
+        if APPLY_CHILD in command:return True
+    return False
+
+
+def snapshot(root=Path('/'),upgrade=False):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     pair=read_dict(runtime/'pair-auto-control.json')
     owned=read_dict(persist/'pair-auto-state.json')
-    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
-        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
+    if pair.get('mode')=='on':raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)
@@ -301,6 +365,11 @@ def snapshot(root=Path('/')):
                 or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
                 or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    phase=owned.get('data',{}).get('phase') if owned else None
+    # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
+    if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'
     if config.is_symlink():raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
@@ -314,6 +383,7 @@ def snapshot(root=Path('/')):
             reply=subprocess.run(['/sbin/uci','-q','get','homensai_vpn.main.'+key],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
             if reply.returncode not in (0,1):raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
+    if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
 
 
@@ -336,10 +406,14 @@ def control_lock():
 
 
 def main(action):
-    if action not in ('check','prepare'):raise SystemExit('LIFECYCLE-ACTION')
+    # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
+    # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
+    # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
+    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
     try:
         with control_lock():
-            code=assess(*snapshot())
+            # Removal ('check') never uses the interrupted-journal exception.
+            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -349,7 +423,7 @@ def main(action):
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print('LIFECYCLE-READY' if action=='check' else 'LIFECYCLE-AUTO-DISABLED')
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
@@ -375,7 +449,8 @@ define Package/homensai-auto-vpn/prerm
 #!/bin/sh
 set -eu
 [ -n "$${IPKG_INSTROOT:-}" ] && exit 0
-/usr/bin/python3 - check <<'HOMENSAI_LIFECYCLE_GUARD'
+if [ "$${1:-}" = upgrade ]; then action=upgrade; else action=check; fi
+/usr/bin/python3 - "$$action" <<'HOMENSAI_LIFECYCLE_GUARD'
 """Own-package lifecycle guard. No routes, VPN keys or firewall writes.
 
 The package embeds this stdlib-only checker before unpacking new files. The only
@@ -395,6 +470,11 @@ import time
 
 ACTIVE={'OBSERVING','ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING'}
 STOPPED={'STOPPED','DISABLED','EXPIRED','ROLLED-BACK'}
+# Upgrade only: an unfinished journal whose worker is provably gone. The new
+# supervisor's guarded recovery owns it after the restart; nothing here touches
+# the journal, the guard or the pair ownership record.
+INTERRUPTED={'ARMED','APPLYING','WAIT-CLIENT','RESTORING'}
+APPLY_CHILD=b'native_switch.py' + bytes([0]) + b'apply' + bytes([0])
 
 
 def finite(value):
@@ -402,27 +482,34 @@ def finite(value):
     except OverflowError:return False
 
 
-def stop_acknowledged(status,transaction,intent,stopped):
+def closed(status,transaction,interrupted=False):
+    return (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True
+            or interrupted is True and transaction.get('phase') in INTERRUPTED)
+
+
+def stop_acknowledged(status,transaction,intent,stopped,interrupted=False):
     requested=intent.get('time');stop=stopped.get('requested');stamp=status.get('time')
     return (intent.get('mode')=='on' and isinstance(intent.get('trial'),str) and bool(intent['trial'])
             and stopped.get('trial')==intent['trial'] and finite(requested) and finite(stop)
-            and finite(stamp) and requested<=stop<=stamp and status.get('state') in STOPPED
-            and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+            and finite(stamp) and requested<=stop<=stamp
+            and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+            and closed(status,transaction,interrupted))
 
 
-def assess(settings,status,transaction,intent,stopped):
+def assess(settings,status,transaction,intent,stopped,interrupted=False):
     if any(not isinstance(row,dict) for row in (settings,status,transaction,intent,stopped)):
         return 'LIFECYCLE-STATE-UNVERIFIED'
     flag=settings.get('native_enabled',False)
     if not (type(flag) is bool or flag is None or isinstance(flag,str) and flag in ('0','1','')):return 'LIFECYCLE-CONFIG-UNVERIFIED'
     if status and not isinstance(status.get('state'),str):return 'LIFECYCLE-STATE-UNVERIFIED'
-    acknowledged=stop_acknowledged(status,transaction,intent,stopped)
+    acknowledged=stop_acknowledged(status,transaction,intent,stopped,interrupted)
     legacy_ack=False
     if isinstance(settings.get('native_trial'),str) and settings['native_trial']:
         stop=stopped.get('requested');stamp=status.get('time');request_time=intent.get('time',0)
         legacy_ack=(stopped.get('trial')==settings['native_trial'] and finite(stop) and finite(stamp)
-                    and finite(request_time) and request_time<=stop<=stamp and status.get('state') in STOPPED
-                    and (not transaction or transaction.get('phase')=='ROLLED-BACK' and status.get('original_restored') is True))
+                    and finite(request_time) and request_time<=stop<=stamp
+                    and (status.get('state') in STOPPED or interrupted is True and status.get('state')=='BLOCKED')
+                    and closed(status,transaction,interrupted))
     requested=intent.get('mode')=='on'
     # A known private trial mismatch invalidates a historical request. Public
     # inventory omits this field and therefore takes the conservative ack path.
@@ -431,7 +518,10 @@ def assess(settings,status,transaction,intent,stopped):
     if status.get('state') in ACTIVE or status.get('state')=='STOPPED-ON-RESERVE' or status.get('guard')=='closed':
         return 'LIFECYCLE-STOP-AUTO-FIRST'
     if status and status.get('state') not in STOPPED|{'BLOCKED'}:return 'LIFECYCLE-STATE-UNVERIFIED'
-    if transaction and transaction.get('phase')!='ROLLED-BACK':return 'LIFECYCLE-JOURNAL-ACTIVE'
+    if transaction and transaction.get('phase')!='ROLLED-BACK':
+        # Upgrade exception: proven-dead worker, reported BLOCKED/STOPPED controller.
+        if not (interrupted is True and transaction.get('phase') in INTERRUPTED
+                and status.get('state') in STOPPED|{'BLOCKED'}):return 'LIFECYCLE-JOURNAL-ACTIVE'
     if flag in (True,'1') and not legacy_ack or requested and not acknowledged:return 'LIFECYCLE-STOP-AUTO-FIRST'
     return None
 
@@ -469,12 +559,24 @@ def read_dict(path):
     return row
 
 
-def snapshot(root=Path('/')):
+def apply_worker_alive(root):
+    """Any native apply child (including the journal's recorded pid) is alive. Unknown counts as alive."""
+    try:entries=list((root/'proc').iterdir())
+    except OSError:return True
+    for entry in entries:
+        if not entry.name.isdigit():continue
+        try:command=(entry/'cmdline').read_bytes()
+        except (FileNotFoundError,ProcessLookupError):continue  # exited meanwhile
+        except OSError:return True
+        if APPLY_CHILD in command:return True
+    return False
+
+
+def snapshot(root=Path('/'),upgrade=False):
     runtime=root/'var/run/homensai-vpn';persist=root/'etc/homensai-vpn'
     pair=read_dict(runtime/'pair-auto-control.json')
     owned=read_dict(persist/'pair-auto-state.json')
-    if pair.get('mode')=='on' or owned and owned.get('data',{}).get('phase') not in ('STOPPED','FAILED'):
-        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
+    if pair.get('mode')=='on':raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     status=read_dict(runtime/'native-status.json');intent=read_dict(runtime/'auto-control.json')
     stopped=read_dict(persist/'native-stop.json');journal_path=persist/'native-transaction.json'
     envelope=read_dict(journal_path)
@@ -491,6 +593,11 @@ def snapshot(root=Path('/')):
                 or len(before)!=len(set(before)) or len(after)!=len(set(after)) or set(before)!=set(after)
                 or not isinstance(transaction.get('hash'),str) or not re.fullmatch(r'[a-f0-9]{64}',transaction['hash'])):
             raise ValueError('LIFECYCLE-JOURNAL-UNVERIFIED')
+    interrupted=bool(upgrade and transaction.get('phase') in INTERRUPTED and not apply_worker_alive(root))
+    phase=owned.get('data',{}).get('phase') if owned else None
+    # The pair session is left as it is (HELD etc.); the new supervisor fences and recovers it.
+    if owned and phase not in ('STOPPED','FAILED') and not (interrupted and phase in ('RUNNING','HELD','STOPPING')):
+        raise ValueError('LIFECYCLE-STOP-AUTO-FIRST')
     settings={'native_enabled':'0','native_trial':''}
     config=root/'etc/config/homensai_vpn'
     if config.is_symlink():raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
@@ -504,6 +611,7 @@ def snapshot(root=Path('/')):
             reply=subprocess.run(['/sbin/uci','-q','get','homensai_vpn.main.'+key],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
             if reply.returncode not in (0,1):raise ValueError('LIFECYCLE-CONFIG-UNVERIFIED')
             if reply.returncode==0:settings[key]=reply.stdout.decode('utf8').strip()
+    if upgrade:return settings,status,transaction,intent,stopped,interrupted
     return settings,status,transaction,intent,stopped
 
 
@@ -526,10 +634,14 @@ def control_lock():
 
 
 def main(action):
-    if action not in ('check','prepare'):raise SystemExit('LIFECYCLE-ACTION')
+    # check: removal (old prerm 'remove'); upgrade: old prerm during an opkg upgrade
+    # (opkg runs the OLD package's prerm 'upgrade <new>' before the new preinst);
+    # prepare: new preinst/postinst. Only upgrade/prepare accept a dead interrupted journal.
+    if action not in ('check','prepare','upgrade'):raise SystemExit('LIFECYCLE-ACTION')
     try:
         with control_lock():
-            code=assess(*snapshot())
+            # Removal ('check') never uses the interrupted-journal exception.
+            code=assess(*snapshot(upgrade=action in ('prepare','upgrade')))
             if code:raise ValueError(code)
             if action=='prepare':
                 # No names, priorities, tokens or statistics are changed.
@@ -539,7 +651,7 @@ def main(action):
     except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError) as error:
         code=str(error) if type(error) is ValueError and str(error).startswith('LIFECYCLE-') else 'LIFECYCLE-STATE-UNVERIFIED'
         print(code,file=sys.stderr);raise SystemExit(1)
-    print('LIFECYCLE-READY' if action=='check' else 'LIFECYCLE-AUTO-DISABLED')
+    print({'check':'LIFECYCLE-READY','upgrade':'LIFECYCLE-UPGRADE-READY'}.get(action,'LIFECYCLE-AUTO-DISABLED'))
 
 
 if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')

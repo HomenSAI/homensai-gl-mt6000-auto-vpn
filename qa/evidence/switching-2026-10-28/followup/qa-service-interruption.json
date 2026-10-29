@@ -1,0 +1,9 @@
+{
+  "status": "NOT_VERIFIED",
+  "affected": "Final independent three recovery replays",
+  "service_message": "Agent turn failed after content was flagged for possible cybersecurity risk.",
+  "action": "No retry of the interrupted scenarios; completed artifacts inspected read-only and preserved; only owned QEMU guest stopped.",
+  "completed_browser_final_retained": true,
+  "completed_browser_assertions": 16,
+  "runtime_source_unchanged_by_qa": true
+}

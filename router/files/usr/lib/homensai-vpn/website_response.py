@@ -177,7 +177,7 @@ def public(row,state='checking',code='WEBSITE-CHECK-PENDING',stamp=None,results=
 class WebsiteSampler:
     def __init__(self,inventory_reader,binding_reader,paused=lambda:False):
         self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused
-        self.lock=Lock();self.cache={};self.current=set();self.attempts={};self.worker=None;self.closed=False;self.context=None
+        self.lock=Lock();self.cache={};self.completed_at={};self.current=set();self.attempts={};self.worker=None;self.closed=False;self.context=None
 
     def measure(self,row):
         try:
@@ -204,9 +204,41 @@ class WebsiteSampler:
             for key,row in batch:
                 result=self.measure(row)
                 with self.lock:
-                    if not self.closed and key in self.current:self.cache[key]=result
+                    if not self.closed and key in self.current:
+                        self.cache[key]=result;self.completed_at[key]=time.monotonic()
         finally:
             with self.lock:self.worker=None
+
+    def cached(self,row,key,now):
+        """Caller owns the lock. Expiry is final until a new measurement arrives."""
+        result=self.cache.get(key)
+        if not result:return None
+        stamp=result.get('time');completed=self.completed_at.get(key)
+        if (type(stamp) not in (int,float) or not math.isfinite(stamp) or not -5<=now-stamp<=VALID_FOR
+                or completed is not None and not 0<=time.monotonic()-completed<=VALID_FOR):
+            result=public(row,'stale','WEBSITE-DATA-STALE',stamp)
+            self.cache[key]=result
+        return dict(result)
+
+    def collect(self,rows,pair,now):
+        """Publish finished work between health scans, without dispatching probes.
+
+        A completed batch used to wait for the next health scan, which may be
+        300 seconds away. By then every 45-second website result had expired.
+        Keep both the original health timestamps and the measurement TTL.
+        """
+        selected={pair.get('source'),pair.get('target')}-{None}
+        changed=False
+        with self.lock:
+            if self.closed or self.paused():return False
+            for row in rows:
+                key=signature(row)
+                if row.get('id') not in selected or key not in self.current:continue
+                result=self.cached(row,key,now)
+                if not result:continue
+                if row.get('website_response')!=result:
+                    row['website_response']=result;changed=True
+        return changed
 
     def apply(self,rows,pair,now):
         selected={pair.get('source'),pair.get('target')}-{None};batch=[];thread=None
@@ -214,14 +246,14 @@ class WebsiteSampler:
                   and type(row.get('time')) in (int,float) and math.isfinite(row['time']) and -5<=now-row['time']<=VALID_FOR}
         with self.lock:
             self.current=eligible;self.cache={key:value for key,value in self.cache.items() if key in eligible}
+            self.completed_at={key:value for key,value in self.completed_at.items() if key in self.cache}
             mono=time.monotonic();live={row.get('vendor_tunnel_id') for row in rows if row.get('id') in selected}
             self.attempts={key:value for key,value in self.attempts.items() if key in live or mono-value<INTERVAL}
             for row in rows:
                 key=signature(row)
                 if row.get('id') not in selected:row['website_response']=public(row,'inactive','WEBSITE-NOT-SELECTED');continue
                 if key not in eligible:row['website_response']=public(row,'unavailable','WEBSITE-IDENTITY-CHANGED');continue
-                result=self.cache.get(key);row['website_response']=dict(result) if result else public(row)
-                if result and (type(result.get('time')) not in (int,float) or not math.isfinite(result['time']) or not -5<=now-result['time']<=VALID_FOR):row['website_response']=public(row,'stale','WEBSITE-DATA-STALE',result.get('time'))
+                result=self.cached(row,key,now);row['website_response']=result if result else public(row)
                 if not self.closed and not self.paused() and self.worker is None and len(batch)<2 and mono-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=INTERVAL:
                     self.attempts[row['vendor_tunnel_id']]=mono
                     batch.append((key,{name:row.get(name) for name in IDENTITY+BINDING+('administrative_state','vendor_state')}))
@@ -231,10 +263,11 @@ class WebsiteSampler:
             except Exception:
                 with self.lock:
                     self.worker=None
-                    for key,row in batch:self.cache[key]=public(row,'unavailable','WEBSITE-UNAVAILABLE',now)
+                    for key,row in batch:
+                        self.cache[key]=public(row,'unavailable','WEBSITE-UNAVAILABLE',now);self.completed_at[key]=time.monotonic()
 
     def idle(self):
         with self.lock:return self.worker is None
 
     def close(self):
-        with self.lock:self.closed=True;self.current.clear();self.cache.clear()
+        with self.lock:self.closed=True;self.current.clear();self.cache.clear();self.completed_at.clear()
