@@ -162,6 +162,10 @@ function uiOperationTimer(stage,elapsed,remaining,checking){
 // Owner wording for an available, unselected live channel; it promises a manual switch only when the router allows one now.
 function channelAliveText(direction,status,now){var m=status&&typeof manualControlModel==='function'?manualControlModel(status,now):null;return m&&m[direction]&&m[direction].allowed?bi('Live, you can switch to it manually','Живой, можно переключиться на него вручную'):bi('Live; manual switching is unavailable now','Живой; ручное переключение сейчас недоступно');}
 // Policy selection is independent of controller phase and VPN health.
+// Freshness is judged once for the whole router answer (observationFresh); what the answer contains is judged
+// at the time the router served it. The controller renews the kernel proof every ~5 s, but the page receives an
+// answer only every 10-20 s; ageing the content by the page clock made a fresh proof look expired.
+function statusServedAt(status,now){var t=status&&status.server_time;return Number.isFinite(t)&&t>0&&t<=now+5?Math.min(t,now):now;}
 function channelPathSelection(status,now,sourceId,targetId){
   status=status||{};var native=status.native_failover||{},path=status.channel_path;
   var required=native.mode==='continuous-pair'||native.proof_scope==='router-probed-ipv4'||!!(path&&(path.mode==='continuous-pair'||path.selection_proof==='fw3-kernel-marking')),authoritative=required||Object.prototype.hasOwnProperty.call(status,'channel_path');
@@ -175,7 +179,8 @@ function channelPathSelection(status,now,sourceId,targetId){
   if(required&&(path.mode!=='continuous-pair'||path.selection_proof!=='fw3-kernel-marking'||!Number.isFinite(path.valid_for)||path.valid_for<=0||path.valid_for>15||!Number.isFinite(path.checked_at)||path.time!==path.checked_at))return result;
   var maxAge=required?path.valid_for:30;
   var checkedAt=required?path.checked_at:path.time;
-  if(!Number.isFinite(checkedAt)||now-checkedAt< -5||now-checkedAt>maxAge){result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';result.expired=Number.isFinite(checkedAt)&&now-checkedAt>maxAge;return result;}
+  var servedAt=statusServedAt(status,now);
+  if(!Number.isFinite(checkedAt)||servedAt-checkedAt< -5||servedAt-checkedAt>maxAge){result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';result.expired=Number.isFinite(checkedAt)&&servedAt-checkedAt>maxAge;return result;}
   var source=path.source_profile_id,target=path.target_profile_id;
   if(typeof source!=='string'||!source||typeof target!=='string'||!target||source===target||sourceId&&source!==sourceId||targetId&&target!==targetId){result.code='PAIR-POLICY-UNVERIFIED';return result;}
   result.moving=path.transitioning===true;

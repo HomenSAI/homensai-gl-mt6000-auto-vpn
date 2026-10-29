@@ -918,7 +918,7 @@ function autoLightModel(status,inventory,now){
   var manual=typeof manualOperationModel==='function'?manualOperationModel(status,now):null,recovery=typeof uiRecoveryModel==='function'&&!(manual&&manual.busy&&!manual.uncertain)?uiRecoveryModel(status,now):null;
   if(recovery)return out('problem',recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'),uiRecoveryText(recovery),recovery.code);
   var lostFor=UI_RPC_LOST_SINCE===null?0:now-UI_RPC_LOST_SINCE,turnedOn=intent.requested==='on'&&['STARTING','RUNNING'].indexOf(intent.pair_phase)>=0||(status.rpc_error||status.error)&&UI_AUTO_LAST_ON!==null;
-  if(!model.fresh&&turnedOn&&!blockers.length&&lostFor<=AUTO_RPC_GRACE)return out('unknown',status.rpc_error||status.error?bi('No answer from the router, retrying…','Нет ответа роутера, повторяем запрос…'):bi('Refreshing the router state…','Обновляем состояние роутера…'),bi('Auto stays on. Fresh data from the router has not arrived yet; this is not an error. Red is shown only if the router stays silent for 90 s.','Auto остаётся включённым. Свежие данные роутера ещё не пришли; это не ошибка. Красный будет, только если роутер молчит дольше 90 с.'),null,true);
+  if(!model.fresh&&turnedOn&&!blockers.length&&lostFor<=AUTO_RPC_GRACE)return out('unknown',status.rpc_error||status.error?bi('No answer, retrying','Нет ответа, повтор'):bi('Updating data','Обновление данных'),bi('Auto stays on. Fresh data from the router has not arrived yet; this is not an error. Red is shown only if the router stays silent for 90 s.','Auto остаётся включённым. Свежие данные роутера ещё не пришли; это не ошибка. Красный будет, только если роутер молчит дольше 90 с.'),null,true);
   if(!model.fresh)return out('unknown',status.rpc_error||status.error?bi('No connection to the router program','Нет связи с программой роутера'):bi('Controller state is out of date','Состояние контроллера устарело'),status.rpc_error||status.error?bi('The page gets no answer from the router program.','Страница не получает ответ от программы роутера.'):bi('The router answers, but the Auto controller has not reported a current state. Open Settings and make sure the monitor is running.','Роутер отвечает, но контроллер Auto не сообщил актуальное состояние. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
@@ -928,19 +928,18 @@ function autoLightModel(status,inventory,now){
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
     if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
       var route=channelPathSelection(status,now,ns.source,ns.target);
-      if(!route.selected)return out('unknown',bi('Re-checking the traffic channel','Перепроверяем канал трафика'),bi('The router is confirming its VPN rules again. Auto keeps working.','Роутер заново подтверждает действующие правила VPN. Auto продолжает работать.'),route.code||'KERNEL-POLICY-UNVERIFIED',true);
+      if(!route.selected)return out('unknown',bi('Route check','Проверка маршрута'),bi('The router is confirming its VPN rules again. Auto keeps working.','Роутер заново подтверждает действующие правила VPN. Auto продолжает работать.'),route.code||'KERNEL-POLICY-UNVERIFIED',true);
       var active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
       if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
       if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'),null,true);
       if(['source','target'].indexOf((status.manual_switch_control||{}).hold)>=0)return Object.assign(out('off',bi('Channel held manually','Канал удерживается вручную'),manualHoldText()),{hold:true});
       if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
-      if(autoCheckDue(status,now))return out('unknown',bi('Checking the channels now…','Идёт проверка каналов…'),bi('The router is running its scheduled channel check. Auto keeps working.','Роутер выполняет плановую проверку каналов. Auto продолжает работать.'),null,true);
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
     var failedCode=blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
     if(sessionRuns&&intent.pair_phase==='RUNNING'&&blockers.length&&blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;}))
-      return out('unknown',bi('Waiting for fresh router data','Ждём свежие данные роутера'),autoBlockerText(blockers[0]),blockers[0],true);
+      return out('unknown',bi('Updating data','Обновление данных'),autoBlockerText(blockers[0]),blockers[0],true);
     if(model.off&&!failedCode)return out('off',bi('Auto is off','Auto выключен'),scopeHint);
     return out('problem',bi('Auto needs attention','Auto требует внимания'),failedCode?autoBlockerText(failedCode):scopeHint,failedCode);
   }
@@ -1081,7 +1080,8 @@ function renderAutoPowerControl(status,inventory){
     button.disabled=!!(autoStopBusy||operation==='stopping'||!stop&&(operation||autoRequestBusy||inventory.error||!model.fresh||!monitorReady));
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');
       var confirmedOn=!operation&&autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
-      button.classList.toggle('hv-auto-lit-on',confirmedOn);button.classList.toggle('hv-auto-lit-off',!confirmedOn);}
+      var litOn=!operation&&autoRuns(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
+      button.classList.toggle('hv-auto-lit-on',litOn);button.classList.toggle('hv-auto-lit-off',!litOn);}
     AUTO_COUNTDOWN_NODES=countdownNodes;
     if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
     else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn&&model.fresh&&!model.awaiting:model.fresh&&model.off&&!model.awaiting&&!intent.failure&&(intent.pair_phase==='STOPPED'||!intent.pair_phase&&ns.original_restored===true));}
@@ -1245,7 +1245,7 @@ function renderProbeControl(status,inventory){
 var PROBE_TICK=null;
 function probeCountdownText(node){
   var left=Math.round((node.hvDeadline-Date.now())/1000);
-  node.textContent=left>0?bi('Next check in ','Следующая проверка через ')+left+bi(' s',' с')+' · '+bi('every ','раз в ')+node.hvInterval+bi(' s',' с'):bi('Checking now…','Идёт проверка…');
+  node.textContent=left>0?bi('Check in ','Проверка через ')+left+bi(' s',' с'):bi('Checking','Проверка');
 }
 function probeCountdown(status){
   var p=(status||{}).probe_policy||{},interval=p.effective_interval;
@@ -1722,6 +1722,7 @@ function uiOperationTimer(stage,elapsed,remaining,checking){
   return text;
 }
 function channelAliveText(direction,status,now){var m=status&&typeof manualControlModel==='function'?manualControlModel(status,now):null;return m&&m[direction]&&m[direction].allowed?bi('Live, you can switch to it manually','Живой, можно переключиться на него вручную'):bi('Live; manual switching is unavailable now','Живой; ручное переключение сейчас недоступно');}
+var PATH_HOLD_SECONDS=60,UI_ROUTE_CONFIRMED=null;
 function channelPathSelection(status,now,sourceId,targetId){
   status=status||{};var native=status.native_failover||{},path=status.channel_path;
   var required=native.mode==='continuous-pair'||native.proof_scope==='router-probed-ipv4'||!!(path&&(path.mode==='continuous-pair'||path.selection_proof==='fw3-kernel-marking')),authoritative=required||Object.prototype.hasOwnProperty.call(status,'channel_path');
@@ -1734,14 +1735,22 @@ function channelPathSelection(status,now,sourceId,targetId){
   if(required&&(path.mode!=='continuous-pair'||path.selection_proof!=='fw3-kernel-marking'||!Number.isFinite(path.valid_for)||path.valid_for<=0||path.valid_for>15||!Number.isFinite(path.checked_at)||path.time!==path.checked_at))return result;
   var maxAge=required?path.valid_for:30;
   var checkedAt=required?path.checked_at:path.time;
-  if(!Number.isFinite(checkedAt)||now-checkedAt< -5||now-checkedAt>maxAge){result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';result.expired=Number.isFinite(checkedAt)&&now-checkedAt>maxAge;return result;}
+  if(!Number.isFinite(checkedAt)||now-checkedAt< -5||now-checkedAt>maxAge){
+    result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';result.expired=Number.isFinite(checkedAt)&&now-checkedAt>maxAge;
+    var held=UI_ROUTE_CONFIRMED,blocked=Array.isArray(native.blockers)&&native.blockers.length;
+    if(result.expired&&held&&!blocked&&path.transitioning!==true&&held.source===path.source_profile_id&&held.target===path.target_profile_id
+       &&(!sourceId||held.source===sourceId)&&(!targetId||held.target===targetId)&&now-held.at>=-5&&now-held.at<=PATH_HOLD_SECONDS){
+      result.selected=held.selected;result.held=true;result.code=null;
+    }
+    return result;}
   var source=path.source_profile_id,target=path.target_profile_id;
   if(typeof source!=='string'||!source||typeof target!=='string'||!target||source===target||sourceId&&source!==sourceId||targetId&&target!==targetId){result.code='PAIR-POLICY-UNVERIFIED';return result;}
   result.moving=path.transitioning===true;
   if(result.moving){result.code=null;return result;}
   if(path.confirmed!==true||required&&path.kernel_policy_verified!==true)return result;
   if(path.active_profile_id!==source&&path.active_profile_id!==target){result.code='PAIR-POLICY-UNVERIFIED';return result;}
-  result.selected=path.active_profile_id;result.code=null;return result;
+  result.selected=path.active_profile_id;result.code=null;
+  UI_ROUTE_CONFIRMED={source:source,target:target,selected:result.selected,at:checkedAt};return result;
 }
 function savedTransition(entry){
   entry=entry||{};

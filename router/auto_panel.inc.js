@@ -17,7 +17,8 @@ function autoControlModel(status,now){
   var monitorFresh=typeof observationFresh==='function'?observationFresh(status,now):Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90;
   // The controller does not republish while it waits for its worker; its transition phase stays current until the bounded deadline.
   var live=typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).live;
-  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&now-ns.time>=-5&&(now-ns.time<=30+(typeof UI_DISPLAY_GRACE==='number'?UI_DISPLAY_GRACE:0)||live);
+  var servedAt=typeof statusServedAt==='function'?statusServedAt(status,now):now;
+  var fresh=!status.rpc_error&&!status.error&&monitorFresh&&Number.isFinite(ns.time)&&servedAt-ns.time>=-5&&(servedAt-ns.time<=30||live);
   var pairScope=ns.mode==='continuous-pair'||ns.proof_scope==='router-probed-ipv4'||(status.channel_path||{}).mode==='continuous-pair';
   var pairPermitsOn=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0,runningPair=pairScope&&pairPermitsOn;
   var on=!paused&&fresh&&(!pairScope||pairPermitsOn)&&((ns.state==='OBSERVING'&&(ns.certified===true||ns.mode==='continuous-pair'&&ns.readiness_verified===true))||ns.state==='COMMITTED'||ns.state==='ROLLED-BACK'&&runningPair);
@@ -275,7 +276,7 @@ function autoLightModel(status,inventory,now){
   var manual=typeof manualOperationModel==='function'?manualOperationModel(status,now):null,recovery=typeof uiRecoveryModel==='function'&&!(manual&&manual.busy&&!manual.uncertain)?uiRecoveryModel(status,now):null;
   if(recovery)return out('problem',recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'),uiRecoveryText(recovery),recovery.code);
   var lostFor=UI_RPC_LOST_SINCE===null?0:now-UI_RPC_LOST_SINCE,turnedOn=intent.requested==='on'&&['STARTING','RUNNING'].indexOf(intent.pair_phase)>=0||(status.rpc_error||status.error)&&UI_AUTO_LAST_ON!==null;
-  if(!model.fresh&&turnedOn&&!blockers.length&&lostFor<=AUTO_RPC_GRACE)return out('unknown',status.rpc_error||status.error?bi('No answer from the router, retrying…','Нет ответа роутера, повторяем запрос…'):bi('Refreshing the router state…','Обновляем состояние роутера…'),bi('Auto stays on. Fresh data from the router has not arrived yet; this is not an error. Red is shown only if the router stays silent for 90 s.','Auto остаётся включённым. Свежие данные роутера ещё не пришли; это не ошибка. Красный будет, только если роутер молчит дольше 90 с.'),null,true);
+  if(!model.fresh&&turnedOn&&!blockers.length&&lostFor<=AUTO_RPC_GRACE)return out('unknown',status.rpc_error||status.error?bi('No answer, retrying','Нет ответа, повтор'):bi('Updating data','Обновление данных'),bi('Auto stays on. Fresh data from the router has not arrived yet; this is not an error. Red is shown only if the router stays silent for 90 s.','Auto остаётся включённым. Свежие данные роутера ещё не пришли; это не ошибка. Красный будет, только если роутер молчит дольше 90 с.'),null,true);
   if(!model.fresh)return out('unknown',status.rpc_error||status.error?bi('No connection to the router program','Нет связи с программой роутера'):bi('Controller state is out of date','Состояние контроллера устарело'),status.rpc_error||status.error?bi('The page gets no answer from the router program.','Страница не получает ответ от программы роутера.'):bi('The router answers, but the Auto controller has not reported a current state. Open Settings and make sure the monitor is running.','Роутер отвечает, но контроллер Auto не сообщил актуальное состояние. Откройте «Настройки» и проверьте, что мониторинг запущен.'));
   if(ns.proof_scope==='router-probed-ipv4'&&ns.mode==='continuous-pair'){
     var scopeHint='';
@@ -285,19 +286,18 @@ function autoLightModel(status,inventory,now){
     if(model.transitioning)return out('switching',bi('Switching the route','Переключение маршрута'),scopeHint,null,sessionRuns);
     if((model.on||sessionRuns)&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','ROLLED-BACK'].indexOf(state)>=0){
       var route=channelPathSelection(status,now,ns.source,ns.target);
-      if(!route.selected)return out('unknown',bi('Re-checking the traffic channel','Перепроверяем канал трафика'),bi('The router is confirming its VPN rules again. Auto keeps working.','Роутер заново подтверждает действующие правила VPN. Auto продолжает работать.'),route.code||'KERNEL-POLICY-UNVERIFIED',true);
+      if(!route.selected)return out('unknown',bi('Route check','Проверка маршрута'),bi('The router is confirming its VPN rules again. Auto keeps working.','Роутер заново подтверждает действующие правила VPN. Auto продолжает работать.'),route.code||'KERNEL-POLICY-UNVERIFIED',true);
       var active=(status.profiles||[]).filter(function(p){return p.id===route.selected;})[0],health=active&&profileHealth(active,now).state;
       if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
       if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'),null,true);
       if(['source','target'].indexOf((status.manual_switch_control||{}).hold)>=0)return Object.assign(out('off',bi('Channel held manually','Канал удерживается вручную'),manualHoldText()),{hold:true});
       if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
-      if(autoCheckDue(status,now))return out('unknown',bi('Checking the channels now…','Идёт проверка каналов…'),bi('The router is running its scheduled channel check. Auto keeps working.','Роутер выполняет плановую проверку каналов. Auto продолжает работать.'),null,true);
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
     var failedCode=blockers[0]||(intent.failure&&intent.failure.code&&intent.requested!=='on'?intent.failure.code:null);
     if(sessionRuns&&intent.pair_phase==='RUNNING'&&blockers.length&&blockers.every(function(code){return AUTO_TRANSIENT.indexOf(code)>=0;}))
-      return out('unknown',bi('Waiting for fresh router data','Ждём свежие данные роутера'),autoBlockerText(blockers[0]),blockers[0],true);
+      return out('unknown',bi('Updating data','Обновление данных'),autoBlockerText(blockers[0]),blockers[0],true);
     if(model.off&&!failedCode)return out('off',bi('Auto is off','Auto выключен'),scopeHint);
     return out('problem',bi('Auto needs attention','Auto требует внимания'),failedCode?autoBlockerText(failedCode):scopeHint,failedCode);
   }
@@ -447,7 +447,8 @@ function renderAutoPowerControl(status,inventory){
     if(button.classList&&button.classList.toggle){button.classList.toggle('hv-auto-stop-requested',operation==='stopping');
       // The button shows "on" only when Auto is confirmed working and no command is still pending.
       var confirmedOn=!operation&&autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
-      button.classList.toggle('hv-auto-lit-on',confirmedOn);button.classList.toggle('hv-auto-lit-off',!confirmedOn);}
+      var litOn=!operation&&autoRuns(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));
+      button.classList.toggle('hv-auto-lit-on',litOn);button.classList.toggle('hv-auto-lit-off',!litOn);}
     AUTO_COUNTDOWN_NODES=countdownNodes;
     if(operation==='starting'||operation==='stopping')autoCountdownBegin(operation==='starting'?'start':'stop');
     else if(AUTO_COUNTDOWN){var nowOn=autoWorking(autoLightModel(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)));autoCountdownEnd(AUTO_COUNTDOWN.kind==='start'?nowOn&&model.fresh&&!model.awaiting:model.fresh&&model.off&&!model.awaiting&&!intent.failure&&(intent.pair_phase==='STOPPED'||!intent.pair_phase&&ns.original_restored===true));}
