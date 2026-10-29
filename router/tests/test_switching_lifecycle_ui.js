@@ -74,7 +74,7 @@ async function main(){
     assert(resume,'a backend-authorized manual hold has a visible Resume Auto command');assert.equal(resume.text(),label);assert(!resume.disabled);
     const light=c.autoLightModel(held,inventory,1000);assert(!c.autoWorking(light),'manual hold cannot promise automatic switching');
     const home=c.simpleHomeModel(held,inventory,1000);assert.equal(home.title,light.title);assert.notEqual(home.state,'on');
-    const sidebar=new N('div');c.fillSideStatus(sidebar,held,inventory);assert(sidebar.text().includes(light.title));
+    const sidebar=new N('div');c.fillSideStatus(sidebar,held,inventory);assert(sidebar.text().includes(language==='ru'?'Auto вкл.':'Auto ON'),'a manual hold is a running Auto: the lamp stays on');
     for(const edit of [x=>delete x.manual_switch_control.hold,x=>x.manual_switch_control.hold='invalid',x=>x.manual_switch_control.mode='legacy']){
       const hidden=JSON.parse(JSON.stringify(held));edit(hidden);assert(!choice(c.renderManualSwitch(hidden,inventory),'resume'));
     }

@@ -124,3 +124,26 @@ class ResponseMetric(unittest.TestCase):
         self.assertEqual(setup_config.response_payload({'metric':'websites'})['main'],{'response_metric':'websites'})
         for bad in ({},{'metric':'icmp-10.0.0.1'},{'metric':'websites','x':1}):
             with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'RESPONSE-METRIC-INVALID'):setup_config.response_payload(bad)
+
+
+class BoostBounds(unittest.TestCase):
+    def setUp(self):
+        temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)
+        self.runtime=Path(temporary.name)/'run';self.persist=Path(temporary.name)/'etc';self.runtime.mkdir();self.persist.mkdir()
+        self.settings={'probe_level':1,'probe_boost':True,'interval':60,'measure_interval':300}
+        self.booster=P.Booster(self.runtime,self.persist,write,read)
+
+    def test_a_primary_that_stays_down_cannot_extend_the_episode_forever(self):
+        t=1000
+        while t<1000+6*P.BOOST_HOLD:
+            self.booster.observe(self.settings,[row('wg',code='VPN-001')],PAIR,'OBSERVING',t);t+=10
+        self.assertFalse(self.booster.active(),'bounded to two holds, then one hold of rest, even though the primary never recovers')
+        rows=read(self.persist/P.HISTORY_NAME)
+        self.assertEqual(sum(r['kind']=='boost-start' for r in rows),1,'a channel that never recovers opens one episode only')
+        self.assertEqual([r['result'] for r in rows if r['kind']=='boost-end'][-1],'failure-confirmed')
+
+    def test_target_change_clears_the_ping_cache(self):
+        import icmp_ping
+        sampler=icmp_ping.PingSampler(lambda:{},lambda i:{},paused=lambda:False)
+        sampler.cache={'k':{'target':'1.1.1.1'}};sampler.configure(30,'1.1.1.1');self.assertEqual(sampler.cache,{'k':{'target':'1.1.1.1'}})
+        sampler.configure(30,'9.9.9.9');self.assertEqual(sampler.cache,{});self.assertEqual(sampler.target,'9.9.9.9')

@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha71'
+VERSION = '0.9.1-alpha73'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -745,7 +745,7 @@ def serve():
     from vendor_observation import VendorObserver
     vendor_observer=VendorObserver()
     from icmp_ping import PingSampler, public as ping_public
-    sampler_inventory=shared_inventory(10)
+    sampler_inventory=shared_inventory(3)
     ping_sampler=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     from website_response import WebsiteSampler,public as website_public
     website_sampler=WebsiteSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
@@ -811,11 +811,10 @@ def serve():
             from reliability import failure_pair_context
             failure_pair=failure_pair_context(data,after_inventory)
             # Ping/website cadence follows the probe level (shorter while boosting); the owner picks the metric.
-            ping_sampler.configure(booster.measure(settings));website_sampler.configure(booster.measure(settings))
             from probe_policy import response_metric,RESPONSE_METRICS
             metric=response_metric(settings)
-            import icmp_ping
-            if metric!='websites' and icmp_ping.TARGET!=RESPONSE_METRICS[metric]:icmp_ping.TARGET=RESPONSE_METRICS[metric]
+            ping_sampler.configure(booster.measure(settings),RESPONSE_METRICS[metric] if metric!='websites' else None)
+            website_sampler.configure(booster.measure(settings))
             # Optional ICMP latency is cached by a separate bounded worker. It never enters health/Auto decisions.
             try:ping_sampler.apply(rows,failure_pair,time.time())
             except Exception:

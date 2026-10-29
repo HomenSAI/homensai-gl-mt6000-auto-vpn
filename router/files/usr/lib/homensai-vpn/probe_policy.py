@@ -105,11 +105,14 @@ class Booster:
             self.state['level']=current
         selected={pair.get('source'):'source',pair.get('target'):'target'} if isinstance(pair,dict) else {}
         bad=[row for row in rows if isinstance(row,dict) and row.get('id') in selected and row.get('id') is not None and failing(row)]
+        if self.state.get('rest_profile') and any(isinstance(r,dict) and r.get('id')==self.state['rest_profile'] and not failing(r) for r in rows):self.state.pop('rest_profile',None)
         if self.active():
             if native_state in TRANSITIONS:self.state['switched']=True
             if bad:
-                self.state.update(until=now+BOOST_HOLD,failures=int(self.state.get('failures',0))+1,
-                                  last_code=bad[0].get('code') or ('DNS-001' if bad[0].get('dns_ok') is False else 'VPN-003'))
+                failures=int(self.state.get('failures',0))+1;started=self.state.get('started',now)
+                done=self.state.get('switched') or failures>CONFIRM_FAILURES  # the confirming failure still extends once
+                self.state.update(failures=failures,last_code=bad[0].get('code') or ('DNS-001' if bad[0].get('dns_ok') is False else 'VPN-003'),
+                                  until=self.state.get('until',0) if done else min(now+BOOST_HOLD,started+2*BOOST_HOLD))
             if not enabled or now>=self.state.get('until',0):
                 result='switched' if self.state.get('switched') else 'failure-confirmed' if self.state.get('failures',0)>=CONFIRM_FAILURES else 'false-alarm'
                 if not enabled:result='disabled'
@@ -119,8 +122,9 @@ class Booster:
                     'code':self.state.get('last_code') or trigger.get('code'),'result':result,
                     'failures':int(self.state.get('failures',0)),'duration':round(max(0,now-self.state.get('started',now))),
                     'boost_interval':BOOST_INTERVAL},now))
-                self.state={'active':False,'level':current}
-        elif enabled and bad and native_state in WATCHING:
+                # No new episode for one hold, and none for the same channel until it passed a check again.
+                self.state={'active':False,'level':current,'rest_until':now+BOOST_HOLD,'rest_profile':trigger.get('profile')}
+        elif enabled and bad and native_state in WATCHING and now>=self.state.get('rest_until',0) and bad[0].get('id')!=self.state.get('rest_profile'):
             row=bad[0];code=row.get('code') or ('DNS-001' if row.get('dns_ok') is False else 'VPN-003')
             trigger={'profile':row.get('id'),'role':selected.get(row.get('id')),'code':code}
             self.state.update(active=True,started=now,until=now+BOOST_HOLD,failures=1,switched=native_state in TRANSITIONS,

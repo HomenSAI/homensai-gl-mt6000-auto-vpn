@@ -49,6 +49,19 @@ function manualResultFresh(row,now){
   return (!known||tick-first>=0&&tick-first<=300000)&&(manualFresh(stamp,now,300)||known&&stamp>now+5);
 }
 function manualHoldText(){return bi('Channel selected manually and held. Resume Auto restores normal selection; failover protection remains active.','Канал выбран вручную и удерживается. «Возобновить Auto» возвращает обычный автовыбор; защита при отказе сохраняется.');}
+var UI_PATH_MEMORY=null,UI_PATH_MEMORY_SECONDS=120;
+// Display only (sidebar and Auto card lamps): a route confirmed within the last 2 minutes stays the carrier while
+// its proof is only transiently missing and Auto keeps running. Manual-control decisions never use this.
+function heldConfirmedPath(status,source,target,now){
+  var proof=manualConfirmedPath(status,source,target,now),ns=(status||{}).native_failover||{},sid=source&&source.id,tid=target&&target.id;
+  if(proof.selected){UI_PATH_MEMORY={selected:proof.selected,source:sid,target:tid,at:now};return proof;}
+  var blockers=Array.isArray(ns.blockers)?ns.blockers:[];
+  if(!proof.moving&&!proof.pending&&UI_PATH_MEMORY&&UI_PATH_MEMORY.source===sid&&UI_PATH_MEMORY.target===tid&&now-UI_PATH_MEMORY.at>=-5&&now-UI_PATH_MEMORY.at<=UI_PATH_MEMORY_SECONDS
+     &&((status||{}).auto_control||{}).requested==='on'&&['OBSERVING','COMMITTED','DEGRADED-ON-RESERVE','BLOCKED'].indexOf(ns.state)>=0
+     &&(typeof AUTO_TRANSIENT==='undefined'||blockers.every(function(c){return AUTO_TRANSIENT.indexOf(c)>=0;})))
+    return Object.assign({},proof,{selected:UI_PATH_MEMORY.selected,code:null,held:true});
+  return proof;
+}
 function manualConfirmedPath(status,source,target,now){
   var neutral={source:'neutral',target:'neutral',direction:'none',moving:false,selected:null};
   var proof=channelPathSelection(status,now,source&&source.id,target&&target.id);
