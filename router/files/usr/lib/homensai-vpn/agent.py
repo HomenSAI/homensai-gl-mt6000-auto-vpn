@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha64'
+VERSION = '0.9.1-alpha65'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -729,6 +729,9 @@ def serve():
     ping_sampler=PingSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     from website_response import WebsiteSampler,public as website_public
     website_sampler=WebsiteSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    # Owner probe level 1-5 and the optional automatic boost; every decision is recorded.
+    from probe_policy import Booster
+    booster=Booster(RUNTIME,PERSIST,atomic_json,read_json)
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
         from speed_pause import gate as speed_gate
@@ -786,6 +789,8 @@ def serve():
                 storage_error = 'CLOCK-001'
             from reliability import failure_pair_context
             failure_pair=failure_pair_context(data,after_inventory)
+            # Ping/website cadence follows the probe level (shorter while boosting).
+            ping_sampler.configure(booster.measure(settings));website_sampler.configure(booster.measure(settings))
             # Optional ICMP latency is cached by a separate bounded worker. It never enters health/Auto decisions.
             try:ping_sampler.apply(rows,failure_pair,time.time())
             except Exception:
@@ -838,6 +843,10 @@ def serve():
             from candidate_hierarchy import rank_candidates
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',10)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+            try:
+                booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time())
+                status['probe_policy']=booster.public(settings,time.time())
+            except (OSError,ValueError,TypeError,KeyError):status['probe_policy']={'code':'PROBE-POLICY-UNAVAILABLE'}
             latency.observe(status,settings,time.time())
             status['latency_history']=technical_history_tail(latency.public(),time.time())
             try:
@@ -905,7 +914,7 @@ def serve():
             except Exception:pass
             settings = {'interval': 30}
         # A scan request is bounded metadata, never an arbitrary command/path.
-        while not STOP and time.monotonic()-started < monitor_poll_interval(settings):
+        while not STOP and time.monotonic()-started < min(monitor_poll_interval(settings),booster.interval(settings)):
             if (RUNTIME/'speed-pause.json').exists():break
             request = RUNTIME/'scan.request'
             if request.exists() and not request.is_symlink():
@@ -966,6 +975,7 @@ def rpc(method):
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
+                          'setup_probe':{'level':0,'boost':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
@@ -1044,9 +1054,9 @@ def rpc(method):
         except ValueError as error:
             result={'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
         print(json.dumps(result));return
-    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding'):
+    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding','setup_probe'):
         from setup_config import save
-        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding'}[method])
+        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding','setup_probe':'probe'}[method])
         except ValueError as error:
             code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'
             result={'saved':False,'code':code}

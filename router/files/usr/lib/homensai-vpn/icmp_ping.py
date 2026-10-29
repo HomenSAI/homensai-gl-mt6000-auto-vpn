@@ -128,6 +128,11 @@ class PingSampler:
     def __init__(self,inventory_reader,binding_reader,paused=lambda:False):
         self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused
         self.lock=Lock();self.cache={};self.jobs={};self.attempts={};self.current=set();self.closed=False;self.worker=None
+        self.interval=INTERVAL;self.valid_for=VALID_FOR
+
+    def configure(self,interval):
+        """Cadence from the owner probe level; results stay current for 1.5 cadences + probe budget."""
+        with self.lock:self.interval=interval;self.valid_for=int(interval*3//2+15)
 
     def measure(self,row):
         if self.closed or self.paused():return public(row,'unavailable','PING-UNAVAILABLE',time.time())
@@ -166,6 +171,7 @@ class PingSampler:
     def _run(self,key,row):
         try:result=self.measure(row)
         except Exception:result=public(row,'unavailable','PING-UNAVAILABLE',time.time())
+        if isinstance(result,dict) and 'valid_for' in result:result['valid_for']=self.valid_for
         with self.lock:
             if not self.closed and key in self.current:self.cache[key]=result
             self.jobs.pop(key,None)
@@ -182,7 +188,7 @@ class PingSampler:
         """Decorate only nested ping; never modify the original channel health."""
         selected={pair.get('source'),pair.get('target')}-{None}
         eligible={signature(row) for row in rows if row.get('id')in selected and signature(row)is not None
-                  and type(row.get('time'))in(int,float)and math.isfinite(row['time'])and -5<=now-row['time']<=VALID_FOR}
+                  and type(row.get('time'))in(int,float)and math.isfinite(row['time'])and -5<=now-row['time']<=self.valid_for}
         batch=[];thread=None
         with self.lock:
             self.current=eligible
@@ -191,7 +197,7 @@ class PingSampler:
             # or a brief disabled/stale observation. Otherwise rebinds could bypass the limit.
             live={row.get('vendor_tunnel_id')for row in rows if row.get('id')in selected}
             monotonic_now=time.monotonic()
-            self.attempts={key:value for key,value in self.attempts.items()if key in live or monotonic_now-value<INTERVAL}
+            self.attempts={key:value for key,value in self.attempts.items()if key in live or monotonic_now-value<self.interval}
             for row in rows:
                 if row.get('id')not in selected:
                     row['ping']=public(row,'inactive','PING-NOT-SELECTED');continue
@@ -203,10 +209,10 @@ class PingSampler:
                     row['ping']=public(row,'stale','PING-DATA-STALE');continue
                 value=self.cache.get(key)
                 row['ping']=dict(value)if value else public(row,'checking','PING-CHECK-PENDING')
-                if value and (type(value.get('time'))not in(int,float)or not math.isfinite(value['time'])or not -5<=now-value['time']<=VALID_FOR):
+                if value and (type(value.get('time'))not in(int,float)or not math.isfinite(value['time'])or not -5<=now-value['time']<=self.valid_for):
                     row['ping']=public(row,'stale','PING-DATA-STALE',value.get('time'))
                 if (not self.closed and not self.paused() and self.worker is None and key not in self.jobs and len(batch)<2
-                        and monotonic_now-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=INTERVAL):
+                        and monotonic_now-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=self.interval):
                     snapshot={name:row.get(name)for name in IDENTITY+BINDING+('administrative_state','vendor_state')}
                     self.attempts[row['vendor_tunnel_id']]=monotonic_now;batch.append((key,snapshot))
             if batch:

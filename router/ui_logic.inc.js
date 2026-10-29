@@ -66,7 +66,7 @@ function channelPingModel(p,status,now){
   if(x.metric!==WEBSITE_METRIC||x.target_set!==WEBSITE_TARGET_SET||p.vendor_state!=='SETTLED'||typeof p.vendor_generation!=='string'||!/^[a-f0-9]{32}$/.test(p.vendor_generation)||x.generation!==p.vendor_generation||x.interface!==p.interface||typeof p.vendor_tunnel_id!=='string'||p.vendor_tunnel_id!==p.protocol+':'+p.interface||x.vendor_tunnel_id!==p.vendor_tunnel_id)return no('checking','WEBSITE-IDENTITY-CHANGED');
   if(x.state==='checking')return no('checking','WEBSITE-CHECK-PENDING');
   if(x.state==='inactive'||x.state==='unavailable')return no(x.state,'WEBSITE-UNAVAILABLE');
-  if(!Number.isFinite(x.time)||!Number.isFinite(x.valid_for)||x.valid_for<=0||x.valid_for>45||now-x.time< -5||now-x.time>x.valid_for||x.state==='stale')return no('stale','WEBSITE-DATA-STALE');
+  if(!Number.isFinite(x.time)||!Number.isFinite(x.valid_for)||x.valid_for<=0||x.valid_for>465||now-x.time< -5||now-x.time>x.valid_for||x.state==='stale')return no('stale','WEBSITE-DATA-STALE');
   if(x.state!=='ok')return no(x.state==='partial'?'partial':'failed',x.state==='partial'?'WEBSITE-PARTIAL':'WEBSITE-RESPONSE-FAILED');
   var results=x.results,seen={},sum=0;
   if(x.successes!==3||x.attempted!==3||!Array.isArray(results)||results.length!==3)return no('unavailable','WEBSITE-UNAVAILABLE');

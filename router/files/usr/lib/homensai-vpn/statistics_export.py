@@ -5,10 +5,14 @@ from native_history import History,WEEK
 
 
 def page(directory,arguments,now=None):
-    if (set(arguments)!={'kind','after','until'} or arguments.get('kind') not in ('controller','failures')
+    if (set(arguments)!={'kind','after','until'} or arguments.get('kind') not in ('controller','failures','probe')
             or any(type(arguments.get(key)) is not int or not 0<=arguments[key]<2**53 for key in ('after','until'))):
         raise ValueError('STATISTICS-FIELDS')
     now=time.time() if now is None else now
+    if arguments['kind']=='probe':
+        from agent import read_json
+        from probe_policy import history_page
+        return history_page(directory,arguments,read_json,now)
     from retention_settings import configured_days
     detail_days=configured_days()
     if arguments['kind']=='controller':
