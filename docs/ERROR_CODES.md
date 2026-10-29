@@ -1387,6 +1387,66 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **Action:** Review the selected pair and the actual applied VPN policy. Keep the refusal evidence and retry only after the router confirms that binding.
 
+## PROBE-SETTINGS-FIELDS
+
+Неполный запрос уровня опроса / Probe level request is incomplete
+
+**RU:** Страница отправила запрос уровня опроса без нужных полей уровня и ускорения.
+
+**EN:** The page sent a probe-level request without the expected level and boost fields.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и примените уровень ещё раз.
+
+**Action:** Reload the page (Ctrl+F5) and apply the level again.
+
+## PROBE-SETTINGS-RANGE
+
+Неизвестный уровень опроса / Unknown probe level
+
+**RU:** Существуют только уровни от 1 до 5.
+
+**EN:** Only levels 1 to 5 exist.
+
+**Что делать:** Выберите уровень ползунком и примените ещё раз.
+
+**Action:** Choose a level with the slider and apply it again.
+
+## PROBE-SETTINGS-BUSY
+
+Идёт переключение / A switch is in progress
+
+**RU:** Уровень опроса не меняется, пока идёт переключение или восстановление канала.
+
+**EN:** The probe level is not changed while a channel switch or recovery is running.
+
+**Что делать:** Дождитесь окончания переключения и примените уровень ещё раз.
+
+**Action:** Wait until the switch finishes, then apply the level again.
+
+## PROBE-POLICY-UNAVAILABLE
+
+Состояние уровня опроса недоступно / Probe level state unavailable
+
+**RU:** Мониторинг не смог опубликовать текущий уровень опроса в этом цикле. Сам мониторинг продолжается.
+
+**EN:** The monitor could not publish the current probe level this cycle. Monitoring itself continues.
+
+**Что делать:** Дождитесь следующей проверки; если не проходит, обновите страницу.
+
+**Action:** Wait for the next check; if it stays, reload the page.
+
+## PROBE-HISTORY-UNAVAILABLE
+
+Журнал решений недоступен / Decision log unavailable
+
+**RU:** Роутер не вернул журнал решений уровня опроса.
+
+**EN:** The router did not return the probe decision log.
+
+**Что делать:** Закройте и снова откройте журнал через минуту.
+
+**Action:** Close and open the log again in a minute.
+
 ## MANUAL-ALREADY-SELECTED
 
 Этот канал уже выбран / This channel is already selected

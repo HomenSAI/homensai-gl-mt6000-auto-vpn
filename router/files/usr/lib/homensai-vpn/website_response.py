@@ -178,6 +178,11 @@ class WebsiteSampler:
     def __init__(self,inventory_reader,binding_reader,paused=lambda:False):
         self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused
         self.lock=Lock();self.cache={};self.completed_at={};self.current=set();self.attempts={};self.worker=None;self.closed=False;self.context=None
+        self.interval=INTERVAL;self.valid_for=VALID_FOR
+
+    def configure(self,interval):
+        """Cadence from the owner probe level; results stay current for 1.5 cadences + probe budget."""
+        with self.lock:self.interval=interval;self.valid_for=int(interval*3//2+15)
 
     def measure(self,row):
         try:
@@ -203,6 +208,7 @@ class WebsiteSampler:
         try:
             for key,row in batch:
                 result=self.measure(row)
+                if isinstance(result,dict) and 'valid_for' in result:result['valid_for']=self.valid_for
                 with self.lock:
                     if not self.closed and key in self.current:
                         self.cache[key]=result;self.completed_at[key]=time.monotonic()
@@ -214,8 +220,8 @@ class WebsiteSampler:
         result=self.cache.get(key)
         if not result:return None
         stamp=result.get('time');completed=self.completed_at.get(key)
-        if (type(stamp) not in (int,float) or not math.isfinite(stamp) or not -5<=now-stamp<=VALID_FOR
-                or completed is not None and not 0<=time.monotonic()-completed<=VALID_FOR):
+        if (type(stamp) not in (int,float) or not math.isfinite(stamp) or not -5<=now-stamp<=self.valid_for
+                or completed is not None and not 0<=time.monotonic()-completed<=self.valid_for):
             result=public(row,'stale','WEBSITE-DATA-STALE',stamp)
             self.cache[key]=result
         return dict(result)
@@ -243,18 +249,18 @@ class WebsiteSampler:
     def apply(self,rows,pair,now):
         selected={pair.get('source'),pair.get('target')}-{None};batch=[];thread=None
         eligible={signature(row) for row in rows if row.get('id') in selected and signature(row) is not None
-                  and type(row.get('time')) in (int,float) and math.isfinite(row['time']) and -5<=now-row['time']<=VALID_FOR}
+                  and type(row.get('time')) in (int,float) and math.isfinite(row['time']) and -5<=now-row['time']<=self.valid_for}
         with self.lock:
             self.current=eligible;self.cache={key:value for key,value in self.cache.items() if key in eligible}
             self.completed_at={key:value for key,value in self.completed_at.items() if key in self.cache}
             mono=time.monotonic();live={row.get('vendor_tunnel_id') for row in rows if row.get('id') in selected}
-            self.attempts={key:value for key,value in self.attempts.items() if key in live or mono-value<INTERVAL}
+            self.attempts={key:value for key,value in self.attempts.items() if key in live or mono-value<self.interval}
             for row in rows:
                 key=signature(row)
                 if row.get('id') not in selected:row['website_response']=public(row,'inactive','WEBSITE-NOT-SELECTED');continue
                 if key not in eligible:row['website_response']=public(row,'unavailable','WEBSITE-IDENTITY-CHANGED');continue
                 result=self.cached(row,key,now);row['website_response']=result if result else public(row)
-                if not self.closed and not self.paused() and self.worker is None and len(batch)<2 and mono-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=INTERVAL:
+                if not self.closed and not self.paused() and self.worker is None and len(batch)<2 and mono-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=self.interval:
                     self.attempts[row['vendor_tunnel_id']]=mono
                     batch.append((key,{name:row.get(name) for name in IDENTITY+BINDING+('administrative_state','vendor_state')}))
             if batch:thread=Thread(target=self.run_batch,args=(batch,),name='website-response',daemon=True);self.worker=thread

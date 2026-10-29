@@ -64,3 +64,9 @@
 .hv-app .hv-auto-controls .hv-auto-power-unit{padding-top:0;gap:14px}.hv-app .hv-auto-power-unit>:nth-child(1){order:2}.hv-app .hv-auto-power-unit>:nth-child(2){order:1}.hv-app .hv-auto-power-unit>:nth-child(3){order:3}.hv-app .hv-auto-failure{margin:12px 0;overflow-wrap:anywhere}
 /* LuCI's poll badge ("REFRESHING") flashes on every 10 s update; only real errors are shown. */
 #indicators [data-indicator="poll-status"]{display:none!important}
+.hv-probe-scale{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hv-probe-scale span{font-size:.85em;opacity:.8;flex:0 1 auto}
+.hv-probe-slider{flex:1 1 220px;min-width:160px;accent-color:var(--hv-accent,#2f7d5b)}
+.hv-probe-boost-label{display:flex;align-items:center;gap:6px;margin-top:8px}
+.hv-probe-active{font-weight:600}
+.hv-probe-log td,.hv-probe-log th{padding:4px 8px;vertical-align:top}

@@ -212,7 +212,8 @@ VENDOR_LOCK='/tmp/run/rtp2.lock'
 RECOVERY_RTP_TIMEOUT=90  # supervisor recovery: no parent kills it; still bounded
 ALLOWED_STALE_LOCK=[None]  # set only while a vendor-rebuild proof reads diagnostics
 STABLE_PROFILE=('id','protocol','interface','vendor_tunnel_id')  # profile identity without the monitor epoch
-SETTLE_SECONDS=90;SETTLE_POLL=3  # monitor settle after a restart is 30 s at the 10 s interval
+SETTLE_SECONDS=90;SETTLE_POLL=3
+VENDOR_SETTLE_SECONDS=60;VENDOR_SETTLE_POLL=3  # GL hotplug/firewall reloads after a switch  # monitor settle after a restart is 30 s at the 10 s interval
 
 
 def vendor_lock_pid():
@@ -269,6 +270,31 @@ def settled(backend,clock=None,sleep=None):
         blockers,current=backend.diagnostic()
         if not blockers and isinstance(current,dict) or clock()>=until:return blockers,current
         sleep(SETTLE_POLL)
+
+
+def vendor_settled(backend,clock=None,sleep=None,board=None):
+    """MT3000 only: wait (bounded) until GL workers are quiet and the kernel graph is stable.
+
+    Right after a switch the vendor may cycle the tunnel and reload the firewall
+    several times (hotplug ifdown/ifup). A rollback proof taken in those seconds
+    sees a moving kernel fingerprint and refuses, spending the bounded budget on
+    a transient. Nothing is written while waiting; the caller still decides.
+    """
+    import time
+    from device_profile import detect
+    if (board or detect())!='mt3000':return
+    clock=clock or time.monotonic;sleep=sleep or time.sleep
+    until=clock()+VENDOR_SETTLE_SECONDS
+    try:
+        from native_platform import wait_quiet
+        wait_quiet(min(30,max(1,until-clock())))
+    except (OSError,ValueError,ImportError):pass
+    previous=None
+    while clock()<until:
+        try:current=backend.kernel_fingerprint()
+        except Exception:current=None
+        if current is not None and current==previous:return
+        previous=current;sleep(VENDOR_SETTLE_POLL)
 
 
 def unrouted_kernel():

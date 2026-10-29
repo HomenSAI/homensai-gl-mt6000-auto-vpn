@@ -97,6 +97,11 @@ uci:foreach('homensai_vpn','main',function(s)
   main.telegram_items=s.telegram_items or ''
   main.telegram_configured=type(s.telegram_token)=='string' and #s.telegram_token>20 and type(s.telegram_chat)=='string' and #s.telegram_chat>0
   main.interval=math.max(10,math.min(300,tonumber(s.interval) or 10))
+  local level=tonumber(s.probe_level)
+  main.probe_level=(level and level>=1 and level<=5 and level==math.floor(level)) and level or 0
+  main.probe_boost=s.probe_boost~='0'
+  local measure=tonumber(s.measure_interval)
+  main.measure_interval=(measure and measure>=30 and measure<=300) and math.floor(measure) or 0
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
   main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))

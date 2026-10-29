@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard139'
+UI_MODULE='dashboard141'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -126,7 +126,7 @@ must_replace("      while(panel.firstChild)","      var focused=panel.contains(d
 must_replace("sortableTables();showPage(activeTab);","sortableTables();showPage(activeTab);if(focused){var input=pages[focused.key]&&pages[focused.key].querySelector('.hv-search');if(input){input.focus();input.setSelectionRange(focused.start,focused.end);}}")
 source='\n'.join(line for line in source.splitlines() if "put('overview',E('section',{'class':'hv-chart-card hv-control-summary'}" not in line)
 must_replace("var ns=status.native_failover||{state:'SERVICE-STOPPED'};","var ns=status.native_failover||{state:'SERVICE-STOPPED'};\n      var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);pages.overview.insertBefore(controlCard,pages.overview.firstChild);")
-must_replace('return view.extend({',(Path(__file__).parent/'manual_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_live_chart.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'manual_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_live_chart.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'auto_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'probe_panel.inc.js').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'setup_wizard.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("      showPage(activeTab);window.addEventListener","      settingsHost.insertBefore(E('div',{'class':'hv-wizard-launch'},[E('button',{'type':'button','class':'cbi-button cbi-button-action','click':function(){setupWizard(inventory,'system');}},bi('System setup wizard','Мастер настройки системы')),E('button',{'type':'button','class':'cbi-button','click':function(){setupWizard(inventory,'telegram');}},bi('Telegram channel wizard','Мастер Telegram-канала')),E('button',{'type':'button','class':'cbi-button','click':function(){return rpc.declare({object:'homensai-vpn',method:'telegram_test',expect:{}})().then(function(result){ui.addNotification(null,E('p',{},result.code||'TELEGRAM-TEST-UNKNOWN'));});}},bi('Test Telegram delivery','Проверить доставку Telegram'))]),settingsHost.firstChild);\n      showPage(activeTab);window.addEventListener")
 must_replace("telegramChat.datatype='integer'","telegramChat.datatype='string'")
 must_replace("var appRoot=null,settingsHost","var lastGoodStatus=data[1];\n    var appRoot=null,settingsHost")
@@ -362,7 +362,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui105.css',expected=3)
+must_replace('ui15.css','ui107.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -519,7 +519,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui105.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui107.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -550,5 +550,11 @@ assert source.count('function speedPanel(status,inventory,period,onPeriod){')==2
 assert [line.split('(')[0] for line in _dead_text.split('\n') if line.startswith('function ')]==['function speedPanel','function trafficHistoryPanel'],'DEAD-PANEL-SPAN'
 source=source[:_dead_panels]+source[_dead_panels_end+1:]
 assert source.count('function speedPanel(')==1 and source.count('function trafficHistoryPanel(')==1,'FINAL-PANEL-COUNT'
+# Declarations no code path calls any more (their call sites were replaced by later patches).
+for _name in ('renderPlanBlockers','renderProbeChecks'):
+    assert len(re.findall(r'(?<![A-Za-z0-9_$.])'+_name+r'(?![A-Za-z0-9_$])',source))==1,'DEAD-FUNCTION-STILL-USED '+_name
+    _start=source.index('\nfunction '+_name+'(')+1;_end=source.index('\n}\n',_start)+3
+    assert '\nfunction ' not in source[_start:_end],'DEAD-FUNCTION-SPAN '+_name
+    source=source[:_start]+source[_end:]
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

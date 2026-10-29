@@ -44,6 +44,7 @@
           "fault_cancel",
           "stats_reset",
           "setup_monitor",
+          "setup_probe",
           "setup_onboarding"
         ]
       }

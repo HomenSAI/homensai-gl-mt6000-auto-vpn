@@ -109,6 +109,16 @@ def speed_payload(arguments):
     return {'main':main,'servers':[]}
 
 
+def probe_payload(arguments):
+    from probe_policy import LEVELS
+    if not isinstance(arguments,dict) or set(arguments)!={'level','boost'} or type(arguments['boost']) is not bool:
+        raise ValueError('PROBE-SETTINGS-FIELDS')
+    if type(arguments['level']) is not int or arguments['level'] not in LEVELS:raise ValueError('PROBE-SETTINGS-RANGE')
+    interval,measure=LEVELS[arguments['level']]
+    return {'main':{'probe_level':str(arguments['level']),'probe_boost':'1' if arguments['boost'] else '0',
+                    'interval':str(interval),'measure_interval':str(measure)},'servers':[]}
+
+
 def monitor_payload(arguments, probe_max=16):
     required={'interval','checkpoint','probe_limit','planning_enabled'}
     if not required<=set(arguments) or set(arguments)-required-{'live_log_limit','history_days'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
@@ -214,6 +224,7 @@ def save(arguments, kind):
     elif kind=='telegram':payload=telegram_payload(arguments)
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
+    elif kind=='probe':payload=probe_payload(arguments)
     elif kind=='terms':
         from agent import TERMS_VERSION
         import time
@@ -232,6 +243,15 @@ def save(arguments, kind):
         if kind=='system':
             current=inventory()
             payload=system_payload(arguments,current['profiles'],current.get('settings'))
+        if kind=='probe':
+            # Cadence is not part of the Auto session fingerprint: every decision recomputes
+            # its windows from the current interval. Only an active switch or speed test waits.
+            from speed_pause import public as pause_status
+            if pause_status().get('active'):return {'saved':False,'code':'SPEED-BUSY'}
+            from native_switch import journal_read, Refused
+            try:phase=journal_read().get('phase')
+            except Refused:return {'saved':False,'code':'CONFIG-RECOVERY-UNVERIFIED'}
+            if phase in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):return {'saved':False,'code':'PROBE-SETTINGS-BUSY'}
         if kind in ('recovery','monitor'):
             from configuration_guard import blocked
             reason=blocked(inventory().get('settings',{}))
