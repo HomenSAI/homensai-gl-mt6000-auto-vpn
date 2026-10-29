@@ -85,7 +85,8 @@ class BoundManualContext(unittest.TestCase):
         self.enter(patch.object(n.Linux,'guard',return_value=None));self.enter(patch.object(n.Linux,'unguard',return_value=None))
         self.enter(patch.object(n.Linux,'devices',return_value=['wgclient1','tun0']))
         self.enter(patch.object(n.Linux,'health',return_value=True));self.enter(patch.object(n.Linux,'recovery_ready',return_value=True))
-        self.enter(patch('device_profile.detect',return_value='mt3000'));self.enter(patch('rtp_boot.prepare',return_value={'prepared':True}))
+        self.enter(patch('device_profile.detect',return_value='mt3000'));self.enter(patch('rollback_recovery.vendor_settled',return_value=None))  # settle wait has its own tests
+        self.enter(patch('rtp_boot.prepare',return_value={'prepared':True}))
         self.enter(patch('rtp_boot.assess',return_value={'safe':True,'ready':True,'kernel_verified':False}))
         self.enter(patch('rtp_boot.ready',return_value=True));self.enter(patch('native_platform.wait_quiet'))
         self.enter(patch.object(n,'trace',return_value='9.9.9.9'));self.enter(patch.object(n,'probe',return_value={'code':None,'dns_ok':True,'https_success':2}))
