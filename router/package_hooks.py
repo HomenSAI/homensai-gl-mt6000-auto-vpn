@@ -30,7 +30,10 @@ fi
 /usr/bin/python3 /usr/lib/homensai-vpn/luci_cache.py
 exit 0
 '''
-    prerm=header+guard_block('check')+'''/etc/init.d/homensai-vpn stop
+    # opkg 21.02 runs the installed package's prerm with 'upgrade <new>' before the
+    # new preinst; a removal passes 'remove'. Only an upgrade may proceed over a
+    # journal whose apply worker is provably gone (the new supervisor recovers it).
+    prerm=header+'if [ "${1:-}" = upgrade ]; then action=upgrade; else action=check; fi\n'+guard_block('"$action"')+'''/etc/init.d/homensai-vpn stop
 /etc/init.d/homensai-vpn disable
 exit 0
 '''
