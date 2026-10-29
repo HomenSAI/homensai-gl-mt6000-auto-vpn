@@ -194,7 +194,7 @@ def pair_fault_role(native,selection,now):
     from pair_policy import state_order_matches
     kernel=backend.attest_policy(selection);role=kernel.get('role');stamp=kernel.get('time')
     if (kernel.get('verified') is not True or role not in ('source','target')
-            or type(stamp) not in (int,float) or not 0<=now-stamp<=5
+            or type(stamp) not in (int,float) or not now-5<=stamp<=max(now,time.time())+1  # the proof is taken after the request time 'now'
             or kernel.get('profile_id')!=selection[role]['id'] or kernel.get('policy_hash')!=selection['hash']
             or kernel.get('order')!=backend.order()[0] or not state_order_matches(state,journal,backend.order())):
         raise FaultError('FAULT-IDENTITY-UNVERIFIED')
