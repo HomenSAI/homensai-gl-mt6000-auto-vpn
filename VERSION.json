@@ -8,7 +8,7 @@
     "ui_module": "dashboard137",
     "ui_stylesheet": "ui103.css",
     "artifact": "homensai-auto-vpn_0.9.1-alpha62-1_all.ipk",
-    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "sha256": "395694553054b05087b441da889f488807860f5cfbd0e16207cd0cecfd620057",
     "source_fingerprint": "40f664678ae0a3376fe3188bc13763d7a6b9e4be0341b076e689cf3d759909a4",
     "ui_lazy_modules": [
       "homensai-vpn/help137.js"

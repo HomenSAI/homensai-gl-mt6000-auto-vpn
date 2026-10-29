@@ -3,8 +3,8 @@
 # Usage on the router:  sh 02-install.sh /tmp/homensai-auto-vpn_0.9.1-alpha62-1_all.ipk
 # Requires step 1 and verified Auto OFF/recovery. No firmware replacement.
 # Package lifecycle may stop own services; never force past its guards.
-EXPECTED_SHA=aa5770f7cefa62396dcff00392cf9a7b89144c54c5a4ec39443310a83ed252e7
-EXPECTED_SIZE=983552
+EXPECTED_SHA=395694553054b05087b441da889f488807860f5cfbd0e16207cd0cecfd620057
+EXPECTED_SIZE=983971
 EXPECTED_VERSION=0.9.1-alpha62-1
 KIT=/tmp/homensai-kit
 IPK="$1"
