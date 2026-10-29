@@ -7,7 +7,7 @@ let cards=new N('div'),hosts=c.channelCardHosts(rows,status,inventory,cards);for
 assert.equal(cards.children[0].attrs['data-profile'],primary.id);assert.equal(cards.children[1].attrs['data-profile'],reserve.id);const details=cards.children[2];assert(!details.attrs.open);assert.equal(details.children[1].children.length,1);
 details.open=true;details.listeners.toggle();cards=new N('div');hosts=c.channelCardHosts(rows,status,inventory,cards);hosts.finish();assert.equal(cards.children[0].attrs.open,'open','polling retains disclosure without swapping roles');
 const p={id:primary.id,interface:'wgclient1',time:100,vendor_state:'SETTLED',server_endpoint:{profile:primary.id,interface:'wgclient1',time:100,host:'198.51.100.8',port:51820,transport:'udp',source:'live-kernel-peer'}};
-assert(c.endpointText(p,101).includes('198.51.100.8:51820'));assert(!c.endpointText(p,200).includes('198.51.100.8'));
+assert(c.endpointText(p,101).includes('198.51.100.8:51820'));assert(!c.endpointText(p,200+(c.UI_DISPLAY_GRACE||0)).includes('198.51.100.8'));
 for(const changed of [{profile:reserve.id},{source:'configured'},{host:'user:password@host'},{host:'<img>'},{port:0}]){const bad=JSON.parse(JSON.stringify(p));Object.assign(bad.server_endpoint,changed);assert.equal(c.endpointText(bad,101),'Server address: not observed');}
 assert(!c.roleDescription(primary,status,inventory).includes('default'));assert(c.roleDescription(reserve,status,inventory).includes('Reserve'));
 console.log('PASS: fixed primary/reserve positions, collapsed other cards with persistent expansion, truthful fresh bound peer addresses and no default-group noise');

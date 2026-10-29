@@ -9,7 +9,7 @@
     "router/analytics_panel.inc.js": "8e9716e0c453a01a099d88b05fa405f6956e0cfa03cc226a85c888499b1017c6",
     "router/attribution_panel.inc.js": "dc9f4026fd4656da6e3bf2500602e4fd117571f019258fb6a69db07cc73e2431",
     "router/auto_live_chart.inc.js": "30817089a5ced3c64ab612d119640be2c6f01dbfea3d548a6d1a5d1b70eba54d",
-    "router/auto_panel.inc.js": "51978b105d41b80e1426a397c3372dd4ed01f55927c7a0b48ef886bbd19dcd31",
+    "router/auto_panel.inc.js": "89ea79cfeda9fadb33ac475b512bbcbb647641e3ed4bb7a30d85c69134586105",
     "router/channel_guidance.inc.js": "93ddbe65d93a3a1423499e229dad76ecf2837cf98eac3f53039fb641befe9565",
     "router/connectivity_panel.inc.js": "061e4d9eee841150b89d32915a1e5fd819443554fedf880e795649c71af7e4ed",
     "router/country_panel.inc.js": "ae36846896491605967cca8246be84e0b48e3fbaed8f300e1573baaa1cec1530",

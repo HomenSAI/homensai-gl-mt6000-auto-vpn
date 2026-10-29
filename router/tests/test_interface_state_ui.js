@@ -36,7 +36,7 @@ console.log('PASS: primary/reserve and at most one green, yellow standby/red dis
  assert.equal(c.statusNow(frame),1000);
  const row={id:'p',interface:'wgclient1',time:999,dns_ok:true,https_success:2};
  assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'green');
- monotonic=92000;assert.equal(c.statusNow(frame),1092);
+ monotonic=92000+(c.UI_DISPLAY_GRACE||0)*1000;assert.equal(c.statusNow(frame),1092+(c.UI_DISPLAY_GRACE||0));
  assert.equal(c.dvChannelUse(row,{now:c.statusNow(frame),settings:{},selected:'p'},frame).kind,'grey','an old frame still expires: waiting for the router (grey)');
  delete c.Date;delete c.performance;
 }

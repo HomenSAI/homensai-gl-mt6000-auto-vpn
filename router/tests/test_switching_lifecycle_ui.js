@@ -63,8 +63,8 @@ async function main(){
     const slow=status();slow.time=800;slow.observation_valid_for=900;slow.profiles.forEach(p=>{p.time=800;p.observation_valid_for=900;});
     assert(c.autoControlModel(slow,1000).fresh);assert.equal(c.monitorLightModel(slow,inventory,1000,false).key,'ok');assert(slow.profiles.every(p=>c.profileHealth(p,1000).state==='healthy'));assert(c.manualControlModel(slow,1000).reserve.allowed);
     slow.channel_path.checked_at=slow.channel_path.time=984;assert.equal(c.selectedProfile(slow,1000),null,'cadence cannot extend 15-second kernel proof');
-    slow.native_failover.time=969;assert(!c.autoControlModel(slow,1000).fresh,'cadence cannot extend 30-second controller heartbeat');
-    for(const value of [0,901,Infinity,'900'])assert.equal(c.observationValidFor({observation_valid_for:value}),90);
+    slow.native_failover.time=1000-31-(c.UI_DISPLAY_GRACE||0);assert(!c.autoControlModel(slow,1000).fresh,'cadence cannot extend the 30-second controller heartbeat (+display grace)');
+    for(const value of [0,901,Infinity,'900'])assert.equal(c.observationValidFor({observation_valid_for:value}),90+(c.UI_DISPLAY_GRACE||0));
   }
   console.log('PASS: queued/unknown/cancelled/recovered manual lifecycle, consistent immediate lamps, typed terminal correlation, truthful channel state and cadence EN/RU');
   for(const language of ['en','ru']){
@@ -112,7 +112,7 @@ async function main(){
     const original=JSON.stringify(s);let resolve;const pending=c.uiStatusRequest(()=>new Promise(done=>{resolve=done}));await Promise.resolve();
     clock.tick+=scenario.delay;clock.wall+=scenario.wallBack?-600000:scenario.delay;resolve(s);const received=await pending,now=c.statusNow(received),slow=scenario.delay>15000;
     assert(Math.abs(now-stamp-scenario.delay/1000)<1e-9,'status evidence ages during RPC transport, including a zero monotonic tick and backwards clocks');
-    assert.strictEqual(c.uiNewestStatus(previous,received),received);assert.equal(c.selectedProfile(received,now),slow?null:'a');assert.equal(c.autoControlModel(received,now).fresh,!slow);
+    assert.strictEqual(c.uiNewestStatus(previous,received),received);assert.equal(c.selectedProfile(received,now),slow?null:'a');assert.equal(c.autoControlModel(received,now).fresh,10+scenario.delay/1000<=30+(c.UI_DISPLAY_GRACE||0),'controller heartbeat ages in transit; display grace tolerates a slow status call');
     received.profiles.forEach((p,i)=>assert.equal(c.channelPingModel(p,received,now).rtt_ms,slow?null:100*(i+1),'both 45-second website results expire while in transit'));
     assert(c.observationFresh(received,now));assert.equal(JSON.stringify(received),original,'transport metadata does not rewrite router evidence');
   }
@@ -184,7 +184,7 @@ async function main(){
     reset.auto_control.requested='off';reset.auto_control.pair_phase='STOPPED';assert(!c.autoControlModel(reset,100).awaiting);assert.equal(c.autoCommandOperation(reset,100),null);
     reset.auto_control.requested='on';
     reset.auto_control.pair_phase='STARTING';assert(c.autoControlModel(reset,100).awaiting);assert.equal(c.autoCommandOperation(reset,100),'starting');
-    reset.auto_control.pair_phase='RUNNING';assert(!c.autoControlModel(reset,131).fresh);
+    reset.auto_control.pair_phase='RUNNING';assert(!c.autoControlModel(reset,131+(c.UI_DISPLAY_GRACE||0)).fresh);
     reset.native_failover.mode='legacy';reset.native_failover.proof_scope='lan';delete reset.channel_path;assert(c.autoControlModel(reset,100).awaiting,'legacy timestamp validation is unchanged');
   }
   for(const observed of [false,true]){

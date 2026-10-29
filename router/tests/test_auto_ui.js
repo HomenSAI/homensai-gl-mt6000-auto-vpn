@@ -152,7 +152,7 @@ console.log('PASS: 200 path combinations, at most one green confirmed traffic pa
     assert(['off','unknown','ok','switching','reserve','problem'].includes(l.key));
     assert(l.lamp===null||['green','yellow','orange','red'].includes(l.lamp));
     assert(typeof l.title==='string'&&l.title.length>3&&typeof l.hint==='string'&&l.hint.length>10);
-    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30&&!rpc);
+    if(l.lamp==='green')assert(state==='OBSERVING'&&certified===true&&age<=30+(context.UI_DISPLAY_GRACE||0)&&!rpc);
   }
   assert(combos>=800);
   // The button carries no status colour class any more.
