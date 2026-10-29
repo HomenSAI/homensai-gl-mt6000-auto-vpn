@@ -70,3 +70,5 @@
 .hv-probe-boost-label{display:flex;align-items:center;gap:6px;margin-top:8px}
 .hv-probe-active{font-weight:600}
 .hv-probe-log td,.hv-probe-log th{padding:4px 8px;vertical-align:top}
+.hv-app .hv-lamp-yellow:not(.hv-lamp-lit){background:radial-gradient(circle at 34% 28%,#5a5130,#30290f 70%);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+.hv-app .hv-light-three{gap:8px}
