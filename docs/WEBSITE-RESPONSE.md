@@ -1,7 +1,11 @@
 <!-- doc-role: technical-reference -->
 # Отклик сайтов / Website response
 
-The displayed response is one shared metric for every card, table, recommendation, graph and latency statistic. Each VPN has its own measurement of the same three HTTPS targets: Google (`www.google.com/generate_204`), Cloudflare (`www.cloudflare.com/cdn-cgi/trace`) and Wikipedia (`www.wikipedia.org/`).
+The response method is chosen in Settings → How the response is measured: by default a ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each VPN, or alternatively the three-site HTTPS mean described below. The option "Measure all methods (comparison)" additionally pings the other DNS addresses and opens the three websites on every check and adds one column per method to the server ranking on Tests; switching still uses only the chosen method. The delay chart and statistics follow the chosen method; the ping history is kept separately.
+
+Метод отклика выбирается в «Настройки → Как измеряется отклик»: по умолчанию пинг (ICMP к 1.1.1.1, либо 8.8.8.8 / 9.9.9.9) через каждый VPN, либо среднее трёх сайтов по HTTPS, описанное ниже. Параметр «Мерить все способы (сравнение)» дополнительно пингует остальные DNS-адреса и открывает три сайта при каждой проверке и добавляет по столбцу на способ в рейтинг серверов на странице «Тесты»; переключение по-прежнему использует только выбранный способ. График задержки и статистика следуют выбранному способу; история пинга хранится отдельно.
+
+The website method below: the displayed response is one shared metric for every card, table, recommendation, graph and latency statistic. Each VPN has its own measurement of the same three HTTPS targets: Google (`www.google.com/generate_204`), Cloudflare (`www.cloudflare.com/cdn-cgi/trace`) and Wikipedia (`www.wikipedia.org/`).
 
 For one complete measurement, **mean milliseconds = (Google milliseconds + Cloudflare milliseconds + Wikipedia milliseconds) / 3**. The timer includes DNS through that VPN, TCP connection, verified TLS and receipt of HTTP response headers. It stops before downloading a complete page, its images or scripts. This is a small active request from the router; it does not observe the owner's browsing or measure browser rendering.
 

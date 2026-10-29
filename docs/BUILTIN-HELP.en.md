@@ -69,6 +69,33 @@ Do not request secrets in chat or print full configs. This is diagnosis only: no
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
 ```
 
+<a id="probe-boost"></a>
+## Probe level and automatic boost: how it works
+
+You want to know exactly when the router checks more often and when it returns to the chosen level.
+
+Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Response measurement (ping or the three sites): 300, 120, 60, 45 and 30 s. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
+
+Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the response every 30 s, whatever level you chose. Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
+
+An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.
+
+When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.
+
+The decision log on Overview lists every level change and every episode: time, level, what happened, which channel and its error code. The countdown under the traffic light shows the current cadence, with «· boost» while an episode runs.
+
+If the router refuses a level change while a switch is running, the reason is shown under the Apply button and the change is retried automatically for 2 minutes. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Probe level and automatic boost: how it works.
+You want to know exactly when the router checks more often and when it returns to the chosen level.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="response-measurement"></a>
 ## How the response is measured
 
@@ -81,6 +108,8 @@ The response shown is the average of the three sites and appears only when all t
 Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.
 
 How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
+
+The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option "Measure all methods (comparison)" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.
 
 ### Diagnostic prompt
 
@@ -99,9 +128,9 @@ You want to know what Auto does after you press its button and what the router c
 
 Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.
 
-About these checks: two selected VPN channels; the router checks them itself, about every 10 seconds, through each tunnel.
+About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level on Overview (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.
 
-Lamp colours: green works in Auto; yellow: Alive; you can switch to it manually; grey is waiting for the router's answer; red is an error, the channel does not work.
+Lamp colours are the same on every page: green means this channel carries your traffic; yellow means it is alive but not in use (only such a channel offers "switch to it") or is being checked for a moment; red means a proven failure; grey means we are waiting for the router. The Auto button, the traffic light, the sidebar Auto lamp and the live journal always show one colour: green while Auto runs, yellow only during a real switch, start or stop and in a short pulse around each scheduled check, red only for a proven failure (the selected channel failed, a controller alarm, or no router answer for 90 s), dark when you turned Auto off. During a manual switch the destination card blinks green.
 
 No internet? Open the topic "No internet" below in Help for the recovery steps.
 
@@ -233,9 +262,9 @@ The selected reserve is working, a return is requested, or Stop retained the res
 
 Check both channel measurements and the selected route on Overview. Being on reserve does not by itself mean an error.
 
-For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. If Stop retained the reserve, use the offered Return to primary action and verify its actual result.
+For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If Stop retained the reserve, use the offered Return to primary action and verify its actual result.
 
-Automatic return depends on the saved return policy, fresh primary health and operator hold. Hold-reserve preference does not promise automatic return merely because primary probes succeed.
+Automatic return depends on the saved return policy and fresh primary health. Hold-reserve preference does not promise automatic return merely because primary probes succeed. After an Auto restart or a package upgrade Auto returns to the primary when it is healthy.
 
 If neither channel works or a recovery command is refused, read its code and use No internet. Do not change stock VPN profiles while Auto owns a transition.
 

@@ -1,3 +1,11 @@
+## Alpha80 source candidate: indication, manual switching, probe level / Кандидат alpha80
+
+Current branch: **0.9.1-alpha80-1**, dashboard155/ui121/help155. Source only: not a release and not an installed-device receipt; no router was contacted for this documentation update. Behaviour added in alpha73-79 is described in [the current guide](CURRENT-STATE.en.md): one lamp rule on every page (green carries traffic, yellow alive but not in use or a short check, red proven failure, grey waiting) and one Auto colour on button, traffic light, sidebar lamp and journal; a manual channel switch never turns Auto off and the "Resume Auto" button is gone; probe level 1-5 with automatic boost and decision log; response by ping (default) or three websites, with an optional all-methods comparison; a cheaper MT3000 status call (shared 15 s kernel attestation). Earlier sections below keep the version they describe.
+
+Исходный кандидат, не выпуск и не квитанция об установке; к роутеру при обновлении документации никто не обращался. Поведение alpha73–79 описано в [актуальном руководстве](CURRENT-STATE.ru.md): единое правило ламп на всех страницах и один цвет Auto на кнопке, светофоре, боковой лампе и журнале; ручное переключение не выключает Auto, кнопки «Возобновить Auto» больше нет; уровень опроса 1–5 с автоускорением и журналом решений; отклик пингом (по умолчанию) или тремя сайтами, с необязательным сравнением всех способов; более лёгкий вызов статуса MT3000. Разделы ниже сохраняют ту версию, которую описывают.
+
+---
+
 ## Alpha59 source candidate: interrupted UCI and evidence age / Кандидат alpha59
 
 Current branch: **0.9.1-alpha59-1**, dashboard134/ui100/help134. Additional failures reproduced after the alpha58 review: delayed status renewed expired proof, clock-skew hid terminal explanations, known invalid kernel still enabled manual routing buttons, and interrupted multi-move UCI rollback lacked a durable step/commit checkpoint. [Current follow-up](handoff/SWITCHING-FOLLOWUP-2026-10-28.ru.md) · [Independent review prompt](handoff/SWITCHING-FINISH-PROMPT-2026-10-28.ru.md).

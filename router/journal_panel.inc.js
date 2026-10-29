@@ -421,7 +421,7 @@ Object.assign(JOURNAL_TYPES,{"CANCELLED": {"code": "EVENT-COMMAND-CANCELLED", "l
 JOURNAL_TYPES["HELD-ON-RESERVE"]=JOURNAL_TYPES["STOPPED-ON-RESERVE"];
 JOURNAL_TYPES.CHANNEL_SELECTION={code:'EVENT-CHANNEL-SELECTION',label:['Channel selection record','Запись выбора канала'],message:['The router recorded a channel selection operation','Роутер сохранил операцию выбора канала'],meaning:['The saved direction and completion describe this operation. A controller phase alone does not prove the selected route or independent LAN availability.','Сохранённые направление и завершение описывают эту операцию. Сам этап контроллера не доказывает выбранный маршрут или доступность независимого клиента LAN.'],level:'warning'};
 JOURNAL_TYPES.POLICY_REAPPLY={code:'EVENT-POLICY-REAPPLY',label:['VPN rules applied again','Повторное применение правил VPN'],message:['The router applied VPN rules without changing channel order','Роутер повторно применил правила VPN без изменения порядка каналов'],meaning:['This is a rule application, not a channel switch or an internet availability result. Completion and the saved policy reason are separate facts.','Это применение правил, а не переключение канала или результат проверки интернета. Завершение и сохранённая причина проверки правил указываются отдельно.'],level:'warning'};
-JOURNAL_TYPES.ROUTER_OBSERVATION={code:'EVENT-ROUTER-OBSERVATION',label:['Router state observation','Наблюдение состояния роутера'],message:['Router control state was recorded; no channel switch is claimed','Сохранено состояние управления роутера; переключение канала не заявлено'],meaning:['This observation did not record a channel-order change. Use the saved event-time selection evidence rather than interpreting the controller phase as a new switch.','В этом наблюдении смена порядка каналов не записана. Используйте сохранённое подтверждение выбора на момент события; этап контроллера не считается новым переключением.'],level:'ok'};
+JOURNAL_TYPES.ROUTER_OBSERVATION={code:'EVENT-ROUTER-OBSERVATION',label:['Auto state','Состояние Auto'],message:['Auto state was recorded; the channel did not change','Записано состояние Auto; канал не менялся'],meaning:['This observation did not record a channel-order change. Use the saved event-time selection evidence rather than interpreting the controller phase as a new switch.','В этом наблюдении смена порядка каналов не записана. Используйте сохранённое подтверждение выбора на момент события; этап контроллера не считается новым переключением.'],level:'ok'};
 JOURNAL_TYPES.DIRECTION_NOT_SAVED={code:'EVENT-DIRECTION-NOT-SAVED',label:['Switch direction not recorded','Направление перехода не сохранено'],message:['The saved data does not establish the direction of this operation','Сохранённые данные не подтверждают направление этой операции'],meaning:['The event lacks valid explicit source or destination metadata. The current pair and controller phase are not used to invent the missing direction.','В событии нет корректно сохранённых исходного канала или назначения. Текущая пара и этап контроллера не используются для выдумывания направления.'],level:'warning'};
 function journalCodeRow(code){
   if(typeof ERROR_ROWS==='undefined'||typeof code!=='string')return null;
@@ -520,6 +520,16 @@ function journalLatencyText(entry){
   return sample?bi('Technical health HTTPS: ','Техническая HTTPS-проверка: ')+sample.rtt_ms.toFixed(1)+' '+bi('ms HTTPS','мс HTTPS')+' · '+bi('measured ','замер ')+new Date(sample.time*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):bi('Delay: no saved measurement at this event','Задержка: нет сохранённого замера на момент события');
 }
 function journalCurrentLatency(p,status,now){var model=channelPingModel(p,status,now);return model.rtt_ms===null?null:{profile:p.id,metric:WEBSITE_METRIC,time:p.website_response.time,rtt_ms:model.rtt_ms,interface:p.interface,generation:p.vendor_generation};}
+// A saved controller state without a channel change says what Auto was doing, never "switch not recorded".
+function journalAutoStateText(entry,transition,names){
+  var codes=[entry.code].concat(Array.isArray(entry.codes)?entry.codes:[]).filter(function(c){return typeof c==='string'&&c;});
+  var where=transition.to&&names[transition.to]?bi(' · traffic on the ',' · трафик на ')+names[transition.to]+bi(' channel',' канале'):'';
+  if(codes.indexOf('PAIR-MANUAL-HOLD-PRIMARY')>=0)return bi('Auto works · primary channel chosen by you','Auto работает · основной канал выбран вручную');
+  if(codes.indexOf('PAIR-MANUAL-HOLD-RESERVE')>=0)return bi('Auto works · reserve channel chosen by you','Auto работает · резервный канал выбран вручную');
+  var waiting=codes.filter(function(c){return !/^(PAIR-WATCHING|EVENT-|OPERATOR-)/.test(c);})[0];
+  if(waiting){var row=typeof journalCodeRow==='function'?journalCodeRow(waiting):null;return bi('Auto works · waiting: ','Auto работает · ожидание: ')+(row?bi(row[2],row[3]):waiting)+where;}
+  return bi('Auto works · channel unchanged','Auto работает · канал не менялся')+where;
+}
 function journalMessage(entry,status,hideCode){
   var t=journalDefinition(entry),text=bi(t.message[0],t.message[1]);
   var profiles=Array.isArray(status.profiles)?status.profiles:[],p=profiles.find(function(p){return p.id===entry.profile;});
@@ -531,7 +541,7 @@ function journalMessage(entry,status,hideCode){
     var names={source:bi('primary','основной'),target:bi('reserve','резервный')},direction=transition.to?(transition.changed&&transition.from?names[transition.from]+' → '+names[transition.to]:names[transition.to]):null;
     if(transition.outcome==='refused')text=bi('Channel selection request was refused','Запрос выбора канала отклонён')+(transition.to?' · '+names[transition.to]:'');
     else if(transition.reapply)text=transition.completed&&transition.outcome==='policy-verified'?bi('VPN rules verified; channel order unchanged','Правила VPN проверены; порядок каналов не изменился'):bi('Applying VPN rules again; no channel switch is claimed','Повторное применение правил VPN; переключение канала не заявлено');
-    else if(transition.unchanged)text=bi('Router state observation; no channel switch recorded','Наблюдение состояния роутера; переключение канала не записано');
+    else if(transition.unchanged)text=journalAutoStateText(entry,transition,names);
     else if(!direction)text=bi('Switch direction was not saved; see the recorded reason','Направление перехода не сохранено; смотрите записанную причину');
     else if(transition.completed&&transition.outcome==='restored')text=bi('Return confirmed: ','Возврат подтверждён: ')+direction;
     else if(transition.completed&&transition.outcome==='committed')text=(transition.changed&&transition.from?bi('Switch confirmed: ','Переход подтверждён: '):bi('Channel selected: ','Выбран канал: '))+direction;

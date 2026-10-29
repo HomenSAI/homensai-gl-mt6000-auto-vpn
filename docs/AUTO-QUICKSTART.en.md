@@ -9,7 +9,7 @@
 4. Review probe/checkpoint settings and, where supported, live-log count 1–2000 and detail days 1–7. Optional speed/Telegram features need their own selection. Save and verify; Save does not start Auto.
 5. Open System readiness and Overview. Prepared continuous MT3000 router-probed mode does not need a LAN certificate; a separate client-confirmed trial does. Do not bypass a refused prerequisite.
 6. Press Check VPN now for fresh observations, then explicit Auto Start when the selected mode is ready. Wait for confirmed selection and fresh DNS/HTTPS; a queued ACK or Connected interface is insufficient.
-7. Manual channel selection can work while Auto runs. A working reserve is normal. Return only under current readiness, policy and operator intent; a lower-delay recommendation never switches traffic itself.
+7. Manual channel selection can work while Auto runs and never turns it off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails. A working reserve is normal. Return only under current readiness, policy and operator intent; a lower-delay recommendation never switches traffic itself.
 8. To finish, use normal Stop and verify its actual restoration/cleanup. A retained reserve or failed recovery is a separate outcome, not successful restoration. Auto needs explicit Start after restart.
 
 The live log groups consecutive repeats, newest first. Its first two pinned rows are monitor/Auto, followed by the working channel. Saved Events starts with 20 rows and expands/searches the retained snapshot. M/R graphics identify direction; confirmed route selection and tunnel health are distinct.

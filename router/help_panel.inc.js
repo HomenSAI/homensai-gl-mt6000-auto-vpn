@@ -1,5 +1,6 @@
 /* Built-in help: what to do when something is wrong. Data are [English, Russian] pairs; commands are never translated. */
 var HELP_TOPICS=[
+  {"id": "probe-boost", "open": false, "title": ["Probe level and automatic boost: how it works", "Уровень опроса и автоматическое ускорение: как это работает"], "when": ["You want to know exactly when the router checks more often and when it returns to the chosen level.", "Вы хотите точно знать, когда роутер начинает проверять чаще и когда возвращается к выбранному уровню."], "steps": [{"t": ["Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Response measurement (ping or the three sites): 300, 120, 60, 45 and 30 s. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.", "Уровень опроса 1–5 задаёт два интервала. Проверка канала (работает ли интернет через VPN): уровень 1 — раз в 60 с, 2 — раз в 30 с, 3 — раз в 20 с, 4 — раз в 15 с, 5 — раз в 10 с. Замер отклика (пинг или три сайта): 300, 120, 60, 45 и 30 с. Сбой подтверждается после 3 неудачных проверок подряд, поэтому на уровне 1 это около 3 минут, на уровне 5 — около 30 с."]}, {"t": ["Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the response every 30 s, whatever level you chose. Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.", "Автоматическое ускорение включается, когда Auto работает и наблюдает (OBSERVING, COMMITTED или работа на резерве), а основной или резервный канал не прошёл одну проверку. С этого момента роутер проверяет каналы раз в 10 с и замеряет отклик раз в 30 с, независимо от выбранного уровня. Само ускорение ничего не переключает: оно только учащает проверки, чтобы настоящий сбой подтвердился примерно за 30 с."]}, {"t": ["An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.", "Эпизод длится 10 минут от последней неудачной проверки, но всего не дольше 20 минут. Как только задача выполнена — Auto переключил канал или сбой подтверждён (3 неудачные проверки), — новые неудачи его больше не продлевают."]}, {"t": ["When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.", "Когда эпизод закончился, роутер возвращается к вашему уровню и записывает итог в журнал решений: switched (Auto переключил канал), failure-confirmed (канал действительно отказал), false-alarm (одна проверка не прошла, потом канал работал) или disabled (вы выключили ускорение). Затем 10 минут отдыха: новый эпизод не начинается, а тот же канал не может начать его снова, пока не пройдёт проверку. Поэтому канал, который лежит долго, не держит роутер на частых проверках бесконечно."]}, {"t": ["The decision log on Overview lists every level change and every episode: time, level, what happened, which channel and its error code. The countdown under the traffic light shows the current cadence, with «· boost» while an episode runs.", "Журнал решений на «Обзоре» перечисляет каждую смену уровня и каждый эпизод: время, уровень, что произошло, какой канал и код ошибки. Отсчёт под светофором показывает текущий интервал, во время эпизода — с пометкой «· ускорение»."]}, {"t": ["If the router refuses a level change while a switch is running, the reason is shown under the Apply button and the change is retried automatically for 2 minutes. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.", "Если роутер отклоняет смену уровня во время переключения, причина показывается под кнопкой «Применить», а смена автоматически повторяется в течение 2 минут. Ручное переключение канала не выключает Auto: Auto продолжает следить за выбранным вами каналом, поэтому ускорение работает так же и после ручного переключения."]}]},
   {
     "id": "response-measurement",
     "open": false,
@@ -35,6 +36,12 @@ var HELP_TOPICS=[
           "How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.",
           "Как часто измеряется, задаёт уровень опроса на «Обзоре» (раз в 30 с на уровне 5, раз в 5 мин на уровне 1, раз в 30 с во время автоускорения). Отклик — только информация: Auto решает по проверкам DNS и HTTPS, а не по времени отклика."
         ]
+      },
+      {
+        "t": [
+          "The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option \"Measure all methods (comparison)\" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.",
+          "График задержки и статистика следуют выбранному способу; история пинга хранится отдельно. Параметр «Мерить все способы (сравнение)» заставляет каждую проверку дополнительно пинговать остальные DNS-адреса и открывать три сайта; рейтинг серверов на странице «Тесты» показывает по одному столбцу на каждый способ. Переключение по-прежнему использует только выбранный способ."
+        ]
       }
     ]
   },
@@ -58,14 +65,14 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "About these checks: two selected VPN channels; the router checks them itself, about every 10 seconds, through each tunnel.",
-          "Об этих проверках: два выбранных VPN-канала; проверку делает сам роутер, примерно каждые 10 секунд, через каждый туннель."
+          "About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level on Overview (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.",
+          "Об этих проверках: два выбранных VPN-канала; проверку делает сам роутер через каждый туннель. Как часто — задаёт уровень опроса на «Обзоре» (от раза в 60 с на уровне 1 до раза в 10 с на уровне 5); сбой подтверждается после 3 неудачных проверок."
         ]
       },
       {
         "t": [
-          "Lamp colours: green works in Auto; yellow: Alive; you can switch to it manually; grey is waiting for the router's answer; red is an error, the channel does not work.",
-          "Цвета ламп: зелёный — работает в автомате; жёлтый — Живой, можно переключиться на него вручную; серый — ждём ответа роутера; красный — ошибка, канал не работает."
+          "Lamp colours are the same on every page: green means this channel carries your traffic; yellow means it is alive but not in use (only such a channel offers \"switch to it\") or is being checked for a moment; red means a proven failure; grey means we are waiting for the router. The Auto button, the traffic light, the sidebar Auto lamp and the live journal always show one colour: green while Auto runs, yellow only during a real switch, start or stop and in a short pulse around each scheduled check, red only for a proven failure (the selected channel failed, a controller alarm, or no router answer for 90 s), dark when you turned Auto off. During a manual switch the destination card blinks green.",
+          "Цвета ламп одинаковы на всех страницах: зелёный — этот канал несёт ваш трафик; жёлтый — канал жив, но не используется (только к такому каналу предлагается «переключиться») или идёт короткая проверка; красный — доказанный сбой; серый — ждём ответа роутера. Кнопка Auto, светофор, лампа Auto в боковом меню и живой журнал всегда показывают один цвет: зелёный, пока Auto работает; жёлтый только во время реального переключения, запуска или остановки и короткой вспышкой вокруг каждой плановой проверки; красный только при доказанном сбое (выбранный канал отказал, тревога контроллера или нет ответа роутера 90 с); погашен, когда вы выключили Auto. При ручном переключении карточка назначения мигает зелёным."
         ]
       },
       {
@@ -257,14 +264,14 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. If Stop retained the reserve, use the offered Return to primary action and verify its actual result.",
-          "Для осознанного возврата используйте «Ручное переключение канала», когда основной готов и действие доступно. Если Stop сохранил резерв, используйте предлагаемое действие возврата и проверьте фактический итог."
+          "For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If Stop retained the reserve, use the offered Return to primary action and verify its actual result.",
+          "Для осознанного возврата используйте «Ручное переключение канала», когда основной готов и действие доступно. Ручное переключение никогда не выключает Auto: Auto продолжает следить за выбранным вами каналом и переносит трафик на другой, если этот откажет (отдельной кнопки «Возобновить Auto» нет). Если Stop сохранил резерв, используйте предлагаемое действие возврата и проверьте фактический итог."
         ]
       },
       {
         "t": [
-          "Automatic return depends on the saved return policy, fresh primary health and operator hold. Hold-reserve preference does not promise automatic return merely because primary probes succeed.",
-          "Автоматический возврат зависит от сохранённой политики, свежих проверок основного и ручного удержания. Предпочтение оставаться на резерве не обещает автоматического возврата лишь после успешной проверки основного."
+          "Automatic return depends on the saved return policy and fresh primary health. Hold-reserve preference does not promise automatic return merely because primary probes succeed. After an Auto restart or a package upgrade Auto returns to the primary when it is healthy.",
+          "Автоматический возврат зависит от сохранённой политики и свежих проверок основного. Предпочтение оставаться на резерве не обещает автоматического возврата лишь после успешной проверки основного. После перезапуска Auto или обновления пакета Auto возвращается на основной, когда он исправен."
         ]
       },
       {

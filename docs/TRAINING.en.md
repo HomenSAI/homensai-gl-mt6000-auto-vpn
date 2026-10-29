@@ -31,7 +31,7 @@ Monitoring runs independently of Auto. On Overview, monitoring and Check VPN now
 
 A green monitoring lamp means fresh observations; Auto still needs an explicit Start.
 
-Grey means switched off, red means switched on but not working: open Help.
+Grey means waiting for the router, red means a proven failure: open Help.
 
 ## 4. Setup
 
@@ -48,8 +48,8 @@ The bot token is a secret. Never post it or send it to anyone.
 On Overview press “Step 1 · Check the VPNs now”. It tests right away which connected VPNs give internet. Fix problems first.
 Step 2: use the readiness list for your actual mode. Prepared-MT3000 router-probed IPv4 Auto checks the two channels on the router; a LAN helper is optional for additional client-path proof. A separate client-confirmed trial requires its own helper. Start Auto only when your mode is ready.
 What is the LAN helper? A small PowerShell 7 script (plain text, you can read it) that runs on your Windows computer, not on the router. Install PowerShell 7 once, put the two downloaded files in one folder and start the launcher, then choose mode 1 (check only) first:
-The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green in manual control means selected, not independent proof of Internet. Pending commands are yellow; inspect fresh channel checks for availability.
-To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. Yellow or a queued request is not completion. Continuous Auto may stay on and continue observing.
+The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green means this channel carries your traffic, not independent proof of Internet; yellow means alive but not in use (or a short check or switch); red is a proven failure. During a manual switch the destination card blinks green. Inspect fresh channel checks for availability.
+To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. A queued request is not completion; the destination card blinks green during the switch. Manual selection never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails.
 Use the large Auto button to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. A retained-reserve outcome requires its separately offered recovery action.
 
 Example: “2 of 2 VPNs work” confirms router observations for both paths; it does not certify every LAN client.
@@ -59,7 +59,7 @@ Do not turn Auto on when you cannot afford a short interruption (a call, a downl
 ## 6. Reading the pages
 
 Overview starts with Auto and the VPN check. Manual primary/reserve controls follow the collapsed technical and switching-statistics blocks. A queued command remains pending until the router confirms it.
-Channels and servers shows primary first and reserve second, server names/IP where observed, HTTPS delay and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.
+Channels and servers shows primary first and reserve second, server names/IP where observed, the response (ping by default, or the three-site HTTPS mean) and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.
 The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events shows the latest 20 rows, with expansion, search and sorting. Setup step 2 or Monitoring settings selects 1–2000 live observations and 1–7 days of detail. M/R identifies primary/reserve and who initiated a transition; missing historical outcomes are explained, not invented.
 
 One outage may contain many failed checks. The failure chart counts the episode once.
@@ -69,7 +69,7 @@ Speed tests are optional and use traffic; they live under Advanced settings → 
 ## 7. If the internet is gone
 
 Keep access to the router by cable or Wi-Fi and inspect the selected channel, current measurements and the recorded reason. Use Help → No internet.
-Switch manually only when the requested channel is confirmed ready and its action is available. Working on reserve alone is not a reason to force a return to a failed primary. Auto can remain on during normal manual selection.
+Switch manually only when the requested channel is confirmed ready and its action is available. Working on reserve alone is not a reason to force a return to a failed primary. Manual selection never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails.
 Use emergency commands only for the documented recovery situation. Start with read-only show; removing the owned guard is a recovery action, not a general internet fix.
 
 Reserve works and primary is failing: keep the working route and diagnose the primary.

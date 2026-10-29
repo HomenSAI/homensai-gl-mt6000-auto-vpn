@@ -8,7 +8,7 @@ WEEK=7*DAY
 MAX_ROWS=7*1440+1
 MAX_BYTES=2*1024*1024
 IDENTIFIER=re.compile(r'^(?:openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$')
-KINDS={'source','target','unknown','off','switching'}
+KINDS={'source','target','unknown','off','switching','blocked','down'}
 
 
 def number(value):

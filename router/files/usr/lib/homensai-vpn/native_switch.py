@@ -1596,6 +1596,8 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
                 require_control_revision(control_revision)
                 journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
+                from switch_timing import record as record_switch_time
+                record_switch_time(PERSIST,journal['confirmed']-journal['started'])  # page countdown only
                 if manual_request_id is not None:
                     with control_lock(RUNTIME):
                         require_control_revision(control_revision)

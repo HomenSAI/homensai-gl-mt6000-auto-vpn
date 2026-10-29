@@ -105,7 +105,7 @@ function renderProbeControl(status,inventory){
     E('div',{'class':'hv-probe-scale'},[E('span',{},bi('Fewer checks, lower load','Меньше опросов, ниже нагрузка')),E('div',{'class':'hv-probe-slider-box'},[slider,ticks]),E('span',{},bi('More checks, faster switching','Больше опросов, быстрее переключение'))]),
     E('p',{'class':'hv-probe-text-row'},[levelLabel,' · ',text]),
     E('label',{'class':'hv-probe-boost-label'},[box,' ',E('strong',{},bi('Automatic boost','Автоматическое ускорение'))]),
-    E('p',{'class':'hv-step-note'},bi('If a channel fails a check, the router checks every 10 s for 10 minutes, then returns to the chosen level. Rare checks at rest, a quick answer when something breaks. Every episode is written to the log below.','Если канал не прошёл проверку, роутер 10 минут проверяет раз в 10 с, затем возвращается к выбранному уровню. В покое проверок мало, при сбое ответ быстрый. Каждый эпизод записывается в журнал ниже.')),
+    E('p',{'class':'hv-step-note'},[bi('If a channel fails a check, the router checks every 10 s for 10 minutes, then returns to the chosen level. Rare checks at rest, a quick answer when something breaks. Every episode is written to the log below.','Если канал не прошёл проверку, роутер 10 минут проверяет раз в 10 с, затем возвращается к выбранному уровню. В покое проверок мало, при сбое ответ быстрый. Каждый эпизод записывается в журнал ниже.')+' ',typeof helpLink==='function'?helpLink('probe-boost',bi('How it works in detail','Подробно, как это работает')):null]),
     active,E('p',{'class':'hv-req-actions'},[apply]),refused,log]);
   section.hvUpdate=function(policyNow,nowSeconds){
     saved=probeSavedChoice(policyNow);section.setAttribute('data-probe-level',String(policyNow.level));
@@ -164,19 +164,35 @@ function probeCountdown(status){
 var RESPONSE_CHOICES=[['icmp-1.1.1.1','Ping 1.1.1.1 (Cloudflare DNS) — recommended','Пинг 1.1.1.1 (Cloudflare DNS) — рекомендуется'],['icmp-8.8.8.8','Ping 8.8.8.8 (Google DNS)','Пинг 8.8.8.8 (Google DNS)'],['icmp-9.9.9.9','Ping 9.9.9.9 (Quad9)','Пинг 9.9.9.9 (Quad9)'],['websites','Three websites over HTTPS (Google, Cloudflare, Wikipedia)','Три сайта по HTTPS (Google, Cloudflare, Wikipedia)']];
 function responseSettings(inventory){
   var current=((inventory||{}).settings||{}).response_metric||'icmp-1.1.1.1',chosen=current,busy=false;
+  var compareNow=((inventory||{}).settings||{}).response_compare===true,compareBox=E('input',{'type':'checkbox','class':'hv-response-compare'});compareBox.checked=compareNow;
+  function dirty(){return chosen!==current||compareBox.checked!==compareNow;}
+  compareBox.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
   var save=E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':''},bi('Save','Сохранить'));
   var list=E('div',{'class':'hv-response-choices'},RESPONSE_CHOICES.map(function(c){
     var input=E('input',{'type':'radio','name':'hv-response-metric','value':c[0]});input.checked=c[0]===current;
-    input.addEventListener('change',function(){chosen=c[0];if(chosen===current)save.setAttribute('disabled','');else save.removeAttribute('disabled');});
+    input.addEventListener('change',function(){chosen=c[0];if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
     return E('label',{'class':'hv-response-choice'},[input,' ',bi(c[1],c[2])]);}));
   save.addEventListener('click',function(){
-    if(busy||chosen===current)return;busy=true;save.setAttribute('disabled','');
-    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric'],expect:{}})(chosen).then(function(r){
-      if(r&&r.saved){current=chosen;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
+    if(busy||!dirty())return;busy=true;save.setAttribute('disabled','');var compare=compareBox.checked;
+    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric','compare'],expect:{}})(chosen,compare).then(function(r){
+      if(r&&r.saved){current=chosen;compareNow=compare;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
       else ui.addNotification(null,E('p',{},(r&&r.code)||'SETUP-SAVE-FAILED'));
-    }).catch(function(){ui.addNotification(null,E('p',{},'SETUP-SAVE-UNCONFIRMED'));}).finally(function(){busy=false;if(chosen!==current)save.removeAttribute('disabled');});
+    }).catch(function(){ui.addNotification(null,E('p',{},'SETUP-SAVE-UNCONFIRMED'));}).finally(function(){busy=false;if(dirty())save.removeAttribute('disabled');});
   });
   return E('section',{'class':'hv-chart-card hv-response-settings'},[E('h3',{},bi('How the response is measured','Как измеряется отклик')),
     E('p',{'class':'hv-step-note'},bi('Ping is a short echo through each VPN to a public DNS address. It shows which channel is faster, gives small numbers and barely loads the router; recommended. Three websites over HTTPS measure opening real pages (DNS, connection, encryption, headers); the numbers are closer to what you feel but larger, and each check costs the router three encrypted connections per channel. The response is information only: Auto decides on its own health checks either way.','Пинг — короткий запрос через каждый VPN к публичному DNS-адресу. Он показывает, какой канал быстрее, даёт небольшие числа и почти не нагружает роутер; рекомендуется. Три сайта по HTTPS измеряют открытие настоящих страниц (DNS, соединение, шифрование, заголовки): числа ближе к ощущениям, но больше, и каждая проверка стоит роутеру трёх зашифрованных соединений на канал. Отклик — только информация: Auto в любом случае решает по своим проверкам исправности.')),
-    list,E('p',{'class':'hv-req-actions'},[save])]);
+    list,
+    E('label',{'class':'hv-response-compare-label'},[compareBox,' ',E('strong',{},bi('Measure all methods (comparison)','Мерить все способы (сравнение)'))]),
+    E('p',{'class':'hv-step-note'},bi('Each check also pings the other two DNS addresses and opens the three websites through both channels. The ranking on the Tests page then shows every method side by side. Switching still uses only the method chosen above. Costs a little more router load and traffic.','Каждая проверка дополнительно пингует два других DNS-адреса и открывает три сайта через оба канала. Тогда рейтинг на странице «Тесты» показывает все способы рядом. Переключение по-прежнему использует только способ, выбранный выше. Немного больше нагрузка на роутер и трафик.')),
+    E('p',{'class':'hv-req-actions'},[save])]);
+}
+// Ranking columns for "measure all methods": one column per method the router compared.
+var COMPARE_LABELS={'icmp-1.1.1.1':['Ping 1.1.1.1','Пинг 1.1.1.1'],'icmp-8.8.8.8':['Ping 8.8.8.8','Пинг 8.8.8.8'],'icmp-9.9.9.9':['Ping 9.9.9.9','Пинг 9.9.9.9'],'websites':['Three websites','Три сайта']};
+function compareColumns(status){var c=(status||{}).response_compare;return c&&Array.isArray(c.methods)?c.methods.filter(function(m){return COMPARE_LABELS[m];}):[];}
+function compareHeader(method){return bi(COMPARE_LABELS[method][0],COMPARE_LABELS[method][1]);}
+function compareCell(status,method,id){
+  var r=((((status||{}).response_compare||{}).profiles||{})[id]||{})[method];
+  if(!r||!(r.ok+r.failed))return '—';
+  var loss=r.failed?' · '+Math.round(100*r.failed/(r.ok+r.failed))+'% '+bi('lost','потерь'):'';
+  return (r.avg_ms===null?'—':websiteMs(r.avg_ms)+' '+bi('ms','мс'))+loss;
 }

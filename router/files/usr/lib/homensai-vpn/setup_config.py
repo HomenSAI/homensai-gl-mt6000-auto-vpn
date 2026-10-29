@@ -121,9 +121,12 @@ def probe_payload(arguments):
 
 def response_payload(arguments):
     from probe_policy import RESPONSE_METRICS
-    if not isinstance(arguments,dict) or set(arguments)!={'metric'} or arguments['metric'] not in RESPONSE_METRICS:
+    if (not isinstance(arguments,dict) or set(arguments) not in ({'metric'},{'metric','compare'}) or arguments['metric'] not in RESPONSE_METRICS
+            or 'compare' in arguments and type(arguments['compare']) is not bool):
         raise ValueError('RESPONSE-METRIC-INVALID')
-    return {'main':{'response_metric':arguments['metric']},'servers':[]}
+    main={'response_metric':arguments['metric']}
+    if 'compare' in arguments:main['response_compare']='1' if arguments['compare'] else '0'
+    return {'main':main,'servers':[]}
 
 
 def monitor_payload(arguments, probe_max=16):

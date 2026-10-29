@@ -1289,3 +1289,19 @@
 .hv-app .hv-manual-channel{word-break:normal;overflow-wrap:break-word;hyphens:manual}
 .hv-app .hv-manual-channel .hv-manual-enable{margin-top:auto}
 .hv-app .hv-manual-channel .hv-manual-health{min-height:2.7em}
+/* Monitoring sits right of the Auto controls with a lamp as large as the Auto button (the card stays balanced). */
+.hv-app .hv-auto-controls{grid-template-columns:minmax(0,1fr) minmax(200px,260px);align-items:center}
+.hv-app .hv-auto-controls>.hv-monitor-block{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;margin:0;padding:0;border:0;box-shadow:none;background:none}
+.hv-app .hv-auto-controls>.hv-monitor-block .hv-monitor-lamp{width:132px;height:132px;min-width:132px;flex:0 0 132px;border-radius:50%;margin:0}
+.hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text{display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:normal}
+.hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text strong{font-size:15px;padding:4px 14px;border-radius:999px;border:2px solid currentColor}
+.hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text small{font-size:12px;max-width:240px}
+/* The Auto title never breaks inside a word ("Авторежим" stays whole). */
+.hv-app .hv-light-block .hv-light-text{flex:1 1 15em;min-width:15em}
+.hv-app .hv-light-block .hv-light-title{word-break:keep-all;overflow-wrap:normal;hyphens:none}
+@media(max-width:1100px){.hv-app .hv-auto-controls{grid-template-columns:1fr}.hv-app .hv-auto-controls>.hv-monitor-block{justify-self:center}}
+/* Manual cards: equal height in every state; the reason line under each card has a fixed slot. */
+.hv-app .hv-manual-channel-grid{align-items:stretch}
+.hv-app .hv-manual-choice{display:grid;grid-template-rows:1fr auto;min-width:0}
+.hv-app .hv-manual-choice>.hv-manual-channel{height:100%}
+.hv-app .hv-manual-choice>.hv-manual-diagnostic{min-height:2.9em;margin:8px 0 0}

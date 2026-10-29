@@ -3061,15 +3061,15 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 ## HELD-ON-RESERVE
 
-Удерживаю на резерве / Held on the reserve
+Остаюсь на резерве; Auto продолжает наблюдать / Staying on the reserve; Auto keeps watching
 
-**RU:** Контроллер осознанно остаётся на резерве: ваше правило возврата «удерживать» либо основной ещё не проверен.
+**RU:** Трафик намеренно остаётся на резерве (по вашему правилу возврата или ручному выбору), пока резерв работает. Auto остаётся включённым: если резерв откажет, он сам переведёт трафик на другой канал.
 
-**EN:** The controller stays on the reserve on purpose: your return rule says “hold” or the primary is not verified yet.
+**EN:** Traffic stays on the reserve on purpose (your return rule or your manual choice) while the reserve works. Auto is still on: if the reserve fails, it moves traffic to the other channel by itself.
 
-**Что делать:** Нажмите «Вернуться на основной», когда нужно вернуть трафик.
+**Что делать:** Делать ничего не нужно. Если хотите вернуть трафик на основной, нажмите «Вернуться на основной».
 
-**Action:** Press “Return to primary” when you want traffic back.
+**Action:** Nothing to do. If you want traffic back on the primary, press “Return to primary”.
 
 ## DISABLED
 
@@ -5281,6 +5281,1386 @@ Python слишком старый / Python is too old
 
 **Action:** Repeat; try a shorter duration.
 
+## PAIR-WATCHING
+
+Auto наблюдает за обоими каналами / Auto is watching both channels
+
+**RU:** Обычное рабочее состояние. Трафик идёт через рабочий канал, второй проверяется в фоне, и Auto готов сам переключиться, если рабочий канал откажет.
+
+**EN:** Normal working state. Traffic goes through the channel that works, the other one is checked in the background, and Auto is ready to switch by itself if the working channel fails.
+
+**Что делать:** Делать ничего не нужно, это нормально.
+
+**Action:** Nothing to do, this is normal.
+
+## PAIR-WAITING-PROBES
+
+Auto собирает первые проверки / Auto is collecting the first checks
+
+**RU:** Auto только что запущен и собирает первые свежие проверки обоих каналов (обычно до 3 минут). Пока их нет, он не переключает.
+
+**EN:** Auto has just started and is collecting the first fresh checks of both channels (usually up to 3 minutes). It does not switch before they arrive.
+
+**Что делать:** Подождите несколько минут: лампа сама станет зелёной.
+
+**Action:** Wait a few minutes; the lamp turns green by itself.
+
+## PAIR-CONNECTING
+
+Подключаю второй канал / Connecting the second channel
+
+**RU:** Auto поднимает VPN-каналы, за которыми ему нужно следить. Это короткий шаг, поэтому лампа жёлтая.
+
+**EN:** Auto is bringing up the VPN channels it needs to watch. This is a short step, so the lamp is yellow.
+
+**Что делать:** Подождите минуту. Если длится дольше 5 минут, проверьте оба VPN-профиля в роутере.
+
+**Action:** Wait a minute. If it lasts longer than 5 minutes, check both VPN profiles in the router.
+
+## PAIR-CLEANUP
+
+Привожу маршрут в порядок / Putting the route back in order
+
+**RU:** Auto останавливает или восстанавливает VPN-каналы и проверяет, что исходный маршрут на месте. Короткий шаг, лампа жёлтая.
+
+**EN:** Auto is stopping or restoring the VPN channels and checking that the original route is back. Short step, yellow lamp.
+
+**Что делать:** Подождите минуту; не нажимайте Start и Stop повторно.
+
+**Action:** Wait a minute; do not press Start or Stop again.
+
+## PAIR-WAITING-VENDOR
+
+Жду данные VPN от роутера / Waiting for the router VPN data
+
+**RU:** Роутер пока не отдал текущее состояние своих VPN, поэтому Auto не может оценить каналы. Лампа серая: программа ждёт роутер, это не доказанный отказ VPN.
+
+**EN:** The router did not give the current state of its own VPN yet, so Auto cannot judge the channels. The lamp is grey: the program is waiting for the router, this is not a proven VPN failure.
+
+**Что делать:** Подождите минуту. Если не проходит, откройте VPN-страницу роутера и проверьте, что профили включены.
+
+**Action:** Wait a minute. If it stays, open the VPN page of the router and check that the profiles are on.
+
+## PAIR-MANUAL-HOLD-RESERVE
+
+Резерв выбран вручную; Auto продолжает наблюдать / Reserve chosen manually; Auto keeps watching
+
+**RU:** Вы сами перевели трафик на резерв. Auto остаётся включённым и наблюдает: пока резерв работает, трафик остаётся на нём и сам на основной не возвращается. Если резерв откажет, Auto сам переведёт трафик на другой канал.
+
+**EN:** You switched traffic to the reserve yourself. Auto is still on and keeps watching: while the reserve works, traffic stays on it and does not return to the primary automatically. If the reserve fails, Auto moves traffic to the other channel by itself.
+
+**Что делать:** Делать ничего не нужно. Чтобы вернуться, переключите на основной канал вручную.
+
+**Action:** Nothing to do. To go back, switch to the primary channel manually.
+
+## PAIR-MANUAL-HOLD-PRIMARY
+
+Основной выбран вручную; Auto продолжает наблюдать / Primary chosen manually; Auto keeps watching
+
+**RU:** Вы сами выбрали основной канал. Auto остаётся включённым и наблюдает: пока основной работает, трафик остаётся на нём. Если он откажет, Auto сам переведёт трафик на резерв.
+
+**EN:** You chose the primary channel yourself. Auto is still on and keeps watching: traffic stays on the primary while it works. If it fails, Auto moves traffic to the reserve by itself.
+
+**Что делать:** Делать ничего не нужно, это нормально.
+
+**Action:** Nothing to do, this is normal.
+
+## PAIR-MANUAL-HOLD-UNVERIFIED
+
+Ручной выбор не удалось подтвердить / Manual choice could not be confirmed
+
+**RU:** Auto не смог доказать, что выбранный вами вручную канал по-прежнему несёт трафик, поэтому снял ручной выбор и снова работает обычным образом.
+
+**EN:** Auto could not prove that the channel you chose manually is still the one carrying traffic, so it dropped the manual choice and works normally again.
+
+**Что делать:** Посмотрите в блоке Auto текущий канал и при необходимости выберите заново.
+
+**Action:** Check the Auto card for the current channel and choose again if needed.
+
+## PAIR-MANUAL-RECOVERED
+
+Прерванное ручное переключение снято / Interrupted manual switch cleared
+
+**RU:** Запрос на ручное переключение был прерван (например, перезапуском). Он не повторялся, поэтому канал может отличаться от выбранного вами.
+
+**EN:** A manual switch request was interrupted (for example by a restart). It was not repeated, so the channel may be different from what you asked for.
+
+**Что делать:** Посмотрите текущий канал в блоке Auto и повторите ручной выбор, если он ещё нужен.
+
+**Action:** Look at the current channel in the Auto card and repeat the manual choice if you still want it.
+
+## PAIR-MANUAL-BUSY
+
+Уже идёт другое переключение / Another switch is in progress
+
+**RU:** Прямо сейчас идёт переключение, поэтому новый ручной запрос не принят.
+
+**EN:** A switch is running right now, so the new manual request was not accepted.
+
+**Что делать:** Дождитесь окончания текущего переключения (около минуты) и повторите.
+
+**Action:** Wait for the current switch to finish (about a minute) and try again.
+
+## PAIR-MANUAL-COOLDOWN
+
+Короткая пауза между ручными переключениями / Short pause between manual switches
+
+**RU:** Ручные переключения ограничены по частоте, чтобы не раскачивать связь. Запрос не выполнен.
+
+**EN:** Manual switches are limited in frequency, so the line is not shaken by repeated switching. The request was not executed.
+
+**Что делать:** Подождите минуту и повторите.
+
+**Action:** Wait a minute and try again.
+
+## PAIR-MANUAL-EXPIRED
+
+Ручной запрос устарел / Manual request expired
+
+**RU:** Ручной запрос ждал дольше 60 секунд, поэтому был отменён, чтобы не выполнять старую команду.
+
+**EN:** The manual request waited longer than 60 seconds before it could be run, so it was cancelled to avoid doing an old command.
+
+**Что делать:** Нажмите ручное переключение ещё раз, если оно ещё нужно.
+
+**Action:** Press the manual switch again if you still need it.
+
+## PAIR-MANUAL-FIELDS
+
+Ручной запрос составлен неверно / Manual request was malformed
+
+**RU:** Роутер отклонил ручной запрос с неполными или неожиданными полями. Ничего не изменено.
+
+**EN:** The router refused a manual request whose fields were incomplete or unexpected. Nothing was changed.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и повторите.
+
+**Action:** Reload the page (Ctrl+F5) and try again.
+
+## PAIR-MANUAL-NOT-AVAILABLE
+
+Ручное переключение сейчас недоступно / Manual switch is not available now
+
+**RU:** Роутер сейчас не может выполнить это ручное переключение (например, выбранный канал уже текущий или Auto не готов).
+
+**EN:** The router cannot do this manual switch at the moment (for example the current channel is already the chosen one, or Auto is not ready).
+
+**Что делать:** Откройте блок Auto: там указано, чего не хватает. Повторите, когда он будет готов.
+
+**Action:** Open the Auto card: it lists what is missing. Try again when it is ready.
+
+## PAIR-MANUAL-REQUEST-UNCONFIRMED
+
+Ручной запрос не подтверждён / Manual request not confirmed
+
+**RU:** Роутер не подтвердил, что принял ручной запрос. Не считайте его выполненным.
+
+**EN:** The router did not confirm that it accepted the manual request. Do not assume it was done.
+
+**Что делать:** Подождите минуту, посмотрите текущий канал в блоке Auto и при необходимости повторите.
+
+**Action:** Wait a minute, look at the current channel in the Auto card, then repeat if needed.
+
+## PAIR-MANUAL-STALE
+
+Данные роутера устарели для ручного переключения / Router data is too old for a manual switch
+
+**RU:** Последнее состояние роутера старше 30 секунд, поэтому ручное переключение недоступно до свежих данных.
+
+**EN:** The newest state of the router is older than 30 seconds, so the manual switch is not offered until fresh data arrives.
+
+**Что делать:** Подождите следующего обновления (несколько секунд).
+
+**Action:** Wait for the next refresh (a few seconds).
+
+## PAIR-MANUAL-STATE-UNVERIFIED
+
+Не удаётся подтвердить состояние для ручного переключения / Cannot confirm the state for a manual switch
+
+**RU:** Auto не смог прочитать или проверить состояние, нужное для ручного переключения. Ничего не изменено.
+
+**EN:** Auto could not read or verify the state it needs for a manual switch. Nothing was changed.
+
+**Что делать:** Подождите минуту и повторите. Если повторяется, сохраните код и загляните в «Помощь».
+
+**Action:** Wait a minute and try again. If it repeats, keep the code and see Help.
+
+## PAIR-MANUAL-TARGET-UNHEALTHY
+
+Выбранный канал не проходит проверки / The chosen channel does not pass its checks
+
+**RU:** Ручное переключение на канал, который сейчас нездоров, отклонено, чтобы вы не потеряли связь.
+
+**EN:** A manual switch to a channel that is not healthy right now was refused, so you do not lose the connection.
+
+**Что делать:** Выберите другой канал или подождите, пока выбранный станет зелёным.
+
+**Action:** Choose the other channel, or wait until the chosen one is green.
+
+## PAIR-MANUAL-UNCONFIRMED
+
+Ручное переключение не подтверждено / Manual switch not confirmed
+
+**RU:** Роутер начал ручное переключение, но не смог доказать результат. Канал, несущий трафик, не подтверждён.
+
+**EN:** The router started the manual switch but could not prove its result. The channel carrying traffic is not verified.
+
+**Что делать:** Не повторяйте сразу. Подождите минуту: Auto продолжает наблюдать и сам исправит отказавший канал.
+
+**Action:** Do not repeat at once. Wait a minute; Auto keeps watching and will fix a failed channel itself.
+
+## PAIR-RATE-LIMIT
+
+Слишком много переключений; Auto делает паузу / Too many switches; Auto is pausing
+
+**RU:** Auto ограничивает частоту переключений, чтобы не раскачивать нестабильную связь. До конца паузы трафик остаётся на текущем канале.
+
+**EN:** Auto limits how often it switches so an unstable line is not shaken further. Traffic stays on the current channel until the pause ends.
+
+**Что делать:** Делать ничего не нужно. Если переключений много, проверьте оба VPN-сервера по «Помощи».
+
+**Action:** Nothing to do. If switching is frequent, check both VPN servers in Help.
+
+## PAIR-MODE-NOT-CONFIGURED
+
+Авторежим двух каналов не настроен / Two-channel Auto is not set up
+
+**RU:** Основной и резервный каналы не выбраны и не сохранены вместе, поэтому Auto двух каналов не может запуститься или переключаться вручную.
+
+**EN:** The primary and reserve channels are not both chosen and saved, so the two-channel Auto cannot start or switch manually.
+
+**Что делать:** Выберите основной и резервный VPN в настройках и сохраните пару.
+
+**Action:** Choose the primary and the reserve VPN in Settings and save the pair.
+
+## PAIR-PLATFORM-UNVERIFIED
+
+Платформа роутера не подтверждена / Router platform not confirmed
+
+**RU:** Auto не смог подтвердить, что эта модель роутера и прошивка поддерживаются для непрерывного переключения, поэтому не запускается.
+
+**EN:** Auto could not confirm that this router model and firmware are supported for continuous switching, so it does not run.
+
+**Что делать:** Посмотрите в «Готовности системы» точный недостающий пункт.
+
+**Action:** Check System readiness for the exact missing item.
+
+## PAIR-READINESS-CHANGED
+
+Готовность изменилась во время работы Auto / Readiness changed while Auto was working
+
+**RU:** Изменилось то, на что опирается Auto (состояние роутера или подготовка), поэтому он остановился и перепроверит перед продолжением.
+
+**EN:** Something Auto relies on (router state or preparation) changed, so it stopped and will re-check before continuing.
+
+**Что делать:** Подождите минуту; если Auto не перезапустился, нажмите Start.
+
+**Action:** Wait a minute; if Auto does not restart, press Start.
+
+## PAIR-STOPPED
+
+Auto остановлен, маршрут восстановлен / Auto was stopped and the route restored
+
+**RU:** Auto выключен, исходный маршрут возвращён. Это обычный результат нажатия Stop.
+
+**EN:** Auto was switched off and the original route was put back. This is the normal result of pressing Stop.
+
+**Что делать:** Делать ничего не нужно. Нажмите Start, когда Auto снова понадобится.
+
+**Action:** Nothing to do. Press Start when you want Auto again.
+
+## PAIR-SYSTEM-001
+
+Неожиданная внутренняя ошибка Auto / Unexpected internal error in Auto
+
+**RU:** Auto встретил ошибку без отдельного кода. Он безопасно остановился; сама по себе эта ошибка маршрут не меняет.
+
+**EN:** Auto met an error that has no specific code. It stopped safely; the route is not changed by this error alone.
+
+**Что делать:** Нажмите Start ещё раз. Если повторяется, сохраните журнал и время события для разработчика.
+
+**Action:** Press Start again. If it repeats, keep the journal and the time of the event for the maintainer.
+
+## PAIR-BUDGET-UNVERIFIED
+
+Запись о лимите переключений нечитаема / Switch limit record is unreadable
+
+**RU:** Auto не может прочитать сохранённый счётчик недавних переключений, поэтому не переключает, пока не докажет, что лимит соблюдён.
+
+**EN:** Auto cannot read its saved count of recent switches, so it does not switch until it can prove the limit is respected.
+
+**Что делать:** Подождите: запись восстановится сама. Если не проходит, нажмите Stop и Start.
+
+**Action:** Wait; the record rebuilds itself. If it stays, press Stop and Start.
+
+## PAIR-CONFIG-UNVERIFIED
+
+Сохранённые настройки Auto не подтверждены / Saved Auto settings not confirmed
+
+**RU:** Сохранённую пару или настройки Auto не удалось прочитать и проверить.
+
+**EN:** The saved pair or Auto settings could not be read back and verified.
+
+**Что делать:** Откройте настройки, проверьте основной и резервный и сохраните снова.
+
+**Action:** Open Settings, check the primary and reserve, and save again.
+
+## PAIR-INTENT-UNVERIFIED
+
+Запись о незавершённом переключении не подтверждена / Unfinished switch record not confirmed
+
+**RU:** Запись о переключении в процессе не удалось проверить, поэтому Auto не продолжает его на веру.
+
+**EN:** The record of a switch in progress could not be verified, so Auto does not continue it on trust.
+
+**Что делать:** Подождите минуту; если не проходит, см. PAIR-RECOVERY-REQUIRED.
+
+**Action:** Wait a minute; if it stays, see PAIR-RECOVERY-REQUIRED.
+
+## PAIR-NETWORK-UNVERIFIED
+
+Состояние сети не подтверждено / Network state not confirmed
+
+**RU:** Auto не смог прочитать сетевые настройки двух каналов, поэтому не действует.
+
+**EN:** Auto could not read the network settings of the two channels, so it does not act.
+
+**Что делать:** Подождите минуту и нажмите Start снова.
+
+**Action:** Wait a minute and press Start again.
+
+## PAIR-NETWORK-WRITE-FAILED
+
+Не удалось записать сетевые настройки / Could not write the network settings
+
+**RU:** Роутер отказался сохранить сетевые настройки, нужные Auto. Прежние настройки остаются.
+
+**EN:** The router refused to save the network settings Auto needs. The previous settings stay.
+
+**Что делать:** Нажмите Start снова через минуту. Если повторяется, проверьте свободное место и страницу роутера.
+
+**Action:** Press Start again after a minute. If it repeats, check free space and the router page.
+
+## PAIR-NETWORK-WRITE-UNVERIFIED
+
+Запись сетевых настроек не подтверждена / Network settings write not confirmed
+
+**RU:** Auto записал сетевые настройки, но не смог прочитать их обратно, поэтому не полагается на них.
+
+**EN:** Auto wrote network settings but could not read them back to prove them, so it does not rely on them.
+
+**Что делать:** Нажмите Start снова. Если повторяется, сохраните код для разработчика.
+
+**Action:** Press Start again. If it repeats, keep the code for the maintainer.
+
+## PAIR-PROFILE-STOP-UNVERIFIED
+
+Не удалось подтвердить остановку лишнего VPN / Could not confirm the extra VPN stopped
+
+**RU:** При остановке Auto не смог доказать, что неиспользуемый VPN-клиент выключен.
+
+**EN:** When stopping, Auto could not prove that the unused VPN client is off.
+
+**Что делать:** Проверьте VPN-страницу роутера и выключите неиспользуемый профиль.
+
+**Action:** Check the VPN page of the router and switch the unused profile off.
+
+## RESPONSE-COMPARE-UNAVAILABLE
+
+Сравнение способов недоступно / Method comparison is unavailable
+
+**RU:** Сохранённое сравнение всех способов отклика сейчас нельзя использовать. Переключение и выбранный способ отклика не затронуты.
+
+**EN:** The saved comparison of all response methods cannot be used right now. Switching and the chosen response method are not affected.
+
+**Что делать:** Делать ничего не нужно. Если не проходит, выключите и снова включите «замерять все способы».
+
+**Action:** Nothing to do. Turn “measure all methods” off and on again if it stays.
+
+## RESPONSE-COMPARE-WRITE-FAILED
+
+Сравнение способов не сохранено / Method comparison was not saved
+
+**RU:** Роутер не смог сохранить последнее сравнение способов отклика (например, мало места). Последняя хорошая копия остаётся.
+
+**EN:** The router could not save the latest comparison of response methods (for example not enough free space). The last good copy stays.
+
+**Что делать:** Освободите место на роутере или подождите; Auto и лампы не затронуты.
+
+**Action:** Free some space on the router or wait; Auto and the lamps are not affected.
+
+## RESPONSE-COMPARE-SCHEMA
+
+Файл сравнения способов в неверном виде / Method comparison file has the wrong form
+
+**RU:** Сохранённое сравнение имеет неожиданную структуру и проигнорировано.
+
+**EN:** The saved comparison has an unexpected structure and was ignored.
+
+**Что делать:** Делать ничего не нужно: новое сравнение соберётся само.
+
+**Action:** Nothing to do; a new comparison is collected by itself.
+
+## RESPONSE-COMPARE-SIZE
+
+Файл сравнения способов слишком велик / Method comparison file is too large
+
+**RU:** Сохранённое сравнение больше допустимого и проигнорировано.
+
+**EN:** The saved comparison is bigger than allowed and was ignored.
+
+**Что делать:** Делать ничего не нужно: оно пересоберётся само.
+
+**Action:** Nothing to do; it is rebuilt by itself.
+
+## RESPONSE-COMPARE-VALUE
+
+В сравнении способов неверное значение / Method comparison has a wrong value
+
+**RU:** Одно сохранённое значение сравнения вне допустимого диапазона, файл проигнорирован.
+
+**EN:** One saved value of the comparison is outside the allowed range and the file was ignored.
+
+**Что делать:** Делать ничего не нужно: оно пересоберётся само.
+
+**Action:** Nothing to do; it is rebuilt by itself.
+
+## PING-HISTORY
+
+Проблема истории пинга / Ping history problem
+
+**RU:** Сохранённую историю пинга нельзя использовать. Текущие пинги и переключение продолжаются.
+
+**EN:** The saved ping history could not be used. Current pings and switching continue.
+
+**Что делать:** Делать ничего не нужно: история соберётся заново.
+
+**Action:** Nothing to do; the history is collected again.
+
+## LATENCY-HISTORY-UNAVAILABLE
+
+История задержки недоступна / Delay history is unavailable
+
+**RU:** Сохранённую историю задержки сейчас нельзя прочитать. Графики могут какое-то время быть пустыми; текущие показания и Auto не затронуты.
+
+**EN:** The saved delay history cannot be read right now. The charts may be empty for a while; current readings and Auto are not affected.
+
+**Что делать:** Делать ничего не нужно: она заполнится снова сама.
+
+**Action:** Nothing to do; it fills again by itself.
+
+## LATENCY-HISTORY-WRITE-FAILED
+
+История задержки не сохранена / Delay history was not saved
+
+**RU:** Роутер не смог сохранить новые замеры задержки. Прежние сохранённые данные остаются.
+
+**EN:** The router could not save the newest delay readings. Older saved data stays.
+
+**Что делать:** Если повторяется, освободите место на роутере.
+
+**Action:** Free some space on the router if it repeats.
+
+## LIFECYCLE-READY
+
+Проверка перед обновлением пройдена / Ready for an upgrade check passed
+
+**RU:** Auto выключен, исходный маршрут на месте, поэтому обновление или остановка безопасны.
+
+**EN:** Auto is off and the original route is in place, so an upgrade or stop is safe.
+
+**Что делать:** Делать ничего не нужно, это хороший результат.
+
+**Action:** Nothing to do, this is a good result.
+
+## LIFECYCLE-UPGRADE-READY
+
+Готово к обновлению / Ready to upgrade
+
+**RU:** Все проверки перед обновлением пройдены.
+
+**EN:** All checks before an upgrade passed.
+
+**Что делать:** Можно продолжать обновление.
+
+**Action:** You can continue with the upgrade.
+
+## LIFECYCLE-AUTO-DISABLED
+
+Auto выключен на время обновления / Auto was switched off for the upgrade
+
+**RU:** Перед обновлением программа выключила Auto и проверила маршрут.
+
+**EN:** Before the upgrade the program switched Auto off and checked the route.
+
+**Что делать:** После обновления нажмите Start, когда Auto снова понадобится.
+
+**Action:** After the upgrade press Start when you want Auto again.
+
+## LIFECYCLE-AUTO-DISABLE-FAILED
+
+Не удалось выключить Auto / Could not switch Auto off
+
+**RU:** Программа не смогла доказать, что Auto выключен, поэтому шаг обновления остановлен.
+
+**EN:** The program could not prove that Auto is off, so the upgrade step stopped.
+
+**Что делать:** Нажмите Stop в блоке Auto, дождитесь исходного маршрута и повторите.
+
+**Action:** Press Stop in the Auto card, wait for the original route, and repeat.
+
+## LIFECYCLE-ACTION
+
+Неизвестное действие службы / Unknown service action
+
+**RU:** Скрипт службы вызван с неизвестным действием. Ничего не изменено.
+
+**EN:** The service script was called with an action it does not know. Nothing was changed.
+
+**Что делать:** Используйте обычную команду установки или обновления.
+
+**Action:** Use the normal install or upgrade command.
+
+## LIFECYCLE-CONFIG-UNVERIFIED
+
+Настройки не подтверждены перед обновлением / Settings not confirmed before the upgrade
+
+**RU:** Сохранённые настройки не удалось прочитать и проверить, поэтому шаг обновления не продолжен.
+
+**EN:** The saved settings could not be read and checked, so the upgrade step did not go on.
+
+**Что делать:** Подождите минуту и повторите. Если не проходит, сохраните код.
+
+**Action:** Wait a minute and repeat. Keep the code if it stays.
+
+## LIFECYCLE-CONTROL-BUSY
+
+Выполняется другое управляющее действие / Another control action is running
+
+**RU:** Управляющая блокировка занята другим действием, поэтому шаг подождал и отказался.
+
+**EN:** The control lock is held by another action, so this step waited and then gave up.
+
+**Что делать:** Дождитесь окончания другого действия и повторите.
+
+**Action:** Wait for the other action to finish and repeat.
+
+## LIFECYCLE-CONTROL-UNVERIFIED
+
+Состояние управления не подтверждено / Control state not confirmed
+
+**RU:** Сохранённое состояние управления не удалось проверить.
+
+**EN:** The saved control state could not be verified.
+
+**Что делать:** Подождите минуту и повторите.
+
+**Action:** Wait a minute and repeat.
+
+## LIFECYCLE-JOURNAL-ACTIVE
+
+Переключение ещё не завершено / A switch is still unfinished
+
+**RU:** Журнал переключений показывает незавершённое переключение, поэтому обновление ждёт.
+
+**EN:** The switch journal shows an unfinished switch, so the upgrade waits.
+
+**Что делать:** Дождитесь окончания переключения или восстановления и повторите.
+
+**Action:** Wait until the switch ends or recovery completes, then repeat.
+
+## LIFECYCLE-JOURNAL-UNVERIFIED
+
+Журнал переключений не подтверждён / Switch journal not confirmed
+
+**RU:** Журнал переключений не удалось проверить, поэтому шаг обновления остановлен.
+
+**EN:** The switch journal could not be verified, so the upgrade step stopped.
+
+**Что делать:** Сохраните журнал и обратитесь к разработчику; не удаляйте его.
+
+**Action:** Keep the journal and ask the maintainer; do not delete it.
+
+## LIFECYCLE-PENDING-UCI-CHANGES
+
+Есть неприменённые настройки роутера / Unsaved router settings exist
+
+**RU:** В роутере есть изменённые, но не применённые настройки, поэтому шаг обновления остановлен.
+
+**EN:** The router has settings that are changed but not applied yet, so the upgrade step stopped.
+
+**Что делать:** Примените или отмените ожидающие настройки в интерфейсе роутера и повторите.
+
+**Action:** Apply or discard the pending settings in the router interface and repeat.
+
+## LIFECYCLE-STATE-UNVERIFIED
+
+Состояние программы не подтверждено / Program state not confirmed
+
+**RU:** Текущее состояние программы не удалось проверить перед обновлением.
+
+**EN:** The current state of the program could not be verified before the upgrade.
+
+**Что делать:** Подождите минуту и повторите.
+
+**Action:** Wait a minute and repeat.
+
+## PREPARATION-VERIFIED
+
+Подготовка роутера подтверждена / Router preparation verified
+
+**RU:** Сохранённая подготовка роутера проверена и верна.
+
+**EN:** The saved preparation of the router was checked and is correct.
+
+**Что делать:** Делать ничего не нужно, это хороший результат.
+
+**Action:** Nothing to do, this is a good result.
+
+## PREPARATION-UNVERIFIED
+
+Подготовка роутера не подтверждена / Router preparation not confirmed
+
+**RU:** Хотя бы одно условие подготовки роутера не удалось доказать.
+
+**EN:** At least one prerequisite of the router preparation could not be proven.
+
+**Что делать:** Откройте «Готовность системы» → «Подготовка роутера» и посмотрите, какого пункта не хватает.
+
+**Action:** Open System readiness → Router preparation and read which item is missing.
+
+## PREPARATION-STOP-AUTO-FIRST
+
+Остановите Auto перед сменой подготовки / Stop Auto before changing the preparation
+
+**RU:** Подготовку можно менять только при выключенном Auto, чтобы не мешать работающему Auto.
+
+**EN:** The preparation can be changed only while Auto is off, so a running Auto is not disturbed.
+
+**Что делать:** Нажмите Stop в блоке Auto, дождитесь исходного маршрута и повторите.
+
+**Action:** Press Stop in the Auto card, wait for the original route, then repeat.
+
+## PREPARATION-STALE-REVIEW
+
+Проверка устарела / The review is out of date
+
+**RU:** Роутер изменился после вашего просмотра подготовки, поэтому действие отклонено.
+
+**EN:** The router changed after you reviewed the preparation, so the action was refused.
+
+**Что делать:** Откройте подготовку заново, прочитайте свежую проверку и подтвердите снова.
+
+**Action:** Open the preparation again, read the fresh review, and confirm again.
+
+## PREPARATION-EXTERNAL-CHANGE
+
+Настройки роутера изменены снаружи / Router settings changed from outside
+
+**RU:** Что-то другое изменило настройку роутера, на которую опирается подготовка.
+
+**EN:** Something else changed a router setting that the preparation relies on.
+
+**Что делать:** Откройте подготовку, посмотрите, что изменилось, и примените снова, если согласны.
+
+**Action:** Open the preparation, review what changed, and apply it again if you agree.
+
+## PREPARATION-PENDING-OR-UNREADABLE
+
+Настройки роутера ожидают применения или нечитаемы / Router settings pending or unreadable
+
+**RU:** В роутере есть неприменённые изменения или настройку не удалось прочитать, поэтому подготовка не продолжается.
+
+**EN:** The router has unapplied changes or the setting could not be read, so the preparation does not go on.
+
+**Что делать:** Примените или отмените ожидающие изменения в интерфейсе роутера и повторите.
+
+**Action:** Apply or discard pending changes in the router interface and repeat.
+
+## PREPARATION-WRITE-UNCONFIRMED
+
+Запись подготовки не подтверждена / Preparation write not confirmed
+
+**RU:** Настройка подготовки записана, но не удалось прочитать её обратно и доказать.
+
+**EN:** A preparation setting was written but could not be read back and proven.
+
+**Что делать:** Проверьте подготовку заново, прежде чем полагаться на неё.
+
+**Action:** Review the preparation again before relying on it.
+
+## PREPARATION-AUTOLOAD-UNVERIFIED
+
+Автозагрузка не подтверждена / Startup loading not confirmed
+
+**RU:** Не доказано, что нужный модуль загружается при старте роутера.
+
+**EN:** It was not proven that the needed module is loaded at router start.
+
+**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+
+**Action:** Review System readiness → Router preparation.
+
+## PREPARATION-BACKUP-UNVERIFIED
+
+Резервная копия не подтверждена / Backup copy not confirmed
+
+**RU:** Резервную копию исходных настроек не удалось доказать, поэтому изменение не сделано.
+
+**EN:** The backup of the original settings could not be proven, so the change was not made.
+
+**Что делать:** Повторите подготовку через минуту; если не проходит, сохраните код.
+
+**Action:** Repeat the preparation after a minute; keep the code if it stays.
+
+## PREPARATION-BINDING-UNVERIFIED
+
+Подготовка не соответствует этому роутеру / Preparation does not match this router
+
+**RU:** Сохранённая подготовка относится к другому состоянию или версии роутера.
+
+**EN:** The saved preparation belongs to a different router state or version.
+
+**Что делать:** Запустите проверку подготовки заново.
+
+**Action:** Run the preparation review again.
+
+## PREPARATION-BOOT-UNVERIFIED
+
+Запуск при загрузке не подтверждён / Start-at-boot not confirmed
+
+**RU:** Не доказано, что программа запускается при загрузке роутера.
+
+**EN:** It was not proven that the program starts when the router boots.
+
+**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+
+**Action:** Review System readiness → Router preparation.
+
+## PREPARATION-FIELDS
+
+Запрос подготовки составлен неверно / Preparation request was malformed
+
+**RU:** В запросе подготовки были лишние или недостающие поля, он отклонён. Ничего не изменено.
+
+**EN:** The preparation request had missing or extra fields and was refused. Nothing was changed.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и повторите.
+
+**Action:** Reload the page (Ctrl+F5) and repeat.
+
+## PREPARATION-FILE-UNVERIFIED
+
+Файл программы не подтверждён / A program file is not confirmed
+
+**RU:** Файл подготовки отсутствует или отличается от ожидаемого.
+
+**EN:** A file of the preparation is missing or differs from the expected one.
+
+**Что делать:** Переустановите пакет и повторите проверку.
+
+**Action:** Reinstall the package, then repeat the review.
+
+## PREPARATION-FIREWALL-UNVERIFIED
+
+Правила файрвола не подтверждены / Firewall rules not confirmed
+
+**RU:** Состояние файрвола, нужное для безопасной работы, не удалось доказать.
+
+**EN:** The firewall state needed for safe work could not be proven.
+
+**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+
+**Action:** Review System readiness → Router preparation.
+
+## PREPARATION-HISTORY-LIMIT
+
+Слишком много записей подготовки / Too many preparation records
+
+**RU:** Журнал прошлых действий подготовки достиг предела; новые действия не принимаются, пока он не очищен.
+
+**EN:** The record of past preparation actions reached its limit; no further action is accepted until it is cleaned.
+
+**Что делать:** Сохраните код и попросите разработчика очистить журнал.
+
+**Action:** Keep the code and ask the maintainer to clean the record.
+
+## PREPARATION-HNAT-UNVERIFIED
+
+Аппаратное ускорение не подтверждено выключенным / Hardware acceleration not confirmed off
+
+**RU:** Не доказано, что аппаратное ускорение роутера выключено, а оно нужно Auto для безопасного переключения.
+
+**EN:** It was not proven that the router hardware acceleration is off, which Auto needs for safe switching.
+
+**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+
+**Action:** Review System readiness → Router preparation.
+
+## PREPARATION-PLATFORM-UNVERIFIED
+
+Модель роутера не подтверждена / Router model not confirmed
+
+**RU:** Модель или прошивка этого роутера не подтверждены для подготовки.
+
+**EN:** This router model or firmware was not confirmed for the preparation.
+
+**Что делать:** Посмотрите «Готовность системы» для точного пункта.
+
+**Action:** Check System readiness for the exact item.
+
+## PREPARATION-VALUE-UNVERIFIED
+
+Значение настройки не подтверждено / A setting value is not confirmed
+
+**RU:** У настройки подготовки неожиданное значение.
+
+**EN:** A setting of the preparation has a value that was not expected.
+
+**Что делать:** Запустите проверку подготовки заново.
+
+**Action:** Run the preparation review again.
+
+## FAULT-CERTIFICATE-STALE
+
+Разрешение теста сбоя устарело / Failure test approval expired
+
+**RU:** Разрешение на тест сбоя устарело или не совпадает с текущим состоянием, поэтому тест не запущен.
+
+**EN:** The approval for the failure test is old or does not match the current state, so the test did not start.
+
+**Что делать:** Подготовьте тест заново на странице «Тесты».
+
+**Action:** Prepare the test again from the Tests page.
+
+## FAULT-CLAIM-STALE
+
+Запрос теста сбоя устарел / Failure test request expired
+
+**RU:** Запрос теста сбоя ждал слишком долго и был сброшен.
+
+**EN:** The failure test request waited too long and was dropped.
+
+**Что делать:** Запустите тест заново.
+
+**Action:** Start the test again.
+
+## FAULT-COMMAND-UNCONFIRMED
+
+Команда теста не подтверждена / Test command not confirmed
+
+**RU:** Роутер не подтвердил команду теста сбоя. Не считайте тест запущенным.
+
+**EN:** The router did not confirm the failure test command. Do not assume the test is running.
+
+**Что делать:** Проверьте на странице «Тесты», что сбой выключен и маршрут обычный.
+
+**Action:** Check that the fault is off in the Tests page and the route is normal.
+
+## FAULT-CONTROL-CHANGED
+
+Управление тестом изменилось / Test control changed meanwhile
+
+**RU:** Другое действие изменило состояние управления, пока готовился тест сбоя.
+
+**EN:** Another action changed the control state while the failure test was being prepared.
+
+**Что делать:** Повторите тест с начала.
+
+**Action:** Repeat the test from the start.
+
+## FAULT-IDENTITY-GONE
+
+Проверяемый VPN исчез / Tested VPN disappeared
+
+**RU:** VPN, выбранный для теста сбоя, больше не найден.
+
+**EN:** The VPN that was chosen for the failure test is no longer present.
+
+**Что делать:** Выберите VPN заново и повторите.
+
+**Action:** Choose the VPN again and repeat.
+
+## FAULT-IDENTITY-UNVERIFIED
+
+Проверяемый VPN не подтверждён / Tested VPN not confirmed
+
+**RU:** Не доказано, на какой VPN действует тест сбоя, поэтому он не запущен.
+
+**EN:** It was not proven which VPN the failure test affects, so it was not run.
+
+**Что делать:** Дождитесь свежих наблюдений и повторите.
+
+**Action:** Wait for fresh observations and repeat.
+
+## FAULT-START-UNCONFIRMED
+
+Запуск теста не подтверждён / Test start not confirmed
+
+**RU:** Роутер не подтвердил, что тест сбоя запущен.
+
+**EN:** The router did not confirm that the failure test started.
+
+**Что делать:** Проверьте страницу «Тесты»; остановите тест, если он показан как идущий.
+
+**Action:** Check the Tests page; stop the test if it shows as running.
+
+## RPC-RATE-LIMIT
+
+Слишком много запросов, подождите / Too many requests, wait a moment
+
+**RU:** Страница обращалась к роутеру слишком часто, поэтому запрос отклонён для защиты роутера. Ничего не изменено.
+
+**EN:** The page asked the router too often, so this request was refused to protect the router. Nothing was changed.
+
+**Что делать:** Подождите несколько секунд и повторите.
+
+**Action:** Wait a few seconds and repeat.
+
+## RPC-INPUT-INVALID
+
+В запросе неверное значение / Request has a wrong value
+
+**RU:** Роутер отклонил запрос со значением вне допустимого вида или размера. Ничего не изменено.
+
+**EN:** The router refused a request whose value was outside the allowed form or size. Nothing was changed.
+
+**Что делать:** Проверьте введённое и повторите; если не проходит, обновите страницу.
+
+**Action:** Check what you entered and repeat; reload the page if it stays.
+
+## RPC-UNKNOWN-METHOD
+
+Роутер не знает такой запрос / The router does not know this request
+
+**RU:** Страница и программа на роутере разных версий.
+
+**EN:** The page and the program on the router are of different versions.
+
+**Что делать:** Обновите страницу (Ctrl+F5); если не проходит, переустановите пакет.
+
+**Action:** Reload the page (Ctrl+F5); reinstall the package if it stays.
+
+## RPC-UNEXPECTED-ARGS
+
+В запросе лишние данные / Request has extra data
+
+**RU:** Роутер отклонил запрос с неожиданными полями. Ничего не изменено.
+
+**EN:** The router refused a request with unexpected fields. Nothing was changed.
+
+**Что делать:** Обновите страницу (Ctrl+F5).
+
+**Action:** Reload the page (Ctrl+F5).
+
+## RPC-CONFIRM-NO-PENDING
+
+Нечего подтверждать / Nothing is waiting for confirmation
+
+**RU:** Подтверждение пришло, но ни одно переключение его не ждёт (возможно, время вышло).
+
+**EN:** The confirmation arrived but no switch is waiting for it (it may have expired).
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## RPC-CONFIRM-EXPIRED
+
+Подтверждение пришло слишком поздно / Confirmation came too late
+
+**RU:** Время подтверждения переключения вышло, поэтому подтверждение не принято.
+
+**EN:** The time for confirming the switch is over, so the confirmation was not accepted.
+
+**Что делать:** Делать ничего не нужно: Auto сам вернётся на безопасный маршрут.
+
+**Action:** Nothing to do; Auto returns to a safe route by itself.
+
+## RPC-CONFIRM-ADDRESS
+
+Подтверждение пришло с другого адреса / Confirmation came from another address
+
+**RU:** Подтверждение пришло не с того компьютера, который должен подтверждать.
+
+**EN:** The confirmation did not come from the computer that is expected to confirm.
+
+**Что делать:** Подтвердите с выбранного компьютера.
+
+**Action:** Confirm from the chosen computer.
+
+## RPC-CONFIRM-FIELDS
+
+Подтверждение составлено неверно / Confirmation was malformed
+
+**RU:** В подтверждении были лишние или недостающие поля, оно отклонено.
+
+**EN:** The confirmation had missing or extra fields and was refused.
+
+**Что делать:** Обновите страницу (Ctrl+F5).
+
+**Action:** Reload the page (Ctrl+F5).
+
+## RPC-CONFIRM-TRANSACTION
+
+Подтверждение относится к другому переключению / Confirmation is for another switch
+
+**RU:** Подтверждение не относится к переключению, которое ожидает.
+
+**EN:** The confirmation does not belong to the switch that is waiting.
+
+**Что делать:** Делать ничего не нужно; дождитесь текущего переключения.
+
+**Action:** Nothing to do; wait for the current switch.
+
+## RPC-CONFIRM-TRIAL
+
+Подтверждение относится к другому тесту / Confirmation is for another test
+
+**RU:** Подтверждение не относится к текущему тесту.
+
+**EN:** The confirmation does not belong to the current trial.
+
+**Что делать:** Повторите подтверждение для текущего теста.
+
+**Action:** Repeat the confirmation for the current test.
+
+## RPC-CONFIRM-UNVERIFIED
+
+Подтверждение не проверено / Confirmation not verified
+
+**RU:** Роутер не смог проверить подтверждение.
+
+**EN:** The router could not verify the confirmation.
+
+**Что делать:** Повторите через минуту.
+
+**Action:** Repeat after a minute.
+
+## SPEED-ADDRESS
+
+Адрес сервера теста скорости отклонён / Speed test server address refused
+
+**RU:** Адрес теста скорости не был публичным интернет-адресом, поэтому не использован.
+
+**EN:** The speed test address was not a public internet address, so it was not used.
+
+**Что делать:** Делать ничего не нужно; запустите тест заново.
+
+**Action:** Nothing to do; try the test again.
+
+## SPEED-AUTO-DISABLED
+
+Тест скорости недоступен при таком состоянии Auto / Speed test needs Auto off or ready
+
+**RU:** Тест скорости не запускается, пока состояние Auto этого не позволяет.
+
+**EN:** The speed test is not run while Auto state does not allow it.
+
+**Что делать:** Дождитесь окончания шага Auto и повторите.
+
+**Action:** Wait for Auto to finish its step and repeat.
+
+## SPEED-CANCEL-UNVERIFIED
+
+Отмена теста не подтверждена / Test cancel not confirmed
+
+**RU:** Не доказано, что тест скорости остановлен.
+
+**EN:** It was not proven that the speed test stopped.
+
+**Что делать:** Подождите минуту и проверьте, что тест не идёт.
+
+**Action:** Wait a minute and check that the test is not running.
+
+## SPEED-CLOCK-BACKWARD
+
+Часы роутера пошли назад / Router clock went back
+
+**RU:** Часы роутера скакнули назад во время теста, поэтому результат ненадёжен.
+
+**EN:** The router clock jumped back during the test, so the result is not reliable.
+
+**Что делать:** Повторите тест позже.
+
+**Action:** Repeat the test later.
+
+## SPEED-CLOCK-UNSET
+
+Часы роутера не установлены / Router clock is not set
+
+**RU:** Роутер ещё не знает точное время, поэтому лимиты теста скорости нельзя посчитать.
+
+**EN:** The router does not know the real time yet, so the speed test limits cannot be counted.
+
+**Что делать:** Подождите, пока роутер получит время из интернета.
+
+**Action:** Wait until the router gets the time from the internet.
+
+## SPEED-CONFIG
+
+Настройки теста скорости вне диапазона / Speed test settings are out of range
+
+**RU:** У настройки теста скорости недопустимое значение.
+
+**EN:** A speed test setting has a value that is not allowed.
+
+**Что делать:** Откройте настройки теста скорости и введите значение в допустимом диапазоне.
+
+**Action:** Open the speed test settings and enter a value in the allowed range.
+
+## SPEED-CONFIG-FIELDS
+
+Настройки теста скорости составлены неверно / Speed test settings were malformed
+
+**RU:** В настройках теста скорости были лишние или недостающие поля.
+
+**EN:** The speed test settings had missing or extra fields.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и сохраните снова.
+
+**Action:** Reload the page (Ctrl+F5) and save again.
+
+## SPEED-DNS
+
+Имя сервера теста скорости не найдено / Speed test name not resolved
+
+**RU:** Имя сервера теста скорости не удалось разрешить через VPN.
+
+**EN:** The speed test server name could not be resolved through the VPN.
+
+**Что делать:** Повторите позже; если повторяется, проверьте DNS этого VPN.
+
+**Action:** Repeat later; if it repeats check the DNS of this VPN.
+
+## SPEED-HISTORY-CORRUPT
+
+История скорости нечитаема / Speed history unreadable
+
+**RU:** Сохранённые результаты скорости не удалось прочитать, они проигнорированы.
+
+**EN:** The saved speed results could not be read and were ignored.
+
+**Что делать:** Делать ничего не нужно: новые тесты заполнят её снова.
+
+**Action:** Nothing to do; new tests fill it again.
+
+## SPEED-HTTP
+
+Сервер теста скорости ответил ошибкой / Speed test server answered with an error
+
+**RU:** Скачивание для теста скорости завершилось ошибкой HTTP.
+
+**EN:** The speed test download failed with an HTTP error.
+
+**Что делать:** Повторите позже.
+
+**Action:** Repeat later.
+
+## SPEED-MONITOR-UNAVAILABLE
+
+Мониторинг недоступен для теста скорости / Monitor is not available for the speed test
+
+**RU:** Для теста скорости нужен работающий мониторинг, он не отвечает.
+
+**EN:** The speed test needs the running monitor, which does not answer.
+
+**Что делать:** Запустите мониторинг и повторите.
+
+**Action:** Start monitoring and repeat.
+
+## SPEED-QUOTA-CORRUPT
+
+Запись лимита теста скорости нечитаема / Speed test limit record unreadable
+
+**RU:** Сохранённый счётчик трафика тестов скорости не удалось прочитать, поэтому тест не запускается.
+
+**EN:** The saved count of speed test traffic could not be read, so the test is not run.
+
+**Что делать:** Подождите: запись восстановится сама.
+
+**Action:** Wait; the record rebuilds itself.
+
+## SPEED-REQUEST
+
+Запрос теста скорости неверен / Speed test request is wrong
+
+**RU:** В запросе были неверные или лишние значения, он отклонён.
+
+**EN:** The request had wrong or extra values and was refused.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и повторите.
+
+**Action:** Reload the page (Ctrl+F5) and repeat.
+
+## SPEED-RESPONSE-LIMIT
+
+Достигнут лимит скачивания теста / Speed test download limit reached
+
+**RU:** Тест скачал больше допустимого и был остановлен.
+
+**EN:** The test downloaded more than allowed and was stopped.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## SPEED-SHORT-RESPONSE
+
+Ответ сервера теста слишком короткий / Speed test answer too short
+
+**RU:** Сервер отдал меньше данных, чем нужно для надёжного результата.
+
+**EN:** The server gave less data than needed for a reliable result.
+
+**Что делать:** Повторите позже.
+
+**Action:** Repeat later.
+
+## SPEED-STATUS-UNAVAILABLE
+
+Состояние теста скорости недоступно / Speed test status unavailable
+
+**RU:** Роутер не отдал состояние теста скорости.
+
+**EN:** The router did not give the speed test status.
+
+**Что делать:** Обновите страницу и проверьте снова.
+
+**Action:** Reload the page and check again.
+
+## SPEED-SYSTEM
+
+Системная ошибка теста скорости / Speed test system error
+
+**RU:** Роутеру не удалось выполнить шаг теста скорости.
+
+**EN:** The router failed to run a step of the speed test.
+
+**Что делать:** Повторите позже.
+
+**Action:** Repeat later.
+
+## SPEED-WORKER-LOST
+
+Исполнитель теста скорости остановился / Speed test worker stopped
+
+**RU:** Фоновая часть теста остановилась, не закончив работу.
+
+**EN:** The background part of the test stopped before finishing.
+
+**Что делать:** Повторите тест.
+
+**Action:** Repeat the test.
+
+## SPEED-WORKER-START
+
+Тест скорости не удалось запустить / Speed test could not start
+
+**RU:** Роутер не смог запустить фоновую часть теста.
+
+**EN:** The router could not start the background part of the test.
+
+**Что делать:** Повторите позже.
+
+**Action:** Repeat later.
+
+## POLICY-CHANGED-DURING-PREFLIGHT
+
+Правила VPN изменились во время проверки / VPN rules changed during the check
+
+**RU:** Правила маршрутов VPN изменились во время проверки готовности, поэтому её результат не используется.
+
+**EN:** The VPN route rules changed while the readiness check was running, so its result is not used.
+
+**Что делать:** Повторите проверку, когда никто не правит настройки VPN.
+
+**Action:** Repeat the check when nothing edits the VPN settings.
+
+## RECOVERY-ACTION
+
+Неизвестное действие восстановления / Unknown recovery action
+
+**RU:** Скрипт восстановления вызван с неизвестным действием. Ничего не изменено.
+
+**EN:** The recovery script was called with an action it does not know. Nothing was changed.
+
+**Что делать:** Используйте документированную команду восстановления.
+
+**Action:** Use the documented recovery command.
+
+## TELEGRAM-ITEMS
+
+Состав отчёта Telegram неверен / Telegram report items are wrong
+
+**RU:** Список пунктов отчёта Telegram недопустим.
+
+**EN:** The list of items chosen for the Telegram report is not valid.
+
+**Что делать:** Откройте мастер Telegram и выберите пункты заново.
+
+**Action:** Open the Telegram wizard and choose the items again.
+
+## ENDPOINT-ADDRESS
+
+Адрес сервера недопустим / Server address not valid
+
+**RU:** Адрес сервера или порт пусты, слишком длинны или непригодны.
+
+**EN:** The server address or port is empty, too long or not usable.
+
+**Что делать:** Делать ничего не нужно: скрывается только показ адреса.
+
+**Action:** Nothing to do; this only hides the address shown.
+
+## ENDPOINT-PROC
+
+Адрес сервера не удалось прочитать / Server address could not be read
+
+**RU:** Таблицу ядра с текущим адресом сервера не удалось прочитать.
+
+**EN:** The kernel table with the current server address could not be read.
+
+**Что делать:** Делать ничего не нужно: попытка повторится.
+
+**Action:** Nothing to do; it is tried again.
+
+## ENDPOINT-PROCESS-EPOCH
+
+Адрес сервера изменился при чтении / Server address changed while reading
+
+**RU:** Туннель перезапустился во время чтения адреса, значение отброшено.
+
+**EN:** The tunnel restarted while its address was read, so the value was dropped.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## ENDPOINT-READ-LIMIT
+
+Таблица адреса сервера слишком велика / Server address table too large
+
+**RU:** Таблица ядра больше допустимого и не прочитана.
+
+**EN:** The kernel table was larger than allowed and was not read.
+
+**Что делать:** Делать ничего не нужно.
+
+**Action:** Nothing to do.
+
+## RESPONSE-COMPARE*
+
+Сравнение способов отклика / Comparison of response methods
+
+**RU:** Сохранённое сравнение всех способов отклика не удалось безопасно прочитать или записать. Переключение и выбранный способ не затронуты.
+
+**EN:** The saved comparison of all response methods could not be read or written safely. Switching and the chosen metric are not affected.
+
+**Что делать:** Делать ничего не нужно. Выключение и включение «мерить все способы» начинает новое сравнение; старый файл сохраняется.
+
+**Action:** No action is needed. Turning "measure all methods" off and on starts a new comparison; the old file is kept.
+
 ## PING-HISTORY*
 
 Проверка истории пинга / Ping history check
@@ -6991,15 +8371,15 @@ Auto работает / Auto running
 
 ## EVENT-ROUTER-OBSERVATION
 
-Наблюдение состояния роутера / Router state observation
+Состояние Auto / Auto state
 
 **RU:** В этом наблюдении смена порядка каналов не записана. Используйте сохранённое подтверждение выбора на момент события; этап контроллера не считается новым переключением.
 
 **EN:** This observation did not record a channel-order change. Use the saved event-time selection evidence rather than interpreting the controller phase as a new switch.
 
-**Что делать:** Сохранено состояние управления роутера; переключение канала не заявлено. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
+**Что делать:** Записано состояние Auto; канал не менялся. При наличии смотрите отдельный сохранённый код причины; наблюдение и подтверждённая смена маршрута различаются.
 
-**Action:** Router control state was recorded; no channel switch is claimed. Read the separate saved reason code if present; observation and a confirmed route change are different.
+**Action:** Auto state was recorded; the channel did not change. Read the separate saved reason code if present; observation and a confirmed route change are different.
 
 ## EVENT-DIRECTION-NOT-SAVED
 

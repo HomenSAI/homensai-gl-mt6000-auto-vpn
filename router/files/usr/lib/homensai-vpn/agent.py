@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha78'
+VERSION = '0.9.1-alpha80'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -588,7 +588,7 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
     return devices
 
 
-def checkpoint(accounting,latency=None,website_response=None,ping_response=None):
+def checkpoint(accounting,latency=None,website_response=None,ping_response=None,compare_response=None):
     accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
     try:old = read_json(PERSIST/'checkpoint.json')
@@ -616,6 +616,10 @@ def checkpoint(accounting,latency=None,website_response=None,ping_response=None)
         try:ping_response.save(PERSIST/'ping-response-history.json',atomic_json,time.time())
         except (OSError,ValueError):
             if ping_response.notice!='PING-HISTORY-UNAVAILABLE':ping_response.notice='PING-HISTORY-WRITE-FAILED'
+    if compare_response is not None and compare_response.data['rows']:
+        try:compare_response.save(PERSIST/'response-compare.json',atomic_json,time.time())
+        except (OSError,ValueError):
+            if compare_response.notice!='RESPONSE-COMPARE-UNAVAILABLE':compare_response.notice='RESPONSE-COMPARE-WRITE-FAILED'
 
 
 def restore():
@@ -753,6 +757,9 @@ def serve():
     from icmp_ping import PingSampler, public as ping_public
     sampler_inventory=shared_inventory(3)
     ping_sampler=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    compare_samplers={}  # owner option "measure all methods": one extra sampler per other ping target
+    from response_compare import ResponseCompare,enabled as compare_enabled,TARGETS as COMPARE_TARGETS
+    compare_history=ResponseCompare.load(PERSIST/'response-compare.json')
     from website_response import WebsiteSampler,public as website_public
     website_sampler=WebsiteSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     # Owner probe level 1-5 and the optional automatic boost; every decision is recorded.
@@ -761,7 +768,7 @@ def serve():
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
         from speed_pause import gate as speed_gate
-        if speed_gate('monitor',quiescent=lambda:website_sampler.idle() and ping_sampler.idle()):
+        if speed_gate('monitor',quiescent=lambda:website_sampler.idle() and ping_sampler.idle() and all(s.idle() for s in compare_samplers.values())):
             time.sleep(1);continue
         from stats_reset import pending as reset_pending,apply as reset_apply,RESULT as RESET_RESULT
         reset_request=reset_pending(RUNTIME)
@@ -769,11 +776,11 @@ def serve():
             # Owner reset of charts/statistics: archived first, then the counters start again from zero.
             # A failing reset never stops monitoring, and the page always gets a coded result.
             try:
-                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history,ping_response=ping_history)
+                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history,ping_response=ping_history,compare_response=compare_history)
             except Exception:
                 reset_result={'nonce':reset_request['nonce'],'scope':reset_request['scope'],'time':time.time(),'done':False,'code':'STATS-RESET-FAILED'}
             try:
-                if reset_result.get('done'):checkpoint(accounting,latency,website_history,ping_history);last_save=time.monotonic()
+                if reset_result.get('done'):checkpoint(accounting,latency,website_history,ping_history,compare_history);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
@@ -825,7 +832,19 @@ def serve():
             try:ping_sampler.apply(rows,failure_pair,time.time())
             except Exception:
                 for row in rows:row['ping']=ping_public(row,'unavailable','PING-UNAVAILABLE')
-            if metric!='websites':
+            compare=compare_enabled(settings)
+            primary_target=RESPONSE_METRICS[metric] if metric!='websites' else None
+            for target in COMPARE_TARGETS:
+                if not compare or target==primary_target:
+                    if target in compare_samplers:compare_samplers.pop(target).close()
+                    continue
+                sampler=compare_samplers.get(target)
+                if sampler is None:
+                    sampler=compare_samplers[target]=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists(),compare=True)
+                sampler.configure(booster.measure(settings),target)
+                try:sampler.apply(rows,failure_pair,time.time())
+                except Exception:pass
+            if metric!='websites' and not compare:
                 # Ping was chosen: no TLS handshakes to three sites at all.
                 for row in rows:row['website_response']=website_public(row,'inactive','WEBSITE-NOT-SELECTED')
             else:
@@ -893,6 +912,9 @@ def serve():
                 else:
                     ping_history.observe(status,settings,time.time())
                     status['website_response_history']=ping_history.public(time.time())
+                if compare_enabled(settings):
+                    compare_history.observe(status,failure_pair,time.time())
+                    status['response_compare']=compare_history.public(time.time())
             except Exception:
                 from website_response import METRIC,TARGET_SET
                 status['website_response_history']={'metric':METRIC,'target_set':TARGET_SET,'rows':[],'coverage_rows':[],'notice':'WEBSITE-HISTORY-UNAVAILABLE'}
@@ -944,7 +966,7 @@ def serve():
             since_save=time.monotonic()-last_save
             if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
                 try:
-                    checkpoint(accounting,latency,website_history,ping_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
+                    checkpoint(accounting,latency,website_history,ping_history,compare_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -977,6 +999,7 @@ def serve():
                     pass
             time.sleep(1)
     ping_sampler.close();website_sampler.close()
+    for sampler in compare_samplers.values():sampler.close()
     try:
         from speed_test import cancel as cancel_speed
         cancel_speed()
@@ -988,7 +1011,7 @@ def serve():
             try:telegram_collect(telegram_job)
             except Exception:pass
     try:
-        checkpoint(accounting,latency,website_history,ping_history)
+        checkpoint(accounting,latency,website_history,ping_history,compare_history)
     except (OSError, ValueError):
         pass
 
@@ -1020,7 +1043,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
-                          'setup_response':{'metric':''},
+                          'setup_response':{'metric':'','compare':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
@@ -1172,6 +1195,8 @@ def rpc(method):
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
+            from switch_timing import read as switch_timing
+            status['switch_timing']=switch_timing(PERSIST)
             from auto_control import public_status
             status['auto_control']=public_status()
             from manual_control import control_status

@@ -189,7 +189,7 @@ class PingSamplerTests(unittest.TestCase):
         with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=110):
             sampler.apply([profile],{'source':profile['id']},1010);self.assertEqual(profile['ping']['rtt_ms'],12);self.assertFalse(sampler.jobs)
             profile['time']=1046;sampler.apply([profile],{'source':profile['id']},1046)
-            self.assertEqual(profile['ping']['state'],'stale');self.assertIsNone(profile['ping']['rtt_ms'])
+            self.assertEqual(profile['ping']['state'],'stale');self.assertEqual(profile['ping']['rtt_ms'],12)  # the last value stays visible (owner rule)
             profile['time']=990;sampler.apply([profile],{'source':profile['id']},990);self.assertEqual(profile['ping']['state'],'stale')
 
     def test_completed_old_generation_cannot_reenter_cache(self):

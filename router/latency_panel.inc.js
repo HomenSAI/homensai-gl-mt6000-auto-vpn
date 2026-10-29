@@ -5,7 +5,7 @@ var LATENCY_HISTORY_SECONDS=7*86400;
 function latencyCurrent(status,inventory,now){
   if(status.rpc_error||status.error)return [null,null];
   var ids=rolePairIds(status,inventory,now),rows=Array.isArray(status.profiles)?status.profiles:[];
-  return ids.map(function(id){var p=rows.find(function(p){return p&&p.id===id;});var value=channelPingModel(p,status,now).rtt_ms;return value===null?null:Object.assign({},p,{rtt_ms:value});});
+  return ids.map(function(id){var p=rows.find(function(p){return p&&p.id===id;});var value=(typeof channelDelayModel==='function'?channelDelayModel:channelPingModel)(p,status,now).rtt_ms;return value===null?null:Object.assign({},p,{rtt_ms:value});});
 }
 // What carries traffic when no switch is confirmed: a defined statement, never "not confirmed".
 function latencyRouteText(status){
@@ -21,10 +21,10 @@ function latencyRecommendation(status,inventory,now){
     var ids=rolePairIds(status,inventory,now),k=rows[0]?0:1,other=(status.profiles||[]).filter(function(p){return p&&p.id===ids[1-k];})[0];
     return {index:k,single:true,text:(measured.every(Boolean)?(k===0?bi('Only the primary is eligible for this recommendation','Для этой рекомендации сейчас подходит только основной канал'):bi('Only the reserve is eligible for this recommendation','Для этой рекомендации сейчас подходит только резервный канал')):(k===0?bi('Only the primary has a complete three-site measurement','Полный замер трёх сайтов есть только у основного канала'):bi('Only the reserve has a complete three-site measurement','Полный замер трёх сайтов есть только у резервного канала')))+' ('+websiteMs(rows[k].rtt_ms)+' '+bi('ms','мс')+'). '+(k===0?bi('Reserve: ','Резервный: '):bi('Primary: ','Основной: '))+(other&&profileHealth(other,now).state!=='healthy'?channelCheckText(other,now):channelPingModel(other,status,now).text)};
   }
-  if(rows.some(function(p){return !p;}))return {index:null,text:bi('A comparison needs complete three-site results and confirmed healthy channels.','Для сравнения нужны полные замеры трёх сайтов и подтверждённо работающие каналы.')};
+  if(rows.some(function(p){return !p;}))return {index:null,text:bi('No delay has been measured yet for one of the channels; the comparison appears after its first measurement.','У одного из каналов ещё нет ни одного замера задержки; сравнение появится после первого замера.')};
   if(Math.abs(rows[0].rtt_ms-rows[1].rtt_ms)<.1)return {index:null,text:bi('The current measured delays are equal.','Сейчас измеренные задержки одинаковы.')};
   var index=rows[0].rtt_ms<rows[1].rtt_ms?0:1;
-  return {index:index,text:bi('Lower measured website response: ','Меньший измеренный ответ сайтов: ')+(index===0?bi('the primary channel','основной канал'):bi('the reserve channel','резервный канал'))+': '+websiteMs(rows[index].rtt_ms)+' '+bi('ms versus ','мс против ')+websiteMs(rows[1-index].rtt_ms)+' '+bi('ms. Its measured delay is lower by ','мс. Его задержка меньше на ')+websiteMs(rows[1-index].rtt_ms-rows[index].rtt_ms)+' '+bi('ms.','мс.')+' · '+serverTitle(rows[index])};
+  return {index:index,text:bi('Lower measured delay: ','Меньшая измеренная задержка: ')+(index===0?bi('the primary channel','основной канал'):bi('the reserve channel','резервный канал'))+': '+websiteMs(rows[index].rtt_ms)+' '+bi('ms versus ','мс против ')+websiteMs(rows[1-index].rtt_ms)+' '+bi('ms. Its measured delay is lower by ','мс. Его задержка меньше на ')+websiteMs(rows[1-index].rtt_ms-rows[index].rtt_ms)+' '+bi('ms.','мс.')+' · '+serverTitle(rows[index])};
 }
 function renderLatencyRecommendation(status,inventory,context){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,recommend=latencyRecommendation(status,inventory,now),current=latencyCurrent(status,inventory,now),ids=rolePairIds(status,inventory,now);
@@ -87,7 +87,7 @@ function latencyHistoryRows(status,inventory,now){
     try{rows=JSON.parse(h.rows_json);}catch(error){return [];}
   }
   if(!Array.isArray(rows)||rows.length>10081||h.rows_count!==undefined&&(!Number.isInteger(h.rows_count)||h.rows_count!==rows.length))return [];
-  return rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-LATENCY_HISTORY_SECONDS&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isInteger(r[i])&&r[i]>=0&&r[i]<=60000*r[i+2]);})&&['source','target','unknown','off','switching'].indexOf(r[5])>=0;}).map(function(r){var decoded=r.slice();[1,2].forEach(function(i){decoded[i]=r[i+2]?r[i]/(10*r[i+2]):null;});return decoded;}).sort(function(a,b){return a[0]-b[0];});
+  return rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-LATENCY_HISTORY_SECONDS&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isInteger(r[i])&&r[i]>=0&&r[i]<=60000*r[i+2]);})&&['source','target','unknown','off','switching','blocked','down'].indexOf(r[5])>=0;}).map(function(r){var decoded=r.slice();[1,2].forEach(function(i){decoded[i]=r[i+2]?r[i]/(10*r[i+2]):null;});return decoded;}).sort(function(a,b){return a[0]-b[0];});
 }
 function latencySegments(rows,index,start,end,maxY){
   var segments=[],points=[],color=null,last=null;

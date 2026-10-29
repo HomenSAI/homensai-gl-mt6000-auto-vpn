@@ -11,9 +11,9 @@ The configured profile, connected tunnel, healthy router probe and selected comm
 
 ## Continuous Auto
 
-The qualified prepared MT3000/4.11.0 path uses fresh router IPv4 DNS/HTTPS evidence, stable identity, policy/worker/ownership checks and bounded recovery. Consecutive-failure/success thresholds, cooldown, dwell, budgets and operator hold prevent an immediate switch on every noisy sample. A low HTTPS delay is a recommendation, not permission to move traffic.
+The qualified prepared MT3000/4.11.0 path uses fresh router IPv4 DNS/HTTPS evidence, stable identity, policy/worker/ownership checks and bounded recovery. Consecutive-failure/success thresholds, cooldown, dwell and budgets prevent an immediate switch on every noisy sample. A low response time is a recommendation, not permission to move traffic.
 
-Manual selection is an explicit command with a confirmed result, not an immediate lamp change on queue ACK. Automatic return follows saved policy and readiness; manual reserve hold does not promise return just because primary recovers. A deliberate bounded fault test is separately labelled and can test both directions without changing the saved preference.
+Manual selection is an explicit command with a confirmed result, not an immediate lamp change on queue ACK. A manual switch never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails, and after an Auto restart or package upgrade it returns to the primary when that is healthy. Automatic return follows saved policy and readiness; a hold-reserve policy does not promise return just because primary recovers. A deliberate bounded fault test is separately labelled and can test both directions without changing the saved preference.
 
 ## Other proof modes
 

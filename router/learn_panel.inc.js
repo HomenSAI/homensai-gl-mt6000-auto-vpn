@@ -75,8 +75,8 @@ var LEARN_LESSONS=[
       "Зелёный индикатор мониторинга означает свежие наблюдения; для Auto нужен отдельный явный запуск."
     ],
     "tip": [
-      "Grey means switched off, red means switched on but not working: open Help.",
-      "Серый — выключен, красный — включён, но не работает: откройте «Помощь»."
+      "Grey means waiting for the router, red means a proven failure: open Help.",
+      "Серый — ждём ответа роутера, красный — доказанный сбой: откройте «Помощь»."
     ]
   },
   {
@@ -128,8 +128,8 @@ var LEARN_LESSONS=[
         "Что такое LAN-помощник? Небольшой скрипт PowerShell 7 (обычный текст, его можно прочитать), который запускается на вашем компьютере с Windows, а не на роутере. Один раз установите PowerShell 7, положите два скачанных файла в одну папку и запустите, сначала выберите режим 1 (только проверка):"
       ],
       [
-        "The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green in manual control means selected, not independent proof of Internet. Pending commands are yellow; inspect fresh channel checks for availability.",
-        "Большая кнопка показывает включение/выключение Auto. Заголовок маршрута и схема M/R показывают выбранный канал. Зелёный в ручном управлении означает выбор, а не отдельное доказательство Интернета. Ожидающая команда жёлтая; доступность смотрите в свежих проверках канала."
+        "The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green means this channel carries your traffic, not independent proof of Internet; yellow means alive but not in use (or a short check or switch); red is a proven failure. During a manual switch the destination card blinks green. Inspect fresh channel checks for availability.",
+        "Большая кнопка показывает включение/выключение Auto. Заголовок маршрута и схема M/R показывают выбранный канал. Зелёный означает, что этот канал несёт ваш трафик, а не отдельное доказательство Интернета; жёлтый — канал жив, но не используется (или идёт короткая проверка либо переключение); красный — доказанный сбой. При ручном переключении карточка назначения мигает зелёным. Доступность смотрите в свежих проверках канала."
       ]
     ],
     "cmds": [
@@ -169,8 +169,8 @@ var LEARN_LESSONS=[
         "«Обзор» начинается с Auto и проверки VPN. Далее идут свёрнутые технические действия/статистика переключений и ручной выбор основного/резерва. Команда в очереди ожидает подтверждения роутера."
       ],
       [
-        "Channels and servers shows primary first and reserve second, server names/IP where observed, HTTPS delay and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.",
-        "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, HTTPS-задержку и историю 1–168 ч в пределах настроенного хранения 1–7 дней. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
+        "Channels and servers shows primary first and reserve second, server names/IP where observed, the response (ping by default, or the three-site HTTPS mean) and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.",
+        "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, отклик (по умолчанию пинг, либо среднее трёх сайтов по HTTPS) и историю 1–168 ч в пределах настроенного хранения 1–7 дней. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
       ],
       [
         "The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events shows the latest 20 rows, with expansion, search and sorting. Setup step 2 or Monitoring settings selects 1–2000 live observations and 1–7 days of detail. M/R identifies primary/reserve and who initiated a transition; missing historical outcomes are explained, not invented.",
@@ -198,8 +198,8 @@ var LEARN_LESSONS=[
         "Сохраните доступ к роутеру по кабелю или Wi-Fi и проверьте выбранный канал, свежие измерения и записанную причину. Откройте «Помощь» → «Нет интернета»."
       ],
       [
-        "Switch manually only when the requested channel is confirmed ready and its action is available. Working on reserve alone is not a reason to force a return to a failed primary. Auto can remain on during normal manual selection.",
-        "Переключайте вручную только при подтверждённой готовности нужного канала и доступной команде. Работа на резерве сама по себе не повод возвращаться на неисправный основной. При обычном ручном выборе Auto может оставаться включённым."
+        "Switch manually only when the requested channel is confirmed ready and its action is available. Working on reserve alone is not a reason to force a return to a failed primary. Manual selection never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails.",
+        "Переключайте вручную только при подтверждённой готовности нужного канала и доступной команде. Работа на резерве сама по себе не повод возвращаться на неисправный основной. Ручной выбор никогда не выключает Auto: Auto продолжает следить за выбранным вами каналом и переносит трафик на другой, если этот откажет."
       ],
       [
         "Use emergency commands only for the documented recovery situation. Start with read-only show; removing the owned guard is a recovery action, not a general internet fix.",
@@ -279,7 +279,7 @@ var LEARN_QUIZ=[
   {q:['Which command only reads the state and is always safe?','Какая команда только читает состояние и всегда безопасна?'],o:[['homensai-vpn-emergency show','homensai-vpn-emergency show',true],['homensai-vpn-emergency stop-auto','homensai-vpn-emergency stop-auto',false],['homensai-vpn-emergency remove-guard','homensai-vpn-emergency remove-guard',false]]}
 ];
 LEARN_LESSONS[4].body.push(
- ['To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. Yellow or a queued request is not completion. Continuous Auto may stay on and continue observing.','Для ручного выбора откройте «Обзор» → «Ручное переключение канала». Выберите «Основной» или «Резервный», когда управление доступно, затем дождитесь подтверждённого выбора. Жёлтый цвет или очередь не означают завершение. Непрерывный Auto может оставаться включённым и продолжать наблюдение.'],
+ ['To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. A queued request is not completion; the destination card blinks green during the switch. Manual selection never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails.','Для ручного выбора откройте «Обзор» → «Ручное переключение канала». Выберите «Основной» или «Резервный», когда управление доступно, затем дождитесь подтверждённого выбора. Очередь запроса не означает завершение; во время переключения карточка назначения мигает зелёным. Ручной выбор никогда не выключает Auto: Auto продолжает следить за выбранным каналом и переносит трафик на другой, если этот откажет.'],
  ['Use the large Auto button to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. A retained-reserve outcome requires its separately offered recovery action.','Большая кнопка Auto запрашивает запуск или остановку. Дождитесь фактического итогового состояния. Выключение Auto не прекращает мониторинг; управляемая остановка может восстановить исходные правила и флаги интерфейсов. Если резерв удержан, используйте отдельно предложенное действие восстановления.']
 );
 LEARN_QUIZ.push(

@@ -56,9 +56,34 @@ function channelCheckText(profile,now){
 function websiteMs(value){return (Math.floor(value*10+.5)/10).toFixed(1);}
 var WEBSITE_METRIC='websites-https-mean-ms-v1',WEBSITE_TARGET_SET='google-cloudflare-wikipedia-v1';
 var WEBSITE_URLS={google:'https://www.google.com/generate_204',cloudflare:'https://www.cloudflare.com/cdn-cgi/trace',wikipedia:'https://www.wikipedia.org/'};
+// Owner rule: a channel always shows its delay. Without a current measurement the last known one is shown with
+// its age (from this page or from the router's response history), never "out of date 0/3".
+var UI_LAST_DELAY={};
+function lastHistoryDelay(status,id){
+  var h=(status||{}).website_response_history||{},side=Array.isArray(h.pair)?h.pair.indexOf(id):-1;
+  if(side<0||!Array.isArray(h.rows))return null;
+  for(var i=h.rows.length-1;i>=0;i--){var r=h.rows[i];if(Array.isArray(r)&&Number.isInteger(r[side+3])&&r[side+3]>0&&Number.isFinite(r[side+1]))return {rtt_ms:r[side+1]/(10*r[side+3]),time:r[0]+30,metric:h.metric};}
+  return null;
+}
+function delayAge(seconds){seconds=Math.max(0,Math.round(seconds));return seconds<90?seconds+' '+bi('s ago','с назад'):Math.round(seconds/60)+' '+bi('min ago','мин назад');}
+// The current measurement only (strict); channelDelayModel adds the last known delay for display.
 function channelPingModel(p,status,now){
   if(status&&typeof status.response_metric==='string'&&status.response_metric.indexOf('icmp-')===0)return channelIcmpModel(p,status,now);
   return channelWebsiteModel(p,status,now);
+}
+function channelDelayModel(p,status,now){
+  var ping=status&&typeof status.response_metric==='string'&&status.response_metric.indexOf('icmp-')===0;
+  var model=channelPingModel(p,status,now),id=p&&p.id,metric=ping?status.response_metric:'websites';
+  if(!id)return model;
+  if(model.state==='ok'&&Number.isFinite(model.rtt_ms)){UI_LAST_DELAY[id+'|'+metric]={rtt_ms:model.rtt_ms,time:now};return model;}
+  if(model.state==='inactive')return model;
+  var last=UI_LAST_DELAY[id+'|'+metric],x=ping&&p.ping;
+  if(!last&&x&&Number.isFinite(x.rtt_ms)&&Number.isFinite(x.time)&&x.target===String(status.response_metric).slice(5))last={rtt_ms:x.rtt_ms,time:x.time};
+  if(!last){var h=lastHistoryDelay(status,id);if(h&&(ping?h.metric==='icmp-rtt-ms':h.metric===WEBSITE_METRIC))last=h;}
+  if(!last)return model;
+  var label=ping?bi('ping ','пинг ')+String(status.response_metric).slice(5):bi('three sites','три сайта');
+  return {state:'last',code:model.code,rtt_ms:last.rtt_ms,successes:model.successes,kind:model.kind,
+    text:websiteMs(last.rtt_ms)+' '+bi('ms','мс')+' · '+label+' · '+bi('last measured ','последний замер ')+delayAge(now-last.time)};
 }
 // Ping (ICMP echo through the tunnel to the chosen public DNS address): the owner's default response metric.
 function channelIcmpModel(p,status,now){
@@ -91,16 +116,16 @@ function channelWebsiteModel(p,status,now){
   return {state:'ok',code:null,rtt_ms:x.avg_ms,successes:3,text:websiteMs(x.avg_ms)+' '+bi('ms','мс')};
 }
 function renderChannelPing(profile,status,now){
-  var model=channelPingModel(profile,status,now),detail=bi('Mean response of Google, Cloudflare and Wikipedia, all 3 required. Fresh DNS+TCP+TLS+HTTP headers; not a full page.','Средний ответ Google, Cloudflare и Wikipedia, нужны все 3. Новый DNS+TCP+TLS+HTTP-заголовки, не полная страница.')+' '+model.text+(model.code?' · '+model.code:'');
+  var model=channelDelayModel(profile,status,now),detail=bi('Mean response of Google, Cloudflare and Wikipedia, all 3 required. Fresh DNS+TCP+TLS+HTTP headers; not a full page.','Средний ответ Google, Cloudflare и Wikipedia, нужны все 3. Новый DNS+TCP+TLS+HTTP-заголовки, не полная страница.')+' '+model.text+(model.code?' · '+model.code:'');
   var labels={checking:bi('Checking','Проверяется'),stale:bi('Check is out of date','Проверка устарела'),partial:bi('Incomplete check','Неполная проверка'),failed:bi('Check failed','Проверка не прошла'),inactive:bi('Tunnel is off','Туннель отключён'),unavailable:bi('No current result','Нет актуального результата')};
-  var shown=model.rtt_ms==null?'— · '+(labels[model.state]||labels.unavailable)+' · '+model.successes+'/3':model.text;
+  var shown=model.rtt_ms==null?'— · '+(labels[model.state]||labels.unavailable)+(model.kind==='ping'?'':' · '+model.successes+'/3'):model.text;
   return E('small',{'class':'hv-channel-ping','data-ping-state':model.state,'data-latency-metric':WEBSITE_METRIC,'data-latency-state':model.state,'data-coverage':model.successes+'/3','title':detail,'aria-label':detail},shown);
 }
 // The response history follows the owner's metric: three websites or one ICMP echo (ping) per check.
 function responseHistoryKind(h){return !h?null:h.metric===WEBSITE_METRIC&&h.target_set===WEBSITE_TARGET_SET?'websites':h.metric==='icmp-rtt-ms'&&h.target_set==='icmp-echo'?'ping':null;}
 function websiteSamples(status,inventory){
   var h=status.website_response_history||{},out=[];
-  latencyHistoryRows(status,inventory||{},routerWall()).forEach(function(r){[0,1].forEach(function(i){if(r[i+1]!==null)out.push({id:h.pair[i],time:r[0],rtt_ms:r[i+1],count:r[i+3],metric:WEBSITE_METRIC});});});out.stats_since=Number.isFinite(h.stats_since)?h.stats_since:0;return out;
+  latencyHistoryRows(status,inventory||{},routerWall()).forEach(function(r){[0,1].forEach(function(i){if(r[i+1]!==null)out.push({id:h.pair[i],time:r[0],rtt_ms:r[i+1],count:r[i+3],metric:WEBSITE_METRIC});});});out.stats_since=Number.isFinite(h.stats_since)?h.stats_since:0;out.kind=responseHistoryKind(h);return out;
 }
 function websiteQuality(status){
   var h=status.website_response_history||{},rank={};
@@ -154,9 +179,17 @@ function uiRecoveryText(recovery){
 var UI_STAGE_TEXT={ARMED:['Preparing','Подготовка'],APPLYING:['Applying router rules','Применение правил роутера'],'WAIT-CLIENT':['Checking the new route','Проверка нового маршрута'],RESTORING:['Restoring the previous route','Возврат прежнего маршрута'],RECOVERING:['Recovery after an interrupted switch','Восстановление после прерванного переключения'],QUEUED:['Waiting for the controller','Ожидание контроллера'],CLAIMED:['Accepted by the controller','Принято контроллером'],SENT:['Sending the request','Отправка запроса']};
 function uiClock(seconds){seconds=Math.max(0,Math.floor(seconds));return Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2);}
 // One timer text for every surface: stage, elapsed since a known origin and the time left to the real backend deadline.
+// Average confirmed switch time (manual and automatic share one transaction), kept by the router on flash.
+var UI_SWITCH_AVG=null;
 function uiOperationTimer(stage,elapsed,remaining,checking){
   var text=stage&&UI_STAGE_TEXT[stage]?bi(UI_STAGE_TEXT[stage][0],UI_STAGE_TEXT[stage][1]):'';
   if(Number.isFinite(elapsed))text+=(text?' · ':'')+uiClock(elapsed)+bi(' elapsed',' прошло');
+  if(Number.isFinite(elapsed)&&Number.isFinite(UI_SWITCH_AVG)&&!checking){
+    var left=UI_SWITCH_AVG-elapsed;
+    text+=(text?' · ':'')+(left>=1?bi('about ','ещё около ')+uiClock(left)+bi(' (usual ',' (обычно ')+uiClock(UI_SWITCH_AVG)+')':bi('longer than usual (','дольше обычного (')+uiClock(UI_SWITCH_AVG)+')');
+    if(left<1&&Number.isFinite(remaining))text+=' · '+bi('limit in ','предел через ')+uiClock(remaining);
+    return text;
+  }
   if(checking)text+=(text?' · ':'')+bi('checking the result','проверяем результат');
   else if(Number.isFinite(remaining))text+=(text?' · ':'')+bi('limit in ','предел через ')+uiClock(remaining);
   return text;

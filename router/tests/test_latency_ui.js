@@ -13,7 +13,7 @@ const inventory={settings:{plan_source:'wireguard:peer_1',plan_target:'openvpn:1
 c.statusNow=()=>now;c.routerWall=()=>now;c.helpLink=(id,label)=>new N('a',{href:'#help/topic/'+id},label);
 function status(){return {time:now,profiles:[website({id:'wireguard:peer_1',time:now,protocol:'wireguard',code:null,rtt_ms:777,dns_ok:true,https_success:2,vendor_state:'SETTLED'},20),website({id:'openvpn:1_1',time:now,protocol:'openvpn',code:null,rtt_ms:999,dns_ok:true,https_success:2,vendor_state:'SETTLED'},40)],website_response_history:history(['wireguard:peer_1','openvpn:1_1'],[[now-120,30,50,1,1,'source'],[now-60,40,null,1,0,'target']])};}
 let s=status();assert(c.latencyRecommendation(s,inventory,now).text.includes('wireguard:peer_1'),'recommendation identifies the actual profile');assert.equal(c.latencyRecommendation(s,inventory,now).index,0);setResponse(s.profiles[0],80);assert.equal(c.latencyRecommendation(s,inventory,now).index,1);
-for(const edit of [p=>p.website_response.time=now-100,p=>p.website_response.avg_ms=NaN,p=>p.vendor_state='CHANGING',p=>{p.website_response.state='partial';p.website_response.avg_ms=null;p.website_response.successes=2;}]){s=status();edit(s.profiles[0]);const r=c.latencyRecommendation(s,inventory,now);assert.equal(r.index,1);assert(r.single&&/Only the reserve has a complete three-site measurement/.test(r.text));assert(!/only.*works/i.test(r.text),'missing site responses do not declare a VPN failed');}
+for(const edit of [p=>p.website_response.time=now-100,p=>p.website_response.avg_ms=NaN,p=>p.vendor_state='CHANGING',p=>{p.website_response.state='partial';p.website_response.avg_ms=null;p.website_response.successes=2;}]){s=status();edit(s.profiles[0]);c.UI_LAST_DELAY={};delete s.website_response_history;const r=c.latencyRecommendation(s,inventory,now);assert.equal(r.index,1);assert(r.single&&/Only the reserve has a complete three-site measurement/.test(r.text));assert(!/only.*works/i.test(r.text),'missing site responses do not declare a VPN failed');}
 for(const change of [{dns_ok:false},{https_success:0},{code:'DNS-001'},{time:now-100-(c.UI_DISPLAY_GRACE||0)}]){const v=status();Object.assign(v.profiles[0],change);const r=c.latencyRecommendation(v,inventory,now);assert.equal(r.index,1);assert(r.single&&/eligible/.test(r.text));assert.equal(c.latencyCurrent(v,inventory,now)[0].rtt_ms,20,'independent current value stays visible while failed/unknown health excludes recommendation');}
 s=status();setResponse(s.profiles[0],40);assert.equal(c.latencyRecommendation(s,inventory,now).index,null,'ties do not force a recommendation');
 s=status();s.website_response_history.pair.reverse();assert.equal(c.latencyHistoryRows(s,inventory,now).length,0,'another pair never supplies this graph');
@@ -58,7 +58,7 @@ assert(lines.some(n=>textOf(n)==='Страна: Германия'));assert(lines
 recommendation.open=true;recommendation.listeners.toggle();
 assert(c.renderLatencyRecommendation(s,inventory,'manual').attrs.open,'poll preserves expansion');
 assert(!c.renderLatencyRecommendation(s,inventory,'channels').attrs.open,'separate view has independent disclosure');
-s.profiles[0].website_response.time=now-100;text=textOf(c.renderLatencyRecommendation(s,inventory,'manual'));assert(!text.includes('de678.nordvpn.com'),'stale comparisons cannot recommend a server');
+s.profiles[0].website_response.time=now-100;c.UI_LAST_DELAY={};delete s.website_response_history;text=textOf(c.renderLatencyRecommendation(s,inventory,'manual'));assert(!text.includes('de678.nordvpn.com'),'a channel never measured cannot be recommended');
 c.bi=originalBi;c.protocolLabel=originalProtocol;delete c.countryName;
 console.log('PASS: collapsed structured RU recommendation, independent remembered disclosures, exact server name, single protocol and no manual-navigation footer');
 // Weekly browsing keeps the inspected offset and restores live mode, without RPC.
@@ -104,3 +104,10 @@ c.statusNow=()=>now;
  const panel=c.renderLatencyPanel(s,inventory);assert(panel,'panel renders with a failing primary');
  const again=c.renderLatencyPanel(s,inventory);assert(textOf(again).includes('20.0 ms'),'technical health failure does not replace an independently valid website mean');
  console.log('PASS: failing primary renders and shows its latest check');}
+{
+  // alpha79 owner rule: a channel without a current measurement keeps its last known delay, so the recommendation still compares.
+  const fresh=status();c.UI_LAST_DELAY={};c.latencyRecommendation(fresh,inventory,now);
+  const later=status();later.profiles[0].website_response.time=now-100;
+  const r=c.latencyRecommendation(later,inventory,now);assert(r.index===0||r.index===1,'last known delay keeps the recommendation');assert(!r.single);
+  console.log('PASS: last known delay keeps the recommendation');
+}

@@ -45,6 +45,6 @@ function chart(samples,rows){
   });
   svg.appendChild(svgNode('text',{x:55,y:247,fill:'var(--muted)','font-size':12},new Date(start*1000).toLocaleTimeString()));
   svg.appendChild(svgNode('text',{x:800,y:247,fill:'var(--muted)','font-size':12,'text-anchor':'end'},new Date(end*1000).toLocaleTimeString()));
-  [svg,tip,legend,E('small',{},bi('Three-site mean, ms, last hour. Each server has its own colour; point at a line or at a name to highlight it. Gaps longer than 90 seconds are not joined.','Среднее трёх сайтов, мс · последний час. У каждого сервера свой цвет; наведите курсор на линию или на название, чтобы выделить. Разрывы длиннее 90 секунд не соединяются.'))].forEach(function(n){wrap.appendChild(n);});
+  [svg,tip,legend,E('small',{},(samples&&samples.kind==='ping'?bi('Ping, ms','Пинг, мс'):bi('Three-site mean, ms','Среднее трёх сайтов, мс'))+bi(' · last hour. Each server has its own colour; point at a line or at a name to highlight it. Gaps longer than 90 seconds are not joined.',' · последний час. У каждого сервера свой цвет; наведите курсор на линию или на название, чтобы выделить. Разрывы длиннее 90 секунд не соединяются.'))].forEach(function(n){wrap.appendChild(n);});
   return wrap;
 }

@@ -126,8 +126,8 @@ def public(row,state,code,stamp=None,rtt=None,target=None):
 
 
 class PingSampler:
-    def __init__(self,inventory_reader,binding_reader,paused=lambda:False):
-        self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused
+    def __init__(self,inventory_reader,binding_reader,paused=lambda:False,compare=False):
+        self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused;self.compare=compare
         self.lock=Lock();self.cache={};self.jobs={};self.attempts={};self.current=set();self.closed=False;self.worker=None
         self.interval=INTERVAL;self.valid_for=VALID_FOR;self.target=TARGET
 
@@ -203,17 +203,18 @@ class PingSampler:
             self.attempts={key:value for key,value in self.attempts.items()if key in live or monotonic_now-value<self.interval}
             for row in rows:
                 if row.get('id')not in selected:
-                    row['ping']=public(row,'inactive','PING-NOT-SELECTED');continue
+                    if not self.compare:row['ping']=public(row,'inactive','PING-NOT-SELECTED')
+                    continue
                 key=signature(row)
                 if key is None:
                     state='inactive'if row.get('administrative_state')=='disabled'or not row.get('interface')else'unavailable'
-                    row['ping']=public(row,state,'PING-INACTIVE'if state=='inactive'else'PING-UNAVAILABLE');continue
+                    self._put(row,public(row,state,'PING-INACTIVE'if state=='inactive'else'PING-UNAVAILABLE'));continue
                 if key not in eligible:
-                    row['ping']=public(row,'stale','PING-DATA-STALE');continue
+                    self._put(row,public(row,'stale','PING-DATA-STALE'));continue
                 value=self.cache.get(key)
-                row['ping']=dict(value)if value else public(row,'checking','PING-CHECK-PENDING')
+                self._put(row,dict(value,valid_for=self.valid_for)if value else public(row,'checking','PING-CHECK-PENDING'))
                 if value and (type(value.get('time'))not in(int,float)or not math.isfinite(value['time'])or not -5<=now-value['time']<=self.valid_for):
-                    row['ping']=public(row,'stale','PING-DATA-STALE',value.get('time'))
+                    self._put(row,public(row,'stale','PING-DATA-STALE',value.get('time'),value.get('rtt_ms'),value.get('target')))
                 if (not self.closed and not self.paused() and self.worker is None and key not in self.jobs and len(batch)<2
                         and monotonic_now-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=self.interval):
                     snapshot={name:row.get(name)for name in IDENTITY+BINDING+('administrative_state','vendor_state')}
@@ -228,6 +229,12 @@ class PingSampler:
                 with self.lock:
                     self.worker=None
                     for key,row in batch:self.jobs.pop(key,None);self.cache[key]=public(row,'unavailable','PING-UNAVAILABLE',now)
+
+    def _put(self,row,value):
+        if not self.compare:row['ping']=value
+        else:
+            extra=row.get('ping_compare') if isinstance(row.get('ping_compare'),dict) else {}
+            extra[self.target]=value;row['ping_compare']=extra
 
     def idle(self):
         with self.lock:return self.worker is None
