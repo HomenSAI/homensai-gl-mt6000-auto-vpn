@@ -77,3 +77,16 @@
 .hv-app .hv-probe-countdown{font-size:.78em;opacity:.8;white-space:nowrap;font-variant-numeric:tabular-nums}
 .hv-app .hv-response-choices{display:flex;flex-direction:column;gap:6px;margin:8px 0}
 .hv-app .hv-response-choice{display:flex;align-items:center;gap:6px}
+/* Countdown and text column keep their size so nothing next to the button moves on refresh. */
+.hv-app .hv-probe-countdown{display:inline-block;min-width:11.5em;text-align:center}
+.hv-app .hv-light-column{flex:0 0 auto;width:11.5em}
+.hv-app .hv-light-block .hv-light-text{flex:1 1 16em;min-width:14em}
+.hv-app .hv-light-help-wide{margin-top:12px}
+.hv-app .hv-light-help-wide .hv-light-legend{display:grid;gap:8px;max-width:none}
+.hv-app .hv-light-help-wide .hv-light-legend li{display:flex;gap:10px;align-items:flex-start}
+.hv-app .hv-probe-slider-box{flex:1 1 220px;min-width:160px;display:flex;flex-direction:column;gap:2px}
+.hv-app .hv-probe-slider-box .hv-probe-slider{width:100%;min-width:0;flex:none}
+.hv-app .hv-probe-ticks{display:flex;justify-content:space-between;padding:0 6px;font-size:.8em;opacity:.7}
+.hv-app .hv-probe-ticks .hv-probe-tick-current{opacity:1;font-weight:700;color:var(--hv-accent,#2f7d5b)}
+.hv-app .hv-probe-text-row .hv-probe-text{display:inline}
+.hv-app .hv-probe-level-label{white-space:nowrap}

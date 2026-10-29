@@ -978,7 +978,7 @@ function renderAutoLight(light,technicalCode,countdown){
     E('li',{'class':signal==='green'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':signal==='red'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),light.hold?manualHoldText():bi('Red: automatic switching does not work: it is off, blocked, needs your attention, or the router sends no fresh data. Traffic then stays where it is.','Красный: автопереключение не работает: выключено, заблокировано, требует внимания или роутер не присылает свежих данных. Трафик тогда остаётся там, где есть.')]),
     E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive; the button shows whether switching is available, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой, доступность переключения показана на кнопке, серый — ждём ответа роутера, красный — ошибка.')])]);
-  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},[E('span',{'class':'hv-light-icon','aria-hidden':'true'},light.icon+' '),light.title]),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
+  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},light.title),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
 function autoCodeNotice(code,extra){
@@ -1170,6 +1170,8 @@ function renderAutoControl(status,inventory,refresh){
     }
   }
   var automatic=E('section',{'class':'hv-chart-card hv-auto-control'},[header,E('div',{'class':'hv-auto-controls'},[E('div',{'class':'hv-auto-switch'},[E('div',{'class':'hv-auto-power-unit'},[E('strong',{'class':'hv-auto-state hv-auto-state-'+(autoRuns(light)?'on':'off'),'role':'status'},autoRuns(light)?bi('Auto works','Auto работает'):autoSignal(light)==='off'?bi('Auto is off','Auto выключен'):bi('Auto does not work','Auto не работает')),button,actionLabel]),renderAutoLight(light,technicalCode,typeof probeCountdown==='function'?probeCountdown(status):null)]),typeof renderConnectivityCheck==='function'&&typeof refresh==='function'?renderConnectivityCheck(status,refresh,inventory):null].filter(Boolean)),holdReturn,checklist,pairMode?null:E('details',{'class':'hv-auto-scope','data-auto-explanation':'scope'},[E('summary',{},bi('About these checks','Об этих проверках')),E('p',{'class':'hv-auto-limit'},(pairMode?bi('Two selected VPN channels. The router checks it itself.','Два выбранных VPN-канала. Проверку делает сам роутер.'):bi('Experimental: each automatic switch must be confirmed by the LAN helper running on a computer in your network. Without it the router goes back to the previous route after 90 seconds.','Экспериментально: каждое автоматическое переключение должен подтвердить LAN-помощник на компьютере в вашей сети. Без него роутер через 90 секунд вернётся на прежний маршрут.'))+(Number.isFinite(until)&&until>0?' '+bi('Window ends: ','Окно действует до: ')+new Date(until*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB')+'.':''))])].filter(Boolean));
+  var lightHelp=automatic&&automatic.querySelector?automatic.querySelector('.hv-light-help'):null;
+  if(lightHelp){lightHelp.classList.add('hv-light-help-wide');automatic.appendChild(lightHelp);}
   return E('div',{'class':'hv-auto-sections'},[automatic,typeof renderProbeControl==='function'?renderProbeControl(status,inventory):null,statistics,typeof renderManualSwitch==='function'?renderManualSwitch(status,inventory):null].filter(Boolean));
 }
 
@@ -1206,8 +1208,8 @@ function renderProbeLog(host){
 function renderProbeControl(status,inventory){
   var policy=status.probe_policy||{},settings=inventory.settings||{};
   if(!Number.isInteger(policy.level))return null;
-  var stored=Number(settings.probe_level),saved={level:stored>=1&&stored<=5?stored:policy.level,boost:settings.probe_boost===undefined?policy.boost_enabled!==false:settings.probe_boost!==false};
-  if(PROBE_APPLIED&&(policy.level===PROBE_APPLIED.level&&policy.boost_enabled===PROBE_APPLIED.boost||Date.now()-PROBE_APPLIED.at>180000))PROBE_APPLIED=null;
+  var saved={level:policy.level,boost:policy.boost_enabled!==false};
+  if(PROBE_APPLIED&&(policy.level===PROBE_APPLIED.level&&(policy.boost_enabled!==false)===PROBE_APPLIED.boost||Date.now()-PROBE_APPLIED.at>180000))PROBE_APPLIED=null;
   if(PROBE_APPLIED)saved={level:PROBE_APPLIED.level,boost:PROBE_APPLIED.boost};
   var draft=PROBE_DRAFT||saved;
   var slider=E('input',{'type':'range','min':'1','max':'5','step':'1','value':String(draft.level),'class':'hv-probe-slider','aria-label':bi('Probe level','Уровень опроса')});
@@ -1256,6 +1258,7 @@ function probeCountdown(status){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
   var node=E('small',{'class':'hv-probe-countdown','role':'timer','aria-live':'off'},'');
   node.hvDeadline=Date.now()+(status.time+interval-now)*1000;node.hvInterval=interval;
+  if(PROBE_APPLIED&&PROBE_LEVELS[PROBE_APPLIED.level]){node.hvInterval=PROBE_LEVELS[PROBE_APPLIED.level][0];node.hvDeadline=PROBE_APPLIED.at+node.hvInterval*1000;}
   if(typeof node.textContent!=='undefined'||true)probeCountdownText(node);
   if(!PROBE_TICK&&typeof window!=='undefined'&&window.setInterval&&typeof document!=='undefined'&&document.querySelectorAll)
     PROBE_TICK=window.setInterval(function(){var nodes=document.querySelectorAll('.hv-probe-countdown');for(var i=0;i<nodes.length;i++)if(Number.isFinite(nodes[i].hvDeadline))probeCountdownText(nodes[i]);},1000);
