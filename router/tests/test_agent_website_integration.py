@@ -11,7 +11,7 @@ class WebsiteIntegration(unittest.TestCase):
     def iteration(self,fail,history_fail=False):
         profile={'id':'wireguard:peer_1','section':'peer_1','name':'Example','protocol':'wireguard','interface':'wgclient1',
                  'administrative_state':'enabled','vendor_tunnel_id':'wireguard:wgclient1'}
-        data={'profiles':[profile],'servers':[],'wan_interfaces':[],'settings':{'interval':30,'checkpoint':900,'probe_limit':2,'plan_enabled':False}}
+        data={'profiles':[profile],'servers':[],'wan_interfaces':[],'settings':{'interval':30,'checkpoint':900,'probe_limit':2,'plan_enabled':False,'response_metric':'websites'}}
         measured=dict(id=profile['id'],time=time.time(),device='wgclient1',mark=4096,table='1001',ifindex=7,
                       code=None,dns_ok=True,https_success=3,rtt_ms=1400,administrative_state='enabled')
         with tempfile.TemporaryDirectory() as directory,ExitStack() as stack:

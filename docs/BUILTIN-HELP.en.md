@@ -69,6 +69,29 @@ Do not request secrets in chat or print full configs. This is diagnosis only: no
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
 ```
 
+<a id="response-measurement"></a>
+## How the response is measured
+
+You want to know what the response numbers mean and why the reserve is slower.
+
+Settings → How the response is measured chooses the method. Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.
+
+The response shown is the average of the three sites and appears only when all three answered (3/3). A partial result is shown as coverage without an average, so a slow site that timed out cannot make the number look better.
+
+Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.
+
+How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How the response is measured.
+You want to know what the response numbers mean and why the reserve is slower.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="auto-two-channels"></a>
 ## How two-channel Auto works
 

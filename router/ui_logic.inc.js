@@ -57,6 +57,23 @@ function websiteMs(value){return (Math.floor(value*10+.5)/10).toFixed(1);}
 var WEBSITE_METRIC='websites-https-mean-ms-v1',WEBSITE_TARGET_SET='google-cloudflare-wikipedia-v1';
 var WEBSITE_URLS={google:'https://www.google.com/generate_204',cloudflare:'https://www.cloudflare.com/cdn-cgi/trace',wikipedia:'https://www.wikipedia.org/'};
 function channelPingModel(p,status,now){
+  if(status&&typeof status.response_metric==='string'&&status.response_metric.indexOf('icmp-')===0)return channelIcmpModel(p,status,now);
+  return channelWebsiteModel(p,status,now);
+}
+// Ping (ICMP echo through the tunnel to the chosen public DNS address): the owner's default response metric.
+function channelIcmpModel(p,status,now){
+  var x=p&&p.ping,target=String(status.response_metric).slice(5);
+  function no(state,code){return {state:state,code:code,rtt_ms:null,successes:0,kind:'ping',text:bi('No fresh ping','Нет свежего пинга')};}
+  if(!status||status.rpc_error||status.error)return no('unavailable','STATUS-REQUEST-FAILED');
+  if(!observationFresh(status,now))return no('stale','MONITOR-DATA-STALE');
+  if(!p||!p.interface||p.administrative_state==='disabled')return no('inactive','PING-UNAVAILABLE');
+  if(!x||x.state==='checking')return no('checking','PING-PENDING');
+  if(x.metric!=='icmp-rtt-ms'||x.target!==target||x.interface!==p.interface)return no('checking','PING-PENDING');
+  if(!Number.isFinite(x.time)||!Number.isFinite(x.valid_for)||x.valid_for<=0||x.valid_for>465||now-x.time< -5||now-x.time>x.valid_for+(typeof UI_DISPLAY_GRACE==='number'?UI_DISPLAY_GRACE:0))return no('stale','PING-DATA-STALE');
+  if(x.state!=='ok'||!Number.isFinite(x.rtt_ms))return no(x.state==='failed'?'failed':'unavailable',x.code||'PING-FAILED');
+  return {state:'ok',code:null,rtt_ms:x.rtt_ms,successes:1,kind:'ping',text:websiteMs(x.rtt_ms)+' '+bi('ms','мс')+' · '+bi('ping ','пинг ')+target};
+}
+function channelWebsiteModel(p,status,now){
   var x=p&&p.website_response,n=x&&Number.isInteger(x.successes)&&x.successes>=0&&x.successes<=3?x.successes:0;
   function no(state,code){return {state:state,code:code,rtt_ms:null,successes:n,text:bi('No complete three-site check','Нет полной проверки трёх сайтов')+' · '+n+'/3'};}
   if(!status||status.rpc_error||status.error)return no('unavailable','STATUS-REQUEST-FAILED');

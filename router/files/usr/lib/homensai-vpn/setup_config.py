@@ -119,6 +119,13 @@ def probe_payload(arguments):
                     'interval':str(interval),'measure_interval':str(measure)},'servers':[]}
 
 
+def response_payload(arguments):
+    from probe_policy import RESPONSE_METRICS
+    if not isinstance(arguments,dict) or set(arguments)!={'metric'} or arguments['metric'] not in RESPONSE_METRICS:
+        raise ValueError('RESPONSE-METRIC-INVALID')
+    return {'main':{'response_metric':arguments['metric']},'servers':[]}
+
+
 def monitor_payload(arguments, probe_max=16):
     required={'interval','checkpoint','probe_limit','planning_enabled'}
     if not required<=set(arguments) or set(arguments)-required-{'live_log_limit','history_days'} or type(arguments['planning_enabled']) is not bool:raise ValueError('MONITOR-PREFERENCES-FIELDS')
@@ -225,6 +232,7 @@ def save(arguments, kind):
     elif kind=='speed':payload=speed_payload(arguments)
     elif kind=='monitor':payload=monitor_payload(arguments)
     elif kind=='probe':payload=probe_payload(arguments)
+    elif kind=='response':payload=response_payload(arguments)
     elif kind=='terms':
         from agent import TERMS_VERSION
         import time

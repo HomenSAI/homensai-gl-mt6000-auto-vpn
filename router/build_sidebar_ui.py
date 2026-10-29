@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard142'
+UI_MODULE='dashboard143'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -362,7 +362,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui108.css',expected=3)
+must_replace('ui15.css','ui109.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -519,7 +519,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui108.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui109.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -541,6 +541,7 @@ assert source.count(_dead_chart)==1 and source.count('function chart(samples,row
 _dead_start=source.index(_dead_chart);_dead_end=source.index('\nfunction histogram(',_dead_start)
 source=source[:_dead_start]+source[_dead_end+1:]
 assert source.count('function chart(samples,rows){')==1 and 'var CHART_COLORS=' in source,'FINAL-CHART-COUNT'
+must_replace("settingsHost.appendChild(speedSettings(inventory));","settingsHost.appendChild(speedSettings(inventory));settingsHost.appendChild(responseSettings(inventory));")
 # The older speedPanel/trafficHistoryPanel declarations (speed_panel.inc.js, traffic_panel.inc.js) are
 # superseded in the same module scope by speed_table.inc.js/traffic_chart.inc.js; they were shipped dead.
 _dead_panels=source.index('function speedPanel(status,inventory,period,onPeriod){')
@@ -551,7 +552,7 @@ assert [line.split('(')[0] for line in _dead_text.split('\n') if line.startswith
 source=source[:_dead_panels]+source[_dead_panels_end+1:]
 assert source.count('function speedPanel(')==1 and source.count('function trafficHistoryPanel(')==1,'FINAL-PANEL-COUNT'
 # Declarations no code path calls any more (their call sites were replaced by later patches).
-for _name in ('renderPlanBlockers','renderProbeChecks'):
+for _name in ('renderPlanBlockers','renderProbeChecks','renderDecisionExplanation'):
     assert len(re.findall(r'(?<![A-Za-z0-9_$.])'+_name+r'(?![A-Za-z0-9_$])',source))==1,'DEAD-FUNCTION-STILL-USED '+_name
     _start=source.index('\nfunction '+_name+'(')+1;_end=source.index('\n}\n',_start)+3
     assert '\nfunction ' not in source[_start:_end],'DEAD-FUNCTION-SPAN '+_name

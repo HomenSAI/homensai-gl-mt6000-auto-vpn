@@ -1447,6 +1447,30 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **Action:** Close and open the log again in a minute.
 
+## PING-PENDING
+
+Пинг ещё не измерен / Ping not measured yet
+
+**RU:** Роутер ещё не закончил первый пинг через этот канал после запуска или смены настройки.
+
+**EN:** The router has not finished the first ping through this channel since it started or since the setting changed.
+
+**Что делать:** Дождитесь следующей проверки (см. таймер под светофором).
+
+**Action:** Wait for the next check (see the countdown under the traffic light).
+
+## RESPONSE-METRIC-INVALID
+
+Неизвестный способ измерения отклика / Unknown response measurement
+
+**RU:** Страница отправила способ измерения, которого нет на роутере.
+
+**EN:** The page sent a measurement the router does not offer.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и выберите снова.
+
+**Action:** Reload the page (Ctrl+F5) and choose again.
+
 ## MANUAL-ALREADY-SELECTED
 
 Этот канал уже выбран / This channel is already selected

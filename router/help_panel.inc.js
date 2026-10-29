@@ -1,6 +1,44 @@
 /* Built-in help: what to do when something is wrong. Data are [English, Russian] pairs; commands are never translated. */
 var HELP_TOPICS=[
   {
+    "id": "response-measurement",
+    "open": false,
+    "title": [
+      "How the response is measured",
+      "Как измеряется отклик"
+    ],
+    "when": [
+      "You want to know what the response numbers mean and why the reserve is slower.",
+      "Вы хотите понять, что означают числа отклика и почему резерв медленнее."
+    ],
+    "steps": [
+      {
+        "t": [
+          "Settings → How the response is measured chooses the method. Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.",
+          "Способ выбирается в «Настройки» → «Как измеряется отклик». По умолчанию — пинг (ICMP-запрос к 1.1.1.1, либо 8.8.8.8 / 9.9.9.9) через каждый туннель: небольшие числа, почти без нагрузки на роутер, лучше всего для сравнения каналов. Другой вариант — три сайта. Измеряет сам роутер через каждый VPN-туннель, а не ваш компьютер. Он заново открывает три сайта: Google, Cloudflare и Wikipedia. Каждое время включает поиск адреса (DNS), TCP-соединение, установку шифрования TLS и получение полных HTTP-заголовков."
+        ]
+      },
+      {
+        "t": [
+          "The response shown is the average of the three sites and appears only when all three answered (3/3). A partial result is shown as coverage without an average, so a slow site that timed out cannot make the number look better.",
+          "Показанный отклик — среднее трёх сайтов, и он появляется, только если ответили все три (3/3). Частичный результат показывается как охват без среднего, поэтому медленный сайт, не успевший ответить, не может «улучшить» число."
+        ]
+      },
+      {
+        "t": [
+          "Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.",
+          "Открытие сайта требует 5–7 обменов «туда-обратно», поэтому отклик в несколько раз больше пинга. Пример с MT3000: у WireGuard пинг 53 мс даёт около 430 мс; у OpenVPN через TCP пинг 241 мс даёт около 2,4 с, потому что TCP внутри TCP ждёт и переотправляет при любой потере, а OpenVPN сильнее нагружает процессор роутера."
+        ]
+      },
+      {
+        "t": [
+          "How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.",
+          "Как часто измеряется, задаёт уровень опроса на «Обзоре» (раз в 30 с на уровне 5, раз в 5 мин на уровне 1, раз в 30 с во время автоускорения). Отклик — только информация: Auto решает по проверкам DNS и HTTPS, а не по времени отклика."
+        ]
+      }
+    ]
+  },
+  {
     "id": "auto-two-channels",
     "open": false,
     "title": [

@@ -29,3 +29,7 @@
 .hv-simple-return{margin:8px 0 14px}
 @media(max-width:700px){.hv-workspace[data-hv-design] .hv-page-header{flex-direction:column}.hv-page-header>.hv-header-main{width:100%}.hv-page-header>.hv-page-actions{align-self:stretch;flex-direction:row;flex-wrap:wrap;min-width:0}.hv-heading-row{gap:12px;padding-top:4px}}
 @media(max-width:600px){.hv-app[data-hv-active="home"] .hv-main{padding:14px 10px}.hv-simple-card{padding:23px 19px}.hv-simple-state{font-size:26px}.hv-simple-channel-top{gap:8px}}
+/* Responses side by side: primary on the left, reserve on the right. */
+.hv-simple-response{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.hv-simple-response .hv-simple-latency{display:flex;flex-direction:column;gap:6px;padding:12px 14px;min-width:0}
+.hv-simple-response .hv-simple-latency+.hv-simple-latency{border-left:1px solid var(--line)}

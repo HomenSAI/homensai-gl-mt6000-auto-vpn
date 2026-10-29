@@ -116,9 +116,9 @@ for(const language of ['en','ru']){
   {
     // Connection wording: only a lost router-program answer is "no connection".
     const f=fixture(language),stale=base();stale.native_failover.time=T-200;const sv=surfaces(f,stale);
-    assert(!/нет связи|no connection/i.test(sv.side.text()),'stale controller with fresh RPC is not a lost connection');assert(sv.side.text().includes(ru?'Auto: данные устарели':'Auto: data out of date'));
+    assert(!/нет связи|no connection/i.test(sv.side.text()),'stale controller with fresh RPC is not a lost connection');assert(sv.side.text().includes(ru?'Обновляем состояние роутера':'Refreshing the router state'),'Auto the owner turned on stays on while data is late');
     assert(!/Нет связи с роутером|No connection to the router/.test(sv.home.text()));
-    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(lv.side.text().includes(ru?'Auto: нет связи':'Auto: no connection'));
+    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(lv.side.text().includes(ru?'Нет ответа роутера':'No answer from the router'),'a lost answer is named as such and retried');
   }
   {
     // Reload during an operation: the backend request keeps the buttons busy with a deadline-bounded stage.
