@@ -112,7 +112,7 @@ async function main(){
     const original=JSON.stringify(s);let resolve;const pending=c.uiStatusRequest(()=>new Promise(done=>{resolve=done}));await Promise.resolve();
     clock.tick+=scenario.delay;clock.wall+=scenario.wallBack?-600000:scenario.delay;resolve(s);const received=await pending,now=c.statusNow(received),slow=scenario.delay>15000;
     assert(Math.abs(now-stamp-scenario.delay/1000)<1e-9,'status evidence ages during RPC transport, including a zero monotonic tick and backwards clocks');
-    assert.strictEqual(c.uiNewestStatus(previous,received),received);assert.equal(c.selectedProfile(received,now),slow?null:'a');assert.equal(c.autoControlModel(received,now).fresh,10+scenario.delay/1000<=30+(c.UI_DISPLAY_GRACE||0),'controller heartbeat ages in transit; display grace tolerates a slow status call');
+    assert.strictEqual(c.uiNewestStatus(previous,received),received);assert.equal(c.selectedProfile(received,now),'a','a route proof fresh when the router served the answer stays selected in transit');assert.equal(c.autoControlModel(received,now).fresh,true,'the controller heartbeat is judged at the answer time; the answer itself is still fresh');
     received.profiles.forEach((p,i)=>assert.equal(c.channelPingModel(p,received,now).rtt_ms,slow?null:100*(i+1),'both 45-second website results expire while in transit'));
     assert(c.observationFresh(received,now));assert.equal(JSON.stringify(received),original,'transport metadata does not rewrite router evidence');
   }
@@ -184,7 +184,7 @@ async function main(){
     reset.auto_control.requested='off';reset.auto_control.pair_phase='STOPPED';assert(!c.autoControlModel(reset,100).awaiting);assert.equal(c.autoCommandOperation(reset,100),null);
     reset.auto_control.requested='on';
     reset.auto_control.pair_phase='STARTING';assert(c.autoControlModel(reset,100).awaiting);assert.equal(c.autoCommandOperation(reset,100),'starting');
-    reset.auto_control.pair_phase='RUNNING';assert(!c.autoControlModel(reset,131+(c.UI_DISPLAY_GRACE||0)).fresh);
+    reset.auto_control.pair_phase='RUNNING';assert(!c.autoControlModel(reset,100+c.observationValidFor(reset)+1).fresh,'an answer older than its window is not fresh');
     reset.native_failover.mode='legacy';reset.native_failover.proof_scope='lan';delete reset.channel_path;assert(c.autoControlModel(reset,100).awaiting,'legacy timestamp validation is unchanged');
   }
   for(const observed of [false,true]){

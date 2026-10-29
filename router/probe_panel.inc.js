@@ -74,8 +74,10 @@ function renderProbeControl(status,inventory){
 // Countdown to the router's next scheduled channel check, from its published cadence (probe level or boost).
 var PROBE_TICK=null;
 function probeCountdownText(node){
+  var period=node.hvInterval*1000,late=Date.now()-node.hvDeadline;
+  if(late>=0&&period>0)node.hvDeadline+=Math.ceil((late+1)/period)*period;
   var left=Math.round((node.hvDeadline-Date.now())/1000);
-  node.textContent=left>0?bi('Next check in ','Следующая проверка через ')+left+bi(' s',' с')+' · '+bi('every ','раз в ')+node.hvInterval+bi(' s',' с'):bi('Checking now…','Идёт проверка…');
+  node.textContent=left>0?bi('Check in ','Проверка через ')+left+bi(' s',' с'):bi('Checking','Проверка');
 }
 function probeCountdown(status){
   var p=(status||{}).probe_policy||{},interval=p.effective_interval;

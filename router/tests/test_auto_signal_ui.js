@@ -11,17 +11,20 @@ for(const language of ['en','ru']){
   const light=s=>c.autoLightModel(s,inventory,now);
   // Confirmed route: green, and the button says Auto works.
   let s=fixture(1000),l=light(s);assert.equal(c.autoSignal(l),'green');assert(c.autoRuns(l));
-  // The 15-second kernel proof ages while the router re-confirms it: yellow (a check is shown), Auto still runs.
+  // The page shows an answer for 10-20 s before the next one: a proof that was fresh when the router served
+  // the answer stays green while the page waits (content is judged at the answer time).
+  now=1025;s=fixture(1000);s.server_time=1001;l=light(s);assert.equal(c.autoSignal(l),'green','a fresh answer stays green between page updates');assert(c.autoRuns(l));
+  // The router itself served an old proof: a real route check, yellow while Auto runs.
   now=1030;s=fixture(1000);s.time=s.server_time=s.native_failover.time=s.profiles[0].time=s.profiles[1].time=1028;
-  l=light(s);assert.equal(c.autoSignal(l),'yellow','a re-check is shown as yellow');assert(c.autoRuns(l)&&!c.autoWorking(l),'yellow is not a green claim, but Auto still runs');
+  l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l)&&!c.autoWorking(l),'yellow is not a green claim, but Auto still runs');
   // Transient controller blockers during a running session are a check, not an alarm.
   now=2000;s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['OBSERVATION-STALE'];l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l));
   // A critical controller alarm is red.
   s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['ROLLBACK-GIVEN-UP'];l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
   // Data late while the owner's Auto runs: yellow "refreshing", never "Auto off".
   now=2200;s=fixture(2000);l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l));
-  // The scheduled check is due (published cadence passed): yellow while it runs.
-  now=2012;s=fixture(2000);s.channel_path.checked_at=s.channel_path.time=2010;s.probe_policy={effective_interval:10};l=light(s);assert.equal(c.autoSignal(l),'yellow');
+  // A routine scheduled check is due: still green (the countdown shows it), not yellow.
+  now=2012;s=fixture(2000);s.server_time=2012;s.channel_path.checked_at=s.channel_path.time=2010;s.probe_policy={effective_interval:10};l=light(s);assert.equal(c.autoSignal(l),'green');
   // The router itself reports the route unverified (not just aged): never held, yellow while Auto runs.
   now=2000;s=fixture(2000);s.channel_path.checked_at=null;s.channel_path.time=null;s.channel_path.kernel_policy_verified=false;
   l=light(s);assert.notEqual(c.autoSignal(l),'green','an explicit unverified route is never held green');assert.equal(c.autoSignal(l),'yellow');
