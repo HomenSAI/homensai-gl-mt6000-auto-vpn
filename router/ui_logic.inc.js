@@ -158,7 +158,7 @@ function channelPathSelection(status,now,sourceId,targetId){
   if(required&&(path.mode!=='continuous-pair'||path.selection_proof!=='fw3-kernel-marking'||!Number.isFinite(path.valid_for)||path.valid_for<=0||path.valid_for>15||!Number.isFinite(path.checked_at)||path.time!==path.checked_at))return result;
   var maxAge=required?path.valid_for:30;
   var checkedAt=required?path.checked_at:path.time;
-  if(!Number.isFinite(checkedAt)||now-checkedAt< -5||now-checkedAt>maxAge){result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';return result;}
+  if(!Number.isFinite(checkedAt)||now-checkedAt< -5||now-checkedAt>maxAge){result.code=required?'KERNEL-POLICY-UNVERIFIED':'MONITOR-DATA-STALE';result.expired=Number.isFinite(checkedAt)&&now-checkedAt>maxAge;return result;}
   var source=path.source_profile_id,target=path.target_profile_id;
   if(typeof source!=='string'||!source||typeof target!=='string'||!target||source===target||sourceId&&source!==sourceId||targetId&&target!==targetId){result.code='PAIR-POLICY-UNVERIFIED';return result;}
   result.moving=path.transitioning===true;
