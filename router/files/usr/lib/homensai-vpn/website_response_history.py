@@ -71,17 +71,22 @@ def measurement(profile,now):
 
 
 class WebsiteResponseHistory:
+    METRIC=METRIC;TARGET_SET=TARGET_SET;MAX_MS=MAX_MS;DEFINITION=DEFINITION;PREFIX='WEBSITE-HISTORY'
+    SCOPE='only observed complete 3/3 means; partial checks are gaps; historical HTTPS/DoH and ICMP are separate'
+    @staticmethod
+    def measure(profile,now):return measurement(profile,now)
+
     def __init__(self,data=None,notice=None):
         self.data=copy.deepcopy(data)if data is not None else self.empty()
         self.notice=notice;self.retention_seconds=WEEK;self.validate()
 
-    @staticmethod
-    def empty():return {'version':1,'metric':METRIC,'target_set':TARGET_SET,'rows':[],'pairs':{},'current':None,'seen':{},'saved':None,'stats_since':None,'reset_floor':None}
+    @classmethod
+    def empty(cls):return {'version':1,'metric':cls.METRIC,'target_set':cls.TARGET_SET,'rows':[],'pairs':{},'current':None,'seen':{},'saved':None,'stats_since':None,'reset_floor':None}
 
     def validate(self):
         d=self.data
         if (not isinstance(d,dict) or set(d)!=set(self.empty()) or type(d['version'])is not int or d['version']!=1
-                or d['metric']!=METRIC or d['target_set']!=TARGET_SET or not isinstance(d['rows'],list)or len(d['rows'])>MAX_ROWS
+                or d['metric']!=self.METRIC or d['target_set']!=self.TARGET_SET or not isinstance(d['rows'],list)or len(d['rows'])>MAX_ROWS
                 or not isinstance(d['pairs'],dict)or len(d['pairs'])>32 or not isinstance(d['seen'],dict)or len(d['seen'])>64
                 or any(d[key]is not None and(not number(d[key])or d[key]<0)for key in ('saved','stats_since','reset_floor'))):raise ValueError('WEBSITE-HISTORY-SCHEMA')
         for key,pair in d['pairs'].items():
@@ -99,7 +104,7 @@ class WebsiteResponseHistory:
                 value,count,success,attempted,partial=row[1+side],row[3+side],row[7+side],row[9+side],row[11+side]
                 if (any(type(v)is not int or v<0 for v in (count,success,attempted,partial))or count+partial>120
                         or attempted!=3*(count+partial)or not count*3<=success<=count*3+partial*2
-                        or(count==0)!=(value is None)or value is not None and(not number(value)or not 0<=value<=MAX_MS)):
+                        or(count==0)!=(value is None)or value is not None and(not number(value)or not 0<=value<=self.MAX_MS)):
                     raise ValueError('WEBSITE-HISTORY-VALUE')
             previous=row[0]
 
@@ -112,7 +117,7 @@ class WebsiteResponseHistory:
             value=json.loads(path.read_text(encoding='utf8'))
             if not isinstance(value,dict)or set(value)!={'data','sha256'}or value['sha256']!=checksum(value['data']):raise ValueError('checksum')
             return cls(value['data'])
-        except (OSError,ValueError,TypeError,KeyError,OverflowError):return cls(notice='WEBSITE-HISTORY-UNAVAILABLE')
+        except (OSError,ValueError,TypeError,KeyError,OverflowError):return cls(notice=cls.PREFIX+'-UNAVAILABLE')
 
     def observe(self,status,settings,now):
         if not isinstance(status,dict)or not number(now)or now<0:return
@@ -129,7 +134,7 @@ class WebsiteResponseHistory:
         ids=[native.get(role)if fresh else plan.get(role,settings.get('plan_'+role))for role in ('source','target')]
         if ids[0]==ids[1]or any(not isinstance(v,str)or not IDENTIFIER.fullmatch(v)for v in ids):return
         key=hashlib.sha256('\0'.join(ids).encode()).hexdigest()[:16]
-        if key not in d['pairs']and len(d['pairs'])>=32:self.notice='WEBSITE-HISTORY-PAIR-LIMIT';return
+        if key not in d['pairs']and len(d['pairs'])>=32:self.notice=self.PREFIX+'-PAIR-LIMIT';return
         d['pairs'][key]=ids;d['current']=key;minute=int(now//60)*60
         def bucket(stamp):
             found=next((r for r in reversed(d['rows'])if r[0]==stamp and r[6]==key),None)
@@ -143,7 +148,7 @@ class WebsiteResponseHistory:
         profiles=status.get('profiles',[]);profiles=profiles if isinstance(profiles,list)else[]
         for side,identifier in enumerate(ids):
             matched=[p for p in profiles if isinstance(p,dict)and p.get('id')==identifier]
-            sample=measurement(matched[0],now)if len(matched)==1 else None
+            sample=self.measure(matched[0],now)if len(matched)==1 else None
             if (not sample or sample['time']<=d['seen'].get(identifier,-1)
                     or d['reset_floor']is not None and sample['time']<=d['reset_floor']):continue
             row=bucket(int(sample['time']//60)*60)
@@ -158,7 +163,7 @@ class WebsiteResponseHistory:
     def statistics(self,rows,side,since):
         rows=[r for r in rows if r[0]>=since];count=sum(r[3+side]for r in rows)
         total=sum(self.sum_tenths(r,side)for r in rows)
-        return {'metric':METRIC,'target_set':TARGET_SET,'avg_ms':mean_from_tenths(total,count)if count else None,
+        return {'metric':self.METRIC,'target_set':self.TARGET_SET,'avg_ms':mean_from_tenths(total,count)if count else None,
                 'complete_samples':count,'incomplete_samples':sum(r[11+side]for r in rows),
                 'cycles':count+sum(r[11+side]for r in rows),'complete':count,'sum_ms':total/10,'sum_tenths':total,
                 'successful_checks':sum(r[7+side]for r in rows),'attempted_checks':sum(r[9+side]for r in rows),'since':since}
@@ -167,11 +172,11 @@ class WebsiteResponseHistory:
         d=self.data;rows=[r for r in d['rows']if r[6]==d['current']];since=d['stats_since']or 0
         packed=[[r[0],self.sum_tenths(r,0)if r[3]else None,self.sum_tenths(r,1)if r[4]else None,r[3],r[4],r[5]]for r in rows]
         coverage=[[r[0],r[7],r[8],r[9],r[10],r[11],r[12]]for r in rows]
-        result={'version':1,'metric':METRIC,'target_set':TARGET_SET,'row_encoding':'sum-tenths','definition':DEFINITION,'resolution_seconds':60,
+        result={'version':1,'metric':self.METRIC,'target_set':self.TARGET_SET,'row_encoding':'sum-tenths','definition':self.DEFINITION,'resolution_seconds':60,
             'retention_seconds':self.retention_seconds,'pair':list(d['pairs'].get(d['current'],[])),'rows':packed[-1441:],
             'coverage_rows':coverage[-1441:],'rows_count':len(rows),'saved':d['saved'],'notice':self.notice,'stats_since':d['stats_since'],'reset_floor':d['reset_floor'],
             'statistics':{role:self.statistics(rows,side,since)for side,role in enumerate(('source','target'))},
-            'scope':'only observed complete 3/3 means; partial checks are gaps; historical HTTPS/DoH and ICMP are separate'}
+            'scope':self.SCOPE}
         result['profile_statistics']={identifier:result['statistics'][role]for identifier,role in zip(result['pair'],('source','target'))}
         if len(rows)>1441:result['rows_json']=json.dumps(packed,separators=(',',':'),allow_nan=False);result['coverage_rows_json']=json.dumps(coverage,separators=(',',':'))
         return result
@@ -180,21 +185,21 @@ class WebsiteResponseHistory:
     def sum_tenths(row,side):return int(math.floor((row[1+side]or 0)*row[3+side]*10+.5))
 
     def clear(self,now=None):
-        if self.notice=='WEBSITE-HISTORY-UNAVAILABLE':raise ValueError(self.notice)
+        if self.notice==self.PREFIX+'-UNAVAILABLE':raise ValueError(self.notice)
         floor=max(self.data['seen'].values(),default=0)if now is None else now
-        if not number(floor)or floor<0:raise ValueError('WEBSITE-HISTORY-TIME')
+        if not number(floor)or floor<0:raise ValueError(self.PREFIX+'-TIME')
         self.data=self.empty();self.data['reset_floor']=floor;self.notice=None
 
     def clear_statistics(self,now):
-        if self.notice=='WEBSITE-HISTORY-UNAVAILABLE':raise ValueError(self.notice)
-        if not number(now)or now<0:raise ValueError('WEBSITE-HISTORY-TIME')
+        if self.notice==self.PREFIX+'-UNAVAILABLE':raise ValueError(self.notice)
+        if not number(now)or now<0:raise ValueError(self.PREFIX+'-TIME')
         # Do not count a bucket containing pre-reset measurements. Keep its chart point.
         self.data['stats_since']=math.ceil(now/60)*60
 
     def save(self,path,writer,now):
-        if not number(now)or now<0:raise ValueError('WEBSITE-HISTORY-TIME')
-        if self.notice=='WEBSITE-HISTORY-UNAVAILABLE':raise ValueError(self.notice)
+        if not number(now)or now<0:raise ValueError(self.PREFIX+'-TIME')
+        if self.notice==self.PREFIX+'-UNAVAILABLE':raise ValueError(self.notice)
         self.validate();data=copy.deepcopy(self.data);data['saved']=now
-        if len(json.dumps(data,separators=(',',':')).encode())>MAX_BYTES:raise ValueError('WEBSITE-HISTORY-SIZE')
+        if len(json.dumps(data,separators=(',',':')).encode())>MAX_BYTES:raise ValueError(self.PREFIX+'-SIZE')
         writer(Path(path),{'data':data,'sha256':checksum(data)});self.data['saved']=now
-        if self.notice=='WEBSITE-HISTORY-WRITE-FAILED':self.notice=None
+        if self.notice==self.PREFIX+'-WRITE-FAILED':self.notice=None

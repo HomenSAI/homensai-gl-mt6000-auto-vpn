@@ -86,8 +86,8 @@ for(const language of ['en','ru']){
     const timer=f.c.uiOperationTimerText(s,T);assert(timer.includes(ru?'Применение правил роутера':'Applying router rules'),'stage is named: '+timer);
     assert(timer.includes(ru?'0:42 прошло':'0:42 elapsed'),'elapsed from the request: '+timer);assert(timer.includes(ru?'предел через 1:20':'limit in 1:20'),'remaining to the real deadline: '+timer);
     const pendingCard=v.manual.all().find(n=>n.attrs['data-manual-direction']==='reserve');assert(pendingCard.all().some(n=>n.attrs['data-op-timer']),'the switching card carries the shared timer');
-    const other=v.manual.all().find(n=>n.attrs['data-manual-diagnostic']==='primary');assert(other&&other.text().includes(ru?'Операция уже выполняется':'An operation is already running'),'repeat request explains the running operation');
-    assert(v.power.actionLabel.all().some(n=>n.attrs['data-op-timer']),'Auto button shows the same timer during a manual switch');
+    assert(v.manual.all().some(n=>n.attrs['data-manual-timer']==='1'),'the manual panel shows the running operation once');
+    assert(!v.power.actionLabel.all().some(n=>n.attrs['data-op-timer']),'the label under the Auto button stays one short sentence during a manual switch');
     // One shared timer: the heartbeat refreshes every registered node from the same model.
     f.clock.tick+=10000;f.c.uiTimerTick();const node=v.manual.all().find(n=>n.attrs['data-op-timer']);assert(node.textContent.includes(ru?'0:52 прошло':'0:52 elapsed'),'shared tick advanced: '+node.textContent);
     // The published WAIT-CLIENT deadline is authoritative when present.

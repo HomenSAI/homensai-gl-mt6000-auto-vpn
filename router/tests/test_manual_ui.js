@@ -38,7 +38,7 @@ async function main(){
  assert.equal(tone(s,'source').color,'green');assert.equal(tone(s,'target').color,'yellow');
  s.manual_switch_control.mode='continuous-pair';s.manual_switch_control.hold='target';s.manual_switch_control.resume={allowed:true,blockers:[]};response={accepted:true,queued:true,completed:false,request_id:'c'.repeat(32)};pending=null;
  n=c.renderManualSwitch(s,{});assert.equal(n.tag,'section');assert(/hv-chart-card/.test(n.attrs.class));
- assert(n.all().some(x=>x.attrs['data-manual-direction']==='resume'),'manual hold exposes the existing Resume Auto command');
+ assert(!n.all().some(x=>x.attrs['data-manual-direction']==='resume'),'a manual choice never needs Resume Auto');
  await n.all().find(x=>x.attrs['data-manual-direction']==='reserve').attrs.click();assert.equal(calls.at(-1).spec.method,'pair_manual');assert.equal(calls.at(-1).args[0],'reserve');assert.equal(calls.at(-1).args[2],'manual');c.manualControlModel({...s,manual_switch:{state:'COMPLETED',completed:true,request_id:response.request_id,direction:'reserve',requested_at:999,updated_at:999}},now);
  s=status();s.channel_path.active_profile_id='b';n=c.renderManualSwitch(s,{});assert.deepEqual(n.all().filter(x=>x.attrs.class==='hv-channel-signal').map(x=>x.attrs['data-active']),['false','true'],'motion follows confirmed reserve');
  s.profiles=s.profiles.map(p=>({...p,code:'DNS-001'}));n=c.renderManualSwitch(s,{});assert(n.all().filter(x=>x.attrs.class==='hv-channel-signal').every(x=>x.attrs['data-active']==='false'),'failed connectivity never animates');

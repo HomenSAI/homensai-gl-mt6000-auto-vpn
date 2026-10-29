@@ -187,11 +187,12 @@ function renderManualSwitch(status,inventory){
   function choice(direction,profile,role){
     var selected=selection.selected===direction,pending=model.busy||selection.moving;
     var health=profile?profileHealth(profile,now).state:'unknown';
-    var autoRuns=typeof autoWorking!=='function'||typeof autoLightModel!=='function'||autoWorking(autoLightModel(status,inventory,now));
     var stale=!!status.rpc_error||!!status.error||!observationFresh(status,now);
     if(stale||selection.code&&health==='healthy')health='unknown';
-    var waiting=!pending&&health==='healthy'&&(!autoRuns||!selected);
-    var color=waiting?'yellow':health==='failed'||health==='inactive'?'red':pending||!selection.selected||selection.off?'grey':selected&&health==='healthy'?'green':'grey';
+    var tone=channelLampTone(status,inventory,direction==='primary'?'source':'target',now);
+    if(!pending&&tone.carrier&&tone.color==='green')selected=true;
+    var waiting=!pending&&health==='healthy'&&!selected;
+    var color=pending?'grey':tone.color;
     var protocol=profile?(typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol==='wireguard'?'WireGuard':'OpenVPN'):bi('Profile not chosen','Профиль не выбран');
     var healthText=selection.code?bi('Traffic selection is not verified','Выбор канала трафика не подтверждён')+' · '+selection.code:waiting?channelAliveText(direction,status,now):pending?(model.uncertain?bi('Request not confirmed','Запрос не подтверждён'):pendingDirection===direction?bi('Switching','Переключение'):bi('Waiting for the router','Ждём роутер')):!selected?(health==='healthy'?channelAliveText(direction,status,now):bi('Internet channel not in use','Интернет-канал не задействован')):health==='healthy'?(direction==='primary'?bi('Internet: primary channel in use','Интернет: задействован основной канал'):bi('Internet: reserve in use','Интернет: задействован резерв')):health==='failed'?bi('Internet: connection check failed','Интернет: ошибка проверки соединения')+(profile&&profile.code?' · '+profile.code:''):health==='inactive'?bi('Internet: VPN tunnel disconnected','Интернет: VPN-туннель отключён'):bi('Internet: checking the connection','Интернет: выполняется проверка соединения');
     var country=profile&&typeof countryLabel==='function'?countryLabel(profile):null;
@@ -202,7 +203,8 @@ function renderManualSwitch(status,inventory){
     card.setAttribute('class','hv-manual-channel hv-manual-'+color);card.setAttribute('aria-pressed',selected?'true':'false');card.setAttribute('data-selected',selected?'true':'false');
     if(selected&&!pending)card.disabled=true;
     if(!selected&&!pending&&card.disabled)action.textContent=bi('Switch unavailable','Переключение недоступно');
-    var reason=!selected&&card.disabled?E('p',{'class':'hv-manual-diagnostic','id':'hv-manual-reason-'+direction,'data-manual-diagnostic':direction,'role':'status'},pending?(model.uncertain?bi('The result is not confirmed. Refreshing the router state; Stop remains available.','Результат не подтверждён. Обновляем состояние роутера; Stop остаётся доступен.'):[bi('An operation is already running: ','Операция уже выполняется: '),uiTimerNode(status,now)]):recovery?[E('strong',{},(recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'))+' · '),typeof errorCodeLink==='function'?errorCodeLink(recovery.code):recovery.code]:selection.code?manualReason([selection.code]):!selection.selected?bi('Channel selection is not verified.','Выбор канала не подтверждён.'):manualReason(model[direction].blockers)):null;
+    var reasonBody=!selected&&card.disabled?(pending?(model.uncertain?bi('The result is not confirmed. Refreshing the router state; Stop remains available.','Результат не подтверждён. Обновляем состояние роутера; Stop остаётся доступен.'):bi('A switch is running: wait for its result.','Идёт переключение: дождитесь результата.')):recovery?[E('strong',{},(recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'))+' · '),typeof errorCodeLink==='function'?errorCodeLink(recovery.code):recovery.code]:selection.code?manualReason([selection.code]):!selection.selected?bi('Channel selection is not verified.','Выбор канала не подтверждён.'):manualReason(model[direction].blockers)):null;
+    var reason=reasonBody?E('p',{'class':'hv-manual-diagnostic','id':'hv-manual-reason-'+direction,'data-manual-diagnostic':direction,'role':'status'},reasonBody):null;
     if(reason)card.setAttribute('aria-describedby','hv-manual-reason-'+direction);
     return E('div',{'class':'hv-manual-choice'},[card,reason].filter(Boolean));
   }
@@ -211,9 +213,8 @@ function renderManualSwitch(status,inventory){
     recovery&&!model.busy?E('div',{'class':'hv-manual-error','data-manual-recovery':recovery.code,'role':'status'},[E('strong',{},(recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed: ','Результат переключения не подтверждён: '):bi('Recovery needed: ','Нужно восстановление: '))+recovery.code),E('p',{},uiRecoveryText(recovery))]):null,
     typeof renderLatencyRecommendation==='function'?renderLatencyRecommendation(status,inventory,'manual'):null,
     E('div',{'class':'hv-manual-channel-grid'},[choice('primary',source,bi('Primary channel','Основной канал')),choice('reserve',target,bi('Reserve channel','Резервный канал'))]),
-    held?E('div',{'data-manual-hold':model.hold},[E('p',{},manualHoldText()),button('resume',bi('Resume Auto','Возобновить Auto')),!model.resume.allowed&&!model.busy?E('p',{'role':'status'},manualReason(model.resume.blockers)):null].filter(Boolean)):null,
     manualRecordedResult(status,now),
-    E('p',{},bi('Green: works in Auto. Yellow: the channel is alive; see the button for switching availability. Grey: waiting for the router\'s answer. Red: error, does not work.','Зелёный — работает в автомате. Жёлтый — канал живой; доступность переключения указана на кнопке. Серый — ждём ответа роутера. Красный — ошибка, не работает.')),
+    E('p',{},bi('Green: carries your traffic; Auto keeps watching it. Yellow: alive, you can switch to it. Grey: waiting for the router. Red: error. A manual switch never turns Auto off: if the chosen channel fails, Auto moves traffic to the other one.','Зелёный — несёт ваш трафик, Auto следит за ним. Жёлтый — живой, на него можно переключиться. Серый — ждём роутер. Красный — ошибка. Ручное переключение не выключает Auto: если выбранный канал откажет, Auto переведёт трафик на другой.')),
     false&&!selection.selected&&!selection.moving&&!selection.off?E('p',{'role':'status'},bi('The router has not returned a verified channel selection yet. Updating its policy state; no channel is assumed active from a button press.','Роутер ещё не передал проверенный выбор канала. Обновляем состояние маршрутизации; нажатие кнопки само по себе не означает, что канал выбран.')):null,
     !model.busy?manualFailureResult(status,now):null,
     model.busy||liveTransition?E('p',{'class':'hv-op-line','data-manual-timer':'1'},uiTimerNode(status,now)):null,

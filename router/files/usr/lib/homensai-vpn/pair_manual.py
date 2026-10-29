@@ -3,7 +3,7 @@
 Only the native supervisor dispatches. Stop revokes the same revision; queued or
 claimed work is never replayed after process recovery. No external certificate.
 """
-import math,re,subprocess,time,uuid
+import json,math,re,subprocess,time,uuid
 
 PENDING={'QUEUED','CLAIMED'}
 STATES=PENDING|{'COMPLETED','REFUSED','CANCELLED','UNCONFIRMED'}
@@ -78,7 +78,7 @@ def public_for_status(native=None,available=False):
 ATTEST_CACHE_SECONDS=15
 
 
-def attested(backend,journal):
+def attested(backend,journal,full=False):
     """Kernel attestation for the status poll, reused for 15 s in RAM.
 
     A full attestation costs ~5 s of CPU on the MT3000 and the UI polls every
@@ -88,7 +88,8 @@ def attested(backend,journal):
     """
     from agent import RUNTIME,read_json,atomic_json
     path=RUNTIME/'pair-manual-kernel-cache.json'
-    key=[journal.get('tx'),journal.get('phase'),list(backend.order())]
+    key=[journal.get('tx'),journal.get('phase'),list(backend.order()),sorted((backend.process_bindings or {}).items()) if isinstance(getattr(backend,'process_bindings',None),dict) else None]
+    key=json.loads(json.dumps(key))  # compare in its stored JSON form: tuples come back as lists
     now=time.monotonic()
     try:
         row=read_json(path,{})
@@ -96,7 +97,7 @@ def attested(backend,journal):
                 and 0<=now-row['at']<ATTEST_CACHE_SECONDS and isinstance(row.get('kernel'),dict)):return row['kernel']
     except (OSError,ValueError):pass
     kernel=backend.attest_policy()
-    try:atomic_json(path,{'key':key,'at':now,'kernel':{k:kernel.get(k) for k in ('verified','role','repairable_missing','code')}})
+    try:atomic_json(path,{'key':key,'at':now,'kernel':{k:v for k,v in kernel.items() if isinstance(v,(str,int,float,bool,list,type(None)))}})
     except (OSError,ValueError,TypeError):pass
     return kernel
 

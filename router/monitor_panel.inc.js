@@ -44,7 +44,7 @@ function fillMonitorBlock(host,status,inventory){
     }},bi('Restore monitoring','Восстановить мониторинг'));
   }
   host.appendChild(E('span',{'class':'hv-monitor-lamp hv-monitor-lamp-'+tone,'role':'img','aria-label':title}));
-  host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number((inventory.settings||{}).interval)||10)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number((inventory.settings||{}).interval)||10)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,button].filter(Boolean)));
+  host.appendChild(E('div',{'class':'hv-check-text'},[E('strong',{},title),E('small',{},stats),light.key==='ok'?E('small',{'class':'hv-check-status'},bi('Checks every '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' s · last data '+Math.max(0,Math.round(now-status.time))+' s ago','Проверка каждые '+(Number(((status||{}).probe_policy||{}).effective_interval)||Number((inventory.settings||{}).interval)||10)+' с · последние данные '+Math.max(0,Math.round(now-status.time))+' с назад')):null,button].filter(Boolean)));
 }
 function renderMonitorBlock(status,inventory){
   monitorBlockHost=E('section',{'class':'hv-connectivity-control hv-monitor-block'});

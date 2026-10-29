@@ -60,6 +60,16 @@ function renderProbeControl(status,inventory){
   var text=E('p',{'class':'hv-probe-text','role':'status'},probeLevelText(draft.level,draft.boost));
   var apply=E('button',{'type':'button','class':'cbi-button cbi-button-action'},bi('Apply','Применить'));
   var active=E('p',{'class':'hv-probe-active','role':'status'},probeBoostActiveText(policy,now));
+  var refused=E('p',{'class':'hv-probe-refused','role':'status','hidden':''});
+  // Busy codes (a switch or speed test is running) keep the owner's choice and retry every 10 s for 2 minutes.
+  function probeRefused(choice,code){
+    var busy=['PROBE-SETTINGS-BUSY','SPEED-BUSY','RPC-RATE-LIMIT','SETUP-SAVE-UNCONFIRMED'].indexOf(code)>=0;
+    PROBE_DRAFT={level:choice.level,boost:choice.boost};refused.hidden=false;
+    refused.textContent=bi('Not saved yet: ','Пока не сохранено: ')+code+(busy?bi(' · a switch is running, retrying automatically',' · идёт переключение, повторяем автоматически'):'');
+    if(!busy)return;
+    choice.tries=(choice.tries||0)+1;if(choice.tries>12)return;
+    window.setTimeout(function(){if(PROBE_DRAFT&&PROBE_DRAFT.level===choice.level&&PROBE_DRAFT.boost===choice.boost&&!PROBE_BUSY)send(choice);},10000);
+  }
   function paint(){
     var shown=PROBE_DRAFT||saved;
     if(!dragging)slider.value=String(shown.level);
@@ -75,13 +85,16 @@ function renderProbeControl(status,inventory){
   slider.addEventListener('touchstart',function(){dragging=true;});slider.addEventListener('touchend',function(){dragging=false;});
   apply.addEventListener('click',function(){
     var choice={level:Number(slider.value),boost:box.checked};  // what the owner sees, read at the click
-    if(PROBE_BUSY||choice.level===saved.level&&choice.boost===saved.boost)return;PROBE_BUSY=true;apply.setAttribute('disabled','');
-    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_probe',params:['level','boost'],expect:{}})(choice.level,choice.boost).then(function(result){
-      if(result&&result.saved){PROBE_APPLIED={level:choice.level,boost:choice.boost,at:Date.now()};PROBE_DRAFT=null;saved=choice;probeCheckSchedule(null);
-        ui.addNotification(null,E('p',{},bi('Level ','Уровень ')+choice.level+bi(' saved. The router applies it now.',' сохранён. Роутер применяет его сразу.')));}
-      else ui.addNotification(null,E('p',{},(result&&result.code)||'SETUP-SAVE-FAILED'));
-    }).catch(function(){ui.addNotification(null,E('p',{},'SETUP-SAVE-UNCONFIRMED'));}).finally(function(){PROBE_BUSY=false;paint();});
+    if(PROBE_BUSY||choice.level===saved.level&&choice.boost===saved.boost)return;send(choice);
   });
+  function send(choice){
+    PROBE_BUSY=true;apply.setAttribute('disabled','');
+    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_probe',params:['level','boost'],expect:{}})(choice.level,choice.boost).then(function(result){
+      if(result&&result.saved){PROBE_APPLIED={level:choice.level,boost:choice.boost,at:Date.now()};PROBE_DRAFT=null;saved={level:choice.level,boost:choice.boost};refused.hidden=true;probeCheckSchedule(null);
+        ui.addNotification(null,E('p',{},bi('Level ','Уровень ')+choice.level+bi(' saved. The router applies it now.',' сохранён. Роутер применяет его сразу.')));}
+      else probeRefused(choice,(result&&result.code)||'SETUP-SAVE-FAILED');
+    }).catch(function(){probeRefused(choice,'SETUP-SAVE-UNCONFIRMED');}).finally(function(){PROBE_BUSY=false;paint();});
+  }
   if(PROBE_LOG_OPEN===false){try{PROBE_LOG_OPEN=window.localStorage.getItem(PROBE_LOG_KEY)==='1';}catch(e){}}
   var logHost=E('div',{'class':'hv-probe-log-host'});
   var log=E('details',{'class':'hv-probe-log-details','open':PROBE_LOG_OPEN?'':null},[E('summary',{},bi('Decision log: levels and boost','Журнал решений: уровни и ускорение')),logHost]);
@@ -93,7 +106,7 @@ function renderProbeControl(status,inventory){
     E('p',{'class':'hv-probe-text-row'},[levelLabel,' · ',text]),
     E('label',{'class':'hv-probe-boost-label'},[box,' ',E('strong',{},bi('Automatic boost','Автоматическое ускорение'))]),
     E('p',{'class':'hv-step-note'},bi('If a channel fails a check, the router checks every 10 s for 10 minutes, then returns to the chosen level. Rare checks at rest, a quick answer when something breaks. Every episode is written to the log below.','Если канал не прошёл проверку, роутер 10 минут проверяет раз в 10 с, затем возвращается к выбранному уровню. В покое проверок мало, при сбое ответ быстрый. Каждый эпизод записывается в журнал ниже.')),
-    active,E('p',{'class':'hv-req-actions'},[apply]),log]);
+    active,E('p',{'class':'hv-req-actions'},[apply]),refused,log]);
   section.hvUpdate=function(policyNow,nowSeconds){
     saved=probeSavedChoice(policyNow);section.setAttribute('data-probe-level',String(policyNow.level));
     active.textContent=probeBoostActiveText(policyNow,nowSeconds);active.hidden=!active.textContent;

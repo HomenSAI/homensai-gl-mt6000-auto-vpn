@@ -96,14 +96,16 @@ function renderChannelPing(profile,status,now){
   var shown=model.rtt_ms==null?'— · '+(labels[model.state]||labels.unavailable)+' · '+model.successes+'/3':model.text;
   return E('small',{'class':'hv-channel-ping','data-ping-state':model.state,'data-latency-metric':WEBSITE_METRIC,'data-latency-state':model.state,'data-coverage':model.successes+'/3','title':detail,'aria-label':detail},shown);
 }
+// The response history follows the owner's metric: three websites or one ICMP echo (ping) per check.
+function responseHistoryKind(h){return !h?null:h.metric===WEBSITE_METRIC&&h.target_set===WEBSITE_TARGET_SET?'websites':h.metric==='icmp-rtt-ms'&&h.target_set==='icmp-echo'?'ping':null;}
 function websiteSamples(status,inventory){
   var h=status.website_response_history||{},out=[];
   latencyHistoryRows(status,inventory||{},routerWall()).forEach(function(r){[0,1].forEach(function(i){if(r[i+1]!==null)out.push({id:h.pair[i],time:r[0],rtt_ms:r[i+1],count:r[i+3],metric:WEBSITE_METRIC});});});out.stats_since=Number.isFinite(h.stats_since)?h.stats_since:0;return out;
 }
 function websiteQuality(status){
   var h=status.website_response_history||{},rank={};
-  if(h.metric!==WEBSITE_METRIC||h.target_set!==WEBSITE_TARGET_SET)return rank;
-  Object.keys(h.profile_statistics||{}).forEach(function(id){var s=h.profile_statistics[id];if(s.metric===WEBSITE_METRIC&&s.target_set===WEBSITE_TARGET_SET&&Number.isInteger(s.cycles)&&Number.isInteger(s.complete)&&s.cycles>=s.complete&&s.complete>=0&&Number.isFinite(s.sum_ms)&&s.sum_ms>=0)rank[id]={n:s.cycles,good:s.complete,sum:s.sum_ms};});return rank;
+  if(!responseHistoryKind(h))return rank;
+  Object.keys(h.profile_statistics||{}).forEach(function(id){var s=h.profile_statistics[id];if(s.metric===h.metric&&s.target_set===h.target_set&&Number.isInteger(s.cycles)&&Number.isInteger(s.complete)&&s.cycles>=s.complete&&s.complete>=0&&Number.isFinite(s.sum_ms)&&s.sum_ms>=0)rank[id]={n:s.cycles,good:s.complete,sum:s.sum_ms};});return rank;
 }
 var UI_DATA_CAUSE=null;
 function dataCause(status,now){
@@ -232,3 +234,28 @@ function compareTableValues(a,b,direction){
 // Ranking trust: a handful of checks is not enough to name a leader.
 function rankEnough(count){return count>=20?1:0;}
 function rankConfidence(count){return count+' · '+(count>=100?bi('good','высокая'):count>=20?bi('fair','средняя'):bi('too few to rank','мало для рейтинга'));}
+// The only channel-lamp rule of the program. The sidebar, the Auto card, the manual cards, the channel cards,
+// the server table, the Tests page and the live journal all ask this function, so they always show the same colour.
+function channelLampPair(status,inventory){
+  var path=status.channel_path||{},ns=status.native_failover||{},settings=(inventory||{}).settings||{},rows=status.profiles||[];
+  var sourceId=settings.plan_source||path.source_profile_id||ns.source,targetId=settings.plan_target||path.target_profile_id||ns.target;
+  return {source:rows.filter(function(p){return p.id===sourceId;})[0],target:rows.filter(function(p){return p.id===targetId;})[0]};
+}
+function channelLampRole(status,inventory,profile){
+  var pair=channelLampPair(status,inventory);
+  return profile&&pair.source&&profile.id===pair.source.id?'source':profile&&pair.target&&profile.id===pair.target.id?'target':null;
+}
+function channelLampTone(status,inventory,role,now,light){
+  var pair=channelLampPair(status,inventory);
+  if(status.rpc_error||status.error||!observationFresh(status,now))return {color:'grey',text:typeof dataCause==='function'?dataCause(status,now).text:bi('no router data','нет данных роутера'),carrier:false};
+  light=light||(typeof autoLightModel==='function'?autoLightModel(status,inventory,now):null);
+  var confirmed=(typeof heldConfirmedPath==='function'?heldConfirmedPath:manualConfirmedPath)(status,pair.source,pair.target,now);
+  return manualChannelTone(pair[role],role,confirmed,now,!light||(typeof autoRuns==='function'?autoRuns(light):autoWorking(light)),status);
+}
+// Auto lamp colour, same rule as the sidebar: green while Auto runs (a manual choice never stops it).
+function autoLampColor(light,paused){
+  var signal=light&&typeof autoSignal==='function'?autoSignal(light):null;
+  if(paused)return 'yellow';
+  if(signal==='off')return 'grey';
+  return (typeof autoRuns==='function'?autoRuns(light):typeof autoWorking==='function'&&autoWorking(light))?'green':signal==='yellow'?'yellow':'red';
+}

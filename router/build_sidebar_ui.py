@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard148'
+UI_MODULE='dashboard153'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -362,7 +362,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui114.css',expected=3)
+must_replace('ui15.css','ui119.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -464,6 +464,7 @@ must_replace("'data-health':profileHealth(p,Date.now()/1000).state}","'data-heal
 must_replace('function checkLampCell(p){','function checkLampCell(p,status,inventory){')
 must_replace('checkLampCell(p),cell(serverTitle(p))','checkLampCell(p,status,inventory),cell(serverTitle(p))')
 must_replace("var kind=h.state==='healthy'?'green':h.state==='checking'?'yellow':h.state==='failed'?'red':'grey';\n  return E('td',{'class':'hv-check-status'", "var use=channelDisplayUse(p,status,inventory),kind=use.kind;h.label=use.label;\n  return E('td',{'class':'hv-check-status'")
+must_replace("[E('span',{'class':'hv-check-lamp hv-check-'+kind,'aria-hidden':'true'}),E('span',{'class':'hv-check-word'},h.label)]","[E('span',{'class':'hv-check-lamp hv-check-'+kind,'role':'img','aria-label':h.label,'title':h.label})]")
 must_replace('button,input[type=checkbox],select','button,input[type=checkbox],input[type=range],select',expected=2)
 must_replace("?{page:(document.activeElement.closest", "?{node:document.activeElement,page:(document.activeElement.closest")
 must_replace("if(controlFocus&&pages[controlFocus.page]){var options=pages[controlFocus.page].querySelectorAll('button,input[type=checkbox],input[type=range],select');var matching=Array.from(options).find(function(el){return el.tagName===controlFocus.tag&&el.getAttribute('aria-label')===controlFocus.label&&el.textContent===controlFocus.text;});if(matching)matching.focus({preventScroll:true});}","restorePageControlFocus(pages,controlFocus);")
@@ -519,16 +520,16 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui114.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui119.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
 must_replace("chart(status.samples||[],active)","chart(websiteSamples(status,inventory),active)")
-must_replace("cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)","cell(renderChannelPing(p,status,statusNow(status)))")
+must_replace("cell(profileHealth(p,Date.now()/1000).state==='healthy'?p.rtt_ms:null)","E('td',{},[renderChannelPing(p,status,statusNow(status))])")
 must_replace("profileHealth(p,Date.now()/1000).state==='healthy'&&Number.isFinite(p.rtt_ms)?p.rtt_ms.toFixed(0):'—'","renderChannelPing(p,status,statusNow(status))")
 must_replace("E('strong',{},renderChannelPing(p,status,statusNow(status))),E('span',{},tr(\" мс · HTTPS\"))","E('strong',{},renderChannelPing(p,status,statusNow(status)))")
 must_replace('tr("HTTPS, мс")','bi("Response, ms","Ответ, мс")')
-must_replace('tr("Средняя HTTPS-задержка")','bi("Mean three-site response","Средний ответ трёх сайтов")')
+must_replace('tr("Средняя HTTPS-задержка")','bi("Mean response (chosen metric)","Средний отклик (выбранный способ)")')
 must_replace("(item.r.sum/item.r.good).toFixed(1)","websiteMs(item.r.sum/item.r.good)")
 must_replace("var samples=status.samples||[],rank={};samples.forEach(function(s){var r=rank[s.id]||(rank[s.id]={n:0,good:0,sum:0});if(s.code!=='CHECK-001'&&s.code!=='SYSTEM-001'){r.n++;if(!s.code){r.good++;r.sum+=s.rtt_ms||0;}}});", "var samples=websiteSamples(status,inventory),rank=websiteQuality(status);")
 must_replace("Object.keys((status.accounting||{}).quality||{}).forEach(function(id){var q=status.accounting.quality[id],r={n:0,good:0,sum:0};Object.keys(q.buckets||{}).forEach(function(k){var b=q.buckets[k];r.n+=b.n;r.good+=b.success;r.sum+=b.rtt_sum;});rank[id]=r;});", "")
@@ -552,9 +553,13 @@ assert [line.split('(')[0] for line in _dead_text.split('\n') if line.startswith
 source=source[:_dead_panels]+source[_dead_panels_end+1:]
 assert source.count('function speedPanel(')==1 and source.count('function trafficHistoryPanel(')==1,'FINAL-PANEL-COUNT'
 # Declarations no code path calls any more (their call sites were replaced by later patches).
-for _name in ('renderPlanBlockers','renderProbeChecks','renderDecisionExplanation'):
+for _name in ('renderPlanBlockers','renderProbeChecks','renderDecisionExplanation','autoCheckDue','controllerTransitionMarks','dvName',
+              'dvProfileIdentity','journalCurrentLatency','onboardingEntryDeferred','planCheckState','renderOnboardingGate','renderTransitionBadge',
+              'reviewPriorities','simpleHomeShortcutReason','vendorCoordinationText','vendorDetailsLink','vendorIdentityText','vendorLamp','vendorProtocol'):
     assert len(re.findall(r'(?<![A-Za-z0-9_$.])'+_name+r'(?![A-Za-z0-9_$])',source))==1,'DEAD-FUNCTION-STILL-USED '+_name
-    _start=source.index('\nfunction '+_name+'(')+1;_end=source.index('\n}\n',_start)+3
+    _start=source.index('\nfunction '+_name+'(')+1;_line=source.index('\n',_start);_first=source[_start:_line]
+    # A one-line declaration ends on its own line; a block declaration ends at the first column-0 brace.
+    _end=_line+1 if _first.rstrip().endswith('}') and _first.count('{')==_first.count('}') else source.index('\n}\n',_start)+3
     assert '\nfunction ' not in source[_start:_end],'DEAD-FUNCTION-SPAN '+_name
     source=source[:_start]+source[_end:]
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')

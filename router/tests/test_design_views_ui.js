@@ -115,7 +115,7 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  assert(header.children[1].attrs.class.includes('hv-monitor-block'),'monitor at upper right of Auto heading');
  assert(header.children[1].all().some(n=>(n.attrs.class||'').includes('hv-monitor-lamp-green')),'fresh enabled monitor retains green lamp');
  assert.equal(controls.attrs.class,'hv-auto-controls');assert.equal(controls.children[0].attrs.class,'hv-auto-switch');
- assert(controls.children[1].all().includes(actual.connectivityControl.button),'real VPN check action on right of Auto controls');
+ const stepRow=automatic.children.find(n=>n&&n.attrs&&n.attrs.class==='hv-auto-step-row');assert(stepRow&&stepRow.all().includes(actual.connectivityControl.button),'real VPN check action sits below the Auto controls');
  assert(!source.includes("E('div',{'class':'hv-tools-row'},[renderConnectivityCheck"),'no duplicate controls in page header');
  const live=nodes.findIndex(n=>n.attrs.id==='hv-auto-live-chart'),day=nodes.findIndex(n=>n.attrs.id==='hv-auto-day-chart');
  assert(live>=0&&day>live,'Overview includes daily graph directly after live graph');

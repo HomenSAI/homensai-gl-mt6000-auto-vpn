@@ -75,12 +75,12 @@ function renderLatencyStatistics(rows,start,end,status,inventory,now){
   function loss(i){if(!Array.isArray(coverage)||coverage.length>10081)return '—';var attempts=0;coverage.forEach(function(r){if(Array.isArray(r)&&r.length===7&&Number.isFinite(r[0])&&r[0]>=start&&r[0]<=end&&r.slice(1).every(function(v){return Number.isInteger(v)&&v>=0&&v<=360;}))attempts+=r[i+3]/3;});return Number.isInteger(attempts)&&attempts>=stats[i].count&&attempts?Math.round(100*(attempts-stats[i].count)/attempts)+'% ('+(attempts-stats[i].count)+' '+bi('of','из')+' '+attempts+')':'—';}
   function ms(v){return v===null?'—':websiteMs(v)+' '+bi('ms','мс');}
   return E('table',{'class':'table hv-latency-statistics','data-hv-no-sort':'1'},[
-    E('tr',{},[bi('Channel','Канал'),bi('Mean','Средняя'),bi('Minimum minute mean','Мин. за минуту'),bi('Maximum minute mean','Макс. за минуту'),bi('Complete cycles (3/3)','Полные проверки (3/3)'),bi('Incomplete three-site checks','Неполные проверки трёх сайтов')].map(function(t){return E('th',{'scope':'col'},t);})),
+    E('tr',{},[bi('Channel','Канал'),bi('Mean','Средняя'),bi('Minimum minute mean','Мин. за минуту'),bi('Maximum minute mean','Макс. за минуту')].concat(responseHistoryKind(h)==='ping'?[bi('Ping replies','Ответы на пинг'),bi('Lost pings','Потерянные пинги')]:[bi('Complete cycles (3/3)','Полные проверки (3/3)'),bi('Incomplete three-site checks','Неполные проверки трёх сайтов')]).map(function(t){return E('th',{'scope':'col'},t);})),
     ...stats.map(function(s,i){return E('tr',{},[E('th',{'scope':'row'},i===0?bi('Primary','Основной'):bi('Reserve','Резервный')),E('td',{},ms(s.mean)),E('td',{},ms(s.min)),E('td',{},ms(s.max)),E('td',{},String(s.count)),E('td',{},loss(i))]);})]);
 }
 function latencyHistoryRows(status,inventory,now){
   var h=status.website_response_history||{},ids=rolePairIds(status,inventory,now);
-  if(h.version!==1||h.metric!==WEBSITE_METRIC||h.target_set!==WEBSITE_TARGET_SET||h.row_encoding!=='sum-tenths'||!Array.isArray(h.pair)||h.pair.length!==2||h.pair[0]!==ids[0]||h.pair[1]!==ids[1])return [];
+  if(h.version!==1||!responseHistoryKind(h)||h.row_encoding!=='sum-tenths'||!Array.isArray(h.pair)||h.pair.length!==2||h.pair[0]!==ids[0]||h.pair[1]!==ids[1])return [];
   var rows=h.rows;
   if(h.rows_json!==undefined){
     if(typeof h.rows_json!=='string'||h.rows_json.length>850000)return [];

@@ -45,6 +45,13 @@ function dvChannelUse(profile,m,status){
   var reserve=m.reserve&&m.reserve.id===profile.id||settings.plan_target===profile.id||settings.plan_target_tunnel&&settings.plan_target_tunnel===profile.vendor_tunnel_id;
   var role=primary?bi('Primary channel','Основной канал'):reserve?bi('Reserve channel','Резервный канал'):bi('Other VPN','Другой VPN');
   var result={role:role,label:h.label,kind:'grey',state:'unknown'};
+  var lampRole=typeof channelLampTone==='function'&&typeof manualChannelTone==='function'&&typeof manualConfirmedPath==='function'&&m.inventory?channelLampRole(status,m.inventory,profile):null;
+  if(lampRole){
+    var tone=channelLampTone(status,m.inventory,lampRole,m.now,m.light);
+    result.kind=tone.color;result.label=tone.text;result.state={green:'selected',yellow:'standby',red:'failed',grey:'waiting'}[tone.color]||'waiting';
+    if(tone.color==='yellow')result.badgeLabel=tone.text;
+    return result;
+  }
   if(status.rpc_error||status.error||!observationFresh(status,m.now)){result.kind='red';result.state='failed';result.kind='grey';result.state='waiting';result.label=status.rpc_error?bi('No answer from the router','Нет ответа от роутера'):bi('Router data is old','Данные роутера устарели');result.code=status.rpc_error?'STATUS-REQUEST-FAILED':'MONITOR-DATA-STALE';return result;}
   var pending=typeof manualOperationModel==='function'?manualOperationModel(status,m.now):null;
   if(pending&&pending.busy&&(primary||reserve)){result.kind='grey';result.state='switching';result.label=pending.uncertain?bi('Request not confirmed','Запрос не подтверждён'):bi('Switching, waiting for the router','Переключение, ждём роутер');return result;}
@@ -74,7 +81,7 @@ function dvChannelUse(profile,m,status){
 }
 function dvChannelLamp(use){return E('span',{'class':'hv-check-lamp hv-check-'+use.kind,'role':'img','aria-label':use.label,'title':use.label});}
 function channelDisplayUse(profile,status,inventory){
-  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},m={now:now,settings:settings,
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),settings=(inventory||{}).settings||{},m={now:now,settings:settings,inventory:inventory||{},
     primary:vendorDisplayMember(status,inventory,'source',now),reserve:vendorDisplayMember(status,inventory,'target',now),selected:vendorDisplaySelected(status,inventory,now),
     light:typeof autoLightModel==='function'?autoLightModel(status,inventory,now):null};
   return dvChannelUse(profile,m,status);

@@ -35,6 +35,20 @@ class AttestationCache(unittest.TestCase):
         self.backend.order.return_value=(['b','a'],'h'*64);pair_manual.attested(self.backend,dict(self.journal,phase='ROLLED-BACK'))
         self.assertEqual(self.backend.attest_policy.call_count,4)
 
+    def test_real_process_bindings_still_hit_the_cache(self):
+        # alpha77 regression: the key held tuples, the stored JSON key held lists, so every poll attested twice.
+        self.backend.process_bindings={'gl_process':('wgclient1',2),'gl_process_vpn':('ovpnclient2',3)}
+        pair_manual.attested(self.backend,self.journal);self.clock[0]+=5;pair_manual.attested(self.backend,self.journal)
+        self.assertEqual(self.backend.attest_policy.call_count,1)
+
+    def test_channel_path_display_shares_the_same_attestation(self):
+        self.backend.process_bindings={'gl_process':('wgclient1',2)}
+        self.backend.attest_policy.return_value=dict(self.backend.attest_policy.return_value,profile_id='wireguard:a',time=1.5,order=['a','b'])
+        pair_manual.attested(self.backend,self.journal);self.clock[0]+=3
+        shared=pair_manual.attested(self.backend,self.journal)
+        self.assertEqual(self.backend.attest_policy.call_count,1)
+        self.assertEqual((shared['profile_id'],shared['time'],shared['order']),('wireguard:a',1.5,['a','b']))
+
     def test_damaged_cache_is_ignored(self):
         (agent.RUNTIME/'pair-manual-kernel-cache.json').write_text('{not json')
         self.assertTrue(pair_manual.attested(self.backend,self.journal)['verified'])

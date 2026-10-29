@@ -70,27 +70,16 @@ async function main(){
   for(const language of ['en','ru']){
     const {c,status,inventory,calls,replies}=fixture(language),held=status();
     held.manual_switch_control.hold='source';held.manual_switch_control.resume={allowed:true,blockers:[]};
-    const label=language==='ru'?'Возобновить Auto':'Resume Auto',view=c.renderManualSwitch(held,inventory),resume=choice(view,'resume');
-    assert(resume,'a backend-authorized manual hold has a visible Resume Auto command');assert.equal(resume.text(),label);assert(!resume.disabled);
-    const light=c.autoLightModel(held,inventory,1000);assert(!c.autoWorking(light),'manual hold cannot promise automatic switching');
-    const home=c.simpleHomeModel(held,inventory,1000);assert.equal(home.title,light.title);assert.notEqual(home.state,'on');
+    const view=c.renderManualSwitch(held,inventory);assert(!choice(view,'resume'),'a manual choice never needs a Resume Auto command');
+    for(const [direction,role] of [['primary','source'],['reserve','target']]){
+      const card=choice(view,direction),tone=c.channelLampTone(held,inventory,role,1000);
+      assert(card.attrs.class.includes('hv-manual-'+tone.color),'manual card '+direction+' has the sidebar colour '+tone.color+': '+card.attrs.class);
+      if(card.attrs['data-selected']==='true')assert(!/можно переключиться|you can switch/.test(card.text()),'the channel in use never offers a switch to itself');
+    }
+    const light=c.autoLightModel(held,inventory,1000);assert(c.autoRuns(light),'a manual choice keeps Auto running');
     const sidebar=new N('div');c.fillSideStatus(sidebar,held,inventory);assert(sidebar.text().includes(language==='ru'?'Auto вкл.':'Auto ON'),'a manual hold is a running Auto: the lamp stays on');
-    for(const edit of [x=>delete x.manual_switch_control.hold,x=>x.manual_switch_control.hold='invalid',x=>x.manual_switch_control.mode='legacy']){
-      const hidden=JSON.parse(JSON.stringify(held));edit(hidden);assert(!choice(c.renderManualSwitch(hidden,inventory),'resume'));
-    }
-    for(const edit of [x=>x.rpc_error='RPC-UNAVAILABLE',x=>x.manual_switch_control.time=900,x=>x.manual_switch_control.resume.allowed=false]){
-      const blocked=JSON.parse(JSON.stringify(held));edit(blocked);const button=choice(c.renderManualSwitch(blocked,inventory),'resume');assert(button.disabled);button.attrs.click();assert.equal(calls.length,0);
-    }
-    const noPath=JSON.parse(JSON.stringify(held));noPath.channel_path.confirmed=false;noPath.profiles[1].code='DNS-001';assert(!choice(c.renderManualSwitch(noPath,inventory),'resume').disabled,'Resume clears the hold under backend authorization without promising a route or requiring reserve health');
-    const task=resume.attrs.click();assert.equal(calls.length,1);assert.equal(calls[0].method,'pair_manual');assert.deepEqual(calls[0].args,['resume','b'.repeat(32),'manual']);
-    replies.shift().resolve({accepted:true,queued:true,completed:false,request_id:'a'.repeat(32)});await task;
-    const queued=c.renderManualSwitch(held,inventory);assert(choice(queued,'resume').disabled);choice(queued,'resume').attrs.click();assert.equal(calls.length,1);assert.equal(c.selectedProfile(held,1000),'a','Resume ACK never invents a route change');
-    const done=JSON.parse(JSON.stringify(held));delete done.manual_switch_control.hold;done.manual_switch={state:'COMPLETED',completed:true,request_id:'a'.repeat(32),direction:'resume',requested_at:1000,updated_at:1000};
-    assert(!c.manualControlModel(done,1000).busy);assert(!choice(c.renderManualSwitch(done,inventory),'resume'));assert(c.autoWorking(c.autoLightModel(done,inventory,1000)));
-    const lost=choice(c.renderManualSwitch(held,inventory),'resume').attrs.click();replies.shift().reject(new Error('lost Resume acknowledgement'));await lost;
-    assert(c.manualControlModel(held,1000).uncertain);assert(choice(c.renderManualSwitch(held,inventory),'resume').disabled);
   }
-  console.log('PASS: Resume Auto renders only for manual hold, obeys backend gates, shares pending/correlation and never changes a route optimistically EN/RU');
+  console.log('PASS: a manual choice keeps Auto running and shows no Resume Auto command EN/RU');
   // Every status-call consumer shares dispatch provenance. Clock values are never used to order replies.
   {
     const {c}=fixture(),pending=[];const raw=()=>new Promise(resolve=>pending.push(resolve));let current;

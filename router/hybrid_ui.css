@@ -93,3 +93,13 @@
 .hv-app .hv-probe-text-row .hv-probe-text{display:inline}
 .hv-app .hv-probe-level-label{white-space:nowrap}
 .hv-app .hv-auto-pill-knob.hv-lamp-dark{background:radial-gradient(circle at 34% 28%,#4a4f57,#262a30 70%);box-shadow:inset 0 2px 4px rgba(0,0,0,.6)}
+/* Static Auto card: the controls row never shares its width with Step 1, which sits below it. */
+.hv-app .hv-auto-step-row{margin-top:16px}
+.hv-app .hv-auto-step-row>*{max-width:none}
+.hv-app .hv-auto-action{display:block;max-width:16em;min-height:2.8em}
+.hv-app .hv-light-block .hv-light-title{overflow-wrap:break-word;hyphens:auto}
+.hv-app .hv-probe-refused{color:#9a3412;font-weight:600}
+/* Manual cards: same layout in every state; words never break in the middle; the button stays at the bottom. */
+.hv-app .hv-manual-channel{word-break:normal;overflow-wrap:break-word;hyphens:manual}
+.hv-app .hv-manual-channel .hv-manual-enable{margin-top:auto}
+.hv-app .hv-manual-channel .hv-manual-health{min-height:2.7em}

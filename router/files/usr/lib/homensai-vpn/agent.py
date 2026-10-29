@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha73'
+VERSION = '0.9.1-alpha78'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -588,7 +588,7 @@ def sample_wan_counters(data,accounting,now,max_gap=90):
     return devices
 
 
-def checkpoint(accounting,latency=None,website_response=None):
+def checkpoint(accounting,latency=None,website_response=None,ping_response=None):
     accounting.compact()
     payload = {'version': 1, 'saved': time.time(), 'accounting': accounting.export()}
     try:old = read_json(PERSIST/'checkpoint.json')
@@ -612,6 +612,10 @@ def checkpoint(accounting,latency=None,website_response=None):
         try:website_response.save(PERSIST/'website-response-history.json',atomic_json,time.time())
         except (OSError,ValueError):
             if website_response.notice!='WEBSITE-HISTORY-UNAVAILABLE':website_response.notice='WEBSITE-HISTORY-WRITE-FAILED'
+    if ping_response is not None:
+        try:ping_response.save(PERSIST/'ping-response-history.json',atomic_json,time.time())
+        except (OSError,ValueError):
+            if ping_response.notice!='PING-HISTORY-UNAVAILABLE':ping_response.notice='PING-HISTORY-WRITE-FAILED'
 
 
 def restore():
@@ -724,6 +728,8 @@ def serve():
     latency=LatencyHistory.load(PERSIST/'latency-history.json')
     from website_response_history import WebsiteResponseHistory,technical_history_tail
     website_history=WebsiteResponseHistory.load(PERSIST/'website-response-history.json')
+    from ping_response_history import PingResponseHistory
+    ping_history=PingResponseHistory.load(PERSIST/'ping-response-history.json')
     from telegram_report import deliver
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
@@ -763,11 +769,11 @@ def serve():
             # Owner reset of charts/statistics: archived first, then the counters start again from zero.
             # A failing reset never stops monitoring, and the page always gets a coded result.
             try:
-                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history)
+                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history,ping_response=ping_history)
             except Exception:
                 reset_result={'nonce':reset_request['nonce'],'scope':reset_request['scope'],'time':time.time(),'done':False,'code':'STATS-RESET-FAILED'}
             try:
-                if reset_result.get('done'):checkpoint(accounting,latency,website_history);last_save=time.monotonic()
+                if reset_result.get('done'):checkpoint(accounting,latency,website_history,ping_history);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
@@ -880,8 +886,13 @@ def serve():
             latency.observe(status,settings,time.time())
             status['latency_history']=technical_history_tail(latency.public(),time.time())
             try:
-                website_history.observe(status,settings,time.time())
-                status['website_response_history']=website_history.public(time.time())
+                from probe_policy import response_metric
+                if response_metric(settings)=='websites':
+                    website_history.observe(status,settings,time.time())
+                    status['website_response_history']=website_history.public(time.time())
+                else:
+                    ping_history.observe(status,settings,time.time())
+                    status['website_response_history']=ping_history.public(time.time())
             except Exception:
                 from website_response import METRIC,TARGET_SET
                 status['website_response_history']={'metric':METRIC,'target_set':TARGET_SET,'rows':[],'coverage_rows':[],'notice':'WEBSITE-HISTORY-UNAVAILABLE'}
@@ -933,7 +944,7 @@ def serve():
             since_save=time.monotonic()-last_save
             if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
                 try:
-                    checkpoint(accounting,latency,website_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
+                    checkpoint(accounting,latency,website_history,ping_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -977,7 +988,7 @@ def serve():
             try:telegram_collect(telegram_job)
             except Exception:pass
     try:
-        checkpoint(accounting,latency,website_history)
+        checkpoint(accounting,latency,website_history,ping_history)
     except (OSError, ValueError):
         pass
 

@@ -161,7 +161,11 @@ def public_status(status):
         if pair_mode:
             if native.get('state')=='BLOCKED' or native.get('blockers'):return from_kernel(None,native.get('source'),native.get('target'))
             backend.use_process_bindings(state.get('process_bindings'))
-            kernel=backend.attest_policy() if state.get('phase')=='RUNNING' else None
+            kernel=None
+            if state.get('phase')=='RUNNING':
+                # Display only: share the 15 s attestation with the manual buttons; every switch re-attests itself.
+                from pair_manual import attested
+                kernel=attested(backend,journal)
             return pair_snapshot(status,state,journal,backend.order(),kernel=kernel)
         return snapshot(status, journal, backend.order() if journal else None)
     except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):

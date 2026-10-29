@@ -88,7 +88,7 @@ def reset_speed_history(writer,before=None):
     return old
 
 
-def apply(value,accounting,latency,now,writer,persist=None,website_response=None):
+def apply(value,accounting,latency,now,writer,persist=None,website_response=None,ping_response=None):
     """Runs inside the agent. Returns (accounting, latency, result); the caller saves a checkpoint."""
     from agent import Accounting
     from latency_history import LatencyHistory
@@ -103,6 +103,7 @@ def apply(value,accounting,latency,now,writer,persist=None,website_response=None
         exported=accounting.export()
         if 'latency' in parts:payload['latency']=copy.deepcopy(latency.data)
         if website_response is not None and ('latency' in parts or 'quality' in parts):payload['website_response']=copy.deepcopy(website_response.data)
+        if ping_response is not None and ('latency' in parts or 'quality' in parts)and ping_response.notice!='PING-HISTORY-UNAVAILABLE':payload['ping_response']=copy.deepcopy(ping_response.data)
         if 'auto' in parts:payload['reliability']=exported.get('reliability')
         if 'traffic' in parts:payload['traffic']={k:exported.get(k) for k in ('months','days','wan','gaps')}
         if 'quality' in parts:payload['quality']={k:exported.get(k) for k in ('quality','activity')}
@@ -130,6 +131,9 @@ def apply(value,accounting,latency,now,writer,persist=None,website_response=None
     if website_response is not None:
         if 'latency' in parts:website_response.clear(now)
         elif 'quality' in parts:website_response.clear_statistics(now)
+    if ping_response is not None and ping_response.notice!='PING-HISTORY-UNAVAILABLE':
+        if 'latency' in parts:ping_response.clear(now)
+        elif 'quality' in parts:ping_response.clear_statistics(now)
     if 'auto' in parts:
         accounting.reliability=Reliability(None);accounting.reliability.critical=True
     if 'traffic' in parts:

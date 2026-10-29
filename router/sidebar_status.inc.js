@@ -22,13 +22,8 @@ function fillSideStatus(host,status,inventory){
   var autoTitle=autoHint+' '+bi('Click to open Automatic VPN failover.','Нажмите, чтобы открыть «Автоматическое переключение VPN».');
   var autoLamp=E('span',{'class':'hv-side-lamp hv-side-lamp-link','role':'link','tabindex':'0','title':autoTitle,'click':openAuto,'keydown':openAuto},[E('span',{'class':'hv-auto-pill-knob hv-lamp-'+state,'aria-hidden':'true'}),E('span',{'class':'hv-auto-pill-text'},autoText),E('span',{'class':'hv-visually-hidden'},' — '+autoTitle)]);
   host.appendChild(E('div',{'class':'hv-side-lamps'},[autoLamp,lamp(monitorFresh?'on':'off',monText,monHint)]));
-  var path=status.channel_path||{},ns=status.native_failover||{},settings=(inventory||{}).settings||{},rows=status.profiles||[];
-  var sourceId=settings.plan_source||path.source_profile_id||ns.source,targetId=settings.plan_target||path.target_profile_id||ns.target;
-  var source=rows.filter(function(p){return p.id===sourceId;})[0],target=rows.filter(function(p){return p.id===targetId;})[0];
-  var confirmed=(typeof heldConfirmedPath==='function'?heldConfirmedPath:manualConfirmedPath)(status,source,target,now),runs=autoRuns(light);
   function channel(role,label){
-    var row=role==='source'?source:target,tone=manualChannelTone(row,role,confirmed,now,runs,status);
-    if(!monitorFresh)tone={color:'grey',text:typeof dataCause==='function'?dataCause(status,now).text:bi('no router data','нет данных роутера')};
+    var tone=channelLampTone(status,inventory,role,now,light);
     return lamp({green:'on',yellow:'switching',grey:'unknown',red:'off'}[tone.color]||'unknown',label,label+': '+tone.text);
   }
   host.appendChild(E('div',{'class':'hv-side-channel-lamps'},[channel('source',bi('Primary','Основной')),channel('target',bi('Reserve','Резерв'))]));

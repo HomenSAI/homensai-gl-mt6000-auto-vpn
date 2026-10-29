@@ -1327,6 +1327,42 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
 
+## PING-HISTORY-WRITE-FAILED
+
+История пинга не сохранена / Ping history was not saved
+
+**RU:** Отдельный архив ответов сайтов не удалось безопасно записать. Текущие проверки могут продолжаться; пропуски не дорисовываются.
+
+**EN:** The separate ping-response archive could not be safely written. Current checks can continue; missing history stays empty.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## PING-HISTORY-UNAVAILABLE
+
+История пинга недоступна / Ping history unavailable
+
+**RU:** Архив ответов сайтов или его контрольная сумма не подтверждены. Старая история технического HTTPS не подставляется.
+
+**EN:** The ping-response archive or its checksum could not be verified. Old technical HTTPS history is not substituted.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
+## PING-HISTORY-PAIR-LIMIT
+
+Достигнут лимит пар истории / Ping history pair limit reached
+
+**RU:** Ограниченный архив не может добавить ещё одну пару каналов в пределах лимита. Профили и старые значения не переименовываются.
+
+**EN:** The bounded archive cannot add another channel pair while preserving its limits. No profile or historical value is silently relabelled.
+
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+
+**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+
 ## KNOWN-STOCK-DERIVED-RECOVERY
 
 Служебные изменения учтены / Known stock changes reconciled
@@ -5244,6 +5280,18 @@ Python слишком старый / Python is too old
 **Что делать:** Повторите; попробуйте меньшую длительность.
 
 **Action:** Repeat; try a shorter duration.
+
+## PING-HISTORY*
+
+Проверка истории пинга / Ping history check
+
+**RU:** Сохранённую историю пинга не удалось безопасно прочитать или записать. Текущие пинги и переключение продолжают работать.
+
+**EN:** The saved ping history could not be read or written safely. Current pings and switching continue.
+
+**Что делать:** Для переключения ничего делать не нужно. Если повторяется, сбросьте график или переустановите пакет; старый файл сохраняется.
+
+**Action:** No action is needed for switching. If it repeats, reset the chart or reinstall the package; the old file is kept.
 
 ## PREPARATION-*
 
