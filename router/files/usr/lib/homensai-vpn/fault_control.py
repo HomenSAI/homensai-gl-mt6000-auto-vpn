@@ -256,12 +256,15 @@ def require_revision(expected):
             or set(value)!={'revision'} or value['revision']!=expected):raise FaultError('FAULT-CONTROL-CHANGED')
 
 
-def require_auto_on(settings):
+def require_auto_on(settings,locked=False):
     if settings.get('pair_auto_mode')=='router-probed-ipv4':
         import pair_auto as pair
         from pair_manual import active
-        from auto_control import current_revision
-        if not active(pair.read_state(),pair.intent(),current_revision(RUNTIME)):raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
+        from auto_control import current_revision,revision_locked
+        # Under the control lock the revision is read directly: flock is not re-entrant, and taking it again
+        # here deadlocked every pair-mode fault start (rpcd then killed the call before any rule was set).
+        revision=revision_locked(RUNTIME) if locked else current_revision(RUNTIME)
+        if not active(pair.read_state(),pair.intent(),revision):raise FaultError('FAULT-CERTIFIED-AUTO-REQUIRED')
         return
     from auto_control import effective_intent
     active,stopped=effective_intent(settings,read_json(PERSIST/'native-stop.json',{}),
@@ -278,7 +281,7 @@ def claim_locked(nonce,revision):
             or time.monotonic()>=value.get('monotonic_until',0)
             or isinstance(result,dict) and result.get('nonce')==nonce
             or isinstance(cancelled,dict) and cancelled.get('nonce')==nonce):raise FaultError('FAULT-CLAIM-STALE')
-    if value.get('phase')=='ARMED':require_auto_on(value.get('control_settings',{}))
+    if value.get('phase')=='ARMED':require_auto_on(value.get('control_settings',{}),locked=True)  # claim_locked runs under control_lock
     return value
 
 
