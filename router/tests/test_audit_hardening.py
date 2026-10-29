@@ -139,7 +139,7 @@ class Hardening(unittest.TestCase):
         native.journal_write(base)
         self.assertEqual(native.journal_read()['tx'],'current')
         changes=[{'pid':True},{'pid':-1},{'pid':'12'},{'rollback_failures':'bad'},
-                 {'rollback_failures':3},{'trial':'false'},{'source':{}},{'target':base['source']},
+                 {'rollback_failures':3},{'rollback_package':''},{'rollback_package':'0.9 bad'},{'rollback_package':7},{'trial':'false'},{'source':{}},{'target':base['source']},
                  {'deadline':9},{'after':['a','a']}]
         changes.extend({name:None} for name in ('tx','source','target','trial_nonce','started','deadline'))
         for edit in changes:

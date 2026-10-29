@@ -211,6 +211,7 @@ def promote_forward(backend,journal,target):
 VENDOR_LOCK='/tmp/run/rtp2.lock'
 RECOVERY_RTP_TIMEOUT=90  # supervisor recovery: no parent kills it; still bounded
 ALLOWED_STALE_LOCK=[None]  # set only while a vendor-rebuild proof reads diagnostics
+STABLE_PROFILE=('id','protocol','interface','vendor_tunnel_id')  # profile identity without the monitor epoch
 
 
 def vendor_lock_pid():
@@ -324,18 +325,25 @@ def rebuild(backend,journal,reason,target):
         try:blockers,current=backend.diagnostic()
         finally:ALLOWED_STALE_LOCK[0]=None
         if (blockers or not isinstance(current,dict) or proof(current)!=state['policy_roles']
-                or current.get('hash')!=journal['hash'] or current.get('vendor_identity')!=journal.get('vendor_identity')
+                or current.get('hash')!=journal['hash']
                 or current.get('process_bindings')!=journal.get('process_bindings')):refuse()
+        recorded=journal.get('vendor_profiles') or {};same_epoch=True
         for key in ('source','target'):
-            row=current.get(key,{});binding=row.get('kernel_binding')
-            if profile_identity(row) is None or profile_identity(row)!=(journal.get('vendor_profiles') or {}).get(key):refuse()
+            row=current.get(key,{});binding=row.get('kernel_binding');live=profile_identity(row)
+            if live is None or not isinstance(recorded.get(key),dict):refuse()
+            # vendor_generation is the monitor's observation epoch: a restart
+            # (upgrade, reboot) renews it. The configured tunnel identity must
+            # still match exactly; the result is proven by kernel attestation.
+            if any(live.get(field)!=recorded[key].get(field) for field in STABLE_PROFILE):refuse()
+            same_epoch=same_epoch and live==recorded[key]
             if (not isinstance(binding,dict) or binding.get('code') is not None
                     or not isinstance(binding.get('device'),str) or not re.fullmatch('[A-Za-z0-9_]{1,15}',binding['device'])
                     or type(binding.get('mark')) is not int or binding['mark']<=0
                     or not isinstance(binding.get('table'),str) or not binding['table'].isdigit()
                     or type(binding.get('ifindex')) is not int or binding['ifindex']<=0):refuse()
-        if n.digest({key:{'profile':profile_identity(current[key]),'kernel':current[key]['kernel_binding']}
-                     for key in ('source','target')})!=journal['vendor_identity']:refuse()
+        if same_epoch and (current.get('vendor_identity')!=journal.get('vendor_identity')
+                or n.digest({key:{'profile':profile_identity(current[key]),'kernel':current[key]['kernel_binding']}
+                             for key in ('source','target')})!=journal['vendor_identity']):refuse()
         return current
 
     def check():

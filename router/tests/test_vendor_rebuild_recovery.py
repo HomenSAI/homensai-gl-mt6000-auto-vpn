@@ -163,6 +163,21 @@ class VendorRebuildRecovery(unittest.TestCase):
             with self.subTest(change=name):self.refused_without_writes()
         self.fw=partial
 
+    def test_monitor_restart_renews_generation_but_not_the_tunnel_identity(self):
+        # Upgrade/reboot restarts the monitor: every vendor_generation is new.
+        original=self.interrupted()
+        for profile in self.case.profiles:profile['vendor_generation']=os.urandom(16).hex()
+        n.rollback(self.backend,n.journal_read(),'SUPERVISOR-RECOVERY')
+        self.assert_recovered(original)
+
+    def test_renewed_generation_with_changed_tunnel_identity_refuses_before_any_write(self):
+        self.interrupted();profiles=copy.deepcopy(self.case.profiles)
+        for field,value in (('interface','wgclient9'),('vendor_tunnel_id','wireguard:wgclient9')):
+            self.case.profiles=copy.deepcopy(profiles)
+            for profile in self.case.profiles:profile['vendor_generation']='e'*32
+            self.case.profiles[0][field]=value
+            with self.subTest(field=field):self.refused_without_writes()
+
     def test_credential_change_refuses_before_any_write(self):
         self.interrupted();self.wireguard='d'*64;self.refused_without_writes()
 

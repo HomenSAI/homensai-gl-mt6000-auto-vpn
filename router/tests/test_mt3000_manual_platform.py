@@ -427,6 +427,17 @@ class WorkerAndFileTests(unittest.TestCase):
             (root/'rtp2.lock').symlink_to(root/'missing')
             self.assertGreater(platform._workers()['busy'], 0)
 
+    def test_only_the_proven_stale_rtp_lock_is_quiet_during_a_vendor_rebuild_proof(self):
+        import rollback_recovery as recovery
+        with self.environment() as (root, _, _, _):
+            lock = root/'rtp2.lock'; lock.write_text('999999\n')  # dead pid, EXIT trap never ran
+            self.assertGreater(platform._workers()['busy'], 0)
+            with patch.object(recovery, 'VENDOR_LOCK', str(lock)), patch.object(recovery, 'ALLOWED_STALE_LOCK', [999999]):
+                self.assertEqual(platform._workers()['busy'], 0)
+                lock.write_text('999998\n'); self.assertGreater(platform._workers()['busy'], 0)
+            with patch.object(recovery, 'ALLOWED_STALE_LOCK', [999999]):
+                lock.write_text('999999\n'); self.assertGreater(platform._workers()['busy'], 0)  # other path: unproven
+
     def test_stock_hotplug_callback_is_busy_before_it_spawns_firewall_work(self):
         for event in ('iface', 'wireguard'):
             with self.environment() as (_, proc, _, _):

@@ -281,6 +281,31 @@ class Matrix(unittest.TestCase):
         self.assertEqual(self.state()['blockers'],['ROLLBACK-GIVEN-UP'])
         self.assertTrue((native.PERSIST/'native-stop.json').exists())
 
+    def test_a_new_package_gets_one_fresh_bounded_recovery_budget(self):
+        process=MagicMock(pid=123,returncode=1);self.spawn(process);self.b.fail_reorder=99
+        with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertEqual(native.journal_read()['rollback_failures'],2);self.assertEqual(self.state()['alarm'],'ROLLBACK-GIVEN-UP')
+        self.assertEqual(native.journal_read()['rollback_package'],native.recovery_package())
+        # Same package after a restart: still given up, no new attempt.
+        self.b.calls.clear()
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertNotIn(('reorder',self.before),self.b.calls)
+        # An upgraded package (its recovery code differs) gets one fresh budget and recovers.
+        self.b.fail_reorder=0;self.b.calls.clear()
+        with patch.object(native,'recovery_package',return_value='0.0.0-upgraded'),patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):
+            native.serve()
+        self.assertEqual(self.b.current,self.before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
+        self.assertEqual(native.journal_read()['rollback_package'],'0.0.0-upgraded')
+
+    def test_legacy_failure_count_without_package_is_not_inherited_as_exhausted(self):
+        process=MagicMock(pid=123,returncode=1);self.spawn(process);self.b.fail_reorder=99
+        with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)
+        row=native.journal_read();row['rollback_failures']=2;row.pop('rollback_package',None);native.journal_write(row)
+        self.b.fail_reorder=0
+        with patch.object(native,'Linux',return_value=self.b),patch.object(native,'STOP',True):native.serve()
+        self.assertEqual(self.b.current,self.before);self.assertEqual(native.journal_read()['phase'],'ROLLED-BACK')
+
     def test_one_failed_rollback_still_recovers_on_the_next_start(self):
         process=MagicMock(pid=123,returncode=1);self.spawn(process);self.b.fail_reorder=1
         with self.assertRaises(native.Refused):native.attempt(self.b,self.b.selection,time.time()+120,False)

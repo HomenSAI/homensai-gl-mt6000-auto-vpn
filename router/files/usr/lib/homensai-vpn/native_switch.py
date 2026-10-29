@@ -349,6 +349,8 @@ def validate_journal(value):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'rollback_failures' in value and (type(value['rollback_failures']) is not int or not 0<=value['rollback_failures']<=ROLLBACK_FAILURE_LIMIT):
         raise Refused('JOURNAL-INTEGRITY-FAILED')
+    if 'rollback_package' in value and (not isinstance(value['rollback_package'],str) or not re.fullmatch(r'[0-9A-Za-z.+~-]{1,64}',value['rollback_package'])):
+        raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'trial' in value and type(value['trial']) is not bool:raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'manual_request_id' in value and (not isinstance(value['manual_request_id'],str) or not re.fullmatch(r'[a-f0-9]{32}',value['manual_request_id'])):raise Refused('JOURNAL-INTEGRITY-FAILED')
     if 'pair_transition' in value:
@@ -974,11 +976,17 @@ def rollback(backend,journal,reason,restore_order=None):
         publish(value)
 
 
+def recovery_package():
+    from agent import VERSION
+    return VERSION
+
+
 def rollback_counted(backend,journal,reason):
     """rollback() that remembers each failure in the journal, so repeated failures end in give_up() instead of a loop."""
     try:return rollback(backend,journal,reason)
     except Exception:
         journal['rollback_failures']=int(journal.get('rollback_failures',0) or 0)+1
+        journal['rollback_package']=recovery_package()
         try:journal_write(journal)
         except (OSError,ValueError):pass
         raise
@@ -1659,6 +1667,10 @@ def serve():
                 if cmd.exists() and ('native_switch.py\x00apply\x00'+journal['tx']) in cmd.read_bytes().decode(errors='replace'):
                     try:os.killpg(journal['pid'],signal.SIGKILL)
                     except ProcessLookupError:pass
+            if journal.get('rollback_failures') and journal.get('rollback_package')!=recovery_package():
+                # Failures counted by other package code (older or newer) do not
+                # exhaust this version's own recovery: one fresh bounded budget.
+                journal.update(rollback_failures=0,rollback_package=recovery_package());journal_write(journal)
             if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
                 give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
             try:rollback_counted(backend,journal,'SUPERVISOR-RECOVERY')

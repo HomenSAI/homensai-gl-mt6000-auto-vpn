@@ -311,6 +311,14 @@ def _held_firewall_locks():
     return held
 
 
+def _rtp_lock_busy():
+    """The one stale lock a vendor-rebuild proof has just proven dead is not a worker."""
+    import rollback_recovery as recovery
+    if recovery.ALLOWED_STALE_LOCK[0] is None or str(RTP_LOCK) != recovery.VENDOR_LOCK:
+        return True
+    return recovery.rtp_lock_busy()
+
+
 def _workers(deadline=None):
     """Two sampled quiet reads are evidence only, never worker arbitration."""
     if deadline is not None and time.monotonic() >= deadline:
@@ -349,7 +357,7 @@ def _workers(deadline=None):
         except (OSError, ValueError, IndexError):
             if path.exists():
                 raise ValueError('process read unverified') from None
-    if list(RUN_ROOT.glob('tunnel-switch*.lock')) or RTP_LOCK.exists() or RTP_LOCK.is_symlink():
+    if list(RUN_ROOT.glob('tunnel-switch*.lock')) or RTP_LOCK.is_symlink() or RTP_LOCK.exists() and _rtp_lock_busy():
         busy += 1
     return {'time': time.time(), 'busy': busy, 'verified': True}
 
