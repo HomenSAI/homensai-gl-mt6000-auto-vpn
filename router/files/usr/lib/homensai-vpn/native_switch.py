@@ -136,6 +136,24 @@ def publish(value):
 RETURN_CHECKS=6
 # Owner decision (18 Oct 2026): a full LAN block for an unreadable journal happens once; a rollback that failed twice is not retried.
 ROLLBACK_FAILURE_LIMIT=2
+# Switch transaction budget (seconds), sized from the dedicated MT3000
+# (alpha57 native history, 28 Oct 2026, seconds from ARMED): successful
+# switches reached rtp-dispatch at about +35 and WAIT-CLIENT at +47.5..+52.1;
+# three failures were the old 50 s parent cap killing the worker mid-RTP
+# (incident: dispatch +34.9, killed +56.7, only 21.8 s after dispatch).
+# The stock rtp2.sh first flushes its mangle chains and deletes every
+# gl_vpn_rules firewall section, then rebuilds them; a SIGKILL in between
+# leaves a partial vendor state and a stale /tmp/run/rtp2.lock (its EXIT trap
+# never runs). Budget: pre-RTP <=45 (measured ~35 before one redundant
+# selection proof was removed), RTP <=RTP_TIMEOUT, post-RTP <=30 (vendor
+# quiet wait 20 + diagnostic/attestation). The child refuses an RTP that cannot
+# finish inside the transaction; the parent waits for the whole transaction.
+TRANSACTION_SECONDS=120
+RTP_TIMEOUT=45
+POST_RTP_SECONDS=30
+RTP_DISPATCH_RESERVE=RTP_TIMEOUT+POST_RTP_SECONDS
+WORKER_WAIT_GRACE=5
+RTP_TERM_GRACE=5
 JOURNAL_ALARM=PERSIST/'native-journal-alarm.json'
 RETURN_PAUSE=10
 GUARD_RELEASE_SECONDS=90
@@ -635,7 +653,8 @@ class Linux:
             if selection['source']['id'] in disabled or selection['target']['id'] in disabled:blockers.append('PROFILE-NOT-MONITORED')
         except (Refused,OSError,ValueError,subprocess.SubprocessError) as e:
             blockers.append(str(e) if isinstance(e,Refused) else 'POLICY-READ-FAILED');selection=None
-        if list(Path('/var/run').glob('tunnel-switch*.lock')) or Path('/tmp/run/rtp2.lock').exists():blockers.append('VENDOR-WORKER-BUSY')
+        from rollback_recovery import rtp_lock_busy
+        if list(Path('/var/run').glob('tunnel-switch*.lock')) or rtp_lock_busy():blockers.append('VENDOR-WORKER-BUSY')
         return list(dict.fromkeys(blockers)),selection
     def order(self):
         data=self.policy();return policy_order(data['sections'],self.process_bindings),policy_hash(data['sections'],self.process_bindings)
@@ -720,7 +739,7 @@ class Linux:
                 # One UCI transaction; the same Stop/revision fence used for
                 # rule ordering protects this already-modelled derived state.
                 (write_command or command)(['lua','-e',script],timeout=8)
-        (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=45)
+        (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=RTP_TIMEOUT)
         if detected=='mt3000':
             from native_platform import wait_quiet
             try:wait_quiet()
@@ -849,6 +868,10 @@ def rollback(backend,journal,reason,restore_order=None):
         from pair_policy import metadata
         try:pair_context=metadata(journal)
         except (ValueError,TypeError,KeyError):raise Refused('JOURNAL-INTEGRITY-FAILED') from None
+        from rollback_recovery import vendor_rebuild_applies,rebuild
+        if vendor_rebuild_applies(backend,journal):
+            # Our own worker died inside the vendor rebuild: finish it or refuse.
+            return rebuild(backend,journal,reason,restore_order or journal.get('restore_target_order') or journal['before'])
         restore_order=restore_order or journal.get('restore_target_order') or journal['before']
         if restore_order not in (journal['before'],pair_context['primary_order'],pair_context['session_order']):
             raise Refused('POLICY-IDENTITY-CHANGED')
@@ -1205,6 +1228,10 @@ def child(tx):
         before_write()
         if args[0]=='/usr/bin/rtp2.sh':
             apply_progress(tx,'rtp-dispatch')
+            # Refuse before dispatch: an unfinished vendor rebuild is worse than none.
+            if (journal.get('monotonic_deadline') is None
+                    or journal['monotonic_deadline']-time.monotonic()<RTP_DISPATCH_RESERVE):
+                raise Refused('TRANSACTION-EXPIRED')
             from rtp_boot import ready
             try:ready()
             except (OSError,ValueError):raise Refused('RTP-BOOT-PRECONDITION-UNVERIFIED') from None
@@ -1215,7 +1242,11 @@ def child(tx):
         output=forward_dispatch(args,journal['control_revision'],timeout)
         if args[0]=='/usr/bin/rtp2.sh':apply_progress(tx,'rtp-returned')
         return output
-    before_write();apply_progress(tx,'reorder')
+    # Every reorder write runs before_write() itself; the duplicate proof that
+    # used to precede the first move is gone (one diagnostic less pre-RTP). The
+    # apply boundary keeps its proof: a foreign graph after our UCI moves must
+    # refuse before the vendor rebuild even when apply() has no UCI sync write.
+    apply_progress(tx,'reorder')
     backend.reorder(journal['after'],write_command=write_command)
     before_write();apply_progress(tx,'apply')
     backend.apply(write_command=write_command)
@@ -1265,6 +1296,21 @@ def require_control_revision(expected):
         raise Refused('CLIENT-STOP')
 
 
+def stop_vendor(process,args):
+    """Stop a dispatched command; rtp2.sh first gets SIGTERM so its trap removes its lock.
+
+    The result stays a failure either way (fail closed); the wait is bounded.
+    """
+    if args and args[0]=='/usr/bin/rtp2.sh':
+        try:process.terminate()
+        except ProcessLookupError:return
+        for _ in range(int(RTP_TERM_GRACE*10)):  # bounded by count, not by a clock
+            if process.poll() is not None:return
+            time.sleep(.1)
+    try:process.kill()
+    except ProcessLookupError:pass
+
+
 def forward_dispatch(args,control_revision,timeout=5):
     """Fence dispatch against Stop; never wait on a command under the UI lock.
 
@@ -1277,8 +1323,7 @@ def forward_dispatch(args,control_revision,timeout=5):
         process=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL)
     try:output,_=process.communicate(timeout=timeout)
     except BaseException:
-        try:process.kill()
-        except ProcessLookupError:pass
+        stop_vendor(process,args)
         # A vendor grandchild can retain stdout after its parent is killed.
         # The enclosing apply group owns descendant cleanup; never wait here
         # without a bound and prevent a delayed pipe EOF from blocking Stop.
@@ -1411,7 +1456,7 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
     if lease_error:raise Refused(lease_error)
     journal={'tx':tx,'phase':'ARMED','before':before,'after':after,'hash':selection['hash'],
              'source':selection['source']['id'],'target':selection['target']['id'],
-             'deadline':min(until,wall+90),'monotonic_deadline':min(lease_end,mono+90),'lease_monotonic_until':lease_end,'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
+             'deadline':min(until,wall+TRANSACTION_SECONDS),'monotonic_deadline':min(lease_end,mono+TRANSACTION_SECONDS),'lease_monotonic_until':lease_end,'trial':trial,'trial_nonce':backend.policy()['settings'].get('native_trial'),
              'pid':None,'started':time.time(),'vendor_identity':selection['vendor_identity'],
              'process_bindings':selection.get('process_bindings'),
              'proof_scope':PROOF_SCOPE,
@@ -1461,7 +1506,9 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         publish_transition({'state':'APPLYING','source':journal['source'],'target':journal['target'],'trial':trial,'reason':cause,'phase_evidence':journal.get('phase_evidence',[]),'probe_evidence':probe_evidence,'transition_kind':transition_kind(selection['source'],selection['target'])})
         journal_write(journal);released=True
         stage='worker-wait'
-        process.wait(timeout=max(1,min(50,journal['monotonic_deadline']-time.monotonic())))
+        # Bounded by the declared transaction, never shorter than the child's
+        # own RTP/quiet budget: the parent must not SIGKILL a running rtp2.sh.
+        process.wait(timeout=max(1,journal['monotonic_deadline']-time.monotonic()+WORKER_WAIT_GRACE))
         stage='post-apply'
         if pair_context is not None:
             saved=journal_read()
@@ -1550,6 +1597,13 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         failure_code=str(error) if isinstance(error,Refused) and re.fullmatch(r'[A-Z0-9_-]{1,96}',str(error)) else 'NATIVE-SYSTEM-001'
         failure_detail=record_attempt_failure(tx,stage,error,mono)
         # A failed shell may already have exited while its children still run.
+        # SIGTERM first lets a still-running rtp2.sh remove its lock; bounded.
+        try:os.killpg(process.pid,signal.SIGTERM)
+        except ProcessLookupError:pass
+        else:
+            for _ in range(int(RTP_TERM_GRACE*10)):  # bounded by count, not by a clock
+                if process.poll() is not None:break
+                time.sleep(.1)
         try:os.killpg(process.pid,signal.SIGKILL)
         except ProcessLookupError:pass
         process.wait()

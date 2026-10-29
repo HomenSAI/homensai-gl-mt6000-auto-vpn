@@ -359,6 +359,18 @@ class RestoreOrderSteps(unittest.TestCase):
             self.case.mangle=mangle
             self.assertNotIn('restore_proof_source',n.journal_read())
 
+    def test_forward_promotion_refuses_protected_firewall_or_credential_drift(self):
+        # A partially rewritten vendor firewall (e.g. one gl_vpn_rules forwarding
+        # missing after an interrupted rtp2.sh) is not provably ours: no promotion.
+        self.failed_forward();state=pair.read_state()
+        for name in ('firewall','wireguard'):
+            pair.save(dict(state,protected={name:'a'*64}))
+            with self.subTest(config=name),patch.object(pair,'configs',return_value={name:'b'*64}),\
+                    patch.object(pair,'firewall_bytes',return_value=b"config forwarding 'foreign'\n"):
+                self.refuse_retry()
+            self.assertNotIn('restore_proof_source',n.journal_read())
+        pair.save(state)
+
     def test_failed_forward_promotion_write_changes_neither_policy_nor_journal(self):
         self.failed_forward();before=n.JOURNAL.read_bytes();write=n.journal_write
         def failed(row):

@@ -154,4 +154,7 @@ FACTORIES
     replace('key=hybridPage(key);placeHybridControls(key);','key=hybridPage(key);')
     replace("activeTab=key;if(appRoot)appRoot.setAttribute('data-hv-active',key);","activeTab=key;ensureVisiblePage(key);placeHybridControls(key);if(appRoot)appRoot.setAttribute('data-hv-active',key);")
     replace('    function sortableTables(){\n      panel.querySelectorAll',"    function sortableTables(scope){\n      (scope||panel).querySelectorAll")
+    # Whole-line developer comments added after the hybrid pass (lazy core, preparation) stay in their modules.
+    keep=re.compile(r'©|copyright|licen[cs]e|\bMIT\b|HomenS|Khomenko',re.I)
+    source=re.sub(r'(?m)^[ \t]*(?://[^\n]*|/\*[\s\S]*?\*/[ \t]*)\n',lambda m:m.group(0) if keep.search(m.group(0)) else '',source)
     return source

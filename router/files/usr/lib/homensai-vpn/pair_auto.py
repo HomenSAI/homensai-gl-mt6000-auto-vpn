@@ -74,6 +74,9 @@ def read_state():
             or any(x not in ('0', '1') for x in data['before_flags'].values())
             or not isinstance(data.get('network_identity'), str) or not __import__('re').fullmatch('[a-f0-9]{64}', data['network_identity'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not isinstance(data['protected_static']['firewall'],str) or not re.fullmatch('[a-f0-9]{64}',data['protected_static']['firewall'])):
+        raise ValueError('PAIR-STATE-UNVERIFIED')
     if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'policy_roles' in data:
@@ -363,6 +366,23 @@ def config_digest(name, data, interfaces=None):
     return hashlib.sha256(data).hexdigest()
 
 
+# Every stock rtp2.sh run deletes and regenerates these vendor-owned sections.
+GL_VPN_RULES = re.compile(rb"\n[ \t]*option[ \t]+gl_vpn_rules[ \t]+'1'[ \t]*\r?(?:\n|$)")
+
+
+def firewall_bytes():
+    path = Path('/etc/config/firewall')
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 1048576:
+        raise ValueError('PAIR-CONFIG-UNVERIFIED')
+    return path.read_bytes()
+
+
+def static_firewall_digest(data):
+    """Firewall digest without the vendor-regenerated gl_vpn_rules sections."""
+    kept = [block for block in re.split(rb'\n(?=config[ \t])', data) if not GL_VPN_RULES.search(b'\n' + block)]
+    return config_digest('firewall', b'\n'.join(kept))
+
+
 def configs(interfaces=None):
     result = {}
     for name in ('wireguard', 'ovpnclient', 'firewall', 'route_policy', 'wireless', 'dhcp', 'gl-dns-v2'):
@@ -378,7 +398,7 @@ def changed(state, observed, skip=()):
     for name, sha in state['protected'].items():
         if name == 'route_policy' or name in skip:
             continue
-        if observed[name] != sha and not (name == 'firewall' and hashlib.sha256(Path('/etc/config/firewall').read_bytes()).hexdigest() == sha):
+        if observed[name] != sha and not (name == 'firewall' and hashlib.sha256(firewall_bytes()).hexdigest() == sha):
             return True
     return False
 
@@ -544,6 +564,9 @@ def begin(backend, settings, request):
                  network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(managed), owned=[],
                  before_flags={name: row['disabled'] for name, row in selected.items()},
                  process_bindings=selection['process_bindings'], order=selection['order'], policy_hash=selection['hash'])
+    # Lets a later recovery tell vendor-only gl_vpn_rules drift from a foreign edit.
+    try:state['protected_static']={'firewall':static_firewall_digest(firewall_bytes())}
+    except (OSError,ValueError):pass  # the full protected digest above still applies
     from pair_policy import proof
     state['policy_roles']=proof(selection)
     save(state)  # Durable ownership precedes any network write.

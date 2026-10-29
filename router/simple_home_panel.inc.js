@@ -23,26 +23,28 @@ function simpleHomeModel(status,inventory,now){
   var ns=status.native_failover||{},control=autoControlModel(status,now);
   var source=vendorDisplayMember(status,inventory,'source',now,ns.source),target=vendorDisplayMember(status,inventory,'target',now,ns.target);
   var path=manualConfirmedPath(status,source,target,now);
-  var unavailable=!!status.error||!!status.rpc_error||!observationFresh(status,now)||!control.fresh;
+  // A lost answer, stale router data and a stale controller are different facts; a named recovery stays visible.
+  var lost=!!status.error||!!status.rpc_error,light=autoLightModel(status,inventory,now),unavailable=lost||!observationFresh(status,now)||!control.fresh&&light.key!=='problem';
   var decision=simpleHomeEntry({statusFresh:!status.error&&!status.rpc_error&&observationFresh(status,now),controllerFresh:control.fresh,autoRunning:simpleHomeAutoEnabled(status,now)});
-  var operation=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null,light=autoLightModel(status,inventory,now),manual=manualOperationModel(status,now);
+  var operation=typeof autoCommandOperation==='function'?autoCommandOperation(status,now):null,manual=manualOperationModel(status,now);
   var sourceHealth=simpleHomeHealth(source,now,unavailable),targetHealth=simpleHomeHealth(target,now,unavailable);
   var selected=unavailable?null:path.selected,activeHealth=selected==='source'?sourceHealth:selected==='target'?targetHealth:null;
   decision.source=source;decision.target=target;decision.selectedRole=selected;
   decision.sourceHealth=sourceHealth;decision.targetHealth=targetHealth;
   decision.activeHealthy=!!activeHealth&&activeHealth.state==='healthy';
   decision.moving=!unavailable&&(!!path.moving||control.transitioning||manual.busy);
-  decision.dataUnavailable=unavailable;decision.control=control;decision.operation=operation;
+  decision.dataUnavailable=unavailable;decision.connectionLost=lost;decision.control=control;decision.operation=operation;
   decision.enabled=simpleHomeAutoEnabled(status,now);decision.actionStop=control.stop||operation==='starting'||operation==='unconfirmed'||!control.fresh;decision.light=light;decision.path=path;
   decision.blockers=control.fresh&&Array.isArray(ns.blockers)?ns.blockers.slice(0,4):[];
   if(path.code&&decision.blockers.indexOf(path.code)<0)decision.blockers.push(path.code);
   decision.setupRequired=!unavailable&&control.off&&!decision.moving&&!operation&&(!source||!target||!source.id||!target.id||source.id===target.id);
   if(control.paused){decision.state='pending';decision.title=bi('Auto paused for speed test','Auto на паузе для теста скорости');decision.summary=bi('Monitoring resumes first, then Auto. Your VPNs stay connected.','Сначала возобновится мониторинг, затем Auto. VPN остаются подключёнными.');}
-  else if(unavailable){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=bi('Check the connection to the router.','Проверьте связь с роутером.');}
+  else if(unavailable&&(lost||!observationFresh(status,now))){decision.state='unknown';decision.title=bi('No fresh data','Нет свежих данных');decision.summary=lost?bi('Check the connection to the router.','Проверьте связь с роутером.'):bi('The router has not sent fresh measurements.','Роутер не присылает свежие измерения.');}
+  else if(unavailable){decision.state='unknown';decision.title=light.title;decision.summary=light.hint;}
   else if(operation==='stopping'){decision.state='pending';decision.title=bi('Turning Auto off…','Выключение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
   else if(operation==='starting'){decision.state='pending';decision.title=bi('Turning Auto on…','Включение Auto…');decision.summary=bi('The router is carrying out the command, wait a few seconds.','Роутер выполняет команду, подождите несколько секунд.');}
-  else if(operation==='unconfirmed'||manual.uncertain){decision.state='unknown';decision.title=light.title;decision.summary=light.hint;}
-  else if(decision.moving){decision.state='pending';decision.title=manual.busy?light.title:bi('Switching channel','Переключение канала');decision.summary=manual.busy?light.hint:bi('The active channel is being confirmed.','Рабочий канал уточняется.');}
+  else if(operation==='unconfirmed'||manual.uncertain){decision.state=light.key==='problem'?'error':'unknown';decision.title=light.title;decision.summary=light.hint;}
+  else if(decision.moving){decision.state='pending';decision.title=manual.busy||light.key==='switching'?light.title:bi('Switching channel','Переключение канала');decision.summary=(manual.busy||light.key==='switching')&&light.hint?light.hint:bi('The active channel is being confirmed.','Рабочий канал уточняется.');}
   else if(light.key==='problem'){decision.state='error';decision.title=light.title;decision.summary=light.hint;}
   else if(light.key==='unknown'){decision.state='unknown';decision.title=light.title;decision.summary=light.hint;}
   else if(light.hold){decision.state='pending';decision.title=light.title;decision.summary=light.hint;}
@@ -66,7 +68,7 @@ function renderSimpleHome(status,inventory,model,controlCard,openMenu){
   if(actionLabel.classList&&actionLabel.classList.add)actionLabel.classList.add('hv-simple-action');
   function member(profile,role){
     var health=role==='source'?model.sourceHealth:model.targetHealth,selected=model.selectedRole===role;
-    var tone=manualChannelTone(profile,role,model.path||manualConfirmedPath(status,model.source,model.target,now),now,autoWorking(model.light||autoLightModel(status,inventory,now)));
+    var tone=manualChannelTone(profile,role,model.path||manualConfirmedPath(status,model.source,model.target,now),now,autoWorking(model.light||autoLightModel(status,inventory,now)),status);
     var latency=renderChannelPing(profile,status,now);
     var title=profile&&(profile.name||profile.router_name)||bi('No VPN selected','VPN не выбран');
     return E('div',{'class':'hv-simple-channel hv-simple-channel-'+health.state,'data-simple-role':role,'data-node-tone':tone.color},[
@@ -76,7 +78,7 @@ function renderSimpleHome(status,inventory,model,controlCard,openMenu){
       profile&&countryName(profile)?E('div',{},countryName(profile)):null,E('div',{'class':'hv-simple-latency'},latency)
     ].filter(Boolean));
   }
-  var monitor=model.dataUnavailable?bi('No connection to the router','Нет связи с роутером'):model.light&&model.light.hold?model.light.title:model.state==='error'?bi('Needs attention','Нужно внимание'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
+  var monitor=model.connectionLost?bi('No connection to the router','Нет связи с роутером'):model.dataUnavailable?bi('Data out of date','Данные устарели'):model.light&&model.light.hold?model.light.title:model.state==='error'?bi('Needs attention','Нужно внимание'):model.enabled?bi('Auto is on','Auto включён'):model.control&&model.control.off?bi('Auto is off','Auto выключен'):bi('Being confirmed','Уточняется');
   return E('section',{'class':'hv-simple-home','data-simple-home':model.state},[
     E('div',{'class':'hv-simple-card'},[
       E('div',{'class':'hv-simple-top'},[E('strong',{},'Auto VPN'),E('span',{'class':'hv-simple-monitor hv-simple-monitor-'+model.state},monitor)]),

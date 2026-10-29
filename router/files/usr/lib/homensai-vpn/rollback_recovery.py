@@ -43,7 +43,16 @@ def validate_step(journal):
 def restore_origin(journal):
     """Keep the UCI plan separate from the order proven by the actual kernel."""
     if 'restore_proof_source' not in journal and 'restore_order_origin' not in journal:return journal.get('restore_before_order')
-    if (journal.get('restore_proof_source')!='forward' or journal.get('restore_order_origin')!=journal.get('after')
+    source=journal.get('restore_proof_source')
+    origins=[journal.get('after')]
+    if source=='vendor-rebuild':
+        # Our own vendor RTP died mid-rebuild (worker stage rtp-dispatch). The
+        # UCI origin may be either recorded order; every forward flag still holds.
+        detail=journal.get('failure_detail')
+        if not isinstance(detail,dict) or detail.get('worker_stage')!='rtp-dispatch':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+        origins.append(journal.get('before'))
+    elif source!='forward':raise ValueError('JOURNAL-INTEGRITY-FAILED')
+    if (journal.get('restore_order_origin') not in origins
             or journal.get('restore_before_order')!=journal.get('before') or journal.get('restore_target_order')!=journal.get('before')
             or journal.get('before')==journal.get('after') or journal.get('kernel_before_verified') is not True
             or journal.get('restore_before_verified') is not True or journal.get('rtp_dispatched') is not True
@@ -188,3 +197,221 @@ def promote_forward(backend,journal,target):
         if n.journal_read()!=pending:raise n.Refused('JOURNAL-INTEGRITY-FAILED')
     journal.clear();journal.update(pending)
     return authorize(backend,journal)
+
+
+# --- Own interrupted vendor rebuild -----------------------------------------
+# The stock rtp2.sh flushes its mangle chains and deletes every gl_vpn_rules
+# firewall section before rebuilding them. When our own apply worker died at
+# stage rtp-dispatch (e.g. the old 50 s parent cap SIGKILLed its group), the
+# kernel and those vendor sections are a partial vendor intermediate: there is
+# no verified graph to prove and nothing else completes it. This narrow path
+# restores our recorded UCI order and reruns the vendor rebuild to completion,
+# then requires the exact protected configuration, an attested original role
+# and the owned guard. Every other mismatch refuses before any write.
+VENDOR_LOCK='/tmp/run/rtp2.lock'
+RECOVERY_RTP_TIMEOUT=90  # supervisor recovery: no parent kills it; still bounded
+ALLOWED_STALE_LOCK=[None]  # set only while a vendor-rebuild proof reads diagnostics
+
+
+def vendor_lock_pid():
+    """None if absent; the recorded pid when the lock is provably stale; else refuse."""
+    from pathlib import Path
+    if list(Path('/var/run').glob('tunnel-switch*.lock')):raise ValueError('VENDOR-WORKER-BUSY')
+    path=Path(VENDOR_LOCK)
+    if path.is_symlink():raise ValueError('VENDOR-WORKER-BUSY')
+    try:raw=path.read_bytes()
+    except FileNotFoundError:return None
+    text=raw.decode('ascii').strip() if len(raw)<=32 else ''
+    if not re.fullmatch('[1-9][0-9]{0,9}',text):raise ValueError('VENDOR-WORKER-BUSY')
+    try:command=(Path('/proc')/text/'cmdline').read_bytes()
+    except FileNotFoundError:return int(text)  # dead pid: its EXIT trap never ran
+    if b'rtp2' in command:raise ValueError('VENDOR-WORKER-BUSY')
+    return int(text)  # pid reused by an unrelated process
+
+
+def rtp_lock_busy():
+    """Any vendor lock is busy, except the one stale lock a rebuild proof just proved."""
+    from pathlib import Path
+    if not Path(VENDOR_LOCK).exists() and not Path(VENDOR_LOCK).is_symlink():return False
+    allowed=ALLOWED_STALE_LOCK[0]
+    if allowed is None:return True
+    try:return vendor_lock_pid()!=allowed
+    except (OSError,ValueError):return True
+
+
+def interrupted_vendor_rtp(journal):
+    detail=journal.get('failure_detail')
+    return (journal.get('phase')=='APPLYING' and forward_proof(journal)
+            and isinstance(detail,dict) and detail.get('worker_stage')=='rtp-dispatch')
+
+
+def vendor_rebuild_applies(backend,journal):
+    if journal.get('phase')=='RESTORING' and journal.get('restore_proof_source')=='vendor-rebuild':return True
+    # The rebuild never overwrites a routed graph: only an unrouted vendor
+    # intermediate (flushed, no TUNNEL route chain, no LAN MARK) qualifies.
+    return (interrupted_vendor_rtp(journal) and backend.kernel_fingerprint()!=journal.get('kernel_before_fingerprint')
+            and unrouted_kernel())
+
+
+def unrouted_kernel():
+    import native_switch as n
+    from kernel_policy import unrouted
+    try:return unrouted(n.command(['iptables-save','-t','mangle']).decode('utf8'))
+    except (OSError,ValueError,UnicodeError):return False
+
+
+def rebuild(backend,journal,reason,target):
+    import time
+    from pathlib import Path
+    import native_switch as n
+    import pair_auto as pair
+    from agent import RUNTIME,read_json
+    from auto_control import control_lock
+    from pair_policy import metadata,proof,role
+    from pair_interfaces import state as interfaces
+    from failure_diagnosis import profile_identity
+
+    def refuse(code='KERNEL-POLICY-UNVERIFIED'):raise n.Refused(code)
+    context=metadata(journal)
+    if context is None or target!=journal.get('before'):refuse()
+    if journal.get('phase')=='RESTORING':
+        if journal.get('restore_proof_source')!='vendor-rebuild':refuse()
+        try:validate_step(journal)
+        except (ValueError,TypeError,KeyError):refuse('JOURNAL-INTEGRITY-FAILED')
+    elif not interrupted_vendor_rtp(journal):refuse()
+    pid=journal.get('pid')
+    if pid is not None:
+        try:
+            if ('native_switch.py\x00apply\x00'+journal['tx']).encode() in Path('/proc',str(pid),'cmdline').read_bytes():
+                refuse('VENDOR-WORKER-BUSY')  # our worker still lives: never race it
+        except FileNotFoundError:pass
+    marker=read_json(RUNTIME/'auto-control-revision.json',{})
+    revision=marker.get('revision') if isinstance(marker,dict) else None
+    n.require_control_revision(revision)
+    state=pair.read_state();requested=pair.intent()
+    if (requested.get('mode')!='off' or requested.get('revision')!=revision
+            or state.get('phase') not in ('RUNNING','HELD','STOPPING')
+            or state.get('id')!=journal.get('trial_nonce')
+            or state.get('revision')!=journal.get('control_revision')
+            or state.get('process_bindings')!=journal.get('process_bindings')
+            or state.get('order')!=context['session_order'] or state.get('policy_hash')!=journal.get('hash')
+            or state.get('policy_roles')!={key:context[key] for key in ('source_rule','target_rule','direction','generic_rules','source_id','target_id')}):refuse()
+    managed=interfaces(state);lock=[None];kernel=[None]
+
+    def pending(final=False):
+        lines=[x for x in n.command(['uci','-q','changes']).decode('utf8','replace').splitlines() if x.strip()]
+        step=journal.get('restore_order_step') or {}
+        # Only our own recorded, still uncommitted route_policy move may be pending.
+        owned=step.get('kind')=='reorder' or step.get('kind')=='commit' and journal.get('restore_order_origin')!=journal.get('restore_target_order')
+        if lines and (final or not owned or any(not x.startswith('route_policy.') for x in lines)):
+            refuse('PAIR-EXTERNAL-CONFIG-CHANGE')
+
+    def configuration(final=False):
+        if pair.normalized_network(pair.network(),managed)!=state['network_identity']:refuse('PAIR-EXTERNAL-NETWORK-CHANGE')
+        observed=pair.configs(managed)
+        if pair.changed(state,observed,skip=('firewall',)):refuse('PAIR-EXTERNAL-CONFIG-CHANGE')
+        if not pair.changed(state,observed):return
+        # Before the rebuild only vendor-owned gl_vpn_rules sections may differ;
+        # a session without the stored static digest is decided after the rebuild.
+        static=(state.get('protected_static') or {}).get('firewall')
+        if final or static is not None and pair.static_firewall_digest(pair.firewall_bytes())!=static:
+            refuse('PAIR-EXTERNAL-CONFIG-CHANGE')
+
+    def selection():
+        try:lock[0]=vendor_lock_pid()
+        except (OSError,ValueError):refuse('VENDOR-WORKER-BUSY')
+        ALLOWED_STALE_LOCK[0]=lock[0]
+        try:blockers,current=backend.diagnostic()
+        finally:ALLOWED_STALE_LOCK[0]=None
+        if (blockers or not isinstance(current,dict) or proof(current)!=state['policy_roles']
+                or current.get('hash')!=journal['hash'] or current.get('vendor_identity')!=journal.get('vendor_identity')
+                or current.get('process_bindings')!=journal.get('process_bindings')):refuse()
+        for key in ('source','target'):
+            row=current.get(key,{});binding=row.get('kernel_binding')
+            if profile_identity(row) is None or profile_identity(row)!=(journal.get('vendor_profiles') or {}).get(key):refuse()
+            if (not isinstance(binding,dict) or binding.get('code') is not None
+                    or not isinstance(binding.get('device'),str) or not re.fullmatch('[A-Za-z0-9_]{1,15}',binding['device'])
+                    or type(binding.get('mark')) is not int or binding['mark']<=0
+                    or not isinstance(binding.get('table'),str) or not binding['table'].isdigit()
+                    or type(binding.get('ifindex')) is not int or binding['ifindex']<=0):refuse()
+        if n.digest({key:{'profile':profile_identity(current[key]),'kernel':current[key]['kernel_binding']}
+                     for key in ('source','target')})!=journal['vendor_identity']:refuse()
+        return current
+
+    def check():
+        n.require_control_revision(revision)
+        if (pair.intent()!=requested or pair.read_state()!=state or n.journal_read()!=journal
+                or backend.guard_exists() is not True):refuse()
+        pending();configuration();current=selection()
+        live=backend.order()
+        allowed=(order_allowed(journal,live[0]) if journal.get('phase')=='RESTORING'
+                 else live[0] in (journal['after'],journal['before']))
+        fingerprint=backend.kernel_fingerprint()
+        if live!=(current.get('order'),journal['hash']) or not allowed or not isinstance(fingerprint,str):refuse()
+        # Until our own rebuild runs, nobody else may touch the partial graph.
+        if journal.get('restore_rtp_dispatched') is not True:
+            if not unrouted_kernel():refuse()
+            if kernel[0] is None:kernel[0]=fingerprint
+            elif fingerprint!=kernel[0]:refuse()
+        n.require_control_revision(revision)
+        if (pair.intent()!=requested or pair.read_state()!=state or n.journal_read()!=journal
+                or backend.order()!=live or backend.guard_exists() is not True):refuse()
+        return live[0]
+
+    live=check()
+    if journal.get('phase')=='APPLYING':
+        updated=copy.deepcopy(journal)
+        updated.update(phase='RESTORING',restore_proof_source='vendor-rebuild',restore_order_origin=list(live),
+                       restore_before_order=list(journal['before']),restore_before_verified=True,restore_target_order=list(target),
+                       restore_kernel_fingerprint=journal['kernel_before_fingerprint'])
+        updated['restore_order_step']=next(order_steps(live,target),{'version':1,'kind':'commit','before':list(target),'after':list(target)})
+        with control_lock(RUNTIME):
+            n.require_control_revision(revision)
+            if n.journal_read()!=journal or pair.read_state()!=state or pair.intent()!=requested:refuse('JOURNAL-INTEGRITY-FAILED')
+            n.journal_write(updated)
+            if n.journal_read()!=updated:refuse('JOURNAL-INTEGRITY-FAILED')
+        journal.clear();journal.update(updated)
+        n.publish(dict(n.pair_event_fields(journal,restoring=True,restore_order=target),state='RESTORING',reason=reason,
+                       source=journal['source'],target=journal['target'],proof_scope=journal.get('proof_scope','router-probed-ipv4')))
+
+    def write(args,timeout=5):
+        check()
+        record_step(backend,journal,args)
+        check()
+        if args[0]=='/usr/bin/rtp2.sh':
+            if lock[0] is not None:
+                # Remove only the lock just proven stale (same dead pid); rtp2.sh
+                # would wait 30 s and remove it itself, inside our RTP bound.
+                try:same=vendor_lock_pid()==lock[0]
+                except (OSError,ValueError):same=False
+                if not same:refuse('VENDOR-WORKER-BUSY')
+                Path(VENDOR_LOCK).unlink()
+            journal['restore_rtp_dispatched']=True;n.journal_write(journal)
+            timeout=RECOVERY_RTP_TIMEOUT
+        return n.forward_dispatch(args,revision,timeout=timeout)
+
+    step=journal.get('restore_order_step') or {}
+    if live!=target:backend.reorder(target,write_command=write)
+    elif step.get('kind')=='reorder':write(['uci','commit','route_policy'])  # our last move, uncommitted
+    backend.apply(write_command=write)
+
+    def failed(code='ROLLBACK-UNVERIFIED'):
+        try:backend.guard(backend.devices())
+        except (n.Refused,OSError,ValueError):pass
+        refuse(code)
+    if backend.order()!=(target,journal['hash']):failed()
+    blockers,current=backend.diagnostic()
+    kernel_proof=backend.attest_policy(current) if not blockers and current else {}
+    if kernel_proof.get('verified') is not True or kernel_proof.get('role')!=role(context,target):failed()
+    if backend.guard_exists() is not True:failed()
+    try:pending(final=True);configuration(final=True)
+    except n.Refused as error:failed(str(error))
+    n.require_control_revision(revision)
+    if pair.intent()!=requested or pair.read_state()!=state:failed('CLIENT-STOP')
+    journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time(),restored_order=list(target))
+    n.journal_write(journal)
+    backend.guard(backend.devices())
+    fields=n.pair_event_fields(journal,completed=True,outcome='restored',restoring=True)
+    n.publish(dict(fields,state='RESTORING' if reason in ('PAIR-STOPPED','SERVICE-STOPPED','SUPERVISOR-RECOVERY') else 'ROLLED-BACK',
+                   reason=reason,source=journal['source'],target=journal['target'],proof_scope=journal.get('proof_scope','router-probed-ipv4'),
+                   kernel_proof=kernel_proof,original_restored=target==context['session_order'],vendor_rebuild=True))

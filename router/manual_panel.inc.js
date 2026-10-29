@@ -11,10 +11,34 @@ function manualOperationModel(status,now){
   if(op&&valid&&same&&typedTerminal){
     MANUAL_SWITCH_FEEDBACK=row;MANUAL_SWITCH_OPERATION=op=null;MANUAL_SWITCH_PENDING=false;MANUAL_SWITCH_DIRECTION=null;
   }else if(op&&valid&&same){op.request_id=row.request_id;op.acknowledged=true;if(terminal)op.uncertain=true;}
-  if(op&&(Number.isFinite(op.tick)?manualClockTick()-op.tick:Date.now()-op.t0)>120000)op.uncertain=true;
-  var backendPending=['QUEUED','CLAIMED','APPLYING','WAIT-CLIENT'].indexOf(row.state)>=0;
+  var backendPending=['QUEUED','CLAIMED','APPLYING','WAIT-CLIENT'].indexOf(row.state)>=0,ours=backendPending&&(!op||same);
+  // Real bounds: an unclaimed request expires after 60 s; a claimed one runs one transaction (<= 120 s, parent finishes <= 125 s).
+  var transition=typeof uiTransitionModel==='function'?uiTransitionModel(status,now):{live:false},stage=op&&!op.acknowledged?'SENT':null,deadline=null;
+  if(ours&&valid){stage=row.state;deadline=row.state==='QUEUED'&&Number.isFinite(row.requested_at)?row.requested_at+60:Number.isFinite(row.updated_at)?row.updated_at+125:null;}
+  if((op||backendPending)&&transition.live){stage=transition.state;deadline=transition.deadline;}
+  var elapsed=op&&Number.isFinite(op.tick)?(manualClockTick()-op.tick)/1000:op?(Date.now()-op.t0)/1000:backendPending&&Number.isFinite(row.requested_at)?now-row.requested_at:null;
+  var late=Number.isFinite(deadline)?now>deadline+15:Number.isFinite(elapsed)&&elapsed>120;
+  if(op&&late)op.uncertain=true;
   return {busy:!!op||backendPending,direction:op?op.direction:backendPending?row.direction:null,
-    uncertain:!!(op&&op.uncertain)||backendPending&&(!valid||!manualFresh(row.updated_at,now,90)),request:op||row};
+    uncertain:!!(op&&op.uncertain)||backendPending&&(!valid||late),request:op||row,
+    stage:stage,deadline:deadline,elapsed:elapsed,checking:transition.live&&transition.phase==='checking'||Number.isFinite(deadline)&&now>deadline};
+}
+// The one shared operation timer (Auto, manual, observed automatic switch). Nodes are refreshed by the page heartbeat.
+var UI_TIMER_NODES=[];
+function uiOperationTimerText(status,now){
+  status=status||{};var manual=manualOperationModel(status,now),transition=typeof uiTransitionModel==='function'?uiTransitionModel(status,now):{live:false};
+  if(manual.busy)return manual.uncertain?bi('Result not confirmed','Результат не подтверждён')+(Number.isFinite(manual.elapsed)?' · '+uiClock(manual.elapsed)+bi(' elapsed',' прошло'):''):uiOperationTimer(manual.stage,manual.elapsed,Number.isFinite(manual.deadline)?manual.deadline-now:null,manual.checking);
+  var command=typeof autoCommandPending!=='undefined'&&(autoCommandPending||autoObservedOperation),elapsed=command?autoElapsedMs(command)/1000:transition.started?now-transition.started:null;
+  if(transition.live)return uiTransitionText(transition,elapsed,now);
+  if(command)return uiOperationTimer(null,elapsed,null,false);
+  return '';
+}
+function uiTransitionText(transition,elapsed,now){return uiOperationTimer(transition.state,elapsed,transition.deadline-now,transition.phase==='checking');}
+function uiTimerNode(status,now){var node=E('span',{'class':'hv-op-timer','data-op-timer':'1'},uiOperationTimerText(status,now));node.hvStatus=status;UI_TIMER_NODES.push(node);return node;}
+function uiTimerTick(){
+  if(typeof autoCountdownTick==='function')autoCountdownTick();
+  UI_TIMER_NODES=UI_TIMER_NODES.filter(function(node){return node.isConnected!==false;}).slice(-40);
+  UI_TIMER_NODES.forEach(function(node){var status=node.hvStatus,text=uiOperationTimerText(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000);if(node.textContent!==text)node.textContent=text;});
 }
 function manualFresh(time,now,limit){return Number.isFinite(time)&&now-time>=-5&&now-time<=limit;}
 function manualResultFresh(row,now){
@@ -43,9 +67,9 @@ function manualConfirmedPath(status,source,target,now){
   if(model.fresh&&ns.state==='STOPPED-ON-RESERVE'&&source&&target&&source.id!==target.id&&ns.original_restored===false)path.selected='target';
   return path;
 }
-function manualChannelTone(profile,key,path,now,autoRuns){
+function manualChannelTone(profile,key,path,now,autoRuns,status){
   var health=profile?profileHealth(profile,now).state:'unknown',selected=path.selected===key;
-  var waitText=key==='target'||key==='reserve'?bi('Reserve channel: Alive','Запасной канал: Живой'):bi('Primary channel: Alive','Основной канал: Живой');
+  var waitText=channelAliveText(key==='target'||key==='reserve'?'reserve':'primary',status,now);
   if(!profile)return {color:'grey',text:bi('Not chosen','Не выбран'),carrier:false};
   if(path.moving||path.pending)return {color:'grey',text:path.uncertain?bi('Request not confirmed · waiting for fresh router state','Запрос не подтверждён · ждём актуального состояния роутера'):bi('Switching · waiting for the router','Переключение · ждём роутер'),carrier:false};
   // Owner colour rule: green works in Auto, yellow alive and available for manual switching, grey waiting for the router, red error.
@@ -103,7 +127,7 @@ function manualFailureResult(status,now){
 function renderManualSwitch(status,inventory){
   var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),model=manualControlModel(status,now),buttons=[],labels={},actionMarks={},signals={},settings=(inventory||{}).settings||{},ns=status.native_failover||{},route=status.channel_path||{},profiles=status.profiles||[];
   var source=profiles.filter(function(p){return p.id===(settings.plan_source||route.source_profile_id||ns.source);})[0],target=profiles.filter(function(p){return p.id===(settings.plan_target||route.target_profile_id||ns.target);})[0];
-  var selection=manualSelectionModel(status,source,target,now);
+  var selection=manualSelectionModel(status,source,target,now),recovery=typeof uiRecoveryModel==='function'?uiRecoveryModel(status,now):null,liveTransition=typeof uiTransitionModel==='function'&&uiTransitionModel(status,now).live;
   var held=model.mode==='continuous-pair'&&['source','target'].indexOf(model.hold)>=0;
   var pendingDirection=model.busy?model.direction:selection.moving?(ns.state==='RESTORING'||ns.reason==='PAIR-CONNECTING'||ns.reason==='PAIR-WAITING-PROBES'?'primary':'reserve'):null;
   function notice(text){ui.addNotification(null,E('p',{},text));}
@@ -121,8 +145,12 @@ function renderManualSwitch(status,inventory){
         if(result&&result.accepted===true&&result.queued===true&&result.completed===false&&typeof result.request_id==='string'&&/^[a-f0-9]{32}$/.test(result.request_id)){operation.request_id=result.request_id;operation.acknowledged=true;}
         else if(result&&result.accepted===false&&result.queued!==true){
           var codes=Array.isArray(result.blockers)?result.blockers.filter(function(c){return typeof c==='string'&&/^[A-Z][A-Z0-9_-]{0,95}$/.test(c);}):[];
-          MANUAL_SWITCH_FEEDBACK={state:'REFUSED',completed:false,updated_at:typeof statusNow==='function'?statusNow(status):Date.now()/1000,code:codes[0]||'MANUAL-REQUEST-UNCONFIRMED'};
-          MANUAL_SWITCH_OPERATION=null;MANUAL_SWITCH_PENDING=false;MANUAL_SWITCH_DIRECTION=null;notice(manualReason(codes));
+          var running=['PAIR-MANUAL-BUSY','TRANSACTION-IN-PROGRESS'].indexOf(codes[0])>=0;
+          // A duplicate during a live operation is not a refusal of that operation; without proof of one the next status names the recovery.
+          MANUAL_SWITCH_FEEDBACK=running?null:{state:'REFUSED',completed:false,updated_at:typeof statusNow==='function'?statusNow(status):Date.now()/1000,code:codes[0]||'MANUAL-REQUEST-UNCONFIRMED'};
+          MANUAL_SWITCH_OPERATION=null;MANUAL_SWITCH_PENDING=false;MANUAL_SWITCH_DIRECTION=null;
+          var timer=running?uiOperationTimerText(status,typeof statusNow==='function'?statusNow(status):Date.now()/1000):'';
+          notice(running?bi('Not sent again: an operation is already running','Повторно не отправлено: операция уже выполняется')+(timer?' · '+timer:''):manualReason(codes));
         }else operation.uncertain=true;
       }).catch(function(){if(MANUAL_SWITCH_OPERATION===operation)operation.uncertain=true;}).finally(function(){buttons.forEach(function(node){node.disabled=true;});if(typeof uiOperationRefresh==='function')uiOperationRefresh();});
     }},label);n.hvManualDirection=direction;buttons.push(n);return n;
@@ -152,21 +180,22 @@ function renderManualSwitch(status,inventory){
     var waiting=!pending&&health==='healthy'&&(!autoRuns||!selected);
     var color=waiting?'yellow':health==='failed'||health==='inactive'?'red':pending||!selection.selected||selection.off?'grey':selected&&health==='healthy'?'green':'grey';
     var protocol=profile?(typeof protocolLabel==='function'?protocolLabel(profile):profile.protocol==='wireguard'?'WireGuard':'OpenVPN'):bi('Profile not chosen','Профиль не выбран');
-    var healthText=selection.code?bi('Traffic selection is not verified','Выбор канала трафика не подтверждён')+' · '+selection.code:waiting?(direction==='primary'?bi('Primary channel: Alive','Основной канал: Живой'):bi('Reserve channel: Alive','Запасной канал: Живой')):pending?(model.uncertain?bi('Request not confirmed','Запрос не подтверждён'):pendingDirection===direction?bi('Switching','Переключение'):bi('Waiting for the router','Ждём роутер')):!selected?(health==='healthy'?bi('Reserve channel: Alive','Запасной канал: Живой'):bi('Internet channel not in use','Интернет-канал не задействован')):health==='healthy'?(direction==='primary'?bi('Internet: primary channel in use','Интернет: задействован основной канал'):bi('Internet: reserve in use','Интернет: задействован резерв')):health==='failed'?bi('Internet: connection check failed','Интернет: ошибка проверки соединения')+(profile&&profile.code?' · '+profile.code:''):health==='inactive'?bi('Internet: VPN tunnel disconnected','Интернет: VPN-туннель отключён'):bi('Internet: checking the connection','Интернет: выполняется проверка соединения');
+    var healthText=selection.code?bi('Traffic selection is not verified','Выбор канала трафика не подтверждён')+' · '+selection.code:waiting?channelAliveText(direction,status,now):pending?(model.uncertain?bi('Request not confirmed','Запрос не подтверждён'):pendingDirection===direction?bi('Switching','Переключение'):bi('Waiting for the router','Ждём роутер')):!selected?(health==='healthy'?channelAliveText(direction,status,now):bi('Internet channel not in use','Интернет-канал не задействован')):health==='healthy'?(direction==='primary'?bi('Internet: primary channel in use','Интернет: задействован основной канал'):bi('Internet: reserve in use','Интернет: задействован резерв')):health==='failed'?bi('Internet: connection check failed','Интернет: ошибка проверки соединения')+(profile&&profile.code?' · '+profile.code:''):health==='inactive'?bi('Internet: VPN tunnel disconnected','Интернет: VPN-туннель отключён'):bi('Internet: checking the connection','Интернет: выполняется проверка соединения');
     var country=profile&&typeof countryLabel==='function'?countryLabel(profile):null;
     var indicator=E('strong',{'class':'hv-manual-health hv-health-'+health},healthText);labels[direction]=indicator;
     var action=E('b',{'class':'hv-manual-enable'},pending?bi('Wait','Подождите'):selected?bi('In use','Используется'):bi('Switch to this channel','Переключиться на канал'));actionMarks[direction]=action;
     var card=button(direction,[E('small',{},role),E('strong',{'class':'hv-manual-protocol'},protocol),country?E('span',{},country):null,typeof endpointText==='function'?E('small',{},endpointText(profile,now)):null,typeof renderChannelPing==='function'?renderChannelPing(profile,status,now):null,signal(direction,selected&&health==='healthy'&&!pending),indicator,
-      action].filter(Boolean));
+      action,pending&&pendingDirection===direction?uiTimerNode(status,now):null].filter(Boolean));
     card.setAttribute('class','hv-manual-channel hv-manual-'+color);card.setAttribute('aria-pressed',selected?'true':'false');card.setAttribute('data-selected',selected?'true':'false');
     if(selected&&!pending)card.disabled=true;
     if(!selected&&!pending&&card.disabled)action.textContent=bi('Switch unavailable','Переключение недоступно');
-    var reason=!selected&&card.disabled?E('p',{'class':'hv-manual-diagnostic','id':'hv-manual-reason-'+direction,'data-manual-diagnostic':direction,'role':'status'},pending?(model.uncertain?bi('The result is not confirmed. Refreshing the router state; Stop remains available.','Результат не подтверждён. Обновляем состояние роутера; Stop остаётся доступен.'):bi('A request is pending. Wait for the router.','Запрос выполняется. Дождитесь ответа роутера.')):selection.code?manualReason([selection.code]):!selection.selected?bi('Channel selection is not verified.','Выбор канала не подтверждён.'):manualReason(model[direction].blockers)):null;
+    var reason=!selected&&card.disabled?E('p',{'class':'hv-manual-diagnostic','id':'hv-manual-reason-'+direction,'data-manual-diagnostic':direction,'role':'status'},pending?(model.uncertain?bi('The result is not confirmed. Refreshing the router state; Stop remains available.','Результат не подтверждён. Обновляем состояние роутера; Stop остаётся доступен.'):[bi('An operation is already running: ','Операция уже выполняется: '),uiTimerNode(status,now)]):recovery?[E('strong',{},(recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed','Результат переключения не подтверждён'):bi('Recovery needed','Нужно восстановление'))+' · '),typeof errorCodeLink==='function'?errorCodeLink(recovery.code):recovery.code]:selection.code?manualReason([selection.code]):!selection.selected?bi('Channel selection is not verified.','Выбор канала не подтверждён.'):manualReason(model[direction].blockers)):null;
     if(reason)card.setAttribute('aria-describedby','hv-manual-reason-'+direction);
     return E('div',{'class':'hv-manual-choice'},[card,reason].filter(Boolean));
   }
   return E('section',{'class':'hv-chart-card hv-manual-switch','data-manual-controls':'1'},[
     E('h3',{},bi('Manual channel switch','Ручное переключение канала')),
+    recovery&&!model.busy?E('div',{'class':'hv-manual-error','data-manual-recovery':recovery.code,'role':'status'},[E('strong',{},(recovery.code==='SWITCH-RESULT-UNCONFIRMED'?bi('Switch result not confirmed: ','Результат переключения не подтверждён: '):bi('Recovery needed: ','Нужно восстановление: '))+recovery.code),E('p',{},uiRecoveryText(recovery))]):null,
     typeof renderLatencyRecommendation==='function'?renderLatencyRecommendation(status,inventory,'manual'):null,
     E('div',{'class':'hv-manual-channel-grid'},[choice('primary',source,bi('Primary channel','Основной канал')),choice('reserve',target,bi('Reserve channel','Резервный канал'))]),
     held?E('div',{'data-manual-hold':model.hold},[E('p',{},manualHoldText()),button('resume',bi('Resume Auto','Возобновить Auto')),!model.resume.allowed&&!model.busy?E('p',{'role':'status'},manualReason(model.resume.blockers)):null].filter(Boolean)):null,
@@ -174,6 +203,7 @@ function renderManualSwitch(status,inventory){
     E('p',{},bi('Green: works in Auto. Yellow: the channel is alive; see the button for switching availability. Grey: waiting for the router\'s answer. Red: error, does not work.','Зелёный — работает в автомате. Жёлтый — канал живой; доступность переключения указана на кнопке. Серый — ждём ответа роутера. Красный — ошибка, не работает.')),
     false&&!selection.selected&&!selection.moving&&!selection.off?E('p',{'role':'status'},bi('The router has not returned a verified channel selection yet. Updating its policy state; no channel is assumed active from a button press.','Роутер ещё не передал проверенный выбор канала. Обновляем состояние маршрутизации; нажатие кнопки само по себе не означает, что канал выбран.')):null,
     !model.busy?manualFailureResult(status,now):null,
+    model.busy||liveTransition?E('p',{'class':'hv-op-line','data-manual-timer':'1'},uiTimerNode(status,now)):null,
     model.busy?E('p',{'role':'status','data-manual-operation':model.uncertain?'unconfirmed':'pending'},model.uncertain?bi('The switch result is not confirmed. Waiting for a fresh result from the router; you can press Auto to stop.','Результат переключения не подтверждён. Ждём актуальный ответ роутера; можно нажать Auto для остановки.'):bi('A switch request is pending. Wait for confirmation or press the Auto power button to stop.','Запрос переключения ожидает подтверждения. Дождитесь результата или нажмите кнопку Auto для остановки.')):null
   ].filter(Boolean));
 }

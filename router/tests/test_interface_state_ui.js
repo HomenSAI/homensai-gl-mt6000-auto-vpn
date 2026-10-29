@@ -5,7 +5,7 @@ const now=100,primary={id:'a',interface:'wgclient1',time:99,dns_ok:true,https_su
 const model={now,primary,reserve,selected:'a',settings:{plan_source:'a',plan_target:'b'}};
 const status={time:99,native_failover:{state:'OBSERVING',time:99}};
 assert.equal(c.dvChannelUse(primary,model,status).kind,'green');assert.equal(c.dvChannelUse(primary,model,status).role,'Primary channel');
-assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Reserve channel: Alive');
+assert.equal(c.dvChannelUse(reserve,model,status).kind,'yellow');assert.equal(c.dvChannelUse(reserve,model,status).label,'Live; manual switching is unavailable now','without router manual-control evidence a live channel promises no manual switch');
 assert.equal(c.dvChannelUse({...reserve,interface:null},model,status).kind,'red');
 assert.equal(c.dvChannelUse({...primary,code:'DNS-001'},model,status).kind,'red');
 assert.equal(c.dvChannelUse(primary,model,{...status,rpc_error:true}).kind,'grey','no router answer is grey: waiting for the router');

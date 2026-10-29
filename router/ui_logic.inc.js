@@ -24,7 +24,8 @@ var UI_OPERATION_REFRESH=function(){},UI_STATUS_REFRESH=function(){};
 function uiOperationRefresh(refresh){UI_OPERATION_REFRESH();if(refresh!==false)UI_STATUS_REFRESH();}
 function uiStateSignature(status,inventory,now){
   var light=autoLightModel(status,inventory,now),manual=manualControlModel(status,now),op=autoCommandOperation(status,now),path=channelPathSelection(status,now);
-  return JSON.stringify([light.key,light.title,light.code,op,manual.busy,manual.uncertain,manual.direction,manual.primary.allowed,manual.reserve.allowed,manual.hold,manual.resume.allowed,path.selected,path.code,path.moving,Array.from(MANUAL_RESULT_SEEN.values()).map(function(t){return manualClockTick()-t<=300000;}),
+  var transition=uiTransitionModel(status,now),recovery=uiRecoveryModel(status,now);
+  return JSON.stringify([light.key,light.title,light.code,op,transition.phase,recovery&&recovery.code,manual.busy,manual.uncertain,manual.direction,manual.primary.allowed,manual.reserve.allowed,manual.hold,manual.resume.allowed,path.selected,path.code,path.moving,Array.from(MANUAL_RESULT_SEEN.values()).map(function(t){return manualClockTick()-t<=300000;}),
     (status.profiles||[]).map(function(p){var ping=channelPingModel(p,status,now);return [p.id,profileHealth(p,now).state,ping.state,ping.code,ping.rtt_ms];})]);
 }
 var UI_STATUS_CLOCKS=new WeakMap();
@@ -99,6 +100,47 @@ function profileHealth(profile,now){
   if(profile.dns_ok===true&&profile.https_success>=2)return {state:'healthy',label:bi('Healthy','Работает')};
   return {state:'checking',label:bi('Checking','Проверяется')};
 }
+// A published transition phase stays authoritative only until the controller's own bounded deadline
+// (journal deadline <= start + 120 s; the parent may finish up to 5 s later), then briefly "checking the result", then it is an unconfirmed result.
+var UI_TRANSITION_STATES=['ARMED','APPLYING','WAIT-CLIENT','RESTORING'],UI_TRANSITION_GRACE=15;
+function uiTransitionModel(status,now){
+  status=status||{};var ns=status.native_failover||{};
+  if(UI_TRANSITION_STATES.indexOf(ns.state)<0||Array.isArray(ns.blockers)&&ns.blockers.length||status.rpc_error||status.error||!observationFresh(status,now)||!Number.isFinite(ns.time)||now-ns.time< -5)return {live:false,overdue:false,state:null};
+  var started=Number.isFinite(ns.started)&&ns.started<=ns.time+5&&ns.time-ns.started<=125?ns.started:null;
+  var deadline=Number.isFinite(ns.deadline)&&ns.deadline>=ns.time-125&&ns.deadline<=(started||ns.time)+125?ns.deadline:(started||ns.time)+120;
+  var phase=now<=deadline?'running':now<=deadline+UI_TRANSITION_GRACE?'checking':'overdue';
+  // Guarded recovery of an interrupted switch restores the previous route; it is recovery in progress, never success.
+  var state=ns.state==='RESTORING'&&(ns.restore_proof_source==='vendor-rebuild'||ns.reason==='SUPERVISOR-RECOVERY')?'RECOVERING':ns.state;
+  return {live:phase!=='overdue',overdue:phase==='overdue',phase:phase,state:state,started:started,deadline:deadline};
+}
+// An unfinished journal without a live operation is a recovery state, never "switching".
+var UI_RECOVERY_CODES=['PAIR-RECOVERY-REQUIRED','PAIR-STATE-UNVERIFIED','JOURNAL-INTEGRITY-FAILED'];
+function uiRecoveryModel(status,now){
+  status=status||{};if(status.rpc_error||status.error||!observationFresh(status,now))return null;
+  var ns=status.native_failover||{},intent=status.auto_control||{},t=uiTransitionModel(status,now);
+  if(t.overdue)return {code:'SWITCH-RESULT-UNCONFIRMED',stage:t.state,deadline:t.deadline};
+  if(t.live)return null;
+  var blockers=Array.isArray(ns.blockers)?ns.blockers:[],failure=intent.failure&&intent.failure.code;
+  var code=blockers.filter(function(c){return UI_RECOVERY_CODES.indexOf(c)>=0;})[0]||(UI_RECOVERY_CODES.indexOf(failure)>=0&&intent.requested!=='on'?failure:null);
+  return code?{code:code,stage:null,deadline:null}:null;
+}
+function uiRecoveryText(recovery){
+  if(!recovery)return '';
+  if(recovery.code==='SWITCH-RESULT-UNCONFIRMED')return bi('The router did not report the end of the switch by its deadline. The channel is not verified; do not repeat the switch. Stop remains available.','Роутер не сообщил о завершении переключения к предельному сроку. Канал не подтверждён; не повторяйте переключение. Stop остаётся доступен.');
+  var text=typeof AUTO_REMEDIES!=='undefined'&&AUTO_REMEDIES.unfinished?AUTO_REMEDIES.unfinished.text:['A previous switch did not finish; recovery is needed.','Предыдущее переключение не завершилось; нужно восстановление.'];return bi(text[0],text[1]);
+}
+var UI_STAGE_TEXT={ARMED:['Preparing','Подготовка'],APPLYING:['Applying router rules','Применение правил роутера'],'WAIT-CLIENT':['Checking the new route','Проверка нового маршрута'],RESTORING:['Restoring the previous route','Возврат прежнего маршрута'],RECOVERING:['Recovery after an interrupted switch','Восстановление после прерванного переключения'],QUEUED:['Waiting for the controller','Ожидание контроллера'],CLAIMED:['Accepted by the controller','Принято контроллером'],SENT:['Sending the request','Отправка запроса']};
+function uiClock(seconds){seconds=Math.max(0,Math.floor(seconds));return Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2);}
+// One timer text for every surface: stage, elapsed since a known origin and the time left to the real backend deadline.
+function uiOperationTimer(stage,elapsed,remaining,checking){
+  var text=stage&&UI_STAGE_TEXT[stage]?bi(UI_STAGE_TEXT[stage][0],UI_STAGE_TEXT[stage][1]):'';
+  if(Number.isFinite(elapsed))text+=(text?' · ':'')+uiClock(elapsed)+bi(' elapsed',' прошло');
+  if(checking)text+=(text?' · ':'')+bi('checking the result','проверяем результат');
+  else if(Number.isFinite(remaining))text+=(text?' · ':'')+bi('limit in ','предел через ')+uiClock(remaining);
+  return text;
+}
+// Owner wording for an available, unselected live channel; it promises a manual switch only when the router allows one now.
+function channelAliveText(direction,status,now){var m=status&&typeof manualControlModel==='function'?manualControlModel(status,now):null;return m&&m[direction]&&m[direction].allowed?bi('Live, you can switch to it manually','Живой, можно переключиться на него вручную'):bi('Live; manual switching is unavailable now','Живой; ручное переключение сейчас недоступно');}
 // Policy selection is independent of controller phase and VPN health.
 function channelPathSelection(status,now,sourceId,targetId){
   status=status||{};var native=status.native_failover||{},path=status.channel_path;
@@ -108,6 +150,8 @@ function channelPathSelection(status,now,sourceId,targetId){
   if(status.rpc_error||status.error){result.code='STATUS-REQUEST-FAILED';return result;}
   if(!observationFresh(status,now)){result.code='MONITOR-DATA-STALE';return result;}
   if(!path||typeof path!=='object'||Array.isArray(path))return result;
+  // A transition has no kernel proof yet; it is "moving" only while the controller's live operation is proven.
+  if(required&&path.transitioning===true&&uiTransitionModel(status,now).live&&(!sourceId||!path.source_profile_id||path.source_profile_id===sourceId)&&(!targetId||!path.target_profile_id||path.target_profile_id===targetId)){result.moving=true;result.code=null;return result;}
   if(required&&(path.mode!=='continuous-pair'||path.selection_proof!=='fw3-kernel-marking'||!Number.isFinite(path.valid_for)||path.valid_for<=0||path.valid_for>15||!Number.isFinite(path.checked_at)||path.time!==path.checked_at))return result;
   var maxAge=required?path.valid_for:30;
   var checkedAt=required?path.checked_at:path.time;
@@ -142,9 +186,10 @@ function selectedProfile(status,now){
   if(native.state==='OBSERVING'&&native.certified===true)return native.source||null;
   return null;
 }
-function sortServerCards(rows,selected,now){
-  var ranks={healthy:1,checking:2,unknown:3,inactive:4,failed:5};
-  return rows.map(function(row,index){var state=profileHealth(row,now).state;return {row:row,index:index,rank:state==='healthy'&&row.id===selected?0:ranks[state]};}).sort(function(a,b){return a.rank-b.rank||a.index-b.index;}).map(function(entry){return entry.row;});
+// Fixed roles: primary first, reserve second, other servers after them. The active route never reorders rows.
+function sortServerCards(rows,selected,now,roles){
+  var ranks={healthy:1,checking:2,unknown:3,inactive:4,failed:5};roles=roles||[];
+  return rows.map(function(row,index){var role=roles.indexOf(row.id);return {row:row,index:index,rank:role>=0&&row.id?role-10:ranks[profileHealth(row,now).state]};}).sort(function(a,b){return a.rank-b.rank||a.index-b.index;}).map(function(entry){return entry.row;});
 }
 function healthBadge(profile){
   var health=profileHealth(profile,routerWall());
