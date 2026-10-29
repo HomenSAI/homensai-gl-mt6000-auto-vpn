@@ -100,6 +100,8 @@ uci:foreach('homensai_vpn','main',function(s)
   local level=tonumber(s.probe_level)
   main.probe_level=(level and level>=1 and level<=5 and level==math.floor(level)) and level or 0
   main.probe_boost=s.probe_boost~='0'
+  local metric=s.response_metric
+  main.response_metric=(metric=='icmp-1.1.1.1' or metric=='icmp-8.8.8.8' or metric=='icmp-9.9.9.9' or metric=='websites') and metric or 'icmp-1.1.1.1'
   local measure=tonumber(s.measure_interval)
   main.measure_interval=(measure and measure>=30 and measure<=300) and math.floor(measure) or 0
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))

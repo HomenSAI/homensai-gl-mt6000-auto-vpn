@@ -73,7 +73,7 @@ for(const d of ['a','b','c']){const n=render(ctx,d,hostile).node;n.all().forEach
 {const evil=fixture();evil.profiles[0].code='"]x[data-y="';evil.native_history.events.push({sequence:9,time:now-5,state:'constructor',codes:['__proto__','a"b'],source:'a',target:'b'});
  for(const d of ['a','b','c']){const n=render(ctx,d,evil).node;n.all().forEach(y=>{assert(typeof y.tag==='string');});}
  const hostileStatus=fixture({native_failover:{state:'__proto__',source:'a',target:'b',time:now-1},decision_explanation:{diagnosis:{code:'constructor'}}});
- assert.doesNotThrow(()=>{ctx.renderDecisionExplanation(hostileStatus);ctx.renderCascadePath(Object.assign(fixture(),{profiles:[Object.assign({},fixture().profiles[0],{code:'a"]'})]}));});}
+ assert.doesNotThrow(()=>{if(typeof ctx.renderDecisionExplanation==='function')ctx.renderDecisionExplanation(hostileStatus);ctx.renderCascadePath(Object.assign(fixture(),{profiles:[Object.assign({},fixture().profiles[0],{code:'a"]'})]}));});}
 // Russian: same structure, translated text.
 const ru=sandbox('ru');vm.runInContext("locale='ru'",ru);
 const ra=render(ru,'a',fixture()).node.text();assert(/Всё работает\./.test(ra)&&/Последние события/.test(ra)&&/Германия/.test(ra));

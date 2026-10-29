@@ -11,23 +11,37 @@ for(const language of ['en','ru']){
   const light=s=>c.autoLightModel(s,inventory,now);
   // Confirmed route: green, and the button says Auto works.
   let s=fixture(1000),l=light(s);assert.equal(c.autoSignal(l),'green');assert(c.autoRuns(l));
-  // The 15-second kernel proof ages during a slow status round trip: the last confirmed route is held, still green.
+  // The 15-second kernel proof ages while the router re-confirms it: yellow (a check is shown), Auto still runs.
   now=1030;s=fixture(1000);s.time=s.server_time=s.native_failover.time=s.profiles[0].time=s.profiles[1].time=1028;
-  l=light(s);assert.equal(c.autoSignal(l),'green','an aged proof within the hold is not a failure');
-  // Beyond the hold the router is re-checking: yellow, Auto still runs (no red, button stays on).
-  now=1000+c.AUTO_ROUTE_HOLD+20;s=fixture(1000);s.time=s.server_time=s.native_failover.time=s.profiles[0].time=s.profiles[1].time=now-2;
-  l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l)&&!c.autoWorking(l),'yellow is not a green claim, but Auto still runs');
+  l=light(s);assert.equal(c.autoSignal(l),'yellow','a re-check is shown as yellow');assert(c.autoRuns(l)&&!c.autoWorking(l),'yellow is not a green claim, but Auto still runs');
+  // Transient controller blockers during a running session are a check, not an alarm.
+  now=2000;s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['OBSERVATION-STALE'];l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l));
+  // A critical controller alarm is red.
+  s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['ROLLBACK-GIVEN-UP'];l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
+  // Data late while the owner's Auto runs: yellow "refreshing", never "Auto off".
+  now=2200;s=fixture(2000);l=light(s);assert.equal(c.autoSignal(l),'yellow');assert(c.autoRuns(l));
+  // The scheduled check is due (published cadence passed): yellow while it runs.
+  now=2012;s=fixture(2000);s.channel_path.checked_at=s.channel_path.time=2010;s.probe_policy={effective_interval:10};l=light(s);assert.equal(c.autoSignal(l),'yellow');
   // The router itself reports the route unverified (not just aged): never held, yellow while Auto runs.
-  now=2000;c.UI_LAST_ROUTE=null;light(fixture(2000));s=fixture(2000);s.channel_path.checked_at=null;s.channel_path.time=null;s.channel_path.kernel_policy_verified=false;
+  now=2000;s=fixture(2000);s.channel_path.checked_at=null;s.channel_path.time=null;s.channel_path.kernel_policy_verified=false;
   l=light(s);assert.notEqual(c.autoSignal(l),'green','an explicit unverified route is never held green');assert.equal(c.autoSignal(l),'yellow');
+  now=2000;
   // A switch in progress is yellow, never red.
   s=fixture(2000);s.native_failover.state='APPLYING';s.channel_path.transitioning=true;l=light(s);assert.equal(c.autoSignal(l),'yellow');
   // A completed failed check of the selected channel is red at once.
   s=fixture(2000);s.profiles[0].code='VPN-003';s.profiles[0].https_success=0;l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
   // No connection to the router program: red.
-  s=fixture(2000);s.rpc_error='RPC';l=light(s);assert.equal(c.autoSignal(l),'red');
-  // Auto off: red (automatic switching does not work), not yellow.
-  s=fixture(2000);s.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s.native_failover.state='STOPPED';l=light(s);assert.equal(c.autoSignal(l),'red');
+  s=fixture(2000);s.rpc_error='RPC';l=light(s);assert.equal(c.autoSignal(l),'yellow','one missed answer is a retry, not an error');assert(c.autoRuns(l));
+  now=2000+c.AUTO_RPC_GRACE+1;l=light(s);assert.equal(c.autoSignal(l),'red','no answer for longer than the grace is an error');now=2000;
+  l=light(fixture(2000));
+  // Auto off by the owner: a quiet dark light, not an error.
+  s=fixture(2000);s.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s.native_failover.state='STOPPED';l=light(s);assert.equal(c.autoSignal(l),'off');
+  // Response metric: ping by default is one model for every place (number, unit, target); websites stay separate.
+  s=fixture(2000);s.response_metric='icmp-1.1.1.1';s.profiles[0].ping={metric:'icmp-rtt-ms',target:'1.1.1.1',state:'ok',code:null,time:1995,rtt_ms:53.2,valid_for:60,interface:'wgclient1'};
+  let m=c.channelPingModel(s.profiles[0],s,now);assert.equal(m.state,'ok');assert.equal(m.rtt_ms,53.2);assert(m.text.includes('1.1.1.1'));
+  s.profiles[0].ping.target='8.8.8.8';assert.notEqual(c.channelPingModel(s.profiles[0],s,now).state,'ok','a ping to another target is not the chosen measurement');
+  s.profiles[0].ping.target='1.1.1.1';s.profiles[0].ping.time=1000;assert.equal(c.channelPingModel(s.profiles[0],s,now).state,'stale');
+  s.response_metric='websites';assert.notEqual(c.channelPingModel(s.profiles[0],s,now).kind,'ping');
   // The housing has three lamps and lights exactly the signal.
   for(const [state,signal] of [['OBSERVING','green'],['APPLYING','yellow']]){
     s=fixture(2000);s.native_failover.state=state;s.channel_path.transitioning=state==='APPLYING';l=light(s);
@@ -35,4 +49,4 @@ for(const language of ['en','ru']){
     assert.equal(lamps.length,3);assert.deepStrictEqual(lamps.filter(n=>/hv-lamp-lit/.test(n.attrs.class)).map(n=>n.attrs.class.match(/hv-lamp-(red|yellow|green)/)[1]),[signal]);
   }
 }
-console.log('PASS: three-signal Auto light, held confirmed route, yellow re-check/switching, red only on failure (EN/RU)');
+console.log('PASS: three-signal Auto light: green confirmed, yellow re-check/transient/late data/due check/switching, red only critical, dark when off (EN/RU)');

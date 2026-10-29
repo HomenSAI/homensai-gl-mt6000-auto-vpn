@@ -7,11 +7,14 @@ function fillSideStatus(host,status,inventory){
   // "No connection" is reserved for a lost router-program answer; stale controller data and recovery have their own words.
   var rpcLost=!!(status.rpc_error||status.error),problem=!rpcLost&&light&&light.key==='problem';
   var state=rpcLost||!model.fresh&&!problem?'unknown':light&&typeof autoWorking==='function'?(autoWorking(light)?'on':light.key==='switching'||light.key==='unknown'?'unknown':'off'):(model.on||model.transitioning)?'on':'off';
-  if(!rpcLost&&light&&typeof autoSignal==='function'&&autoSignal(light)==='yellow')state='switching';
+  var signal=light&&typeof autoSignal==='function'?autoSignal(light):null;
+  if(signal)state={green:'on',yellow:'switching',red:'off',off:'unknown'}[signal];
   var autoText=state==='on'?bi('Auto ON','Auto вкл.'):state==='off'?bi('Auto OFF','Auto выкл.'):rpcLost?bi('Auto: no connection','Auto: нет связи'):bi('Auto: data out of date','Auto: данные устарели');
   var autoHint=state==='on'?bi('Auto is on: it can switch to the reserve VPN.','Auto включён: он может переключить на резервный VPN.'):state==='off'?bi('Auto is off: nothing is switched, the program only watches.','Auto выключен: ничего не переключается, программа только наблюдает.'):rpcLost?bi('The page gets no answer from the router program, so the state is not known.','Страница не получает ответ от программы роутера, поэтому состояние неизвестно.'):bi('The router answers, but the Auto controller state is out of date.','Роутер отвечает, но состояние контроллера Auto устарело.');
-  if(!rpcLost&&(model.fresh||problem)&&light&&(light.hold||['switching','unknown','problem'].indexOf(light.key)>=0)){autoText=light.title;autoHint=light.hint;}
-  if(state!=='switching'&&state==='unknown'&&model.fresh&&light&&['KERNEL-POLICY-UNVERIFIED','PAIR-POLICY-UNVERIFIED'].indexOf(light.code)>=0){autoText=bi('Auto: route not verified','Auto: маршрут не подтверждён');autoHint=light.hint+' · '+light.code;}
+  if(signal==='off'){autoText=bi('Auto OFF','Auto выкл.');}
+  else if(signal&&signal!=='green'&&light){autoText=light.title;autoHint=light.hint;}
+  else if(!signal&&!rpcLost&&(model.fresh||problem)&&light&&(light.hold||['switching','unknown','problem'].indexOf(light.key)>=0)){autoText=light.title;autoHint=light.hint;}
+  if(!signal&&state==='unknown'&&model.fresh&&light&&['KERNEL-POLICY-UNVERIFIED','PAIR-POLICY-UNVERIFIED'].indexOf(light.code)>=0){autoText=bi('Auto: route not verified','Auto: маршрут не подтверждён');autoHint=light.hint+' · '+light.code;}
   var monText=bi('Monitoring','Мониторинг');
   var monHint=monitorFresh?bi('Monitoring works: fresh data from the router.','Мониторинг работает: свежие данные от роутера.'):status.rpc_error?bi('The router does not answer.','Роутер не отвечает.'):bi('Monitoring is not sending data.','Мониторинг не присылает данные.');
   function lamp(kind,text,hint){return E('span',{'class':'hv-side-lamp','role':'status','title':hint},[E('span',{'class':'hv-auto-pill-knob hv-lamp-'+kind,'aria-hidden':'true'}),E('span',{'class':'hv-auto-pill-text'},text),E('span',{'class':'hv-visually-hidden'},' — '+hint)]);}

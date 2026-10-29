@@ -47,6 +47,15 @@ def measure_valid_for(interval):
     return int(interval*3//2+15)
 
 
+RESPONSE_METRICS={'icmp-1.1.1.1':'1.1.1.1','icmp-8.8.8.8':'8.8.8.8','icmp-9.9.9.9':'9.9.9.9','websites':None}
+DEFAULT_RESPONSE='icmp-1.1.1.1'  # ping: light on the router, best for comparing the two channels
+
+
+def response_metric(settings):
+    value=settings.get('response_metric') if isinstance(settings,dict) else None
+    return value if value in RESPONSE_METRICS else DEFAULT_RESPONSE
+
+
 def failing(row):
     return (row.get('code') is not None or row.get('dns_ok') is False
             or not isinstance(row.get('https_success'),int) or row['https_success']<2)

@@ -110,3 +110,13 @@ class Save(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class ResponseMetric(unittest.TestCase):
+    def test_ping_is_the_default_and_only_offered_metrics_are_accepted(self):
+        self.assertEqual(P.response_metric({}),'icmp-1.1.1.1')
+        for metric in ('icmp-8.8.8.8','icmp-9.9.9.9','websites'):self.assertEqual(P.response_metric({'response_metric':metric}),metric)
+        self.assertEqual(P.response_metric({'response_metric':'icmp-10.0.0.1'}),'icmp-1.1.1.1')
+        self.assertEqual(setup_config.response_payload({'metric':'websites'})['main'],{'response_metric':'websites'})
+        for bad in ({},{'metric':'icmp-10.0.0.1'},{'metric':'websites','x':1}):
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'RESPONSE-METRIC-INVALID'):setup_config.response_payload(bad)

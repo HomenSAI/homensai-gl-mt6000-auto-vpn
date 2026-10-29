@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha67'
+VERSION = '0.9.1-alpha68'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -663,6 +663,24 @@ def probe_profiles(profiles, settings):
     return eligible[:settings['probe_limit']]
 
 
+def shared_inventory(ttl):
+    """inventory() reused for ttl seconds across sampler threads (bounded staleness, live route checks)."""
+    from threading import Lock
+    lock=Lock();cache={'at':None,'value':None}
+    def read():
+        with lock:
+            now=time.monotonic()
+            if cache['at'] is None or not 0<=now-cache['at']<ttl:
+                cache['value']=inventory();cache['at']=now
+            return cache['value']
+    return read
+
+
+def config_mtime():
+    try:return os.stat('/etc/config/homensai_vpn').st_mtime_ns
+    except OSError:return None
+
+
 def monitor_poll_interval(settings, now=None):
     """Accelerate only a correlated bounded startup; never overlap probe rounds."""
     normal = settings['interval']
@@ -690,6 +708,7 @@ def monitor_poll_interval(settings, now=None):
 
 
 CRITICAL_SAVE_SPACING=60
+PAGE_SAMPLE_OMIT=('vendor_generation','vendor_tunnel_id','interface')  # not used by the page; ~40% of status
 
 
 def serve():
@@ -726,9 +745,10 @@ def serve():
     from vendor_observation import VendorObserver
     vendor_observer=VendorObserver()
     from icmp_ping import PingSampler, public as ping_public
-    ping_sampler=PingSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    sampler_inventory=shared_inventory(10)
+    ping_sampler=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     from website_response import WebsiteSampler,public as website_public
-    website_sampler=WebsiteSampler(inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    website_sampler=WebsiteSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     # Owner probe level 1-5 and the optional automatic boost; every decision is recorded.
     from probe_policy import Booster
     booster=Booster(RUNTIME,PERSIST,atomic_json,read_json)
@@ -752,6 +772,7 @@ def serve():
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
+        config_stamp=config_mtime()
         started = time.monotonic()
         published_status=None
         try:
@@ -789,15 +810,23 @@ def serve():
                 storage_error = 'CLOCK-001'
             from reliability import failure_pair_context
             failure_pair=failure_pair_context(data,after_inventory)
-            # Ping/website cadence follows the probe level (shorter while boosting).
+            # Ping/website cadence follows the probe level (shorter while boosting); the owner picks the metric.
             ping_sampler.configure(booster.measure(settings));website_sampler.configure(booster.measure(settings))
+            from probe_policy import response_metric,RESPONSE_METRICS
+            metric=response_metric(settings)
+            import icmp_ping
+            if metric!='websites' and icmp_ping.TARGET!=RESPONSE_METRICS[metric]:icmp_ping.TARGET=RESPONSE_METRICS[metric]
             # Optional ICMP latency is cached by a separate bounded worker. It never enters health/Auto decisions.
             try:ping_sampler.apply(rows,failure_pair,time.time())
             except Exception:
                 for row in rows:row['ping']=ping_public(row,'unavailable','PING-UNAVAILABLE')
-            try:website_sampler.apply(rows,failure_pair,time.time())
-            except Exception:
-                for row in rows:row['website_response']=website_public(row,'unavailable','WEBSITE-UNAVAILABLE')
+            if metric!='websites':
+                # Ping was chosen: no TLS handshakes to three sites at all.
+                for row in rows:row['website_response']=website_public(row,'inactive','WEBSITE-NOT-SELECTED')
+            else:
+                try:website_sampler.apply(rows,failure_pair,time.time())
+                except Exception:
+                    for row in rows:row['website_response']=website_public(row,'unavailable','WEBSITE-UNAVAILABLE')
             for row in rows:
                 row['role']='source' if row['id']==failure_pair.get('source') else 'target' if row['id']==failure_pair.get('target') else 'unknown'
             failure_context=read_json(RUNTIME/'native-status.json', {})
@@ -846,6 +875,8 @@ def serve():
             try:
                 booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time())
                 status['probe_policy']=booster.public(settings,time.time())
+                from probe_policy import response_metric
+                status['response_metric']=response_metric(settings)
             except (OSError,ValueError,TypeError,KeyError):status['probe_policy']={'code':'PROBE-POLICY-UNAVAILABLE'}
             latency.observe(status,settings,time.time())
             status['latency_history']=technical_history_tail(latency.public(),time.time())
@@ -882,7 +913,9 @@ def serve():
                 # runs at a time in its own thread on a copy of this pass, and its result is applied here next pass.
                 if telegram_job is not None and not telegram_job[0].is_alive():
                     telegram_collect(telegram_job);telegram_job=None
-                if telegram_job is None:
+                if telegram_job is None and not settings.get('telegram_enabled'):
+                    telegram_public={'enabled':False}
+                elif telegram_job is None:
                     try:
                         holder={};snapshot=json.loads(json.dumps(dict(status,accounting=accounting.export())))
                         saved_copy=json.loads(json.dumps(telegram_saved))
@@ -920,6 +953,7 @@ def serve():
             if request.exists() and not request.is_symlink():
                 break
             if (RUNTIME/'stats-reset-request.json').exists():break
+            if config_mtime()!=config_stamp:break  # new settings: measure now with them
             if published_status is not None:
                 try:
                     from website_publication import publish_completed
@@ -976,6 +1010,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
+                          'setup_response':{'metric':''},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
@@ -1054,9 +1089,9 @@ def rpc(method):
         except ValueError as error:
             result={'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
         print(json.dumps(result));return
-    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding','setup_probe'):
+    if method in ('setup_system','setup_telegram','setup_speed','setup_recovery','setup_monitor','setup_onboarding','setup_probe','setup_response'):
         from setup_config import save
-        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding','setup_probe':'probe'}[method])
+        try:result=save(arguments,{'setup_system':'system','setup_telegram':'telegram','setup_speed':'speed','setup_recovery':'recovery','setup_monitor':'monitor','setup_onboarding':'onboarding','setup_probe':'probe','setup_response':'response'}[method])
         except ValueError as error:
             code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'
             result={'saved':False,'code':code}
@@ -1116,6 +1151,9 @@ def rpc(method):
     elif method in ('status', 'events'):
         status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
         if method == 'status':
+            if isinstance(status.get('samples'),list):
+                status['samples']=[{key:value for key,value in sample.items() if key not in PAGE_SAMPLE_OMIT}
+                                   if isinstance(sample,dict) else sample for sample in status['samples']]
             from speed_pause import public as speed_pause_status
             status['speed_pause']=speed_pause_status()
             from scan_control import public as scan_public
