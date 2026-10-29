@@ -111,11 +111,11 @@ function probeCheckSchedule(status){
   var p=status.probe_policy||{},interval=p.effective_interval;
   if(!Number.isFinite(interval)||interval<=0||!Number.isFinite(status.time))return;
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
-  if(PROBE_APPLIED&&PROBE_LEVELS[PROBE_APPLIED.level]){interval=PROBE_LEVELS[PROBE_APPLIED.level][0];}
+  if(PROBE_APPLIED&&PROBE_LEVELS[PROBE_APPLIED.level]&&p.boost_active!==true){interval=PROBE_LEVELS[PROBE_APPLIED.level][0];}
   var deadline=Date.now()+(status.time+interval-now)*1000;
   // A check we were waiting for has answered: keep yellow one more second, then the base colour.
   if(PROBE_SCHEDULE.lastStatus!==null&&status.time>PROBE_SCHEDULE.lastStatus&&PROBE_SCHEDULE.pulseUntil===Infinity)PROBE_SCHEDULE.pulseUntil=Date.now()+1000;
-  PROBE_SCHEDULE.lastStatus=status.time;PROBE_SCHEDULE.interval=interval;PROBE_SCHEDULE.deadline=deadline;
+  PROBE_SCHEDULE.lastStatus=status.time;PROBE_SCHEDULE.interval=interval;PROBE_SCHEDULE.deadline=deadline;PROBE_SCHEDULE.boost=p.boost_active===true;
 }
 function probeCheckPulse(){
   var s=PROBE_SCHEDULE,nowMs=Date.now();
@@ -137,7 +137,7 @@ function probeCountdownText(node){
   var period=s.interval*1000,late=Date.now()-s.deadline;
   if(late>=1000&&period>0&&s.pulseUntil!==Infinity)s.deadline+=Math.ceil(late/period)*period;
   var left=Math.round((s.deadline-Date.now())/1000);
-  node.textContent=probeCheckPulse()?bi('Checking','Проверка'):bi('Check in ','Проверка через ')+Math.max(0,left)+bi(' s',' с');
+  node.textContent=(probeCheckPulse()?bi('Checking','Проверка'):bi('Check in ','Проверка через ')+Math.max(0,left)+bi(' s',' с'))+(s.boost?bi(' · boost',' · ускорение'):'');
 }
 function probeCountdown(status){
   probeCheckSchedule(status);
