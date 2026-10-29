@@ -74,6 +74,9 @@ def read_state():
             or any(x not in ('0', '1') for x in data['before_flags'].values())
             or not isinstance(data.get('network_identity'), str) or not __import__('re').fullmatch('[a-f0-9]{64}', data['network_identity'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
+    if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
+            or not isinstance(data['protected_static']['firewall'],str) or not re.fullmatch('[a-f0-9]{64}',data['protected_static']['firewall'])):
+        raise ValueError('PAIR-STATE-UNVERIFIED')
     if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'policy_roles' in data:
@@ -363,6 +366,23 @@ def config_digest(name, data, interfaces=None):
     return hashlib.sha256(data).hexdigest()
 
 
+# Every stock rtp2.sh run deletes and regenerates these vendor-owned sections.
+GL_VPN_RULES = re.compile(rb"\n[ \t]*option[ \t]+gl_vpn_rules[ \t]+'1'[ \t]*\r?(?:\n|$)")
+
+
+def firewall_bytes():
+    path = Path('/etc/config/firewall')
+    if path.is_symlink() or not path.is_file() or path.stat().st_size > 1048576:
+        raise ValueError('PAIR-CONFIG-UNVERIFIED')
+    return path.read_bytes()
+
+
+def static_firewall_digest(data):
+    """Firewall digest without the vendor-regenerated gl_vpn_rules sections."""
+    kept = [block for block in re.split(rb'\n(?=config[ \t])', data) if not GL_VPN_RULES.search(b'\n' + block)]
+    return config_digest('firewall', b'\n'.join(kept))
+
+
 def configs(interfaces=None):
     result = {}
     for name in ('wireguard', 'ovpnclient', 'firewall', 'route_policy', 'wireless', 'dhcp', 'gl-dns-v2'):
@@ -378,7 +398,7 @@ def changed(state, observed, skip=()):
     for name, sha in state['protected'].items():
         if name == 'route_policy' or name in skip:
             continue
-        if observed[name] != sha and not (name == 'firewall' and hashlib.sha256(Path('/etc/config/firewall').read_bytes()).hexdigest() == sha):
+        if observed[name] != sha and not (name == 'firewall' and hashlib.sha256(firewall_bytes()).hexdigest() == sha):
             return True
     return False
 
@@ -544,6 +564,9 @@ def begin(backend, settings, request):
                  network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(managed), owned=[],
                  before_flags={name: row['disabled'] for name, row in selected.items()},
                  process_bindings=selection['process_bindings'], order=selection['order'], policy_hash=selection['hash'])
+    # Lets a later recovery tell vendor-only gl_vpn_rules drift from a foreign edit.
+    try:state['protected_static']={'firewall':static_firewall_digest(firewall_bytes())}
+    except (OSError,ValueError):pass  # the full protected digest above still applies
     from pair_policy import proof
     state['policy_roles']=proof(selection)
     save(state)  # Durable ownership precedes any network write.
@@ -628,20 +651,27 @@ def cleanup(backend, state, stop_revision=None):
     return True
 
 
+def fence_recovery():
+    """Revoke pair intent and pending commands before guarded journal recovery."""
+    from auto_control import control_lock, revision_locked
+    from agent import RUNTIME
+    from pair_manual import terminalize_pending_locked
+    with control_lock():
+        if paths()[0].exists():
+            stop_locked(revision_locked(RUNTIME))
+        try:terminalize_pending_locked('UNCONFIRMED','PAIR-MANUAL-RECOVERED')
+        except (OSError,ValueError,TypeError,KeyError):
+            pass  # Preserve the damaged command; it must not block journal recovery.
+
+
 def recover(backend):
     """Called after core journal recovery on supervisor restart; never resumes."""
     import native_switch as n
-    from auto_control import control_lock, revision_locked
-    from agent import RUNTIME
     try:
         # Fence old intent even when its durable ownership can no longer be
         # reconciled. Retain that ownership and every recovery guard on failure.
-        if paths()[0].exists():
-            with control_lock():
-                stop_locked(revision_locked(RUNTIME))
+        fence_recovery()
         state = read_state()
-        from pair_manual import recover as recover_manual
-        recover_manual()
         if state and state['phase'] not in TERMINAL:
             if not cleanup(backend, state):
                 publish_failure('PAIR-RECOVERY-REQUIRED')
@@ -833,9 +863,21 @@ def tick(backend, settings, revision):
                                source=journal['source'],target=journal['target'],reason=decision['reason'],blockers=[]))
                 if n.finish_committed(backend, journal, decision['reason']):
                     final_kernel=backend.attest_policy() if context else None
+                    if context:
+                        if (final_kernel.get('verified') is not True or final_kernel.get('role')!='source'
+                                or final_kernel.get('order')!=context['primary_order']):raise n.Refused('ROLLBACK-UNVERIFIED')
+                        remember_selected(state,final_kernel)
+                    resume_running(state)
                     fields=n.pair_event_fields(journal,completed=True,outcome='restored',restoring=True) if context else {}
                     n.publish(dict(fields,state='ROLLED-BACK',reason=decision['reason'],source=journal['source'],target=journal['target'],
                                    original_restored=backend.order()==(state['order'],state['policy_hash']),mode='continuous-pair',proof_scope=MODE,kernel_proof=final_kernel))
+                else:
+                    n.publish({'state':'DEGRADED-ON-RESERVE','reason':journal.get('reason','SOURCE-NOT-VERIFIED'),
+                               'source':journal['source'],'target':journal['target'],'mode':'continuous-pair',
+                               'proof_scope':MODE,'original_restored':False,'blockers':[]})
+                # This decision has been handled. Its kernel/order snapshot is
+                # obsolete after a restore, including a refused fresh health check.
+                return True
             else:
                 resume_running(state)
                 n.publish({'state': ('OBSERVING' if journal.get('activation_reapply') else 'COMMITTED') if decision['action']=='OBSERVE' else 'DEGRADED-ON-RESERVE',
@@ -855,10 +897,11 @@ def tick(backend, settings, revision):
         resume_running(state)
         now = time.time()
         recovery = normalized(settings)
-        age = max(30, min(900, int(settings.get('interval', 10)) * 3))
+        from observation_freshness import valid_for
+        age = valid_for(settings)
         failed = streak(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, False, selection['source'])
         healthy = streak(status.get('samples', []), selection['target']['id'], recovery['successes'], now, age, True, selection['target'])
-        diagnosis = diagnose(status, selection['source']['id'], now)
+        diagnosis = diagnose(status, selection['source']['id'], now, settings)
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
         events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])

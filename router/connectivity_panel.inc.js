@@ -28,8 +28,9 @@ function updateConnectivityCheck(status){
   var clock=function(seconds){return new Date(seconds*1000).toLocaleTimeString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'});};
   // The idle line shows the latest automatic check, so it always says something true.
   var rows=connectivityProfiles(status),working=rows.filter(function(p){return profileHealth(p,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)).state==='healthy';}).length;
+  var stale=rows.filter(function(p){return profileHealth(p,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)).state==='unknown';}).length;
   var latest=rows.reduce(function(newest,p){return Number.isFinite(p.time)&&p.time>newest?p.time:newest;},0);
-  var summary=function(time,total,ok){return bi('Last check ','Последняя проверка ')+clock(time)+'\n'+ok+' '+bi('of','из')+' '+total+' '+bi('VPNs work','VPN работают');};
+  var summary=function(time,total,ok){return bi('Last check ','Последняя проверка ')+clock(time)+'\n'+(stale&&!ok?bi('Waiting for fresh router data','Ждём свежие данные роутера'):ok+' '+bi('of','из')+' '+total+' '+bi('VPNs work','VPN работают'));};
   var text;
   if(model.state==='EMPTY')text=bi('No VPN is connected right now, so there was nothing to check.','Сейчас ни один VPN не подключён, проверять нечего.');
   else if(model.state==='COMPLETED'&&model.checked!=null&&model.time)text=latest>=model.time?summary(latest,rows.length,working):model.checked!==rows.length?bi('Channels changed. Check the VPNs again.','Состав каналов изменился. Повторите проверку VPN.'):summary(model.time,model.checked,model.checked-model.failed);
@@ -50,7 +51,7 @@ function updateConnectivityCheck(status){
   }
   if(connectivityControl.next){
     connectivityControl.next.hidden=!rows.length;
-    connectivityControl.next.textContent=working?bi('Step 2: turn on Auto with the button in this card.','Шаг 2: включите Auto кнопкой в этом блоке.'):bi('No VPN works right now. Check the VPN profiles in GL.iNet, then press the button again.','Сейчас ни один VPN не работает. Проверьте VPN-профили в GL.iNet и нажмите кнопку ещё раз.');
+    connectivityControl.next.textContent=!working&&stale?bi('The router data is being refreshed; this is not a VPN failure.','Данные роутера обновляются; это не сбой VPN.'):working?bi('Use the Auto button to control automatic switching.','Управляйте автоматическим переключением кнопкой Auto.'):bi('No VPN works right now. Check the VPN profiles in GL.iNet, then press the button again.','Сейчас ни один VPN не работает. Проверьте VPN-профили в GL.iNet и нажмите кнопку ещё раз.');
   }
   connectivityControl.button.setAttribute('aria-busy',model.busy?'true':'false');
 }

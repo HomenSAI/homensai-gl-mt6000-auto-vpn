@@ -1,0 +1,93 @@
+test_stop_after_durable_arm_before_spawn_closes_undispatched_journal (test_switching_recovery_regressions.SwitchingRecovery.test_stop_after_durable_arm_before_spawn_closes_undispatched_journal) ... FAIL
+test_supervisor_hands_stranded_pair_journal_to_independent_recovery (test_switching_recovery_regressions.SwitchingRecovery.test_supervisor_hands_stranded_pair_journal_to_independent_recovery) ... FAIL
+test_stop_cancels_queued_manual_once_without_waiting_for_another_start (test_switching_recovery_regressions.SwitchingRecovery.test_stop_cancels_queued_manual_once_without_waiting_for_another_start) ... FAIL
+test_supported_long_interval_does_not_disable_healthy_manual_choices (test_switching_recovery_regressions.SwitchingRecovery.test_supported_long_interval_does_not_disable_healthy_manual_choices) ... FAIL
+test_orphan_claim_is_terminalized_once_without_replaying_work (test_switching_recovery_regressions.SwitchingRecovery.test_orphan_claim_is_terminalized_once_without_replaying_work) ... FAIL
+test_recovery_revokes_intent_before_rollback_failure (test_switching_recovery_regressions.SwitchingRecovery.test_recovery_revokes_intent_before_rollback_failure) ... FAIL
+test_retry_restores_same_owned_kernel_after_apply_failed_before_rtp (test_rollback_interruption.InterruptedRollback.test_retry_restores_same_owned_kernel_after_apply_failed_before_rtp) ... ERROR
+
+======================================================================
+ERROR: test_retry_restores_same_owned_kernel_after_apply_failed_before_rtp (test_rollback_interruption.InterruptedRollback.test_retry_restores_same_owned_kernel_after_apply_failed_before_rtp)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_rollback_interruption.py", line 58, in test_retry_restores_same_owned_kernel_after_apply_failed_before_rtp
+    native.rollback(case.backend,native.journal_read(),'SUPERVISOR-RECOVERY')
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/files/usr/lib/homensai-vpn/native_switch.py", line 850, in rollback
+    raise Refused('KERNEL-POLICY-UNVERIFIED')
+native_switch.Refused: KERNEL-POLICY-UNVERIFIED
+
+======================================================================
+FAIL: test_stop_after_durable_arm_before_spawn_closes_undispatched_journal (test_switching_recovery_regressions.SwitchingRecovery.test_stop_after_durable_arm_before_spawn_closes_undispatched_journal)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 50, in test_stop_after_durable_arm_before_spawn_closes_undispatched_journal
+    self.assertEqual(native.journal_read()['phase'], 'ROLLED-BACK')
+AssertionError: 'ARMED' != 'ROLLED-BACK'
+- ARMED
++ ROLLED-BACK
+
+
+======================================================================
+FAIL: test_supervisor_hands_stranded_pair_journal_to_independent_recovery (test_switching_recovery_regressions.SwitchingRecovery.test_supervisor_hands_stranded_pair_journal_to_independent_recovery)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 74, in test_supervisor_hands_stranded_pair_journal_to_independent_recovery
+    native.serve()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/files/usr/lib/homensai-vpn/native_switch.py", line 1609, in serve
+    if pair_tick(backend,settings,decision_revision):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1124, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1128, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1189, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 64, in incomplete_tick
+    self.assertFalse(called, 'an unfinished journal must not be polled forever')
+AssertionError: [True] is not false : an unfinished journal must not be polled forever
+
+======================================================================
+FAIL: test_stop_cancels_queued_manual_once_without_waiting_for_another_start (test_switching_recovery_regressions.SwitchingRecovery.test_stop_cancels_queued_manual_once_without_waiting_for_another_start)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 86, in test_stop_cancels_queued_manual_once_without_waiting_for_another_start
+    self.assertEqual(first['state'], 'CANCELLED')
+AssertionError: 'QUEUED' != 'CANCELLED'
+- QUEUED
++ CANCELLED
+
+
+======================================================================
+FAIL: test_supported_long_interval_does_not_disable_healthy_manual_choices (test_switching_recovery_regressions.SwitchingRecovery.test_supported_long_interval_does_not_disable_healthy_manual_choices)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 101, in test_supported_long_interval_does_not_disable_healthy_manual_choices
+    self.assertTrue(control['primary']['allowed'], control)
+AssertionError: False is not true : {'available': True, 'mode': 'continuous-pair', 'time': 1792750000, 'control_revision': '9536a40c08b844b3b5ba7705d062860e', 'hold': None, 'primary': {'allowed': False, 'blockers': ['SOURCE-NOT-HEALTHY']}, 'reserve': {'allowed': False, 'blockers': ['PAIR-MANUAL-TARGET-UNHEALTHY']}, 'resume': {'allowed': False, 'blockers': []}, 'blockers': []}
+
+======================================================================
+FAIL: test_orphan_claim_is_terminalized_once_without_replaying_work (test_switching_recovery_regressions.SwitchingRecovery.test_orphan_claim_is_terminalized_once_without_replaying_work)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 125, in test_orphan_claim_is_terminalized_once_without_replaying_work
+    self.assertTrue(manual.consume(case.backend, pair.read_state(), case.settings, case.revision))
+AssertionError: False is not true
+
+======================================================================
+FAIL: test_recovery_revokes_intent_before_rollback_failure (test_switching_recovery_regressions.SwitchingRecovery.test_recovery_revokes_intent_before_rollback_failure)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/baseline-regressions/router/tests/test_switching_recovery_regressions.py", line 149, in test_recovery_revokes_intent_before_rollback_failure
+    self.assertEqual(pair.intent()['mode'], 'off')
+AssertionError: 'on' != 'off'
+- on
++ off
+
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.217s
+
+FAILED (failures=6, errors=1)

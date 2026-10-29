@@ -1,0 +1,29 @@
+======================================================================
+FAIL: test_complete_synthetic_stock_facts_only_propose_monitor_review (test_mt3000_monitor_preflight.Mt3000MonitorPreflightTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final39/qa/test_mt3000_monitor_preflight.py", line 60, in test_complete_synthetic_stock_facts_only_propose_monitor_review
+    self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+AssertionError: 1 != 0 : EXTERNAL-REVIEW-CLAIM	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+BLOCKED	OWN-STATE-PRESENT-FRESH-INSTALL-ONLY
+PASS	PYTHON-MONITOR-PREREQUISITES
+PASS	LUA-MONITOR-PREREQUISITES
+NATIVE-SWITCH	REFUSED-UNCERTIFIED-TARGET
+INSTALLATION	NOT-AUTHORIZED-BY-PREFLIGHT
+BLOCKED	MONITOR-CANDIDATE-BLOCKED
+
+
+----------------------------------------------------------------------
+Ran 150 tests in 22.610s
+
+FAILED (failures=1, skipped=2)
+
+
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final39/qa/run_offline_ci.py", line 114, in <module>
+    if __name__=='__main__':main()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final39/qa/run_offline_ci.py", line 52, in main
+    qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final39/qa/run_offline_ci.py", line 48, in check
+    raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
+RuntimeError: CI-CHECK-FAILED: exit=1 command=/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/bin/python3 -m unittest discover -s qa -q

@@ -33,7 +33,7 @@ class ParentDiagnostics(unittest.TestCase):
     def test_timed_out_parent_records_stage_type_frames_and_restores_verified_previous_target(self):
         journal=self.timeout_request();detail=journal['failure_detail']
         self.assertEqual(detail['stage'],'worker-wait');self.assertEqual(detail['error_type'],'TimeoutExpired')
-        self.assertEqual(detail['worker_stage'],'done');self.assertEqual(detail['elapsed_ms'],50000)
+        self.assertEqual(detail['worker_stage'],'done');self.assertEqual(detail['elapsed_ms'],(n.TRANSACTION_SECONDS+n.WORKER_WAIT_GRACE)*1000)
         self.assertEqual(detail['code'],'NATIVE-SYSTEM-001');self.assertNotIn('PRIVATE_SENTINEL',json.dumps(detail))
         self.assertLessEqual(len(detail['error_at']),5)
         self.assertTrue(all('/' not in row['file'] and '\\' not in row['file'] for row in detail['error_at']))

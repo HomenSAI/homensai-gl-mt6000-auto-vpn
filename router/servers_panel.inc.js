@@ -4,10 +4,11 @@ function serverCounts(status,inventory,rows,now){
   var shown=rows.length;
   var connected=rows.filter(function(p){return p.interface;});
   var working=connected.filter(function(p){return profileHealth(p,now).state==='healthy';}).length;
-  return {onRouter:Math.max(onRouter,shown),shown:shown,connected:connected.length,working:working,hidden:Math.max(0,onRouter-shown)};
+  var stale=connected.filter(function(p){return profileHealth(p,now).state==='unknown';}).length;
+  return {onRouter:Math.max(onRouter,shown),shown:shown,connected:connected.length,working:working,stale:stale,hidden:Math.max(0,onRouter-shown)};
 }
 function renderServerSummary(status,inventory,rows){
-  var c=serverCounts(status,inventory,rows,(typeof routerWall==='function'?routerWall():Date.now()/1000));
+  var c=serverCounts(status,inventory,rows,(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
   function tile(value,label,hint){return E('div',{'class':'hv-count'},[E('strong',{},String(value)),E('span',{},label),hint?E('small',{},hint):null].filter(Boolean));}
   var tiles=[
     tile(c.onRouter,bi('VPN profiles on the router','VPN-профилей на роутере'),bi('Added in GL.iNet → VPN','Добавлены в GL.iNet → VPN')),

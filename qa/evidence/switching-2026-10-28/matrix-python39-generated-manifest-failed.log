@@ -1,0 +1,24 @@
+======================================================================
+FAIL: test_local_targets_and_current_version_scopes (test_documentation_current.DocumentationCurrentTests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-clean39/qa/test_documentation_current.py", line 5, in test_local_targets_and_current_version_scopes
+    result=audit()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-clean39/qa/audit_documentation.py", line 55, in audit
+    for name,digest in manifest[group].items():assert normalized_hash(ROOT/name)==digest,'GENERATED-DOC-STALE:'+name
+AssertionError: GENERATED-DOC-STALE:router/connectivity_panel.inc.js
+
+----------------------------------------------------------------------
+Ran 150 tests in 22.244s
+
+FAILED (failures=1, skipped=2)
+
+
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-clean39/qa/run_offline_ci.py", line 114, in <module>
+    if __name__=='__main__':main()
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-clean39/qa/run_offline_ci.py", line 52, in main
+    qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-clean39/qa/run_offline_ci.py", line 48, in check
+    raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
+RuntimeError: CI-CHECK-FAILED: exit=1 command=/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.9-linux-x86_64-gnu/bin/python3 -m unittest discover -s qa -q

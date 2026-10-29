@@ -1,0 +1,14 @@
+{
+  "requested_handoff": "docs/handoff/TODO-CLAUDE-SWITCHING-2026-10-28.ru.md",
+  "worktree_exists": false,
+  "history_commits_for_exact_path": [],
+  "all_ref_object_path_matches": [],
+  "result": "BLOCKED: mandatory handoff missing",
+  "physical_mt3000_access": "NOT AVAILABLE / NOT ATTEMPTED; private executor/runbook unavailable",
+  "physical_mt6000_access": "NOT ATTEMPTED",
+  "docker_on_path": null,
+  "dev_kvm_exists": false,
+  "actual_qa_vm": "Disposable OpenWrt21.02.7 x86/64 on software QEMU TCG; not target firmware/hardware",
+  "host_native_netns_kernel_graph": "BLOCKED: isolated namespace is supported, but host kernel returned Unknown device type for dummy interfaces. No host module loading or network mutation was attempted.",
+  "canonical_dual_docker_ci_gate": "BLOCKED here: approved immutable Docker runtimes not available; parent separately runs isolated local Python3.9/3.11 checks, which do not replace this gate."
+}

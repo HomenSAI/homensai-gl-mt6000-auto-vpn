@@ -1,0 +1,99 @@
+======================================================================
+FAIL: test_complete_synthetic_stock_facts_only_propose_monitor_review (test_mt3000_monitor_preflight.Mt3000MonitorPreflightTests.test_complete_synthetic_stock_facts_only_propose_monitor_review)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/test_mt3000_monitor_preflight.py", line 60, in test_complete_synthetic_stock_facts_only_propose_monitor_review
+    self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+AssertionError: 1 != 0 : EXTERNAL-REVIEW-CLAIM	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+BLOCKED	DEPENDENCY-MISSING:python3
+BLOCKED	DEPENDENCY-MISSING:lua
+BLOCKED	DEPENDENCY-MISSING:lua-cjson
+BLOCKED	DEPENDENCY-MISSING:libuci-lua
+BLOCKED	DEPENDENCY-MISSING:ip-full
+BLOCKED	DEPENDENCY-MISSING:ubus
+BLOCKED	DEPENDENCY-MISSING:rpcd
+BLOCKED	DEPENDENCY-MISSING:luci-base
+BLOCKED	DEPENDENCY-MISSING:ca-bundle
+BLOCKED	STORAGE-NOT-VERIFIED
+PASS	PYTHON-MONITOR-PREREQUISITES
+PASS	LUA-MONITOR-PREREQUISITES
+NATIVE-SWITCH	REFUSED-UNCERTIFIED-TARGET
+INSTALLATION	NOT-AUTHORIZED-BY-PREFLIGHT
+BLOCKED	MONITOR-CANDIDATE-BLOCKED
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 12: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+preflight-harness: 52: /workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/router-test-kit/00-mt3000-monitor-preflight.sh: awk: not found
+
+
+======================================================================
+FAIL: test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states (test_runtime_probe.RuntimeProbeTests.test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states) (script='00-runtime-probe.sh', status='install ok installed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/test_runtime_probe.py", line 77, in test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states
+    if script==PROBE:self.assertEqual(rows['package_version:lua'],expected)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'MISSING' != '1.2.3'
+- MISSING
++ 1.2.3
+
+
+======================================================================
+FAIL: test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states (test_runtime_probe.RuntimeProbeTests.test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states) (script='00-runtime-probe.sh', status='install user installed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/test_runtime_probe.py", line 77, in test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states
+    if script==PROBE:self.assertEqual(rows['package_version:lua'],expected)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'MISSING' != '1.2.3'
+- MISSING
++ 1.2.3
+
+
+======================================================================
+FAIL: test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states (test_runtime_probe.RuntimeProbeTests.test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states) (script='00-platform-probe.sh', status='install ok installed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/test_runtime_probe.py", line 78, in test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states
+    else:self.assertEqual(rows['package_lua'],'INSTALLED' if installed else 'MISSING')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'MISSING' != 'INSTALLED'
+- MISSING
++ INSTALLED
+
+
+======================================================================
+FAIL: test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states (test_runtime_probe.RuntimeProbeTests.test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states) (script='00-platform-probe.sh', status='install user installed')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/test_runtime_probe.py", line 78, in test_both_scripts_accept_installed_ok_or_user_and_refuse_partial_or_conflicting_states
+    else:self.assertEqual(rows['package_lua'],'INSTALLED' if installed else 'MISSING')
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'MISSING' != 'INSTALLED'
+- MISSING
++ INSTALLED
+
+
+----------------------------------------------------------------------
+Ran 150 tests in 21.743s
+
+FAILED (failures=5, skipped=2)
+
+
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/run_offline_ci.py", line 114, in <module>
+    if __name__=='__main__':main()
+                            ^^^^^^
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/run_offline_ci.py", line 52, in main
+    qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/evidence-switching/candidate-final311/qa/run_offline_ci.py", line 48, in check
+    raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
+RuntimeError: CI-CHECK-FAILED: exit=1 command=/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11-linux-x86_64-gnu/bin/python3 -m unittest discover -s qa -q

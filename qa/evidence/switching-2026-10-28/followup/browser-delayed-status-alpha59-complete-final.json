@@ -1,0 +1,406 @@
+{
+  "scope": "Actual Chromium and exact generated dashboard. RPC/inventory/probe/kernel status are synthetic frozen frames; only browser clocks and RPC delivery are controlled. No backend transaction, QEMU, physical router or network rules are invoked.",
+  "identity": {
+    "head": "32b26f62f0c8db587bac065eae1c7e6d31404b44",
+    "version": "0.9.1-alpha59",
+    "dashboard_file": "dashboard134.js",
+    "dashboard_sha256": "ec7f62847a5ea87d6fbcd995a4088d2d282bb3826e0d9504519e0e081d7181a0",
+    "isolation": {
+      "etc_readonly": true,
+      "run_readonly": true,
+      "effective_capabilities": "0000000000000000"
+    }
+  },
+  "fixture": {
+    "server_time": 1000,
+    "native_time": 990,
+    "kernel_checked_at": 1000,
+    "kernel_valid_for": 15,
+    "website_time": 975,
+    "website_valid_for": 45,
+    "health_valid_for": 900,
+    "delay_ms": 24000,
+    "raw_frame_sha256": "e7081a9474954dc644f9409a543ae6e3e09607e455a3b53a55f4c14010cc1cd5",
+    "observed_browser_delay_ms": 24000
+  },
+  "checks": [
+    {
+      "name": "fresh initial frame selects the verified primary",
+      "passed": true
+    },
+    {
+      "name": "status reply is held for 24 browser seconds below 30 second deadline",
+      "passed": true
+    },
+    {
+      "name": "existing kernel proof expires while the reply is in flight",
+      "passed": true
+    },
+    {
+      "name": "delayed reply does not renew expired kernel proof",
+      "passed": true
+    },
+    {
+      "name": "delayed reply does not renew expired controller heartbeat",
+      "passed": true
+    },
+    {
+      "name": "sidebar Auto lamp stays non-green after expired proof",
+      "passed": true
+    },
+    {
+      "name": "Minimum agrees that automatic operation is unconfirmed",
+      "passed": true
+    },
+    {
+      "name": "both expired website responses are visibly stale without a current mean",
+      "passed": true
+    },
+    {
+      "name": "same frozen raw response is delivered without server timestamp refresh",
+      "passed": true
+    },
+    {
+      "name": "delayed-response scenario sends no switch command",
+      "passed": true
+    },
+    {
+      "name": "host /etc and /run remain readonly with no effective capabilities",
+      "passed": true
+    },
+    {
+      "name": "real click and matching refused terminal establish saved feedback",
+      "passed": true
+    },
+    {
+      "name": "new request ID completion supersedes saved refusal after clockback",
+      "passed": true
+    },
+    {
+      "name": "other-tab completion never invents a different kernel-selected route",
+      "passed": true
+    },
+    {
+      "name": "new backend refusal replaces old request feedback without another click",
+      "passed": true
+    },
+    {
+      "name": "no Chromium script exceptions",
+      "passed": true
+    }
+  ],
+  "steps": [
+    {
+      "name": "initial-fresh",
+      "dom": {
+        "tick": 2,
+        "full": [
+          "✓ Two-channel Auto is on"
+        ],
+        "side": [
+          {
+            "text": "Auto ON\n— Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "title": "Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-green"
+          },
+          {
+            "direction": "reserve",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto works",
+            "class": "hv-auto-state hv-auto-state-on"
+          }
+        ],
+        "lastResults": [],
+        "operation": []
+      }
+    },
+    {
+      "name": "waiting-before-delivery",
+      "dom": {
+        "tick": 24002,
+        "full": [
+          "? No data from the router"
+        ],
+        "side": [
+          {
+            "text": "Auto: no connection\n— No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "title": "No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto does not work",
+            "class": "hv-auto-state hv-auto-state-off"
+          }
+        ],
+        "lastResults": [],
+        "operation": []
+      }
+    },
+    {
+      "name": "delayed-reply-delivered",
+      "dom": {
+        "tick": 24002,
+        "full": [
+          "? No data from the router"
+        ],
+        "side": [
+          {
+            "text": "Auto: no connection\n— No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "title": "No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto does not work",
+            "class": "hv-auto-state hv-auto-state-off"
+          }
+        ],
+        "lastResults": [],
+        "operation": []
+      }
+    },
+    {
+      "name": "minimum-after-real-click",
+      "dom": {
+        "tick": 24002,
+        "full": [
+          "? No data from the router"
+        ],
+        "side": [
+          {
+            "text": "Auto: no connection — No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "title": "No fresh data from the router, so the state is not known. Click to open Automatic VPN failover.",
+            "green": false
+          }
+        ],
+        "simple": [
+          {
+            "state": "unknown",
+            "text": "Auto VPN\nNo connection to the router\nNo fresh data\nPress to turn Auto off\n\nCheck the connection to the router.\n\nReserve channel\nNo fresh data\nPrimary response\n— · Check is out of date · 3/3\nReserve response\n— · Check is out of date · 3/3\nConnection details\nAdvanced menu →\n\nOverview · channels · checks · settings"
+          }
+        ],
+        "responses": [
+          {
+            "text": "— · Check is out of date · 3/3",
+            "state": "stale",
+            "coverage": "3/3"
+          },
+          {
+            "text": "— · Check is out of date · 3/3",
+            "state": "stale",
+            "coverage": "3/3"
+          }
+        ],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          },
+          {
+            "direction": "reserve",
+            "disabled": true,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-grey"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto does not work",
+            "class": "hv-auto-state hv-auto-state-off"
+          }
+        ],
+        "lastResults": [],
+        "operation": []
+      }
+    },
+    {
+      "name": "cross-tab-old-correlated-refusal",
+      "dom": {
+        "tick": 4,
+        "full": [
+          "✓ Two-channel Auto is on"
+        ],
+        "side": [
+          {
+            "text": "Auto ON\n— Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "title": "Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-green"
+          },
+          {
+            "direction": "reserve",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto works",
+            "class": "hv-auto-state hv-auto-state-on"
+          }
+        ],
+        "lastResults": [
+          "Switch refused: SOURCE-NOT-HEALTHY\n\nSOURCE-NOT-HEALTHY · Primary not healthy yet"
+        ],
+        "operation": []
+      }
+    },
+    {
+      "name": "cross-tab-new-completed-after-clockback",
+      "dom": {
+        "tick": 4,
+        "full": [
+          "✓ Two-channel Auto is on"
+        ],
+        "side": [
+          {
+            "text": "Auto ON\n— Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "title": "Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-green"
+          },
+          {
+            "direction": "reserve",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto works",
+            "class": "hv-auto-state hv-auto-state-on"
+          }
+        ],
+        "lastResults": [],
+        "operation": []
+      }
+    },
+    {
+      "name": "cross-tab-current-refusal-after-clockback",
+      "dom": {
+        "tick": 4,
+        "full": [
+          "✓ Two-channel Auto is on"
+        ],
+        "side": [
+          {
+            "text": "Auto ON\n— Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "title": "Auto is on: it can switch to the reserve VPN. Click to open Automatic VPN failover.",
+            "green": true
+          }
+        ],
+        "simple": [],
+        "responses": [],
+        "manual": [
+          {
+            "direction": "primary",
+            "disabled": true,
+            "selected": "true",
+            "class": "hv-manual-channel hv-manual-green"
+          },
+          {
+            "direction": "reserve",
+            "disabled": false,
+            "selected": "false",
+            "class": "hv-manual-channel hv-manual-yellow"
+          }
+        ],
+        "power": [
+          {
+            "text": "Auto works",
+            "class": "hv-auto-state hv-auto-state-on"
+          }
+        ],
+        "lastResults": [
+          "Switch refused: PAIR-MANUAL-TARGET-UNHEALTHY\n\nThe reserve has no fresh successful DNS/HTTPS confirmation. It will not be selected."
+        ],
+        "operation": []
+      }
+    }
+  ],
+  "errors": [],
+  "browser": "156.0.8078.73",
+  "status_rpc_count": 2,
+  "cross_tab_fixture": {
+    "synthetic_manual_rpc_calls": 1,
+    "old_request_id": "cccccccccccccccccccccccccccccccc",
+    "old_updated_at": 1000,
+    "new_request_id": "dddddddddddddddddddddddddddddddd",
+    "new_updated_at": 100,
+    "backend_commands": 0
+  },
+  "verdict": "PASS"
+}

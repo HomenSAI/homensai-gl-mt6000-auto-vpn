@@ -1,0 +1,23 @@
+test_failed_forward_rtp_reuses_original_verified_proof_after_stop (test_rollback_order_steps.RestoreOrderSteps.test_failed_forward_rtp_reuses_original_verified_proof_after_stop) ... ERROR
+
+======================================================================
+ERROR: test_failed_forward_rtp_reuses_original_verified_proof_after_stop (test_rollback_order_steps.RestoreOrderSteps.test_failed_forward_rtp_reuses_original_verified_proof_after_stop)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_rollback_order_steps.py", line 266, in test_failed_forward_rtp_reuses_original_verified_proof_after_stop
+    n.rollback(self.backend,n.journal_read(),'SUPERVISOR-RECOVERY')
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/native_switch.py", line 861, in rollback
+    resume_check,recovery_revision=authorize(backend,journal)
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/rollback_recovery.py", line 83, in authorize
+    or journal.get('restore_target_order') is None or journal.get('restore_before_order') is None):refuse()
+                                                                                                   ^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/rollback_recovery.py", line 78, in refuse
+    def refuse():raise n.Refused('KERNEL-POLICY-UNVERIFIED')
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+native_switch.Refused: KERNEL-POLICY-UNVERIFIED
+
+----------------------------------------------------------------------
+Ran 1 test in 0.213s
+
+FAILED (errors=1)

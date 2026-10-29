@@ -1,0 +1,64 @@
+test_last_move_crash_commits_owned_delta_before_applying (test_rollback_order_steps.RestoreOrderSteps.test_last_move_crash_commits_owned_delta_before_applying) ... ERROR
+test_restart_resumes_only_remaining_move_after_first_move_crash (test_rollback_order_steps.RestoreOrderSteps.test_restart_resumes_only_remaining_move_after_first_move_crash) ... ERROR
+
+======================================================================
+ERROR: test_last_move_crash_commits_owned_delta_before_applying (test_rollback_order_steps.RestoreOrderSteps.test_last_move_crash_commits_owned_delta_before_applying)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_rollback_order_steps.py", line 104, in test_last_move_crash_commits_owned_delta_before_applying
+    n.rollback(self.backend,n.journal_read(),'SUPERVISOR-RECOVERY')
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/native_switch.py", line 898, in rollback
+    backend.apply(write_command=restore_command)
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/native_switch.py", line 718, in apply
+    (write_command or command)(['lua','-e',script],timeout=8)
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/native_switch.py", line 888, in restore_command
+    return (forward_dispatch(args,recovery_revision,timeout=timeout) if recovery_revision is not None
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1124, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1128, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1189, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_pair_manual_bound_context.py", line 148, in dispatch
+    def dispatch(self,args,revision,timeout=5):n.require_control_revision(revision);return self.write(args)
+                                                                                           ^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1124, in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1128, in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/unittest/mock.py", line 1189, in _execute_mock_call
+    result = effect(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_rollback_order_steps.py", line 40, in write
+    result=original_write(args)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_pair_manual_bound_context.py", line 156, in write
+    elif args[:2]==['lua','-e']:self.data=self.lua(args[2])
+                                          ^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_pair_manual_bound_context.py", line 117, in lua
+    result=subprocess.run(args,input=json.dumps(self.data).encode(),capture_output=True,timeout=5,check=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/bebc33966e94/python-runtimes/cpython-3.11.17-linux-x86_64-gnu/lib/python3.11/subprocess.py", line 571, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['/workspace/scratch/bebc33966e94/test-tools/bin/lua5.1', '-e', '\nlocal json=require(\'cjson\');FIXTURE=json.decode(io.read(\'*a\'))\nlocal function copy(x)if type(x)~=\'table\'then return x end;local y={};for k,v in pairs(x)do y[k]=copy(v)end;return y end\npackage.preload[\'uci\']=function()\n return {cursor=function()\n  local c={}\n  function c:changes()return FIXTURE.pending or {}end\n  function c:foreach(config,kind,callback)\n   local rows=config==\'route_policy\'and FIXTURE.sections or config==\'firewall\'and FIXTURE.firewall_defaults or {}\n   for _,row in ipairs(rows)do if not kind or row[\'.type\']==kind or config==\'firewall\'and kind==\'defaults\'then callback(copy(row))end end\n  end\n  function c:get_all(config,section)\n   if config==\'homensai_vpn\'then return copy(FIXTURE.settings)end\n   if config==\'route_policy\'then for _,row in ipairs(FIXTURE.sections)do if row[\'.name\']==section then return copy(row)end end end\n  end\n  function c:get(config,section,key)\n   if config==\'glipv6\'and key==\'enabled\'then return FIXTURE.ipv6 end\n   if config==\'network\'and section==\'lan\'then return \'br-lan\'end\n   local row=self:get_all(config,section);return row and row[key]or nil\n  end\n  function c:set(config,section,key,value)\n   assert(config==\'route_policy\');for _,row in ipairs(FIXTURE.sections)do if row[\'.name\']==section then row[key]=value;return true end end;return nil\n  end\n  function c:reorder(config,section,index)\n   assert(config==\'route_policy\');for i,row in ipairs(FIXTURE.sections)do if row[\'.name\']==section then table.remove(FIXTURE.sections,i);table.insert(FIXTURE.sections,index+1,row);return true end end;return nil\n  end\n  function c:save(config)assert(config==\'route_policy\');return true end\n  function c:commit(config)assert(config==\'route_policy\');return true end\n  return c\n end}\nend\nlocal u=require(\'uci\')\nlocal pending=u.cursor():changes(\'route_policy\');assert(not pending or next(pending)==nil,\'pending\')\nlocal c=u.cursor(\'/etc/config\',"/tmp/homensai-process-voblg7jj")\nlocal s=c:get_all(\'route_policy\',\'gl_process_vpn\')\nassert(s and s[\'.type\']==\'rule_process\'and s.enabled==\'1\'and s.from_type==\'process_gid\',\'identity\')\nassert(s.via=="wgclient1" and s.mark=="0x1000",\'changed\')\nlocal first=nil\nc:foreach(\'route_policy\',\'rule\',function(r)if not first and r.enabled==\'1\'and r.via~=\'novpn\'then first=r end end)\nassert(first and first.via=="ovpnclient2" and first.mark=="0xb000",\'order\')\nassert(c:set(\'route_policy\',\'gl_process_vpn\',\'via\',first.via))\nassert(c:set(\'route_policy\',\'gl_process_vpn\',\'mark\',first.mark))\nassert(c:save(\'route_policy\'));assert(c:commit(\'route_policy\'))\nlocal fresh=u.cursor(\'/etc/config\',"/tmp/homensai-process-voblg7jj")\nassert(fresh:get(\'route_policy\',\'gl_process_vpn\',\'via\')==first.via and fresh:get(\'route_policy\',\'gl_process_vpn\',\'mark\')==first.mark,\'readback\')\n\nprint(json.encode(FIXTURE))']' returned non-zero exit status 1.
+
+======================================================================
+ERROR: test_restart_resumes_only_remaining_move_after_first_move_crash (test_rollback_order_steps.RestoreOrderSteps.test_restart_resumes_only_remaining_move_after_first_move_crash)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/tests/test_rollback_order_steps.py", line 90, in test_restart_resumes_only_remaining_move_after_first_move_crash
+    n.rollback(self.backend,n.journal_read(),'SUPERVISOR-RECOVERY')
+  File "/workspace/scratch/bebc33966e94/auto-vpn/router/files/usr/lib/homensai-vpn/native_switch.py", line 853, in rollback
+    raise Refused('POLICY-IDENTITY-CHANGED')
+native_switch.Refused: POLICY-IDENTITY-CHANGED
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.237s
+
+FAILED (errors=2)

@@ -2157,63 +2157,75 @@ VPN-профиль изменился / VPN profile changed
 
 ## PAIR-EXTERNAL-POLICY-CHANGE
 
-Правила маршрутов изменены вне приложения / Route rules changed outside the app
+Правила маршрутов отличаются от сохранённой сессии / Route rules differ from the saved session
 
-**RU:** Порядок или содержимое правил маршрутов VPN больше не совпадает с сохранённой сессией Auto, например туннель переставили в штатной странице VPN. Простое переименование туннеля не считается.
+**RU:** Порядок или содержимое правил маршрутов VPN больше не совпадает с сохранённой сессией Auto. Кто или что их изменил, не установлено: их может менять и правка в штатной странице VPN, и штатные службы роутера. Простое переименование туннеля не считается.
 
-**EN:** The order or content of the VPN route rules no longer matches the saved Auto session, for example a tunnel was moved in the stock VPN page. Renaming a tunnel alone does not count.
+**EN:** The order or content of the VPN route rules no longer matches the saved Auto session. Who or what changed them is not established: an edit in the stock VPN page and the stock router services can both change them. Renaming a tunnel alone does not count.
 
-**Что делать:** Нажмите Start: Auto сам архивирует старую сессию и принимает новые правила. Если в течение 15 минут отказ повторяется, сначала закончите правки в штатной странице.
+**Что делать:** Нажмите Start: Auto сам архивирует старую сессию и примет текущие правила. Если в течение 15 минут отказ повторяется, правила ещё меняются: подождите и повторите.
 
-**Action:** Press Start: Auto archives the old session and adopts the new rules by itself. If it refuses again within 15 minutes, finish editing the stock page first.
+**Action:** Press Start: Auto archives the old session and adopts the current rules by itself. If it refuses again within 15 minutes, the rules are still changing: wait and try again.
 
 ## PAIR-EXTERNAL-NETWORK-CHANGE
 
-Сетевые настройки изменены вне приложения / Network settings changed outside the app
+Сетевые настройки отличаются от сохранённой сессии / Network settings differ from the saved session
 
-**RU:** Сетевой интерфейс выбранной пары или другой интерфейс изменился после запуска Auto (не остановленный лишний клиент).
+**RU:** Сетевой интерфейс выбранной пары или другой интерфейс изменился после запуска Auto (не остановленный лишний клиент). Сравнение не показывает, кто или что его изменил.
 
-**EN:** A network interface of the selected pair, or another interface, changed after Auto started (not a stopped leftover client).
+**EN:** A network interface of the selected pair, or another interface, changed after Auto started (not a stopped leftover client). The comparison does not show who or what changed it.
 
-**Что делать:** Нажмите Start: Auto сам примет новые настройки. Повторные отказы значат, что настройки ещё меняются.
+**Что делать:** Нажмите Start: Auto сам примет текущие настройки. Повторные отказы значат, что настройки ещё меняются.
 
-**Action:** Press Start: Auto adopts the new settings by itself. Repeated refusals mean the settings are still changing.
+**Action:** Press Start: Auto adopts the current settings by itself. Repeated refusals mean the settings are still changing.
 
 ## PAIR-EXTERNAL-CONFIG-CHANGE
 
-Конфигурация роутера изменена вне приложения / Router configuration changed outside the app
+Защищённая конфигурация роутера отличается / Protected router configuration differs
 
-**RU:** Защищённая конфигурация (файрвол, DNS, Wi-Fi или профили VPN) отличается от той, которую Auto видел при запуске.
+**RU:** Защищённая конфигурация (файрвол, DNS, Wi-Fi или профили VPN) отличается от той, которую Auto видел при запуске. Сравнение не показывает, кто или что её изменил: её могут менять и штатные службы роутера.
 
-**EN:** A protected configuration (firewall, DNS, Wi-Fi or the VPN profiles) differs from the one Auto saw when it started.
+**EN:** A protected configuration (firewall, DNS, Wi-Fi or the VPN profiles) differs from the one Auto saw when it started. The comparison does not show who or what changed it: the stock router services can change it too.
 
-**Что делать:** Нажмите Start: Auto архивирует старую сессию и сам примет новую конфигурацию.
+**Что делать:** Нажмите Start: Auto архивирует старую сессию и сам примет текущую конфигурацию.
 
-**Action:** Press Start: Auto archives the old session and adopts the new configuration by itself.
+**Action:** Press Start: Auto archives the old session and adopts the current configuration by itself.
 
 ## PAIR-RECOVERY-REQUIRED
 
-Предыдущая сессия Auto передаётся заново / Previous Auto session is being taken over
+Незавершённое переключение требует восстановления / Unfinished switch needs recovery
 
-**RU:** Предыдущая сессия Auto не завершена и не может быть принята автоматически (например роутер удерживается на резерве или автоматический приём уже выполнялся три раза за 15 минут).
+**RU:** Предыдущее переключение или сессия Auto не завершились, сейчас их ничто не выполняет, и принять их автоматически нельзя (например роутер удерживается на резерве или автоматический приём уже выполнялся три раза за 15 минут). Журнал и защита сохранены; канал трафика не подтверждён. Это не означает, что вы меняли настройки.
 
-**EN:** An earlier Auto session is not finished and cannot be taken over automatically (for example the router is held on the reserve, or the automatic takeover already ran three times in 15 minutes).
+**EN:** An earlier switch or Auto session did not finish, nothing is running it now, and it cannot be taken over automatically (for example the router is held on the reserve, or the automatic takeover already ran three times in 15 minutes). The journal and safety guard are kept; the traffic channel is not verified. This does not mean that you changed any settings.
 
-**Что делать:** Если роутер на резерве, дождитесь восстановления основного или нажмите «Вернуться на основной». Иначе подождите 15 минут и нажмите Start ещё раз.
+**Что делать:** Не повторяйте Start и ручное переключение: они отклоняются до завершения восстановления. Если роутер удерживается на резерве, дождитесь восстановления основного. Сохраните журнал; если состояние не меняется, роутеру нужна проверенная процедура восстановления.
 
-**Action:** If the router is on the reserve, wait for the primary to recover or press Return to primary. Otherwise wait 15 minutes and press Start again.
+**Action:** Do not repeat Start or manual switching: they are refused until recovery completes. If the router is held on the reserve, wait for the primary to recover. Keep the journal; if the state does not change, the router needs its guarded recovery procedure.
 
 ## PAIR-READOPTED
 
 Auto заново прочитал изменённые настройки / Auto re-read changed settings
 
-**RU:** Настройки изменили вне приложения. Auto архивировал старую сессию, принял новые настройки и сам запустился заново.
+**RU:** Защищённые настройки отличались от сохранённой сессии. Auto архивировал старую сессию, принял текущие настройки и сам запустился заново.
 
-**EN:** Settings were changed outside the app. Auto archived the old session, adopted the new settings and started again by itself.
+**EN:** Protected settings differed from the saved session. Auto archived the old session, adopted the current settings and started again by itself.
 
 **Что делать:** Делать ничего не нужно. Старая сессия сохранена в папке восстановления роутера.
 
 **Action:** Nothing to do. The old session is kept in the router recovery folder.
+
+## SWITCH-RESULT-UNCONFIRMED
+
+Результат переключения не подтверждён вовремя / Switch result not confirmed in time
+
+**RU:** Страница видела фазу переключения, но роутер не сообщил о его завершении до предельного срока (не более 2 минут и короткая проверка). Канал трафика не подтверждён; страница не показывает успех и не продолжает отсчёт.
+
+**EN:** The page saw a switch phase, but the router did not report its end before the switch deadline (at most 2 minutes plus a short check). The traffic channel is not verified; the page does not show success or keep counting.
+
+**Что делать:** Не повторяйте переключение. Дождитесь следующего состояния роутера; Stop остаётся доступен. Если состояние не меняется, незавершённое переключение требует восстановления.
+
+**Action:** Do not repeat the switch. Wait for the next router state; Stop remains available. If it stays like this, the unfinished switch needs recovery.
 
 ## VENDOR-REASON-UNOBSERVED
 
@@ -2231,9 +2243,9 @@ Auto заново прочитал изменённые настройки / Aut
 
 Старая сессия Auto архивирована автоматически / Old Auto session archived automatically
 
-**RU:** Запись в архивной сессии Auto: настройки изменили вне приложения, и Auto сам принял их.
+**RU:** Запись в архивной сессии Auto: защищённые настройки отличались от неё, и Auto сам принял текущие настройки.
 
-**EN:** Recorded in the archived Auto session when settings were changed outside the app and Auto adopted them by itself.
+**EN:** Recorded in the archived Auto session when protected settings differed from it and Auto adopted the current settings by itself.
 
 **Что делать:** Делать ничего не нужно. Архивная копия остаётся в папке восстановления роутера.
 
@@ -2801,9 +2813,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 Ждём ваш компьютер / Waiting for your computer
 
-**RU:** Маршрут переключён, контроллер до 90 секунд ждёт, пока LAN-помощник на вашем компьютере подтвердит, что интернет работает.
+**RU:** Маршрут переключён, контроллер до 2 минут ждёт, пока LAN-помощник на вашем компьютере подтвердит, что интернет работает.
 
-**EN:** The route is switched and the controller waits up to 90 seconds for the LAN helper on your computer to confirm that the internet works.
+**EN:** The route is switched and the controller waits up to 2 minutes for the LAN helper on your computer to confirm that the internet works.
 
 **Что делать:** Ожидайте данные своего режима доказательства. Внешний LAN использует помощник, router-probed — внутренние проверки. При таймауте проверьте фактическое восстановление, а не только запрос.
 
@@ -5529,13 +5541,13 @@ Python слишком старый / Python is too old
 
 Переключение идёт / Switch in progress
 
-**RU:** Переключение уже идёт. Дождитесь окончания или нажмите «Стоп».
+**RU:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или нажмите «Стоп»; без выполняющегося переключения нужно восстановление.
 
-**EN:** A switch is already in progress. Wait for it to finish or press Stop.
+**EN:** An unfinished switch record is open on the router. If a switch is running, wait for it or press Stop; without a running switch, recovery is needed.
 
-**Что делать:** Переключение уже идёт. Дождитесь окончания или нажмите «Стоп». Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или нажмите «Стоп»; без выполняющегося переключения нужно восстановление. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
-**Action:** A switch is already in progress. Wait for it to finish or press Stop. If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** An unfinished switch record is open on the router. If a switch is running, wait for it or press Stop; without a running switch, recovery is needed. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## TRIAL-ATTEMPT-LIMIT
 
@@ -6175,15 +6187,15 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 ## PAIR-STATE-UNVERIFIED
 
-Настройки изменены вне приложения / Settings were changed outside the app
+Незавершённое переключение требует восстановления / Unfinished switch needs recovery
 
-**RU:** Настройки изменены вне приложения
+**RU:** Незавершённое переключение требует восстановления
 
-**EN:** Settings were changed outside the app
+**EN:** Unfinished switch needs recovery
 
-**Что делать:** Настройки изменены вне приложения Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Незавершённое переключение требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
-**Action:** Settings were changed outside the app If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** Unfinished switch needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## PAIR-PROFILES-UNVERIFIED
 
@@ -6309,13 +6321,13 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 Завершите подготовку роутера / Complete router preparation
 
-**RU:** Настройки изменены вне приложения
+**RU:** Изменение подготовки требует восстановления
 
-**EN:** Settings were changed outside the app
+**EN:** A preparation change needs recovery
 
-**Что делать:** Настройки изменены вне приложения Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Изменение подготовки требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
 
-**Action:** Settings were changed outside the app If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** A preparation change needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## PREP-SOURCE-AUTOSTART
 

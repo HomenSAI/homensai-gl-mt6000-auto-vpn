@@ -1,0 +1,12 @@
+{
+  "kind": "QA infrastructure isolation mistake",
+  "scope": "Disposable executor host, not any physical router",
+  "path": "/etc/homensai-vpn/native-certificate.json",
+  "bytes": 396,
+  "sha256": "773aaf1eeb8c289b8a3b46d8a12d282a0fbcd41f04c108df8831c00331b0cb3b",
+  "mtime_utc": "2026-10-28T20:29:07.324541+00:00",
+  "cause": "BoundManualContext patches PERSIST/JOURNAL/STATE but did not redirect the derived native_switch.CERT constant; first synthetic Auto success wrote a certificate on the executor. No host routing or physical-router actions occurred.",
+  "remediation": "Redirect CERT, ATTEMPTS and PREPARE into fixture persist directory; final bridge runs under bwrap private user/mount namespace, readonly host filesystem and /etc,/run, private /tmp, all capabilities dropped, writable QA workspace only. Shared loopback is used exclusively for QA HTTP and private QEMU serial.",
+  "existing_host_file_action": "Read metadata/hash only; no deletion or move performed.",
+  "final_acceptance": "Only reports from the isolated final bridge count as final verification."
+}

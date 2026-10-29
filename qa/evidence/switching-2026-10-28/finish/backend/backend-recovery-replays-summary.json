@@ -1,0 +1,60 @@
+{
+  "date_utc": "2026-10-28/29",
+  "executor": "backend/transactions/recovery subagent; no physical router, SSH, ACTIVE-EXECUTOR or Windows networking touched",
+  "harness": {
+    "path": "qa/evidence/switching-2026-10-28/followup/reproduction/real_rollback_crash.py",
+    "change": "added case 3 (forward manual RTP fails without kernel change -> Stop -> forward-proof promotion inside a separate fork()ed recovery process -> SIGKILL after the last reverse UCI move -> fresh revision Stop -> SUPERVISOR-RECOVERY); QA_CASES selector; production hash map tolerates missing rollback_recovery.py on the alpha57 baseline",
+    "runner": "logs/run_harness.sh (docker; replaces bwrap run_isolated.sh which is unavailable on this Windows host)",
+    "change_v2": "added case 4 (vendor): a real separate stand-in process takes /tmp/run/rtp2.lock like rtp2.sh, the guest mangle is replaced by the unrouted intermediate (TUNNEL route chains flushed), one gl_vpn_rules forwarding is removed from the fixture firewall, the stand-in is SIGKILLed (stale lock, dead pid); then Stop and SUPERVISOR-RECOVERY; harness sha256 4dc986b8edb6ee813a0525fcf59e2002fc0fb0babcb04c47b99bd8671aa89242"
+  },
+  "bench": {
+    "guest": "OpenWrt 21.02.7 x86/64, kernel 5.4.238, iptables 1.8.7 legacy, pinned image/kernel/IPK SHA-256 from reproduction scripts; TCG QEMU 7.2.22 inside container hv-qa-qemu-backend (image homensai-vpn-qemu-alpha7:local sha256:62cc5a91...), user-mode NAT only, private loopback serial 14555, marker /tmp/HOMENSAI_VIRTUAL_LAB created by prepare_qemu.py --bootstrap after PID/disk/serial ownership check",
+    "harness_container": "homensai-vpn-python311:local (sha256:90d3ace7...), Python 3.11.2, lua5.1+cjson; --read-only rootfs (/etc and /run read-only), --cap-drop ALL (CapEff 0), no-new-privileges, uid 1000, private tmpfs /tmp, --init, network namespace shared with the QEMU container only for the loopback serial; source mounted read-only, only finish/backend writable",
+    "boundary": "Real: separate Linux process, SIGKILL, on-disk journal, Lua 5.1 policy parser, production rollback/authorize/record_step/promote_forward, guest netfilter+ip rules read by production attestor. Synthetic adapters: UCI pending delta, vendor RTP compiler (iptables-restore of fixture text), diagnostics/health, nft guard, apply child run in-process via Mock Popen for the forward failure. Not covered: procd, power-cut, physical GL firmware/rtp2.sh, real tunnels/LAN traffic."
+  },
+  "fixture_artifact_found": "Without --init the harness Python is container PID 1; BoundManualContext's Mock child uses pid=os.getpid()=1, which validate_journal rejects (pid<=1) -> JOURNAL-INTEGRITY-FAILED. Kept as real-rollback-crash-alpha59-candidate-0b042f6-pid1-fixture-artifact.json; also makes 8 focused unit tests fail in a bare container. Not a product defect.",
+  "results": {
+    "alpha57-baseline-059d0d3": {
+      "file": "real-rollback-crash-alpha57-baseline-059d0d3.json",
+      "verdict": "FAIL",
+      "cases": {
+        "move1": "FAIL POLICY-IDENTITY-CHANGED",
+        "move2": "FAIL KERNEL-POLICY-UNVERIFIED",
+        "forward": "FAIL: recovery child itself refused KERNEL-POLICY-UNVERIFIED before any move (exit 75), journal stays APPLYING - same shape as the live MT3000"
+      }
+    },
+    "alpha59-candidate-0b042f6": {
+      "files": [
+        "real-rollback-crash-alpha59-candidate-0b042f6.json",
+        "real-rollback-crash-alpha59-candidate-0b042f6-final-harness.json"
+      ],
+      "verdict": "PASS 3/3 (13/13, 13/13, 20/20 checks), both harness revisions"
+    },
+    "alpha59-candidate-plus-budget-fix": {
+      "file": "real-rollback-crash-alpha59-candidate-plus-budget-fix.json",
+      "verdict": "PASS 3/3"
+    },
+    "alpha59-plus-backend-fixes-v2": {
+      "file": "real-rollback-crash-alpha59-candidate-plus-backend-fixes-v2.json",
+      "source": "logs/QA-SOURCE-fix-v2.json",
+      "verdict": "PASS 4/4 (13/13, 13/13, 20/20, 13/13)"
+    },
+    "alpha57-baseline-vendor-case": {
+      "file": "real-rollback-crash-alpha57-baseline-059d0d3-vendor-case.json",
+      "verdict": "FAIL KERNEL-POLICY-UNVERIFIED (no recovery)"
+    },
+    "alpha59-0b042f6-vendor-case": {
+      "file": "real-rollback-crash-alpha59-candidate-0b042f6-vendor-case.json",
+      "verdict": "FAIL (no recovery). Boundary: error is FileNotFoundError /etc/config/firewall because unmodified alpha59 changed() reads the real path the harness cannot redirect; on a router the same journal refuses with KERNEL-POLICY-UNVERIFIED (unit-proven)"
+    }
+  },
+  "unit_suites": {
+    "0b042f6_py311": "router 1203 ran, 1 FAIL test_native_progress.test_explicit_return_and_committed_expiry_do_not_depend_on_progress_ack (load-sensitive: passed 5/5 isolated and in the 3 other full runs); qa 150 OK skipped=2",
+    "0b042f6_py39": "router 1203 OK; qa 150 OK skipped=37",
+    "fix_py311": "router 1205 OK; qa 150: 1 expected FAIL test_version_current VERSION-STALE (product source changed without version bump)",
+    "fix_py39": "router 1205 OK",
+    "fix_v2_py311": "router 1223 OK; qa 150: only test_version_current VERSION-STALE (needs version bump)",
+    "fix_v2_py39": "router 1223 OK; qa 150: only test_version_current VERSION-STALE"
+  },
+  "mutation_checks": "logs/mutate-vendor-rebuild.sh: static-firewall, live-lock, pending-uci, unrouted, credentials, final-config guards each killed by the new tests; removing the APPLYING order guard is still caught by journal validation (restore_origin) before any write"
+}

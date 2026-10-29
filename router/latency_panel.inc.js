@@ -29,7 +29,7 @@ function latencyRecommendation(status,inventory,now){
 function renderLatencyRecommendation(status,inventory,context){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,recommend=latencyRecommendation(status,inventory,now),current=latencyCurrent(status,inventory,now),ids=rolePairIds(status,inventory,now);
   var selected=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):null,path=status.channel_path||{};
-  if(typeof vendorDisplaySelected!=='function'&&!status.rpc_error&&!status.error&&Number.isFinite(status.time)&&now-status.time>=-5&&now-status.time<=90&&path.confirmed===true&&Number.isFinite(path.time)&&now-path.time>=-5&&now-path.time<=30)selected=path.active_profile_id;
+  if(typeof vendorDisplaySelected!=='function'&&!status.rpc_error&&!status.error&&observationFresh(status,now)&&path.confirmed===true&&Number.isFinite(path.time)&&now-path.time>=-5&&now-path.time<=30)selected=path.active_profile_id;
   var role=selected===ids[0]?bi('primary','основной'):selected===ids[1]?bi('reserve','резервный'):null;
   var body=[];
   function line(label,value){return E('p',{'class':'hv-recommendation-line'},[E('strong',{},label),String(value)]);}

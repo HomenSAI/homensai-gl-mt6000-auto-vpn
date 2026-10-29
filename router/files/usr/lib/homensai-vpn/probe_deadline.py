@@ -14,7 +14,7 @@ def remaining(deadline):
     seconds = deadline-time.monotonic()
     if seconds <= 0:
         raise socket.timeout('probe deadline exceeded')
-    return min(3, seconds)
+    return seconds  # the whole probe budget; a slow TCP tunnel is not a failure
 
 
 class _Reader(io.RawIOBase):

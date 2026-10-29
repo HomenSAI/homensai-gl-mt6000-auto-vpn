@@ -7,7 +7,10 @@ assert.equal(c.profileHealth(row('a','VPN-003'),1000).state,'failed');
 assert.equal(c.profileHealth(row('a',null,800),1000).state,'unknown');
 assert.equal(c.profileHealth(row('a','CHECK-001'),1000).state,'checking');
 let rows=[row('a'),row('b','DNS-001'),row('c'),{...row('d'),interface:null}];
-assert.deepEqual(Array.from(c.sortServerCards(rows,'c',1000),r=>r.id),['c','a','d','b']);assert.equal(rows[0].id,'a');
+// Owner P3: fixed roles (primary, reserve) on top; the active route never moves a row.
+assert.deepEqual(Array.from(c.sortServerCards(rows,'c',1000),r=>r.id),['a','c','d','b'],'selected route is not promoted');
+assert.deepEqual(Array.from(c.sortServerCards(rows,'c',1000,['b','c']),r=>r.id),['b','c','a','d'],'primary first even when failed, reserve second, others by health');
+assert.deepEqual(Array.from(c.sortServerCards(rows,'b',1000,['b','c']),r=>r.id),Array.from(c.sortServerCards(rows,'c',1000,['b','c']),r=>r.id),'switching the active route keeps the row order');assert.equal(rows[0].id,'a');
 assert.equal(c.selectedProfile({native_failover:{state:'COMMITTED',target:'c',time:999}},1000),'c');
 assert.equal(c.selectedProfile({native_failover:{state:'COMMITTED',target:'c',time:800}},1000),null);
 assert.equal(c.selectedProfile({native_failover:{state:'APPLYING',target:'c',time:999}},1000),null);

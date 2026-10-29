@@ -1,0 +1,74 @@
+[
+  {
+    "package": "zlib",
+    "filename": "zlib_1.2.11-6_x86_64.ipk",
+    "sha256": "3020ff568a50a835e626adf07d24fafc3b2d698bbd6d3c93ed9e6a04a60582c3",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/packages/x86_64/base/zlib_1.2.11-6_x86_64.ipk"
+  },
+  {
+    "package": "libelf1",
+    "filename": "libelf1_0.180-1_x86_64.ipk",
+    "sha256": "1cae06433c03107938ea150b442b60ce7caa1e76acf5d4d2783ffeb4d7e48818",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/packages/x86_64/base/libelf1_0.180-1_x86_64.ipk"
+  },
+  {
+    "package": "libmnl0",
+    "filename": "libmnl0_1.0.4-2_x86_64.ipk",
+    "sha256": "b40b77dfc340a7666ae0763369135cc12d2a86d7e293310e40af1b16d021d290",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/packages/x86_64/base/libmnl0_1.0.4-2_x86_64.ipk"
+  },
+  {
+    "package": "libbpf0",
+    "filename": "libbpf0_5.10.10-2_x86_64.ipk",
+    "sha256": "abc45305e76e0f87af4bb11fb845760f18e36082617ef7257d58ccc980bd19c0",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/packages/x86_64/base/libbpf0_5.10.10-2_x86_64.ipk"
+  },
+  {
+    "package": "ip-full",
+    "filename": "ip-full_5.11.0-3_x86_64.ipk",
+    "sha256": "64675b060f49ac0cc48039a3b3ef3bb12d87ba4cffcd8a5bee212cbd02145be4",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/packages/x86_64/base/ip-full_5.11.0-3_x86_64.ipk"
+  },
+  {
+    "package": "kmod-ipt-raw",
+    "filename": "kmod-ipt-raw_5.4.238-1_x86_64.ipk",
+    "sha256": "f492604e41c64be3408c68c97c2a2541a2f991ecdd4eb2eff5c6eca4342d6d2d",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/kmod-ipt-raw_5.4.238-1_x86_64.ipk"
+  },
+  {
+    "package": "kmod-ipt-conntrack-extra",
+    "filename": "kmod-ipt-conntrack-extra_5.4.238-1_x86_64.ipk",
+    "sha256": "6f4f3290a5a286eae93274c1b6fc418575be1d635981b9dde24f144d091f6a15",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/kmod-ipt-conntrack-extra_5.4.238-1_x86_64.ipk"
+  },
+  {
+    "package": "kmod-ipt-ipopt",
+    "filename": "kmod-ipt-ipopt_5.4.238-1_x86_64.ipk",
+    "sha256": "c27fd6338c5e072959af5fea97618e51bea5f45c6f7cd6d03195fb7aa2d3b3c3",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/kmod-ipt-ipopt_5.4.238-1_x86_64.ipk"
+  },
+  {
+    "package": "kmod-ipt-extra",
+    "filename": "kmod-ipt-extra_5.4.238-1_x86_64.ipk",
+    "sha256": "fc914a4d20d3780f45c4ae440d23f364cb434af0798bcf8ce611ef8b434655cb",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/kmod-ipt-extra_5.4.238-1_x86_64.ipk"
+  },
+  {
+    "package": "iptables-mod-conntrack-extra",
+    "filename": "iptables-mod-conntrack-extra_1.8.7-1_x86_64.ipk",
+    "sha256": "7d00257e9e48268f7422ba69c880aa941b0b11e83c457058426cfcb099c6914e",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/iptables-mod-conntrack-extra_1.8.7-1_x86_64.ipk"
+  },
+  {
+    "package": "iptables-mod-ipopt",
+    "filename": "iptables-mod-ipopt_1.8.7-1_x86_64.ipk",
+    "sha256": "74b4ee3c57dcae1ab759b1f09a68da6963c35f43aa6e62e3f854c2622cf59ed9",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/iptables-mod-ipopt_1.8.7-1_x86_64.ipk"
+  },
+  {
+    "package": "iptables-mod-extra",
+    "filename": "iptables-mod-extra_1.8.7-1_x86_64.ipk",
+    "sha256": "acad6d4cade829ba910f84de8cf2de48bcaf37d811fee5ffef857213351fe1ac",
+    "url": "https://downloads.openwrt.org/releases/21.02.7/targets/x86/64/packages/iptables-mod-extra_1.8.7-1_x86_64.ipk"
+  }
+]

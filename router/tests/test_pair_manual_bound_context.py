@@ -220,6 +220,29 @@ class BoundManualContext(unittest.TestCase):
         self.assertFalse(manual.request('reserve',self.revision)['accepted']);self.assertEqual(self.commands,[])
         self.assertEqual(n.JOURNAL.read_bytes(),before);self.assertEqual(self.spawned,0)
 
+    def test_foreign_kernel_blocks_both_public_choices_before_queueing(self):
+        self.mangle=self.mangle.replace('--set-xmark 0x1000/0xf000','--set-xmark 0xb000/0xf000')
+        backend=n.Linux();n.bind_policy_context(backend,self.state)
+        proof=backend.attest_policy()
+        self.assertFalse(proof['verified']);self.assertFalse(proof['repairable_missing'])
+        journal=n.JOURNAL.read_bytes();control=manual.controls()
+        for direction in ('primary','reserve'):
+            with self.subTest(direction=direction):
+                self.assertFalse(control[direction]['allowed'])
+                self.assertIn('KERNEL-POLICY-UNVERIFIED',control[direction]['blockers'])
+                self.assertFalse(manual.request(direction,self.revision)['accepted'])
+        self.assertFalse(manual.path().exists());self.assertEqual(self.commands,[])
+        self.assertEqual(n.JOURNAL.read_bytes(),journal);self.assertEqual(self.spawned,0)
+
+    def test_unverified_kernel_does_not_prevent_releasing_manual_hold(self):
+        state=pair.read_state();state['manual_hold']='source';pair.save(state)
+        self.mangle=self.mangle.replace('--set-xmark 0x1000/0xf000','--set-xmark 0xb000/0xf000')
+        self.assertTrue(manual.controls()['resume']['allowed'])
+        self.assertTrue(manual.request('resume',self.revision)['accepted'])
+        manual.consume(n.Linux(),pair.read_state(),self.data['settings'],self.revision)
+        self.assertEqual(manual.public()['state'],'COMPLETED');self.assertNotIn('manual_hold',pair.read_state())
+        self.assertEqual(self.commands,[]);self.assertEqual(self.spawned,0)
+
     def test_foreign_change_after_request_cannot_borrow_the_bound_context(self):
         self.assertTrue(manual.request('reserve',self.revision)['accepted']);self.data['sections'][-1]['foreign_option']='1'
         manual.consume(n.Linux(),pair.read_state(),self.data['settings'],self.revision)
