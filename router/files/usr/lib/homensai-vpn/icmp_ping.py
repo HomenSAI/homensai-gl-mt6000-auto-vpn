@@ -31,14 +31,14 @@ def checksum(data):
     return (~total)&0xffff
 
 
-def valid_reply(data,identifier,sequence,payload):
+def valid_reply(data,identifier,sequence,payload,target=None):
     """Raw IPv4 ICMP echo reply, with the exact random per-request payload."""
     if len(data)<28 or data[0]>>4!=4:return False
     header=(data[0]&15)*4
     if header<20 or header>60 or len(data)<header+8 or data[9]!=socket.IPPROTO_ICMP:return False
     length=struct.unpack('!H',data[2:4])[0]
     if length!=header+8+len(payload) or length>len(data) or struct.unpack('!H',data[6:8])[0]&0xbfff:return False
-    if socket.inet_ntoa(data[12:16])!=TARGET:return False
+    if socket.inet_ntoa(data[12:16])!=(target or TARGET):return False
     echo=data[header:length]
     kind,code,_,echo_id,echo_seq=struct.unpack('!BBHHH',echo[:8])
     return (kind==0 and code==0 and echo_id==identifier and echo_seq==sequence
@@ -53,7 +53,8 @@ def binding_valid(binding):
             and isinstance(binding.get('table'),str) and binding['table'].isdigit())
 
 
-def echo(binding,before_send=None):
+def echo(binding,before_send=None,target=None):
+    target=target or TARGET
     """A single marked/bound echo. The network deadline is monotonic and absolute."""
     if not binding_valid(binding):raise ValueError('PING-IDENTITY-CHANGED')
     identifier,sequence=struct.unpack('!HH',os.urandom(4));payload=b'HV-PING\0'+os.urandom(16)
@@ -64,7 +65,7 @@ def echo(binding,before_send=None):
         sock.setsockopt(socket.SOL_SOCKET,getattr(socket,'SO_BINDTODEVICE',25),binding['device'].encode('ascii')+b'\0')
         sock.setsockopt(socket.SOL_SOCKET,getattr(socket,'SO_MARK',36),binding['mark'])
         began=time.monotonic();deadline=began+TIMEOUT
-        sock.settimeout(TIMEOUT);sock.connect((TARGET,0))
+        sock.settimeout(TIMEOUT);sock.connect((target,0))
         left=deadline-time.monotonic()
         if left<=0:raise socket.timeout()
         if before_send is not None:before_send()
@@ -75,7 +76,7 @@ def echo(binding,before_send=None):
             left=deadline-time.monotonic()
             if left<=0:raise socket.timeout()
             sock.settimeout(left);data,peer=sock.recvfrom(256)
-            if peer[0]==TARGET and valid_reply(data,identifier,sequence,payload):
+            if peer[0]==target and valid_reply(data,identifier,sequence,payload,target):
                 finished=time.monotonic();elapsed=finished-sent_at
                 if finished>deadline or not 0<=elapsed<=TIMEOUT:raise socket.timeout()
                 return round(elapsed*1000,1)
@@ -118,8 +119,8 @@ def signature(row):
     return tuple(row.get(key)for key in IDENTITY+BINDING)
 
 
-def public(row,state,code,stamp=None,rtt=None):
-    return {'metric':'icmp-rtt-ms','target':TARGET,'state':state,'code':code,'time':stamp,'rtt_ms':rtt,
+def public(row,state,code,stamp=None,rtt=None,target=None):
+    return {'metric':'icmp-rtt-ms','target':target or TARGET,'state':state,'code':code,'time':stamp,'rtt_ms':rtt,
             'valid_for':VALID_FOR,'interface':row.get('interface'),'vendor_tunnel_id':row.get('vendor_tunnel_id'),
             'generation':row.get('vendor_generation')}
 
@@ -128,11 +129,13 @@ class PingSampler:
     def __init__(self,inventory_reader,binding_reader,paused=lambda:False):
         self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused
         self.lock=Lock();self.cache={};self.jobs={};self.attempts={};self.current=set();self.closed=False;self.worker=None
-        self.interval=INTERVAL;self.valid_for=VALID_FOR
+        self.interval=INTERVAL;self.valid_for=VALID_FOR;self.target=TARGET
 
-    def configure(self,interval):
+    def configure(self,interval,target=None):
         """Cadence from the owner probe level; results stay current for 1.5 cadences + probe budget."""
-        with self.lock:self.interval=interval;self.valid_for=int(interval*3//2+15)
+        with self.lock:
+            self.interval=interval;self.valid_for=int(interval*3//2+15)
+            if target and target!=self.target:self.target=target;self.cache={}
 
     def measure(self,row):
         if self.closed or self.paused():return public(row,'unavailable','PING-UNAVAILABLE',time.time())
@@ -147,7 +150,7 @@ class PingSampler:
             if self.closed or self.paused():return public(row,'unavailable','PING-UNAVAILABLE',time.time())
             state,code,rtt='ok',None,None
             try:
-                rtt=echo(before,before_send=lambda:self._record_send(row))
+                target=self.target;rtt=echo(before,before_send=lambda:self._record_send(row),**({'target':target} if target!=TARGET else {}))
                 if type(rtt)not in(int,float)or not math.isfinite(rtt)or not 0<=rtt<=TIMEOUT*1000:raise ValueError('invalid ICMP RTT')
             except socket.timeout:state,code='failed','PING-FAILED'
             except (OSError,ValueError):state,code,rtt='unavailable','PING-UNAVAILABLE',None
@@ -156,7 +159,7 @@ class PingSampler:
             if (not binding_valid(after)or any(after.get(key)!=before.get(key)for key in BINDING)
                     or not inventory_identity(self.inventory_reader(),row)):
                 return public(row,'unavailable','PING-IDENTITY-CHANGED',time.time())
-            return public(row,state,code,measured_at,rtt)
+            return public(row,state,code,measured_at,rtt,target)
         except socket.timeout:return public(row,'failed','PING-FAILED',time.time())
         except (OSError,ValueError,TypeError,KeyError,subprocess.SubprocessError):
             return public(row,'unavailable','PING-UNAVAILABLE',time.time())
@@ -171,7 +174,7 @@ class PingSampler:
     def _run(self,key,row):
         try:result=self.measure(row)
         except Exception:result=public(row,'unavailable','PING-UNAVAILABLE',time.time())
-        if isinstance(result,dict) and 'valid_for' in result:result['valid_for']=self.valid_for
+        if isinstance(result,dict) and 'valid_for' in result:result['valid_for']=self.valid_for;result['target']=self.target
         with self.lock:
             if not self.closed and key in self.current:self.cache[key]=result
             self.jobs.pop(key,None)

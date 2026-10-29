@@ -46,10 +46,10 @@ console.log('PASS: probe level slider, boost checkbox, active boost and decision
   c.probeCheckSchedule(status(100));                 // next check at 110 s
   c.nowMs=105000;assert(!c.probeCheckPulse(),'green well before the check');
   c.nowMs=109200;assert(c.probeCheckPulse(),'yellow one second before the check');
-  c.nowMs=112000;assert(c.probeCheckPulse(),'still yellow until the answer arrives');
-  c.probeCheckSchedule(status(110.5));               // the router answered for that check
-  assert(c.probeCheckPulse(),'yellow one more second after the answer');
-  c.nowMs=113500;assert(!c.probeCheckPulse(),'then back to the base colour');
+  c.nowMs=112000;assert(c.probeCheckPulse(),'yellow through the check');
+  c.nowMs=113500;assert(!c.probeCheckPulse(),'then back to the base colour, without waiting for the next poll');
+  c.probeCheckSchedule(status(110.5));               // the router's answer for that check arrives later
+  c.nowMs=114000;assert(!c.probeCheckPulse(),'an arriving answer does not re-light yellow');
   c.nowMs=119500;assert(c.probeCheckPulse(),'the next check pulses again');
   // A slider choice moves the schedule to the new interval at once.
   c.PROBE_APPLIED={level:1,boost:true,at:c.nowMs};c.probeCheckSchedule(status(119));

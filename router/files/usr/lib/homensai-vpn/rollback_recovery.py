@@ -266,9 +266,10 @@ def settled(backend,clock=None,sleep=None):
     import time
     clock=clock or time.monotonic;sleep=sleep or time.sleep
     until=clock()+SETTLE_SECONDS
+    import native_switch as n
     while True:
         blockers,current=backend.diagnostic()
-        if not blockers and isinstance(current,dict) or clock()>=until:return blockers,current
+        if not blockers and isinstance(current,dict) or clock()>=until or n.STOP:return blockers,current
         sleep(SETTLE_POLL)
 
 
@@ -290,7 +291,8 @@ def vendor_settled(backend,clock=None,sleep=None,board=None):
         wait_quiet(min(30,max(1,until-clock())))
     except (OSError,ValueError,ImportError):pass
     previous=None
-    while clock()<until:
+    import native_switch as n
+    while clock()<until and not n.STOP:
         try:current=backend.kernel_fingerprint()
         except Exception:current=None
         if current is not None and current==previous:return
@@ -436,7 +438,8 @@ def rebuild(backend,journal,reason,target):
                 try:same=vendor_lock_pid()==lock[0]
                 except (OSError,ValueError):same=False
                 if not same:refuse('VENDOR-WORKER-BUSY')
-                Path(VENDOR_LOCK).unlink()
+                try:Path(VENDOR_LOCK).unlink()
+                except FileNotFoundError:pass
             journal['restore_rtp_dispatched']=True;n.journal_write(journal)
             timeout=RECOVERY_RTP_TIMEOUT
         return n.forward_dispatch(args,revision,timeout=timeout)

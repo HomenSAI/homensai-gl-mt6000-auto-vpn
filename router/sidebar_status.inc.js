@@ -8,11 +8,11 @@ function fillSideStatus(host,status,inventory){
   var rpcLost=!!(status.rpc_error||status.error),problem=!rpcLost&&light&&light.key==='problem';
   var state=rpcLost||!model.fresh&&!problem?'unknown':light&&typeof autoWorking==='function'?(autoWorking(light)?'on':light.key==='switching'||light.key==='unknown'?'unknown':'off'):(model.on||model.transitioning)?'on':'off';
   var signal=light&&typeof autoSignal==='function'?autoSignal(light):null;
-  if(signal)state={green:'on',yellow:'switching',red:'off',off:'unknown'}[signal];
+  if(signal)state=signal==='off'?'dark':(typeof autoRuns==='function'?autoRuns(light):signal!=='red')?'on':signal==='yellow'?'switching':'off';
   var autoText=state==='on'?bi('Auto ON','Auto вкл.'):state==='off'?bi('Auto OFF','Auto выкл.'):rpcLost?bi('Auto: no connection','Auto: нет связи'):bi('Auto: data out of date','Auto: данные устарели');
   var autoHint=state==='on'?bi('Auto is on: it can switch to the reserve VPN.','Auto включён: он может переключить на резервный VPN.'):state==='off'?bi('Auto is off: nothing is switched, the program only watches.','Auto выключен: ничего не переключается, программа только наблюдает.'):rpcLost?bi('The page gets no answer from the router program, so the state is not known.','Страница не получает ответ от программы роутера, поэтому состояние неизвестно.'):bi('The router answers, but the Auto controller state is out of date.','Роутер отвечает, но состояние контроллера Auto устарело.');
-  if(signal==='off'){autoText=bi('Auto OFF','Auto выкл.');}
-  else if(signal&&signal!=='green'&&light){autoText=light.title;autoHint=light.hint;}
+  if(signal==='off'){autoText=bi('Auto OFF','Auto выкл.');autoHint=bi('Auto is off: nothing is switched, the program only watches.','Auto выключен: ничего не переключается, программа только наблюдает.');}
+  else if(signal&&signal!=='green'&&light&&state!=='on'){autoText=light.title;autoHint=light.hint;}
   else if(!signal&&!rpcLost&&(model.fresh||problem)&&light&&(light.hold||['switching','unknown','problem'].indexOf(light.key)>=0)){autoText=light.title;autoHint=light.hint;}
   if(!signal&&state==='unknown'&&model.fresh&&light&&['KERNEL-POLICY-UNVERIFIED','PAIR-POLICY-UNVERIFIED'].indexOf(light.code)>=0){autoText=bi('Auto: route not verified','Auto: маршрут не подтверждён');autoHint=light.hint+' · '+light.code;}
   var monText=bi('Monitoring','Мониторинг');
@@ -25,7 +25,7 @@ function fillSideStatus(host,status,inventory){
   var path=status.channel_path||{},ns=status.native_failover||{},settings=(inventory||{}).settings||{},rows=status.profiles||[];
   var sourceId=settings.plan_source||path.source_profile_id||ns.source,targetId=settings.plan_target||path.target_profile_id||ns.target;
   var source=rows.filter(function(p){return p.id===sourceId;})[0],target=rows.filter(function(p){return p.id===targetId;})[0];
-  var confirmed=manualConfirmedPath(status,source,target,now),runs=autoWorking(light);
+  var confirmed=(typeof heldConfirmedPath==='function'?heldConfirmedPath:manualConfirmedPath)(status,source,target,now),runs=autoRuns(light);
   function channel(role,label){
     var row=role==='source'?source:target,tone=manualChannelTone(row,role,confirmed,now,runs,status);
     if(!monitorFresh)tone={color:'grey',text:typeof dataCause==='function'?dataCause(status,now).text:bi('no router data','нет данных роутера')};

@@ -18,6 +18,8 @@ import time
 import uuid
 
 MODE = 'router-probed-ipv4'
+TRANSIENT_START = ('VENDOR-WORKER-BUSY', 'VENDOR-SETTLING', 'OBSERVATION-STALE')  # retried, not terminal
+TRANSIENT_START_SECONDS = 90
 TERMINAL = {'STOPPED', 'FAILED'}
 INTERFACES = {'wgclient1': 'wgclient', 'ovpnclient1': 'ovpnclient'}
 
@@ -965,6 +967,12 @@ def tick(backend, settings, revision):
         # A failed Start before durable acquisition has no STARTING state to
         # finish. Consume its exact request; a newer Stop/Start cannot be lost.
         # A session that already ran is not switched off by one more error: it stays HELD and resumes by itself.
+        if (str(error) in TRANSIENT_START and pending.get('phase') in (None,'STOPPED','FAILED') and request_row.get('mode')=='on'
+                and 0<=time.time()-(request_row.get('time') or 0)<=TRANSIENT_START_SECONDS):
+            # GL is still bringing tunnels up (typical right after an upgrade or reboot): keep the Start
+            # queued and let the next tick rerun the full preflight. Nothing was acquired or written.
+            n.publish({'state':'ARMED','mode':'continuous-pair','proof_scope':MODE,'reason':'PAIR-WAITING-VENDOR','blockers':[str(error)]})
+            return True
         if (pending.get('phase') in (None,'STOPPED','FAILED') or pending.get('phase')=='HELD' and not pending.get('ran')) and request_row.get('mode')=='on':
             fail_request(request_row,revision,error)
         # Leave unverified ownership intact. Stop is independent of this code.

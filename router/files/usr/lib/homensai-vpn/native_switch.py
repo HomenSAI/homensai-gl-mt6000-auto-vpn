@@ -1249,7 +1249,6 @@ def child(tx):
     def write_command(args,timeout=5):
         before_write()
         if args[0]=='/usr/bin/rtp2.sh':
-            apply_progress(tx,'rtp-dispatch')
             # Refuse before dispatch: an unfinished vendor rebuild is worse than none.
             if (journal.get('monotonic_deadline') is None
                     or journal['monotonic_deadline']-time.monotonic()<RTP_DISPATCH_RESERVE):
@@ -1261,6 +1260,7 @@ def child(tx):
             if args[0]=='/usr/bin/rtp2.sh':journal['rtp_dispatched']=True
             else:journal['forward_policy_touched']=True
             journal_write(journal)  # Recovery distinguishes UCI-only work from a dispatched kernel writer.
+        if args[0]=='/usr/bin/rtp2.sh':apply_progress(tx,'rtp-dispatch')
         output=forward_dispatch(args,journal['control_revision'],timeout)
         if args[0]=='/usr/bin/rtp2.sh':apply_progress(tx,'rtp-returned')
         return output

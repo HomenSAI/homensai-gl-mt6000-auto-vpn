@@ -452,3 +452,10 @@ class Settings(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+
+class TransientStart(unittest.TestCase):
+    def test_transient_start_codes_are_named_and_bounded(self):
+        import pair_auto
+        self.assertEqual(set(pair_auto.TRANSIENT_START),{'VENDOR-WORKER-BUSY','VENDOR-SETTLING','OBSERVATION-STALE'})
+        self.assertTrue(30<=pair_auto.TRANSIENT_START_SECONDS<=180)

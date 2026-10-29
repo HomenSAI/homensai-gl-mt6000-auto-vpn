@@ -22,7 +22,9 @@ function drawProbeLog(host,rows){
     return E('tr',{'data-probe-kind':row.kind},[E('td',{},clock(row.time)),E('td',{},String(row.level)),E('td',{},d[0]),E('td',{},d[1]),E('td',{'class':'hv-probe-code'},code?(typeof errorCodeLink==='function'?errorCodeLink(code):code):'—')]);
   }))));
 }
+var PROBE_LOG_AT=0;
 function renderProbeLog(host){
+  PROBE_LOG_AT=Date.now();
   // Rows already read stay on screen; the refresh runs in the background (no "Loading…" flash on every poll).
   if(PROBE_LOG_ROWS)drawProbeLog(host,PROBE_LOG_ROWS);else host.textContent=bi('Loading…','Загрузка…');
   var call=rpc.declare({object:PROBE_RPC,reject:true,method:'statistics',params:['kind','after','until'],expect:{}});
@@ -95,7 +97,7 @@ function renderProbeControl(status,inventory){
   section.hvUpdate=function(policyNow,nowSeconds){
     saved=probeSavedChoice(policyNow);section.setAttribute('data-probe-level',String(policyNow.level));
     active.textContent=probeBoostActiveText(policyNow,nowSeconds);active.hidden=!active.textContent;
-    if(log.open&&!PROBE_BUSY)renderProbeLog(logHost);
+    if(log.open&&!PROBE_BUSY&&Date.now()-PROBE_LOG_AT>8000)renderProbeLog(logHost);
     paint();
   };
   active.hidden=!active.textContent;paint();
@@ -113,29 +115,24 @@ function probeCheckSchedule(status){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000;
   if(PROBE_APPLIED&&PROBE_LEVELS[PROBE_APPLIED.level]&&p.boost_active!==true){interval=PROBE_LEVELS[PROBE_APPLIED.level][0];}
   var deadline=Date.now()+(status.time+interval-now)*1000;
-  // A check we were waiting for has answered: keep yellow one more second, then the base colour.
-  if(PROBE_SCHEDULE.lastStatus!==null&&status.time>PROBE_SCHEDULE.lastStatus&&PROBE_SCHEDULE.pulseUntil===Infinity)PROBE_SCHEDULE.pulseUntil=Date.now()+1000;
   PROBE_SCHEDULE.lastStatus=status.time;PROBE_SCHEDULE.interval=interval;PROBE_SCHEDULE.deadline=deadline;PROBE_SCHEDULE.boost=p.boost_active===true;
 }
+var PROBE_PULSE_BEFORE=1000,PROBE_PULSE_AFTER=3000;
 function probeCheckPulse(){
   var s=PROBE_SCHEDULE,nowMs=Date.now();
   if(!Number.isFinite(s.deadline))return false;
-  if(nowMs>=s.deadline-1000&&s.pulseUntil!==Infinity&&nowMs<s.deadline+1000)s.pulseUntil=Infinity;  // checking: until the answer arrives
-  if(s.pulseUntil===Infinity&&nowMs>s.deadline+30000)s.pulseUntil=nowMs;  // no answer for 30 s: the light logic takes over (late data)
-  return s.pulseUntil===Infinity||nowMs<s.pulseUntil;
+  return nowMs>=s.deadline-PROBE_PULSE_BEFORE&&nowMs<s.deadline+PROBE_PULSE_AFTER;
 }
 function probePaintPulse(){
   if(typeof document==='undefined'||!document.querySelectorAll)return;
   var on=probeCheckPulse(),housings=document.querySelectorAll('.hv-light-three[data-signal="green"]');
   for(var i=0;i<housings.length;i++){var lamps=housings[i].querySelectorAll('.hv-lamp');for(var j=0;j<lamps.length;j++){var l=lamps[j];
     if(l.classList.contains('hv-lamp-green'))l.classList.toggle('hv-lamp-lit',!on);if(l.classList.contains('hv-lamp-yellow'))l.classList.toggle('hv-lamp-lit',on);}}
-  var knobs=document.querySelectorAll('.hv-side-lamp-link .hv-auto-pill-knob.hv-lamp-on,.hv-side-lamp-link .hv-auto-pill-knob.hv-lamp-pulse');
-  for(var k=0;k<knobs.length;k++){knobs[k].classList.toggle('hv-lamp-switching',on);knobs[k].classList.toggle('hv-lamp-pulse',on);if(!on)knobs[k].classList.add('hv-lamp-on');else knobs[k].classList.remove('hv-lamp-on');}
 }
 function probeCountdownText(node){
   var s=PROBE_SCHEDULE;if(!Number.isFinite(s.deadline)){node.textContent='';return;}
   var period=s.interval*1000,late=Date.now()-s.deadline;
-  if(late>=1000&&period>0&&s.pulseUntil!==Infinity)s.deadline+=Math.ceil(late/period)*period;
+  if(late>=PROBE_PULSE_AFTER&&period>0)s.deadline+=Math.ceil((late-PROBE_PULSE_AFTER+1)/period)*period;
   var left=Math.round((s.deadline-Date.now())/1000);
   node.textContent=(probeCheckPulse()?bi('Checking','Проверка'):bi('Check in ','Проверка через ')+Math.max(0,left)+bi(' s',' с'))+(s.boost?bi(' · boost',' · ускорение'):'');
 }
