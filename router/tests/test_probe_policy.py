@@ -79,6 +79,10 @@ class Boost(unittest.TestCase):
         self.assertFalse(self.booster.active());self.assertEqual(self.history()[-1]['result'],'disabled')
         self.booster.observe(off,[row('wg',code='VPN-003')],PAIR,'OBSERVING',1020);self.assertFalse(self.booster.active())
 
+    def test_a_failure_while_auto_is_not_watching_never_boosts(self):
+        for state in ('STOPPED','ARMED','APPLYING','BLOCKED',None):
+            self.booster.observe(self.settings,[row('wg',code='VPN-001')],PAIR,state,1000);self.assertFalse(self.booster.active(),state)
+
     def test_channels_outside_the_pair_never_boost(self):
         self.booster.observe(self.settings,[row('other',code='VPN-003')],PAIR,'OBSERVING',1000);self.assertFalse(self.booster.active())
 

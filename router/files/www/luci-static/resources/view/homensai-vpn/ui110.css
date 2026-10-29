@@ -1263,3 +1263,10 @@
 .hv-app .hv-probe-countdown{font-size:.78em;opacity:.8;white-space:nowrap;font-variant-numeric:tabular-nums}
 .hv-app .hv-response-choices{display:flex;flex-direction:column;gap:6px;margin:8px 0}
 .hv-app .hv-response-choice{display:flex;align-items:center;gap:6px}
+/* Countdown and text column keep their size so nothing next to the button moves on refresh. */
+.hv-app .hv-probe-countdown{display:inline-block;min-width:11.5em;text-align:center}
+.hv-app .hv-light-column{flex:0 0 auto;width:11.5em}
+.hv-app .hv-light-block .hv-light-text{flex:1 1 16em;min-width:14em}
+.hv-app .hv-light-help-wide{margin-top:12px}
+.hv-app .hv-light-help-wide .hv-light-legend{display:grid;gap:8px;max-width:none}
+.hv-app .hv-light-help-wide .hv-light-legend li{display:flex;gap:10px;align-items:flex-start}

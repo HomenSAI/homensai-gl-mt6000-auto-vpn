@@ -17,6 +17,7 @@ BOOST_INTERVAL=10;BOOST_MEASURE=30;BOOST_HOLD=600
 CONFIRM_FAILURES=3  # same count the pair controller needs for a failure streak
 HISTORY_LIMIT=500
 TRANSITIONS=('ARMED','APPLYING','WAIT-CLIENT','RESTORING','COMMITTED')
+WATCHING=('OBSERVING','COMMITTED','DEGRADED-ON-RESERVE')  # Auto is watching: a failure here is real evidence
 HISTORY_NAME='probe-history.json';STATE_NAME='probe-boost.json'
 
 
@@ -119,7 +120,7 @@ class Booster:
                     'failures':int(self.state.get('failures',0)),'duration':round(max(0,now-self.state.get('started',now))),
                     'boost_interval':BOOST_INTERVAL},now))
                 self.state={'active':False,'level':current}
-        elif enabled and bad:
+        elif enabled and bad and native_state in WATCHING:
             row=bad[0];code=row.get('code') or ('DNS-001' if row.get('dns_ok') is False else 'VPN-003')
             trigger={'profile':row.get('id'),'role':selected.get(row.get('id')),'code':code}
             self.state.update(active=True,started=now,until=now+BOOST_HOLD,failures=1,switched=native_state in TRANSITIONS,
