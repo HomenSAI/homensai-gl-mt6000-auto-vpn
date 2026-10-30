@@ -126,7 +126,7 @@ for(const requested of REQUESTED)for(const phase of PHASES)for(const state of ST
   const carrierRole=carrier==='primary'?'source':carrier==='reserve'?'target':null;
   // (a) channel lamps agree per role across every surface (the manual card's blinking "switching" destination is a pending grey)
   for(const role of ['source','target']){
-    const v=o.channel[role],norm=Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='manual'&&x==='switching'?'grey':x]));
+    const v=o.channel[role],norm=Object.fromEntries(Object.entries(v).map(([k,x])=>[k,k==='manual'&&x==='switching'?'yellow':x]));
     if(new Set(Object.values(norm)).size!==1)fail('channel-disagree '+role+' '+JSON.stringify(v),d,v);
   }
   // (b) Auto surfaces agree: the lamp (button, state text, sidebar, journal) is one colour; the traffic light refines it.

@@ -104,9 +104,9 @@
 .hv-app .hv-manual-channel .hv-manual-enable{margin-top:auto}
 .hv-app .hv-manual-channel .hv-manual-health{min-height:2.7em}
 /* Monitoring sits right of the Auto controls with a lamp as large as the Auto button (the card stays balanced). */
-.hv-app .hv-auto-controls{grid-template-columns:minmax(0,1fr) minmax(200px,260px);align-items:center}
+.hv-app .hv-auto-controls{grid-template-columns:minmax(0,1fr) auto;align-items:center}
 .hv-app .hv-auto-controls>.hv-monitor-block{display:flex;flex-direction:column;align-items:center;text-align:center;gap:12px;margin:0;padding:0;border:0;box-shadow:none;background:none}
-.hv-app .hv-auto-controls>.hv-monitor-block .hv-monitor-lamp{width:132px;height:132px;min-width:132px;flex:0 0 132px;border-radius:50%;margin:0}
+.hv-app .hv-auto-controls>.hv-monitor-block .hv-monitor-lamp{width:48px;height:48px;min-width:48px;flex:0 0 48px;border-radius:50%;margin:0}
 .hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text{display:flex;flex-direction:column;align-items:center;gap:4px;overflow-wrap:normal}
 .hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text strong{font-size:15px;padding:4px 14px;border-radius:999px;border:2px solid currentColor}
 .hv-app .hv-auto-controls>.hv-monitor-block .hv-check-text small{font-size:12px;max-width:240px}
@@ -127,3 +127,9 @@
 .hv-app .hv-legend-item{display:inline-grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:2px;align-items:center;text-align:left}
 .hv-app .hv-legend-item>i{grid-row:1 / span 2}
 .hv-app .hv-legend-item>small{grid-column:2}
+/* Help: measured Auto results. */
+.hv-app .hv-measure-legend{display:flex;flex-wrap:wrap;gap:6px 16px}
+.hv-app .hv-measure-legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px}
+.hv-app .hv-measure-table td,.hv-app .hv-measure-table th{white-space:nowrap}
+.hv-app .hv-measure-mean{font-weight:700}
+.hv-app .hv-probe-forced{margin:4px 0 0;font-size:13px;opacity:.85}

@@ -74,7 +74,7 @@ class Boost(unittest.TestCase):
 
     def test_boost_off_never_boosts_and_turning_it_off_ends_an_episode(self):
         self.booster.observe(self.settings,[row('wg',code='VPN-003')],PAIR,'OBSERVING',1000);self.assertTrue(self.booster.active())
-        off=dict(self.settings,probe_boost=False)
+        off=dict(self.settings,probe_boost=False,probe_level=3)  # levels 1-2 force the boost; 3-5 let the owner turn it off
         self.booster.observe(off,[row('wg',code='VPN-003')],PAIR,'OBSERVING',1010)
         self.assertFalse(self.booster.active());self.assertEqual(self.history()[-1]['result'],'disabled')
         self.booster.observe(off,[row('wg',code='VPN-003')],PAIR,'OBSERVING',1020);self.assertFalse(self.booster.active())
@@ -104,7 +104,10 @@ class Save(unittest.TestCase):
     def test_payload_sets_level_boost_and_both_intervals(self):
         self.assertEqual(setup_config.probe_payload({'level':3,'boost':True})['main'],
                          {'probe_level':'3','probe_boost':'1','interval':'20','measure_interval':'60'})
-        self.assertEqual(setup_config.probe_payload({'level':1,'boost':False})['main']['probe_boost'],'0')
+        self.assertEqual(setup_config.probe_payload({'level':3,'boost':False})['main']['probe_boost'],'0')
+        for low in (1,2):self.assertEqual(setup_config.probe_payload({'level':low,'boost':False})['main']['probe_boost'],'1','levels 1-2 always boost')
+        from probe_policy import boost_enabled
+        self.assertTrue(boost_enabled({'probe_level':'1','probe_boost':'0'}));self.assertFalse(boost_enabled({'probe_level':'4','probe_boost':'0'}))
 
     def test_invalid_requests_are_refused_with_codes(self):
         for bad,code in (({'level':3},'PROBE-SETTINGS-FIELDS'),({'level':3,'boost':'1'},'PROBE-SETTINGS-FIELDS'),

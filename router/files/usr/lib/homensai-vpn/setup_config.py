@@ -115,7 +115,9 @@ def probe_payload(arguments):
         raise ValueError('PROBE-SETTINGS-FIELDS')
     if type(arguments['level']) is not int or arguments['level'] not in LEVELS:raise ValueError('PROBE-SETTINGS-RANGE')
     interval,measure=LEVELS[arguments['level']]
-    return {'main':{'probe_level':str(arguments['level']),'probe_boost':'1' if arguments['boost'] else '0',
+    from probe_policy import FORCED_BOOST_LEVELS
+    boost=arguments['boost'] or arguments['level'] in FORCED_BOOST_LEVELS
+    return {'main':{'probe_level':str(arguments['level']),'probe_boost':'1' if boost else '0',
                     'interval':str(interval),'measure_interval':str(measure)},'servers':[]}
 
 

@@ -1,3 +1,4 @@
+var PROBE_FORCED_BOOST=[1,2];  // probe_policy.FORCED_BOOST_LEVELS
 // Probe level 1-5 (router load vs. failure detection) and the automatic boost, under the Auto card.
 // Values come from the router's own probe_policy; the page never derives a cadence itself.
 var PROBE_APPLIED=null,PROBE_LOG_KEY='homensai-vpn-probe-log-open',PROBE_LOG_ROWS=null,PROBE_RPC='homensai-vpn',PROBE_LEVELS={1:[60,300],2:[30,120],3:[20,60],4:[15,45],5:[10,30]},PROBE_DRAFT=null,PROBE_BUSY=false,PROBE_LOG_OPEN=false;
@@ -57,6 +58,7 @@ function renderProbeControl(status,inventory){
   var ticks=E('div',{'class':'hv-probe-ticks','aria-hidden':'true'},[1,2,3,4,5].map(function(n){return E('span',{'data-level':String(n)},String(n));}));
   var levelLabel=E('strong',{'class':'hv-probe-level-label'},bi('Level ','Уровень ')+draft.level);
   var box=E('input',{'type':'checkbox','class':'hv-probe-boost'});box.checked=draft.boost;
+  var forcedNote=E('p',{'class':'hv-probe-forced','role':'note'},bi('Levels 1 and 2 always use the boost: a rare check alone cannot confirm a short failure in time.','На уровнях 1 и 2 ускорение включено всегда: редкие проверки сами по себе не успевают подтвердить короткий сбой.'));
   var text=E('p',{'class':'hv-probe-text','role':'status'},probeLevelText(draft.level,draft.boost));
   var apply=E('button',{'type':'button','class':'cbi-button cbi-button-action'},bi('Apply','Применить'));
   var active=E('p',{'class':'hv-probe-active','role':'status'},probeBoostActiveText(policy,now));
@@ -73,18 +75,18 @@ function renderProbeControl(status,inventory){
   function paint(){
     var shown=PROBE_DRAFT||saved;
     if(!dragging)slider.value=String(shown.level);
-    box.checked=shown.boost;levelLabel.textContent=bi('Level ','Уровень ')+shown.level;text.textContent=probeLevelText(shown.level,shown.boost);
+    var forced=PROBE_FORCED_BOOST.indexOf(shown.level)>=0;box.checked=forced||shown.boost;box.disabled=forced;forcedNote.hidden=!forced;levelLabel.textContent=bi('Level ','Уровень ')+shown.level;text.textContent=probeLevelText(shown.level,shown.boost);
     for(var i=0;i<ticks.children.length;i++){var t=ticks.children[i];if(t.classList&&t.getAttribute)t.classList.toggle('hv-probe-tick-current',Number(t.getAttribute('data-level'))===shown.level);}
     var same=shown.level===saved.level&&shown.boost===saved.boost;
     if(PROBE_BUSY||same)apply.setAttribute('disabled','');else apply.removeAttribute('disabled');
   }
-  function change(){PROBE_DRAFT={level:Number(slider.value),boost:box.checked};if(PROBE_DRAFT.level===saved.level&&PROBE_DRAFT.boost===saved.boost)PROBE_DRAFT=null;paint();}
+  function change(){var lvl=Number(slider.value);PROBE_DRAFT={level:lvl,boost:PROBE_FORCED_BOOST.indexOf(lvl)>=0||box.checked};if(PROBE_DRAFT.level===saved.level&&PROBE_DRAFT.boost===saved.boost)PROBE_DRAFT=null;paint();}
   slider.addEventListener('input',change);slider.addEventListener('change',change);box.addEventListener('change',change);
   slider.addEventListener('pointerdown',function(){dragging=true;});slider.addEventListener('pointerup',function(){dragging=false;});
   slider.addEventListener('mousedown',function(){dragging=true;});slider.addEventListener('mouseup',function(){dragging=false;});
   slider.addEventListener('touchstart',function(){dragging=true;});slider.addEventListener('touchend',function(){dragging=false;});
   apply.addEventListener('click',function(){
-    var choice={level:Number(slider.value),boost:box.checked};  // what the owner sees, read at the click
+    var choice={level:Number(slider.value),boost:PROBE_FORCED_BOOST.indexOf(Number(slider.value))>=0||box.checked};  // what the owner sees, read at the click
     if(PROBE_BUSY||choice.level===saved.level&&choice.boost===saved.boost)return;send(choice);
   });
   function send(choice){
@@ -104,7 +106,7 @@ function renderProbeControl(status,inventory){
     E('h3',{},bi('Probe level: router load ↔ reliability','Уровень опроса: нагрузка ↔ надёжность')),
     E('div',{'class':'hv-probe-scale'},[E('span',{},bi('Fewer checks, lower load','Меньше опросов, ниже нагрузка')),E('div',{'class':'hv-probe-slider-box'},[slider,ticks]),E('span',{},bi('More checks, faster switching','Больше опросов, быстрее переключение'))]),
     E('p',{'class':'hv-probe-text-row'},[levelLabel,' · ',text]),
-    E('label',{'class':'hv-probe-boost-label'},[box,' ',E('strong',{},bi('Automatic boost','Автоматическое ускорение'))]),
+    E('label',{'class':'hv-probe-boost-label'},[box,' ',E('strong',{},bi('Automatic boost','Автоматическое ускорение'))]),forcedNote,
     E('p',{'class':'hv-step-note'},[bi('If a channel fails a check, the router checks every 10 s for 10 minutes, then returns to the chosen level. Rare checks at rest, a quick answer when something breaks. Every episode is written to the log below.','Если канал не прошёл проверку, роутер 10 минут проверяет раз в 10 с, затем возвращается к выбранному уровню. В покое проверок мало, при сбое ответ быстрый. Каждый эпизод записывается в журнал ниже.')+' ',typeof helpLink==='function'?helpLink('probe-boost',bi('How it works in detail','Подробно, как это работает')):null]),
     active,E('p',{'class':'hv-req-actions'},[apply]),refused,log]);
   section.hvUpdate=function(policyNow,nowSeconds){

@@ -7,10 +7,35 @@ function observationFresh(row,now){return !!row&&Number.isFinite(row.time)&&Numb
 // Order every status RPC by its browser dispatch sequence, never by the router's wall clock.
 // NTP changes and router reboots may move server_time backwards; old page callbacks retain their original provenance.
 var UI_STATUS_REQUEST_SEQUENCE=0,UI_STATUS_ORDER=new WeakMap();
+// Long event lists come from the separate 'history' call and are merged into every status the page sees.
+var UI_HISTORY=null,UI_HISTORY_AT=0,UI_HISTORY_BUSY=false;
+function uiHistoryDue(){
+  var page=typeof activeTab==='string'?activeTab:'';
+  var every=['statistics','events','services','tests','analytics'].indexOf(page)>=0?60000:300000;
+  return !UI_HISTORY_BUSY&&Date.now()-UI_HISTORY_AT>=every;
+}
+function uiHistoryRefresh(){
+  if(!uiHistoryDue()||typeof rpc==='undefined'||!rpc.declare)return;
+  UI_HISTORY_BUSY=true;
+  Promise.resolve().then(function(){return rpc.declare({object:'homensai-vpn',method:'history',expect:{}})();})
+    .then(function(h){if(h&&typeof h==='object'&&!h.error){var first=!UI_HISTORY;UI_HISTORY=h;UI_HISTORY_AT=Date.now();if(first&&typeof UI_STATUS_REFRESH==='function')UI_STATUS_REFRESH();}})
+    .catch(function(){UI_HISTORY_AT=Date.now()-240000;}).finally(function(){UI_HISTORY_BUSY=false;});
+}
+function uiMergeHistory(status){
+  if(!status||typeof status!=='object'||!Array.isArray(status.history_split)||!UI_HISTORY)return status;
+  status.history_split.forEach(function(path){
+    var value=UI_HISTORY[path];if(value===undefined)return;
+    var keys=path.split('.'),node=status;
+    for(var i=0;i<keys.length-1;i++){if(!node[keys[i]]||typeof node[keys[i]]!=='object')return;node=node[keys[i]];}
+    node[keys[keys.length-1]]=value;
+  });
+  return status;
+}
 function uiStatusRequest(call){
+  uiHistoryRefresh();
   var order=++UI_STATUS_REQUEST_SEQUENCE,tick=typeof performance!=='undefined'&&typeof performance.now==='function'?performance.now()/1000:Date.now()/1000;
   // Charge the full request duration conservatively; transport cannot renew evidence TTLs.
-  var promise=Promise.resolve().then(call).then(function(status){if(status&&typeof status==='object'){UI_STATUS_ORDER.set(status,order);if(Number.isFinite(status.server_time))UI_STATUS_CLOCKS.set(status,{server:status.server_time,tick:tick});}return status;});
+  var promise=Promise.resolve().then(call).then(function(status){if(status&&typeof status==='object'){uiMergeHistory(status);UI_STATUS_ORDER.set(status,order);if(Number.isFinite(status.server_time))UI_STATUS_CLOCKS.set(status,{server:status.server_time,tick:tick});}return status;});
   UI_STATUS_ORDER.set(promise,order);return promise;
 }
 function uiStatusOrder(value){return value&&typeof value==='object'?UI_STATUS_ORDER.get(value)||0:0;}
@@ -180,13 +205,14 @@ var UI_STAGE_TEXT={ARMED:['Preparing','Подготовка'],APPLYING:['Applyin
 function uiClock(seconds){seconds=Math.max(0,Math.floor(seconds));return Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2);}
 // One timer text for every surface: stage, elapsed since a known origin and the time left to the real backend deadline.
 // Average confirmed switch time (manual and automatic share one transaction), kept by the router on flash.
-var UI_SWITCH_AVG=null;
+var UI_SWITCH_AVG=null,UI_SWITCH_MEASURED=56;  // 30 Oct 2026 tests, 19 switches: switch 63 s, return 48 s
 function uiOperationTimer(stage,elapsed,remaining,checking){
   var text=stage&&UI_STAGE_TEXT[stage]?bi(UI_STAGE_TEXT[stage][0],UI_STAGE_TEXT[stage][1]):'';
   if(Number.isFinite(elapsed))text+=(text?' · ':'')+uiClock(elapsed)+bi(' elapsed',' прошло');
-  if(Number.isFinite(elapsed)&&Number.isFinite(UI_SWITCH_AVG)&&!checking){
-    var left=UI_SWITCH_AVG-elapsed;
-    text+=(text?' · ':'')+(left>=1?bi('about ','ещё около ')+uiClock(left)+bi(' (usual ',' (обычно ')+uiClock(UI_SWITCH_AVG)+')':bi('longer than usual (','дольше обычного (')+uiClock(UI_SWITCH_AVG)+')');
+  if(Number.isFinite(elapsed)&&!checking){
+    // Expected time = measured average + 25% margin (router average, else the overnight MT3000 measurement).
+    var expected=Math.round((Number.isFinite(UI_SWITCH_AVG)?UI_SWITCH_AVG:UI_SWITCH_MEASURED)*1.25),left=expected-elapsed;
+    text+=(text?' · ':'')+(left>=1?bi('about ','ещё около ')+uiClock(left)+bi(' (expected ',' (ожидается ')+uiClock(expected)+')':bi('longer than expected (','дольше ожидаемого (')+uiClock(expected)+')');
     if(left<1&&Number.isFinite(remaining))text+=' · '+bi('limit in ','предел через ')+uiClock(remaining);
     return text;
   }

@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '0.9.1-alpha82'
+VERSION = '1.0.0-beta1'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -1016,6 +1016,21 @@ def serve():
         pass
 
 
+HISTORY_PARTS=(('native_history','events'),('accounting','quality'))
+
+
+def split_history(status):
+    """Move the long event lists out of a status reply; returns them for the separate 'history' call."""
+    moved={}
+    for parent,key in HISTORY_PARTS:
+        value=status.get(parent)
+        if isinstance(value,dict) and key in value:moved[parent+'.'+key]=value.pop(key)
+    reliability=(status.get('accounting') or {}).get('reliability') if isinstance(status.get('accounting'),dict) else None
+    if isinstance(reliability,dict) and 'events' in reliability:moved['accounting.reliability.events']=reliability.pop('events')
+    status['history_split']=sorted(moved)
+    return moved
+
+
 def trim_status_reply(status,limit=900000):
     from website_response import METRIC
     if isinstance(status.get('website_response_history'),dict) and status['website_response_history'].get('metric')==METRIC:
@@ -1037,7 +1052,7 @@ def trim_status_reply(status,limit=900000):
 
 def rpc(method):
     if method == 'list':
-        print(json.dumps({'status': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
+        print(json.dumps({'status': {}, 'history': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
                           'native_confirm': {'tx':'','exit_ipv4':'','dns_ok':False,'https_ok':False,'trial':''},
                           'native_trial_start': {'control_revision':'','trial':''},
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
@@ -1213,7 +1228,14 @@ def rpc(method):
                 status['speed_tests']=speed_status()
             except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
             status['server_time']=time.time()
+        if method=='status':split_history(status)
         print(json.dumps({'events': status.get('events', [])} if method=='events' else trim_status_reply(status)))
+    elif method=='history':
+        status=read_json(RUNTIME/'status.json',{})
+        from native_history import read_public
+        history=split_history({'accounting':status.get('accounting') if isinstance(status,dict) else None,
+                               'native_history':read_public(PERSIST,cache=RUNTIME/'native-history-public.json')})
+        print(json.dumps(dict(history,time=time.time())))
     else:
         raise ValueError('RPC-UNKNOWN-METHOD')
 

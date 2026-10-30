@@ -847,6 +847,7 @@ class Linux:
 
 
 def rollback(backend,journal,reason,restore_order=None):
+    restore_started=time.time()  # page countdown: a planned return is a switch too
     bind_policy_context(backend,journal)
     if (journal.get('activation_reapply') is True and journal.get('before')==journal.get('after')
             and journal.get('phase') in ('ARMED','APPLYING','RESTORING')
@@ -977,6 +978,9 @@ def rollback(backend,journal,reason,restore_order=None):
     journal.update(phase='ROLLED-BACK',reason=reason,finished=time.time())
     if journal.get('pair_transition') is not None:journal['restored_order']=list(restore_order)
     journal_write(journal)
+    if reason=='PRIMARY-STABLY-RECOVERED' or journal.get('manual_request_id'):
+        from switch_timing import record as record_switch_time
+        record_switch_time(PERSIST,journal['finished']-restore_started)
     # Retain the VPN-only guard during the experiment. INPUT/LAN management is unaffected.
     backend.guard(backend.devices())
     if journal.get('pair_transition') is not None:

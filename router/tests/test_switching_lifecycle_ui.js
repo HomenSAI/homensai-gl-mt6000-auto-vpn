@@ -30,8 +30,8 @@ async function main(){
     const f=fixture(language),{c,status,inventory,calls,replies}=f,s=status(),before=JSON.stringify(s);let sidebar;
     c.UI_OPERATION_REFRESH=()=>{sidebar=new N('div');c.fillSideStatus(sidebar,s,inventory);};
     const manual=c.renderManualSwitch(s,inventory),primary=choice(manual,'primary'),reserve=choice(manual,'reserve');
-    const pending=reserve.attrs.click();assert(primary.attrs.class.includes('hv-manual-grey'),'a click cannot turn a healthy existing channel red');
-    assert(sidebar.all().filter(n=>(n.attrs.class||'').includes('hv-auto-pill-knob')).slice(2).every(n=>n.attrs.class.includes('hv-lamp-unknown')),'sidebar and manual cards enter the same pending presentation immediately');
+    const pending=reserve.attrs.click();assert(primary.attrs.class.includes('hv-manual-yellow'),'a click cannot turn a healthy existing channel red (it blinks yellow)');
+    assert(sidebar.all().filter(n=>(n.attrs.class||'').includes('hv-auto-pill-knob')).slice(2).every(n=>n.attrs.class.includes('hv-lamp-switching')),'sidebar and manual cards enter the same pending (yellow) presentation immediately');
     assert.equal(c.selectedProfile(s,1000),'a','pending presentation never forges kernel selection');assert.equal(JSON.stringify(s),before);
     replies.shift().resolve({accepted:true,queued:true,completed:false,request_id:'c'.repeat(32)});await pending;
     assert(c.MANUAL_SWITCH_PENDING);const stalePage=c.renderManualSwitch(s,inventory);assert(choice(stalePage,'reserve').disabled);choice(stalePage,'reserve').attrs.click();assert.equal(calls.length,1,'same pre-click snapshot cannot dispatch a duplicate after ACK');

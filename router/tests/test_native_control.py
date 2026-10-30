@@ -39,7 +39,7 @@ class ControlTests(unittest.TestCase):
         read=set(acl['read']['ubus']['homensai-vpn'])
         write=set(acl['write']['ubus']['homensai-vpn'])
         self.assertEqual(methods,read|write)
-        self.assertEqual(read,{'inventory','status','events','priority_preview','preparation_preview','auto_live','statistics','speed_live'})
+        self.assertEqual(read,{'inventory','status','history','events','priority_preview','preparation_preview','auto_live','statistics','speed_live'})
         self.assertNotIn('preparation_apply',read);self.assertIn('preparation_apply',write)
         self.assertNotIn('speed_live',write)
         self.assertNotIn('*',write)

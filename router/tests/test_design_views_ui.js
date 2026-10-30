@@ -112,8 +112,7 @@ console.log('PASS: retained overview helpers handle real/hostile data and RU; re
  const card=actual.renderAutoControl(st,inv,()=>Promise.resolve()),nodes=card.all();
  const automatic=card.children[0],header=automatic.children[0],controls=automatic.children[1];
  assert.equal(header.attrs.class,'hv-auto-header');assert.equal(header.children[0].tag,'h2');
- const monitor=controls.children.find(n=>n&&n.attrs&&(n.attrs.class||'').includes('hv-monitor-block'));assert(monitor,'monitor lamp sits right of the Auto controls');
- assert(monitor.all().some(n=>(n.attrs.class||'').includes('hv-monitor-lamp-green')),'fresh enabled monitor retains green lamp');
+ assert(!controls.children.some(n=>n&&n.attrs&&(n.attrs.class||'').includes('hv-monitor-block')),'healthy monitoring shows no lamp on the Auto card (the sidebar lamp shows it)');
  assert.equal(controls.attrs.class,'hv-auto-controls');assert.equal(controls.children[0].attrs.class,'hv-auto-switch');
  const stepRow=automatic.children.find(n=>n&&n.attrs&&n.attrs.class==='hv-auto-step-row');assert(stepRow&&stepRow.all().includes(actual.connectivityControl.button),'real VPN check action sits below the Auto controls');
  assert(!source.includes("E('div',{'class':'hv-tools-row'},[renderConnectivityCheck"),'no duplicate controls in page header');

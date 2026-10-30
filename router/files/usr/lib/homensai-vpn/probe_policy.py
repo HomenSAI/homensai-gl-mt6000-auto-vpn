@@ -35,7 +35,11 @@ def level(settings):
     return 1
 
 
+FORCED_BOOST_LEVELS=(1,2)  # overnight test 30 Oct 2026: level 1 without boost never confirmed a 3-minute failure
+
+
 def boost_enabled(settings):
+    if level(settings) in FORCED_BOOST_LEVELS:return True
     return settings.get('probe_boost') not in (False,'0')
 
 
