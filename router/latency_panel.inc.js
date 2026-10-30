@@ -146,7 +146,7 @@ function renderLatencyPanel(status,inventory){
   var selectedId=typeof vendorDisplaySelected==='function'?vendorDisplaySelected(status,inventory,now):null,roleIds=rolePairIds(status,inventory,now);
   var selected=selectedId&&selectedId===roleIds[0]?'source':selectedId&&selectedId===roleIds[1]?'target':null;
   return E('section',{'class':'hv-chart-card','data-latency-panel':'1','data-stats-reset':'latency'},[
-    E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),renderLatencyRecommendation(status,inventory,'channels'),
+    E('h3',{},bi('Delay of the two VPN channels','Задержка двух VPN-каналов')),typeof statsWorkNote==='function'?statsWorkNote(status):'',renderLatencyRecommendation(status,inventory,'channels'),
     E('div',{'class':'hv-latency-values'},[0,1].map(function(i){return E('p',{},[E('strong',{},i===0?bi('Primary: ','Основной: '):bi('Reserve: ','Резервный: ')),renderChannelPing((status.profiles||[]).find(function(p){return p&&p.id===roleIds[i];}),status,now)]);})),
     E('div',{'class':'hv-latency-series'},[
       E('span',{},[E('i',{'class':'hv-latency-sample','aria-hidden':'true'}),bi('Primary · solid line','Основной · сплошная линия')]),

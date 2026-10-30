@@ -47,6 +47,7 @@
           "setup_monitor",
           "setup_probe",
           "setup_response",
+          "setup_stats",
           "setup_onboarding"
         ]
       }

@@ -4681,6 +4681,18 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** Look at the state on the page; press the button again only if nothing changed.
 
+## STATS-SETTINGS-FIELDS
+
+Настройка статистики не принята / Statistics setting not accepted
+
+**RU:** Роутер принимает только «Работу» или «Диагностику» на 1, 3, 7 или 14 дней.
+
+**EN:** The router accepts only Work, or Diagnostics for 1, 3, 7 or 14 days.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и выберите снова.
+
+**Action:** Reload the page (Ctrl+F5) and choose again.
+
 ## RPC-NONFINITE-NUMBER
 
 Неверное число / Invalid number

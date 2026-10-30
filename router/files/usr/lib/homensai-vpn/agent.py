@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '1.0.0-beta10'
+VERSION = '1.0.0-beta11'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -744,9 +744,9 @@ def control_reply(method, arguments):
         from fault_control import start,cancel,FaultError
         try:return start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
         except FaultError as error:return {'accepted':False,'code':str(error)}
-    if method in ('setup_probe','setup_response'):
+    if method in ('setup_probe','setup_response','setup_stats'):
         from setup_config import save
-        try:return save(arguments,{'setup_probe':'probe','setup_response':'response'}[method])
+        try:return save(arguments,{'setup_probe':'probe','setup_response':'response','setup_stats':'stats'}[method])
         except ValueError as error:
             return {'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
     from auto_control import start, stop
@@ -765,7 +765,7 @@ def control_reply(method, arguments):
     raise ValueError('RPC-UNEXPECTED-METHOD')
 
 
-CONTROL_METHODS=('native_start','native_stop','fault_start','fault_cancel','setup_probe','setup_response')
+CONTROL_METHODS=('native_start','native_stop','fault_start','fault_cancel','setup_probe','setup_response','setup_stats')
 
 
 def pair_manual_reply(arguments):
@@ -795,12 +795,20 @@ def monitor_loop():
     except (OSError, ValueError, KeyError, TypeError):
         accounting, storage_error = Accounting(), 'STORAGE-001'
     events, samples, last_save = [], [], time.monotonic()
+    from stats_mode import diagnostic as stats_diagnostic,public as stats_public,WORK_SAMPLE_SECONDS,WORK_CHECKPOINT_SECONDS
     from latency_history import LatencyHistory
-    latency=LatencyHistory.load(PERSIST/'latency-history.json')
     from website_response_history import WebsiteResponseHistory,technical_history_tail
-    website_history=WebsiteResponseHistory.load(PERSIST/'website-response-history.json')
     from ping_response_history import PingResponseHistory
-    ping_history=PingResponseHistory.load(PERSIST/'ping-response-history.json')
+    from response_compare import ResponseCompare
+    def load_histories(diagnosing):
+        # Work mode: empty in-memory histories that are neither filled nor saved (the flash copies stay intact).
+        if not diagnosing:return LatencyHistory(),WebsiteResponseHistory(),PingResponseHistory(),ResponseCompare()
+        return (LatencyHistory.load(PERSIST/'latency-history.json'),WebsiteResponseHistory.load(PERSIST/'website-response-history.json'),
+                PingResponseHistory.load(PERSIST/'ping-response-history.json'),ResponseCompare.load(PERSIST/'response-compare.json'))
+    diagnosing=stats_diagnostic()
+    latency,website_history,ping_history,compare_history=load_histories(diagnosing);publication_history=website_history if diagnosing else WorkModeHistory(website_history)
+    def saved_histories():
+        return (latency,website_history,ping_history,compare_history) if diagnosing else (None,None,None,None)
     from telegram_report import deliver
     from failover_plan import plan
     from telegram_state import load as load_telegram_state, save as save_telegram_state
@@ -825,8 +833,7 @@ def monitor_loop():
     sampler_inventory=shared_inventory(3)
     ping_sampler=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     compare_samplers={}  # owner option "measure all methods": one extra sampler per other ping target
-    from response_compare import ResponseCompare,enabled as compare_enabled,TARGETS as COMPARE_TARGETS
-    compare_history=ResponseCompare.load(PERSIST/'response-compare.json')
+    from response_compare import enabled as compare_enabled,TARGETS as COMPARE_TARGETS
     from website_response import WebsiteSampler,public as website_public
     website_sampler=WebsiteSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
     # Owner probe level 1-5 and the optional automatic boost; every decision is recorded.
@@ -845,15 +852,28 @@ def monitor_loop():
         if reset_request:
             # Owner reset of charts/statistics: archived first, then the counters start again from zero.
             # A failing reset never stops monitoring, and the page always gets a coded result.
+            # Work mode holds empty histories: a reset works on the real flash copies and saves exactly those.
+            reset_histories=(latency,website_history,ping_history,compare_history) if diagnosing else load_histories(True)
             try:
-                accounting,latency,reset_result=reset_apply(reset_request,accounting,latency,time.time(),atomic_json,website_response=website_history,ping_response=ping_history,compare_response=compare_history)
+                reset_latency,reset_result=None,None
+                accounting,reset_latency,reset_result=reset_apply(reset_request,accounting,reset_histories[0],time.time(),atomic_json,website_response=reset_histories[1],ping_response=reset_histories[2],compare_response=reset_histories[3])
+                reset_histories=(reset_latency,)+tuple(reset_histories[1:])
+                if diagnosing:latency=reset_latency
             except Exception:
                 reset_result={'nonce':reset_request['nonce'],'scope':reset_request['scope'],'time':time.time(),'done':False,'code':'STATS-RESET-FAILED'}
             try:
-                if reset_result.get('done'):checkpoint(accounting,latency,website_history,ping_history,compare_history);last_save=time.monotonic()
+                if reset_result.get('done'):checkpoint(accounting,*reset_histories);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
+        now_diagnosing=stats_diagnostic()
+        if now_diagnosing!=diagnosing:
+            if diagnosing:
+                # The diagnostic window closed: its histories are saved once, then work mode keeps only what switching needs.
+                try:checkpoint(accounting,*saved_histories());last_save=time.monotonic()
+                except (OSError,ValueError):pass
+            diagnosing=now_diagnosing
+            latency,website_history,ping_history,compare_history=load_histories(diagnosing);publication_history=website_history if diagnosing else WorkModeHistory(website_history)
         scan_id=begin_scan(RUNTIME,read_json,atomic_json)
         config_stamp=config_mtime()
         started = time.monotonic()
@@ -930,7 +950,8 @@ def monitor_loop():
                 accounting.observe(row,max_gap=settings['interval']*3,native=failure_context,pair=failure_pair)
                 samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
                     'interface','vendor_tunnel_id','vendor_generation')})
-            samples = [s for s in samples if (s.get('time') or 0) >= time.time()-86400*retention_days(settings)][-10000:]
+            kept=86400*retention_days(settings) if diagnosing else WORK_SAMPLE_SECONDS  # work mode: decisions need minutes
+            samples = [s for s in samples if (s.get('time') or 0) >= time.time()-kept][-10000:]
             try:
                 from speed_test import observe_traffic, automatic_new, active_job, cancel as cancel_speed, SpeedError
                 observe_traffic(wan_devices or measured,scope='wan' if wan_devices else 'vpn')
@@ -974,18 +995,20 @@ def monitor_loop():
                 from probe_policy import response_metric
                 status['response_metric']=response_metric(settings)
             except (OSError,ValueError,TypeError,KeyError):status['probe_policy']={'code':'PROBE-POLICY-UNAVAILABLE'}
-            latency.observe(status,settings,time.time())
+            from stats_mode import storage as stats_storage
+            status['stats_mode']=dict(stats_public(),storage=stats_storage(RUNTIME,PERSIST))
+            if diagnosing:latency.observe(status,settings,time.time())
             status['latency_history']=technical_history_tail(latency.public(),time.time())
             try:
                 from probe_policy import response_metric
                 if response_metric(settings)=='websites':
-                    website_history.observe(status,settings,time.time())
+                    if diagnosing:website_history.observe(status,settings,time.time())
                     status['website_response_history']=website_history.public(time.time())
                 else:
-                    ping_history.observe(status,settings,time.time())
+                    if diagnosing:ping_history.observe(status,settings,time.time())
                     status['website_response_history']=ping_history.public(time.time())
                 if compare_enabled(settings):
-                    compare_history.observe(status,failure_pair,time.time())
+                    if diagnosing:compare_history.observe(status,failure_pair,time.time())
                     status['response_compare']=compare_history.public(time.time())
             except Exception:
                 from website_response import METRIC,TARGET_SET
@@ -999,8 +1022,7 @@ def monitor_loop():
             from route_history import observed_route
             if accounting.reliability.routes.observe(observed_route(status,time.time()),time.time(),max_gap=settings['interval']*3):accounting.reliability.critical=True
             status['accounting']['reliability']=accounting.reliability.public()
-            from native_history import read_public
-            status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
+            status['native_history']=native_history_public()
             status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
             from auto_control import public_status
             status['auto_control']=public_status()
@@ -1036,9 +1058,11 @@ def monitor_loop():
             published_status=status
             finish_scan(RUNTIME,read_json,atomic_json,scan_id,snapshot=status)
             since_save=time.monotonic()-last_save
-            if accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']:
+            # Work mode: the accounting reaches flash once a day (and at shutdown), not every checkpoint interval.
+            due=(accounting.reliability.critical and since_save>=CRITICAL_SAVE_SPACING or since_save >= settings['checkpoint']) if diagnosing else since_save>=WORK_CHECKPOINT_SECONDS
+            if due:
                 try:
-                    checkpoint(accounting,latency,website_history,ping_history,compare_history);storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
+                    checkpoint(accounting,*saved_histories());storage_error = None;last_save = time.monotonic();accounting.reliability.critical=False
                 except (OSError, ValueError):
                     storage_error = 'STORAGE-001'
             events = events[-1000:]
@@ -1062,7 +1086,7 @@ def monitor_loop():
                 try:
                     from website_publication import publish_completed
                     published_status=publish_completed(published_status,failure_pair,settings,
-                        website_sampler,website_history,
+                        website_sampler,publication_history,
                         lambda value:atomic_json(RUNTIME/'status.json',value),
                         lambda:read_json(RUNTIME/'native-status.json',{}),time.time())
                 except (OSError,ValueError,TypeError,KeyError):
@@ -1077,6 +1101,11 @@ def monitor_loop():
                                 read_json(RUNTIME/'native-status.json',{}).get('state'),time.time()):break
                     except Exception:pass
             time.sleep(1)
+    # Saved first: in work mode this is the only save besides the daily one, and procd kills after 15 s.
+    try:
+        checkpoint(accounting,*saved_histories())
+    except (OSError, ValueError):
+        pass
     ping_sampler.close();website_sampler.close()
     for sampler in compare_samplers.values():sampler.close()
     try:
@@ -1085,14 +1114,25 @@ def monitor_loop():
     except (OSError,ValueError):pass
     # A report being sent at shutdown finishes (bounded by its own timeouts) and its state is saved: no duplicate later.
     if telegram_job is not None:
-        telegram_job[0].join(20)
+        telegram_job[0].join(10)
         if not telegram_job[0].is_alive():
             try:telegram_collect(telegram_job)
             except Exception:pass
-    try:
-        checkpoint(accounting,latency,website_history,ping_history,compare_history)
-    except (OSError, ValueError):
-        pass
+
+
+class WorkModeHistory:
+    """Work mode: a finished website measurement still reaches the page, but no history is recorded."""
+    def __init__(self,empty):self.empty=empty
+    def observe(self,*args,**kwargs):pass
+    def public(self,now):return self.empty.public(now)
+
+
+def native_history_public():
+    """The event journal the page shows: the persistent history while diagnosing, else the RAM ring since boot."""
+    from native_history import read_public
+    from stats_mode import history_target
+    directory,_=history_target(RUNTIME,PERSIST)
+    return read_public(directory,cache=RUNTIME/('native-history-public.json' if directory==PERSIST else 'native-history-ring-public.json'))
 
 
 HISTORY_PARTS=(('native_history','events'),('accounting','quality'))
@@ -1147,9 +1187,8 @@ def status_reply(load=read_monitor_status):
     status['speed_pause']=speed_pause_status()
     from scan_control import public as scan_public
     status['scan']=scan_public(RUNTIME,read_json)
-    from native_history import read_public
     status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
-    status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
+    status['native_history']=native_history_public()
     status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
     from switch_timing import read as switch_timing
     status['switch_timing']=switch_timing(PERSIST)
@@ -1180,9 +1219,8 @@ def events_reply(load=read_monitor_status):
 
 def history_reply(load=read_monitor_status):
     status=load({})
-    from native_history import read_public
     history=split_history({'accounting':status.get('accounting') if isinstance(status,dict) else None,
-                           'native_history':read_public(PERSIST,cache=RUNTIME/'native-history-public.json')})
+                           'native_history':native_history_public()})
     return dict(history,time=time.time())
 
 
@@ -1195,6 +1233,7 @@ def rpc(method):
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
                           'setup_response':{'metric':'','compare':False,'fast_switch':False},
+                          'setup_stats':{'mode':'','hours':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
@@ -1246,7 +1285,7 @@ def rpc(method):
     if method=='stats_reset':
         from stats_reset import request as reset_request
         print(json.dumps(reset_request(arguments)));return
-    if method in ('fault_start','fault_cancel','setup_probe','setup_response'):
+    if method in ('fault_start','fault_cancel','setup_probe','setup_response','setup_stats'):
         print(json.dumps(control_reply(method,arguments)));return
     if method in ('priority_preview','priority_apply'):
         from priority_config import preview,apply

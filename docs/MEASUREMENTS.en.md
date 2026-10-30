@@ -38,6 +38,15 @@ What this shows:
 | 1.0.0-beta7 | full guarded transaction | 1 | 4.6 s | 2.8 s | 12.1 s | 5.5 s | 15.7 s | 1.5 s | **42.2 s** | ~25 s |
 | 1.0.0-beta8 | instant manual switch | 6 | 3.5 s | 1.7 s | 5.3 s | 0.3 s | 3.7 s | 2.1 s | **16.6 s** (14.5–20.2) | 10.8 s (10.1–12.6) |
 | 1.0.0-beta9 | click and history in memory | 6 | 3.3 s | 1.4 s | 2.3 s | 1.2 s | 0.7 s | 1.0 s | **9.9 s** (8.2–12.6) | 8.2 s (6.3–11.0) |
+| 1.0.0-beta10 | light gate, faster parsing | 6 | 0.6 s | 0.9 s | 1.5 s | 1.1 s | 0.3 s | 0.9 s | **5.4 s** (4.2–6.6) | 4.2 s (3.2–5.3) |
+
+Page buttons (router answer):
+
+| Button | beta9 | beta10 |
+|---|---|---|
+| Start Auto | 1.06 s | 0.30 s |
+| Cancel failure test | 1.04 s | 0.21 s |
+| Manual click | 0.9–3.1 s | 0.5–0.8 s |
 
 Beta9 stamps every stage itself:
 - checks before the switch: full diagnostic 1.0 s, kernel proof 1.1 s;
@@ -102,28 +111,41 @@ In 1.0.0-beta9 the Auto service keeps the history in memory, and the backup is m
 
 ## 5. Memory used by the services
 
-Measured on the router on 30 Oct 2026 with 1.0.0-beta9. Total RAM is 480 MB (491,320 kB).
+Total RAM is 480 MB. Measured on 30 Oct 2026.
 
-| What | Size | Share of RAM |
+| Service | beta9, long running | beta10, 6 min after start | Share of RAM |
+|---|---|---|---|
+| Monitor service (agent) | 45.3 MB | 48.1 MB | ~10% |
+| Auto service (native_switch) | 40.0 MB | 41.4 MB | ~9% |
+| Sum of the two figures | 85.3 MB | 89.5 MB | ~18% |
+
+How to read these figures (from the router's /proc, beta10):
+
+| Part of one service | Monitor | Auto |
 |---|---|---|
-| Available to programs (MemAvailable) | 109 MB | 22.7% |
-| Monitor service (agent, including the status kept in memory) | 45.3 MB | 9.4% |
-| Auto service (native_switch, including the history kept in memory) | 40.0 MB | 8.3% |
-| **Both of our services** | **85.3 MB** | **17.8%** |
-| For comparison: GL web server (nginx, 3 processes) | 99 MB | 20.6% |
+| Python and libraries mapped from flash (RssFile) | 6.8 MB | 6.8 MB |
+| The service's working memory (RssAnon) | 41.3 MB | 34.6 MB |
+| Peak since start (VmHWM) | 52.1 MB | 45.7 MB |
 
-What one service is made of (measured in a separate process):
+- Python and its libraries (about 7 MB) are physically shared by both services but appear in each figure. The truly unique memory is about 83 MB, not 89.5 MB.
+- Working memory is everything a service works with:
+  - the observation file and the finished page replies (about 3 MB);
+  - the Auto service's copy of the event history (about 8 MB);
+  - journals, the latency history, kernel rules and probe data;
+  - the Python objects and imported code themselves (about 9 MB per service).
+- Python does not return freed memory to the system; it keeps it for reuse. So the figure stays near the working peak: parsing the status, the history and the kernel rules.
 
-| Part | Size |
-|---|---|
-| Bare Python | 6.5 MB |
-| Program code (import) | +9.4 MB, about 16 MB in total |
-| Event history kept in memory (Auto service only) | +7.8 MB (1.6% of RAM) |
-| Page status: the observation file and the finished reply (monitor service only) | +3.0 MB (0.6% of RAM) |
+A separate measurement of a bare Python process on the router:
+- bare Python: 6.5 MB;
+- with the program code loaded: 16.3 MB;
+- after reading the history: +7.9 MB;
+- after the status and the finished reply: +3 MB.
 
-Before the resident copies (beta6 and earlier), the services used about 11 MB less, around 2.2% of RAM. Peak use while recording an event was the same, because the history was read in full anyway. Now that memory is simply not released between events.
+These are parts, not the whole service. The rest is working data and Python's reserve, as described above.
 
-Safeguard: from beta10, the history is kept in memory only while at least 64 MB is available. Otherwise the service reads the file as before.
+Before the resident copies (beta6 and earlier), the services held about 11 MB less. Peak use while recording an event was the same, because the history was read in full then too.
+
+Safeguard: from beta10, the history copy is kept in memory only while at least 64 MB of RAM is available.
 
 Other resources:
 - state files in RAM (/var/run/homensai-vpn): 0.6 MB;

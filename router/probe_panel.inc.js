@@ -201,6 +201,34 @@ function responseSettings(inventory){
     E('p',{'class':'hv-step-note'},bi('On the GL-iNet MT3000 the router writes the new channel order straight into its firewall rules in one step: the change itself takes tens of milliseconds and new connections use the new channel within about half a second, without the 20-60 second GL rebuild. If anything looks unexpected it falls back to the GL rebuild on its own. With Auto on, the manual channel buttons then switch at once (a few seconds) to a channel that passed its last check, without waits or extra confirmations; Auto keeps watching that channel afterwards. Turn this off to always use the GL rebuild.','На GL-iNet MT3000 роутер записывает новый порядок каналов прямо в правила межсетевого экрана одним шагом: сама смена занимает десятки миллисекунд, а новые соединения идут по новому каналу примерно за полсекунды, без перестройки GL на 20-60 секунд. Если что-то выглядит неожиданно, роутер сам откатывается к перестройке GL. При включённом Auto ручные кнопки каналов тогда переключают сразу (за несколько секунд) на канал, прошедший последнюю проверку, без ожиданий и дополнительных подтверждений; после этого Auto продолжает следить за этим каналом. Выключите, чтобы всегда использовать перестройку GL.')),
     E('p',{'class':'hv-req-actions'},[save])]);
 }
+// Statistics mode (owner, 30 Oct 2026): "work" keeps only what switching needs; "diagnostic" records everything for 1 h-7 days.
+function statsModeModel(source,now){
+  var s=(source&&source.stats_mode&&typeof source.stats_mode==='object')?source.stats_mode:null;
+  if(s)return {diagnostic:s.mode==='diagnostic',until:Number(s.until)||0};
+  var settings=(source&&source.settings)||{},until=Number(settings.stats_until)||0;
+  return {diagnostic:settings.stats_mode==='diagnostic'&&until>now,until:until};
+}
+// One note for the statistics surfaces while the router is in work mode; nothing in diagnostics.
+function statsWorkNote(status){
+  var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,model=statsModeModel(status||{},now);
+  if(model.diagnostic||!(status&&status.stats_mode))return '';
+  return E('p',{'class':'hv-step-note hv-stats-work-note','data-stats-work':'1'},[bi('Statistics collection is off (Work mode): the router keeps only what switching needs. To record charts and statistics for 1 to 14 days, turn on Diagnostics: ','Сбор статистики выключен (режим «Работа»): роутер хранит только нужное для переключения. Чтобы записывать графики и статистику на срок от 1 до 14 дней, включите «Диагностику»: '),
+    E('a',{'href':'#collection'},bi('Advanced → Statistics collection','Расширенные → Сбор статистики'))]);
+}
+// Advanced > Statistics collection: the page itself is optional (lazy); this model gives it the router call.
+function collectionModel(status){
+  var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,m=statsModeModel(status||{},now);
+  return {diagnostic:m.diagnostic,until:m.until,storage:(status&&status.stats_mode&&status.stats_mode.storage)||{},
+    save:function(mode,hours){return mode==='work'?rpc.declare({object:PROBE_RPC,reject:true,method:'setup_stats',params:['mode'],expect:{}})('work')
+      :rpc.declare({object:PROBE_RPC,reject:true,method:'setup_stats',params:['mode','hours'],expect:{}})('diagnostic',hours);},
+    notify:function(text){ui.addNotification(null,E('p',{},text));}};
+}
+function renderCollectionStats(status){
+  LAZY_HELP.collectionStatus=status;var host=renderLazyPage('collection'),item=LAZY_HELP.hosts.collection;
+  // Rendered once per load: the form must not reset while the owner is choosing.
+  if(LAZY_HELP.api&&item.requested&&!item.ready){while(host.firstChild)host.removeChild(host.firstChild);host.appendChild(LAZY_HELP.api.renderCollectionPage(collectionModel(status)));item.ready=true;}
+  return host;
+}
 // Ranking columns for "measure all methods": one column per method the router compared.
 var COMPARE_LABELS={'icmp-1.1.1.1':['Ping 1.1.1.1','Пинг 1.1.1.1'],'icmp-8.8.8.8':['Ping 8.8.8.8','Пинг 8.8.8.8'],'icmp-9.9.9.9':['Ping 9.9.9.9','Пинг 9.9.9.9'],'websites':['Three websites','Три сайта']};
 function compareColumns(status){var c=(status||{}).response_compare;return c&&Array.isArray(c.methods)?c.methods.filter(function(m){return COMPARE_LABELS[m];}):[];}

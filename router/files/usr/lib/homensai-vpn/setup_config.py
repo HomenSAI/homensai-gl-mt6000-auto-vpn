@@ -254,6 +254,9 @@ def save(arguments, kind):
     elif kind=='recovery':
         from recovery_settings import payload as recovery_payload
         payload=recovery_payload(arguments)
+    elif kind=='stats':
+        from stats_mode import payload as stats_payload
+        payload=stats_payload(arguments)
     else:raise ValueError('SETUP-KIND')
     with control_lock():
         if kind=='system':

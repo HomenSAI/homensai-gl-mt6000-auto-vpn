@@ -34,7 +34,7 @@ PLUGIN = ROOT / 'usr/libexec/rpcd/homensai-vpn'
 ACL = ROOT / 'usr/share/rpcd/acl.d/luci-app-homensai-vpn.json'
 APPLICATION = {path.stem for path in LIB.glob('*.py')}
 # sha256 of `agent.py list` at f493528 (before the status server); the rpcd signature must not move.
-LIST_SHA256 = 'cd51fc9250b2ac89a40c2e56f0ffd0b386d3e7073ad53995a3b22dffea0f9321'
+LIST_SHA256 = '2e3341778948d859323fa1e91315684fece061b2bdaee543e89ad664010bc818'
 
 
 def plugin_text():
@@ -573,7 +573,7 @@ class Signature(unittest.TestCase):
         self.assertLessEqual(status_server.METHODS, read)
         self.assertFalse(status_server.METHODS & write, 'the read path serves read-ACL methods only')
         self.assertEqual(status_server.WRITERS, {'pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel',
-                                                 'setup_probe', 'setup_response'})
+                                                 'setup_probe', 'setup_response', 'setup_stats'})
         self.assertLessEqual(status_server.WRITERS, write, 'the button methods keep their write ACL in rpcd')
         self.assertEqual(set(agent.CONTROL_METHODS) | {'pair_manual'}, status_server.WRITERS)
         self.assertEqual(set(status_client.METHODS), status_server.METHODS | status_server.WRITERS)

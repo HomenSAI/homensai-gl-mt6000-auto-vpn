@@ -69,7 +69,7 @@ console.log('PASS: constrained-height sidebar geometry, external header clearanc
  const hybrid=source.includes('hv-hybrid-release');
  const linksLine=hybrid?"var links=tabs.map(function(tab){return tabLink(tab[0]);});":source.split('\n').find(line=>line.includes("var links=['channels','diagnostics','events','settings','help'].map(tabLink)"));
  assert(tabsLine&&linkLine&&linksLine,'selected module declares its actual navigation destinations');
- const expected=hybrid?['start','overview','channels','tests','statistics','traffic','services','events','switches','readiness','settings','learn','help']:['channels','diagnostics','events','settings','help'];
+ const expected=hybrid?['start','overview','channels','tests','statistics','traffic','services','events','switches','collection','readiness','settings','learn','help']:['channels','diagnostics','events','settings','help'];
  class NavNode{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children);}setAttribute(k,v){this.attrs[k]=v;}}
  for(const ru of [false,true]){
   const opened=[],ctx={E:(...args)=>new NavNode(...args),bi:(en,rus)=>ru?rus:en,showPage:key=>opened.push(key),minimumNavigate:key=>opened.push(key)};

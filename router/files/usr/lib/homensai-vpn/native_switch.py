@@ -127,7 +127,9 @@ def publish(value):
     if value['proof_scope']=='router-probed-ipv4':
         value.setdefault('mode','continuous-pair')
         value['external_lan_verified']=False
-    try:History(PERSIST).record(value)
+    from stats_mode import history_target
+    directory,limit=history_target(RUNTIME,PERSIST)  # always the flash history: switch events are rare
+    try:History(directory,limit=limit).record(value)
     except (OSError,ValueError,KeyError,TypeError):
         atomic_json(STATE,{'state':'BLOCKED','blockers':['HISTORY-001']})
         raise Refused('HISTORY-001')

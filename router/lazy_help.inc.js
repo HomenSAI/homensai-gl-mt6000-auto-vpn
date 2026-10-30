@@ -32,7 +32,7 @@ function renderErrorTable(){return renderLazyPage('events');}
 function mountLazyHelp(){
   if(!LAZY_HELP.api)return;
   Object.keys(LAZY_HELP.hosts).forEach(function(key){var item=LAZY_HELP.hosts[key];if(item.ready||!item.requested)return;
-    var node=key==='switches'?LAZY_HELP.api.renderSwitchPage(switchStatsModel(LAZY_HELP.switchStatus)):LAZY_HELP.api[{help:'renderHelp',learn:'renderLearn',events:'renderErrorTable'}[key]](LAZY_HELP.inventory);
+    var node=key==='switches'?LAZY_HELP.api.renderSwitchPage(switchStatsModel(LAZY_HELP.switchStatus)):key==='collection'?LAZY_HELP.api.renderCollectionPage(collectionModel(LAZY_HELP.collectionStatus)):LAZY_HELP.api[{help:'renderHelp',learn:'renderLearn',events:'renderErrorTable'}[key]](LAZY_HELP.inventory);
     while(item.node.firstChild)item.node.removeChild(item.node.firstChild);item.node.appendChild(node);item.ready=true;
   });
 }
@@ -69,6 +69,6 @@ function loadLazyHelp(retry){
   }).then(function(value){LAZY_HELP.promise=null;return value;});return LAZY_HELP.promise;
 }
 function ensureLazyPage(key,inventory){
-  if(['help','learn','events','switches'].indexOf(key)<0)return Promise.resolve(null);
+  if(['help','learn','events','switches','collection'].indexOf(key)<0)return Promise.resolve(null);
   renderLazyPage(key,inventory);LAZY_HELP.hosts[key].requested=true;return loadLazyHelp(false);
 }

@@ -104,6 +104,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.response_metric=(metric=='icmp-1.1.1.1' or metric=='icmp-8.8.8.8' or metric=='icmp-9.9.9.9' or metric=='websites') and metric or 'icmp-1.1.1.1'
   main.response_compare=s.response_compare=='1'
   main.fast_switch=s.fast_switch~='0'
+  main.stats_mode=s.stats_mode=='diagnostic' and 'diagnostic' or 'work'
+  main.stats_until=math.max(0,math.floor(tonumber(s.stats_until) or 0))
   local measure=tonumber(s.measure_interval)
   main.measure_interval=(measure and measure>=30 and measure<=300) and math.floor(measure) or 0
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))

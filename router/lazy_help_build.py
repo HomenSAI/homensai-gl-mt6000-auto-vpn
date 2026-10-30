@@ -54,7 +54,7 @@ def split(source,ui_module):
     payload="'use strict';\n'require baseclass';\nreturn baseclass.extend({create:function(ctx){\n"+imports+'\n'
     payload+='\n'.join(parts[name] for name in MODULES)+'\n'
     payload+="ctx.extraHelpTopics.forEach(function(topic){if(topic.id!=='telegram'&&!HELP_TOPICS.some(function(t){return t.id===topic.id;}))HELP_TOPICS.push(topic);});\n"
-    payload+="ctx.installCatalogue({rows:ERROR_ROWS,groups:ERROR_GROUPS,groupOf:ERROR_GROUP_OF,state:ERROR_TABLE_STATE,persist:persistErrorTableState});\nensureJournalDictionary();\nreturn {renderHelp:renderHelp,renderLearn:renderLearn,renderErrorTable:renderErrorTable,renderSwitchPage:renderSwitchPage};\n}});\n"
+    payload+="ctx.installCatalogue({rows:ERROR_ROWS,groups:ERROR_GROUPS,groupOf:ERROR_GROUP_OF,state:ERROR_TABLE_STATE,persist:persistErrorTableState});\nensureJournalDictionary();\nreturn {renderHelp:renderHelp,renderLearn:renderLearn,renderErrorTable:renderErrorTable,renderSwitchPage:renderSwitchPage,renderCollectionPage:renderCollectionPage};\n}});\n"
     lazy_dir=root/'router/files/www/luci-static/resources/homensai-vpn';lazy_dir.mkdir(parents=True,exist_ok=True)
     (lazy_dir/('help'+ui_module.removeprefix('dashboard')+'.js')).write_text(payload,encoding='utf8',newline='')
     if len(source.encode('utf8'))>int((len(source.encode('utf8'))+sum(len(text.encode('utf8')) for text in parts.values()))*.70):

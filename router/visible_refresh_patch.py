@@ -86,12 +86,13 @@ def apply(source):
     tests=replace_fragment(tests,move,ranking+'\n'+speed)
     warning=section('      if(inventory.error)',"      put('statistics',renderMonitorInfo")
     overview+=warning
-    switches=''
+    switches='';collection=''
     tail=section("      put('statistics',renderMonitorInfo",'      var homeModel=simpleHomeModel')
     for key,call in puts(tail):
         if key=='statistics':statistics+=call+'\n'
         elif key=='events':events+=call+'\n'
         elif key=='switches':switches+=call+'\n'
+        elif key=='collection':collection+=call+'\n'
         else:raise AssertionError('VISIBLE-TAIL-PAGE '+key)
     home=section('      if(homeModel.showCard){','      installErrorLinks(appRoot);')
     return_button=next(line for line in home.splitlines() if "pages.overview.insertBefore(E('button'" in line)
@@ -102,9 +103,9 @@ def apply(source):
     assert home.endswith("      }else if(activeTab==='home')activeTab=startLanding(status,inventory);\n")
     home=home[:-len("else if(activeTab==='home')activeTab=startLanding(status,inventory);\n")]
     renderers={'overview':overview,'channels':channels,'statistics':statistics,'tests':''.join(other.pop('tests'))+'\n'+tests,
-               'traffic':traffic,'services':services,'events':events,'switches':switches,'settings':settings,'home':home}
+               'traffic':traffic,'services':services,'events':events,'switches':switches,'collection':collection,'settings':settings,'home':home}
     for key,calls in other.items():renderers[key]='\n'.join(calls)
-    assert set(renderers)=={'overview','channels','statistics','tests','traffic','services','events','switches','settings','home','readiness','help','learn','start'}
+    assert set(renderers)=={'overview','channels','statistics','tests','traffic','services','events','switches','collection','settings','home','readiness','help','learn','start'}
     factories=',\n'.join("        '%s':function(){\n%s\n        }"%(key,body) for key,body in renderers.items())
     body="""    function draw(status){
       var refreshViewport=rememberPageViewport(appRoot||panel,activeTab);

@@ -9,8 +9,8 @@ Safety contract:
 - Only the read methods in METHODS with no arguments. Anything else, any malformed request and any
   failure while computing answers FALLBACK: the caller then runs agent.py exactly as before, so error
   codes, write methods and rpcd ACLs are unchanged.
-- The page buttons in WRITERS (manual channel click, Start/Stop Auto, failure test, probe and response
-  settings) are answered by the same functions agent.py calls, in this already running process (beta8
+- The page buttons in WRITERS (manual channel click, Start/Stop Auto, failure test, probe, response and
+  statistics-mode settings) are answered by the same functions agent.py calls, in this already running process (beta8
   measured 3.5 s of python start-up per click). They only queue or save; the supervisor validates and acts.
   FALLBACK is possible only before the function runs; once it ran, any failure is answered as unconfirmed,
   never repeated through agent.py.
@@ -33,7 +33,8 @@ import threading
 import time
 
 METHODS = frozenset(('status', 'events', 'history', 'auto_live'))
-WRITERS = frozenset(('pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel', 'setup_probe', 'setup_response'))
+WRITERS = frozenset(('pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel', 'setup_probe', 'setup_response',
+                     'setup_stats'))
 WRITE_FAILED = {'pair_manual': {'accepted': False, 'queued': False, 'completed': False, 'blockers': ['PAIR-MANUAL-REQUEST-UNCONFIRMED']}}
 WRITE_FAILED_DEFAULT = {'accepted': False, 'queued': False, 'saved': False, 'code': 'RPC-UNCONFIRMED', 'blockers': ['RPC-UNCONFIRMED']}
 CACHED = ('status', 'events', 'history')
@@ -52,7 +53,7 @@ NATIVE_LIMIT = 65536
 
 # Written while answering (caches) or private to the RPC throttle: never a reason to recompute.
 SELF_WRITTEN = frozenset(('pair-manual-kernel-cache.json', 'native-history-public.json', 'rpc-throttle.json',
-                          'pair-manual-timing.json'))
+                          'pair-manual-timing.json', 'native-history-ring-public.json'))
 # Rewritten by the two daemons on every pass/tick; they refresh on the poll schedule instead.
 OBSERVATION = frozenset(('status.json', 'native-status.json', 'speed-traffic.json', 'checkpoint.json',
                          'checkpoint.backup.json', 'latency-history.json', 'ping-response-history.json',

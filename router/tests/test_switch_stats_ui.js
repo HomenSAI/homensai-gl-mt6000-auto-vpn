@@ -110,7 +110,7 @@ function status(){
 
  }
  const c=context('en');assert.equal(c.spanText(59.6),'1 min');assert.equal(c.spanText(3725),'1 h 2 min');assert.equal(c.spanText(-1),'—');assert.equal(c.spanText(null),'—');
- assert(source.includes("['switches','⏱',"),'Advanced tab');assert(source.includes("var ADVANCED_KEYS=['tests','statistics','traffic','services','events','switches'];"));
- assert(source.includes("'analytics','switches'].indexOf(page)>=0?60000"),'history refresh every minute on the page');
+ assert(source.includes("['switches','⏱',"),'Advanced tab');assert(source.includes("var ADVANCED_KEYS=['tests','statistics','traffic','services','events','switches','collection'];"));
+ assert(source.includes("'analytics','switches','collection'].indexOf(page)>=0?60000"),'history refresh every minute on the page');
  console.log('PASS: switch episodes (auto/manual/missing/running), journal+live-log durations, Switch statistics page EN/RU, empty states');
 })().catch(error=>{console.error(error);process.exitCode=1;});

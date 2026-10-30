@@ -6,7 +6,7 @@
 # and any failure of that path, runs agent.py exactly as before.
 case "$1:$2:$#" in
     call:status:2|call:events:2|call:history:2|call:auto_live:2|call:pair_manual:2|\
-    call:native_start:2|call:native_stop:2|call:fault_start:2|call:fault_cancel:2|call:setup_probe:2|call:setup_response:2)
+    call:native_start:2|call:native_stop:2|call:fault_start:2|call:fault_cancel:2|call:setup_probe:2|call:setup_response:2|call:setup_stats:2)
         [ -S /var/run/homensai-vpn/status.sock ] &&
             exec /usr/bin/python3 -I -S /usr/lib/homensai-vpn/status_client.py "$2"
         ;;

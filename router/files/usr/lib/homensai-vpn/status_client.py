@@ -17,7 +17,7 @@ PYTHON = '/usr/bin/python3'
 AGENT = '/usr/lib/homensai-vpn/agent.py'
 # The page buttons after auto_live are writers answered by the running monitor (status_server.WRITERS).
 METHODS = ('status', 'events', 'history', 'auto_live', 'pair_manual', 'native_start', 'native_stop', 'fault_start',
-           'fault_cancel', 'setup_probe', 'setup_response')
+           'fault_cancel', 'setup_probe', 'setup_response', 'setup_stats')
 REQUEST_LIMIT = 65537            # the same read limit as agent.rpc
 REPLY_LIMIT = 8 * 1024 * 1024
 TIMEOUT = 10.0                   # the server gives up after 8 s; agent.py still fits rpcd's 30 s

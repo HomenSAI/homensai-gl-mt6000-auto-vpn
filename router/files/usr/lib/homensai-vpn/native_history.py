@@ -136,6 +136,8 @@ def memory_available_kb():
 
 
 def remember(history,data):
+    from stats_mode import diagnostic
+    if not diagnostic():return  # work mode: switches are rare, the history is read, used and released (owner decision)
     available=memory_available_kb()
     if available is not None and available<RESIDENT_MIN_AVAILABLE_KB:return  # low memory: read the file next time
     _WRITER_CACHE[str(history.path)]={'key':(_file_key(history.path),_file_key(history.backup)),'data':data,'detail_days':history.detail_days}
