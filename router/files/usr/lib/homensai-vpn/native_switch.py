@@ -557,6 +557,45 @@ VERIFY_VENDOR_WAIT=20
 VERIFY_TRANSIENT={'VENDOR-WORKER-BUSY','VENDOR-SETTLING','VENDOR-WORKER-QUIET-UNVERIFIED'}
 
 
+LUA_CORE=Path('/usr/lib/homensai-vpn/lua/instant_switch.lua')
+LUA_REQUEST=RUNTIME/'instant-request.json'
+
+
+def lua_core_enabled():
+    """2.0.0-lua-alpha1: the write stage of the instant manual switch runs in Lua when the owner set
+    `option lua_core '1'` and the Lua core is installed. Off by default; the Python path is unchanged."""
+    try:text=FAST_SWITCH_CONFIG.read_text(encoding='utf8')
+    except (OSError,UnicodeError):return False
+    return bool(re.search(r"^\s*option\s+lua_core\s+'?1'?\s*$",text,re.M)) and LUA_CORE.is_file()
+
+
+def lua_instant_switch(backend,selection,journal,pair_destination,after):
+    """Run lua/instant_switch.lua for the reorder/apply/verify/journal stage. Returns the result dict;
+    raises Refused with the Lua code. `rollback_required` in a Refused result means a write happened."""
+    sections=backend.policy()['sections']
+    names={};tunnels={}
+    for s in sections:
+        identity=section_id(s,backend.process_bindings);names[identity]=s['.name']
+        if s.get('.type')=='rule' and s.get('enabled','1')!='0' and s.get('tunnel_id'):tunnels[identity]=str(s['tunnel_id'])
+    order=[tunnels[identity] for identity in after if identity in tunnels]
+    if len(order)!=2:raise Refused('FAST-RULES')
+    request={'direction':'primary' if pair_destination=='source' else 'reserve','control_revision':journal['control_revision'],
+             'journal':journal,'names':names,'tunnel_order':order}
+    atomic_json(LUA_REQUEST,request)
+    try:
+        process=subprocess.run(['/usr/bin/lua',str(LUA_CORE),request['direction'],str(LUA_REQUEST)],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=30)
+    except (OSError,subprocess.SubprocessError):raise Refused('LUA-CORE-UNAVAILABLE') from None
+    finally:
+        try:LUA_REQUEST.unlink()
+        except OSError:pass
+    try:result=json.loads(process.stdout.decode('utf8','replace').strip().splitlines()[-1])
+    except (ValueError,IndexError):raise Refused('LUA-CORE-UNAVAILABLE') from None
+    if not isinstance(result,dict):raise Refused('LUA-CORE-UNAVAILABLE')
+    if process.returncode==0 and result.get('ok') is True:return result
+    code=result.get('code') if isinstance(result.get('code'),str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',result['code']) else 'LUA-CORE-UNAVAILABLE'
+    error=Refused(code);error.lua_result=result;raise error
+
+
 def fast_switch_enabled():
     """On the installed router unless the owner set `option fast_switch '0'` (then every switch uses the vendor
     rebuild). Read from the config file itself: no process, and never on a host without the package config."""
@@ -1752,6 +1791,31 @@ def instant_manual(backend,selection,until,control_revision,manual_request_id,re
              'forward_policy_touched':True,'rtp_dispatched':True,'transition_source':source,'manual_instant':True}
     def publish_pair(value):
         publish(dict(value,transition_source=source,destination_role=pair_destination,destination_profile_id=selection[pair_destination]['id']))
+    if lua_core_enabled():
+        # The Lua core writes the APPLYING journal itself (fenced) and refuses when the current journal is not settled.
+        publish_pair(dict(pair_event_fields(journal),state='APPLYING',source=journal['source'],target=journal['target'],trial=False,reason='OPERATOR-MANUAL',
+                          manual_instant=True,lua_core=True,transition_kind=transition_kind(selection['source'],selection['target'])))
+        try:
+            result=lua_instant_switch(backend,selection,journal,pair_destination,after)
+            for name,seconds in result.get('stages') or []:manual_stamp('lua-'+str(name)[:24])
+            journal=journal_read()
+            if journal.get('tx')!=tx or journal.get('phase')!='HELD-ON-RESERVE':raise Refused('MANUAL-COMPLETION-UNVERIFIED')
+            kernel=backend.attest_policy(dict(selection,order=list(after)))
+            if kernel.get('verified') is not True or kernel.get('role')!=pair_destination:raise Refused('KERNEL-POLICY-UNVERIFIED')
+            if not backend.guard_exists():backend.guard(backend.devices(),control_revision=control_revision)
+            return kernel
+        except BaseException as error:
+            code=str(error) if isinstance(error,Refused) and re.fullmatch(r'[A-Z0-9_-]{1,96}',str(error)) else 'NATIVE-SYSTEM-001'
+            saved=journal_read()
+            if saved.get('tx')==tx:journal=saved
+            journal['failure_code']=code;journal['failure_detail']=record_attempt_failure(tx,'lua-instant',error,mono)
+            if (getattr(error,'lua_result',None) or {}).get('rollback_required') or journal.get('phase')=='HELD-ON-RESERVE':
+                journal_write(journal);rollback_counted(backend,journal,'TRANSACTION-FAILED')
+            elif journal.get('phase')!='ROLLED-BACK':
+                journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY',restored_order=list(before),finished=time.time());journal_write(journal)
+                publish_pair(dict(pair_event_fields(journal,completed=True,outcome='refused',restoring=True),state='ROLLED-BACK',reason='TRANSACTION-FAILED',
+                                  source=journal['source'],target=journal['target'],blockers=[code]))
+            raise
     with control_lock(RUNTIME):
         require_control_revision(control_revision)
         journal_write(journal)

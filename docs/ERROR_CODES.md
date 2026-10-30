@@ -4693,6 +4693,66 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** Reload the page (Ctrl+F5) and choose again.
 
+## LUA-CORE-UNAVAILABLE
+
+Ядро Lua не ответило / Lua core did not answer
+
+**RU:** Необязательное ядро Lua для мгновенного переключения не запустилось или не дало корректного ответа. Оно ничего не переключило; журнал работает по обычным правилам.
+
+**EN:** The optional Lua core for the instant switch could not run or gave no valid answer. Nothing was switched by it; the journal follows the usual rules.
+
+**Что делать:** Выключите ядро Lua (option lua_core 0) и сообщите код разработчику.
+
+**Action:** Turn the Lua core off (option lua_core 0) and send the code to the developer.
+
+## JOURNAL-DELEGATED-UNVERIFIED
+
+Журнал от Python не принят ядром Lua / Switch journal from Python not accepted by Lua
+
+**RU:** Ядро Lua проверило журнал, подготовленный службой Python, и отказало до любых изменений.
+
+**EN:** The Lua core checked the journal prepared by the Python service and refused it before any change.
+
+**Что делать:** Ничего делать не нужно; если повторяется, выключите ядро Lua и сообщите код разработчику.
+
+**Action:** Nothing to do; if it repeats, turn the Lua core off and send the code to the developer.
+
+## CONTROL-LOCK-UNAVAILABLE
+
+Блокировка управления недоступна / Control lock not available
+
+**RU:** Ядро Lua не смогло взять общую блокировку управления и ничего не изменило.
+
+**EN:** The Lua core could not take the shared control lock, so it changed nothing.
+
+**Что делать:** Подождите минуту и повторите.
+
+**Action:** Wait a minute and try again.
+
+## CONTROL-LOCK-REENTRY
+
+Повторный захват блокировки / Control lock taken twice
+
+**RU:** Внутренняя проверка остановила повторный захват блокировки в одном процессе Lua.
+
+**EN:** An internal safety check stopped a second lock in the same Lua process.
+
+**Что делать:** Сообщите код разработчику.
+
+**Action:** Send the code to the developer.
+
+## COMMAND-FAILED
+
+Системная команда не выполнилась / System command failed
+
+**RU:** Команда роутера, которую использует ядро Lua (iptables, uci или conntrack), вернула ошибку.
+
+**EN:** A router command used by the Lua core (iptables, uci or conntrack) returned an error.
+
+**Что делать:** Переключение отменяется по обычным правилам; если повторяется, сообщите код разработчику.
+
+**Action:** The switch is undone by the usual rules; if it repeats, send the code to the developer.
+
 ## RPC-NONFINITE-NUMBER
 
 Неверное число / Invalid number

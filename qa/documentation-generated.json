@@ -17,10 +17,10 @@
     "router/design_views.inc.js": "06ff0185edf8dcedfab37190316684d9f03215da704edc2545c548bdb23a6692",
     "router/element_guard.inc.js": "6588f7f5d65b8c7eb0d3bb4e90e572f5a69aaaceab6b335c6291094e8e85a45e",
     "router/error_links.inc.js": "b893f5680ba66892716fcf822603261cdc895f26dc71308955367180e10cc5a7",
-    "router/error_rows_extra.inc.js": "58f9dd5cb1474ee8cf240a3f640fdddf28c09d4f183cb537d21997b36a42bb8f",
+    "router/error_rows_extra.inc.js": "f637f4d1778363931911be48868bf543d6d9852120368edf553c0d41a39274e1",
     "router/error_table.inc.js": "5ab4c9ade767af4a46a6f7c9655499d8753859799f257dbcc73de8aa438ca7c9",
     "router/fault_panel.inc.js": "6ee9d416241f4da6e7374815b8f4d0aa6b8674c46084c2ab9bb8c5cc2cee52db",
-    "router/files/usr/lib/homensai-vpn/agent.py": "e5e3d71c83a957445543072c84aa87275b08829a24475556bf23c0ad0c6a3c31",
+    "router/files/usr/lib/homensai-vpn/agent.py": "d16302af4df13b9a1a87c0e31cd841b91054f6cd7a3735e4ad64fa44f31559bc",
     "router/fool_guard.inc.js": "1288a5e44e6ed75c079461380a767e2a0543362e1de52f0168a161df53f1c335",
     "router/help_panel.inc.js": "547f6f7b722fa6f4db65c503cfbe1102821decaa264efd138ddb3569094cda83",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -81,6 +81,6 @@
     "docs/AI-INSTALL.ru.md": "094d356abf404474e78eaa18851ab45caa3901b0005737ae29ac6c60d0faddb1",
     "docs/AI-LAN.ru.md": "6516e76271e6d4cb4c4c17f802b141c12ec600fa100296abd0aa7f1d412fc2f7",
     "docs/BUILTIN-HELP.ru.md": "c8fcf93b9d4bc8a31a5539d1c12d4a0c6a43d4c8cee86da55385d6c272290e4b",
-    "docs/ERROR_CODES.md": "afadb7c48ec42685d6f77bc3722e75ca0729c813c5cce456e95f28961f6520bc"
+    "docs/ERROR_CODES.md": "f5b46a6ee2740b6f51705f97483ea8491ecf1d71b56ae2a5f1939d6728ad5f60"
   }
 }
