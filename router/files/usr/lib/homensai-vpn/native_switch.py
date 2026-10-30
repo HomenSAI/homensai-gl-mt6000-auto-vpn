@@ -1698,6 +1698,109 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
         raise
 
 
+def instant_manual(backend,selection,until,control_revision,manual_request_id,request_source,pair_destination,pair_session_order,kernel_before=None):
+    """Owner button with Auto running: switch at once to a channel the monitor has just seen alive.
+
+    Measured on the MT3000 (30 Oct 2026, beta7): the full guarded transaction took 42 s for a manual return,
+    yet the traffic itself moves in one atomic kernel write. Here the switch runs in this supervisor without an
+    apply child, without a proof per write, without the exit trace and the confirmation wait: one kernel
+    attestation before, the committed UCI order, the atomic fast path, one attestation after. The journal and its
+    dispatch markers are the same as in attempt(), so a crash or a refused step still rolls back the usual way.
+    Auto keeps watching the chosen channel afterwards; a failure there is handled by the normal rules.
+    """
+    global PROOF_SCOPE
+    PROOF_SCOPE=selection.get('proof_scope','external-lan')
+    if (not isinstance(manual_request_id,str) or not re.fullmatch(r'[a-f0-9]{32}',manual_request_id)
+            or pair_destination not in ('source','target') or PROOF_SCOPE!='router-probed-ipv4' or pair_session_order is None):
+        raise Refused('MANUAL-REQUEST-INVALID')
+    from auto_control import normalize_request_source,control_lock
+    from pair_policy import transition,desired_order
+    bind_policy_context(backend,selection)
+    require_control_revision(control_revision)
+    before=selection['order']
+    try:
+        pair_context=transition(selection,pair_session_order,pair_destination)
+        after=desired_order(pair_context,before,pair_destination)
+    except (ValueError,TypeError,KeyError):raise Refused('POLICY-IDENTITY-CHANGED') from None
+    if kernel_before is None:kernel_before=backend.attest_policy(selection)  # the caller's attestation of this very selection is reused
+    fingerprint=kernel_before.get('kernel_fingerprint')
+    if (not (kernel_before.get('verified') is True or kernel_before.get('repairable_missing') is True)
+            or not isinstance(fingerprint,str) or not re.fullmatch('[a-f0-9]{64}',fingerprint)):
+        raise Refused('KERNEL-POLICY-UNVERIFIED')
+    from rtp_boot import assess,prepare
+    try:assess()
+    except (OSError,ValueError):raise Refused('RTP-BOOT-PRECONDITION-UNVERIFIED') from None
+    prepare(control_revision)
+    tx=uuid.uuid4().hex;wall=time.time();mono=time.monotonic()
+    settings=backend.policy()['settings']
+    lease_end,lease_error=monotonic_lease(settings,until,wall,mono)
+    if lease_error:raise Refused(lease_error)
+    source=normalize_request_source(request_source)
+    journal={'tx':tx,'phase':'APPLYING','before':before,'after':after,'hash':selection['hash'],
+             'source':selection['source']['id'],'target':selection['target']['id'],
+             'deadline':min(until,wall+TRANSACTION_SECONDS),'monotonic_deadline':min(lease_end,mono+TRANSACTION_SECONDS),'lease_monotonic_until':lease_end,
+             'trial':False,'trial_nonce':settings.get('native_trial'),'pid':None,'started':wall,
+             'vendor_identity':selection['vendor_identity'],'process_bindings':selection.get('process_bindings'),'proof_scope':PROOF_SCOPE,
+             'control_revision':control_revision,'manual_request_id':manual_request_id,'pair_transition':pair_context,
+             'vendor_profiles':{role:{key:selection[role].get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')} for role in ('source','target')},
+             'kernel_before_fingerprint':fingerprint,'kernel_before_verified':kernel_before.get('verified') is True,
+             'forward_policy_touched':False,'rtp_dispatched':False,'transition_source':source,'manual_instant':True}
+    def publish_pair(value):
+        publish(dict(value,transition_source=source,destination_role=pair_destination,destination_profile_id=selection[pair_destination]['id']))
+    with control_lock(RUNTIME):
+        require_control_revision(control_revision)
+        journal_write(journal)
+    publish_pair(dict(pair_event_fields(journal),state='APPLYING',source=journal['source'],target=journal['target'],trial=False,reason='OPERATOR-MANUAL',
+                      manual_instant=True,transition_kind=transition_kind(selection['source'],selection['target'])))
+    def write_command(args,timeout=5):
+        require_control_revision(control_revision)
+        key='rtp_dispatched' if args[0] in ('/usr/bin/rtp2.sh','iptables-restore') else 'forward_policy_touched'
+        if journal.get(key) is not True:
+            journal[key]=True;journal_write(journal)  # recovery must know a writer was dispatched
+        return forward_dispatch(args,control_revision,timeout)
+    try:
+        backend.reorder(after,write_command=write_command)
+        backend.apply(write_command=write_command)
+        switched=time.time()
+        if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
+        kernel=backend.attest_policy(dict(selection,order=list(after)))
+        if kernel.get('verified') is not True or kernel.get('role')!=pair_destination:raise Refused('KERNEL-POLICY-UNVERIFIED')
+        if not backend.guard_exists():backend.guard(backend.devices(),control_revision=control_revision)
+        with control_lock(RUNTIME):
+            require_control_revision(control_revision)
+            journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL',confirmed=time.time(),reserve_healthy=True,
+                           instant_seconds=round(switched-wall,3))
+            journal_write(journal)
+    except BaseException as error:
+        code=str(error) if isinstance(error,Refused) and re.fullmatch(r'[A-Z0-9_-]{1,96}',str(error)) else 'NATIVE-SYSTEM-001'
+        journal['failure_detail']=record_attempt_failure(tx,'instant',error,mono);journal['failure_code']=code
+        if journal.get('forward_policy_touched') is not True and journal.get('rtp_dispatched') is not True:
+            journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY',restored_order=list(before),finished=time.time());journal_write(journal)
+            publish_pair(dict(pair_event_fields(journal,completed=True,outcome='refused',restoring=True),state='ROLLED-BACK',reason='TRANSACTION-FAILED',
+                              source=journal['source'],target=journal['target'],blockers=[code]))
+        else:
+            journal_write(journal);rollback_counted(backend,journal,'TRANSACTION-FAILED')
+        raise
+    value=dict(pair_event_fields(journal,completed=True,outcome='committed'),state='OBSERVING' if pair_destination=='source' else 'STOPPED-ON-RESERVE',
+               reason='OPERATOR-MANUAL',source=journal['source'],target=journal['target'],original_restored=False,reserve_healthy=True,trial=False,tx=tx,
+               readiness_verified=True,kernel_policy_verified=True,kernel_proof=kernel,manual_instant=True,switch_seconds=journal['instant_seconds'])
+    try:publish_pair(value)
+    except (Refused,OSError,ValueError,KeyError,TypeError):atomic_json(STATE,dict(value,time=time.time(),history_error='HISTORY-001'))
+    return kernel
+
+
+def nap(seconds):
+    """The supervisor's pause between pair ticks; a queued owner click ends it at once (instant manual switch)."""
+    end=time.monotonic()+seconds
+    while not STOP:
+        left=end-time.monotonic()
+        if left<=0:return
+        try:
+            if read_json(RUNTIME/'pair-manual-control.json',{}).get('state')=='QUEUED':return
+        except (OSError,ValueError,AttributeError):pass
+        time.sleep(min(.2,left))
+
+
 def serve():
     global PROOF_SCOPE
     RUNTIME.mkdir(parents=True,exist_ok=True);PERSIST.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -1798,7 +1901,7 @@ def serve():
                         from pair_auto import publish_failure
                         publish_failure('PAIR-RECOVERY-REQUIRED')
                         return
-                    time.sleep(2);continue
+                    nap(2);continue
                 until=deadline(settings.get('native_until'))
                 from native_proof import requested,matches
                 try:PROOF_SCOPE=requested(settings)

@@ -206,12 +206,13 @@ function uiClock(seconds){seconds=Math.max(0,Math.floor(seconds));return Math.fl
 // One timer text for every surface: stage, elapsed since a known origin and the time left to the real backend deadline.
 // Average confirmed switch time (manual and automatic share one transaction), kept by the router on flash.
 var UI_SWITCH_AVG=null,UI_SWITCH_MEASURED=56;  // 30 Oct 2026 tests, 19 switches: switch 63 s, return 48 s
-function uiOperationTimer(stage,elapsed,remaining,checking){
+var UI_INSTANT_EXPECTED=4;  // instant owner switch (router reports manual_switch_control.instant): click to done, seconds
+function uiOperationTimer(stage,elapsed,remaining,checking,instant){
   var text=stage&&UI_STAGE_TEXT[stage]?bi(UI_STAGE_TEXT[stage][0],UI_STAGE_TEXT[stage][1]):'';
   if(Number.isFinite(elapsed))text+=(text?' · ':'')+uiClock(elapsed)+bi(' elapsed',' прошло');
   if(Number.isFinite(elapsed)&&!checking){
     // Expected time = measured average + 25% margin (router average, else the overnight MT3000 measurement).
-    var expected=Math.round((Number.isFinite(UI_SWITCH_AVG)?UI_SWITCH_AVG:UI_SWITCH_MEASURED)*1.25),left=expected-elapsed;
+    var expected=instant?UI_INSTANT_EXPECTED:Math.round((Number.isFinite(UI_SWITCH_AVG)?UI_SWITCH_AVG:UI_SWITCH_MEASURED)*1.25),left=expected-elapsed;
     text+=(text?' · ':'')+(left>=1?bi('about ','ещё около ')+uiClock(left)+bi(' (expected ',' (ожидается ')+uiClock(expected)+')':bi('longer than expected (','дольше ожидаемого (')+uiClock(expected)+')');
     if(left<1&&Number.isFinite(remaining))text+=' · '+bi('limit in ','предел через ')+uiClock(remaining);
     return text;

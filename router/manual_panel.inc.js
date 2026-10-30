@@ -27,7 +27,7 @@ function manualOperationModel(status,now){
 var UI_TIMER_NODES=[];
 function uiOperationTimerText(status,now){
   status=status||{};var timing=status.switch_timing;UI_SWITCH_AVG=timing&&Number.isFinite(timing.avg_seconds)&&timing.avg_seconds>=1&&timing.avg_seconds<=600?timing.avg_seconds:null;var manual=manualOperationModel(status,now),transition=typeof uiTransitionModel==='function'?uiTransitionModel(status,now):{live:false};
-  if(manual.busy)return manual.uncertain?bi('Result not confirmed','Результат не подтверждён')+(Number.isFinite(manual.elapsed)?' · '+uiClock(manual.elapsed)+bi(' elapsed',' прошло'):''):uiOperationTimer(manual.stage,manual.elapsed,Number.isFinite(manual.deadline)?manual.deadline-now:null,manual.checking);
+  if(manual.busy)return manual.uncertain?bi('Result not confirmed','Результат не подтверждён')+(Number.isFinite(manual.elapsed)?' · '+uiClock(manual.elapsed)+bi(' elapsed',' прошло'):''):uiOperationTimer(manual.stage,manual.elapsed,Number.isFinite(manual.deadline)?manual.deadline-now:null,manual.checking,!!(status.manual_switch_control&&status.manual_switch_control.instant===true));
   var command=typeof autoCommandPending!=='undefined'&&(autoCommandPending||autoObservedOperation),elapsed=command?autoElapsedMs(command)/1000:transition.started?now-transition.started:null;
   if(transition.live)return uiTransitionText(transition,elapsed,now);
   if(command)return uiOperationTimer(null,elapsed,null,false);

@@ -27,5 +27,14 @@ for(const language of ['en','ru']){
     assert('disabled' in save.attrs,'saved: the button waits for the next change');
   }
 }
+// Instant owner switch: the countdown expects seconds, not the guarded automatic transaction's average.
+for(const language of ['en','ru']){
+  const c={locale:language,Date,Math,Number,String,Object,Array,JSON};c.bi=(en,ru)=>language==='ru'?ru:en;c.E=node;
+  vm.createContext(c);vm.runInContext(fs.readFileSync('router/ui_logic.inc.js','utf8'),c);
+  c.UI_SWITCH_AVG=30;
+  assert(c.uiOperationTimer(null,1,null,false,true).includes('0:04'),'instant: about four seconds expected');
+  assert(c.uiOperationTimer(null,1,null,false,false).includes('0:38'),'guarded: average + 25%');
+  assert(c.uiOperationTimer(null,1,null,false).includes('0:38'),'no flag: guarded');
+}
 console.log('PASS: fast switch setting');
 })().catch(e=>{console.error(e);process.exit(1);});

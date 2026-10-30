@@ -25,6 +25,7 @@ def valid(row):
     if not basic:return False
     selected=row['selection']
     if row['direction']=='resume':return selected=={}
+    if set(selected)=={'tx'}:return selected['tx'] is None or isinstance(selected['tx'],str) and re.fullmatch('[a-f0-9]{32}',selected['tx']) is not None
     return (set(selected)=={'hash','settings_hash','vendor_identity','source','target','tx'}
             and all(isinstance(selected[k],str) and re.fullmatch('[a-f0-9]{64}',selected[k]) for k in ('hash','settings_hash','vendor_identity'))
             and all(isinstance(selected[k],str) and re.fullmatch(r'(?:openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)',selected[k]) for k in ('source','target'))
@@ -147,13 +148,15 @@ def controls():
         known=kernel.get('role') if kernel.get('verified') is True and kernel.get('role') in ('source','target') else None
         if general and not busy_switch and known is None and kernel.get('repairable_missing') is not True:
             primary.append('KERNEL-POLICY-UNVERIFIED');reserve.append('KERNEL-POLICY-UNVERIFIED')
-        if not permitted:
+        if general and n.fast_switch_enabled():pass  # the instant owner switch is never rate limited (see consume)
+        elif not permitted:
             if known!='target':reserve.append('PAIR-RATE-LIMIT')
             if general and known!='source':primary.append('PAIR-RATE-LIMIT')
         elif events:
             if now-events[-1]<max(policy['cooldown'],policy['min_dwell']):
                 if known!='target':reserve.append('PAIR-MANUAL-COOLDOWN')
                 if general and known!='source':primary.append('PAIR-MANUAL-COOLDOWN')
+        result['instant']=general and n.fast_switch_enabled()  # the page shows the instant switch's short expected time
         result.update(primary={'allowed':not primary,'blockers':primary},reserve={'allowed':not reserve,'blockers':reserve},
                       resume={'allowed':not reasons and state.get('manual_hold') in ('source','target'),'blockers':reasons},blockers=reasons)
         return result
@@ -175,10 +178,15 @@ def request(direction,revision,request_source=None):
         if not control.get('available') or not choice.get('allowed'):return refuse((choice.get('blockers') or control.get('blockers') or ['PAIR-MANUAL-NOT-AVAILABLE'])[0])
         selection={}
         if direction!='resume':
-            blockers,chosen=backend.diagnostic()
-            if blockers:return refuse(blockers[0])
-            selection={k:chosen.get(k) for k in ('hash','settings_hash','vendor_identity')}
-            selection.update(source=chosen['source']['id'],target=chosen['target']['id'],tx=n.journal_read().get('tx'))
+            if n.fast_switch_enabled():
+                # The supervisor diagnoses the pair itself when it consumes the click (well under a second later);
+                # a second ~1 s diagnostic here only delayed the instant switch. The journal binds the click.
+                selection={'tx':n.journal_read().get('tx')}
+            else:
+                blockers,chosen=backend.diagnostic()
+                if blockers:return refuse(blockers[0])
+                selection={k:chosen.get(k) for k in ('hash','settings_hash','vendor_identity')}
+                selection.update(source=chosen['source']['id'],target=chosen['target']['id'],tx=n.journal_read().get('tx'))
         with control_lock(RUNTIME):
             from speed_pause import public as pause_status
             if pause_status().get('active'):return refuse('SPEED-BUSY')
@@ -211,6 +219,16 @@ def recover():
     from auto_control import control_lock
     with control_lock():
         terminalize_pending_locked('UNCONFIRMED','PAIR-MANUAL-RECOVERED')
+
+
+def lease_until(settings,state):
+    """The pair's current transaction lease when it still covers a whole transaction (saves a flash write)."""
+    import native_switch as n
+    try:until=float(settings.get('native_until') or 0)
+    except (TypeError,ValueError):return None
+    now=time.time()
+    if settings.get('native_trial')!=state.get('id') or not now+n.TRANSACTION_SECONDS+10<=until<=now+14400:return None
+    return until
 
 
 def consume(backend,state,settings,revision):
@@ -249,7 +267,8 @@ def consume(backend,state,settings,revision):
         n.bind_policy_context(backend,state)
         blockers,selection=backend.diagnostic();expected=row['selection']
         if blockers:raise n.Refused(blockers[0])
-        if any(selection.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity')) or any(selection[k]['id']!=expected.get(k) for k in ('source','target')):
+        if set(expected)!={'tx'} and (any(selection.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity'))
+                                      or any(selection[k]['id']!=expected.get(k) for k in ('source','target'))):
             raise n.Refused('MANUAL-CONFIG-CHANGED')
         journal=n.journal_read()
         if state.get('policy_roles') is not None:
@@ -259,7 +278,10 @@ def consume(backend,state,settings,revision):
                     or not state_order_matches(state,journal,backend.order())):
                 raise n.Refused('MANUAL-CONFIG-CHANGED')
             hold='source' if row['direction']=='primary' else 'target'
-            if backend.health(selection[hold]['id']) is not True:
+            from observation_freshness import valid_for as observation_window
+            instant=n.fast_switch_enabled()
+            alive=instant and healthy(read_json(RUNTIME/'status.json',{}),selection[hold]['id'],time.time(),observation_window(settings))
+            if not alive and backend.health(selection[hold]['id']) is not True:
                 raise n.Refused('SOURCE-NOT-HEALTHY' if hold=='source' else 'PAIR-MANUAL-TARGET-UNHEALTHY')
             kernel=backend.attest_policy(selection)
             if kernel.get('verified') is True and kernel.get('role')==hold:
@@ -273,36 +295,44 @@ def consume(backend,state,settings,revision):
                     pair.require_running(revision);state['manual_hold']=hold;state['manual_hold_source']=row.get('request_source','unknown')
                     pair.remember_selected(state,kernel)
                     state['manual_selection']=selected;pair.save(state)
-                n.publish({'state':'OBSERVING','mode':'continuous-pair','proof_scope':pair.MODE,'source':expected['source'],'target':expected['target'],
+                n.publish({'state':'OBSERVING','mode':'continuous-pair','proof_scope':pair.MODE,'source':selection['source']['id'],'target':selection['target']['id'],
                            'reason':'MANUAL-ALREADY-SELECTED','manual':True,'readiness_verified':True,'kernel_policy_verified':True,'kernel_proof':kernel,
                            'route_changed':False,'transition_completed':True,'transition_outcome':'policy-verified','transition_source':row.get('request_source','unknown')})
                 finish('COMPLETED','MANUAL-ALREADY-SELECTED');return True
             if kernel.get('verified') is not True and kernel.get('repairable_missing') is not True:
                 raise n.Refused('KERNEL-POLICY-UNVERIFIED')
-            from recovery_settings import normalized
-            recovery=normalized(settings)
-            pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
-            events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
-            if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
-            if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
-            until=pair.configure_lease(state);blockers,fresh=backend.diagnostic()
-            if blockers:raise n.Refused(blockers[0])
-            if (proof(fresh)!=state['policy_roles'] or any(fresh.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity'))
-                    or not state_order_matches(state,journal,backend.order())):raise n.Refused('MANUAL-CONFIG-CHANGED')
-            def charge_dispatched():
-                pair.require_running(revision);stamp=time.time();fresh_ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
-                charged,allowed=pair.budget(fresh_ledger.get('events'),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
-                if not allowed:raise n.Refused('PAIR-RATE-LIMIT')
-                if charged and stamp-charged[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
-                atomic_json(PERSIST/'pair-auto-budget.json',{'events':charged+[stamp]})
-            n.attempt(backend,fresh,until,False,control_revision=revision,manual_request_id=row['id'],
-                      request_source=row.get('request_source'),pair_destination=hold,pair_session_order=state['order'],on_dispatch=charge_dispatched)
+            if instant:
+                # Owner button (30 Oct 2026): a manual switch to a live channel happens at once. The attempt budget and
+                # cooldown exist against automatic flapping; a person's click neither waits for them nor uses them up.
+                pair.require_running(revision)
+                until=lease_until(settings,state) or pair.configure_lease(state)
+                kernel=n.instant_manual(backend,selection,until,revision,row['id'],row.get('request_source'),hold,state['order'],kernel_before=kernel)
+                fresh=selection
+            else:
+                from recovery_settings import normalized
+                recovery=normalized(settings)
+                pair.require_running(revision);now=time.time();ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+                events,permitted=pair.budget(ledger.get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+                if not permitted:raise n.Refused('PAIR-RATE-LIMIT')
+                if events and now-events[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
+                until=pair.configure_lease(state);blockers,fresh=backend.diagnostic()
+                if blockers:raise n.Refused(blockers[0])
+                if (proof(fresh)!=state['policy_roles'] or any(fresh.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity'))
+                        or not state_order_matches(state,journal,backend.order())):raise n.Refused('MANUAL-CONFIG-CHANGED')
+                def charge_dispatched():
+                    pair.require_running(revision);stamp=time.time();fresh_ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+                    charged,allowed=pair.budget(fresh_ledger.get('events'),stamp,recovery['attempt_window']*60,recovery['attempt_limit'])
+                    if not allowed:raise n.Refused('PAIR-RATE-LIMIT')
+                    if charged and stamp-charged[-1]<max(recovery['cooldown'],recovery['min_dwell']):raise n.Refused('PAIR-MANUAL-COOLDOWN')
+                    atomic_json(PERSIST/'pair-auto-budget.json',{'events':charged+[stamp]})
+                n.attempt(backend,fresh,until,False,control_revision=revision,manual_request_id=row['id'],
+                          request_source=row.get('request_source'),pair_destination=hold,pair_session_order=state['order'],on_dispatch=charge_dispatched)
             journal=n.journal_read();context=metadata(journal)
             if (context is None or context['destination_role']!=hold or context['session_order']!=state['order']
                     or journal.get('manual_request_id')!=row['id'] or journal.get('phase')!='HELD-ON-RESERVE'
                     or not journal.get('confirmed') or backend.order()!=(journal['after'],journal['hash'])):
                 raise n.Refused('MANUAL-COMPLETION-UNVERIFIED')
-            kernel=backend.attest_policy(dict(fresh,order=list(journal['after'])))
+            if not instant:kernel=backend.attest_policy(dict(fresh,order=list(journal['after'])))  # instant_manual attested after its write
             if kernel.get('verified') is not True or kernel.get('role')!=hold:raise n.Refused('KERNEL-POLICY-UNVERIFIED')
         elif row['direction']=='reserve':
             if journal.get('phase') not in (None,'ROLLED-BACK') or backend.order()!=(state['order'],state['policy_hash']):raise n.Refused('TRANSACTION-IN-PROGRESS')
@@ -323,7 +353,7 @@ def consume(backend,state,settings,revision):
             if journal.get('tx')!=expected.get('tx') or journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):raise n.Refused('RETURN-TRANSACTION-MISMATCH')
             handled,_=n.handle_return(backend,journal,{'time':row['requested'],'tx':journal['tx']},0,control_revision=revision)
             from manual_dispatch import _confirmed_return
-            record={'requested_at':row['requested'],'transaction_id':journal['tx'],'source_id':expected['source'],'target_id':expected['target']}
+            record={'requested_at':row['requested'],'transaction_id':journal['tx'],'source_id':selection['source']['id'],'target_id':selection['target']['id']}
             if not handled or not _confirmed_return(record,read_json(n.return_result_path(),{}),n.journal_read(),backend.order(),time.time()):raise n.Refused('RETURN-UNCONFIRMED')
             hold='source'
         with control_lock(RUNTIME):
@@ -336,7 +366,7 @@ def consume(backend,state,settings,revision):
             pair.save(state)
         fields=n.pair_event_fields(journal,completed=True,outcome='committed') if state.get('policy_roles') is not None else {}
         n.publish(dict(fields,state='COMMITTED' if hold=='target' else 'OBSERVING' if state.get('policy_roles') is not None else 'ROLLED-BACK',mode='continuous-pair',proof_scope=pair.MODE,
-                   source=expected['source'],target=expected['target'],reason='OPERATOR-MANUAL',manual=True,
+                   source=selection['source']['id'],target=selection['target']['id'],reason='OPERATOR-MANUAL',manual=True,
                    readiness_verified=state.get('policy_roles') is not None,kernel_policy_verified=state.get('policy_roles') is not None,
                    kernel_proof=kernel if state.get('policy_roles') is not None else None,
                    transition_source=row.get('request_source','unknown'),original_restored=backend.order()==(state['order'],state['policy_hash'])))
