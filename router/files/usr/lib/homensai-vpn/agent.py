@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '1.0.0-beta8'
+VERSION = '1.0.0-beta9'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -725,9 +725,17 @@ def start_status_server():
         from status_server import StatusServer
         from auto_live import snapshot as live
         return StatusServer(RUNTIME, PERSIST, {'status': status_reply, 'events': events_reply, 'history': history_reply},
-                            live, read_json, stopping=lambda: STOP).start()
+                            live, read_json, stopping=lambda: STOP, writers={'pair_manual': pair_manual_reply}).start()
     except Exception:
         return None
+
+
+def pair_manual_reply(arguments):
+    """The owner's manual channel click; the same answer through rpcd/agent.py and the resident socket."""
+    from pair_manual import request
+    if not {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'}:
+        return {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}
+    return request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source'))
 
 
 def serve():
@@ -1164,8 +1172,7 @@ def rpc(method):
         from statistics_export import page
         print(json.dumps(page(PERSIST,arguments)));return
     if method=='pair_manual':
-        from pair_manual import request
-        print(json.dumps(request(arguments['direction'],arguments['control_revision'],request_source=arguments.get('request_source')) if {'direction','control_revision'}<=set(arguments)<={'direction','control_revision','request_source'} else {'accepted':False,'blockers':['PAIR-MANUAL-FIELDS']}));return
+        print(json.dumps(pair_manual_reply(arguments)));return
     if method=='native_confirm':
         if set(arguments)!= {'tx','exit_ipv4','dns_ok','https_ok','trial'}:
             raise ValueError('RPC-CONFIRM-FIELDS')

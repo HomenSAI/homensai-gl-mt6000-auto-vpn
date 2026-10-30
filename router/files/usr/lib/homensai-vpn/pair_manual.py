@@ -227,7 +227,8 @@ def lease_until(settings,state):
     try:until=float(settings.get('native_until') or 0)
     except (TypeError,ValueError):return None
     now=time.time()
-    if settings.get('native_trial')!=state.get('id') or not now+n.TRANSACTION_SECONDS+10<=until<=now+14400:return None
+    # An instant switch finishes in seconds; its journal deadline is min(lease, now+120), so 30 s of lease is plenty.
+    if settings.get('native_trial')!=state.get('id') or not now+30<=until<=now+14400:return None
     return until
 
 
@@ -252,6 +253,7 @@ def consume(backend,state,settings,revision):
         if reason:
             row.update(state='CANCELLED',updated=max(time.time(),row['requested']),code=reason);atomic_json(path(),row);return True
         row.update(state='CLAIMED',updated=time.time());atomic_json(path(),row)
+    n.manual_stamp('claimed',row['id'])
     def finish(result,code=None):
         with control_lock(RUNTIME):
             current=read()
@@ -266,6 +268,7 @@ def consume(backend,state,settings,revision):
             finish('COMPLETED');return True
         n.bind_policy_context(backend,state)
         blockers,selection=backend.diagnostic();expected=row['selection']
+        n.manual_stamp('diagnosed')
         if blockers:raise n.Refused(blockers[0])
         if set(expected)!={'tx'} and (any(selection.get(k)!=expected.get(k) for k in ('hash','settings_hash','vendor_identity'))
                                       or any(selection[k]['id']!=expected.get(k) for k in ('source','target'))):
@@ -284,6 +287,7 @@ def consume(backend,state,settings,revision):
             if not alive and backend.health(selection[hold]['id']) is not True:
                 raise n.Refused('SOURCE-NOT-HEALTHY' if hold=='source' else 'PAIR-MANUAL-TARGET-UNHEALTHY')
             kernel=backend.attest_policy(selection)
+            n.manual_stamp('attested')
             if kernel.get('verified') is True and kernel.get('role')==hold:
                 from failure_diagnosis import profile_identity
                 if kernel.get('policy_hash')!=selection['hash'] or kernel.get('order')!=selection['order']:
@@ -306,6 +310,7 @@ def consume(backend,state,settings,revision):
                 # cooldown exist against automatic flapping; a person's click neither waits for them nor uses them up.
                 pair.require_running(revision)
                 until=lease_until(settings,state) or pair.configure_lease(state)
+                n.manual_stamp('lease')
                 kernel=n.instant_manual(backend,selection,until,revision,row['id'],row.get('request_source'),hold,state['order'],kernel_before=kernel)
                 fresh=selection
             else:
@@ -364,13 +369,15 @@ def consume(backend,state,settings,revision):
                 state['manual_selection']={'request_id':row['id'],'role':hold,'order':list(journal['after']),'hash':journal['hash'],
                                            'vendor_identity':fresh['vendor_identity'],'profiles':{key:profile_identity(fresh[key]) for key in ('source','target')}}
             pair.save(state)
+        n.manual_stamp('saved')
         fields=n.pair_event_fields(journal,completed=True,outcome='committed') if state.get('policy_roles') is not None else {}
+        if journal.get('manual_instant') is True:fields.update(manual_instant=True,switch_seconds=journal.get('instant_seconds'))
         n.publish(dict(fields,state='COMMITTED' if hold=='target' else 'OBSERVING' if state.get('policy_roles') is not None else 'ROLLED-BACK',mode='continuous-pair',proof_scope=pair.MODE,
                    source=selection['source']['id'],target=selection['target']['id'],reason='OPERATOR-MANUAL',manual=True,
                    readiness_verified=state.get('policy_roles') is not None,kernel_policy_verified=state.get('policy_roles') is not None,
                    kernel_proof=kernel if state.get('policy_roles') is not None else None,
                    transition_source=row.get('request_source','unknown'),original_restored=backend.order()==(state['order'],state['policy_hash'])))
-        finish('COMPLETED')
+        finish('COMPLETED');n.manual_stamp('done')
     except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
         code=str(error) if isinstance(error,n.Refused) and re.fullmatch('[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'PAIR-MANUAL-UNCONFIRMED'
         finish('REFUSED' if isinstance(error,n.Refused) else 'UNCONFIRMED',code)

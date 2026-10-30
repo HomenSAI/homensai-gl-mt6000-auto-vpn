@@ -40,6 +40,8 @@ class InstantManual(unittest.TestCase):
         self.assertEqual(journal['before'],['t','s']);self.assertEqual(journal['after'],['s','t'])
         self.assertTrue(journal['rtp_dispatched']);self.assertIsNone(journal['pid']);self.assertTrue(journal['confirmed'])
         self.spawn.assert_not_called();self.probe.assert_not_called();self.assertEqual(self.writes,['iptables-restore'])
+        stages=[name for name,_ in agent.read_json(self.runtime/'pair-manual-timing.json')['stages']]
+        self.assertEqual(stages,['claimed','diagnosed','attested','lease','journal','reordered','switched','verified','held','saved','done'])
         self.assertEqual(pair.read_state()['manual_hold'],'source');self.assertEqual(pair.intent()['mode'],'on')
         self.assertFalse((self.persist/'pair-auto-budget.json').exists(),'an owner click is not an automatic attempt')
 
@@ -107,6 +109,14 @@ class InstantManual(unittest.TestCase):
         self.assertEqual(self.current,['t','s'])
 
 
+class OneDurableJournalWrite(unittest.TestCase):
+    def test_instant_journal_marks_both_writers_at_once(self):
+        source=Path(n.__file__).read_text(encoding='utf-8')
+        body=source[source.index('def instant_manual('):source.index('def manual_stamp(')]
+        self.assertIn("'forward_policy_touched':True,'rtp_dispatched':True",body)
+        self.assertNotIn("journal[key]=True",body,'no extra flash write per dispatched writer')
+
+
 class Nap(unittest.TestCase):
     def test_a_queued_click_ends_the_pause_at_once(self):
         import tempfile,time
@@ -122,7 +132,8 @@ class Lease(unittest.TestCase):
         state={'id':'a'*32}
         with patch.object(manual.time,'time',return_value=NOW):
             self.assertEqual(manual.lease_until({'native_trial':'a'*32,'native_until':str(NOW+600)},state),NOW+600)
-            self.assertIsNone(manual.lease_until({'native_trial':'a'*32,'native_until':str(NOW+100)},state))
+            self.assertEqual(manual.lease_until({'native_trial':'a'*32,'native_until':str(NOW+100)},state),NOW+100)
+            self.assertIsNone(manual.lease_until({'native_trial':'a'*32,'native_until':str(NOW+20)},state))
             self.assertIsNone(manual.lease_until({'native_trial':'b'*32,'native_until':str(NOW+600)},state))
             self.assertIsNone(manual.lease_until({'native_trial':'a'*32,'native_until':'x'},state))
 

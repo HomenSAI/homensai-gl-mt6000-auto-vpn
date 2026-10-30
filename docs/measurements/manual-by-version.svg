@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 312" font-family="Segoe UI,Arial,sans-serif">
+<rect width="1000" height="312" fill="#ffffff"/>
+<text x="20" y="30" font-size="18" font-weight="700" fill="#14212e">Ручная кнопка при включённом Auto: от нажатия до готово / click to done</text>
+<line x1="150.0" x2="150.0" y1="52" y2="140" stroke="#d8d9d8"/>
+<text x="150.0" y="156" font-size="12" text-anchor="middle" fill="#4b5563">0 с</text>
+<line x1="327.8" x2="327.8" y1="52" y2="140" stroke="#d8d9d8"/>
+<text x="327.8" y="156" font-size="12" text-anchor="middle" fill="#4b5563">10 с</text>
+<line x1="505.6" x2="505.6" y1="52" y2="140" stroke="#d8d9d8"/>
+<text x="505.6" y="156" font-size="12" text-anchor="middle" fill="#4b5563">20 с</text>
+<line x1="683.3" x2="683.3" y1="52" y2="140" stroke="#d8d9d8"/>
+<text x="683.3" y="156" font-size="12" text-anchor="middle" fill="#4b5563">30 с</text>
+<line x1="861.1" x2="861.1" y1="52" y2="140" stroke="#d8d9d8"/>
+<text x="861.1" y="156" font-size="12" text-anchor="middle" fill="#4b5563">40 с</text>
+<text x="140" y="82" font-size="14" text-anchor="end" fill="#14212e">beta7</text>
+<rect x="150.0" y="64" width="81.8" height="28" fill="#7c3aed"><title>Запрос кнопки / button request: 4.6 с</title></rect>
+<text x="190.9" y="83" font-size="12" text-anchor="middle" fill="#ffffff">4.6</text>
+<rect x="231.8" y="64" width="49.8" height="28" fill="#9aa3ad"><title>Ожидание Auto / waiting for Auto: 2.8 с</title></rect>
+<text x="256.7" y="83" font-size="12" text-anchor="middle" fill="#ffffff">2.8</text>
+<rect x="281.6" y="64" width="215.1" height="28" fill="#e0b100"><title>Проверки до / checks before: 12.1 с</title></rect>
+<text x="389.1" y="83" font-size="12" text-anchor="middle" fill="#ffffff">12.1</text>
+<rect x="496.7" y="64" width="97.8" height="28" fill="#2f9e57"><title>Смена маршрута / route change: 5.5 с</title></rect>
+<text x="545.6" y="83" font-size="12" text-anchor="middle" fill="#ffffff">5.5</text>
+<rect x="594.4" y="64" width="279.1" height="28" fill="#e07800"><title>Проверки после / checks after: 15.7 с</title></rect>
+<text x="734.0" y="83" font-size="12" text-anchor="middle" fill="#ffffff">15.7</text>
+<rect x="873.6" y="64" width="26.7" height="28" fill="#2563eb"><title>Запись и отображение / saving: 1.5 с</title></rect>
+<text x="906.2" y="83" font-size="13" font-weight="700" fill="#14212e">42.2 с</text>
+<text x="140" y="122" font-size="14" text-anchor="end" fill="#14212e">beta8</text>
+<rect x="150.0" y="104" width="62.2" height="28" fill="#7c3aed"><title>Запрос кнопки / button request: 3.5 с</title></rect>
+<text x="181.1" y="123" font-size="12" text-anchor="middle" fill="#ffffff">3.5</text>
+<rect x="212.2" y="104" width="30.2" height="28" fill="#9aa3ad"><title>Ожидание Auto / waiting for Auto: 1.7 с</title></rect>
+<rect x="242.4" y="104" width="94.2" height="28" fill="#e0b100"><title>Проверки до / checks before: 5.3 с</title></rect>
+<text x="289.6" y="123" font-size="12" text-anchor="middle" fill="#ffffff">5.3</text>
+<rect x="336.7" y="104" width="5.3" height="28" fill="#2f9e57"><title>Смена маршрута / route change: 0.3 с</title></rect>
+<rect x="342.0" y="104" width="65.8" height="28" fill="#e07800"><title>Проверки после / checks after: 3.7 с</title></rect>
+<text x="374.9" y="123" font-size="12" text-anchor="middle" fill="#ffffff">3.7</text>
+<rect x="407.8" y="104" width="37.3" height="28" fill="#2563eb"><title>Запись и отображение / saving: 2.1 с</title></rect>
+<text x="426.4" y="123" font-size="12" text-anchor="middle" fill="#ffffff">2.1</text>
+<text x="451.1" y="123" font-size="13" font-weight="700" fill="#14212e">16.6 с</text>
+<rect x="150" y="165" width="14" height="14" fill="#7c3aed"/><text x="172" y="176" font-size="13" fill="#14212e">Запрос кнопки / button request</text>
+<rect x="150" y="187" width="14" height="14" fill="#9aa3ad"/><text x="172" y="198" font-size="13" fill="#14212e">Ожидание Auto / waiting for Auto</text>
+<rect x="150" y="209" width="14" height="14" fill="#e0b100"/><text x="172" y="220" font-size="13" fill="#14212e">Проверки до / checks before</text>
+<rect x="150" y="231" width="14" height="14" fill="#2f9e57"/><text x="172" y="242" font-size="13" fill="#14212e">Смена маршрута / route change</text>
+<rect x="150" y="253" width="14" height="14" fill="#e07800"/><text x="172" y="264" font-size="13" fill="#14212e">Проверки после / checks after</text>
+<rect x="150" y="275" width="14" height="14" fill="#2563eb"/><text x="172" y="286" font-size="13" fill="#14212e">Запись и отображение / saving</text>
+</svg>

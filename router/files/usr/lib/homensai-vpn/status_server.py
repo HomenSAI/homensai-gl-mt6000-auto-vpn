@@ -9,6 +9,10 @@ Safety contract:
 - Only the read methods in METHODS with no arguments. Anything else, any malformed request and any
   failure while computing answers FALLBACK: the caller then runs agent.py exactly as before, so error
   codes, write methods and rpcd ACLs are unchanged.
+- One write method, the owner's manual channel click (WRITERS: pair_manual), is answered by the same
+  function agent.py calls, in this already running process (beta8 measured 3.5 s of python start-up per
+  click). It only queues the click; the supervisor validates and switches. FALLBACK is possible only before
+  the function runs; once it ran, any failure is answered as an unconfirmed request, never repeated.
 - The socket is 0600 inside the 0700 runtime directory, peers must have this process' user id, and the
   socket is removed as soon as the monitor stops.
 - A snapshot is served only while every control file (Auto/Stop requests, control revision, manual
@@ -28,6 +32,8 @@ import threading
 import time
 
 METHODS = frozenset(('status', 'events', 'history', 'auto_live'))
+WRITERS = frozenset(('pair_manual',))
+WRITE_FAILED = {'accepted': False, 'queued': False, 'completed': False, 'blockers': ['PAIR-MANUAL-REQUEST-UNCONFIRMED']}
 CACHED = ('status', 'events', 'history')
 NAME = 'status.sock'
 REQUEST_LIMIT = 65537 + 32       # method line plus the same 65537 request bytes agent.py reads
@@ -43,7 +49,8 @@ IO_TIMEOUT = 2.0
 NATIVE_LIMIT = 65536
 
 # Written while answering (caches) or private to the RPC throttle: never a reason to recompute.
-SELF_WRITTEN = frozenset(('pair-manual-kernel-cache.json', 'native-history-public.json', 'rpc-throttle.json'))
+SELF_WRITTEN = frozenset(('pair-manual-kernel-cache.json', 'native-history-public.json', 'rpc-throttle.json',
+                          'pair-manual-timing.json'))
 # Rewritten by the two daemons on every pass/tick; they refresh on the poll schedule instead.
 OBSERVATION = frozenset(('status.json', 'native-status.json', 'speed-traffic.json', 'checkpoint.json',
                          'checkpoint.backup.json', 'latency-history.json', 'ping-response-history.json',
@@ -79,8 +86,9 @@ class Entry:
 
 class StatusServer:
     def __init__(self, runtime, persist, builders, live, read_json, decode=None, stopping=None,
-                 configs=CONFIGS, clock=time.monotonic):
+                 configs=CONFIGS, clock=time.monotonic, writers=None):
         self.runtime, self.persist = runtime, persist
+        self.writers = {name: value for name, value in (writers or {}).items() if name in WRITERS}
         self.builders, self.live, self.read_json = dict(builders), live, read_json
         if decode is None:
             from rpc_input import decode_request as decode
@@ -267,6 +275,8 @@ class StatusServer:
     # ---- answers -----------------------------------------------------------------------------------
     def answer(self, method, request):
         """The reply bytes for one connection: OK + JSON line, or FALLBACK."""
+        if method in self.writers:
+            return self.write(method, request)
         if method not in METHODS or self._stopping():
             return FALLBACK
         try:
@@ -310,6 +320,24 @@ class StatusServer:
                 if remaining <= 0:
                     return FALLBACK
                 self._cond.wait(remaining)
+
+    def write(self, method, request):
+        if self._stopping():
+            return FALLBACK
+        try:
+            arguments = self.decode(request)
+        except ValueError:
+            return FALLBACK              # agent.py reports the request-format code
+        if not isinstance(arguments, dict):
+            return FALLBACK
+        try:
+            result = self.writers[method](arguments)
+            body = json.dumps(result).encode('ascii')
+            if not isinstance(result, dict):
+                raise ValueError('reply')
+        except Exception:
+            body = json.dumps(WRITE_FAILED).encode('ascii')   # it may have queued: never run it twice
+        return OK + body + b'\n'
 
     def compute(self, method):
         current = self.signature()

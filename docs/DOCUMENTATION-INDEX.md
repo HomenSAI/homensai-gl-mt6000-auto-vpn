@@ -97,6 +97,8 @@ Current instructions describe source behavior. Installed state requires a separa
 |[docs/LICENSING-AND-TERMS.md](LICENSING-AND-TERMS.md)|preserved-legal|
 |[docs/LIVE-SPEED-ALPHA23-2026-10-25.md](LIVE-SPEED-ALPHA23-2026-10-25.md)|versioned-evidence|
 |[docs/LOCAL-ACCESS.md](LOCAL-ACCESS.md)|current|
+|[docs/MEASUREMENTS.en.md](MEASUREMENTS.en.md)|versioned-evidence|
+|[docs/MEASUREMENTS.ru.md](MEASUREMENTS.ru.md)|versioned-evidence|
 |[docs/MT3000-AUTO-TEST-REPORT-2026-10-23.md](MT3000-AUTO-TEST-REPORT-2026-10-23.md)|historical-reference|
 |[docs/MT3000-OPERATIONS-2026-10-22.md](MT3000-OPERATIONS-2026-10-22.md)|historical-reference|
 |[docs/NATIVE-EXPERIMENTAL.md](NATIVE-EXPERIMENTAL.md)|historical-reference|

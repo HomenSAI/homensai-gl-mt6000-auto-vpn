@@ -1744,49 +1744,61 @@ def instant_manual(backend,selection,until,control_revision,manual_request_id,re
              'control_revision':control_revision,'manual_request_id':manual_request_id,'pair_transition':pair_context,
              'vendor_profiles':{role:{key:selection[role].get(key) for key in ('id','protocol','interface','vendor_tunnel_id','vendor_generation')} for role in ('source','target')},
              'kernel_before_fingerprint':fingerprint,'kernel_before_verified':kernel_before.get('verified') is True,
-             'forward_policy_touched':False,'rtp_dispatched':False,'transition_source':source,'manual_instant':True}
+             # Both writers are marked as dispatched in this single durable write (one flash write instead of three):
+             # recovery then treats the kernel as possibly changed, the conservative reading. Which writer really
+             # ran is kept in memory for this process's own error handling.
+             'forward_policy_touched':True,'rtp_dispatched':True,'transition_source':source,'manual_instant':True}
     def publish_pair(value):
         publish(dict(value,transition_source=source,destination_role=pair_destination,destination_profile_id=selection[pair_destination]['id']))
     with control_lock(RUNTIME):
         require_control_revision(control_revision)
         journal_write(journal)
+    manual_stamp('journal')
     publish_pair(dict(pair_event_fields(journal),state='APPLYING',source=journal['source'],target=journal['target'],trial=False,reason='OPERATOR-MANUAL',
-                      manual_instant=True,transition_kind=transition_kind(selection['source'],selection['target'])))
+                      manual_instant=True,transition_kind=transition_kind(selection['source'],selection['target'])))  # starts the history attempt
+    wrote=[]
     def write_command(args,timeout=5):
         require_control_revision(control_revision)
-        key='rtp_dispatched' if args[0] in ('/usr/bin/rtp2.sh','iptables-restore') else 'forward_policy_touched'
-        if journal.get(key) is not True:
-            journal[key]=True;journal_write(journal)  # recovery must know a writer was dispatched
+        wrote.append(args[0])
         return forward_dispatch(args,control_revision,timeout)
     try:
         backend.reorder(after,write_command=write_command)
+        manual_stamp('reordered')
         backend.apply(write_command=write_command)
-        switched=time.time()
+        switched=time.time();manual_stamp('switched')
         if backend.order()!=(after,selection['hash']):raise Refused('POLICY-CHANGED-DURING-APPLY')
         kernel=backend.attest_policy(dict(selection,order=list(after)))
         if kernel.get('verified') is not True or kernel.get('role')!=pair_destination:raise Refused('KERNEL-POLICY-UNVERIFIED')
         if not backend.guard_exists():backend.guard(backend.devices(),control_revision=control_revision)
+        manual_stamp('verified')
         with control_lock(RUNTIME):
             require_control_revision(control_revision)
             journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL',confirmed=time.time(),reserve_healthy=True,
                            instant_seconds=round(switched-wall,3))
             journal_write(journal)
+        manual_stamp('held')
     except BaseException as error:
         code=str(error) if isinstance(error,Refused) and re.fullmatch(r'[A-Z0-9_-]{1,96}',str(error)) else 'NATIVE-SYSTEM-001'
         journal['failure_detail']=record_attempt_failure(tx,'instant',error,mono);journal['failure_code']=code
-        if journal.get('forward_policy_touched') is not True and journal.get('rtp_dispatched') is not True:
+        if not wrote:
             journal.update(phase='ROLLED-BACK',reason='FAILED-BEFORE-APPLY',restored_order=list(before),finished=time.time());journal_write(journal)
             publish_pair(dict(pair_event_fields(journal,completed=True,outcome='refused',restoring=True),state='ROLLED-BACK',reason='TRANSACTION-FAILED',
                               source=journal['source'],target=journal['target'],blockers=[code]))
         else:
             journal_write(journal);rollback_counted(backend,journal,'TRANSACTION-FAILED')
         raise
-    value=dict(pair_event_fields(journal,completed=True,outcome='committed'),state='OBSERVING' if pair_destination=='source' else 'STOPPED-ON-RESERVE',
-               reason='OPERATOR-MANUAL',source=journal['source'],target=journal['target'],original_restored=False,reserve_healthy=True,trial=False,tx=tx,
-               readiness_verified=True,kernel_policy_verified=True,kernel_proof=kernel,manual_instant=True,switch_seconds=journal['instant_seconds'])
-    try:publish_pair(value)
-    except (Refused,OSError,ValueError,KeyError,TypeError):atomic_json(STATE,dict(value,time=time.time(),history_error='HISTORY-001'))
-    return kernel
+    return kernel  # the caller saves the hold and publishes the one completed event (one history write)
+
+
+def manual_stamp(name,request_id=None):
+    """Stage times of the current owner click in RAM (pair-manual-timing.json): measurement only, never fails."""
+    try:
+        path=RUNTIME/'pair-manual-timing.json'
+        row=read_json(path,{})
+        if request_id is not None and (not isinstance(row,dict) or row.get('request_id')!=request_id):row={'request_id':request_id,'stages':[]}
+        if not isinstance(row,dict) or not isinstance(row.get('stages'),list) or len(row['stages'])>=32:return
+        row['stages'].append([name,round(time.time(),3)]);atomic_json(path,row)
+    except (OSError,ValueError,TypeError):pass
 
 
 def nap(seconds):
@@ -1796,7 +1808,9 @@ def nap(seconds):
         left=end-time.monotonic()
         if left<=0:return
         try:
-            if read_json(RUNTIME/'pair-manual-control.json',{}).get('state')=='QUEUED':return
+            row=read_json(RUNTIME/'pair-manual-control.json',{})
+            if row.get('state')=='QUEUED':
+                manual_stamp('woke',row.get('id'));return
         except (OSError,ValueError,AttributeError):pass
         time.sleep(min(.2,left))
 

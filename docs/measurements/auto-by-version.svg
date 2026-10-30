@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 286" font-family="Segoe UI,Arial,sans-serif">
+<rect width="1000" height="286" fill="#ffffff"/>
+<text x="20" y="30" font-size="18" font-weight="700" fill="#14212e">Auto: от сбоя до трафика на резерве (уровень 3) / fault to traffic on reserve</text>
+<line x1="150.0" x2="150.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="150.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">0 с</text>
+<line x1="250.0" x2="250.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="250.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">20 с</text>
+<line x1="350.0" x2="350.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="350.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">40 с</text>
+<line x1="450.0" x2="450.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="450.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">60 с</text>
+<line x1="550.0" x2="550.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="550.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">80 с</text>
+<line x1="650.0" x2="650.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="650.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">100 с</text>
+<line x1="750.0" x2="750.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="750.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">120 с</text>
+<line x1="850.0" x2="850.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="850.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">140 с</text>
+<line x1="950.0" x2="950.0" y1="52" y2="180" stroke="#d8d9d8"/>
+<text x="950.0" y="196" font-size="12" text-anchor="middle" fill="#4b5563">160 с</text>
+<text x="140" y="82" font-size="14" text-anchor="end" fill="#14212e">alpha82 · rtp2</text>
+<rect x="150.0" y="64" width="147.5" height="28" fill="#9aa3ad"><title>Сбой ещё не замечен / not yet noticed: 29.5 с</title></rect>
+<text x="223.8" y="83" font-size="12" text-anchor="middle" fill="#ffffff">29.5</text>
+<rect x="297.5" y="64" width="316.5" height="28" fill="#e0b100"><title>Подтверждение сбоя / confirming: 63.3 с</title></rect>
+<text x="455.8" y="83" font-size="12" text-anchor="middle" fill="#ffffff">63.3</text>
+<rect x="614.0" y="64" width="302.5" height="28" fill="#e07800"><title>Само переключение / switch itself: 60.5 с</title></rect>
+<text x="765.2" y="83" font-size="12" text-anchor="middle" fill="#ffffff">60.5</text>
+<text x="922.5" y="83" font-size="13" font-weight="700" fill="#14212e">153.3 с</text>
+<text x="140" y="122" font-size="14" text-anchor="end" fill="#14212e">beta5 · fast</text>
+<rect x="150.0" y="104" width="140.0" height="28" fill="#9aa3ad"><title>Сбой ещё не замечен / not yet noticed: 28.0 с</title></rect>
+<text x="220.0" y="123" font-size="12" text-anchor="middle" fill="#ffffff">28.0</text>
+<rect x="290.0" y="104" width="285.0" height="28" fill="#e0b100"><title>Подтверждение сбоя / confirming: 57.0 с</title></rect>
+<text x="432.5" y="123" font-size="12" text-anchor="middle" fill="#ffffff">57.0</text>
+<rect x="575.0" y="104" width="220.0" height="28" fill="#e07800"><title>Само переключение / switch itself: 44.0 с</title></rect>
+<text x="685.0" y="123" font-size="12" text-anchor="middle" fill="#ffffff">44.0</text>
+<text x="801.0" y="123" font-size="13" font-weight="700" fill="#14212e">129.0 с</text>
+<text x="140" y="162" font-size="14" text-anchor="end" fill="#14212e">beta7 · fast</text>
+<rect x="150.0" y="144" width="141.5" height="28" fill="#9aa3ad"><title>Сбой ещё не замечен / not yet noticed: 28.3 с</title></rect>
+<text x="220.8" y="163" font-size="12" text-anchor="middle" fill="#ffffff">28.3</text>
+<rect x="291.5" y="144" width="341.5" height="28" fill="#e0b100"><title>Подтверждение сбоя / confirming: 68.3 с</title></rect>
+<text x="462.2" y="163" font-size="12" text-anchor="middle" fill="#ffffff">68.3</text>
+<rect x="633.0" y="144" width="196.5" height="28" fill="#e07800"><title>Само переключение / switch itself: 39.3 с</title></rect>
+<text x="731.2" y="163" font-size="12" text-anchor="middle" fill="#ffffff">39.3</text>
+<text x="835.5" y="163" font-size="13" font-weight="700" fill="#14212e">135.9 с</text>
+<rect x="150" y="205" width="14" height="14" fill="#9aa3ad"/><text x="172" y="216" font-size="13" fill="#14212e">Сбой ещё не замечен / not yet noticed</text>
+<rect x="150" y="227" width="14" height="14" fill="#e0b100"/><text x="172" y="238" font-size="13" fill="#14212e">Подтверждение сбоя / confirming</text>
+<rect x="150" y="249" width="14" height="14" fill="#e07800"/><text x="172" y="260" font-size="13" fill="#14212e">Само переключение / switch itself</text>
+</svg>

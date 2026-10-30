@@ -220,6 +220,31 @@ class Requests(ServerCase):
         self.assertEqual(status_server.splice(b'{}', 1.0), b'{"served_from":"memory","served_age":1.0}')
 
 
+class Writer(ServerCase):
+    """The owner's manual click is answered in the running monitor by the same function agent.py calls."""
+    def test_click_is_answered_once_by_the_resident_function(self):
+        calls = []
+        server = self.server(writers={'pair_manual': lambda arguments: calls.append(arguments) or {'accepted': True, 'queued': True}})
+        body = self.ask(server, 'pair_manual', b'{"direction":"reserve","control_revision":"' + b'a' * 32 + b'"}')
+        self.assertEqual(json.loads(body), {'accepted': True, 'queued': True})
+        self.assertEqual(calls, [{'direction': 'reserve', 'control_revision': 'a' * 32}])
+
+    def test_a_failure_after_the_call_is_never_repeated_through_agent(self):
+        def broken(arguments):
+            raise RuntimeError('after queueing')
+        server = self.server(writers={'pair_manual': broken})
+        reply = server.answer('pair_manual', b'{"direction":"reserve"}')
+        self.assertTrue(reply.startswith(status_server.OK), 'answered here: agent.py would queue a second click')
+        self.assertEqual(json.loads(reply[3:])['blockers'], ['PAIR-MANUAL-REQUEST-UNCONFIRMED'])
+
+    def test_malformed_click_and_unknown_writers_go_to_agent(self):
+        server = self.server(writers={'pair_manual': lambda arguments: {'accepted': True}, 'native_start': lambda arguments: {}})
+        self.assertEqual(server.answer('pair_manual', b'{'), status_server.FALLBACK)
+        self.assertEqual(server.answer('native_start', b'{}'), status_server.FALLBACK, 'only the listed click')
+        server.close()
+        self.assertEqual(server.answer('pair_manual', b'{}'), status_server.FALLBACK, 'stopping monitor: agent.py')
+
+
 class Freshness(ServerCase):
     def first(self, server):
         value, _ = served(self.ask(server))
@@ -544,8 +569,10 @@ class Signature(unittest.TestCase):
         read = set(acl['read']['ubus']['homensai-vpn'])
         write = set(acl['write']['ubus']['homensai-vpn'])
         self.assertLessEqual(status_server.METHODS, read)
-        self.assertFalse(status_server.METHODS & write, 'the memory path serves read-ACL methods only')
-        self.assertEqual(set(status_client.METHODS), status_server.METHODS)
+        self.assertFalse(status_server.METHODS & write, 'the read path serves read-ACL methods only')
+        self.assertEqual(status_server.WRITERS, {'pair_manual'})
+        self.assertLessEqual(status_server.WRITERS, write, 'the one write method keeps its write ACL in rpcd')
+        self.assertEqual(set(status_client.METHODS), status_server.METHODS | status_server.WRITERS)
 
 
 if __name__ == '__main__':

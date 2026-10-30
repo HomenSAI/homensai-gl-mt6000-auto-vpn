@@ -109,6 +109,42 @@ class HistoryError(ValueError):
     pass
 
 
+# Resident copy of the history for its long-lived writer (the Auto supervisor). Measured on the MT3000 (30 Oct 2026):
+# the file is 1.27 MB; every recorded transition parsed and checksummed it (0.42 s), encoded it four times (~0.19 s
+# each) and wrote it twice with fsync (main + full backup copy, 2.5 MB of flash per event, ~1.5-2 s per event and
+# several events per switch). The writer now keeps the data it last wrote, keyed by both files' inode, size and mtime:
+# any other writer (statistics reset, a restore, a second process) replaces a file, changes the key and forces a
+# normal full load. The previous main file becomes the backup by a rename instead of a second full write.
+_WRITER_CACHE={}
+
+
+def _file_key(path):
+    try:info=os.lstat(str(path));return (info.st_ino,info.st_size,info.st_mtime_ns)
+    except FileNotFoundError:return None
+
+
+def atomic_bytes(path,raw):
+    """atomic() for an already encoded value."""
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    if path.is_symlink() or path.parent.is_symlink():raise HistoryError('HISTORY-PATH')
+    fd,pending=tempfile.mkstemp(dir=str(path.parent),prefix='.'+path.name+'.',suffix='.pending')
+    try:
+        with os.fdopen(fd,'wb') as stream:
+            stream.write(raw);stream.flush();os.fsync(stream.fileno())
+        os.replace(pending,str(path))
+    except BaseException:
+        with contextlib.suppress(OSError):os.unlink(pending)
+        raise
+    fd=os.open(str(path.parent),os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(fd)
+    finally:os.close(fd)
+
+
+def envelope_bytes(raw):
+    """encoded(History.envelope(data)) built from encoded(data) without encoding the data again (sorted keys)."""
+    return b'{"data":'+raw+b',"schema":1,"sha256":"'+hashlib.sha256(raw).hexdigest().encode()+b'"}'
+
+
 def encoded(value):
     return json.dumps(value,sort_keys=True,separators=(',',':'),allow_nan=False).encode()
 
@@ -288,12 +324,33 @@ class History:
         finally:
             os.close(fd)
     def record(self,value,now=None):
-        with self.locked():return self._record(value,now)
+        with self.locked():
+            try:return self._record(value,now)
+            except BaseException:
+                _WRITER_CACHE.pop(str(self.path),None)  # the resident copy may be half-changed: reload next time
+                raise
+    def _writer_load(self):
+        """The resident copy when both files are exactly what this process last wrote, else a full load()."""
+        cached=_WRITER_CACHE.pop(str(self.path),None)
+        if cached is not None and cached['key']==(_file_key(self.path),_file_key(self.backup)) and cached['detail_days']==self.detail_days:
+            self.restored=False;self._from_main=True
+            return cached['data']
+        data=self.load();self._from_main=not self.restored and _file_key(self.path) is not None
+        return data
+    def _write_new(self,data,raw):
+        """Main := new data, backup := the previous main (renamed, not rewritten); one full flash write per event."""
+        if self._from_main and _file_key(self.path) is not None:
+            os.replace(str(self.path),str(self.backup))  # until the new main lands, load() reads this backup
+        else:
+            atomic(self.backup,self._old())  # first write after a backup restore or a legacy upgrade: full copy
+        atomic_bytes(self.path,envelope_bytes(raw))
+        _WRITER_CACHE[str(self.path)]={'key':(_file_key(self.path),_file_key(self.backup)),'data':data,'detail_days':self.detail_days}
     def _record(self,value,now=None):
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
-        data=self.load()
+        data=self._writer_load()
         legacy=data.get('counter_version')!=2
+        if legacy:self._from_main=False  # a legacy upgrade keeps the full backup copy of the old format
         self.migrate(data)
         if data['last_time'] is not None and now<data['last_time']:now=data['last_time']
         state=value.get('state','UNKNOWN')
@@ -361,8 +418,10 @@ class History:
             if data.get('daily_since') is None:
                 old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
                 atomic(self.backup,old);atomic(self.path,self.envelope(data))
+            # Unchanged or just rewritten from this very data: the resident copy stays valid for the next event.
+            _WRITER_CACHE[str(self.path)]={'key':(_file_key(self.path),_file_key(self.backup)),'data':data,'detail_days':self.detail_days}
             return False
-        old=self.envelope(json.loads(encoded(data)))
+        if not self._from_main:self._legacy_old=self.envelope(json.loads(encoded(data)))
         if data['sequence']>=2**53-1:raise HistoryError('HISTORY-SEQUENCE-LIMIT')
         data['active_attempt']=active;data['retry_episode']=episode
         item.update(time=now,sequence=data['sequence']+1)
@@ -379,12 +438,16 @@ class History:
         self.prune(data,now)
         # New phase evidence must not make our own next read exceed its bound.
         # Keep aggregate counters; trim only oldest detailed event observations.
-        while len(data['events'])>1 and len(encoded(data))>self.RETENTION_BYTES:
+        raw=encoded(data)
+        while len(data['events'])>1 and len(raw)>self.RETENTION_BYTES:
             del data['events'][0]
             data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+1
-        if len(encoded(data))>self.RETENTION_BYTES:raise HistoryError('HISTORY-SIZE')
-        atomic(self.backup,old);atomic(self.path,self.envelope(data))
+            raw=encoded(data)
+        if len(raw)>self.RETENTION_BYTES:raise HistoryError('HISTORY-SIZE')
+        self._write_new(data,raw)
         return True
+    def _old(self):
+        return self._legacy_old
     def public(self,data=None,now=None):
         data=self.load() if data is None else json.loads(encoded(data))
         self.migrate(data);self.prune(data,now if now is not None else data['last_time'] if data['last_time'] is not None else time.time())
