@@ -240,7 +240,7 @@ function sweepStates(){
   run(()=>collect('measurements',c.renderMeasurements()));
   if(missing.length)logCrash.push('sweep: functions not found in the page: '+missing.join(', '));
 }
-const TABS=['start','home','overview','channels','tests','statistics','traffic','services','events','readiness','settings','learn','help'];
+const TABS=['start','home','overview','channels','tests','statistics','traffic','services','events','switches','readiness','settings','learn','help'];
 const logCrash=[];
 async function renderPages(kind,language,rpcMode,interact){
   const s=sandbox(language,rpcMode),inv=inventoryFixture(termsVersion?termsVersion[1]:'');
@@ -277,7 +277,7 @@ async function renderPages(kind,language,rpcMode,interact){
   }
   if(!interact&&language==='en'&&kind==='ok'){
     const all=root.text();
-    for(const needle of ['Measured results of Auto mode','Probe level and automatic boost','DNS check did not pass','Traffic this month','Channels and servers'])assert(all.includes(needle),'the audit reached: '+needle);
+    for(const needle of ['Measured results of Auto mode','Router switch average','Probe level and automatic boost','DNS check did not pass','Traffic this month','Channels and servers'])assert(all.includes(needle),'the audit reached: '+needle);
   }
   return {s,root};
 }

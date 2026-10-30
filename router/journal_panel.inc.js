@@ -558,7 +558,7 @@ function journalMessage(entry,status,hideCode){
     text+=' · HTTPS '+entry.probe.https_success+'/3 · '+(entry.probe.dns_ok===true?bi('DNS passed','DNS прошёл'):entry.probe.dns_ok===false?bi('DNS failed','DNS не прошёл'):bi('DNS result unavailable','Результат DNS не сохранён'));
     entry.probe.checks.filter(function(c){return c.result==='http-unsupported';}).forEach(function(c){text+=' · '+bi('Check endpoint incompatible: ','Несовместимый проверочный адрес: ')+c.target+(c.http_status?' (HTTP '+c.http_status+')':'');});
   }
-  return text+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+code;
+  return text+(entry.timing?' · ⏱ '+entry.timing:'')+(entry.profile?' · '+(p?serverTitle(p):entry.profile):'')+(sourced?' · '+journalSourceLabel(entry.action_source):'')+(switching?' · '+journalLatencyText(entry):'')+code;
 }
 function journalDescriptionContent(entry,status,extra){
   var nodes=[journalDescriptionLink(entry,status,false,extra),' · ',E('a',{'href':'#events','class':'hv-errlink','data-journal-code':journalDefinition(entry).code,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(journalDefinition(entry).code);}},journalDefinition(entry).code)];
@@ -622,7 +622,7 @@ function journalRows(status,stored,now){
       var transition=savedTransition(e),delayProfile=transition.present?(transition.changed&&!transition.reapply&&transition.to?pair[transition.to]:null):(returnPrimary||['RESTORING','ROLLED-BACK'].indexOf(state)>=0)?pair.source:pair.target;
       var role=['source','target'].indexOf(e.role)>=0?e.role:null;
       if(!role&&profile&&pair.source&&pair.target&&pair.source!==pair.target)role=profile===pair.source?'source':profile===pair.target?'target':null;
-      var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0],probe:probe};
+      var record={key:key,time:e.time,state:state,kind:journalToken(e.kind,'OBSERVATION'),code:code,profile:profile,role:role,source:pair.source,target:pair.target,original_restored:e.original_restored===true,return_primary:returnPrimary,latency:journalLatencySample(e.latency,delayProfile,e.time),action_source:actionSource,level:level,origin:group[0],probe:probe,outage_seconds:Number.isFinite(e.observed_duration_seconds)&&e.observed_duration_seconds>=0?e.observed_duration_seconds:null};
       if(Object.prototype.hasOwnProperty.call(e,'website_response')){
         record.website_response={};if(journalWebsiteSample(e.website_response,delayProfile,e.time)){['profile','metric','target_set','state','time','avg_ms','successes','attempted','interface','generation','vendor_tunnel_id'].forEach(function(k){record.website_response[k]=e.website_response[k];});record.website_response.site_ms=e.website_response.site_ms.slice();}
       }
@@ -639,6 +639,7 @@ function journalRows(status,stored,now){
   });
   var request=status.auto_control||{};
   if(request.requested==='on'||request.requested==='off')control(request.request_action,request.requested_at,request.request_source);
+  if(typeof switchTimeline==='function')switchTimeline(result);
   return result.sort(function(a,b){return b.time-a.time||a.key.localeCompare(b.key);});
 }
 function filteredJournalRows(rows,status,query,sort,desc){

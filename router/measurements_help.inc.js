@@ -21,19 +21,29 @@ var MEASURE_PHASES=[['Fault not yet noticed','Сбой ещё не замече�
   ['Switching to the reserve','Переключение на резерв','#e07800'],['Traffic on the reserve','Трафик на резерве','#2f9e57'],['Returning to the primary','Возврат на основной','#2563eb']];
 function measureMean(values){values=values.filter(Number.isFinite);return values.length?values.reduce(function(a,b){return a+b;},0)/values.length:null;}
 function measureSvg(tag,attrs){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs||{}).forEach(function(k){n.setAttribute(k,String(attrs[k]));});return n;}
-function measureChart(set){
-  var max=Math.max.apply(null,set.rows.map(function(r){return r[5];}))*1.05,row=26,top=26,left=64,width=900,h=top+set.rows.length*row+34;
-  if(typeof document==='undefined'||!document.createElementNS)return E('p',{},'');
-  var svg=measureSvg('svg',{viewBox:'0 0 1000 '+h,role:'img','aria-label':bi(set.title[0],set.title[1]),style:'width:100%;height:auto;display:block'});
-  for(var t=0;t<=max;t+=30){var x=left+t/max*width;svg.appendChild(measureSvg('line',{x1:x,x2:x,y1:top-6,y2:h-28,stroke:'#d8d9d8','stroke-width':1}));var lab=measureSvg('text',{x:x,y:h-12,'text-anchor':'middle','font-size':11,fill:'currentColor'});lab.textContent=t+bi(' s',' с');svg.appendChild(lab);}
-  var fx=left+set.fault/max*width;svg.appendChild(measureSvg('line',{x1:fx,x2:fx,y1:top-10,y2:h-28,stroke:'#c0392b','stroke-width':2,'stroke-dasharray':'5 3'}));
-  var fl=measureSvg('text',{x:fx+4,y:top-12,'font-size':11,fill:'#c0392b'});fl.textContent=bi('fault ends','конец сбоя');svg.appendChild(fl);
-  set.rows.forEach(function(r,i){
-    var y=top+i*row,edges=[0,r[1],r[2],r[3],r[4],r[5]],name=measureSvg('text',{x:left-6,y:y+15,'text-anchor':'end','font-size':11,fill:'currentColor'});name.textContent=r[0];svg.appendChild(name);
-    for(var k=0;k<5;k++){var a=left+edges[k]/max*width,b=left+edges[k+1]/max*width,rect=measureSvg('rect',{x:a,y:y+3,width:Math.max(1,b-a),height:row-8,fill:MEASURE_PHASES[k][2]}),tip=measureSvg('title');
-      tip.textContent=bi(MEASURE_PHASES[k][0],MEASURE_PHASES[k][1])+': '+edges[k]+'–'+edges[k+1]+bi(' s',' с');rect.appendChild(tip);svg.appendChild(rect);}
+// Shared stacked phase chart (Help measurements and Advanced > Switch statistics). Each row: {label,segs:[{k,from,to,tip}]},
+// from/to are seconds on the chart axis; k indexes MEASURE_PHASES. A marker draws a dashed vertical line.
+function phaseChart(rows,opts){
+  opts=opts||{};if(typeof document==='undefined'||!document.createElementNS)return E('p',{},'');
+  var ends=[30,opts.marker?opts.marker.at:0];rows.forEach(function(r){r.segs.forEach(function(s){ends.push(s.to);});});
+  var max=Math.max.apply(null,ends)*1.05,row=26,top=26,left=opts.left||64,width=964-left,h=top+Math.max(1,rows.length)*row+34;
+  var step=[10,15,30,60,120,300,600,1800,3600,7200,21600].find(function(v){return max/v<=12;})||43200;
+  var svg=measureSvg('svg',{viewBox:'0 0 1000 '+h,role:'img','aria-label':opts.title||'',style:'width:100%;height:auto;display:block'});
+  for(var t=0;t<=max;t+=step){var x=left+t/max*width;svg.appendChild(measureSvg('line',{x1:x,x2:x,y1:top-6,y2:h-28,stroke:'#d8d9d8','stroke-width':1}));var lab=measureSvg('text',{x:x,y:h-12,'text-anchor':'middle','font-size':11,fill:'currentColor'});lab.textContent=t<600?t+bi(' s',' с'):Math.round(t/60)+bi(' min',' мин');svg.appendChild(lab);}
+  if(opts.marker){var fx=left+opts.marker.at/max*width;svg.appendChild(measureSvg('line',{x1:fx,x2:fx,y1:top-10,y2:h-28,stroke:'#c0392b','stroke-width':2,'stroke-dasharray':'5 3'}));
+    var fl=measureSvg('text',{x:fx+4,y:top-12,'font-size':11,fill:'#c0392b'});fl.textContent=opts.marker.label;svg.appendChild(fl);}
+  rows.forEach(function(r,i){
+    var y=top+i*row,name=measureSvg('text',{x:left-6,y:y+15,'text-anchor':'end','font-size':11,fill:'currentColor'});name.textContent=r.label;svg.appendChild(name);
+    r.segs.forEach(function(sg){var a=left+sg.from/max*width,b=left+sg.to/max*width,rect=measureSvg('rect',{x:a,y:y+3,width:Math.max(1,b-a),height:row-8,fill:MEASURE_PHASES[sg.k][2],'data-phase':sg.k}),tip=measureSvg('title');
+      if(sg.open)rect.setAttribute('fill-opacity','0.55');tip.textContent=bi(MEASURE_PHASES[sg.k][0],MEASURE_PHASES[sg.k][1])+': '+sg.tip;rect.appendChild(tip);svg.appendChild(rect);
+      if(sg.label&&b-a>=46){var lt=measureSvg('text',{x:(a+b)/2,y:y+15,'text-anchor':'middle','font-size':10,fill:'#fff'});lt.textContent=sg.label;svg.appendChild(lt);}});
   });
   return svg;
+}
+function measureChart(set){
+  return phaseChart(set.rows.map(function(r){var edges=[0,r[1],r[2],r[3],r[4],r[5]];
+    return {label:r[0],segs:[0,1,2,3,4].map(function(k){return {k:k,from:edges[k],to:edges[k+1],tip:edges[k]+'–'+edges[k+1]+bi(' s',' с')};})};}),
+    {title:bi(set.title[0],set.title[1]),marker:{at:set.fault,label:bi('fault ends','конец сбоя')}});
 }
 function measureTable(set){
   var cols=[bi('Time','Время'),bi('Noticed','Замечен'),bi('Switch started','Начало перехода'),bi('On reserve','На резерве'),bi('Return started','Начало возврата'),bi('Back on primary','Снова на основном'),bi('Switch itself','Само переключение'),bi('Return itself','Сам возврат')];

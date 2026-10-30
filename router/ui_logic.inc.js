@@ -11,7 +11,7 @@ var UI_STATUS_REQUEST_SEQUENCE=0,UI_STATUS_ORDER=new WeakMap();
 var UI_HISTORY=null,UI_HISTORY_AT=0,UI_HISTORY_BUSY=false;
 function uiHistoryDue(){
   var page=typeof activeTab==='string'?activeTab:'';
-  var every=['statistics','events','services','tests','analytics'].indexOf(page)>=0?60000:300000;
+  var every=['statistics','events','services','tests','analytics','switches'].indexOf(page)>=0?60000:300000;
   return !UI_HISTORY_BUSY&&Date.now()-UI_HISTORY_AT>=every;
 }
 function uiHistoryRefresh(){

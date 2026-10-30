@@ -1,17 +1,17 @@
 {
   "schema": 1,
   "application": {
-    "version": "1.0.0-beta1",
+    "version": "1.0.0-beta2",
     "package_revision": 1,
-    "package_version": "1.0.0-beta1-1",
-    "release_tag": "v1.0.0-beta1",
-    "ui_module": "dashboard158",
-    "ui_stylesheet": "ui124.css",
-    "artifact": "homensai-auto-vpn_1.0.0-beta1-1_all.ipk",
-    "sha256": "cab05fc170400cdb4fffb81cd67badffb7c2c96bfcaa45eab2bd62e689dee75c",
-    "source_fingerprint": "c75251c57e4a2503edd4ec5c1bba3e42f69af062155f3dd7d81118e1685977c9",
+    "package_version": "1.0.0-beta2-1",
+    "release_tag": "v1.0.0-beta2",
+    "ui_module": "dashboard159",
+    "ui_stylesheet": "ui125.css",
+    "artifact": "homensai-auto-vpn_1.0.0-beta2-1_all.ipk",
+    "sha256": "c60f661403b10b30d7f4c6a3804751dccebe3fe02a3207fb99168b24e20ca42a",
+    "source_fingerprint": "af9990303842694cc2fc25c33c32fa4619babdbe159f83d6016ec29d9c4220a9",
     "ui_lazy_modules": [
-      "homensai-vpn/help158.js"
+      "homensai-vpn/help159.js"
     ]
   },
   "handoff": {

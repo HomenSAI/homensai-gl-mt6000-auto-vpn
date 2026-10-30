@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard158'
+UI_MODULE='dashboard159'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -277,7 +277,7 @@ import re as _r
 must_replace("put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));put('overview',renderDecisionExplanation(status));","put('overview',controlCard);put('tests',renderCascadePath(status));put('tests',renderDecisionExplanation(status));")
 source,_n=_r.subn(r"put\('overview',(E\('p',\{'class':'alert-message warning'\},\s*bi\('Monitoring is )",r"put('services',\1",source,count=1)
 assert _n==1,'monitor note'
-must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','statistics','traffic','services','events'];
+must_replace('return view.extend({',"""var ADVANCED_KEYS=['tests','statistics','traffic','services','events','switches'];
 var PAGE_SUBTITLES={
   overview:['Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.'],
   channels:['Every VPN profile on the router and whether it works right now.','Все VPN-профили роутера и работают ли они прямо сейчас.'],
@@ -289,6 +289,7 @@ var PAGE_SUBTITLES={
   traffic:['How much data went through each VPN.','Сколько данных прошло через каждый VPN.'],
   services:['A live log of what the router sees.','Живой журнал того, что видит роутер.'],
   events:['Everything that happened: switches, failures, recoveries.','Всё, что происходило: переключения, сбои, восстановления.'],
+  switches:['How long it took to notice a failure, switch to the reserve and return, measured from the router events.','Сколько времени заняло обнаружение сбоя, переключение на резерв и возврат — по событиям роутера.'],
   readiness:['Look at the items below: when all of them are green, your system is ready for Auto.','Посмотрите на пункты ниже: когда все они зелёные, ваша система готова к Auto.']
 };
 return view.extend({""")
@@ -335,7 +336,7 @@ must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in 
 # The shared subtitle can be followed by an absent connectivity widget. Never render that null child.
 must_replace("renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})]),E('div',{'class':'hv-page-actions'}", "renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'}")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
-must_replace('return view.extend({',lazy_marked('help_panel',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'measurements_help.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('help_panel',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'measurements_help.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'switch_stats_page.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
 must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp(inventory)));")
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
@@ -362,7 +363,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui124.css',expected=3)
+must_replace('ui15.css','ui125.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -473,6 +474,8 @@ must_replace('renderConnectivityCheck(data[1],function(){return statusCall().the
 must_replace('Monitoring is on. The checks run from the router and show whether each VPN works; they cannot prove what a computer on your network sees. That is confirmed separately by the LAN helper before Auto may switch.','The terminal shows real router observations. A separate optional LAN-helper test checks what a client sees; it is not required for prepared router-probed Auto mode.')
 must_replace('Мониторинг включён. Проверки выполняет сам роутер и показывают, работает ли каждый VPN; они не доказывают, что видит компьютер в вашей сети. Это отдельно подтверждает LAN-помощник перед включением Auto.','Терминал показывает реальные наблюдения роутера. Отдельный необязательный LAN-тест проверяет связь клиента; для подготовленного router-probed авторежима он не обязателен.')
 must_replace('return view.extend({',(Path(__file__).parent/'journal_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+# Measured switch timing: journal/live-log durations and the Advanced > Switch statistics page (its renderer is in the lazy module).
+must_replace('return view.extend({',(Path(__file__).parent/'switch_timing.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace('return view.extend({',(Path(__file__).parent/'live_terminal.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("put('events',historyPanel);","put('events',renderEventHistory(status));")
 must_replace("if(table.closest('.hv-errtable'))return;","if(table.closest('.hv-errtable')||table.hasAttribute('data-hv-no-sort'))return;")
@@ -520,7 +523,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui124.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui125.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -534,6 +537,8 @@ must_replace("(item.r.sum/item.r.good).toFixed(1)","websiteMs(item.r.sum/item.r.
 must_replace("var samples=status.samples||[],rank={};samples.forEach(function(s){var r=rank[s.id]||(rank[s.id]={n:0,good:0,sum:0});if(s.code!=='CHECK-001'&&s.code!=='SYSTEM-001'){r.n++;if(!s.code){r.good++;r.sum+=s.rtt_ms||0;}}});", "var samples=websiteSamples(status,inventory),rank=websiteQuality(status);")
 must_replace("Object.keys((status.accounting||{}).quality||{}).forEach(function(id){var q=status.accounting.quality[id],r={n:0,good:0,sum:0};Object.keys(q.buckets||{}).forEach(function(k){var b=q.buckets[k];r.n+=b.n;r.good+=b.success;r.sum+=b.rtt_sum;});rank[id]=r;});", "")
 
+must_replace("['events','≡',bi('Events and errors','События и ошибки')],","['events','≡',bi('Events and errors','События и ошибки')],['switches','⏱',bi('Switch statistics','Статистика переключений')],")
+must_replace("put('events',errorTable||(errorTable=renderErrorTable()));","put('events',errorTable||(errorTable=renderErrorTable()));put('switches',renderSwitchStats(status));")
 from visible_refresh_patch import apply as apply_visible_refresh
 source=apply_visible_refresh(source)
 # The frozen legacy chart declaration is overwritten by the final renderer.

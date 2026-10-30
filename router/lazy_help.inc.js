@@ -32,14 +32,14 @@ function renderErrorTable(){return renderLazyPage('events');}
 function mountLazyHelp(){
   if(!LAZY_HELP.api)return;
   Object.keys(LAZY_HELP.hosts).forEach(function(key){var item=LAZY_HELP.hosts[key];if(item.ready||!item.requested)return;
-    var renderer={help:'renderHelp',learn:'renderLearn',events:'renderErrorTable'}[key],node=LAZY_HELP.api[renderer](LAZY_HELP.inventory);
+    var node=key==='switches'?LAZY_HELP.api.renderSwitchPage(switchStatsModel(LAZY_HELP.switchStatus)):LAZY_HELP.api[{help:'renderHelp',learn:'renderLearn',events:'renderErrorTable'}[key]](LAZY_HELP.inventory);
     while(item.node.firstChild)item.node.removeChild(item.node.firstChild);item.node.appendChild(node);item.ready=true;
   });
 }
 function lazyHelpContext(){return {E:E,bi:bi,locale:locale,richText:richText,helpCommand:helpCommand,
   READINESS_GUIDES:READINESS_GUIDES,READINESS_CHECKS:READINESS_CHECKS,renderReadinessHelp:renderReadinessHelp,
   renderAutoRemedy:renderAutoRemedy,AUTO_BLOCKERS:AUTO_BLOCKERS,AUTO_REMEDIES:AUTO_REMEDIES,autoRemedyKey:autoRemedyKey,
-  PLAN_BLOCKERS:PLAN_BLOCKERS,errorCodeLink:errorCodeLink,ensureJournalDictionary:ensureJournalDictionary,extraHelpTopics:HELP_TOPICS,
+  PLAN_BLOCKERS:PLAN_BLOCKERS,errorCodeLink:errorCodeLink,spanText:spanText,ensureJournalDictionary:ensureJournalDictionary,extraHelpTopics:HELP_TOPICS,
   // The catalogue restored its validated session state. Eager defaults must not overwrite it;
   // an explicit code clicked while loading is applied afterwards by lazyHelpDeepLink.
   installCatalogue:function(value){ERROR_ROWS=value.rows;ERROR_GROUPS=value.groups;ERROR_GROUP_OF=value.groupOf;ERROR_TABLE_STATE=value.state;persistErrorTableState=value.persist;}
@@ -69,6 +69,6 @@ function loadLazyHelp(retry){
   }).then(function(value){LAZY_HELP.promise=null;return value;});return LAZY_HELP.promise;
 }
 function ensureLazyPage(key,inventory){
-  if(['help','learn','events'].indexOf(key)<0)return Promise.resolve(null);
+  if(['help','learn','events','switches'].indexOf(key)<0)return Promise.resolve(null);
   renderLazyPage(key,inventory);LAZY_HELP.hosts[key].requested=true;return loadLazyHelp(false);
 }

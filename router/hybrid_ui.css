@@ -133,3 +133,8 @@
 .hv-app .hv-measure-table td,.hv-app .hv-measure-table th{white-space:nowrap}
 .hv-app .hv-measure-mean{font-weight:700}
 .hv-app .hv-probe-forced{margin:4px 0 0;font-size:13px;opacity:.85}
+/* Advanced > Switch statistics */
+.hv-app .hv-switch-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:12px 0 16px}
+.hv-app .hv-switch-card{border:1px solid rgba(127,127,127,.35);border-radius:8px;padding:10px 12px}
+.hv-app .hv-switch-card span,.hv-app .hv-switch-card small{display:block;opacity:.8}
+.hv-app .hv-switch-card strong{display:block;font-size:1.3em;margin:2px 0}
