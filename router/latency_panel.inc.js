@@ -89,17 +89,27 @@ function latencyHistoryRows(status,inventory,now){
   if(!Array.isArray(rows)||rows.length>10081||h.rows_count!==undefined&&(!Number.isInteger(h.rows_count)||h.rows_count!==rows.length))return [];
   return rows.filter(function(r){return Array.isArray(r)&&r.length===6&&Number.isFinite(r[0])&&r[0]>=now-LATENCY_HISTORY_SECONDS&&r[0]<=now+5&&[1,2].every(function(i){return Number.isInteger(r[i+2])&&r[i+2]>=0&&r[i+2]<=120&&(r[i+2]===0?r[i]===null:Number.isInteger(r[i])&&r[i]>=0&&r[i]<=60000*r[i+2]);})&&['source','target','unknown','off','switching','blocked','down'].indexOf(r[5])>=0;}).map(function(r){var decoded=r.slice();[1,2].forEach(function(i){decoded[i]=r[i+2]?r[i]/(10*r[i+2]):null;});return decoded;}).sort(function(a,b){return a[0]-b[0];});
 }
+// Points are joined while the gap is within 2.5 measurement periods (the period follows the probe level, 30-300 s);
+// minutes without a sample are skipped, not treated as a break. A colour change keeps the line continuous.
+function latencyJoinGap(rows,index){
+  var times=rows.filter(function(r){return r[index+1]!==null;}).map(function(r){return r[0];}),gaps=[];
+  for(var i=1;i<times.length;i++)if(times[i]>times[i-1])gaps.push(times[i]-times[i-1]);
+  gaps.sort(function(a,b){return a-b;});
+  return Math.max(90,2.5*(gaps.length?gaps[Math.floor(gaps.length/2)]:60));
+}
 function latencySegments(rows,index,start,end,maxY){
-  var segments=[],points=[],color=null,last=null;
+  var segments=[],points=[],color=null,last=null,join=latencyJoinGap(rows,index);
   function finish(){if(points.length)segments.push({color:color,points:points});points=[];}
   rows.forEach(function(row){
     if(row[0]<start||row[0]>end)return;
     var value=row[index+1];
-    if(value===null){finish();color=null;last=null;return;}
+    if(value===null)return;
     var selected=row[5]==='source'?'source':row[5]==='target'?'target':null;
     var nextColor=selected?selected===(index===0?'source':'target')?'#16a765':'#c49500':'#8a929d';
-    if(color!==nextColor||last!==null&&row[0]-last>90)finish();
-    color=nextColor;last=row[0];points.push([52+(row[0]-start)/(end-start)*904,220-value/maxY*185,row[0],value]);
+    var point=[52+(row[0]-start)/(end-start)*904,220-value/maxY*185,row[0],value];
+    if(last!==null&&row[0]-last>join){finish();}
+    else if(color!==null&&color!==nextColor&&points.length){var bridge=points[points.length-1];finish();points.push(bridge);}
+    color=nextColor;last=row[0];points.push(point);
   });finish();return segments;
 }
 function latencySvg(tag,attributes){var node=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attributes||{}).forEach(function(k){node.setAttribute(k,String(attributes[k]));});return node;}

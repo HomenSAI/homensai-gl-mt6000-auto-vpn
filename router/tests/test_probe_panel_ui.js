@@ -36,6 +36,15 @@ for(const language of ['en','ru']){
     const d=c.probeDecision({kind:'boost-end',level:3,interval:20,measure_interval:60,role:'source',result,failures:3,duration:600});
     assert(d[0].length>5&&d[0]!==result&&d[1].includes('10'),'result '+result+' is explained');
   }
+  // Suspicion episodes: the reason is explained and the log says a suspicion alone never switches.
+  for(const reason of ['rx-stall','wg-handshake-stale','link-missing']){
+    const s=c.probeDecision({kind:'suspicion-start',level:1,interval:60,measure_interval:300,role:'source',reason,evidence:{stalled_s:7},dense_interval:4});
+    assert(s[0].length>5&&!s[1].includes(reason)&&s[1].includes('4')&&s[1].includes(language==='ru'?'никогда не переключает':'never switches'),'suspicion '+reason);
+  }
+  for(const result of ['false-alarm','failure-confirmed','switched','expired','cancelled']){
+    const d=c.probeDecision({kind:'suspicion-end',level:1,interval:60,measure_interval:300,role:'target',reason:'rx-stall',result,failures:3,checks:4,duration:21});
+    assert(d[0].length>5&&d[0]!==result&&d[1].includes('21')&&d[1].includes(language==='ru'?'резервный канал':'reserve channel'),'suspicion result '+result);
+  }
 }
 console.log('PASS: probe level slider, boost checkbox, active boost and decision log wording (EN/RU)');
 // Yellow pulse around the scheduled check: 1 s before, through the check, 1 s after the router's answer.

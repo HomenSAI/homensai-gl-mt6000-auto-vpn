@@ -133,6 +133,12 @@ end
         result,calls=self.run_setup(ok,failure='delete',pending=b'')
         self.assertNotEqual(result.returncode,0);self.assertIn('revert',[c['name'] for c in calls]);self.assertNotIn('commit',[c['name'] for c in calls])
 
+    def test_fast_switch_option_is_writable_as_a_string_only(self):
+        result,calls=self.run_setup(json.dumps({'main':{'fast_switch':'0'},'servers':[]}).encode(),pending=b'')
+        self.assertEqual(result.stdout,b'OK');self.assertEqual({c['key'] for c in calls if c['name']=='set'},{'fast_switch'})
+        result,calls=self.run_setup(json.dumps({'main':{'fast_switch':False},'servers':[]}).encode(),pending=b'')
+        self.assertNotEqual(result.returncode,0)
+
     def test_terms_keys_are_writable_and_arbitrary_keys_are_not(self):
         result,calls=self.run_setup(json.dumps({'main':{'terms_version':'1','terms_time':'1792000000'},'servers':[]}).encode(),pending=b'')
         self.assertEqual(result.stdout,b'OK');self.assertEqual({c['key'] for c in calls if c['name']=='set'},{'terms_version','terms_time'})

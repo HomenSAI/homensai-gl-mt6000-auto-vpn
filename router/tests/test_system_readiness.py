@@ -42,6 +42,7 @@ class PresetTests(unittest.TestCase):
 class CachedReadinessTests(unittest.TestCase):
     def test_status_rpc_uses_daemon_snapshot(self):
         source=(path.parent/'agent.py').read_text(encoding='utf-8')
-        rpc=source.split("elif method in ('status', 'events'):",1)[1]
+        # The status answer (per-call RPC and resident status server alike) is built by status_reply().
+        rpc=source.split("def status_reply(",1)[1].split("\ndef rpc(",1)[0]
         self.assertNotIn('readiness_snapshot()',rpc)
         self.assertIn("status['system_readiness']=readiness_snapshot(settings=settings)",source)

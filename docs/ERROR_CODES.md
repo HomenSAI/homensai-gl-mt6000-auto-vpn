@@ -6649,6 +6649,18 @@ Auto выключен на время обновления / Auto was switched o
 
 **Action:** Nothing to do.
 
+## FAST-*
+
+Быстрое переключение не применено / Fast switch not used
+
+**RU:** Роутер не смог применить порядок каналов напрямую (неожиданные цепочки firewall или изменение не подтвердилось) и использовал медленную перестройку GL либо отказался от переключения.
+
+**EN:** The router could not apply the channel order directly (unexpected firewall chains or the change was not confirmed) and used the slower GL rebuild instead, or refused the switch.
+
+**Что делать:** Ничего делать не нужно: переключение работает через перестройку GL. Если повторяется, отправьте код разработчику.
+
+**Action:** Nothing to do: the switch still works through the GL rebuild. If it repeats, send the code to the developer.
+
 ## RESPONSE-COMPARE*
 
 Сравнение способов отклика / Comparison of response methods

@@ -4,7 +4,8 @@ import re
 import time
 
 
-def snapshot():
+def snapshot(load_monitor=None):
+    """load_monitor(default): the resident status server passes its parsed status.json (read-only use)."""
     from agent import RUNTIME,PERSIST,read_json,checksum
     now=time.time()
     try:
@@ -12,7 +13,7 @@ def snapshot():
             path=RUNTIME/name
             if path.is_symlink()or path.stat().st_size>limit:raise ValueError()
         native=read_json(RUNTIME/'native-status.json',{})
-        monitor=read_json(RUNTIME/'status.json',{})
+        monitor=load_monitor({}) if load_monitor is not None else read_json(RUNTIME/'status.json',{})
         if not isinstance(native,dict)or not isinstance(monitor,dict):raise ValueError()
     except (OSError,ValueError):
         return {'time':now,'native_failover':{},'rpc_error':'RPC-UNAVAILABLE'}

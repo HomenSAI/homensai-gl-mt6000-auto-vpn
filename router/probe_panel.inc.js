@@ -12,6 +12,15 @@ function probeDecision(row){
   var role=row.role==='source'?bi('primary channel','основной канал'):row.role==='target'?bi('reserve channel','резервный канал'):bi('channel','канал');
   if(row.kind==='level')return [bi('Level ','Выбран уровень ')+row.level,cadence+'; '+(row.boost_enabled?bi('boost on','ускорение включено'):bi('boost off','ускорение выключено'))];
   if(row.kind==='boost-start')return [bi('Boost started','Ускорение включено'),role+bi(' failed a check; checks every ',' не прошёл проверку; проверка раз в ')+row.boost_interval+bi(' s for 10 min (',' с на 10 мин (')+level+')'];
+  if(row.kind==='suspicion-start'||row.kind==='suspicion-end'){
+    // Passive suspicion (probe_policy.Booster.suspect): only dense full checks, never a switch by itself.
+    var ev=row.evidence||{},why={'rx-stall':bi('sends data but receives nothing','отправляет данные, но ничего не получает')+(ev.stalled_s!=null?bi(' for '+Math.round(ev.stalled_s)+' s',' '+Math.round(ev.stalled_s)+' с'):''),
+      'wg-handshake-stale':bi('WireGuard handshake is older than 3 min while sending','рукопожатие WireGuard старше 3 мин при отправке данных'),
+      'link-missing':bi('the tunnel interface disappeared','интерфейс туннеля пропал')}[row.reason]||String(row.reason||'');
+    if(row.kind==='suspicion-start')return [bi('Suspicion: dense checks','Подозрение: частые проверки'),role+' '+why+bi('; full checks every ','; полные проверки раз в ')+row.dense_interval+bi(' s. A suspicion alone never switches.',' с. Одно подозрение никогда не переключает.')];
+    var ended={'false-alarm':bi('Suspicion cleared: checks passed','Подозрение снято: проверки пройдены'),'failure-confirmed':bi('Suspicion confirmed by failed checks','Подозрение подтверждено неудачными проверками'),'switched':bi('Suspicion ended: Auto switched','Подозрение завершено: Auto переключил канал'),'expired':bi('Suspicion ended without confirmation','Подозрение завершено без подтверждения'),'cancelled':bi('Suspicion ended: Auto is not watching','Подозрение завершено: Auto не наблюдает')};
+    return [ended[row.result]||row.result,role+'; '+(row.failures||0)+bi(' failed of ',' неудачных из ')+(row.checks||0)+bi(' checks in ',' проверок за ')+(row.duration||0)+bi(' s; back to ',' с; возврат на ')+level];
+  }
   var results={'switched':bi('Boost ended: the channel was switched','Ускорение завершено: было переключение'),'failure-confirmed':bi('Boost ended: failure confirmed','Ускорение завершено: сбой подтверждён'),'false-alarm':bi('Boost ended: false alarm, the channel recovered','Ускорение завершено: ложная тревога, канал восстановился'),'disabled':bi('Boost turned off by the owner','Ускорение выключено владельцем')};
   return [results[row.result]||row.result,role+'; '+row.failures+bi(' failed checks in ',' неудачных проверок за ')+Math.round((row.duration||0)/60)+bi(' min; back to ',' мин; возврат на ')+level];
 }
@@ -167,17 +176,19 @@ var RESPONSE_CHOICES=[['icmp-1.1.1.1','Ping 1.1.1.1 (Cloudflare DNS) — recomme
 function responseSettings(inventory){
   var current=((inventory||{}).settings||{}).response_metric||'icmp-1.1.1.1',chosen=current,busy=false;
   var compareNow=((inventory||{}).settings||{}).response_compare===true,compareBox=E('input',{'type':'checkbox','class':'hv-response-compare'});compareBox.checked=compareNow;
-  function dirty(){return chosen!==current||compareBox.checked!==compareNow;}
+  var fastNow=((inventory||{}).settings||{}).fast_switch!==false,fastBox=E('input',{'type':'checkbox','class':'hv-fast-switch'});fastBox.checked=fastNow;
+  function dirty(){return chosen!==current||compareBox.checked!==compareNow||fastBox.checked!==fastNow;}
   compareBox.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
+  fastBox.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
   var save=E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':''},bi('Save','Сохранить'));
   var list=E('div',{'class':'hv-response-choices'},RESPONSE_CHOICES.map(function(c){
     var input=E('input',{'type':'radio','name':'hv-response-metric','value':c[0]});input.checked=c[0]===current;
     input.addEventListener('change',function(){chosen=c[0];if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
     return E('label',{'class':'hv-response-choice'},[input,' ',bi(c[1],c[2])]);}));
   save.addEventListener('click',function(){
-    if(busy||!dirty())return;busy=true;save.setAttribute('disabled','');var compare=compareBox.checked;
-    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric','compare'],expect:{}})(chosen,compare).then(function(r){
-      if(r&&r.saved){current=chosen;compareNow=compare;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
+    if(busy||!dirty())return;busy=true;save.setAttribute('disabled','');var compare=compareBox.checked,fast=fastBox.checked;
+    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric','compare','fast_switch'],expect:{}})(chosen,compare,fast).then(function(r){
+      if(r&&r.saved){current=chosen;compareNow=compare;fastNow=fast;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
       else ui.addNotification(null,E('p',{},(r&&r.code)||'SETUP-SAVE-FAILED'));
     }).catch(function(){ui.addNotification(null,E('p',{},'SETUP-SAVE-UNCONFIRMED'));}).finally(function(){busy=false;if(dirty())save.removeAttribute('disabled');});
   });
@@ -186,6 +197,8 @@ function responseSettings(inventory){
     list,
     E('label',{'class':'hv-response-compare-label'},[compareBox,' ',E('strong',{},bi('Measure all methods (comparison)','Мерить все способы (сравнение)'))]),
     E('p',{'class':'hv-step-note'},bi('Each check also pings the other two DNS addresses and opens the three websites through both channels. The ranking on the Tests page then shows every method side by side. Switching still uses only the method chosen above. Costs a little more router load and traffic.','Каждая проверка дополнительно пингует два других DNS-адреса и открывает три сайта через оба канала. Тогда рейтинг на странице «Тесты» показывает все способы рядом. Переключение по-прежнему использует только способ, выбранный выше. Немного больше нагрузка на роутер и трафик.')),
+    E('label',{'class':'hv-fast-switch-label'},[fastBox,' ',E('strong',{},bi('Fast switch (without the GL rebuild)','Быстрое переключение (без перестройки GL)'))]),
+    E('p',{'class':'hv-step-note'},bi('On the GL-iNet MT3000 the router writes the new channel order straight into its firewall rules in one step: the change itself takes tens of milliseconds and new connections use the new channel within about half a second, without the 20-60 second GL rebuild. If anything looks unexpected it falls back to the GL rebuild on its own. Turn this off to always use the GL rebuild.','На GL-iNet MT3000 роутер записывает новый порядок каналов прямо в правила межсетевого экрана одним шагом: сама смена занимает десятки миллисекунд, а новые соединения идут по новому каналу примерно за полсекунды, без перестройки GL на 20-60 секунд. Если что-то выглядит неожиданно, роутер сам откатывается к перестройке GL. Выключите, чтобы всегда использовать перестройку GL.')),
     E('p',{'class':'hv-req-actions'},[save])]);
 }
 // Ranking columns for "measure all methods": one column per method the router compared.

@@ -125,8 +125,15 @@ class ResponseMetric(unittest.TestCase):
         for metric in ('icmp-8.8.8.8','icmp-9.9.9.9','websites'):self.assertEqual(P.response_metric({'response_metric':metric}),metric)
         self.assertEqual(P.response_metric({'response_metric':'icmp-10.0.0.1'}),'icmp-1.1.1.1')
         self.assertEqual(setup_config.response_payload({'metric':'websites'})['main'],{'response_metric':'websites'})
-        for bad in ({},{'metric':'icmp-10.0.0.1'},{'metric':'websites','x':1}):
+        for bad in ({},{'metric':'icmp-10.0.0.1'},{'metric':'websites','x':1},{'metric':'websites','fast_switch':'0'},{'metric':'websites','fast_switch':0},{'fast_switch':True}):
             with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'RESPONSE-METRIC-INVALID'):setup_config.response_payload(bad)
+
+    def test_fast_switch_owner_option_is_saved_as_one_or_zero(self):
+        self.assertEqual(setup_config.response_payload({'metric':'websites','compare':False,'fast_switch':False})['main'],
+                         {'response_metric':'websites','response_compare':'0','fast_switch':'0'})
+        self.assertEqual(setup_config.response_payload({'metric':'icmp-1.1.1.1','fast_switch':True})['main'],
+                         {'response_metric':'icmp-1.1.1.1','fast_switch':'1'})
+        self.assertNotIn('fast_switch',setup_config.response_payload({'metric':'websites','compare':True})['main'])
 
 
 class BoostBounds(unittest.TestCase):

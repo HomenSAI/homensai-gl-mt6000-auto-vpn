@@ -138,3 +138,7 @@
 .hv-app .hv-switch-card{border:1px solid rgba(127,127,127,.35);border-radius:8px;padding:10px 12px}
 .hv-app .hv-switch-card span,.hv-app .hv-switch-card small{display:block;opacity:.8}
 .hv-app .hv-switch-card strong{display:block;font-size:1.3em;margin:2px 0}
+/* Monitoring page: a small lamp beside the state, the numbers in a table. */
+.hv-app .hv-monitor-page-head{display:flex;align-items:center;gap:12px}
+.hv-app .hv-monitor-page-head .hv-monitor-lamp{width:32px;height:32px;min-width:32px;flex:0 0 32px;border-radius:50%}
+.hv-app .hv-monitor-table td,.hv-app .hv-monitor-table th{white-space:nowrap}

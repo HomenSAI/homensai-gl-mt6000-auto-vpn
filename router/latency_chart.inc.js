@@ -21,7 +21,8 @@ function chart(samples,rows){
   rows.filter(function(p){return good.some(function(s){return s.id===p.id;});}).forEach(function(p,i){
     var color=CHART_COLORS[i%CHART_COLORS.length],name=serverTitle(p);
     var points=good.filter(function(s){return s.id===p.id;}).sort(function(a,b){return a.time-b.time;}),path='',previous;
-    points.forEach(function(s){var x=55+(s.time-start)/Math.max(1,end-start)*745,y=215-s.rtt_ms/max*180;path+=(previous&&s.time-previous<=90?' L':' M')+x.toFixed(1)+','+y.toFixed(1);previous=s.time;});
+    var latencyChartJoin=(function(){var g=[];for(var i=1;i<points.length;i++)if(points[i].time>points[i-1].time)g.push(points[i].time-points[i-1].time);g.sort(function(a,b){return a-b;});return Math.max(90,2.5*(g.length?g[Math.floor(g.length/2)]:60));})();
+    points.forEach(function(s){var x=55+(s.time-start)/Math.max(1,end-start)*745,y=215-s.rtt_ms/max*180;path+=(previous&&s.time-previous<=latencyChartJoin?' L':' M')+x.toFixed(1)+','+y.toFixed(1);previous=s.time;});
     var line=svgNode('path',{d:path,fill:'none',stroke:color,'stroke-width':3,'stroke-linecap':'round','stroke-linejoin':'round','class':'hv-line hv-line-on'});
     var title=svgNode('title',{},name);line.appendChild(title);
     var hit=svgNode('path',{d:path,fill:'none',stroke:'transparent','stroke-width':16,'class':'hv-line-hit'});
@@ -45,6 +46,6 @@ function chart(samples,rows){
   });
   svg.appendChild(svgNode('text',{x:55,y:247,fill:'var(--muted)','font-size':12},new Date(start*1000).toLocaleTimeString()));
   svg.appendChild(svgNode('text',{x:800,y:247,fill:'var(--muted)','font-size':12,'text-anchor':'end'},new Date(end*1000).toLocaleTimeString()));
-  [svg,tip,legend,E('small',{},(samples&&samples.kind==='ping'?bi('Ping, ms','Пинг, мс'):bi('Three-site mean, ms','Среднее трёх сайтов, мс'))+bi(' · last hour. Each server has its own colour; point at a line or at a name to highlight it. Gaps longer than 90 seconds are not joined.',' · последний час. У каждого сервера свой цвет; наведите курсор на линию или на название, чтобы выделить. Разрывы длиннее 90 секунд не соединяются.'))].forEach(function(n){wrap.appendChild(n);});
+  [svg,tip,legend,E('small',{},(samples&&samples.kind==='ping'?bi('Ping, ms','Пинг, мс'):bi('Three-site mean, ms','Среднее трёх сайтов, мс'))+bi(' · last hour. Each server has its own colour; point at a line or at a name to highlight it. Points are joined unless a gap is longer than 2.5 measurement periods.',' · последний час. У каждого сервера свой цвет; наведите курсор на линию или на название, чтобы выделить. Точки соединяются, если пропуск не длиннее 2,5 интервалов замера.'))].forEach(function(n){wrap.appendChild(n);});
   return wrap;
 }

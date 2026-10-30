@@ -123,11 +123,14 @@ def probe_payload(arguments):
 
 def response_payload(arguments):
     from probe_policy import RESPONSE_METRICS
-    if (not isinstance(arguments,dict) or set(arguments) not in ({'metric'},{'metric','compare'}) or arguments['metric'] not in RESPONSE_METRICS
-            or 'compare' in arguments and type(arguments['compare']) is not bool):
+    if (not isinstance(arguments,dict) or 'metric' not in arguments or not set(arguments)<={'metric','compare','fast_switch'}
+            or arguments['metric'] not in RESPONSE_METRICS
+            or any(key in arguments and type(arguments[key]) is not bool for key in ('compare','fast_switch'))):
         raise ValueError('RESPONSE-METRIC-INVALID')
     main={'response_metric':arguments['metric']}
     if 'compare' in arguments:main['response_compare']='1' if arguments['compare'] else '0'
+    # Owner switch for the fast channel change (fast_policy); default on, off means every switch uses the GL rebuild.
+    if 'fast_switch' in arguments:main['fast_switch']='1' if arguments['fast_switch'] else '0'
     return {'main':main,'servers':[]}
 
 

@@ -60,3 +60,20 @@ function renderMonitorInfo(status,inventory){
     E('p',{},bi('Monitoring is always on. About every '+(Number(settings.interval)||10)+' seconds it checks each connected VPN (can it open a website and resolve a name through it). From these checks the charts above are built: how fast each server answers, and how long each one worked or failed. History starts when monitoring first started; nothing is guessed for earlier time.','Мониторинг всегда включён. Примерно каждые '+(Number(settings.interval)||10)+' с он проверяет каждый подключённый VPN (может ли он открыть сайт и найти адрес). Из этих проверок построены графики выше: как быстро отвечает каждый сервер и сколько времени он работал или не работал. История начинается с первого запуска мониторинга; за более раннее время ничего не придумывается.')),
     E('p',{'class':'hv-ready-intro'},bi('Where it is stored: on the router itself, in /etc/homensai-vpn (saved '+(every?'about every '+every+' min':'periodically')+'; the interval can be changed in Settings → Advanced settings → Monitoring parameters). Nothing leaves the router.','Где хранится: на самом роутере, в /etc/homensai-vpn (сохраняется '+(every?'примерно раз в '+every+' мин':'периодически')+'; интервал можно изменить в «Настройки» → «Расширенные настройки» → «Параметры мониторинга»). Ничего не уходит с роутера.'))]);
 }
+// Monitoring page (opened from the sidebar lamp): small lamp, state, numbers of the last hour per channel.
+function renderMonitorPage(status,inventory){
+  var now=(typeof statusNow==='function'?statusNow(status):Date.now()/1000),head=E('div',{'class':'hv-monitor-page-head'});
+  fillMonitorBlock(head,status,inventory);
+  var samples=Array.isArray(status.samples)?status.samples:[],ids=typeof rolePairIds==='function'?rolePairIds(status,inventory||{},now):[];
+  var rows=ids.map(function(id,i){
+    var mine=samples.filter(function(s){return s.id===id&&Number.isFinite(s.time)&&now-s.time<=3600&&now-s.time>=-5;}),bad=mine.filter(function(s){return s.code;}).length;
+    var last=mine.length?mine[mine.length-1]:null;
+    return E('tr',{},[E('th',{'scope':'row'},i===0?bi('Primary','Основной'):bi('Reserve','Резервный')),E('td',{},String(mine.length)),E('td',{},String(bad)),
+      E('td',{},mine.length?Math.round(100*(mine.length-bad)/mine.length)+'%':'—'),E('td',{},last?new Date(last.time*1000).toLocaleTimeString():'—'),E('td',{},last&&last.code?last.code:bi('OK','OK'))]);
+  });
+  var p=status.probe_policy||{};
+  return E('section',{'class':'hv-chart-card hv-monitor-page','data-monitor-page':'1'},[
+    E('h3',{},bi('Monitoring','Мониторинг')),head,
+    E('p',{'class':'hv-step-note'},bi('Probe level ','Уровень опроса ')+(p.level||'—')+' · '+bi('channel check every ','проверка каналов раз в ')+(p.effective_interval||'—')+bi(' s',' с')+' · '+bi('response every ','замер отклика раз в ')+(p.measure_interval||'—')+bi(' s',' с')+(p.boost_active?' · '+bi('boost active','идёт ускорение'):'')),
+    E('table',{'class':'table hv-monitor-table','data-hv-no-sort':'1'},[E('tr',{},[bi('Channel','Канал'),bi('Checks in the last hour','Проверок за час'),bi('Failed','Не прошло'),bi('Passed','Прошло'),bi('Last check','Последняя проверка'),bi('Last result','Последний результат')].map(function(c){return E('th',{'scope':'col'},c);}))].concat(rows))]);
+}

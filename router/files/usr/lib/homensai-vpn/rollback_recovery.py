@@ -442,6 +442,9 @@ def rebuild(backend,journal,reason,target):
                 except FileNotFoundError:pass
             journal['restore_rtp_dispatched']=True;n.journal_write(journal)
             timeout=RECOVERY_RTP_TIMEOUT
+        elif args[0]=='iptables-restore':
+            # Fast path writes the same kernel graph as rtp2; a resumed recovery must know the graph moved.
+            journal['restore_rtp_dispatched']=True;n.journal_write(journal)
         return n.forward_dispatch(args,revision,timeout=timeout)
 
     step=journal.get('restore_order_step') or {}

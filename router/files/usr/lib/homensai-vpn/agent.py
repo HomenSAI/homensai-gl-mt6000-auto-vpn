@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '1.0.0-beta2'
+VERSION = '1.0.0-beta7'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -719,10 +719,31 @@ CRITICAL_SAVE_SPACING=60
 PAGE_SAMPLE_OMIT=('vendor_generation','vendor_tunnel_id','interface')  # not used by the page; ~40% of status
 
 
+def start_status_server():
+    """Resident read-only answers for the page (status_server.py). Never a reason to stop monitoring."""
+    try:
+        from status_server import StatusServer
+        from auto_live import snapshot as live
+        return StatusServer(RUNTIME, PERSIST, {'status': status_reply, 'events': events_reply, 'history': history_reply},
+                            live, read_json, stopping=lambda: STOP).start()
+    except Exception:
+        return None
+
+
 def serve():
     RUNTIME.mkdir(mode=0o700, parents=True, exist_ok=True)
     lock = os.open(str(RUNTIME/'agent.lock'), os.O_CREAT|os.O_RDWR|getattr(os, 'O_NOFOLLOW', 0), 0o600)
     fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
+    server = start_status_server()
+    try:
+        monitor_loop()
+    finally:
+        # The socket disappears with the monitor: the plugin then answers through agent.py again.
+        if server is not None:
+            server.close()
+
+
+def monitor_loop():
     try:
         accounting, storage_error = restore()
     except (OSError, ValueError, KeyError, TypeError):
@@ -765,6 +786,9 @@ def serve():
     # Owner probe level 1-5 and the optional automatic boost; every decision is recorded.
     from probe_policy import Booster
     booster=Booster(RUNTIME,PERSIST,atomic_json,read_json)
+    # Passive suspicion between full checks (sysfs counters, rare `wg show`): only starts dense full checks.
+    from suspicion import SuspicionWatcher,channels as suspicion_channels
+    watcher=SuspicionWatcher()
     from scan_control import begin as begin_scan, finish as finish_scan
     while not STOP:
         from speed_pause import gate as speed_gate
@@ -853,6 +877,8 @@ def serve():
                     for row in rows:row['website_response']=website_public(row,'unavailable','WEBSITE-UNAVAILABLE')
             for row in rows:
                 row['role']='source' if row['id']==failure_pair.get('source') else 'target' if row['id']==failure_pair.get('target') else 'unknown'
+            try:watcher.configure(suspicion_channels(rows))
+            except Exception:watcher.configure([])
             failure_context=read_json(RUNTIME/'native-status.json', {})
             for row in measured:
                 accounting.observe(row,max_gap=settings['interval']*3,native=failure_context,pair=failure_pair)
@@ -997,6 +1023,13 @@ def serve():
                     # An optional measurement must not stop health monitoring;
                     # leave the last published snapshot intact and retry later.
                     pass
+                if watcher.due(time.monotonic()):
+                    try:
+                        found=watcher.poll(time.monotonic(),time.time())
+                        # A suspicion starts the next full check now; it is never itself a failure.
+                        if found and booster.suspect(settings,found,failure_pair,
+                                read_json(RUNTIME/'native-status.json',{}).get('state'),time.time()):break
+                    except Exception:pass
             time.sleep(1)
     ping_sampler.close();website_sampler.close()
     for sampler in compare_samplers.values():sampler.close()
@@ -1050,6 +1083,63 @@ def trim_status_reply(status,limit=900000):
     return status
 
 
+STATUS_DEFAULT={'version':VERSION,'mode':'monitor','error':'SERVICE-STOPPED'}
+
+
+def read_monitor_status(default):
+    """The monitor snapshot exactly as the read RPCs read it; the resident status server passes a cached copy."""
+    return read_json(RUNTIME/'status.json',default)
+
+
+def status_reply(load=read_monitor_status):
+    """The full 'status' answer. One function for both the per-call RPC and the resident status server."""
+    status=load(dict(STATUS_DEFAULT))
+    if isinstance(status.get('samples'),list):
+        status['samples']=[{key:value for key,value in sample.items() if key not in PAGE_SAMPLE_OMIT}
+                           if isinstance(sample,dict) else sample for sample in status['samples']]
+    from speed_pause import public as speed_pause_status
+    status['speed_pause']=speed_pause_status()
+    from scan_control import public as scan_public
+    status['scan']=scan_public(RUNTIME,read_json)
+    from native_history import read_public
+    status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
+    status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
+    status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
+    from switch_timing import read as switch_timing
+    status['switch_timing']=switch_timing(PERSIST)
+    from auto_control import public_status
+    status['auto_control']=public_status()
+    from manual_control import control_status
+    from channel_path import public_status as path_status
+    from pair_manual import controls as pair_controls,public_for_status
+    pair_control=pair_controls()
+    use_pair,status['manual_switch']=public_for_status(status['native_failover'],available=pair_control.get('available',False))
+    status['manual_switch_control']=pair_control if use_pair else control_status()
+    from observation_freshness import attach as attach_observation_freshness
+    attach_observation_freshness(status)
+    status['channel_path']=path_status(status)
+    try:
+        from speed_test import public_status as speed_status
+        status['speed_tests']=speed_status()
+    except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
+    status['server_time']=time.time()
+    split_history(status)
+    return trim_status_reply(status)
+
+
+def events_reply(load=read_monitor_status):
+    status=load(dict(STATUS_DEFAULT))
+    return {'events': status.get('events', [])}
+
+
+def history_reply(load=read_monitor_status):
+    status=load({})
+    from native_history import read_public
+    history=split_history({'accounting':status.get('accounting') if isinstance(status,dict) else None,
+                           'native_history':read_public(PERSIST,cache=RUNTIME/'native-history-public.json')})
+    return dict(history,time=time.time())
+
+
 def rpc(method):
     if method == 'list':
         print(json.dumps({'status': {}, 'history': {}, 'speed_live': {}, 'auto_live': {}, 'statistics': {'kind':'','after':0,'until':0}, 'pair_manual':{'direction':'','control_revision':'','request_source':''}, 'inventory': {}, 'scan': {}, 'events': {},
@@ -1058,7 +1148,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
-                          'setup_response':{'metric':'','compare':False},
+                          'setup_response':{'metric':'','compare':False,'fast_switch':False},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
@@ -1196,46 +1286,12 @@ def rpc(method):
     elif method=='auto_live':
         from auto_live import snapshot
         print(json.dumps(snapshot()))
-    elif method in ('status', 'events'):
-        status = read_json(RUNTIME/'status.json', {'version':VERSION,'mode': 'monitor', 'error': 'SERVICE-STOPPED'})
-        if method == 'status':
-            if isinstance(status.get('samples'),list):
-                status['samples']=[{key:value for key,value in sample.items() if key not in PAGE_SAMPLE_OMIT}
-                                   if isinstance(sample,dict) else sample for sample in status['samples']]
-            from speed_pause import public as speed_pause_status
-            status['speed_pause']=speed_pause_status()
-            from scan_control import public as scan_public
-            status['scan']=scan_public(RUNTIME,read_json)
-            from native_history import read_public
-            status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
-            status['native_history']=read_public(PERSIST,cache=RUNTIME/'native-history-public.json')
-            status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
-            from switch_timing import read as switch_timing
-            status['switch_timing']=switch_timing(PERSIST)
-            from auto_control import public_status
-            status['auto_control']=public_status()
-            from manual_control import control_status
-            from channel_path import public_status as path_status
-            from pair_manual import controls as pair_controls,public_for_status
-            pair_control=pair_controls()
-            use_pair,status['manual_switch']=public_for_status(status['native_failover'],available=pair_control.get('available',False))
-            status['manual_switch_control']=pair_control if use_pair else control_status()
-            from observation_freshness import attach as attach_observation_freshness
-            attach_observation_freshness(status)
-            status['channel_path']=path_status(status)
-            try:
-                from speed_test import public_status as speed_status
-                status['speed_tests']=speed_status()
-            except (OSError,ValueError,KeyError):status['speed_tests']={'code':'SPEED-STATUS-UNAVAILABLE','results':[]}
-            status['server_time']=time.time()
-        if method=='status':split_history(status)
-        print(json.dumps({'events': status.get('events', [])} if method=='events' else trim_status_reply(status)))
+    elif method=='status':
+        print(json.dumps(status_reply()))
+    elif method=='events':
+        print(json.dumps(events_reply()))
     elif method=='history':
-        status=read_json(RUNTIME/'status.json',{})
-        from native_history import read_public
-        history=split_history({'accounting':status.get('accounting') if isinstance(status,dict) else None,
-                               'native_history':read_public(PERSIST,cache=RUNTIME/'native-history-public.json')})
-        print(json.dumps(dict(history,time=time.time())))
+        print(json.dumps(history_reply()))
     else:
         raise ValueError('RPC-UNKNOWN-METHOD')
 

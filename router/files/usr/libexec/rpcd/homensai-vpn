@@ -1,2 +1,12 @@
 #!/bin/sh
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# Read-only page polls are answered from the monitor's memory (status.sock) by a light client
+# (python3 -I -S, no application imports). Every other call, and any failure of that path,
+# runs agent.py exactly as before.
+case "$1:$2:$#" in
+    call:status:2|call:events:2|call:history:2|call:auto_live:2)
+        [ -S /var/run/homensai-vpn/status.sock ] &&
+            exec /usr/bin/python3 -I -S /usr/lib/homensai-vpn/status_client.py "$2"
+        ;;
+esac
 exec /usr/bin/python3 /usr/lib/homensai-vpn/agent.py "$@"

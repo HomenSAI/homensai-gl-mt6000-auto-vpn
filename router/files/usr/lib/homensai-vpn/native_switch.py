@@ -550,6 +550,19 @@ def slot_contract_verified():
     except (OSError,ValueError,KeyError):return False
 
 
+FAST_SWITCH_CONFIG=Path('/etc/config/homensai_vpn')
+VERIFY_VENDOR_WAIT=20
+VERIFY_TRANSIENT={'VENDOR-WORKER-BUSY','VENDOR-SETTLING','VENDOR-WORKER-QUIET-UNVERIFIED'}
+
+
+def fast_switch_enabled():
+    """On the installed router unless the owner set `option fast_switch '0'` (then every switch uses the vendor
+    rebuild). Read from the config file itself: no process, and never on a host without the package config."""
+    try:text=FAST_SWITCH_CONFIG.read_text(encoding='utf8')
+    except (OSError,UnicodeError):return False
+    return not re.search(r"^\s*option\s+fast_switch\s+'?0'?\s*$",text,re.M)
+
+
 class Linux:
     def __init__(self):self.process_bindings=None
     def use_process_bindings(self,bindings):
@@ -752,8 +765,16 @@ class Linux:
                 # One UCI transaction; the same Stop/revision fence used for
                 # rule ordering protects this already-modelled derived state.
                 (write_command or command)(['lua','-e',script],timeout=8)
-        (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=RTP_TIMEOUT)
-        if detected=='mt3000':
+        self.fast_path=None
+        if detected=='mt3000' and fast_switch_enabled():
+            # Measured fast path: the committed UCI order applied to the kernel in one atomic restore (8-33 ms),
+            # no firewall reload and no dnsmasq restart. Any unexpected chain falls back to the vendor rebuild.
+            from fast_policy import Unsupported
+            try:self.fast_path=self.apply_fast(write_command or command)
+            except Unsupported as error:self.fast_path={'used':False,'reason':str(error)}
+        if not (self.fast_path or {}).get('used'):
+            (write_command or command)(['/usr/bin/rtp2.sh','not_reload_network'],timeout=RTP_TIMEOUT)
+        if detected=='mt3000' and not (self.fast_path or {}).get('used'):
             from native_platform import wait_quiet
             try:wait_quiet()
             except (OSError,ValueError) as error:raise Refused(str(error)if str(error)in('VENDOR-WORKER-BUSY','VENDOR-WORKER-QUIET-UNVERIFIED')else'VENDOR-WORKER-QUIET-UNVERIFIED') from None
@@ -761,6 +782,30 @@ class Linux:
         try:verified=applied(self.policy()['sections'],self.process_bindings)
         except (ValueError,KeyError,TypeError):verified=False
         if not verified:raise Refused('POLICY-IDENTITY-CHANGED')
+    def apply_fast(self,write):
+        import fast_policy
+        order,local_tunnel,local_mark=fast_policy.uci_rules(command(['uci','show','route_policy']).decode('utf8','replace'))
+        mangle=command(['iptables-save','-t','mangle']).decode('utf8','replace')
+        payload,old_first,changed=fast_policy.plan(mangle,order,local_tunnel,local_mark)
+        if not changed:return {'used':True,'changed':False}
+        old_mark=fast_policy.mark_of(mangle,old_first)
+        fd,path=tempfile.mkstemp(prefix='fast-policy-',suffix='.rules',dir=str(RUNTIME))
+        try:
+            with os.fdopen(fd,'w') as stream:stream.write(payload)
+            started=time.monotonic()
+            write(['iptables-restore','--noflush',path],timeout=5)
+            swap_ms=round((time.monotonic()-started)*1000,1)
+        finally:
+            try:os.unlink(path)
+            except OSError:pass
+        after=command(['iptables-save','-t','mangle']).decode('utf8','replace')
+        if fast_policy.plan(after,order,local_tunnel,local_mark)[2]:raise Refused('FAST-PATH-UNVERIFIED')
+        # Flows already marked for the channel we leave keep their connmark: drop them so they re-route now.
+        # Not through the fenced writer: it compares the kernel graph with the pre-write fingerprint, which our own
+        # restore has just changed (beta3 failed exactly here). conntrack -D changes no policy, only flow state.
+        try:command(['conntrack','-D','-m',old_mark+'/0xf000'],timeout=5)
+        except (OSError,subprocess.SubprocessError,ValueError):pass  # nothing to delete is not a failure
+        return {'used':True,'changed':True,'swap_ms':swap_ms}
     def guard_exists(self):
         result=subprocess.run(['nft','list','table','inet',TABLE],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=5)
         if result.returncode==0:
@@ -900,8 +945,10 @@ def rollback(backend,journal,reason,restore_order=None):
             from rollback_recovery import order_allowed
             if not order_allowed(journal,live_order):raise Refused('POLICY-IDENTITY-CHANGED')
             same_graph=kernel_before.get('kernel_fingerprint')==journal.get('restore_kernel_fingerprint')
+            # The graph may have moved because our own kernel writer ran (rtp2, or the fast iptables-restore during the
+            # forward step or the restore). It is accepted only when it already proves the recorded restore target.
             if not same_graph and not (kernel_before.get('verified') is True and live_order==journal.get('restore_target_order')
-                                       and journal.get('restore_rtp_dispatched') is True):raise Refused('KERNEL-POLICY-UNVERIFIED')
+                                       and (journal.get('restore_rtp_dispatched') is True or journal.get('rtp_dispatched') is True)):raise Refused('KERNEL-POLICY-UNVERIFIED')
         if (pending_step and same_graph or not known_order
                 or not (kernel_before.get('verified') is True or kernel_before.get('repairable_missing') is True)):
             from rollback_recovery import authorize,promote_forward
@@ -941,7 +988,7 @@ def rollback(backend,journal,reason,restore_order=None):
             from rollback_recovery import record_step
             record_step(backend,journal,args)
             restore_check()
-        if args[0]=='/usr/bin/rtp2.sh':
+        if args[0] in ('/usr/bin/rtp2.sh','iptables-restore'):  # both write the kernel graph (fast path: iptables-restore)
             journal['restore_rtp_dispatched']=True;journal_write(journal)
         return (forward_dispatch(args,recovery_revision,timeout=timeout) if recovery_revision is not None
                 else command(args,timeout=timeout))
@@ -1261,7 +1308,7 @@ def child(tx):
             try:ready()
             except (OSError,ValueError):raise Refused('RTP-BOOT-PRECONDITION-UNVERIFIED') from None
         if journal.get('pair_transition') is not None:
-            if args[0]=='/usr/bin/rtp2.sh':journal['rtp_dispatched']=True
+            if args[0] in ('/usr/bin/rtp2.sh','iptables-restore'):journal['rtp_dispatched']=True  # both write the kernel graph
             else:journal['forward_policy_touched']=True
             journal_write(journal)  # Recovery distinguishes UCI-only work from a dispatched kernel writer.
         if args[0]=='/usr/bin/rtp2.sh':apply_progress(tx,'rtp-dispatch')
@@ -1279,6 +1326,11 @@ def child(tx):
     if journal.get('pair_transition') is not None:
         apply_progress(tx,'verify-diagnostic')
         blockers,current=backend.diagnostic()
+        # GL often restarts the failed tunnel at this very moment (seen on the MT3000: VENDOR-WORKER-BUSY right
+        # after a fast switch). A busy or settling vendor worker is transient: wait for it, bounded, then judge.
+        waited_until=time.monotonic()+VERIFY_VENDOR_WAIT
+        while blockers and set(blockers)<=VERIFY_TRANSIENT and time.monotonic()<waited_until:
+            time.sleep(2);blockers,current=backend.diagnostic()
         if blockers:raise Refused(blockers[0])
         apply_progress(tx,'verify-kernel')
         proof=backend.attest_policy(current)

@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard159'
+UI_MODULE='dashboard164'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -363,7 +363,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui125.css',expected=3)
+must_replace('ui15.css','ui130.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -523,7 +523,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui125.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui130.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -561,7 +561,7 @@ assert source.count('function speedPanel(')==1 and source.count('function traffi
 must_replace('bi("Checks","Проверок")].map(function(t){return E(\'th\',{},t);})','bi("Checks","Проверок")].concat((typeof compareColumns==="function"?compareColumns(status):[]).map(function(m){return compareHeader(m);})).map(function(t){return E(\'th\',{},t);})')
 must_replace("cell(rankConfidence(item.r.n))]));});","cell(rankConfidence(item.r.n))].concat((typeof compareColumns==='function'?compareColumns(status):[]).map(function(m){return cell(compareCell(status,m,item.p.id));}))));});")
 # The monitoring lamp moved from the Auto card to the sidebar; its statistics live at the top of the service monitor page.
-must_replace("put('services',E('h3',{},tr(\"Монитор служб\")))","if(typeof renderMonitorBlock==='function')put('services',E('section',{'class':'hv-chart-card hv-monitor-page','data-monitor-page':'1'},[E('h3',{},bi('Monitoring','Мониторинг')),renderMonitorBlock(status,inventory)]));put('services',E('h3',{},tr(\"Монитор служб\")))")
+must_replace("put('services',E('h3',{},tr(\"Монитор служб\")))","if(typeof renderMonitorPage==='function')put('services',renderMonitorPage(status,inventory));put('services',E('h3',{},tr(\"Монитор служб\")))")
 # Declarations no code path calls any more (their call sites were replaced by later patches).
 for _name in ('renderPlanBlockers','renderProbeChecks','renderDecisionExplanation','autoCheckDue','controllerTransitionMarks','dvName',
               'dvProfileIdentity','journalCurrentLatency','onboardingEntryDeferred','planCheckState','renderOnboardingGate','renderTransitionBadge',
