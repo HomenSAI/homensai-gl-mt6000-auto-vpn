@@ -9,10 +9,11 @@ Safety contract:
 - Only the read methods in METHODS with no arguments. Anything else, any malformed request and any
   failure while computing answers FALLBACK: the caller then runs agent.py exactly as before, so error
   codes, write methods and rpcd ACLs are unchanged.
-- One write method, the owner's manual channel click (WRITERS: pair_manual), is answered by the same
-  function agent.py calls, in this already running process (beta8 measured 3.5 s of python start-up per
-  click). It only queues the click; the supervisor validates and switches. FALLBACK is possible only before
-  the function runs; once it ran, any failure is answered as an unconfirmed request, never repeated.
+- The page buttons in WRITERS (manual channel click, Start/Stop Auto, failure test, probe and response
+  settings) are answered by the same functions agent.py calls, in this already running process (beta8
+  measured 3.5 s of python start-up per click). They only queue or save; the supervisor validates and acts.
+  FALLBACK is possible only before the function runs; once it ran, any failure is answered as unconfirmed,
+  never repeated through agent.py.
 - The socket is 0600 inside the 0700 runtime directory, peers must have this process' user id, and the
   socket is removed as soon as the monitor stops.
 - A snapshot is served only while every control file (Auto/Stop requests, control revision, manual
@@ -32,8 +33,9 @@ import threading
 import time
 
 METHODS = frozenset(('status', 'events', 'history', 'auto_live'))
-WRITERS = frozenset(('pair_manual',))
-WRITE_FAILED = {'accepted': False, 'queued': False, 'completed': False, 'blockers': ['PAIR-MANUAL-REQUEST-UNCONFIRMED']}
+WRITERS = frozenset(('pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel', 'setup_probe', 'setup_response'))
+WRITE_FAILED = {'pair_manual': {'accepted': False, 'queued': False, 'completed': False, 'blockers': ['PAIR-MANUAL-REQUEST-UNCONFIRMED']}}
+WRITE_FAILED_DEFAULT = {'accepted': False, 'queued': False, 'saved': False, 'code': 'RPC-UNCONFIRMED', 'blockers': ['RPC-UNCONFIRMED']}
 CACHED = ('status', 'events', 'history')
 NAME = 'status.sock'
 REQUEST_LIMIT = 65537 + 32       # method line plus the same 65537 request bytes agent.py reads
@@ -336,7 +338,7 @@ class StatusServer:
             if not isinstance(result, dict):
                 raise ValueError('reply')
         except Exception:
-            body = json.dumps(WRITE_FAILED).encode('ascii')   # it may have queued: never run it twice
+            body = json.dumps(WRITE_FAILED.get(method, WRITE_FAILED_DEFAULT)).encode('ascii')  # it may have acted: never twice
         return OK + body + b'\n'
 
     def compute(self, method):

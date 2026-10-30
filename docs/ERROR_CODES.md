@@ -4669,6 +4669,18 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** Reload the page (Ctrl+F5).
 
+## RPC-UNCONFIRMED
+
+Результат кнопки не подтверждён / Button result not confirmed
+
+**RU:** Служба роутера приняла нажатие, но не смогла подтвердить результат. Нажатие не повторялось, поэтому ничего не выполнилось дважды.
+
+**EN:** The router service accepted the button but could not confirm its result. It was not repeated, so nothing happened twice.
+
+**Что делать:** Посмотрите состояние на странице; нажмите кнопку ещё раз, только если ничего не изменилось.
+
+**Action:** Look at the state on the page; press the button again only if nothing changed.
+
 ## RPC-NONFINITE-NUMBER
 
 Неверное число / Invalid number

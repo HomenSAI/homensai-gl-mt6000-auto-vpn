@@ -32,7 +32,8 @@ var VERSION_HISTORY={
         {version:'1.0.0-beta5',how:['fast switch','быстрое переключение'],runs:3,stages:[28,57,44],ret:23.7},
         {version:'1.0.0-beta7',how:['fast switch','быстрое переключение'],runs:3,stages:[28.3,68.3,39.3],ret:25.3}],
   manual:[{version:'1.0.0-beta7',how:['full guarded transaction','полная защищённая транзакция'],runs:1,stages:[4.6,2.8,12.1,5.5,15.7,1.5],moved:25},
-          {version:'1.0.0-beta8',how:['instant manual switch','мгновенное ручное переключение'],runs:6,stages:[3.5,1.7,5.3,0.3,3.7,2.1],moved:10.8}]};
+          {version:'1.0.0-beta8',how:['instant manual switch','мгновенное ручное переключение'],runs:6,stages:[3.5,1.7,5.3,0.3,3.7,2.1],moved:10.8},
+          {version:'1.0.0-beta9',how:['click and history in memory','нажатие и история в памяти'],runs:6,stages:[3.3,1.4,2.3,1.2,0.7,1.0],moved:8.2}]};
 function versionHistoryChart(kind){
   var stages=VERSION_STAGES[kind];
   return phaseChart(VERSION_HISTORY[kind].map(function(v){var at=0;
@@ -55,7 +56,7 @@ function renderVersionHistory(){
     legend('auto'),versionHistoryChart('auto'),versionHistoryTable('auto'),
     E('p',{},bi('The switch itself became about a third shorter with the fast switch and the return twice as fast; most of the time is now the detection and confirmation of the failure, set by the probe level.','Само переключение стало примерно на треть короче с быстрым переключением, возврат — вдвое быстрее; основное время теперь — обнаружение и подтверждение сбоя, оно задаётся уровнем опроса.')),
     legend('manual'),versionHistoryChart('manual'),versionHistoryTable('manual'),
-    E('p',{},bi('Manual button with Auto on: 42 s to done in beta7, 14.5-20.2 s in beta8; the route change itself takes about 0.3 s.','Ручная кнопка при включённом Auto: 42 с до готово в beta7, 14,5–20,2 с в beta8; сама смена маршрута — около 0,3 с.'))]);
+    E('p',{},bi('Manual button with Auto on: 42 s to done in beta7, 14.5-20.2 s in beta8, 8.2-12.6 s in beta9; the atomic kernel switch itself takes 0.15-0.3 s.','Ручная кнопка при включённом Auto: 42 с до готово в beta7, 14,5–20,2 с в beta8, 8,2–12,6 с в beta9; само атомарное переключение в ядре — 0,15–0,3 с.'))]);
 }
 // Guaranteed ranges for the 1.0.0 beta description: fault start -> traffic already on the reserve (min / mean / max, s).
 var AUTO_MEASURED_RANGES=[[1,160,171,183],[3,150,153,163],[4,140,154,159],[5,152,157,162]];

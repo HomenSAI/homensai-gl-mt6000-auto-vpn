@@ -86,6 +86,18 @@ def fields(tokens):
     return result
 
 
+_TOKENS={}  # shlex.split per rule line: the same ~200 lines are parsed 4x per attestation (0.55 s on the MT3000)
+
+
+def _tokens(line):
+    tokens=_TOKENS.get(line)
+    if tokens is None:
+        tokens=tuple(shlex.split(line))
+        if len(_TOKENS)>=4096:_TOKENS.clear()
+        _TOKENS[line]=tokens
+    return tokens
+
+
 def parse_mangle(text):
     if not isinstance(text,str) or len(text)>2*1024*1024:raise ValueError('KERNEL-POLICY-UNVERIFIED')
     chains={};opened=False;committed=False
@@ -101,9 +113,9 @@ def parse_mangle(text):
             if not match or match.group(1) in chains:raise ValueError('KERNEL-POLICY-UNVERIFIED')
             if match.group(1)=='PREROUTING' and line.split()[1]!='ACCEPT':raise ValueError('KERNEL-POLICY-UNVERIFIED')
             chains[match.group(1)]=[];continue
-        tokens=shlex.split(line)
+        tokens=_tokens(line)
         if len(tokens)<4 or tokens[0]!='-A' or tokens[1] not in chains:raise ValueError('KERNEL-POLICY-UNVERIFIED')
-        chains[tokens[1]].append(tokens[2:])
+        chains[tokens[1]].append(list(tokens[2:]))
     if not opened or not committed:raise ValueError('KERNEL-POLICY-UNVERIFIED')
     return chains
 

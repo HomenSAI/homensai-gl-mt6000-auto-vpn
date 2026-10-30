@@ -17,10 +17,10 @@
     "router/design_views.inc.js": "06ff0185edf8dcedfab37190316684d9f03215da704edc2545c548bdb23a6692",
     "router/element_guard.inc.js": "6588f7f5d65b8c7eb0d3bb4e90e572f5a69aaaceab6b335c6291094e8e85a45e",
     "router/error_links.inc.js": "b893f5680ba66892716fcf822603261cdc895f26dc71308955367180e10cc5a7",
-    "router/error_rows_extra.inc.js": "f8a29e89b2fd884a6c5b4d2230d7f08ef23db235fca617ad15ab87fe7ef824f0",
+    "router/error_rows_extra.inc.js": "4492303456d54bf374dd29a11f6f0cf1360894d73b1e90f514507c8897c823dd",
     "router/error_table.inc.js": "5ab4c9ade767af4a46a6f7c9655499d8753859799f257dbcc73de8aa438ca7c9",
     "router/fault_panel.inc.js": "6ee9d416241f4da6e7374815b8f4d0aa6b8674c46084c2ab9bb8c5cc2cee52db",
-    "router/files/usr/lib/homensai-vpn/agent.py": "bf166167febc627a18919b69245efc981d4a6178090124e0e00ac9a199a5c883",
+    "router/files/usr/lib/homensai-vpn/agent.py": "931978bc5711f890cf040c83a8ddb4e62eb0d339b1704c17131d3aa340bd9a2c",
     "router/fool_guard.inc.js": "1288a5e44e6ed75c079461380a767e2a0543362e1de52f0168a161df53f1c335",
     "router/help_panel.inc.js": "547f6f7b722fa6f4db65c503cfbe1102821decaa264efd138ddb3569094cda83",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -35,7 +35,7 @@
     "router/live_log.inc.js": "944c6861238660db2a353fdc8b7d7234ee77ceefd75fae600899d1b1f9703f67",
     "router/live_terminal.inc.js": "1d15345dcd077d10db375ec69eabfbfd8c31f5798d7243056c0aba54bd2d0e16",
     "router/manual_panel.inc.js": "5b352c57c59da7e447a055846340bf8abcadeb27f0b9ce47ca879ab8954e3ba7",
-    "router/measurements_help.inc.js": "176a9bc85b436bdc1d964ebc8d764eb83de561fca8635b63cb92bb2d6154ea88",
+    "router/measurements_help.inc.js": "a57eb4122e95d409e8413cf78581758a7670e50f148baf461c29109510816b0d",
     "router/minimum_channels.inc.js": "8ac51c67c6cd85a7f6f9a0289a2fdb5d9e219a94e29ffcb66c43d126ca3dd48c",
     "router/minimum_help.inc.js": "e71d2447ffe32e040b7b79e574ef734ce7751761127527e4d1cc11e46738f429",
     "router/minimum_navigation.inc.js": "5f6c901e3312e8b0aca9a93ecebb4c7c373a8e327f211142a1d121aebf21f6bc",
@@ -80,6 +80,6 @@
     "docs/AI-INSTALL.ru.md": "094d356abf404474e78eaa18851ab45caa3901b0005737ae29ac6c60d0faddb1",
     "docs/AI-LAN.ru.md": "6516e76271e6d4cb4c4c17f802b141c12ec600fa100296abd0aa7f1d412fc2f7",
     "docs/BUILTIN-HELP.ru.md": "c8fcf93b9d4bc8a31a5539d1c12d4a0c6a43d4c8cee86da55385d6c272290e4b",
-    "docs/ERROR_CODES.md": "25f0b69f393076bded5d5ba051ca64409e3ac8408b0e7b526b1bc61bd1ba3373"
+    "docs/ERROR_CODES.md": "4018068ba1dee3eb85c2e006a732481b912caf42683d42e997436daab48326f8"
   }
 }

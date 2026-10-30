@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '1.0.0-beta9'
+VERSION = '1.0.0-beta10'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -123,6 +123,9 @@ def atomic_json(path, value):
         os.close(directory)
 
 
+FLOAT_EDGE = 2 ** 1023  # integers above this are checked against the float range
+
+
 def read_json(path, default=None):
     if path.is_symlink():
         raise ValueError('symlink storage refused')
@@ -130,8 +133,8 @@ def read_json(path, default=None):
         if path.stat().st_size > 4 * 1024 * 1024:
             raise ValueError('oversize state')
         def number(raw):
-            value = float(raw) if any(c in raw for c in '.eE') else int(raw)
-            if not math.isfinite(value):
+            value = float(raw)
+            if value in (math.inf, -math.inf):
                 raise ValueError('nonfinite state number')
             return value
         def pairs(items):
@@ -143,7 +146,8 @@ def read_json(path, default=None):
             return row
         def constant(raw):
             raise ValueError('nonfinite state number')
-        value = json.loads(path.read_text(encoding='utf-8'), parse_int=number,
+        # parse_int=int keeps the C scanner's fast path (an integer is always finite); floats are checked.
+        value = json.loads(path.read_text(encoding='utf-8'), parse_int=int,
                            parse_float=number, parse_constant=constant, object_pairs_hook=pairs)
         # Existing schemas use only a few levels. Bound recursive consumers too,
         # including checksums, after decoding without recursively walking here.
@@ -157,6 +161,8 @@ def read_json(path, default=None):
                 raise ValueError('state nesting limit')
             if isinstance(row, (dict, list)):
                 pending.append((iter(row.values() if isinstance(row, dict) else row), depth + 1))
+            elif type(row) is int and (row > FLOAT_EDGE or row < -FLOAT_EDGE):
+                float(row)  # an integer beyond the float range: OverflowError -> invalid state, as before
         return value
     except FileNotFoundError:
         return default
@@ -725,9 +731,41 @@ def start_status_server():
         from status_server import StatusServer
         from auto_live import snapshot as live
         return StatusServer(RUNTIME, PERSIST, {'status': status_reply, 'events': events_reply, 'history': history_reply},
-                            live, read_json, stopping=lambda: STOP, writers={'pair_manual': pair_manual_reply}).start()
+                            live, read_json, stopping=lambda: STOP,
+                            writers=dict({'pair_manual': pair_manual_reply},
+                                         **{name: (lambda arguments, name=name: control_reply(name, arguments)) for name in CONTROL_METHODS})).start()
     except Exception:
         return None
+
+
+def control_reply(method, arguments):
+    """Start/Stop Auto, the failure test and the probe/response settings: one answer for rpcd/agent.py and the socket."""
+    if method in ('fault_start','fault_cancel'):
+        from fault_control import start,cancel,FaultError
+        try:return start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
+        except FaultError as error:return {'accepted':False,'code':str(error)}
+    if method in ('setup_probe','setup_response'):
+        from setup_config import save
+        try:return save(arguments,{'setup_probe':'probe','setup_response':'response'}[method])
+        except ValueError as error:
+            return {'saved':False,'code':str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'SETUP-INVALID'}
+    from auto_control import start, stop
+    if method=='native_stop':
+        if set(arguments)-{'request_source'}:raise ValueError('RPC-UNEXPECTED-ARGS')
+        # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
+        try:result=stop(runtime=RUNTIME,persist=PERSIST,request_source=arguments.get('request_source'))
+        except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
+        if (RUNTIME/'fault-intent.json').exists():
+            from fault_control import cancel,FaultError
+            try:result['fault_cleanup']=cancel().get('cleaned',False)
+            except (FaultError,OSError,ValueError,subprocess.SubprocessError):result['fault_cleanup']=False
+        return result
+    if method=='native_start':
+        return start(arguments['control_revision'],request_source=arguments.get('request_source')) if 'control_revision' in arguments and set(arguments)<={'control_revision','request_source'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
+    raise ValueError('RPC-UNEXPECTED-METHOD')
+
+
+CONTROL_METHODS=('native_start','native_stop','fault_start','fault_cancel','setup_probe','setup_response')
 
 
 def pair_manual_reply(arguments):
@@ -1208,11 +1246,8 @@ def rpc(method):
     if method=='stats_reset':
         from stats_reset import request as reset_request
         print(json.dumps(reset_request(arguments)));return
-    if method in ('fault_start','fault_cancel'):
-        from fault_control import start,cancel,FaultError
-        try:result=start(arguments) if method=='fault_start' else cancel() if not arguments else {'queued':False,'code':'FAULT-FIELDS'}
-        except FaultError as error:result={'accepted':False,'code':str(error)}
-        print(json.dumps(result));return
+    if method in ('fault_start','fault_cancel','setup_probe','setup_response'):
+        print(json.dumps(control_reply(method,arguments)));return
     if method in ('priority_preview','priority_apply'):
         from priority_config import preview,apply
         print(json.dumps(preview(arguments) if method=='priority_preview' else apply(arguments)));return
@@ -1271,21 +1306,12 @@ def rpc(method):
         print(json.dumps(enqueue(RUNTIME,read_json,atomic_json)))
     elif method in ('native_start','native_trial_start','native_stop','native_return'):
         from auto_control import start, stop, return_request
-        if method=='native_stop':
-            if set(arguments)-{'request_source'}:raise ValueError('RPC-UNEXPECTED-ARGS')
-            # A failure-simulation test is cleaned up even when the stop latch itself cannot be written.
-            try:result=stop(runtime=RUNTIME,persist=PERSIST,request_source=arguments.get('request_source'))
-            except (OSError,ValueError,subprocess.SubprocessError):result={'queued':False,'code':'STOP-UNCONFIRMED'}
-        elif method=='native_start':
-            result=start(arguments['control_revision'],request_source=arguments.get('request_source')) if 'control_revision' in arguments and set(arguments)<={'control_revision','request_source'} else {'accepted':False,'blockers':['CONTROL-REVISION-STALE']}
-        elif method=='native_trial_start':
+        if method in ('native_stop','native_start'):
+            print(json.dumps(control_reply(method,arguments)));return
+        if method=='native_trial_start':
             valid=(set(arguments)=={'control_revision','trial'}and isinstance(arguments['trial'],str)and re.fullmatch('[a-f0-9]{32}',arguments['trial']))
             result=start(arguments['control_revision'],trial_nonce=arguments['trial']) if valid else {'accepted':False,'blockers':['LAN-TRIAL-REQUIRED']}
         else:result=return_request()
-        if method=='native_stop' and (RUNTIME/'fault-intent.json').exists():
-            from fault_control import cancel,FaultError
-            try:result['fault_cleanup']=cancel().get('cleaned',False)
-            except (FaultError,OSError,ValueError,subprocess.SubprocessError):result['fault_cleanup']=False
         print(json.dumps(result));return
     elif method=='speed_live':
         from speed_test import public_live

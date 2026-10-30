@@ -236,11 +236,13 @@ class Writer(ServerCase):
         reply = server.answer('pair_manual', b'{"direction":"reserve"}')
         self.assertTrue(reply.startswith(status_server.OK), 'answered here: agent.py would queue a second click')
         self.assertEqual(json.loads(reply[3:])['blockers'], ['PAIR-MANUAL-REQUEST-UNCONFIRMED'])
+        server = self.server(writers={'native_stop': broken})
+        self.assertEqual(json.loads(server.answer('native_stop', b'{}')[3:])['code'], 'RPC-UNCONFIRMED')
 
     def test_malformed_click_and_unknown_writers_go_to_agent(self):
-        server = self.server(writers={'pair_manual': lambda arguments: {'accepted': True}, 'native_start': lambda arguments: {}})
+        server = self.server(writers={'pair_manual': lambda arguments: {'accepted': True}, 'setup_system': lambda arguments: {}})
         self.assertEqual(server.answer('pair_manual', b'{'), status_server.FALLBACK)
-        self.assertEqual(server.answer('native_start', b'{}'), status_server.FALLBACK, 'only the listed click')
+        self.assertEqual(server.answer('setup_system', b'{}'), status_server.FALLBACK, 'only the listed buttons')
         server.close()
         self.assertEqual(server.answer('pair_manual', b'{}'), status_server.FALLBACK, 'stopping monitor: agent.py')
 
@@ -570,8 +572,10 @@ class Signature(unittest.TestCase):
         write = set(acl['write']['ubus']['homensai-vpn'])
         self.assertLessEqual(status_server.METHODS, read)
         self.assertFalse(status_server.METHODS & write, 'the read path serves read-ACL methods only')
-        self.assertEqual(status_server.WRITERS, {'pair_manual'})
-        self.assertLessEqual(status_server.WRITERS, write, 'the one write method keeps its write ACL in rpcd')
+        self.assertEqual(status_server.WRITERS, {'pair_manual', 'native_start', 'native_stop', 'fault_start', 'fault_cancel',
+                                                 'setup_probe', 'setup_response'})
+        self.assertLessEqual(status_server.WRITERS, write, 'the button methods keep their write ACL in rpcd')
+        self.assertEqual(set(agent.CONTROL_METHODS) | {'pair_manual'}, status_server.WRITERS)
         self.assertEqual(set(status_client.METHODS), status_server.METHODS | status_server.WRITERS)
 
 

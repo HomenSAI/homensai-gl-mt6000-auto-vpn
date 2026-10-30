@@ -14,5 +14,6 @@ for(const v of c.VH.auto){
 for(const v of c.VH.manual)assert.strictEqual(v.stages.length,c.VS.manual.length,v.version+' manual stages');
 assert(Math.abs(total(c.VH.manual[0])-42.2)<0.2,'beta7 manual return took 42.2 s');
 assert(total(c.VH.manual[1])>14.5&&total(c.VH.manual[1])<20.3,'beta8 mean lies inside the measured 14.5-20.2 s');
+assert(Math.abs(total(c.VH.manual[2])-9.9)<0.1,'beta9 mean 9.9 s (8.2-12.6 s)');
 const versions=c.VH.auto.map(v=>v.version);assert.strictEqual(JSON.stringify(versions),JSON.stringify([...versions].sort()),'oldest first');
 console.log('PASS: version history');

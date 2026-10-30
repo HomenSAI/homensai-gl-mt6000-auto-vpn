@@ -164,6 +164,22 @@ def controls():
         result.update(available=False,blockers=['PAIR-MANUAL-STATE-UNVERIFIED']);return result
 
 
+def light_gate(direction,settings):
+    """The first blocker of an instant click from RAM state only (no diagnostic, no kernel attestation), or None."""
+    from agent import RUNTIME,read_json
+    import native_switch as n
+    from observation_freshness import valid_for as observation_window
+    now=time.time();native=read_json(n.STATE,{});status=read_json(RUNTIME/'status.json',{});queued=read()
+    if not isinstance(native,dict) or not isinstance(status,dict):return 'PAIR-MANUAL-STATE-UNVERIFIED'
+    if queued and queued['state'] in PENDING or native.get('state') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):return 'PAIR-MANUAL-BUSY'
+    if not (type(native.get('time')) in (int,float) and 0<=now-native['time']<=30):return 'PAIR-MANUAL-STALE'
+    if n.journal_read().get('phase') not in (None,'ROLLED-BACK','COMMITTED','HELD-ON-RESERVE'):return 'TRANSACTION-IN-PROGRESS'
+    target=native.get('source') if direction=='primary' else native.get('target')
+    if not healthy(status,target,now,observation_window(settings)):
+        return 'SOURCE-NOT-HEALTHY' if direction=='primary' else 'PAIR-MANUAL-TARGET-UNHEALTHY'
+    return None
+
+
 def request(direction,revision,request_source=None):
     from agent import RUNTIME,read_json,atomic_json
     from auto_control import control_lock,revision_locked,normalize_request_source
@@ -174,8 +190,14 @@ def request(direction,revision,request_source=None):
         backend=n.Linux();n.bind_policy_context(backend,pair.read_state())
         settings=backend.policy()['settings']
         if settings.get('pair_auto_mode')!=pair.MODE:return refuse('PAIR-MODE-NOT-CONFIGURED')
-        control=controls();choice=control.get(direction,{})
-        if not control.get('available') or not choice.get('allowed'):return refuse((choice.get('blockers') or control.get('blockers') or ['PAIR-MANUAL-NOT-AVAILABLE'])[0])
+        if direction!='resume' and n.fast_switch_enabled():
+            # Instant switch: a light gate. beta9 measured 2.5-6 s here for the full button model (kernel attestation
+            # under the monitor's load) although the supervisor proves everything again when it takes the click.
+            code=light_gate(direction,settings)
+            if code:return refuse(code)
+        else:
+            control=controls();choice=control.get(direction,{})
+            if not control.get('available') or not choice.get('allowed'):return refuse((choice.get('blockers') or control.get('blockers') or ['PAIR-MANUAL-NOT-AVAILABLE'])[0])
         selection={}
         if direction!='resume':
             if n.fast_switch_enabled():

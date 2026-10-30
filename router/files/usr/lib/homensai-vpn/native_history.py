@@ -123,6 +123,24 @@ def _file_key(path):
     except FileNotFoundError:return None
 
 
+RESIDENT_MIN_AVAILABLE_KB=64*1024  # the resident copy (~8 MB parsed on the MT3000) is kept only with this much RAM free
+
+
+def memory_available_kb():
+    try:
+        with open('/proc/meminfo') as stream:
+            for line in stream:
+                if line.startswith('MemAvailable:'):return int(line.split()[1])
+    except (OSError,ValueError,IndexError):pass
+    return None
+
+
+def remember(history,data):
+    available=memory_available_kb()
+    if available is not None and available<RESIDENT_MIN_AVAILABLE_KB:return  # low memory: read the file next time
+    _WRITER_CACHE[str(history.path)]={'key':(_file_key(history.path),_file_key(history.backup)),'data':data,'detail_days':history.detail_days}
+
+
 def atomic_bytes(path,raw):
     """atomic() for an already encoded value."""
     path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -344,7 +362,7 @@ class History:
         else:
             atomic(self.backup,self._old())  # first write after a backup restore or a legacy upgrade: full copy
         atomic_bytes(self.path,envelope_bytes(raw))
-        _WRITER_CACHE[str(self.path)]={'key':(_file_key(self.path),_file_key(self.backup)),'data':data,'detail_days':self.detail_days}
+        remember(self,data)
     def _record(self,value,now=None):
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
@@ -419,7 +437,7 @@ class History:
                 old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
                 atomic(self.backup,old);atomic(self.path,self.envelope(data))
             # Unchanged or just rewritten from this very data: the resident copy stays valid for the next event.
-            _WRITER_CACHE[str(self.path)]={'key':(_file_key(self.path),_file_key(self.backup)),'data':data,'detail_days':self.detail_days}
+            remember(self,data)
             return False
         if not self._from_main:self._legacy_old=self.envelope(json.loads(encoded(data)))
         if data['sequence']>=2**53-1:raise HistoryError('HISTORY-SEQUENCE-LIMIT')
