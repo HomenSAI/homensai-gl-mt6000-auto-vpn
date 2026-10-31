@@ -690,13 +690,15 @@ class Linux:
                 try:selected_interfaces(selection)
                 except ValueError:blockers.append('EXISTING-TUNNEL-BINDING-UNVERIFIED')
             self.use_process_bindings(selection.get('process_bindings'))
-            from failure_diagnosis import resolve_pair,profile_identity
+            from failure_diagnosis import resolve_pair,profile_identity,flap_window,SOURCE_UNSTABLE
             interval=data.get('settings',{}).get('interval','10')
             try:interval=int(interval)
             except (ValueError,TypeError,OverflowError):raise Refused('OBSERVATION-STALE')
             observed=read_json(RUNTIME/'status.json',{})
-            pair=resolve_pair(observed,data.get('settings',{}),time.time(),max(30,min(900,interval*3)),max(30,min(600,interval*2)))
+            settle=max(30,min(600,interval*2))
+            pair=resolve_pair(observed,data.get('settings',{}),time.time(),max(30,min(900,interval*3)),settle,flap_window(settle))
             if pair['coordination']['state']!='READY':raise Refused(pair['coordination']['code'])
+            unstable=pair['coordination']['code']==SOURCE_UNSTABLE
             for role in ('source','target'):
                 current=selection[role];measured=pair[role]
                 if any(current.get(key)!=measured.get(key) for key in ('id','protocol','interface','vendor_tunnel_id')):
@@ -705,7 +707,11 @@ class Linux:
                 live=route_binding(current['interface'])
                 # A reserve that is simply not connected is not a changed profile.
                 if role=='target' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001':raise Refused('RESERVE-NOT-CONNECTED')
-                if (live.get('code') is not None and not (role=='source' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001')
+                # An unstable source (it keeps being rebuilt) is only left, never used: its live binding is down or
+                # bound now (its older measurement may be of a former device); a half-built one is still settling.
+                if role=='source' and unstable:
+                    if live.get('code') not in (None,'VPN-001'):raise Refused('VENDOR-SETTLING')
+                elif (live.get('code') is not None and not (role=='source' and live.get('code')=='VPN-001' and measured.get('code')=='VPN-001')
                         or any(live.get(key)!=measured.get(key) for key in ('device','mark','table','ifindex'))):
                     raise Refused('PROFILE-IDENTITY-CHANGED')
                 selection[role]['kernel_binding']={key:live.get(key) for key in ('code','device','mark','table','ifindex')}
@@ -1219,14 +1225,15 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     never hidden behind the historical COMMITTED status.
     """
     from recovery_settings import normalized
-    from failure_diagnosis import resolve_pair,profile_identity
+    from failure_diagnosis import resolve_pair,profile_identity,flap_window
     from observation_freshness import valid_for,settle_for
     recovery=normalized(settings)
     age=valid_for(settings)
     selection_settings=dict(settings)
     for role in ('source','target'):
         if not selection_settings.get('plan_'+role):selection_settings['plan_'+role]=journal[role]
-    pair=resolve_pair(status,selection_settings,now,age,settle_for(settings))
+    # A primary the vendor keeps rebuilding does not make the held reserve's identity unknown.
+    pair=resolve_pair(status,selection_settings,now,age,settle_for(settings),flap_window(settle_for(settings)))
     proofs=journal.get('vendor_profiles',{})
     target=pair['target'];expected=proofs.get('target') if isinstance(proofs,dict) else None
     if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
@@ -1886,6 +1893,8 @@ def serve():
     RUNTIME.mkdir(parents=True,exist_ok=True);PERSIST.mkdir(mode=0o700,parents=True,exist_ok=True)
     with open(RUNTIME/'native.lock','a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+        from agent import sweep_pending
+        for directory in (PERSIST,PERSIST/'session-recovery'):sweep_pending(directory)
         from auto_control import current_revision
         revision_error=False
         try:current_revision(runtime=RUNTIME,rotate=True)
@@ -1912,6 +1921,11 @@ def serve():
         # independent supervisor restores owned work; it never resumes Auto.
         from pair_auto import fence_recovery
         fence_recovery()
+        if journal.get('phase') not in (None,'ROLLED-BACK'):
+            # A power cut removes the stock boot prefix (tmpfs); recovery may write the kernel through rtp2.sh.
+            from rtp_boot import recovery_prefix
+            try:recovery_prefix()
+            except (OSError,ValueError):pass  # the rollback below then refuses with its own code
         if journal.get('phase')=='RELEASE-PENDING':
             abandon(backend,journal,journal.get('reason','EXTERNAL-POLICY-CHANGE'))
         # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
@@ -1928,6 +1942,9 @@ def serve():
                 journal.update(rollback_failures=0,rollback_package=recovery_package());journal_write(journal)
             if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
                 give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
+            # the rollback ends with guard(devices()): a prepared router starts no VPN client by itself
+            from pair_auto import boot_devices
+            boot_devices(backend)
             try:rollback_counted(backend,journal,'SUPERVISOR-RECOVERY')
             except (Refused,OSError,ValueError,subprocess.SubprocessError):
                 if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
@@ -1936,6 +1953,8 @@ def serve():
         elif journal.get('phase')=='COMMITTED':
             if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
             else:
+                from pair_auto import boot_devices
+                boot_devices(backend)  # the pair's own clients first (bounded); the guard refuses an empty list
                 backend.guard(backend.devices())
                 if journal.get('manual_request_id') and journal.get('confirmed'):
                     journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL');journal_write(journal)
@@ -1952,6 +1971,10 @@ def serve():
             publish({'state':'BLOCKED','blockers':['CONTROL-REVISION-STALE'],
                      'alarm':'CONTROL-REVISION-STALE','original_restored':False})
             return
+        # Owner decision extension 31.10.2026 (boot_resume.py): recovery (and its intent fence) is done; a fresh
+        # token lets the monitor resume the owner's Auto after an unintended restart (crash, kill)
+        from boot_resume import write_token
+        write_token(RUNTIME)
         last_return=0;consumed={};last_trial=None;last_attempt=0
         while not STOP:
             try:

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- control.lua: auto_control.control_lock and native_switch.require_control_revision for the Lua core.
 --
 -- Python's control_lock is flock(2) on /var/run/homensai-vpn/auto-control.lock. nixio's File:lock() is

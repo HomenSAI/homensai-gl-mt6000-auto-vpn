@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- Test harness of the Lua monitor: plain lua5.1, no router modules; a fake runner replaces monitor_io.lua.
 -- MERGE NOTE: feat/lua-core-20261030 has tests/lua/harness.lua with the same test/eq/truthy/raises/run API;
 -- this file adds the fake runner. Unify into one harness at merge.
@@ -19,7 +19,10 @@ local function show(v)
   return tostring(v)
 end
 T.show=show
+-- Value equality; a Python-float box equals the plain number of the same value (accounting keeps Python's
+-- int/float types since Lua plan item 6; the byte-level typing is checked by tests/test_lua_history.py).
 local function deep(a,b)
+  if canon.is_float(a) or canon.is_float(b) then return canon.number(a)~=nil and canon.number(a)==canon.number(b) end
   if type(a)~=type(b) then return false end
   if type(a)~='table' then return a==b end
   if a==canon.null or b==canon.null then return a==b end
@@ -117,6 +120,11 @@ function T.fake_runner(options)
   function R.command(name,a,b)
     R.commands_log[#R.commands_log+1]={name,a,b}
     if name=='inventory' then return canon.encode(R.inventory_data) end
+    if name=='native_policy' then
+      R.policy_reads=(R.policy_reads or 0)+1
+      if R.native_policy then return canon.encode(R.native_policy) end
+      return nil,'COMMAND-FAILED'
+    end
     if name=='iface_status' then
       local row=R.interfaces[a];if not row then return nil,'COMMAND-FAILED' end
       return canon.encode(canon.object(row))
@@ -190,6 +198,14 @@ function T.fake_runner(options)
   function R.remove(path) R.files[path]=nil;R.versions[path]=(R.versions[path] or 0)+1 end
   function R.file_key(path) if R.files[path]==nil then return nil end;return tostring(R.versions[path] or 0)..':'..#R.files[path] end
   function R.unsafe(path) return false end
+  function R.list_dir(directory)
+    local names={}
+    for path in pairs(R.files) do
+      local name=string.match(path,'^'..string.gsub(directory,'[%-%.%+%[%]%(%)%$%^%%%?%*]','%%%0')..'/([^/]+)$')
+      if name then names[#names+1]=name end
+    end
+    table.sort(names);return names
+  end
   function R.try_lock(directory,fn,name)
     name=name or 'auto-control.lock'
     if R.locked[name] then return false end

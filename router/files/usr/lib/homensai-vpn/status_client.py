@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Light rpcd client for the read-only page polls; run as `python3 -I -S status_client.py <method>`.
 
 It imports only os, sys, time and the C module _socket (the socket.py wrapper would load enum and

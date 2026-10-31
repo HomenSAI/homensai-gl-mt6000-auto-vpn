@@ -1,8 +1,9 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- setup.lua: the three page settings answered natively by the Lua monitor (owner plan item 3):
 --   setup_probe     setup_config.probe_payload    -> probe_level, probe_boost, interval, measure_interval
---   setup_response  setup_config.response_payload -> response_metric [, response_compare] [, fast_switch]
+--   setup_response  setup_config.response_payload -> response_metric [, response_compare] [, fast_switch] [, ping_interval]
 --   setup_stats     stats_mode.payload            -> stats_mode, stats_until
+--                   (mode 'retention': retention_settings.payload -> stats_retention_mode/_days/_mb [, history_days])
 -- Same validation codes, same guards and the same UCI keys/values as setup_config.save(); the write is the
 -- setup_save.lua procedure (refuse a pending delta, set, save, commit, verify with a fresh cursor) done in this
 -- process with libuci instead of a child. Answers: {"saved":true,"mode":"monitor","requires_lan_certification":true}
@@ -18,6 +19,7 @@ M.FALLBACK={}
 M.LEVELS={[1]={60,300},[2]={30,120},[3]={20,60},[4]={15,45},[5]={10,30}}
 M.FORCED_BOOST={[1]=true,[2]=true}
 M.RESPONSE_METRICS={['icmp-1.1.1.1']=true,['icmp-8.8.8.8']=true,['icmp-9.9.9.9']=true,websites=true}
+M.PING_MIN,M.PING_MAX,M.PING_STEP=10,300,10  -- probe_policy.PING_INTERVAL_MIN/MAX/STEP
 M.HOURS={[24]=true,[72]=true,[168]=true,[336]=true}
 M.WRITER_CODES={['SETUP-PENDING-DELTA']=true,['SETUP-DELTA-UNVERIFIED']=true,['SETUP-SAVE-UNCONFIRMED']=true}
 local NULL=canon.null
@@ -51,18 +53,23 @@ function M.probe_payload(arguments)
 end
 
 function M.response_payload(arguments)
-  if not is_dict(arguments) or arguments.metric==nil or not keys_within(arguments,{'metric','compare','fast_switch'})
+  if not is_dict(arguments) or arguments.metric==nil or not keys_within(arguments,{'metric','compare','fast_switch','ping_interval'})
      or type(arguments.metric)~='string' or not M.RESPONSE_METRICS[arguments.metric] then fail('RESPONSE-METRIC-INVALID') end
   for _,key in ipairs({'compare','fast_switch'}) do
     if arguments[key]~=nil and type(arguments[key])~='boolean' then fail('RESPONSE-METRIC-INVALID') end
   end
+  -- Owner ping cadence: whole seconds 10..300 in steps of 10 (probe_policy.ping_interval reads it back).
+  local ping=arguments.ping_interval
+  if ping~=nil and (not pyint(ping) or ping<M.PING_MIN or ping>M.PING_MAX or ping%M.PING_STEP~=0) then fail('PING-INTERVAL-INVALID') end
   local main={response_metric=arguments.metric}
   if arguments.compare~=nil then main.response_compare=arguments.compare and '1' or '0' end
   if arguments.fast_switch~=nil then main.fast_switch=arguments.fast_switch and '1' or '0' end
+  if ping~=nil then main.ping_interval=string.format('%d',ping) end
   return main
 end
 
 function M.stats_payload(arguments,now)
+  if is_dict(arguments) and arguments.mode=='retention' then return require('retention').payload(arguments) end
   if not is_dict(arguments) or (arguments.mode~='work' and arguments.mode~='diagnostic') then fail('STATS-SETTINGS-FIELDS') end
   if arguments.mode=='work' then
     if not keys_are(arguments,{'mode'}) then fail('STATS-SETTINGS-FIELDS') end
@@ -113,7 +120,8 @@ end
 -- the UCI write (setup_save.lua for 'main' keys)
 ------------------------------------------------------------------------------------------------------
 M.ALLOWED={response_metric=true,response_compare=true,fast_switch=true,stats_mode=true,stats_until=true,probe_level=true,
-  probe_boost=true,interval=true,measure_interval=true}
+  stats_retention_mode=true,stats_retention_days=true,stats_retention_mb=true,history_days=true,
+  probe_boost=true,interval=true,measure_interval=true,ping_interval=true}
 
 function M.write(deps,main)
   local c=deps.cursor()

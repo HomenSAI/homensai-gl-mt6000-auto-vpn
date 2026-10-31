@@ -23,11 +23,14 @@ stop-auto)
   if ! /etc/init.d/homensai-vpn stop; then echo "STOP: service stop failed; saved Auto flag was not changed. Inspect managed recovery before retrying."; exit 1; fi
   if [ -n "$(uci -q changes homensai_vpn)" ]; then echo "STOP: own services stopped; pending homensai_vpn changes remain uncommitted. Resolve them before changing the saved Auto flag."; exit 1; fi
   uci set homensai_vpn.main.native_enabled=0 && uci commit homensai_vpn && echo "native_enabled=0 committed"
+  # The commit fires the service's config trigger, which starts the services again (soak trial 31.10.2026): stop
+  # them once more after the trigger, so close-journal finds no supervisor (Python or Lua) running.
+  sleep 3; /etc/init.d/homensai-vpn stop
   ;;
 close-journal)
   # Only for a stale journal after YOU restored the VPN rules by hand. Archives it, never deletes evidence.
   nft list table inet $TABLE >/dev/null 2>&1 && { echo "STOP: guard still present; run remove-guard first"; exit 1; }
-  ps w | grep -q "[n]ative_switch.py daemon" && { echo "STOP: controller is running; run stop-auto first"; exit 1; }
+  ps w | grep -q -e "[n]ative_switch.py daemon" -e "[l]ua/auto.lua daemon" && { echo "STOP: controller is running; run stop-auto first"; exit 1; }
   J=/etc/homensai-vpn/native-transaction.json
   [ -f "$J" ] || { echo "no journal"; exit 0; }
   A=/etc/homensai-vpn/native-transaction.closed-$(date +%Y%m%d-%H%M%S).json

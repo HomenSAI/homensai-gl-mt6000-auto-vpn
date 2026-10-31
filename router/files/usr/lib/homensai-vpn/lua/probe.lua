@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- probe.lua: the router-originated channel checks of agent.py (dns_question/valid_dns/dns_probe, https_probe,
 -- route_binding, probe, probe_profiles) and the ICMP echo of icmp_ping.py, ported to Lua 5.1.
 -- Every network/system access goes through the injected runner (monitor_io.lua on the router, fakes in tests):
@@ -21,7 +21,9 @@ M.HTTP_SECONDS=6
 M.TARGETS={{'1.1.1.1','one.one.one.one','/cdn-cgi/trace','trace'},
            {'8.8.8.8','dns.google','/resolve?name=example.com&type=A','dns-json'},
            {'9.9.9.9','dns.quad9.net','/dns-query','dns-wire'}}
-M.PING_TARGET='1.1.1.1';M.PING_INTERVAL=30;M.PING_VALID_FOR=45;M.PING_TIMEOUT=1.0
+M.PING_TARGET='1.1.1.1';M.PING_INTERVAL=60;M.PING_VALID_FOR=45;M.PING_TIMEOUT=1.0
+-- icmp_ping.SLACK: a due echo may go up to 2 s early (pass jitter must not turn a 10 s choice into 20 s).
+M.PING_SLACK=2
 
 function M.safe(s,limit) return type(s)=='string' and #s>=1 and #s<=(limit or 96) and string.find(s,'^[A-Za-z0-9_.:-]+$')~=nil end
 function M.is_number(v) return type(v)=='number' and v==v and v~=math.huge and v~=-math.huge end
@@ -234,8 +236,10 @@ end
 local BINDING_KEYS={'device','mark','table','ifindex'}
 M.BINDING_KEYS=BINDING_KEYS
 
--- probe(runner, profile, cb): cb(result) exactly once; the three HTTPS checks and the DNS check run in parallel.
-function M.probe(runner,profile,cb)
+-- probe(runner, profile, cb[, endpoint]): cb(result) exactly once; the three HTTPS checks and the DNS check run in
+-- parallel. endpoint(profile, now) -> server_endpoint row | nil (server_endpoint.lua Observer; agent.probe reads it
+-- after the route identity was confirmed again, whatever the health code); its own fault never fails the probe.
+function M.probe(runner,profile,cb,endpoint)
   local result={id=profile.id,time=runner.wall(),code='CHECK-001',scope='router-originated',lan_path_verified=false}
   local administrative_state=profile.administrative_state or 'unknown'
   if administrative_state=='enabled' or administrative_state=='disabled' or administrative_state=='unknown' then result.administrative_state=administrative_state end
@@ -273,6 +277,11 @@ function M.probe(runner,profile,cb)
         end
         local exit=exit_seen[binding.device]
         if exit and not result.code then result.exit_ip=exit.ip;if exit.country then result.exit_country=exit.country end end
+        if endpoint then
+          local oke,value=pcall(endpoint,profile,runner.wall())
+          if oke and type(value)=='table' then result.server_endpoint=value
+          elseif not oke and runner.log then runner.log('server endpoint '..tostring(profile.id)..': '..tostring(value)) end
+        end
       end)
       if not okf then fail(ferr);return end
       done=true;cb(result)
@@ -404,11 +413,19 @@ M.signature=signature
 local Sampler={};Sampler.__index=Sampler
 function M.PingSampler(runner,binding_reader,paused)
   return setmetatable({runner=runner,binding_reader=binding_reader,paused=paused or function() return false end,
-    cache={},attempts={},interval=M.PING_INTERVAL,valid_for=M.PING_VALID_FOR,target=M.PING_TARGET,closed=false},Sampler)
+    cache={},attempts={},last={},interval=M.PING_INTERVAL,valid_for=M.PING_VALID_FOR,target=M.PING_TARGET,closed=false},Sampler)
 end
-function Sampler:configure(interval,target)
-  self.interval=interval;self.valid_for=math.floor(interval*3/2+15)
+-- icmp_ping.PingSampler.configure: owner cadence; valid_for from probe_policy.ping_valid_for.
+function Sampler:configure(interval,target,valid_for)
+  self.interval=interval;self.valid_for=valid_for or math.max(M.PING_VALID_FOR,math.floor(interval*3/2+15))
   if target and target~=self.target then self.target=target;self.cache={} end
+end
+-- icmp_ping.last_reading: the shared last-ping reading of one answer (only a real reply counts).
+function M.last_reading(result)
+  if type(result)~='table' or result.state~='ok' then return nil end
+  local rtt,stamp=canon.number(result.rtt_ms),canon.number(result.time)
+  if not M.is_number(rtt) or not M.is_number(stamp) then return nil end
+  return {rtt_ms=result.rtt_ms,time=result.time,target=(type(result.target)=='string' and result.target) or M.PING_TARGET}
 end
 -- measure(row, cb): binding before, echo, binding after; cb(public) exactly once.
 function Sampler:measure(row,cb)
@@ -453,6 +470,14 @@ function Sampler:apply(rows,pair,now)
   for _,row in ipairs(rows) do if selected[row.id] then live[row.vendor_tunnel_id or '']=true end end
   local monotonic_now=self.runner.clock()
   for key,value in pairs(self.attempts) do if not live[key] and monotonic_now-value>=self.interval then self.attempts[key]=nil end end
+  -- ping_last (icmp_ping.PingSampler.apply): the channel's last real answer, kept only for listed channels.
+  local listed={}
+  for _,row in ipairs(rows) do if row.id~=nil then listed[row.id]=true end end
+  for id in pairs(self.last) do if not listed[id] then self.last[id]=nil end end
+  for _,row in ipairs(rows) do
+    local last=row.id~=nil and self.last[row.id] or nil
+    row.ping_last=last and {rtt_ms=last.rtt_ms,time=last.time,target=last.target} or canon.null
+  end
   local sent=0
   for _,row in ipairs(rows) do
     if not selected[row.id] then row.ping=M.ping_public(row,'inactive','PING-NOT-SELECTED')
@@ -470,16 +495,20 @@ function Sampler:apply(rows,pair,now)
           if not stamp or now-stamp< -5 or now-stamp>self.valid_for then row.ping=M.ping_public(row,'stale','PING-DATA-STALE',value.time,value.rtt_ms,value.target) end
         else row.ping=M.ping_public(row,'checking','PING-CHECK-PENDING') end
         local last=self.attempts[row.vendor_tunnel_id]
-        if not self.closed and not self.paused() and sent<2 and (last==nil or monotonic_now-last>=self.interval) then
+        if not self.closed and not self.paused() and sent<2 and (last==nil or monotonic_now-last>=self.interval-M.PING_SLACK) then
           self.attempts[row.vendor_tunnel_id]=monotonic_now;sent=sent+1
           local snapshot={};for _,k in ipairs(IDENTITY) do snapshot[k]=row[k] end;for _,k in ipairs(BINDING_KEYS) do snapshot[k]=row[k] end
           snapshot.administrative_state=row.administrative_state;snapshot.vendor_state=row.vendor_state
           local target,valid_for=self.target,self.valid_for
           local applying=true
+          self.inflight=(self.inflight or 0)+1
           self:measure(snapshot,function(result)
+            self.inflight=math.max(0,(self.inflight or 1)-1)
             if self.closed then return end
             result.valid_for=valid_for;result.target=target
             self.cache[key]=result
+            local reading=M.last_reading(result)
+            if reading and snapshot.id~=nil then self.last[snapshot.id]=reading end
             if self.on_result then pcall(self.on_result,snapshot,result) end
             -- a synchronous answer (fakes, or an immediate failure) is shown in this very pass
             if applying then local copy={};for k,v in pairs(result) do copy[k]=v end;row.ping=copy end
@@ -490,6 +519,8 @@ function Sampler:apply(rows,pair,now)
     end
   end
 end
-function Sampler:close() self.closed=true;self.cache={} end
+function Sampler:close() self.closed=true;self.cache={};self.last={} end
+-- icmp_ping.PingSampler.idle(): no echo in flight (the speed test's quiet window waits for it, speed_pause.gate)
+function Sampler:idle() return (self.inflight or 0)==0 end
 
 return M

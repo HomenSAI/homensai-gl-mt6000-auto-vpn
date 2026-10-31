@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Whitelisted own-configuration setup. VPN keys/routes are never edited."""
 import hashlib
 import json

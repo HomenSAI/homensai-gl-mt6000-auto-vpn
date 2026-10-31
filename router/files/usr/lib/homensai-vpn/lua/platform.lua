@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- platform.lua: the platform guards of the Python Auto for the Lua supervisor (2.0.0-lua line).
 -- Ports: native_platform (PINS, assess, wait_quiet); mt3000_manual_platform (_read, _zones, _held_firewall_locks,
 -- _workers); native_switch Linux.acceleration (+ fresh_hook_state, appended_hook_state) and slot_contract_verified;
@@ -660,6 +660,19 @@ function M.rtp_assess(sys)
   for _,name in ipairs({'/tmp/resolv.conf.d','/tmp/hosts.vpn'}) do if M.rtp_checked(sys,name,{directory=true,optional=true})==nil then ready=false end end
   if M.rtp_checked(sys,'/tmp/run/vpn-client-booted',{optional=true})==nil then ready=false end
   return {safe=true,ready=ready,kernel_verified=false}
+end
+-- Boot recovery (soak trial 31.10.2026, alpha11 evidence): after a power cut the stock boot prefix (tmpfs) is gone and
+-- with Auto off nothing recreates it, so every rollback refused RTP-BOOT-PRECONDITION-UNVERIFIED until
+-- ROLLBACK-GIVEN-UP, and Start then refused TRANSACTION-IN-PROGRESS: a dead end only a reinstall could open.
+-- The supervisor's own recovery recreates exactly the prefix stock boot creates (two empty directories, the
+-- zero-byte gate) with the same checks as prepare(), without an Auto intent: it is no Auto start and no consent.
+function M.rtp_recovery_prefix(sys)
+  M.rtp_contract(sys)
+  for _,path in ipairs({'/tmp/resolv.conf.d','/tmp/hosts.vpn'}) do
+    if M.rtp_checked(sys,path,{directory=true,optional=true})==nil then sys.mkdir(path,493) end
+  end
+  if M.rtp_checked(sys,'/tmp/run/vpn-client-booted',{optional=true})==nil then sys.create_exclusive('/tmp/run/vpn-client-booted','') end
+  return M.rtp_ready(sys)
 end
 -- rtp_boot.prepare(revision): under the control lock, only for the running pair session of this revision
 function M.rtp_prepare(env,sys,revision)

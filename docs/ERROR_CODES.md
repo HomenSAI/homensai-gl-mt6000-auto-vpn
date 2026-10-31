@@ -1495,6 +1495,18 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **Action:** Wait for the next check (see the countdown under the traffic light).
 
+## PING-INTERVAL-INVALID
+
+Интервал пинга не принят / Ping interval not accepted
+
+**RU:** Страница отправила интервал пинга, которого нет на роутере: допустимы только шаги по 10 с от 10 с до 5 мин. Ничего не сохранено, прежний интервал остаётся.
+
+**EN:** The page sent a ping interval the router does not offer: only whole steps of 10 s from 10 s to 5 min are allowed. Nothing was saved; the previous interval stays.
+
+**Что делать:** Обновите страницу (Ctrl+F5), выберите интервал из списка и сохраните снова.
+
+**Action:** Reload the page (Ctrl+F5), choose an interval from the list and save again.
+
 ## RESPONSE-METRIC-INVALID
 
 Неизвестный способ измерения отклика / Unknown response measurement
@@ -4693,6 +4705,42 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** Reload the page (Ctrl+F5) and choose again.
 
+## STATS-RETENTION-FIELDS
+
+Выбор хранения статистики не принят / Statistics storage choice not accepted
+
+**RU:** Роутер принимает либо «по времени» с числом дней, либо «по объёму» с числом мегабайт, и ничего больше.
+
+**EN:** The router accepts either "by time" with a number of days or "by size" with a number of megabytes, nothing else.
+
+**Что делать:** Обновите страницу (Ctrl+F5) и снова передвиньте ползунок.
+
+**Action:** Reload the page (Ctrl+F5) and move the slider again.
+
+## STATS-RETENTION-DAYS
+
+Срок хранения статистики не принят / Statistics period not accepted
+
+**RU:** Хранить можно только 1, 2, 3, 4, 5, 6 или 7 дней, 2 недели (14) или месяц (30).
+
+**EN:** Only 1, 2, 3, 4, 5, 6 or 7 days, 2 weeks (14) or 1 month (30) can be kept.
+
+**Что делать:** Выберите одну из отметок ползунка и сохраните снова.
+
+**Action:** Choose one of the slider stops and save again.
+
+## STATS-RETENTION-SIZE
+
+Ограничение объёма статистики не принято / Statistics size limit not accepted
+
+**RU:** Ограничение объёма — целое число мегабайт от 1 до 32.
+
+**EN:** The size limit is a whole number of megabytes from 1 to 32.
+
+**Что делать:** Передвиньте ползунок мегабайт на значение от 1 до 32 и сохраните снова.
+
+**Action:** Move the megabyte slider to a value from 1 to 32 and save again.
+
 ## LUA-CORE-UNAVAILABLE
 
 Ядро Lua не ответило / Lua core did not answer
@@ -4776,6 +4824,18 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 **Что делать:** Если повторяется, выключите супервизор Lua (option lua_auto 0) и сообщите код разработчику.
 
 **Action:** If it repeats, turn the Lua supervisor off (option lua_auto 0) and send the code to the developer.
+
+## STATE-FILE-DAMAGED
+
+Файл сохранённого состояния повреждён / Saved state file damaged
+
+**RU:** Файл состояния Auto на флеш-памяти роутера не читается, обычно после резкого отключения питания. Его копия отложена в папку quarantine; Auto не переключает по этому файлу и продолжает работу.
+
+**EN:** A state file of Auto on the router flash could not be read, usually after a sudden power cut. A copy was put aside in the quarantine folder; Auto does not switch on this file and keeps running.
+
+**Что делать:** Нажмите Stop, затем Start. Если повторяется, отправьте код и папку quarantine (/etc/homensai-vpn/quarantine) разработчику.
+
+**Action:** Press Stop and then Start. If it repeats, send the code and the quarantine folder (/etc/homensai-vpn/quarantine) to the developer.
 
 ## RPC-NONFINITE-NUMBER
 
@@ -6756,6 +6816,18 @@ Auto выключен на время обновления / Auto was switched o
 **Что делать:** Делать ничего не нужно.
 
 **Action:** Nothing to do.
+
+## AUTO-RESUME-*
+
+Возобновление Auto после перезагрузки / Auto resume after a reboot
+
+**RU:** После отключения питания или перезагрузки роутер сам включает Auto, только если владелец включил его кнопкой Start; более поздний Stop это отменяет. Код показывает, почему Auto был или не был возобновлён после этой загрузки; все проверки Start при этом действуют.
+
+**EN:** After a power cut or reboot the router restarts Auto by itself only if the owner had switched it on with Start; a later Stop cancels that. This code says why Auto was or was not resumed after this boot; every Start check still applies.
+
+**Что делать:** Если Auto должен работать, нажмите Start один раз.
+
+**Action:** If Auto should be on, press Start once.
 
 ## FAST-*
 

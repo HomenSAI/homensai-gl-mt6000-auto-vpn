@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 650" font-family="Segoe UI, Arial, sans-serif" role="img" aria-label="Пирамида ядра HomenS.AI Auto VPN: Python, Lua, C и переходы при сбое">
+  <title>Ядро HomenS.AI Auto VPN: уровни Python → Lua → C и переходы при сбое (31.10.2026)</title>
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#b3261e"/>
+    </marker>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#44505c"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1100" height="650" fill="#ffffff"/>
+  <text x="550" y="20" text-anchor="middle" font-size="15" font-weight="700" fill="#14212e">Ядро: быстрые уровни стоят на медленных, но проверенных. При сбое — шаг вниз.</text>
+
+  <!-- tiers: top = fastest, bottom = proven base -->
+  <polygon points="360,34 480,34 550,120 290,120" fill="#e6e2f7" stroke="#44505c" stroke-dasharray="6 4"/>
+  <text x="420" y="74" text-anchor="middle" font-size="15" font-weight="700" fill="#14212e">C · hv-core</text>
+  <text x="420" y="94" text-anchor="middle" font-size="12" fill="#14212e">план: не установлен</text>
+
+  <polygon points="290,120 550,120 620,210 220,210" fill="#bcd7ff" stroke="#44505c"/>
+  <text x="420" y="158" text-anchor="middle" font-size="15" font-weight="700" fill="#14212e">Lua · hv-core (один процесс)</text>
+  <text x="420" y="180" text-anchor="middle" font-size="12" fill="#14212e">option lua_core_process · на роутере не проверялся</text>
+
+  <polygon points="220,210 620,210 690,300 150,300" fill="#b7efc5" stroke="#44505c"/>
+  <text x="420" y="248" text-anchor="middle" font-size="15" font-weight="700" fill="#14212e">Lua 5.1 · monitor.lua + auto.lua</text>
+  <text x="420" y="270" text-anchor="middle" font-size="12" fill="#14212e">два процесса · lua_monitor, lua_auto · ~20 МБ, ~19 % ядра</text>
+
+  <polygon points="150,300 690,300 760,390 80,390" fill="#ffe9a8" stroke="#44505c"/>
+  <text x="420" y="336" text-anchor="middle" font-size="15" font-weight="700" fill="#14212e">Python 3.9 · эталон (основание)</text>
+  <text x="420" y="358" text-anchor="middle" font-size="12" fill="#14212e">agent.py · native_switch.py · lua_bridge.py · status_bridge.py</text>
+  <text x="420" y="376" text-anchor="middle" font-size="12" fill="#14212e">~78 МБ, ~60 % ядра · всегда установлен</text>
+
+  <!-- speed / reliability axis -->
+  <line x1="40" y1="372" x2="40" y2="214" stroke="#44505c" stroke-width="2" marker-end="url(#g)"/>
+  <text x="22" y="204" font-size="12" fill="#14212e">быстрее, легче</text>
+  <text x="22" y="408" font-size="12" fill="#14212e">дольше проверено</text>
+
+  <!-- C (plan) -> separate Lua -->
+  <path d="M 322 76 C 200 76, 110 255, 180 255" fill="none" stroke="#b3261e" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#a)"/>
+  <text x="20" y="100" font-size="12" fill="#b3261e">план: 3 падения за 10 мин</text>
+  <text x="20" y="116" font-size="12" fill="#b3261e">→ exec lua auto.lua daemon</text>
+
+  <!-- hv-core -> separate Lua -->
+  <path d="M 590 165 C 700 165, 720 255, 662 255" fill="none" stroke="#b3261e" stroke-width="2" marker-end="url(#a)"/>
+  <text x="790" y="140" font-size="13" font-weight="700" fill="#b3261e">HV-CORE-FALLBACK</text>
+  <text x="790" y="157" font-size="12" fill="#14212e">3 сбоя за 600 с → монитор и Auto</text>
+  <text x="790" y="173" font-size="12" fill="#14212e">работают двумя Lua-процессами</text>
+  <text x="790" y="189" font-size="12" fill="#14212e">сторож: цикл молчит 120 с → SIGTERM</text>
+  <text x="790" y="205" font-size="12" fill="#14212e">(HV-CORE-WATCHDOG, считается сбоем)</text>
+
+  <!-- separate Lua -> Python -->
+  <path d="M 660 255 C 770 255, 790 345, 732 345" fill="none" stroke="#b3261e" stroke-width="2" marker-end="url(#a)"/>
+  <text x="790" y="248" font-size="13" font-weight="700" fill="#b3261e">LUA-AUTO-FALLBACK</text>
+  <text x="790" y="265" font-size="12" fill="#14212e">auto.lua: 3 ошибки за 600 с →</text>
+  <text x="790" y="281" font-size="12" fill="#14212e">exec native_switch.py (до рестарта службы)</text>
+  <text x="790" y="301" font-size="12" fill="#14212e">монитор: нет ответа Lua / {"fallback":true}</text>
+  <text x="790" y="317" font-size="12" fill="#14212e">→ agent.py на этот запрос (rpcd)</text>
+  <text x="790" y="356" font-size="12" fill="#14212e">Python упал → procd через 5 с,</text>
+  <text x="790" y="372" font-size="12" fill="#14212e">журнал выравнивается при старте</text>
+
+  <!-- language-independent safety -->
+  <rect x="20" y="420" width="1060" height="112" rx="12" fill="#f3f5f7" stroke="#44505c"/>
+  <text x="550" y="442" text-anchor="middle" font-size="14" font-weight="700" fill="#14212e">Защита под всеми уровнями (одни и те же файлы и правила на Python, Lua и C)</text>
+  <rect x="34" y="452" width="250" height="70" rx="10" fill="#ffffff" stroke="#44505c" stroke-opacity=".5"/>
+  <text x="159" y="472" text-anchor="middle" font-size="13" font-weight="700" fill="#14212e">Журнал + откат</text>
+  <text x="159" y="490" text-anchor="middle" font-size="12" fill="#14212e">незавершённое переключение</text>
+  <text x="159" y="506" text-anchor="middle" font-size="12" fill="#14212e">откатывается при старте</text>
+  <rect x="296" y="452" width="250" height="70" rx="10" fill="#ffffff" stroke="#44505c" stroke-opacity=".5"/>
+  <text x="421" y="472" text-anchor="middle" font-size="13" font-weight="700" fill="#14212e">Защита «только VPN»</text>
+  <text x="421" y="490" text-anchor="middle" font-size="12" fill="#14212e">nft homensai_vpn_guard; блок</text>
+  <text x="421" y="506" text-anchor="middle" font-size="12" fill="#14212e">отката снимает ядро через 90 с</text>
+  <rect x="558" y="452" width="250" height="70" rx="10" fill="#ffffff" stroke="#44505c" stroke-opacity=".5"/>
+  <text x="683" y="472" text-anchor="middle" font-size="13" font-weight="700" fill="#14212e">Возобновление Auto</text>
+  <text x="683" y="490" text-anchor="middle" font-size="12" fill="#14212e">после обесточивания и</text>
+  <text x="683" y="506" text-anchor="middle" font-size="12" fill="#14212e">перезапуска супервизора</text>
+  <rect x="820" y="452" width="246" height="70" rx="10" fill="#ffffff" stroke="#44505c" stroke-opacity=".5"/>
+  <text x="943" y="472" text-anchor="middle" font-size="13" font-weight="700" fill="#14212e">homensai-vpn-emergency</text>
+  <text x="943" y="490" text-anchor="middle" font-size="12" fill="#14212e">ручной выход по SSH: show,</text>
+  <text x="943" y="506" text-anchor="middle" font-size="12" fill="#14212e">stop-auto, remove-guard</text>
+
+  <!-- per-call fallbacks -->
+  <text x="20" y="560" font-size="13" font-weight="700" fill="#14212e">Запасные пути на один вызов (без счётчика):</text>
+  <text x="20" y="580" font-size="12" fill="#14212e">• живая проба Lua (ошибка Lua) → lua_bridge.py · поле страницы Lua не вычислено → status_bridge.py (до ответа кнопки заблокированы)</text>
+  <text x="20" y="598" font-size="12" fill="#14212e">• быстрый путь правил (8–33 мс) не подходит → перестройка GL rtp2.sh (46–76 с) · Telegram-тест Lua без ответа → agent.py</text>
+  <text x="20" y="616" font-size="12" fill="#14212e">• исключение: мгновенное переключение Lua (option lua_core) при отказе НЕ повторяется в Python — отказ и откат (LUA-CORE-UNAVAILABLE)</text>
+  <text x="1080" y="640" text-anchor="end" font-size="11" fill="#44505c">HomenS.AI Auto VPN · Serhii Khomenko · homensai.com · 31.10.2026</text>
+</svg>

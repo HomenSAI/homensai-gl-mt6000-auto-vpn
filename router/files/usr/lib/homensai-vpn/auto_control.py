@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Serialized UI intent; only the supervisor writes network state.
 
 Resume keeps the existing nonce, certified policy and bounded deadline.
@@ -229,7 +229,14 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
         if prepared.get('code'):return {'accepted':False,'blockers':[prepared['code']],'prepared':prepared.get('repaired',[])}
     from pair_auto import MODE, request as pair_request
     if trial_nonce is None and settings.get('pair_auto_mode')==MODE:
-        return pair_request(control_revision,request_source=source)
+        reply=pair_request(control_revision,request_source=source)
+        # Owner decision 31.10.2026: the owner's own Start is remembered on flash, so Auto comes back after a power cut
+        if source=='manual' and isinstance(reply,dict) and reply.get('accepted') and not reply.get('already_requested'):
+            try:
+                from boot_resume import remember
+                remember()
+            except (OSError,ValueError):pass
+        return reply
     blockers, selection = backend.diagnostic()
     try:
         consumed=read_json(PERSIST/'native-attempts.json',{})

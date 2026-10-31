@@ -36,6 +36,26 @@ t.test('restart in WAIT-CLIENT: helpers.settled() proves the restored role, jour
   t.eq(env.backend.guard_calls[#env.backend.guard_calls],'vpn-only')
 end)
 
+t.test('power cut: recovery recreates the stock boot prefix before the rollback, without an Auto intent (soak trial)',function()
+  local env=wired()
+  pair_attempt(env)
+  local j=t.journal(env);j.phase='RESTORING';T.journal_write(env,j)
+  local order={}
+  env.deps.rtp_boot={recovery_prefix=function() order[#order+1]='prefix';return true end}
+  t.eq(A.recover(env),'ready')
+  t.eq(order,{'prefix'})
+  t.eq(t.journal(env).phase,'ROLLED-BACK')
+end)
+
+t.test('a failing boot prefix is logged, never an error of its own: the rollback decides',function()
+  local env=wired()
+  pair_attempt(env)
+  local j=t.journal(env);j.phase='WAIT-CLIENT';T.journal_write(env,j)
+  env.deps.rtp_boot={recovery_prefix=function() error({code='RTP-BOOT-PRECONDITION-UNVERIFIED'},0) end}
+  t.eq(A.recover(env),'ready')
+  t.eq(t.journal(env).phase,'ROLLED-BACK')
+end)
+
 t.test('a recorded restore step whose graph is unchanged needs authorize(): without the stopped session it refuses and counts',function()
   local env=wired()
   pair_attempt(env)

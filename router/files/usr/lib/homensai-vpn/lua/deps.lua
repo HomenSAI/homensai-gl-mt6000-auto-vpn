@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- deps.lua: env.deps of the Lua supervisor (2.0.0-lua line) - the Python helper modules transaction.lua,
 -- pair.lua, rollback.lua and manual.lua call, ported:
 --   resolve_pair, diagnose, scoped_samples, profile_identity   failure_diagnosis (diagnosis.lua)
@@ -8,8 +8,9 @@
 --   manual_control {valid_record, publish_result}              manual_control (the legacy one-shot queue)
 --   testing_profile                                             fault_control.testing_profile
 --   from_kernel                                                 channel_path.from_kernel
--- Not ported here (optional in transaction.lua, documented in LUA-AUTO-ITEM1): capture_latency/capture_website
--- (history enrichment of an event), clean_website_response, validate_delegated (Python's extra check of the
+--   capture_latency                                             native_history.capture_transition_latency (item 6)
+-- Not ported here (optional in transaction.lua, documented in LUA-AUTO-ITEM1): capture_website (the Lua monitor
+-- measures no websites, so Python finds no sample either), clean_website_response, validate_delegated (Python's extra check of the
 -- delegated journal records; pair.policy.metadata still checks pair_transition before every write).
 local canon=require('canon')
 local ctl=require('auto_control')
@@ -172,12 +173,15 @@ function M.new(env,sys,backend)
     assess=function() local ok,r=pcall(platform.rtp_assess,sys);if not ok then ctl.refuse('RTP-BOOT-PRECONDITION-UNVERIFIED') end;return r end,
     prepare=function(revision) return platform.rtp_prepare(env,sys,revision) end,
     ready=function() if not pcall(platform.rtp_ready,sys) then ctl.refuse('RTP-BOOT-PRECONDITION-UNVERIFIED') end;return true end,
+    recovery_prefix=function() if not pcall(platform.rtp_recovery_prefix,sys) then ctl.refuse('RTP-BOOT-PRECONDITION-UNVERIFIED') end;return true end,
   }
   D.rollback_recovery=recovery.helpers()
   D.activation_finalize=function(e,state,value,allow_stopping) return recovery.finalize(e or env,state,value,allow_stopping) end
   D.record_switch_time=function(e,seconds) return M.record_switch_time(e or env,seconds) end
   D.manual_control=M.manual_control(env)
   D.testing_profile=function(identifier) return M.testing_profile(env,identifier) end
+  -- native_history.capture_transition_latency (item 6): the event's HTTPS RTT from the Lua monitor's status.json
+  D.capture_latency=function(value,status,binding,now) return require('history').capture_transition_latency(value,status,binding,now) end
   return D
 end
 

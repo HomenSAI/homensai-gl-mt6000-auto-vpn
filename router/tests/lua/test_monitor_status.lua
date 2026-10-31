@@ -1,5 +1,5 @@
--- monitor_status.lua and the status reply: switch_timing, auto_control, manual_switch, channel_path, the Python
--- bridge, native_history public, the ping response history (Diagnostics only), auto_live extras.
+-- monitor_status.lua and the status reply: switch_timing, auto_control, manual_switch, channel_path, the Lua page
+-- controls (no Python bridge), native_history public, the ping response history (Diagnostics only), auto_live extras.
 local t=dofile((arg[0]:match('^(.*)/[^/]*$') or '.')..'/monitor_harness.lua')
 local canon=t.canon
 local page=require('monitor_status')
@@ -10,6 +10,7 @@ local DIAG="config main 'main'\n\toption stats_mode 'diagnostic'\n\toption stats
 local WORK="config main 'main'\n\toption stats_mode 'work'\n"
 local function put(R,path,value) R.write_atomic(path,canon.encode(value)) end
 local function obj(t_) return canon.object(t_) end
+local function rpc_fallback() return require('rpc').FALLBACK end
 
 t.test('switch_timing.read: bounds and rounding',function()
   local R=t.fake_runner();local env=page.env(R,'/run/hv','/etc/hv')
@@ -107,27 +108,94 @@ t.test('channel_path fallback: cached projection of the supervisor, fail-safe ot
   t.eq(page.channel_path_fallback(native,now).confirmed,false,'blockers: never green')
 end)
 
-t.test('status reply: page fields, bridge pending, then the bridge answer while fresh',function()
+t.test('status reply: page fields from Lua (manual_switch_control, scan), no Python bridge child',function()
   local R=t.fake_runner()
   put(R,'/run/hv/native-status.json',obj({state='OBSERVING',mode='continuous-pair',time=R.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))
   put(R,'/etc/hv/switch-timing.json',obj({avg_seconds=4,count=1}))
   local m=monitor.new(R)
   m:pass()
   local reply=m.rpc.handle('status','{}')
-  t.eq(#R.bridge_runs,1,'the page poll started one bridge refresh');t.eq(R.bridge_runs[1],'/run/hv/status-bridge.json')
-  t.eq(reply.manual_switch_control.blockers,{'PAIR-MANUAL-STATE-UNVERIFIED'});t.eq(reply.manual_switch_control.available,false)
+  t.eq(#R.bridge_runs,0,'the page poll starts no Python (page_controls.lua answers)')
+  t.eq(reply.manual_switch_control.available,false,'no running pair session');t.eq(reply.manual_switch_control.mode,'continuous-pair')
+  t.eq(reply.manual_switch_control.bridge,nil);t.eq(reply.scan,{state='IDLE'})
   t.eq(reply.manual_switch.state,'IDLE');t.eq(reply.switch_timing.count,1);t.eq(reply.speed_pause,{active=false})
-  t.eq(reply.channel_path.code,'KERNEL-POLICY-UNVERIFIED');t.eq(reply.speed_tests.code,'SPEED-STATUS-UNAVAILABLE')
+  t.eq(reply.channel_path.code,'KERNEL-POLICY-UNVERIFIED')
+  t.eq(reply.speed_tests.live.state,'IDLE','speed_tests natively in Lua (plan item 7)');t.eq(#reply.speed_tests.results,0);t.eq(reply.speed_tests.retention_days,7)
   t.truthy(reply.auto_control.control_revision~=nil);t.eq(reply.stats_reset,canon.null)
-  m.rpc.handle('status','{}')
-  t.eq(#R.bridge_runs,1,'at most one refresh per 10 s')
   put(R,'/run/hv/status-bridge.json',obj({time=R.now,manual_switch_control=obj({available=true,mode='continuous-pair',blockers=canon.array()}),
-    channel_path=obj({confirmed=true,active_profile_id='wireguard:peer_7'}),scan=obj({state='IDLE'}),speed_tests=obj({results=canon.array()})}))
+    channel_path=obj({confirmed=true,active_profile_id='wireguard:peer_7'}),scan=obj({state='RUNNING'})}))
   reply=m.rpc.handle('status','{}')
-  t.eq(reply.manual_switch_control.available,true);t.eq(reply.channel_path.confirmed,true);t.eq(reply.scan,{state='IDLE'})
-  R.advance(31)
-  reply=m.rpc.handle('status','{}')
-  t.eq(reply.manual_switch_control.available,false,'an old bridge answer is not used');t.eq(#R.bridge_runs,2)
+  t.eq(reply.manual_switch_control.available,false,'a bridge file is not used while Lua answers');t.eq(reply.scan,{state='IDLE'})
+  t.eq(reply.channel_path.confirmed,false,'channel_path is computed in Lua (plan item 4): a bridge value is not used')
+  t.eq(#R.bridge_runs,0)
+end)
+
+t.test('status reply: channel_path in Lua from the session, the live policy order and the supervisor proof',function()
+  local R=t.fake_runner()
+  local identity=require('identity')
+  local pair=require('pair')
+  local sections=canon.array({obj({['.name']='r1',['.type']='rule',enabled='1'}),obj({['.name']='r2',['.type']='rule',enabled='1'})})
+  R.native_policy=obj({sections=sections,settings=obj()})
+  local hash=identity.policy_hash(sections,nil)
+  local proof=pair.policy.proof(obj({source_rule='r1',target_rule='r2',direction='first',order=canon.array({'r1','r2'}),
+    source=obj({id='wireguard:peer_7'}),target=obj({id='wireguard:peer_8'})}))
+  local session=obj({phase='RUNNING',order=canon.array({'r1','r2'}),policy_hash=hash,policy_roles=proof})
+  local original=page.read_state
+  page.read_state=function() return session end
+  local ok,err=pcall(function()
+    local path=page.from_kernel({verified=true,role='source',profile_id='wireguard:peer_7',time=R.now-2},'wireguard:peer_7','wireguard:peer_8',R.now-1)
+    put(R,'/run/hv/native-status.json',obj({state='OBSERVING',mode='continuous-pair',proof_scope='router-probed-ipv4',time=R.now-1,
+      source='wireguard:peer_7',target='wireguard:peer_8',blockers=canon.array(),channel_path=path}))
+    local m=monitor.new(R)
+    m:pass()
+    local reply=m.rpc.handle('status','{}')
+    t.eq(reply.channel_path.confirmed,true);t.eq(reply.channel_path.active_profile_id,'wireguard:peer_7')
+    t.eq(reply.channel_path.configured_profile_id,'wireguard:peer_7');t.eq(reply.channel_path.code,canon.null)
+    m.rpc.handle('status','{}')
+    t.eq(R.policy_reads,1,'the router policy is read again only when a UCI package changes')
+    R.advance(20)
+    reply=m.rpc.handle('status','{}')
+    t.eq(reply.channel_path.confirmed,false,'a supervisor proof older than 15 s is not green')
+    t.eq(reply.channel_path.code,'KERNEL-POLICY-UNVERIFIED')
+    R.advance(-20)
+    R.native_policy=obj({sections=canon.array({sections[2],sections[1]}),settings=obj()})
+    R.write_atomic('/etc/config/route_policy','changed')
+    reply=m.rpc.handle('status','{}')
+    t.eq(R.policy_reads,2);t.eq(reply.channel_path.confirmed,false,'the live order no longer matches the session')
+    local record=m:backend_record()
+    local bridges={};for _,name in ipairs(record.bridges) do bridges[name]=true end
+    t.eq(bridges.channel_path,nil,'channel_path is no longer a Python bridge')
+  end)
+  page.read_state=original
+  if not ok then error(err,0) end
+end)
+
+t.test('buttons through the monitor: Start writes the pair intent, Stop the latch, fault_cancel/fault_start',function()
+  local R=t.fake_runner()
+  R.files['/proc/sys/kernel/random/uuid']='0123abcd-0123-4567-89ab-0123456789ab\n'
+  R.native_policy=obj({settings=obj({pair_auto_mode='router-probed-ipv4',native_trial=string.rep('d',32)}),sections=canon.array()})
+  R.platform_sys=function()
+    return {lstat=function(p) local x=R.files[p];return x and {type='reg',size=#x} or nil end,read=function(p) return R.files[p] end,
+      dir=function() return nil end,exec=function() return 1,'' end}
+  end
+  local m=monitor.new(R)
+  m:pass()
+  local revision=page.current_revision(m.env)
+  t.truthy(type(revision)=='string' and #revision==32)
+  local reply=m.rpc.handle('native_start',canon.encode(obj({control_revision=revision,request_source='manual'})))
+  t.eq(reply.accepted,true);t.eq(reply.mode,'continuous-pair')
+  local intent=canon.decode(R.files['/run/hv/pair-auto-control.json'])
+  t.eq(intent.mode,'on');t.eq(intent.revision,revision);t.eq(intent.request_source,'manual')
+  t.eq(m.rpc.handle('native_start','{"control_revision":"'..string.rep('b',32)..'"}'),{accepted=false,blockers={'CONTROL-REVISION-STALE'}})
+  reply=m.rpc.handle('native_stop','{"request_source":"manual"}')
+  t.eq(reply,{queued=true})
+  t.eq(canon.decode(R.files['/run/hv/pair-auto-control.json']).mode,'off')
+  t.eq(canon.decode(R.files['/etc/hv/native-stop.json']).trial,string.rep('d',32))
+  t.eq(m.rpc.handle('native_stop','{"x":1}'),{error='RPC-UNEXPECTED-ARGS'})
+  t.eq(m.rpc.handle('fault_cancel','{}'),{queued=false,code='FAULT-NOT-ACTIVE'})
+  t.truthy(m.rpc.handle('fault_start','{"profile":"wireguard:peer_7","scope":"channel","duration":60}')==rpc_fallback(),'the test itself: agent.py')
+  R.locked['auto-control.lock']=true
+  t.truthy(m.rpc.handle('native_stop','{}')==rpc_fallback(),'a held control lock: agent.py waits for it')
 end)
 
 t.test('native_history public: the flash history file, cached by file key',function()

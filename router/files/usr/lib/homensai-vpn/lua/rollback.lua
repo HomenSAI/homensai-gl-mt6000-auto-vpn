@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- rollback.lua: native_switch.rollback / rollback_counted / give_up / abandon in Lua (2.0.0-lua-alpha2).
 --
 -- The journal phases and their writes are the Python ones: RESTORING with restore_target_order and
@@ -67,6 +67,15 @@ function M.rollback(env,value,reason,restore_order)
       refuse('EXTERNAL-POLICY-CHANGE-RELEASED')
     end
     if not same_list(order,value.before) then env.backend.reorder(value.before) end
+    -- Power cut (POWER-CUT-INTEGRITY-2026-10-31.ru.md): the vendor rebuilt the kernel at boot from the MOVED UCI
+    -- order, so undoing UCI alone would leave the traffic on the reserve while UCI and this journal say primary.
+    -- When the kernel is no longer the one recorded before our move, the vendor's own reload from the restored UCI
+    -- makes it follow again (the same rebuild every route-policy change triggers). Best effort: a failure keeps
+    -- the previous behaviour (journal ROLLED-BACK, kernel_policy_verified=false, the loop's attestation blocks).
+    if ctl.hex(value.kernel_before_fingerprint,64) then
+      local kok,live=pcall(env.backend.kernel_fingerprint)
+      if kok and live~=value.kernel_before_fingerprint then pcall(env.backend.apply) end
+    end
     local devices=env.backend.devices()
     if #devices>0 then env.backend.guard(devices) end
     value.phase='ROLLED-BACK';value.reason=reason;value.finished=fwall(env);value.restore_before_order=copy_list(order)

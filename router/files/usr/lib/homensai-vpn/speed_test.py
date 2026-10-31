@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Optional bounded HTTPS goodput test. No route, VPN or firewall writes.
 
 Cloudflare's public download/upload API is used without its JS engine or logging
@@ -30,6 +30,7 @@ CANCEL=RUNTIME/'speed-cancel.json'
 HISTORY=PERSIST/'speed-history.json'
 LEDGER=PERSIST/'speed-quota.json'
 MIB=1024*1024
+LUA_WORKER='/usr/lib/homensai-vpn/lua/speed.lua'
 
 
 class SpeedError(Exception):
@@ -270,8 +271,10 @@ def worker_alive(job):
     pid=job.get('pid');tx=job.get('tx','')
     if type(pid) is not int or pid<1 or not re.fullmatch(r'[a-f0-9]{32}',tx):return False
     try:
-        expected=str(Path(__file__).resolve()).encode()+b'\0run\0'+tx.encode()+b'\0'
-        return expected in Path('/proc',str(pid),'cmdline').read_bytes()
+        command=Path('/proc',str(pid),'cmdline').read_bytes()
+        # The Python worker or the Lua worker (lua/speed.lua run <tx>, plan item 7) of exactly this job.
+        return any(script.encode()+b'\0run\0'+tx.encode()+b'\0' in command
+                   for script in (str(Path(__file__).resolve()),LUA_WORKER))
     except OSError:return False
 
 

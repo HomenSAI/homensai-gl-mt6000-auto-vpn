@@ -52,6 +52,22 @@ class BootContract(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,boot.CODE):boot.ready(self.root)
         self.assert_no_preparation()
 
+    def test_recovery_prefix_after_power_cut_needs_no_auto_intent(self):
+        # soak trial 31.10.2026: after a power cut the intent (RAM) is gone and the prefix too; the supervisor's
+        # rollback must still find the stock prefix, created exactly as prepare() creates it, and nothing else.
+        agent.atomic_json(pair.paths()[0],{'mode':'off','id':self.state['id'],'revision':self.revision,'time':1})
+        self.assertTrue(boot.recovery_prefix(self.root))
+        self.assertEqual(self.marker.read_bytes(),b'');self.assertEqual(stat.S_IMODE(self.marker.stat().st_mode),0o600)
+        for path in self.directories:self.assertTrue(path.is_dir());self.assertEqual(stat.S_IMODE(path.stat().st_mode),0o755)
+        self.assertFalse(self.record.exists())
+        self.assertTrue(boot.recovery_prefix(self.root))  # idempotent
+        self.commands.assert_not_called();self.spawn.assert_not_called()
+
+    def test_recovery_prefix_refuses_a_foreign_contract(self):
+        (self.root/'etc/glversion').write_text('4.12.0\n')
+        with self.assertRaisesRegex(ValueError,boot.CODE):boot.recovery_prefix(self.root)
+        self.assert_no_preparation()
+
     def test_cold_prefix_creates_only_runtime_dirs_and_empty_gate_without_kernel_claim(self):
         answer=boot.prepare(self.revision,self.root)
         self.assertEqual(answer,{'prepared':True,'changed':True,'kernel_verified':False})

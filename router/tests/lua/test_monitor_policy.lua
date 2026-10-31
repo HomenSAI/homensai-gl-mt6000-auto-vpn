@@ -24,6 +24,22 @@ t.test('level, interval and measure: owner level, legacy interval mapping, digit
   t.eq(policy.failing(canon.object({id='a',code=canon.null,dns_ok=true})),true,'no https_success: failing')
 end)
 
+t.test('owner ping interval and its freshness window (probe_policy.ping_interval/ping_valid_for)',function()
+  t.eq(policy.ping_interval({}),60)
+  for _,c in ipairs({{10,10},{'10',10},{300,300},{'120',120},{5,60},{0,60},{310,60},{15,60},{'15',60},{'1e2',60},{'',60},{'abc',60},{-10,60},{true,60}}) do
+    t.eq(policy.ping_interval({ping_interval=c[1]}),c[2],tostring(c[1]))
+  end
+  t.eq(policy.ping_interval({ping_interval=canon.decode('60.0')}),60);t.eq(policy.ping_interval({ping_interval=canon.null}),60)
+  t.eq(policy.ping_interval({probe_level=5,measure_interval=30}),60,'the probe level no longer sets the ping cadence')
+  for _,c in ipairs({{{ping_interval=10,interval=10},45},{{ping_interval=20,interval=10},45},{{ping_interval=30,interval=10},60},{{},105},
+      {{ping_interval=10,interval=60},105},{{ping_interval=300,interval=10},465},{{ping_interval=120,interval=30},195}}) do
+    t.eq(policy.ping_valid_for(c[1]),c[2])
+  end
+  local _,io_=memory()
+  local p=policy.Booster('/run/hv','/etc/hv',io_):public({probe_level=1,interval=60,ping_interval='20'},1000)
+  t.eq(p.ping_interval,20);t.eq(p.effective_ping_interval,60);t.eq(p.ping_valid_for,105);t.eq(p.measure_interval,300)
+end)
+
 t.test('a level change is recorded once; the state goes to RAM, the decisions to flash',function()
   local files,io_=memory()
   local b=policy.Booster('/run/hv','/etc/hv',io_)

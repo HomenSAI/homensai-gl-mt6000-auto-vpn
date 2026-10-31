@@ -70,9 +70,24 @@ end)
 
 t.test('Python-answered methods give FALLBACK (agent.py answers); setup_* go to the native handler; unknown refused',function()
   local handler,R=make(nil)
-  for _,name in ipairs({'native_start','native_stop','fault_start','fault_cancel','setup_monitor','terms_accept','stats_reset'}) do
+  for _,name in ipairs({'native_return','native_confirm','setup_monitor','terms_accept','stats_reset'}) do
     t.truthy(handler.handle(name,'{"a":1,"a":2}')==rpc.FALLBACK,name..': the request bytes go to agent.py unchanged')
   end
+  -- plan item 4: the Start/Stop/failure-test buttons go to the monitor's control handler (control_request.lua);
+  -- without one, agent.py answers. Input errors keep agent.rpc's codes (decode_request first, as in Python).
+  for _,name in ipairs(rpc.CONTROL) do
+    t.truthy(handler.handle(name,'{"request_source":"manual"}')==rpc.FALLBACK,name..' without a handler')
+    t.eq(handler.handle(name,'{"a":1,"a":2}'),{error='RPC-DUPLICATE-FIELD'},name)
+  end
+  local seen={}
+  local controlled=rpc.new({version='v',now=function() return R.now end,status=function() return nil end,
+    native_status=function() return canon.object() end,
+    control=function(method,arguments) seen[#seen+1]=method;return canon.object({queued=true,arguments=arguments}) end},R)
+  for _,name in ipairs(rpc.CONTROL) do
+    local reply=controlled.handle(name,'{"request_source":"manual","ubus_rpc_session":"s"}')
+    t.eq(reply.queued,true,name);t.eq(reply.arguments,{request_source='manual'},name..': the session field is dropped')
+  end
+  t.eq(seen,{'native_start','native_stop','fault_start','fault_cancel'})
   -- plan item 4: pair_manual is answered in Lua when the monitor wires a handler, else agent.py answers
   t.truthy(handler.handle('pair_manual','{"direction":"reserve"}')==rpc.FALLBACK,'pair_manual without a handler')
   t.eq(#R.forwards,0,'Lua never starts agent.py itself')

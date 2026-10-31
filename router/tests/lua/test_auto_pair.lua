@@ -200,4 +200,47 @@ t.test('pair.tick: a refused preflight fails the request; transient start keeps 
   env.run.fs.remove(env.runtime..'/pair-auto-control.json');t.eq(pair.tick(env,t.settings(),env.revision),false)
 end)
 
+
+-- MT3000 soak 31.10.2026 (alpha13, cycle 10): the vendor kept rebuilding the primary, every diagnostic
+-- refused VENDOR-SETTLING and the generation-scoped streak restarted on each rebuild; Auto stayed BLOCKED
+-- with a healthy reserve. The diagnostic's bounded unstable proof (diagnosis.resolve_pair) is the failure
+-- evidence; without it the rebuilt primary is never left (test_source_unstable.py, the same decisions).
+t.test('pair.tick leaves a primary the vendor keeps rebuilding only with the unstable proof',function()
+  local function run(coordination)
+    local env=t.env()
+    env.deps.diagnose=require('diagnosis').diagnose
+    local sel=env.backend.selection
+    sel.coordination=coordination
+    env.run.fs.write_atomic(env.runtime..'/pair-auto-control.json',canon.encode(canon.object({mode='on',revision=env.revision,time=canon.float(env.run.wall()),id=string.rep('11',16),request_source='manual'})))
+    env.net={network=function() return canon.array({canon.object({['.name']='wgclient1',disabled='0'}),canon.object({['.name']='ovpnclient1',disabled='0'})}) end,
+      identity=function() return string.rep('aa',32) end,configs=function() return canon.object({}) end,changed=function() return false end,
+      client_down=function() return false end}
+    local state=canon.object({id=string.rep('11',16),phase='RUNNING',ran=true,started=canon.float(env.run.wall()-1000),revision=env.revision,network_identity=string.rep('aa',32),
+      interfaces=canon.object({wgclient1='wgclient',ovpnclient1='ovpnclient'}),protected=canon.object({}),owned=canon.array({}),
+      before_flags=canon.object({wgclient1='0',ovpnclient1='0'}),process_bindings=sel.process_bindings,order=canon.array({'r1','r2'}),policy_hash=t.HEX64,
+      policy_roles=pair.policy.proof(sel)})
+    pair.save(env,state)
+    local now=env.run.wall();local rows={}
+    -- the primary: only failures for 150 s, a new vendor generation every 40 s, rebuilt again 5 s ago
+    for i=0,15 do rows[#rows+1]=canon.object({id='wireguard:peer_1',time=canon.float(now-i*10),code=(i%4==0) and 'VPN-001' or 'VPN-003',dns_ok=true,https_success=0,
+      interface='wgclient1',vendor_tunnel_id='wireguard:wgclient1',vendor_generation=string.format('%032x',math.floor(i/4))}) end
+    for i=0,2 do rows[#rows+1]=canon.object({id='openvpn:1_1',time=canon.float(now-i*10),code=canon.null,dns_ok=true,https_success=2,interface='ovpnclient1',vendor_tunnel_id='openvpn:ovpnclient1',vendor_generation=t.GEN2}) end
+    sel.source.vendor_generation=string.rep('f',32);sel.source.vendor_changed_at=canon.float(now-5);sel.target.vendor_changed_at=canon.float(now-1000)
+    local profiles=canon.array({canon.object({id='wireguard:peer_1',interface='wgclient1',time=canon.float(now),code='VPN-003',dns_ok=true,https_success=0,vendor_state='PENDING'}),
+      canon.object({id='openvpn:1_1',interface='ovpnclient1',time=canon.float(now),code=canon.null,dns_ok=true,https_success=2,vendor_state='SETTLED'})})
+    env.run.fs.write_atomic(env.runtime..'/status.json',canon.encode(canon.object({time=canon.float(now),samples=canon.array(rows),profiles=profiles})))
+    t.eq(pair.tick(env,t.settings(),env.revision),true)
+    return env
+  end
+  local env=run(canon.object({state='READY',code='CROSS-TUNNEL-READY'}))
+  local status=t.read(env,env.runtime..'/native-status.json')
+  t.eq({status.state,status.reason,status.source_failures},{'OBSERVING','VENDOR-SETTLING',false})
+  t.eq(env.backend.kernel,{'r1','r2'});t.eq(t.journal(env).phase,nil)
+  env=run(canon.object({state='READY',code='PAIR-SOURCE-UNSTABLE'}))
+  local j=t.journal(env)
+  t.eq(j.phase,'COMMITTED');t.eq(j.pair_transition.destination_role,'target');t.eq(env.backend.kernel,{'r2','r1'})
+  t.eq(#t.read(env,env.persist..'/pair-auto-budget.json').events,1)
+  t.eq(pair.source_unstable(env.backend.selection),true);t.eq(pair.source_unstable(canon.object({})),false)
+end)
+
 t.run()

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- identity.lua: the policy identity of native_switch.py for the Lua supervisor (2.0.0-lua line).
 -- Ports, byte for byte in their results:
 --   process_policy   mark, validate, system_section, recognizes, selected_bindings, applied

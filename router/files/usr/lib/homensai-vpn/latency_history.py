@@ -1,4 +1,4 @@
-"""Bounded one-minute HTTPS-latency aggregates for the configured 1–7 observed days.
+"""Bounded one-minute HTTPS-latency aggregates for the configured 1–30 observed days (retention_settings).
 
 No endpoints/secrets, invented samples, zero-valued failures or backwards fill.
 Persistence follows the existing application checkpoint cadence.
@@ -12,8 +12,9 @@ import re
 
 DAY=86400
 WEEK=7*DAY
-MAX_ROWS=7*1440+1
-MAX_BYTES=2*1024*1024
+MAX_ROWS=30*1440+1
+MAX_BYTES=4*1024*1024
+PUBLIC_ROWS=7*1440+1  # rows_json carries at most the newest week (status transport bound)
 IDENTIFIER=re.compile(r'^(?:openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$')
 KINDS={'source','target','unknown','off','switching'}
 
@@ -25,6 +26,7 @@ class LatencyHistory:
         self.data=copy.deepcopy(data) if data is not None else {'version':1,'rows':[],'pairs':{},'current':None,'seen':{},'saved':None}
         self.notice=notice
         self.retention_seconds=WEEK
+        self.byte_budget=None  # size mode: retention_settings.resolve()['latency_bytes']
         d=self.data
         if (not isinstance(d,dict) or set(d)!={'version','rows','pairs','current','seen','saved'} or d['version']!=1
                 or not isinstance(d['rows'],list) or len(d['rows'])>MAX_ROWS or not isinstance(d['pairs'],dict) or len(d['pairs'])>32
@@ -107,12 +109,14 @@ class LatencyHistory:
                 'saved':d['saved'],'notice':self.notice,'scope':'observed minute means; gaps are unobserved; not ICMP or LAN proof'}
         # Large nested arrays exceed rpcd/ubus transport bounds. Keep the old
         # daily tail for old clients and carry the complete week as one string.
-        if len(rows)>1441:result['rows_json']=json.dumps(rows,separators=(',',':'),allow_nan=False)
+        if len(rows)>1441:result['rows_json']=json.dumps(rows[-PUBLIC_ROWS:],separators=(',',':'),allow_nan=False)
         return result
 
     def save(self,path,writer,now):
         if not number(now) or now<0:raise ValueError('LATENCY-HISTORY-TIME')
         if self.notice=='LATENCY-HISTORY-UNAVAILABLE':raise ValueError(self.notice)
+        from retention_settings import trim_to_budget
+        trim_to_budget(self.data,self.byte_budget)
         data=copy.deepcopy(self.data);data['saved']=now
         if len(json.dumps(data,separators=(',',':')).encode())>MAX_BYTES:raise ValueError('LATENCY-HISTORY-SIZE')
         writer(Path(path),{'data':data,'sha256':checksum(data)});self.data['saved']=now

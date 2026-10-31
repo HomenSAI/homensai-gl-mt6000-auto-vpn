@@ -1,14 +1,16 @@
-"""MIT. HomenS.AI / Serhii Khomenko. TEMPORARY bridge of the Lua Auto supervisor (2.0.0-lua, plan item 1).
+"""MIT. HomenS.AI / Serhii Khomenko. FALLBACK probe bridge of the Lua Auto supervisor (2.0.0-lua, plan items 1 and 4).
 
-The Lua supervisor (lua/auto.lua + lua/backend.lua) has no router probe of its own until the Lua monitor
-(plan item 2). For the three places that need a live probe of one profile - health(), the WAIT-CLIENT
-confirmation and the exit trace of a trial - it runs:
+Since plan item 4 the Lua supervisor probes natively (lua/live_probe.lua over sys.probe_io) with the same fields
+and codes as this file. It still runs this bridge for the three places that need a live probe of one profile -
+health(), the WAIT-CLIENT confirmation and the exit trace - when `option lua_probe '0'` is set, when the router
+lacks nixio/curl, or when the native probe hits a Lua fault (logged as "hv-auto: native ... failed"):
 
     python3 /usr/lib/homensai-vpn/lua_bridge.py probe|trace <request.json>
 
 The request is the profile row written by the Lua backend into the RAM directory (0600). The answer is one
 JSON line: agent.probe(profile), or {"exit": "<ipv4>"} / {"code": "<REFUSAL>"} for native_switch.trace.
-Read-only: no route, UCI, journal or state file is written. Remove this file when item 2 lands.
+Read-only: no route, UCI, journal or state file is written. tests/test_lua_live_probe.py compares this contract
+with the native probe.
 """
 import json
 import re

@@ -65,8 +65,12 @@ def public(now=None,config=None):
 
 
 def payload(arguments,now=None):
-    """setup_stats: {'mode':'work'} or {'mode':'diagnostic','hours':24|72|168|336}."""
+    """setup_stats: {'mode':'work'} or {'mode':'diagnostic','hours':24|72|168|336}; {'mode':'retention',...} is the
+    retention choice (retention_settings.payload)."""
     now=time.time() if now is None else now
+    if isinstance(arguments,dict) and arguments.get('mode')=='retention':
+        from retention_settings import payload as retention_payload
+        return retention_payload(arguments)
     if not isinstance(arguments,dict) or arguments.get('mode') not in ('work','diagnostic'):raise ValueError('STATS-SETTINGS-FIELDS')
     if arguments['mode']=='work':
         if set(arguments)!={'mode'}:raise ValueError('STATS-SETTINGS-FIELDS')

@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard181'
+UI_MODULE='dashboard186'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -337,7 +337,7 @@ must_replace("(subtitle=E('p',{},bi('Channels, servers and switching reasons in 
 # The shared subtitle can be followed by an absent connectivity widget. Never render that null child.
 must_replace("renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})]),E('div',{'class':'hv-page-actions'}", "renderConnectivityCheck(data[1],function(){return statusCall().then(draw);})].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'}")
 # Built-in Help page: static topics, created once so opened topics stay open while the status refreshes.
-must_replace('return view.extend({',lazy_marked('help_panel',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'measurements_help.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'switch_stats_page.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'stats_page.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
+must_replace('return view.extend({',lazy_marked('help_panel',(Path(__file__).parent/'help_panel.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'measurements_help.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'core_help.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'switch_stats_page.inc.js').read_text(encoding='utf8')+chr(10)+(Path(__file__).parent/'stats_page.inc.js').read_text(encoding='utf8'))+'\nreturn view.extend({')
 must_replace("['settings','⚙',bi('Settings','Настройки')]];","['settings','⚙',bi('Settings','Настройки')],['help','?',bi('Help','Помощь')]];")
 must_replace("put('readiness',renderReadiness(status,inventory));","put('readiness',renderReadiness(status,inventory));put('help',helpNode||(helpNode=renderHelp(inventory)));")
 # First-run terms gate: nothing else is rendered until the terms version is stored on the router.
@@ -364,7 +364,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui147.css',expected=3)
+must_replace('ui15.css','ui152.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -419,7 +419,8 @@ must_replace('return view.extend({',"""function checkLampCell(p){
 return view.extend({""")
 # Getting started is its own first section; new users land there until every step is done, then on the Overview.
 must_replace("var tabs=[['overview','◉',bi('Overview','Обзор')],","var tabs=[['start','▶',bi('Getting started','Начало работы')],['overview','◉',bi('Overview','Обзор')],")
-must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","['start','readiness','overview','channels','settings','help','learn'].map(tabLink)")
+# Menu order follows the setup state (summary_panel.inc.js sidebarOrder): setup sections first only until the system is set up.
+must_replace("['overview','channels','statistics','settings','help','learn'].map(tabLink)","sidebarOrder(data[1],inventory).map(tabLink)")
 must_replace("if(!validTab(activeTab))activeTab='overview';","if(!validTab(activeTab))activeTab=startLanding(data[1],data[0]);")
 must_replace("put('learn',learnNode||(learnNode=renderLearn()));","put('learn',learnNode||(learnNode=renderLearn()));put('start',renderStartPage(status,inventory));")
 must_replace("  learn:['A short interactive training","  start:['First steps: terms, training, monitoring, your two VPNs and Auto. This page opens first until they are done.','Первые шаги: условия, обучение, мониторинг, два ваших VPN и Auto. Эта страница открывается первой, пока они не выполнены.'],\n  learn:['A short interactive training")
@@ -524,7 +525,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui147.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui152.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -559,8 +560,9 @@ assert [line.split('(')[0] for line in _dead_text.split('\n') if line.startswith
 source=source[:_dead_panels]+source[_dead_panels_end+1:]
 assert source.count('function speedPanel(')==1 and source.count('function trafficHistoryPanel(')==1,'FINAL-PANEL-COUNT'
 # Ranking: one extra column per response method while "measure all methods" is on.
-must_replace('bi("Checks","Проверок")].map(function(t){return E(\'th\',{},t);})','bi("Checks","Проверок")].concat((typeof compareColumns==="function"?compareColumns(status):[]).map(function(m){return compareHeader(m);})).map(function(t){return E(\'th\',{},t);})')
-must_replace("cell(rankConfidence(item.r.n))]));});","cell(rankConfidence(item.r.n))].concat((typeof compareColumns==='function'?compareColumns(status):[]).map(function(m){return cell(compareCell(status,m,item.p.id));}))));});")
+must_replace('bi("Checks","Проверок")].map(function(t){return E(\'th\',{},t);})','bi("Checks","Проверок"),bi("Last ping","Последний пинг")].concat((typeof compareColumns==="function"?compareColumns(status):[]).map(function(m){return compareHeader(m);})).map(function(t){return E(\'th\',{},t);})')
+# Last ping: the shared reading (pingReading) with its age; a dash only for a channel the router never pinged.
+must_replace("cell(rankConfidence(item.r.n))]));});","cell(rankConfidence(item.r.n)),cell(typeof pingCellText==='function'?pingCellText(item.p,status,statusNow(status)):'—')].concat((typeof compareColumns==='function'?compareColumns(status):[]).map(function(m){return cell(compareCell(status,m,item.p.id));}))));});")
 # The monitoring lamp moved from the Auto card to the sidebar; its statistics live at the top of the service monitor page.
 must_replace("put('services',E('h3',{},tr(\"Монитор служб\")))","if(typeof renderMonitorPage==='function')put('services',renderMonitorPage(status,inventory));put('services',E('h3',{},tr(\"Монитор служб\")))")
 # Declarations no code path calls any more (their call sites were replaced by later patches).
@@ -573,5 +575,17 @@ for _name in ('renderPlanBlockers','renderProbeChecks','renderDecisionExplanatio
     _end=_line+1 if _first.rstrip().endswith('}') and _first.count('{')==_first.count('}') else source.index('\n}\n',_start)+3
     assert '\nfunction ' not in source[_start:_end],'DEAD-FUNCTION-SPAN '+_name
     source=source[:_start]+source[_end:]
+# The menu follows the setup state on every refresh too (the first Auto start moves the Overview to the top).
+must_replace("refreshAttribution(status);","refreshAttribution(status);if(appRoot)applySidebarOrder(appRoot,sidebarOrder(status,inventory));")
+# First paint: the three style scripts download in parallel; async=false keeps their execution order.
+must_replace("""  return ['brand','robot','brand-ui'].reduce(function(ready,name){return ready.then(function(){
+    return new Promise(function(resolve,reject){""","""  return Promise.all(['brand','robot','brand-ui'].map(function(name){
+    return new Promise(function(resolve,reject){""")
+must_replace("var script=document.createElement('script');script.src=path;","var script=document.createElement('script');script.async=false;script.src=path;")
+must_replace("""    });
+  });},Promise.resolve());
+}""","""    });
+  }));
+}""")
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

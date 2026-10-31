@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- auto_control.lua: auto_control.py for the Lua supervisor (2.0.0-lua-alpha2).
 --
 -- control.lua (lua-core, alpha1) already owns control_lock / require_control_revision; this module ports the
@@ -58,6 +58,13 @@ function M.decode_resident(path,text,key)
   resident[path]={key=key,text=text,value=value}
   return value
 end
+-- seed_resident(path, text, key, value): hv-core (Lua plan item 8) hands over the status the monitor of the
+-- same process has just written (text and file key of that write, value = decode_keys(text) built from memory
+-- by hv_core.restore): read_json() and backend.status() then neither read nor parse that file version.
+function M.seed_resident(path,text,key,value)
+  if type(text)~='string' or value==nil then return end
+  resident[path]={key=key,text=text,value=value}
+end
 function M.read_json(run,path,default)
   local keyfn=run.fs.key
   local key=nil
@@ -70,8 +77,19 @@ function M.read_json(run,path,default)
   local text=run.fs.read(path)
   if text==nil then return default end
   if #text>4*1024*1024 then error('oversize state',0) end
-  if key then return M.decode_resident(path,text,key) end
-  return canon.decode(text)
+  local ok,value
+  if key then ok,value=pcall(M.decode_resident,path,text,key) else ok,value=pcall(canon.decode,text) end
+  if ok then return value end
+  M.damaged(run,path,text)
+end
+-- A state file that does not decode (empty, zero-filled, cut short: flash damage or a non-atomic foreign writer)
+-- is a known state, never a plain Lua error that would end the daemon and repeat at every restart: a coded
+-- refusal (Python: ValueError -> NATIVE-SYSTEM-001 in the loop) after one quarantine copy of a flash file.
+M.DAMAGED='STATE-FILE-DAMAGED'
+function M.damaged(run,path,text)
+  local durable=require('durable')
+  if not durable.in_ram(path) then pcall(durable.quarantine,path,text,M.DAMAGED,run.fs) end
+  error(setmetatable({code=M.DAMAGED,value_error=true,detail=string.match(path,'[^/]+$')},M.Refused),0)
 end
 function M.write_json(run,path,value) run.fs.write_atomic(path,canon.encode(value)) end
 -- read_json that turns any read/parse error into `default` (Python: `except (OSError,ValueError): row={}`).
@@ -229,7 +247,9 @@ function M.flock_file(path,fn)
   local out=p and p:read('*a') or ''
   if p then p:close() end
   if out~='ok\n' then file:close();M.refuse('HISTORY-PATH') end
+  M.flock_held=(M.flock_held or 0)+1  -- hv-core never lets the supervisor yield while a flock of it is held
   local results={pcall(fn)}
+  M.flock_held=M.flock_held-1
   file:close()
   if not results[1] then error(results[2],0) end
   return unpack(results,2)

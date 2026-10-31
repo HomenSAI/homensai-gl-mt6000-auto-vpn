@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- monitor_io.lua: the router side of every external access of the Lua monitor (the injectable "runner").
 -- Tests replace this whole table with fakes; nothing in monitor.lua/probe.lua/accounting.lua/rpc.lua touches
 -- sockets, files, clocks or processes except through it.
@@ -24,6 +24,7 @@ M.CONFIG='/etc/config/homensai_vpn'
 M.PACKAGE_CONTROL='/usr/lib/opkg/info/homensai-auto-vpn-lua.control'
 M.AGENT='/usr/bin/python3 /usr/lib/homensai-vpn/agent.py'
 M.INVENTORY='/usr/bin/lua /usr/lib/homensai-vpn/inventory.lua'
+M.NATIVE_POLICY='/usr/bin/lua /usr/lib/homensai-vpn/native_policy.lua'
 M.CURL='/usr/bin/curl'
 M.PYTHON='/usr/bin/python3'
 M.BRIDGE='/usr/lib/homensai-vpn/status_bridge.py'
@@ -116,35 +117,26 @@ function M.unsafe(path)
   local st=lstat(path)
   return st~=nil and (st.type~='reg' or st.size>1024*1024)
 end
-function M.write_atomic(path,text)
-  local directory,name=string.match(path,'^(.*)/([^/]+)$')
-  if not canon.safe_directory(directory) or not string.find(name,'^[A-Za-z0-9_.-]+$') then error('monitor_io: unsafe path',0) end
-  local pending=directory..'/.'..name..'.'..canon.unique()..'.pending'
-  local f=io.open(pending,'wb')
-  if not f then os.execute('mkdir -p '..directory..' && chmod 700 '..directory);f=assert(io.open(pending,'wb')) end
-  assert(f:write(text));assert(f:flush());f:close()
-  local synced=false
-  if nixio and nixio.open and nfs and nfs.chmod then
-    synced=pcall(function() assert(nfs.chmod(pending,'rw-------'));local h=assert(nixio.open(pending,'r'));assert(h:sync());h:close() end)
-  end
-  if not synced then os.execute('chmod 600 '..pending..' && sync') end
-  local renamed,err=os.rename(pending,path)
-  if not renamed then os.remove(pending);error(err,0) end
-end
--- RAM-only write without fsync (reply files of the rpcd bridge, probe scratch files).
-function M.write_ram(path,text)
-  local directory,name=string.match(path,'^(.*)/([^/]+)$')
-  if not canon.safe_directory(directory) or not string.find(name,'^[A-Za-z0-9_.-]+$') then error('monitor_io: unsafe path',0) end
-  local pending=directory..'/.'..name..'.'..canon.unique()..'.pending'
-  local f=assert(io.open(pending,'wb'));assert(f:write(text));f:close()
-  if nfs and nfs.chmod then pcall(nfs.chmod,pending,'rw-------') end
-  local renamed,err=os.rename(pending,path)
-  if not renamed then os.remove(pending);error(err,0) end
-end
+-- Flash writes: durable.write (temporary file, fsync, rename, fsync of the directory) - the one primitive of
+-- the Lua line. RAM-only writes (reply files of the rpcd bridge, probe scratch files): the same rename, no fsync.
+function M.write_atomic(path,text) return require('durable').write(path,text) end
+function M.write_ram(path,text) return require('durable').write(path,text,{sync=false}) end
 function M.remove(path) os.remove(path) end
+-- Names in a directory (nixio.fs.dir; no child process); {} when absent or without nixio.fs.
+function M.list_dir(path)
+  local names={}
+  if not (nfs and nfs.dir) then return names end
+  local ok,iterator=pcall(nfs.dir,path)
+  if not ok or not iterator then return names end
+  for name in iterator do if name~='.' and name~='..' then names[#names+1]=name end end
+  return names
+end
+-- A directory that is a symlink (stats-archive must be a real folder, like Python's is_symlink check).
+function M.unsafe_directory(path) local st=lstat(path);return st~=nil and st.type~='dir' end
 function M.exists(path) return M.file_size(path)~=nil end
 
-local SYSFS={ifindex=true,['statistics/rx_bytes']=true,['statistics/tx_bytes']=true,operstate=true}
+local SYSFS={ifindex=true,['statistics/rx_bytes']=true,['statistics/tx_bytes']=true,operstate=true,
+  ['statistics/rx_packets']=true,['statistics/tx_packets']=true}
 function M.sysfs(device,name)
   if not safe_word(device,15) or not SYSFS[name] then return nil end
   local f=io.open('/sys/class/net/'..device..'/'..name,'r')
@@ -208,6 +200,9 @@ M.COMMANDS={
     return 'ip -4 -j route get '..address..' mark '..mark
   end,
   inventory=function() return M.INVENTORY end,
+  native_policy=function() return M.NATIVE_POLICY end,
+  nft_fault_list=function() return 'nft list table inet homensai_vpn_fault' end,
+  nft_fault_delete=function() return 'nft delete table inet homensai_vpn_fault' end,
 }
 function M.command(name,...)
   local build=M.COMMANDS[name]
@@ -217,12 +212,167 @@ function M.command(name,...)
   return capture(line)
 end
 
+-- Exit status of os.execute (Lua 5.1 returns the raw wait status): the exit code, 128+signal when killed.
+local function exit_code(status)
+  if type(status)~='number' then return 255 end
+  if status>=256 then return math.floor(status/256) end
+  if status>0 then return 128+status%128 end
+  return 0
+end
+M.exit_code=exit_code
+-- capture_rc(line): exit code, output (through a RAM file, like capture); the caller judges the code.
+local function capture_rc(line)
+  local path=M.RUNTIME..'/.cmd-'..canon.unique()..'.out'
+  local status=os.execute('{ '..line..'; } >'..path..' 2>/dev/null')
+  local f=io.open(path,'rb')
+  local body=f and f:read('*a') or ''
+  if f then f:close() end
+  os.remove(path)
+  if #body>M.MAX_OUTPUT then return 255,'' end
+  return exit_code(status),body
+end
+-- command_rc(name): a constant command (5 s bound) -> exit code, output. Python's subprocess.run(...).returncode.
+function M.command_rc(name,...)
+  local build=M.COMMANDS[name]
+  if not build then return 255,'' end
+  local line=build(...)
+  if not line then return 255,'' end
+  return capture_rc(bounded(line))
+end
+-- exec(argv, {timeout=}) -> exit code, output: the sys.exec() shape platform.lua expects (preparation checks).
+-- Every argument is single-quoted; one with a quote, NUL or newline is refused (no shell line from data).
+function M.exec(argv,opts)
+  local parts={}
+  for i,a in ipairs(argv) do
+    if type(a)~='string' or string.find(a,"[%z\n']") then error('monitor_io: unsafe command argument',0) end
+    parts[i]="'"..a.."'"
+  end
+  local line=table.concat(parts,' ')..' </dev/null'
+  if opts and opts.timeout then
+    if have_timeout==nil then have_timeout=os.execute('command -v timeout >/dev/null 2>&1')==0 end
+    if have_timeout then line='timeout '..string.format('%d',math.floor(opts.timeout))..' '..line end
+  end
+  return capture_rc(line)
+end
+-- The read-only view of server_endpoint.lua (the peer address of a live VPN client, server_endpoint.py):
+-- bounded file reads (nil = missing, false = another error), readlink/dir of /proc/<pid>/fd through nixio.fs
+-- (no child process), a monotonic clock, and `wg show <wgclientN> endpoints` (1 s bound, output through a RAM
+-- file like every command of this process: SIGCHLD of the curl children interrupts pipe reads).
+function M.endpoint_fs()
+  local F={}
+  function F.read(path,limit)
+    local f,_,errno=io.open(path,'rb')
+    if not f then return errno==2 and nil or false end
+    local ok,data=pcall(f.read,f,limit+1)
+    f:close()
+    if not ok then return false end
+    return data or ''
+  end
+  function F.readlink(path)
+    if not (nfs and nfs.readlink) then return nil end
+    local ok,target=pcall(nfs.readlink,path)
+    return ok and type(target)=='string' and target or nil
+  end
+  function F.dir(path)
+    if not (nfs and nfs.dir) then return nil end
+    local ok,iterator=pcall(nfs.dir,path)
+    if not ok or not iterator then return nil end
+    local names={}
+    for name in iterator do
+      if name~='.' and name~='..' then names[#names+1]=name end
+      if #names>256 then break end  -- server_endpoint refuses more than 256 descriptors anyway
+    end
+    return names
+  end
+  F.clock=M.hires
+  function F.wg(interface)
+    if type(interface)~='string' or not string.find(interface,'^wgclient%d%d?%d?%d?$') then return nil end
+    if have_timeout==nil then have_timeout=os.execute('command -v timeout >/dev/null 2>&1')==0 end
+    local rc,body=capture_rc((have_timeout and 'timeout 1 ' or '')..'wg show '..interface..' endpoints')
+    if rc~=0 then return nil end
+    return body
+  end
+  return F
+end
+
+-- The read-only file view of platform.lua (preparation_control.auto_blocker, preparation_status.snapshot):
+-- lstat {type,size}, read(path,maximum) (raises above maximum), dir(path) -> names | nil, exec as above.
+function M.platform_sys()
+  local S={}
+  function S.lstat(path)
+    if nfs and nfs.lstat then
+      local st=nfs.lstat(path)
+      if not st then return nil end
+      return {type=st.type,size=st.size}
+    end
+    local f=io.open(path,'rb');if not f then return nil end
+    local size=f:seek('end');f:close()
+    return {type='reg',size=size}
+  end
+  function S.read(path,maximum)
+    local f=io.open(path,'rb')
+    if not f then return nil end
+    local text=f:read(maximum and (maximum+1) or '*a') or ''
+    f:close()
+    if maximum and #text>maximum then error({code='OVERSIZE-FILE'},0) end
+    return text
+  end
+  function S.dir(path)
+    if not (nfs and nfs.dir) then return nil end
+    local ok,iter=pcall(nfs.dir,path)
+    if not ok or not iter then return nil end
+    local out={}
+    for name in iter do if name~='.' and name~='..' then out[#out+1]=name end end
+    return out
+  end
+  S.exec=M.exec
+  S.wall=M.wall;S.clock=M.clock
+  -- readiness.lua (system_readiness.snapshot): shutil.which / Path.is_file / shutil.disk_usage + statvfs/os.access,
+  -- all through nixio.fs (no child process); without nixio.fs every answer is "not proven" (nil).
+  function S.executable(path)
+    if not (nfs and nfs.stat and nfs.access) then return false end
+    local st=nfs.stat(path)
+    return st~=nil and st.type~='dir' and nfs.access(path,'x')==true
+  end
+  function S.is_file(path)
+    if not (nfs and nfs.stat) then return false end
+    local st=nfs.stat(path)
+    return st~=nil and st.type=='reg'
+  end
+  function S.readlink(path)
+    if not (nfs and nfs.readlink) then return nil end
+    local ok,target=pcall(nfs.readlink,path)
+    return ok and type(target)=='string' and target or nil
+  end
+  function S.storage(path)
+    if not (nfs and nfs.statvfs) then return nil,nil end
+    local ok,v=pcall(nfs.statvfs,path)
+    if not ok or type(v)~='table' or type(v.bavail)~='number' or type(v.frsize)~='number' then return nil,nil end
+    local free=v.bavail*v.frsize
+    local writable=nil
+    if type(v.flag)=='number' and nfs.access then
+      writable=(v.flag%2==0) and nfs.access(path,'w')==true  -- ST_RDONLY is bit 0
+    end
+    return free,writable
+  end
+  function S.path_env() return os.getenv('PATH') end
+  return S
+end
+-- Anything at this path (a file of any type, a symlink): Python's Path.exists()/is_symlink() test.
+function M.present(path)
+  if nfs and nfs.lstat then return nfs.lstat(path)~=nil end
+  local f=io.open(path,'rb');if f then f:close();return true end
+  return false
+end
+
 ------------------------------------------------------------------------------------------------------
 -- try_lock(directory, fn, name): flock(2) like Python's control_lock/rpc_throttle, but NON-blocking: returns
 -- false when another process holds it (the event loop never waits), else true, fn's results. The flock is
 -- taken by busybox flock(1) -n on the descriptor this process holds open (see control.lua: nixio's lock() is
 -- lockf and does not exclude Python's flock); closing the file releases it.
 ------------------------------------------------------------------------------------------------------
+local held_try=nil  -- descriptor of the lock try_lock holds now (a detached child closes it: speed.lua)
+function M.held_fd() return held_try end
 function M.try_lock(directory,fn,name)
   name=name or 'auto-control.lock'
   if not canon.safe_directory(directory) or not string.find(name,'^[a-z.-]+$') then return false end
@@ -232,11 +382,15 @@ function M.try_lock(directory,fn,name)
   local file=io.open(path,'a')
   if not file then os.execute('mkdir -p '..directory..' && chmod 700 '..directory);file=io.open(path,'a') end
   if not file then return false end
-  local p=io.popen('for f in /proc/$$/fd/*; do if [ "$f" -ef '..path..' ]; then flock -n -x "${f##*/}" && echo ok; exit 0; fi; done; exit 97','r')
+  local p=io.popen('for f in /proc/$$/fd/*; do if [ "$f" -ef '..path..' ]; then flock -n -x "${f##*/}" && echo "ok ${f##*/}"; exit 0; fi; done; exit 97','r')
   local out=p and p:read('*a') or ''
   if p then p:close() end
-  if out~='ok\n' then file:close();return false end
+  local fd=tonumber(string.match(out,'^ok (%d+)\n$'))
+  if not fd then file:close();return false end
+  local outer=held_try
+  held_try=fd
   local results={pcall(fn)}
+  held_try=outer
   file:close()
   if not results[1] then error(results[2],0) end
   return true,unpack(results,2)
@@ -322,7 +476,9 @@ function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
     sock=assert(nixio.socket('inet',kind=='icmp' and 'raw' or 'dgram',kind=='icmp' and 'icmp' or nil))
     assert(sock:setopt('socket','bindtodevice',device))
     assert(sock:setblocking(false))
-    assert(sock:connect(host,port or 0))
+    -- A raw ICMP socket is not connected: nixio's connect() resolves the port as a service name and refuses 0
+    -- ("Unrecognized service", measured on the MT3000), so every ping failed PING-UNAVAILABLE. ICMP uses sendto.
+    if kind~='icmp' then assert(sock:connect(host,port or 0)) end
   end)
   if not ok then finish(nil,'unavailable');return end
   local sent_at=M.hires()
@@ -344,8 +500,44 @@ function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
   end,uloop.ULOOP_READ or 1)
   M.live[key]={sock=sock,ufd=ufd}
   guard=M.after(seconds*1000,function() finish(nil,'timeout') end)
-  local sent=pcall(function() assert(sock:send(packet)) end)
+  local sent=pcall(function()
+    if kind=='icmp' then assert(sock:sendto(packet,host,0)) else assert(sock:send(packet)) end
+  end)
   if not sent then finish(nil,'transport') end
+end
+
+-- beat_socket(device) -> handle | nil, 'missing'|'unavailable'  (fast_detect.lua, Lua plan item 5)
+-- One persistent non-blocking raw ICMP socket bound to the tunnel device (no SO_MARK, as datagram()). It is
+-- never watched by uloop: the pulse sends one echo per beat and reads the answers of the previous beat without
+-- blocking, so a beat costs a few syscalls and no loop object. handle:send(target, packet) -> true | nil, kind
+-- ('refused': the kernel/firewall refused the send; 'missing': the device is gone; 'unavailable'); handle:recv()
+-- -> data | nil (nothing more now); handle:close().
+M.SEND_REFUSED={[1]=true,[13]=true,[100]=true,[101]=true,[105]=true,[113]=true}  -- EPERM EACCES ENETDOWN ENETUNREACH ENOBUFS EHOSTUNREACH
+M.SEND_MISSING={[6]=true,[19]=true}                                               -- ENXIO ENODEV
+function M.beat_socket(device)
+  if not nixio or not safe_word(device,15) then return nil,'unavailable' end
+  local sock=nixio.socket('inet','raw','icmp')
+  if not sock then return nil,'unavailable' end
+  local bound,code=sock:setopt('socket','bindtodevice',device)
+  if not bound then pcall(function() sock:close() end);return nil,M.SEND_MISSING[code] and 'missing' or 'unavailable' end
+  if not sock:setblocking(false) then pcall(function() sock:close() end);return nil,'unavailable' end
+  local handle={}
+  function handle:send(target,packet)
+    if not dotted(target) then return nil,'unavailable' end
+    -- sendto, never connect(): nixio refuses port 0 as a service name on the router (see datagram())
+    local ok,err=sock:sendto(packet,target,0)
+    if ok then return true end
+    if M.SEND_REFUSED[err] then return nil,'refused' end
+    if M.SEND_MISSING[err] then return nil,'missing' end
+    return nil,'unavailable'
+  end
+  function handle:recv()
+    local data=sock:recvfrom(4096)
+    if type(data)~='string' then return nil end  -- false: would block; nil: an error (read again next beat)
+    return data
+  end
+  function handle:close() pcall(function() sock:close() end) end
+  return handle
 end
 
 -- HTTPS GET through the tunnel device with curl (nixio has no TLS). The certificate is checked for the

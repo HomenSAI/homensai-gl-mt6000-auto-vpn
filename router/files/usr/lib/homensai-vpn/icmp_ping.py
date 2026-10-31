@@ -1,7 +1,10 @@
 """Optional ICMP latency for the two selected channels; never a health decision.
 
-One daemon worker, at most two packets in a pass, one per channel per 30 seconds.
-The monitor publishes cached results without waiting for the worker. No shell
+One daemon worker, at most two packets in a pass, one per channel per owner ping
+interval (option ping_interval: 10 s .. 5 min, default 1 min; probe_policy.ping_interval).
+The monitor publishes cached results without waiting for the worker. Every row also
+carries ping_last: the last successful answer of that channel with its time, kept in
+RAM, so the page can show "42 ms (12 s ago)" instead of a dash once a ping existed. No shell
 ping, DNS lookup, flash writes, route changes or fallback to an unbound socket.
 """
 import math
@@ -14,8 +17,9 @@ import time
 from threading import Lock, Thread
 
 TARGET='1.1.1.1'
-INTERVAL=30
-VALID_FOR=45
+INTERVAL=60  # default owner cadence (probe_policy.PING_INTERVAL_DEFAULT)
+VALID_FOR=45  # floor of the freshness window; the monitor configures the real one (probe_policy.ping_valid_for)
+SLACK=2  # a due echo may go up to 2 s early: pass jitter must not turn a 10 s choice into 20 s
 TIMEOUT=1.0
 DEVICE=re.compile(r'^[A-Za-z0-9_.:-]{1,15}$')
 LOGICAL=re.compile(r'^[A-Za-z0-9_.-]{1,64}$')
@@ -125,16 +129,23 @@ def public(row,state,code,stamp=None,rtt=None,target=None):
             'generation':row.get('vendor_generation')}
 
 
+def last_reading(result):
+    """The shared last-ping reading of one answer: only a real reply (state ok, finite RTT) counts."""
+    if (not isinstance(result,dict) or result.get('state')!='ok' or type(result.get('rtt_ms'))not in(int,float)
+            or not math.isfinite(result['rtt_ms']) or type(result.get('time'))not in(int,float) or not math.isfinite(result['time'])):return None
+    return {'rtt_ms':result['rtt_ms'],'time':result['time'],'target':result.get('target') or TARGET}
+
+
 class PingSampler:
     def __init__(self,inventory_reader,binding_reader,paused=lambda:False,compare=False):
         self.inventory_reader=inventory_reader;self.binding_reader=binding_reader;self.paused=paused;self.compare=compare
         self.lock=Lock();self.cache={};self.jobs={};self.attempts={};self.current=set();self.closed=False;self.worker=None
-        self.interval=INTERVAL;self.valid_for=VALID_FOR;self.target=TARGET
+        self.interval=INTERVAL;self.valid_for=VALID_FOR;self.target=TARGET;self.last={}
 
-    def configure(self,interval,target=None):
-        """Cadence from the owner probe level; results stay current for 1.5 cadences + probe budget."""
+    def configure(self,interval,target=None,valid_for=None):
+        """Owner ping cadence; valid_for from probe_policy.ping_valid_for (default 1.5 cadences + probe budget)."""
         with self.lock:
-            self.interval=interval;self.valid_for=int(interval*3//2+15)
+            self.interval=interval;self.valid_for=valid_for if valid_for else max(VALID_FOR,int(interval*3//2+15))
             if target and target!=self.target:self.target=target;self.cache={}
 
     def measure(self,row):
@@ -177,6 +188,7 @@ class PingSampler:
         if isinstance(result,dict) and 'valid_for' in result:result['valid_for']=self.valid_for;result['target']=self.target
         with self.lock:
             if not self.closed and key in self.current:self.cache[key]=result
+            if not self.closed and last_reading(result) is not None:self.last[row['id']]=last_reading(result)
             self.jobs.pop(key,None)
 
     def _run_batch(self,batch):
@@ -201,6 +213,11 @@ class PingSampler:
             live={row.get('vendor_tunnel_id')for row in rows if row.get('id')in selected}
             monotonic_now=time.monotonic()
             self.attempts={key:value for key,value in self.attempts.items()if key in live or monotonic_now-value<self.interval}
+            if not self.compare:
+                # The last answer belongs to the channel (profile id); kept only for channels still listed.
+                listed={row.get('id')for row in rows}
+                self.last={key:value for key,value in self.last.items()if key in listed}
+                for row in rows:row['ping_last']=dict(self.last[row['id']])if row.get('id')in self.last else None
             for row in rows:
                 if row.get('id')not in selected:
                     if not self.compare:row['ping']=public(row,'inactive','PING-NOT-SELECTED')
@@ -216,7 +233,7 @@ class PingSampler:
                 if value and (type(value.get('time'))not in(int,float)or not math.isfinite(value['time'])or not -5<=now-value['time']<=self.valid_for):
                     self._put(row,public(row,'stale','PING-DATA-STALE',value.get('time'),value.get('rtt_ms'),value.get('target')))
                 if (not self.closed and not self.paused() and self.worker is None and key not in self.jobs and len(batch)<2
-                        and monotonic_now-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=self.interval):
+                        and monotonic_now-self.attempts.get(row['vendor_tunnel_id'],float('-inf'))>=self.interval-SLACK):
                     snapshot={name:row.get(name)for name in IDENTITY+BINDING+('administrative_state','vendor_state')}
                     self.attempts[row['vendor_tunnel_id']]=monotonic_now;batch.append((key,snapshot))
             if batch:
@@ -240,4 +257,4 @@ class PingSampler:
         with self.lock:return self.worker is None
 
     def close(self):
-        with self.lock:self.closed=True;self.current.clear();self.cache.clear()
+        with self.lock:self.closed=True;self.current.clear();self.cache.clear();self.last.clear()

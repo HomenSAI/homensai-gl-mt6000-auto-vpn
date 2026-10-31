@@ -152,6 +152,7 @@ end)
 t.test('ping sampler: selected pair only, cadence, identity checks, cached rows',function()
   local R=t.fake_runner()
   local sampler=probe.PingSampler(R,function(logical) return probe.route_binding(R,logical) end)
+  t.eq(sampler.interval,60,'default owner cadence: once a minute');sampler:configure(30)
   local function row(id,iface,gen)
     return {id=id,protocol='wireguard',interface=iface,vendor_tunnel_id='wireguard:'..iface,vendor_generation=gen,
       administrative_state='enabled',vendor_state='SETTLED',device=iface,mark=R.marks[iface].mark,table=R.marks[iface].table,ifindex=R.counters[iface].ifindex,time=R.now}
@@ -184,6 +185,42 @@ t.test('ping sampler: selected pair only, cadence, identity checks, cached rows'
   rows={row('wireguard:peer_7','wgclient',string.rep('a',32))};rows[1].mark=0x1000
   sampler:apply(rows,{source='wireguard:peer_7'},R.now)
   t.eq(rows[1].ping.code,'PING-IDENTITY-CHANGED')
+end)
+
+t.test('ping sampler: owner interval, slack, freshness window and the shared last reading (icmp_ping.py)',function()
+  local R=t.fake_runner()
+  local sampler=probe.PingSampler(R,function(logical) return probe.route_binding(R,logical) end)
+  sampler:configure(10);t.eq(sampler.valid_for,45,'never below the former 45 s window')
+  sampler:configure(300);t.eq(sampler.valid_for,465)
+  sampler:configure(10,nil,105);t.eq(sampler.interval,10);t.eq(sampler.valid_for,105,'valid_for from probe_policy.ping_valid_for')
+  local function row(id,iface,gen)
+    return {id=id,protocol='wireguard',interface=iface,vendor_tunnel_id='wireguard:'..iface,vendor_generation=gen,
+      administrative_state='enabled',vendor_state='SETTLED',device=iface,mark=R.marks[iface].mark,table=R.marks[iface].table,ifindex=R.counters[iface].ifindex,time=R.now}
+  end
+  local PAIR={source='wireguard:peer_7'}
+  R.icmp_rtt=nil;R.icmp_kind='timeout'
+  local rows={row('wireguard:peer_7','wgclient',string.rep('a',32))}
+  sampler:apply(rows,PAIR,R.now)
+  t.eq(rows[1].ping.state,'failed');t.eq(rows[1].ping_last,canon.null,'never answered: no last reading')
+  R.icmp_rtt=42.5;R.icmp_kind=nil;R.advance(8)
+  rows={row('wireguard:peer_7','wgclient',string.rep('a',32))}
+  sampler:apply(rows,PAIR,R.now)
+  t.eq(rows[1].ping.state,'ok','due 2 s early (icmp_ping.SLACK): a 10 s choice stays 10 s')
+  local answered=R.now
+  R.icmp_rtt=nil;R.icmp_kind='timeout';R.advance(10)
+  rows={row('wireguard:peer_7','wgclient',string.rep('a',32)),row('wireguard:peer_8','wgclient2',string.rep('b',32))}
+  sampler:apply(rows,PAIR,R.now)
+  t.eq(rows[1].ping.state,'failed')
+  t.eq(rows[1].ping_last.rtt_ms,42.5,'a timeout keeps the last real answer');t.eq(rows[1].ping_last.time,answered);t.eq(rows[1].ping_last.target,'1.1.1.1')
+  t.eq(rows[2].ping_last,canon.null)
+  R.advance(7)
+  rows={row('wireguard:peer_7','wgclient',string.rep('a',32))};rows[1].time=R.now-500
+  sampler:apply(rows,PAIR,R.now)
+  t.eq(rows[1].ping.code,'PING-DATA-STALE');t.eq(rows[1].ping_last.rtt_ms,42.5,'shown with its age, never replaced by a dash')
+  sampler:apply({row('wireguard:peer_8','wgclient2',string.rep('b',32))},{},R.now)
+  t.eq(next(sampler.last),nil,'a channel no longer listed is forgotten')
+  t.eq(probe.last_reading({state='stale',rtt_ms=12,time=1}),nil,'only an ok answer is a reading')
+  sampler.last['x']={rtt_ms=1,time=1,target='1.1.1.1'};sampler:close();t.eq(next(sampler.last),nil)
 end)
 
 t.run()

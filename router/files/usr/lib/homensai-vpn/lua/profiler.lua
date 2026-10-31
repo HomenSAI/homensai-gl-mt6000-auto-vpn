@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- profiler.lua: on-request sampling profile of a Lua daemon (the Auto supervisor, the monitor).
 -- tick(runtime, name, seconds) is called from the daemon's own loop. When <runtime>/<name>.request exists it is
 -- consumed and a window starts: every 1000 Lua instructions the CPU time since the previous sample (os.clock)

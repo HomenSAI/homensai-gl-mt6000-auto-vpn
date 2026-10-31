@@ -58,7 +58,7 @@ class Reliability:
     DETAIL_BYTES=1024*1024
 
     def __init__(self,data=None,detail_days=7):
-        if type(detail_days) is not int or not 1<=detail_days<=7:raise ValueError("STATISTICS-RETENTION")
+        if type(detail_days) is not int or not 1<=detail_days<=30:raise ValueError("STATISTICS-RETENTION")  # retention_settings.MAX_DAYS
         self.detail_days=detail_days
         self.data=copy.deepcopy(data) if data else {'schema':1,'since':None,'sequence':0,
             'totals':{},'months':{},'events':[],'profiles':{},'details_dropped':0}

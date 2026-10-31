@@ -81,7 +81,7 @@ function minimumComposePages(legacy,panel,status,inventory,controlCard,commandHo
 
   var blockers=autoReadiness(status,inventory,statusNow(status));
   var environment=readinessModel(status,statusNow(status));
-  var checks=environment.environmentFresh?environment.checks:[];
+  var checks=environment.checks.filter(function(row){return !row.stale;});
   var passed=checks.filter(function(row){return row.state==='pass';}).length;
   var failures=checks.filter(function(row){return row.state!=='pass';});
   var checkSummary=E('div',{'class':'hv-chart-card hv-minimum-checks'},[

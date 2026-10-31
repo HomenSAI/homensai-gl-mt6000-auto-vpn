@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- manual_request.lua: the owner's manual channel click (pair_manual.request, instant path) answered by the Lua
 -- monitor without starting Python (plan item 4). Only the request is written here: the supervisor takes it,
 -- diagnoses the pair and proves the kernel itself, exactly as with the Python request.

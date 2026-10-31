@@ -136,6 +136,45 @@ class ResponseMetric(unittest.TestCase):
         self.assertNotIn('fast_switch',setup_config.response_payload({'metric':'websites','compare':True})['main'])
 
 
+class PingInterval(unittest.TestCase):
+    """Owner ping cadence (option ping_interval), separate from the probe level: 10 s .. 5 min, step 10 s, default 60."""
+    def test_default_range_and_step(self):
+        self.assertEqual(P.ping_interval({}),60)
+        for raw,expected in ((10,10),('10',10),(300,300),('300',300),(120,120),('60',60),
+                             (5,60),(0,60),(310,60),(15,60),('15',60),('1e2',60),(60.0,60),(True,60),(None,60),('',60),('abc',60),(-10,60)):
+            with self.subTest(raw=raw):self.assertEqual(P.ping_interval({'ping_interval':raw}),expected)
+        self.assertEqual(P.ping_interval(None),60)
+        self.assertEqual(P.ping_interval({'probe_level':5,'measure_interval':30}),60,'the probe level no longer sets the ping cadence')
+
+    def test_freshness_window_scales_with_the_effective_spacing(self):
+        # 1.5 x max(ping interval, normal check interval) + 15 s probe budget, never below the former 45 s.
+        for settings,expected in (({'ping_interval':10,'interval':10},45),({'ping_interval':20,'interval':10},45),
+                                  ({'ping_interval':30,'interval':10},60),({},105),({'ping_interval':60,'interval':60},105),
+                                  ({'ping_interval':10,'interval':60},105),({'ping_interval':300,'interval':10},465),
+                                  ({'ping_interval':120,'interval':30},195)):
+            with self.subTest(settings=settings):self.assertEqual(P.ping_valid_for(settings),expected)
+        self.assertLessEqual(max(P.ping_valid_for({'ping_interval':n,'interval':i}) for n in range(10,301,10) for i in (10,60,300)),465,
+                             'within the 465 s bound of the histories and the page')
+
+    def test_public_policy_reports_the_ping_cadence(self):
+        with tempfile.TemporaryDirectory() as folder:
+            booster=P.Booster(Path(folder),Path(folder),write,read)
+            public=booster.public({'probe_level':1,'interval':60,'ping_interval':'20'},1000)
+        self.assertEqual((public['ping_interval'],public['effective_ping_interval'],public['ping_valid_for']),(20,60,105))
+        self.assertEqual(public['measure_interval'],300,'the website cadence still follows the level')
+
+    def test_save_payload_validates_the_interval(self):
+        self.assertEqual(setup_config.response_payload({'metric':'icmp-1.1.1.1','ping_interval':10})['main'],
+                         {'response_metric':'icmp-1.1.1.1','ping_interval':'10'})
+        self.assertEqual(setup_config.response_payload({'metric':'websites','compare':False,'fast_switch':True,'ping_interval':300})['main'],
+                         {'response_metric':'websites','response_compare':'0','fast_switch':'1','ping_interval':'300'})
+        self.assertNotIn('ping_interval',setup_config.response_payload({'metric':'websites'})['main'])
+        for bad in (0,5,15,301,310,-10,60.0,'60',True,None,[60]):
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'^PING-INTERVAL-INVALID$'):
+                setup_config.response_payload({'metric':'icmp-1.1.1.1','ping_interval':bad})
+        with self.assertRaisesRegex(ValueError,'RESPONSE-METRIC-INVALID'):setup_config.response_payload({'metric':'x','ping_interval':5})
+
+
 class BoostBounds(unittest.TestCase):
     def setUp(self):
         temporary=tempfile.TemporaryDirectory();self.addCleanup(temporary.cleanup)

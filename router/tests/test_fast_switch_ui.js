@@ -23,7 +23,7 @@ for(const language of ['en','ru']){
     box.checked=!box.checked;box.listeners.change();const wanted=box.checked;
     save.listeners.click();await new Promise(r=>setTimeout(r,0));
     const call=c.calls.pop();
-    assert.strictEqual(JSON.stringify(call),JSON.stringify(['setup_response',['metric','compare','fast_switch'],'icmp-1.1.1.1',false,wanted]));
+    assert.strictEqual(JSON.stringify(call),JSON.stringify(['setup_response',['metric','compare','fast_switch','ping_interval'],'icmp-1.1.1.1',false,wanted,60]));
     assert('disabled' in save.attrs,'saved: the button waits for the next change');
   }
 }

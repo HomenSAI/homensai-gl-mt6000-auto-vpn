@@ -66,6 +66,29 @@ def measure_valid_for(interval):
     return int(interval*3//2+15)
 
 
+# Owner ping cadence (option ping_interval, seconds), separate from the probe level since 2.0.0-alpha14.
+# 10 s .. 5 min in steps of 10 s; missing or invalid -> once a minute. The website check keeps measure_interval.
+PING_INTERVAL_DEFAULT=60;PING_INTERVAL_MIN=10;PING_INTERVAL_MAX=300;PING_INTERVAL_STEP=10
+PING_VALID_FLOOR=45  # the former fixed freshness window (30 s cadence x 1.5)
+
+
+def ping_interval(settings):
+    value=_int(settings.get('ping_interval'),PING_INTERVAL_MIN,PING_INTERVAL_MAX) if isinstance(settings,dict) else None
+    return value if value is not None and value%PING_INTERVAL_STEP==0 else PING_INTERVAL_DEFAULT
+
+
+def ping_valid_for(settings):
+    """How long one ping answer stays current.
+
+    An echo is only sent from a monitor pass, so answers are spaced by the owner interval or by the
+    normal channel-check interval, whichever is longer. One answer stays current for 1.5 of that spacing
+    plus the 15 s probe budget (the pass that sends the next echo may run late), never below the former
+    fixed 45 s window. Highest value: 300 s -> 465 s, the bound the histories and the page accept.
+    """
+    spacing=max(ping_interval(settings),_int(settings.get('interval'),10,300) or 10)
+    return max(PING_VALID_FLOOR,measure_valid_for(spacing))
+
+
 RESPONSE_METRICS={'icmp-1.1.1.1':'1.1.1.1','icmp-8.8.8.8':'8.8.8.8','icmp-9.9.9.9':'9.9.9.9','websites':None}
 DEFAULT_RESPONSE='icmp-1.1.1.1'  # ping: light on the router, best for comparing the two channels
 
@@ -253,6 +276,8 @@ class Booster:
                 'boost_until':self.state.get('until') if self.active() else None,
                 'boost_trigger':trigger if self.active() else None,
                 'effective_interval':self.interval(settings,now),'effective_measure_interval':self.measure(settings),
+                'ping_interval':ping_interval(settings),'ping_valid_for':ping_valid_for(settings),
+                'effective_ping_interval':max(ping_interval(settings),self.interval(settings,now)),
                 'suspicion':({k:self.dense(now).get(k) for k in ('profile','role','reason','started','until')}
                              if self.dense(now) else None),'dense_interval':DENSE_INTERVAL,
                 'boost_interval':BOOST_INTERVAL,'boost_hold':BOOST_HOLD,'levels':{str(k):list(v) for k,v in LEVELS.items()}}

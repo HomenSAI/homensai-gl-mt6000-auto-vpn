@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- attest.lua: kernel_policy.py (static_bindings, rule_bindings, attest, missing_only, unrouted) for the Lua
 -- supervisor (2.0.0-lua line), over kernel.lua's parse_mangle/fields/shlex. Any form the Python code does not
 -- accept raises (ValueError in Python, value_error here): the caller turns it into KERNEL-POLICY-UNVERIFIED.

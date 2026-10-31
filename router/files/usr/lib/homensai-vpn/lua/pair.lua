@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- pair.lua: pair_auto.py + pair_policy.py (+ the small pure helpers they use: recovery_settings.normalized/
 -- stable_success, observation_freshness.valid_for/settle_for, failover_plan.streak) for the Lua supervisor.
 --
@@ -28,6 +28,7 @@ M.READOPT_CODES={['PAIR-EXTERNAL-NETWORK-CHANGE']=true,['PAIR-EXTERNAL-CONFIG-CH
 M.READOPT_LIMIT=3
 M.REVIVE_PAUSE=120
 M.REVIVE_LIMIT=4
+M.DEVICE_WAIT=60   -- seconds a recovery revive waits for a revived tunnel device (bounded; no guard meanwhile)
 
 local function fwall(env) return canon.float(env.run.wall()) end
 local function value_error(code) error(setmetatable({code=code,value_error=true},ctl.Refused),0) end
@@ -506,7 +507,7 @@ end
 -- begin / cleanup / revive (network side through env.net)
 ------------------------------------------------------------------------------------------------------
 function M.preflight(env,settings)
-  if settings.pair_auto_mode~=M.MODE or settings.terms_version~='1' then value_error('PAIR-MODE-NOT-CONFIGURED') end
+  if settings.pair_auto_mode~=M.MODE or settings.terms_version~=require('terms') then value_error('PAIR-MODE-NOT-CONFIGURED') end
   if settings.native_session_loss~='1' then value_error('SESSION-LOSS-NOT-ACCEPTED') end
   local selection=env.backend.pair_preflight(settings)  -- platform pins, acceleration, assess(), choose(), pair_interfaces.selection
   T.bind_policy_context(env,selection)
@@ -571,12 +572,14 @@ function M.cleanup(env,state,stop_revision)
     else value_error('PAIR-RECOVERY-REQUIRED') end
   end
   if phase=='COMMITTED' or phase=='HELD-ON-RESERVE' then
+    M.ensure_devices(env,state)  -- finish_committed/rollback end with guard(devices()): the pair's own tunnels first
     local finished
     if context~=nil then finished=T.finish_committed(env,value,'PAIR-STOPPED',state.order) else finished=T.finish_committed(env,value,'PAIR-STOPPED') end
     if not finished then state.phase='HELD';M.save(env,state);return false end
   else
     local lo,lh=env.backend.order()
     if context~=nil and P.state_order_matches(state,value,lo,lh) and not order_is(env,state.order,state.policy_hash) then
+      M.ensure_devices(env,state)
       if env.backend.recovery_ready(value[P.role(context,state.order)],env.backend.policy().settings)~=true then value_error('PAIR-RECOVERY-REQUIRED') end
       require('rollback').rollback(env,value,'PAIR-STOPPED',state.order)
     end
@@ -648,9 +651,102 @@ function M.revive(env,state,revision,value,rows)
   return false
 end
 
+-- Power cut with a held/committed journal (MT3000 sysrq-b, 31.10.2026): after the boot the intent (RAM) is gone,
+-- and the prepared router does not start the VPN clients by itself (the vendor autostart is off; the pair starts
+-- them). The pair cleanup of a COMMITTED/HELD-ON-RESERVE journal ends with guard(devices()), which refuses an empty
+-- device list (UNSAFE-GUARD-DEVICE): the journal stayed held forever and Start refused TRANSACTION-IN-PROGRESS.
+-- ensure_devices() starts the pair's two configured clients (the interfaces of the pair state - `interfaces`,
+-- not only `owned`: clients that were already up when the session began are not owned, alpha14 cut 31.10.2026)
+-- when no tunnel device is up. The checks are begin()'s profile checks: each row exists with its protocol,
+-- auto='0' and disabled='0' (a client the operator disabled is never touched), netifd reports it stopped, and the
+-- profile definitions (wireguard / ovpnclient configs) are the session's. The whole-network identity and the other
+-- protected configs (wireless, dhcp, DNS: the vendor rewrites some at boot, e.g. the repeater) are only logged:
+-- they do not change which profile ifup starts. ifup is Stop-fenced by the current control revision, bounded by the
+-- shared pair-revive.json budget, then a bounded wait for a device. No guard exists while it waits: the LAN is never
+-- blocked by the wait. A client the session did not own stays up after the cleanup (as before the session); an
+-- owned one is returned by the cleanup as before. Every skip is logged (PAIR-RECOVERY-REVIVE-SKIPPED, at most once
+-- per reason per 5 min). Returns the device list, or nil (the caller goes on and fails with its own code, as
+-- before). Never raises.
+M.PROFILE_CONFIGS={wireguard=true,ovpnclient=true}
+M.SKIP_LOG_EVERY=300
+local skip_logged={}
+local function revive_log(env,line,key)
+  if key then
+    local now=env.run.clock()
+    if skip_logged[key] and now-skip_logged[key]<M.SKIP_LOG_EVERY then return end
+    skip_logged[key]=now
+  end
+  pcall(function() require('durable').log(line) end)
+end
+M.revive_log_reset=function() skip_logged={} end
+function M.ensure_devices(env,state)
+  local ok,devices=pcall(env.backend.devices)
+  if ok and type(devices)=='table' and #devices>0 then return devices end
+  if env.stop() or not canon.is_object(state) or next(state)==nil then return nil end
+  local started={}
+  local function skip(reason) revive_log(env,'PAIR-RECOVERY-REVIVE-SKIPPED: '..reason,reason) end
+  local rok,rerr=pcall(function()
+    local n=env.net
+    if type(n)~='table' or not n.network or not n.client_down or not n.ifup then skip('NETWORK-SIDE-UNAVAILABLE');return end
+    local managed=M.state_interfaces(state)
+    local rows=n.network()
+    if n.identity(rows,managed)~=state.network_identity then
+      revive_log(env,'PAIR-RECOVERY-REVIVE: network identity differs from the session (profiles checked one by one)','identity')
+    end
+    local skipped={firewall=true}
+    if canon.is_object(state.protected) then for name in pairs(state.protected) do if not M.PROFILE_CONFIGS[name] then skipped[name]=true end end end
+    if n.changed(state,n.configs(managed),skipped) then skip('PAIR-EXTERNAL-CONFIG-CHANGE');return end
+    local revision=ctl.current_revision(env)
+    local now=env.run.wall()
+    local path=env.runtime..'/pair-revive.json'
+    local ledger=ctl.read_json_safe(env.run,path,canon.object({}))
+    if not canon.is_object(ledger) then ledger=canon.object({}) end
+    local by_name={};for _,row in ipairs(rows) do by_name[row['.name']]=row end
+    local names={};for name in pairs(managed) do names[#names+1]=name end;table.sort(names)
+    for _,interface in ipairs(names) do
+      local events={}
+      local raw=ledger[interface]
+      if canon.is_array(raw) then for _,x in ipairs(raw) do local v=num(x);if v and finite(v) and 0<=now-v and now-v<900 then events[#events+1]=v end end end
+      local row=by_name[interface]
+      if not row or row.proto~=managed[interface] or row.auto~='0' or row.disabled~='0' then skip('PAIR-PROFILES-UNVERIFIED '..interface)
+      elseif (#events>0 and now-events[#events]<M.REVIVE_PAUSE) or #events>=M.REVIVE_LIMIT then skip('REVIVE-BUDGET '..interface)
+      elseif not n.client_down(interface) then skip('NOT-STOPPED '..interface)
+      else
+        local list={};for i,x in ipairs(events) do list[i]=canon.float(x) end;list[#list+1]=canon.float(now)
+        ledger[interface]=canon.array(list);ctl.write_json(env.run,path,ledger)
+        local iok,ierr=pcall(n.ifup,interface,revision)
+        started[#started+1]=interface
+        revive_log(env,'PAIR-RECOVERY-REVIVE: ifup '..interface..(iok and '' or (' failed '..tostring(is_refused(ierr) and ierr.code or ierr))))
+      end
+    end
+  end)
+  if not rok then revive_log(env,'PAIR-RECOVERY-REVIVE: '..tostring(is_refused(rerr) and rerr.code or rerr)) end
+  if #started==0 then return nil end
+  local deadline=env.run.clock()+M.DEVICE_WAIT
+  while true do
+    local dok,list=pcall(env.backend.devices)
+    if dok and type(list)=='table' and #list>0 then return list end
+    if env.stop() or env.run.clock()>=deadline then return nil end
+    env.sleep(2)
+  end
+end
+
+-- boot_devices(): ensure_devices() for the pair session a boot recovery finds (none or a terminal one: nil).
+function M.boot_devices(env)
+  local ok,state=pcall(M.read_state,env)
+  if not ok or not canon.is_object(state) or next(state)==nil or M.TERMINAL[state.phase] then return nil end
+  return M.ensure_devices(env,state)
+end
+
 ------------------------------------------------------------------------------------------------------
 -- tick
 ------------------------------------------------------------------------------------------------------
+-- The diagnostic accepted a source that keeps being rebuilt only to leave it (diagnosis.resolve_pair).
+function M.source_unstable(selection)
+  local coordination=canon.is_object(selection) and selection.coordination or nil
+  return canon.is_object(coordination) and coordination.code==require('diagnosis').SOURCE_UNSTABLE
+end
+
 function M.reapply_missing_policy(env,state,settings,revision,value,observed)
   if isnone(state.policy_roles) then return false end
   local requested=M.intent(env)
@@ -675,6 +771,8 @@ function M.reapply_missing_policy(env,state,settings,revision,value,observed)
     return true
   end
   local destination=P.role(state.policy_roles,selection.order)
+  -- Never rebuild the policy towards a source the vendor keeps rebuilding: the decision below leaves it.
+  if destination=='source' and M.source_unstable(selection) then return false end
   if not isnone(state.manual_hold) and state.manual_hold~=destination then refuse('PAIR-MANUAL-HOLD-UNVERIFIED') end
   local recovery=M.recovery_normalized(settings);local now=env.run.wall()
   local events,allowed=M.budget(ledger_events(env),now,recovery.attempt_window*60,recovery.attempt_limit)
@@ -777,9 +875,13 @@ function M.tick(env,settings,revision)
     local recovery=M.recovery_normalized(settings)
     local age=M.valid_for(settings)
     local samples=getd(status,'samples',canon.array({}))
-    local failed=M.streak(samples,selection.source.id,recovery.failures,now,age,false,selection.source,env)
+    -- An unstable source (no healthy observation for the whole bounded window, across its vendor rebuilds)
+    -- is the failure evidence itself: its generation-scoped streak restarts on every rebuild.
+    local unstable=M.source_unstable(selection)
+    local failed=unstable or M.streak(samples,selection.source.id,recovery.failures,now,age,false,selection.source,env)
     local healthy=M.streak(samples,selection.target.id,recovery.successes,now,age,true,selection.target,env)
     local diagnosis=env.deps and env.deps.diagnose and env.deps.diagnose(status,selection.source.id,now,settings) or {}
+    if unstable and diagnosis.suppress_switch then diagnosis=merge(diagnosis,{suppress_switch=false}) end
     local events,permitted=M.budget(ledger_events(env),now,recovery.attempt_window*60,recovery.attempt_limit)
     local dwell=#events==0 or now-num(events[#events])>=math.max(recovery.cooldown,recovery.min_dwell)
     local since=num(getd(getd(state,'selected_policy',canon.object({})),'since',nil)) or now

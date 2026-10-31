@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- kernel.lua: the mangle table of the Lua core (kernel_policy.py subset + Linux.apply_fast planning).
 --
 --   decode(bytes)            bytes.decode('utf8','replace'), as apply_fast reads command output

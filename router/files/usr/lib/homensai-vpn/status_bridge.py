@@ -1,13 +1,15 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
-"""TEMPORARY bridge of the Lua monitor (owner plan items 2/3, removed with plan items 1/4).
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
+"""FALLBACK bridge of the Lua monitor (owner plan items 2/3; kept for the Python line and as a fallback).
 
-The Lua monitor answers the page without Python, except for the fields that need the Python Linux backend's
-kernel attestation or modules not ported yet. It starts this script in the background (never on the request
-path, at most every 10 s and only while the page polls) and merges the answer while it is younger than 30 s:
+Since 2.0.0-alpha14 the Lua monitor computes both fields itself (lua/page_controls.lua: pair_manual.controls /
+manual_control.control_status and scan_control.public, differential tests in tests/test_lua_page_controls.py) and
+never starts this script on a timer. It is started in the background only when that Lua computation fails (at most
+every 10 s, never on the request path); its answer is merged while it is younger than 30 s:
 
   manual_switch_control  pair_manual.controls() / manual_control.control_status(), chosen like status_reply
-  channel_path           channel_path.public_status(status)
-  speed_pause, scan, speed_tests
+  scan
+(channel_path is computed by the Lua monitor itself since plan item 4: lua/channel_path.lua; speed_pause and
+speed_tests are answered by the Lua monitor itself since plan item 7: lua/speed_pause.lua, lua/speed.lua.)
 
 Input: the Lua monitor's status.json and native-status.json (the same files agent.status_reply reads).
 Output: one RAM file, written atomically: /var/run/homensai-vpn/status-bridge.json. Usage:
@@ -33,23 +35,8 @@ def compute(runtime, read_json):
     except Exception:
         pass
     try:
-        from channel_path import public_status as path_status
-        result['channel_path'] = path_status(status)
-    except Exception:
-        pass
-    try:
-        from speed_pause import public as speed_pause_status
-        result['speed_pause'] = speed_pause_status()
-    except Exception:
-        pass
-    try:
         from scan_control import public as scan_public
         result['scan'] = scan_public(runtime, read_json)
-    except Exception:
-        pass
-    try:
-        from speed_test import public_status as speed_status
-        result['speed_tests'] = speed_status()
     except Exception:
         pass
     return result

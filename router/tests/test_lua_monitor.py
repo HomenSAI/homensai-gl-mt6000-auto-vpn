@@ -54,7 +54,10 @@ class LuaMonitorFiles(unittest.TestCase):
         self.assertEqual(checkpoint['wan']['months'][month]['rx'],999)
         self.assertIn('wireguard:peer_7',checkpoint['quality'])
         self.assertIn('wireguard:peer_7',checkpoint['activity'])
-        self.assertNotIn('reliability',checkpoint,'alpha3 leaves reliability to the Python line')
+        import reliability
+        model=reliability.Reliability(checkpoint['reliability'])  # item 6: the Lua monitor keeps the reliability model
+        self.assertEqual(model.public()['totals']['outages'],2)
+        self.assertEqual([e['kind'] for e in checkpoint['reliability']['events']],['FAILURE','FAILURE','RECOVERY','RECOVERY'])
 
     def test_status_json_fields(self):
         status=agent.read_json(Path(self.directory)/'status.json')
@@ -75,13 +78,15 @@ class LuaMonitorFiles(unittest.TestCase):
         self.assertEqual(status['stats_mode']['mode'],'diagnostic')
         self.assertEqual(len(status['samples']),6)
         self.assertEqual(set(status['samples'][0]),{'id','time','code','rtt_ms','https_success','dns_ok','interface','vendor_tunnel_id','vendor_generation'})
+        public_model=status['accounting'].pop('reliability')  # the page view (Reliability.public), not the saved model
+        self.assertTrue(public_model['checkpointed'])
         checkpoint_schema.accounting(status['accounting'])
         self.assertEqual(status['storage_error'],None)
         self.assertEqual(status['uplink_observation']['state'],'LINK-UP')
 
     def test_status_reply_and_auto_live_shapes(self):
         reply=json.loads((Path(self.directory)/'status_reply.json').read_text())
-        self.assertEqual(reply['history_split'],['accounting.quality','native_history.events'])
+        self.assertEqual(reply['history_split'],['accounting.quality','accounting.reliability.events','native_history.events'])
         self.assertNotIn('quality',reply['accounting'])
         self.assertNotIn('interface',reply['samples'][0])
         self.assertIn('server_time',reply)

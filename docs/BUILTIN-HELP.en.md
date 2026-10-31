@@ -74,9 +74,9 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want to know exactly when the router checks more often and when it returns to the chosen level.
 
-Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Response measurement (ping or the three sites): 300, 120, 60, 45 and 30 s. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
+Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The ping has its own interval in Settings → How the response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
 
-Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the response every 30 s, whatever level you chose. Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
+Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
 
 An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.
 
@@ -107,7 +107,7 @@ The response shown is the average of the three sites and appears only when all t
 
 Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.
 
-How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
+How often: the ping has its own setting in Settings → How the response is measured, Ping interval: from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Every table shows the last ping with its age, for example 42 ms (12 s ago); a dash means the router has not pinged that channel since it started. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
 
 The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option "Measure all methods (comparison)" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.
 
@@ -1232,6 +1232,29 @@ Do not request secrets in chat or print full configs. This is diagnosis only: no
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
 ```
 
+<a id="stats-retention"></a>
+## How long statistics are kept: by time or by size
+
+You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
+
+Open Advanced → Statistics collection and find "How long statistics are kept".
+
+By time: move the slider from 1 to 7 days, 2 weeks or 1 month. By size: set a limit from 1 to 32 MB; the page shows how many days it holds.
+
+Read the estimate next to the slider: about how much flash and RAM the statistics take while Diagnostics records. A warning appears when flash or memory could run short.
+
+Press Save. The router applies the period from its next check and deletes statistics older than it. Switching and Auto do not depend on this setting.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How long statistics are kept: by time or by size.
+You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
 <a id="preparation-buttons"></a>
 ## Disable a blocking router setting here
 
@@ -1287,30 +1310,31 @@ What you accepted on the first screen. The full text is DISCLAIMER.md in the pro
 
 
 
-The unchanged versioned terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by System readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.
-# Experimental software: terms of use
+The current versioned operational terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by System readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.
+# Experimental software: operational terms and licensing
 
 [Русский](../DISCLAIMER.ru.md)
 
-**HomenS.AI Auto VPN is experimental software (alpha).** Read this before you install or use it. The same text is shown in the program the first time you open it, and Auto cannot be started until you accept it.
+**HomenS.AI Auto VPN is experimental software.** Read this before installation or use. A versioned acknowledgement is shown at first run; automatic switching cannot start until the current terms are accepted. These operational terms supplement, and do not replace, the [software LICENSE](../LICENSE).
 
-1. **It is experimental.** This is an early release. It has been tested only in a limited way, on a GL.iNet GL-MT6000 (firmware 4.11.0) and in a virtual OpenWrt, never on a wide range of devices, firmware versions or networks. It is not production software and must not be treated as such.
-2. **It can interrupt your internet.** Switching a VPN route can drop calls, downloads and sessions for seconds or longer. A fault, a bug or an unexpected router state can leave devices on your network without internet until you repair the router by hand. Keep another way to reach the internet and the router, and make a private backup first (see the Help page and `router-test-kit/`).
-3. **It changes router settings.** The program reorders your existing VPN rules and can add a temporary firewall rule. It does not edit your VPN keys. You can remove it at any time (`opkg remove homensai-auto-vpn`; see the Help page).
-4. **No warranty.** The software is provided "AS IS" under the MIT License, without warranty of any kind, express or implied. The author and contributors are not liable for any damage, loss of data, loss of service, cost or other consequence of installing or using it.
-5. **You are responsible.** You install and use it at your own risk. You are responsible for your router, your network, your VPN accounts, for following your VPN provider's terms and for the law that applies to you. Do not use it where an interruption could endanger people or property.
-6. **Optional reports.** If you configure Telegram reports, summaries are sent through Telegram's servers with a bot token stored on your router. Nothing is sent unless you configure it.
-7. **No promise of support.** Features, behaviour and these terms may change or be withdrawn in later versions; accepting them again may be required.
+1. **Experimental and device-specific.** This software is under development, and testing/qualification applies only to the exact configurations documented in the current test and readiness guides. Do not assume that every GL-MT6000, GL-MT3000, firmware revision, or operating mode is qualified.
+2. **Possible network interruption.** VPN switching may disconnect calls, downloads, devices or sessions. A bug or unexpected state may require manual recovery. Maintain an independent way to reach the router and internet; check your encrypted backup and recovery procedure before upgrading.
+3. **Changes to router settings.** The application can reorder existing VPN routing rules and temporarily adjust firewall rules. It is not GL.iNet firmware. Stop Auto and follow documented recovery/lifecycle steps before upgrading or uninstalling; removal may be refused while a transaction is active.
+4. **License and payment.** The current source distribution is governed, where applicable, by the **HomenSAI Personal & Commercial Source License v1.0**. Unmodified personal non-commercial use is free; use by or for any business or organization requires a separate **paid written license**. Code changes, redistribution, resale and integration need the rightsholder's **prior written consent**. Keep the developer notice **Serhii Khomenko — https://homensai.com**. See [LICENSE](../LICENSE), [LICENSING.md](../LICENSING.md), and [commercial licensing](../COMMERCIAL-LICENSING.md). Earlier MIT grants remain valid for earlier covered copies.
+5. **No warranty and limitations.** The software is supplied "AS IS" to the maximum extent permitted by applicable law. Use it at your own risk; the license contains the applicable liability limitations and non-excludable exceptions.
+6. **User responsibility.** You are responsible for your network, VPN accounts, VPN provider rules, and applicable laws. Never rely on this experimental system where network interruption could threaten life, health or physical safety.
+7. **Optional reports.** Telegram reporting, if enabled, sends summaries through Telegram servers with a bot token stored locally. Nothing is sent through Telegram unless you configure this feature.
+8. **No guaranteed support.** Support, maintenance, uninterrupted operation and compatibility are not promised. Future releases and operational terms may change; updated terms may require another acknowledgement.
 
-This text is not legal advice. If you need certainty about your obligations, ask a qualified lawyer.
+These operational terms do not replace third-party licenses or statutory rights. They are not legal advice.
 
-## How acceptance works
+## How acknowledgement works
 
-When you open the program in LuCI for the first time, a full-page screen shows these terms. Two boxes must be ticked before the Continue button works. The acceptance (terms version and time) is stored on the router in the program's own configuration. Until it is stored, the controller refuses to switch anything (`TERMS-NOT-ACCEPTED`) and the Start button for Auto is refused. If the terms change, their version number changes and you accept again.
+On first use, the LuCI screen presents these operational terms and two confirmations. The version/time are stored on the router. Until accepted, Auto switching is refused (`TERMS-NOT-ACCEPTED`). A changed terms version requires acknowledgement again.
 
-If you do not accept, remove the package and leave your router as it was. Your VPN rules are not changed by the monitor itself.
+Acceptance here does **not** grant Commercial Use, modification or redistribution rights; obtain a separate agreement with the rightsholder first where applicable. If you disagree, do not start Auto, and use the normal documented safe uninstall procedure.
 
-Terms version: 1.
+Operational terms version: **2**. License text version: **1.0**.
 
 
 

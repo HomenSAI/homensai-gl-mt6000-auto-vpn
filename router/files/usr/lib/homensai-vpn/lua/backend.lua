@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- backend.lua: native_switch.Linux for the Lua Auto supervisor (2.0.0-lua line, plan item 1).
 --
 --   local backend=require('backend').new(sys)   -- sys.lua on the router, a fake table in tests
@@ -22,10 +22,12 @@
 -- status (libubus, in process), vendor workers (/proc) and the clock. Nothing is skipped because it "probably
 -- did not change": a cache answers only when its key read back equal.
 --
--- Temporary bridge (documented, LUA-AUTO-ITEM1): probe()/trace() run the Python agent's probe through
--- lua_bridge.py until the Lua monitor (plan item 2) has its own DNS/HTTPS probes. Only health(), the WAIT-CLIENT
--- confirmation and a manual click use it; a negative health answer is reused for 10 s so a primary that the
--- monitor calls healthy but the bound probe does not cannot start a Python process every tick.
+-- Live probe (plan item 4): probe()/trace() run natively in Lua (live_probe.lua over sys.probe_io: route
+-- binding before/after, three `curl --interface` HTTPS checks and a device-bound UDP DNS check side by side) with
+-- the fields and codes of lua_bridge.py. The Python bridge stays as the fallback: `option lua_probe '0'` in
+-- /etc/config/homensai_vpn, a router without nixio/curl, or a Lua fault inside the native probe (logged).
+-- Only health(), the WAIT-CLIENT confirmation and a manual click probe live; a negative health answer is reused
+-- for 10 s so a primary that the monitor calls healthy but the bound probe does not is not re-probed every tick.
 local canon=require('canon')
 local ctl=require('auto_control')
 local py=require('py')
@@ -51,13 +53,12 @@ M.PERSIST='/etc/homensai-vpn'
 M.TABLE='homensai_vpn_guard'
 M.GUARD_RELEASE_SECONDS=90
 M.RTP_TIMEOUT=45
-M.TERMS_VERSION='1'
+M.TERMS_VERSION=require('terms')
 M.TARGETS={'1.1.1.1','8.8.8.8','9.9.9.9'}
 M.HEALTH_NEGATIVE_SECONDS=10
 -- health(id, reuse): a caller may accept a positive live probe up to `reuse` seconds old. Only the steady manual
--- hold (manual.held_reserve, every pass) does: until the supervisor probes natively each live probe is a Python
--- start through lua_bridge.py (~2 s CPU), measured on the MT3000 as ~30 % of a core while a hold lasted.
--- Transitions always probe live; a failing held channel is also seen by the monitor's own probes.
+-- hold (manual.held_reserve, every pass) does (alpha11: each live probe was then a Python start, ~30 % of a core
+-- while a hold lasted). Transitions always probe live; a failing held channel is also seen by the monitor.
 M.ALLOWED_DIAGNOSTIC={['RESERVE-NOT-CONNECTED']=true,['PROFILE-IDENTITY-CHANGED']=true,['VENDOR-SETTLING']=true,
   ['OBSERVATION-STALE']=true,['VENDOR-IDENTITY-UNKNOWN']=true}
 
@@ -217,8 +218,8 @@ function M.new(sys)
   function B.acceleration() return platform.acceleration(sys) end
   function B.history_days()
     local ok,data=pcall(B.inventory)
-    local days=ok and canon.is_object(data.settings) and data.settings.history_days or 7
-    return (py.is_int(days) and days>=1 and days<=7) and days or 7
+    -- retention_settings.configured_days(): the owner's period (time or size mode), 1..30 days
+    return require('retention').days(ok and canon.is_object(data.settings) and data.settings or nil)
   end
 
   local board=nil
@@ -364,8 +365,10 @@ function M.new(sys)
       interval=py.int(interval)
       if interval==nil then refuse('OBSERVATION-STALE') end
       local observed=B.status()
-      local pair=diagnosis.resolve_pair(observed,settings,canon.float(sys.wall()),math.max(30,math.min(900,interval*3)),math.max(30,math.min(600,interval*2)))
+      local settle=math.max(30,math.min(600,interval*2))
+      local pair=diagnosis.resolve_pair(observed,settings,canon.float(sys.wall()),math.max(30,math.min(900,interval*3)),settle,diagnosis.flap_window(settle))
       if pair.coordination.state~='READY' then refuse(pair.coordination.code) end
+      local unstable=pair.coordination.code==diagnosis.SOURCE_UNSTABLE
       local reads=nil
       for _,role in ipairs({'source','target'}) do
         local current,measured=selection[role],pair[role]
@@ -378,10 +381,16 @@ function M.new(sys)
         reads=reads or route_reads()
         local live=B.route_binding(current.interface,reads)
         if role=='target' and live.code=='VPN-001' and measured.code=='VPN-001' then refuse('RESERVE-NOT-CONNECTED') end
-        local tolerated=role=='source' and live.code=='VPN-001' and measured.code=='VPN-001'
-        local changed=false
-        for _,key in ipairs({'device','mark','table','ifindex'}) do if not eq(live[key],measured[key]) then changed=true end end
-        if (not isnone(live.code) and not tolerated) or changed then refuse('PROFILE-IDENTITY-CHANGED') end
+        if role=='source' and unstable then
+          -- An unstable source (it keeps being rebuilt) is only left, never used: its live binding is down or
+          -- bound now (its older measurement may be of a former device); a half-built one is still settling.
+          if not isnone(live.code) and live.code~='VPN-001' then refuse('VENDOR-SETTLING') end
+        else
+          local tolerated=role=='source' and live.code=='VPN-001' and measured.code=='VPN-001'
+          local changed=false
+          for _,key in ipairs({'device','mark','table','ifindex'}) do if not eq(live[key],measured[key]) then changed=true end end
+          if (not isnone(live.code) and not tolerated) or changed then refuse('PROFILE-IDENTITY-CHANGED') end
+        end
         local binding=canon.object({})
         for _,key in ipairs({'code','device','mark','table','ifindex'}) do local v=live[key];binding[key]=v==nil and NULL or v end
         row.kernel_binding=binding
@@ -810,7 +819,7 @@ function M.new(sys)
   end
 
   ------------------------------------------------------------------------------------------------------
-  -- probes (temporary bridge to the Python monitor code), health, recovery readiness
+  -- probes (native live_probe.lua, lua_bridge.py fallback), health, recovery readiness
   ------------------------------------------------------------------------------------------------------
   local function bridge(action,profile)
     local path=sys.RUNTIME..'/.bridge-'..sys.unique()..'.json'
@@ -824,17 +833,64 @@ function M.new(sys)
     return value
   end
   B.bridge=bridge
-  function B.probe(profile)
+  local function bridge_probe(profile)
     local value=bridge('probe',profile)
     if not value then return canon.object({id=profile.id,code='SYSTEM-001',scope='router-originated',lan_path_verified=false}) end
     return value
   end
-  function B.trace(profile)
+  local function bridge_trace(profile)
     local value=bridge('trace',profile)
     if not value then refuse('NATIVE-SYSTEM-001') end
     if type(value.exit)=='string' then return value.exit end
     if type(value.code)=='string' and ctl.code_ok(value.code) then refuse(value.code) end
     refuse('NATIVE-SYSTEM-001')
+  end
+  -- native_probe_enabled(): not `option lua_probe '0'`, and the router has the native primitives
+  function B.native_probe_enabled()
+    if not (sys.probe_io and sys.probe_capable and sys.probe_capable()) then return false end
+    local text=sys.read('/etc/config/homensai_vpn')
+    if text then
+      for line in string.gmatch(text..'\n','([^\n]*)\n') do
+        if string.find(line,"^%s*option%s+lua_probe%s+'?0'?%s*$") then return false end
+      end
+    end
+    return true
+  end
+  local live=nil
+  local function live_probe()
+    if not live then
+      live=require('live_probe').new({wall=sys.wall,clock=sys.clock,random=sys.random,probe_io=sys.probe_io,
+        route_binding=function(logical) return B.route_binding(logical) end})
+    end
+    return live
+  end
+  B.native_faults=0
+  -- native(fn, ...): a router answer or a coded refusal passes through; a Lua fault is logged and the caller
+  -- uses the Python bridge for this call
+  local function native(name,fn,...)
+    local results={pcall(fn,...)}
+    if results[1] then return true,unpack(results,2) end
+    local err=results[2]
+    if type(err)=='table' and type(err.code)=='string' then error(err,0) end
+    B.native_faults=B.native_faults+1
+    pcall(function() io.stderr:write('hv-auto: native ',name,' failed, using lua_bridge.py: ',tostring(err),'\n') end)
+    return false
+  end
+  -- probe(profile, keep): keep=true (the WAIT-CLIENT confirmation) lets the next trace() of the same profile
+  -- within 2 s use this very measurement instead of probing again
+  function B.probe(profile,keep)
+    if B.native_probe_enabled() then
+      local ok,value=native('probe',live_probe().probe,profile,keep)
+      if ok then return value end
+    end
+    return bridge_probe(profile)
+  end
+  function B.trace(profile)
+    if B.native_probe_enabled() then
+      local ok,value=native('trace',live_probe().trace,profile)
+      if ok then return value end
+    end
+    return bridge_trace(profile)
   end
   local negative={}
   local positive={}
@@ -925,6 +981,15 @@ function M.new(sys)
     return selection
   end
   function B.speed_active() return sys.lstat(sys.RUNTIME..'/speed-pause.json')~=nil end
+  -- speed_pause.gate('auto') at the top of every pass, like native_switch.serve() (plan item 7): the Lua supervisor
+  -- acknowledges the speed test's quiet window with the same file, fields and timeouts as the Python one.
+  local pause_deps
+  function B.speed_gate(role)
+    if sys.lstat(sys.RUNTIME..'/speed-pause.json')==nil then return false end
+    local pause=require('speed_pause')
+    pause_deps=pause_deps or pause.router({runtime=sys.RUNTIME,clock=sys.clock,wall=sys.wall})
+    return pause.gate(pause_deps,role)
+  end
   function B.vendor_busy() return platform.tunnel_switch_locks(sys) or sys.lstat(platform.RTP_LOCK)~=nil end
   -- A Python apply child of a journal written by the Python line: kill only that exact process group.
   function B.kill_apply_child(pid,tx)

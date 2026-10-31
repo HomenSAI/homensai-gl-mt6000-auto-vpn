@@ -115,8 +115,11 @@ class LuaFilesForPython(unittest.TestCase):
         self.assertEqual(reply['website_response_history']['metric'], 'icmp-rtt-ms')
         self.assertNotIn('events', reply['native_history'], 'history split out like agent.status_reply')
         self.assertIn('native_history.events', reply['history_split'])
-        self.assertEqual(reply['manual_switch_control']['blockers'], ['PAIR-MANUAL-STATE-UNVERIFIED'], 'no bridge answer yet: fail-safe')
+        # computed by the Lua monitor (lua/page_controls.lua, pair_manual.controls shape), no bridge placeholder
+        self.assertEqual(reply['manual_switch_control'], {'available': False, 'mode': 'continuous-pair',
+                                                          'time': reply['manual_switch_control']['time']})
         self.assertFalse(reply['manual_switch_control']['available'])
+        self.assertEqual(reply['scan'], {'state': 'IDLE'})
         self.assertEqual(status['lua_backend']['so_mark'], False)
         self.assertEqual(status['lua_backend']['monitor'], 'lua')
         self.assertEqual(status['profiles'][0]['exit_country'], 'DE')
@@ -193,7 +196,17 @@ class SetupPayloadsMatchSetupConfig(unittest.TestCase):
                         '{"level":"3","boost":true}', '{"level":3,"boost":1}', '{"level":3}', '{"boost":true}', '{"level":3,"boost":true,"x":1}', '{}'],
         'setup_response': ['{"metric":"icmp-1.1.1.1"}', '{"metric":"icmp-8.8.8.8","compare":true}', '{"metric":"icmp-9.9.9.9","fast_switch":false}',
                            '{"metric":"websites","compare":false,"fast_switch":true}', '{"metric":"icmp-1.1.1.2"}', '{"metric":"websites","compare":1}',
-                           '{"metric":"websites","x":true}', '{"compare":true}', '{}', '{"metric":5}'],
+                           '{"metric":"websites","x":true}', '{"compare":true}', '{}', '{"metric":5}',
+                           # owner ping interval (10..300 s, step 10): the same keys, values and refusal codes
+                           '{"metric":"icmp-1.1.1.1","ping_interval":10}', '{"metric":"icmp-1.1.1.1","ping_interval":60}',
+                           '{"metric":"websites","compare":true,"fast_switch":false,"ping_interval":300}',
+                           '{"metric":"icmp-8.8.8.8","ping_interval":5}', '{"metric":"icmp-8.8.8.8","ping_interval":0}',
+                           '{"metric":"icmp-8.8.8.8","ping_interval":15}', '{"metric":"icmp-8.8.8.8","ping_interval":310}',
+                           '{"metric":"icmp-8.8.8.8","ping_interval":-10}', '{"metric":"icmp-8.8.8.8","ping_interval":60.0}',
+                           '{"metric":"icmp-8.8.8.8","ping_interval":"60"}', '{"metric":"icmp-8.8.8.8","ping_interval":true}',
+                           '{"metric":"icmp-8.8.8.8","ping_interval":null}', '{"metric":"icmp-8.8.8.8","ping_interval":[60]}',
+                           '{"metric":"bad","ping_interval":5}', '{"ping_interval":60}',
+                           '{"metric":"icmp-8.8.8.8","compare":1,"ping_interval":5}'],
         'setup_stats': ['{"mode":"work"}', '{"mode":"diagnostic","hours":24}', '{"mode":"diagnostic","hours":72}', '{"mode":"diagnostic","hours":168}',
                         '{"mode":"diagnostic","hours":336}', '{"mode":"diagnostic","hours":48}', '{"mode":"diagnostic","hours":24.0}',
                         '{"mode":"diagnostic"}', '{"mode":"work","hours":24}', '{"mode":"x"}', '{}'],
@@ -228,7 +241,7 @@ class SetupPayloadsMatchSetupConfig(unittest.TestCase):
         text = (ROOT/'setup_save.lua').read_text()
         lua_setup = (ROOT/'lua/setup.lua').read_text()
         for key in ('response_metric', 'response_compare', 'fast_switch', 'stats_mode', 'stats_until', 'probe_level', 'probe_boost',
-                    'interval', 'measure_interval'):
+                    'interval', 'measure_interval', 'ping_interval'):
             self.assertIn(key+'=true', text, key)
             self.assertIn(key+'=true', lua_setup, key)
 
@@ -277,7 +290,8 @@ class Dispatcher(unittest.TestCase):
         return sorted(p.name for p in self.runtime.iterdir() if p.name.startswith('rpc-'))
 
     def test_lua_answers_reads_and_setup_through_ram_files(self):
-        for method in ('status', 'events', 'history', 'auto_live', 'inventory', 'setup_probe', 'setup_response', 'setup_stats', 'pair_manual'):
+        for method in ('status', 'events', 'history', 'auto_live', 'inventory', 'setup_probe', 'setup_response', 'setup_stats', 'pair_manual',
+                       'native_start', 'native_stop', 'fault_start', 'fault_cancel'):
             with self.subTest(method=method):
                 reply = self.run_plugin('call', method, request=b'{"level":3,"boost":true}')
                 self.assertEqual(reply, {'lua': True, 'request': {'level': 3, 'boost': True}})
@@ -298,8 +312,26 @@ class Dispatcher(unittest.TestCase):
         reply = self.run_plugin('call', 'setup_probe', request=b'{"level":3,"boost":true}', mode='timeout')
         self.assertEqual(reply, {'saved': False, 'code': 'SETUP-SAVE-UNCONFIRMED'})
 
+    def test_buttons_fall_back_to_agent_with_the_same_bytes(self):
+        # plan item 4: Start/Stop/failure test - a FALLBACK, a missing object or an unclear Lua outcome is answered
+        # by agent.py with the request bytes the page sent (a repeated Start finds its own intent, Stop latches again)
+        for method in ('native_start', 'native_stop', 'fault_start', 'fault_cancel'):
+            for mode in ('fallback', 'missing', 'timeout'):
+                with self.subTest(method=method, mode=mode):
+                    reply = self.run_plugin('call', method, request=b'{"request_source":"manual"}', mode=mode)
+                    self.assertEqual(reply, {'agent': ['call', method], 'stdin': '{"request_source":"manual"}'})
+        self.assertEqual(self.leftovers(), [])
+
+    def test_buttons_without_the_lua_monitor_use_the_python_socket_or_agent(self):
+        for method in ('native_start', 'native_stop', 'fault_start', 'fault_cancel', 'pair_manual'):
+            with self.subTest(method=method):
+                self.assertEqual(self.run_plugin('call', method, request=b'{}', ready=False)['agent'], ['call', method])
+        self.assertFalse(self.log.exists(), 'ubus is not called without the readiness marker')
+        text = PLUGIN.read_text()
+        self.assertEqual(text.count('status_client.py'), 1, 'one Python socket path for every listed method')
+
     def test_python_methods_and_a_stopped_lua_monitor_keep_the_old_paths(self):
-        for method in ('native_start', 'native_stop', 'fault_start', 'fault_cancel', 'setup_monitor', 'statistics'):
+        for method in ('native_return', 'native_confirm', 'native_trial_start', 'setup_monitor', 'statistics', 'terms_accept'):
             with self.subTest(method=method):
                 self.assertEqual(self.run_plugin('call', method, request=b'{"a":1}')['agent'], ['call', method])
         self.assertEqual(self.run_plugin('call', 'status', request=b'{}', ready=False)['agent'], ['call', 'status'])

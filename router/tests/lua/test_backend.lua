@@ -26,7 +26,7 @@ local function sections(reserve_first)
 end
 local function policy_text(reserve_first)
   return canon.encode(O({sections=sections(reserve_first),settings=O({plan_source='wireguard:peer_2002',plan_target='openvpn:40354_2020',
-    native_order_direction='first',terms_version='1',interval='10'}),firewall_defaults=A({}),hnat_enable='0',ipv6='0',lan='br-lan',
+    native_order_direction='first',terms_version=require('terms'),interval='10'}),firewall_defaults=A({}),hnat_enable='0',ipv6='0',lan='br-lan',
     firewall_include=O({path='/usr/bin/rtp2.sh',type='script',reload='0'})}))..'\n'
 end
 local INVENTORY=canon.encode(O({profiles=A({
@@ -70,7 +70,7 @@ t.test('policy() hands out copies: a caller cannot change the cached data',funct
   local B=backend(world())
   local d=B.policy();d.sections[1].enabled='0';d.settings.terms_version='x'
   local again=B.policy()
-  t.eq(again.sections[1].enabled,'1');t.eq(again.settings.terms_version,'1')
+  t.eq(again.sections[1].enabled,'1');t.eq(again.settings.terms_version,require('terms'))
   t.eq(B.history_days(),5)
 end)
 

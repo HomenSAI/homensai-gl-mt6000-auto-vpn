@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- transaction.lua: the guarded switch transaction of native_switch.py in Lua (2.0.0-lua-alpha2).
 --
 -- attempt(): ARMED -> APPLYING (reorder / apply / verify-diagnostic / verify-kernel) -> WAIT-CLIENT
@@ -611,7 +611,8 @@ function M.attempt(env,selection,until_,trial,opts)
       if (num(stopped.requested) or 0)>=num(value.started) then refuse('CLIENT-STOP') end
       local confirmation=ctl.read_json(env.run,M.paths(env).confirm,canon.object({}))
       if scope=='router-probed-ipv4' then
-        local measured=env.backend.probe(selection[destination])
+        -- keep=true: the trace() right below may use this very measurement (backend.probe, within 2 s)
+        local measured=env.backend.probe(selection[destination],true)
         M.require_control_revision(env,control_revision)
         if isnone(measured.code) and measured.dns_ok==true and (num(measured.https_success) or 0)>=2 and env.backend.trace(selection[destination])==target_exit then
           confirmation=canon.object({tx=tx,exit_ipv4=target_exit,dns_ok=true,https_ok=true,time=fwall(env),proof_scope=scope})
@@ -780,7 +781,8 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status)
   for _,role in ipairs({'source','target'}) do
     if isnone(selection_settings['plan_'..role]) or selection_settings['plan_'..role]=='' then selection_settings['plan_'..role]=value[role] end
   end
-  local resolved=env.deps.resolve_pair(status,selection_settings,now,age,pair.settle_for(settings))
+  -- A primary the vendor keeps rebuilding does not make the held reserve's identity unknown.
+  local resolved=env.deps.resolve_pair(status,selection_settings,now,age,pair.settle_for(settings),require('diagnosis').flap_window(pair.settle_for(settings)))
   local proofs=getd(value,'vendor_profiles',canon.object({}))
   local target=resolved.target
   local expected=canon.is_object(proofs) and getd(proofs,'target',nil) or nil

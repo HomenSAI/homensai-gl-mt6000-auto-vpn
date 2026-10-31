@@ -1,4 +1,5 @@
-/* Measured switch timing from saved events: first failed check, switch start/end, return start/end. Missing pieces stay null. */
+/* Measured switch timing from saved events: first failed check, switch start/end, return start/end. Missing pieces stay null.
+   A fault (restart recovery, give-up) is a 'recovery' episode: never a switch, never averaged. */
 function spanText(s){
   if(!Number.isFinite(s)||s<0)return '—';s=Math.round(s);
   var h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60,u=function(n,en,ru){return n+bi(' '+en,' '+ru);};
@@ -13,7 +14,7 @@ function switchTimeline(records){
     return a.time-b.time||(o[a.origin]||0)-(o[b.origin]||0)||n(a)-n(b);});
   var episodes=[],cur=null,fails={},ups={},WEEK=7*86400;
   list.forEach(function(r){delete r.timing;});
-  function d(a,b){var v=b-a;return Number.isFinite(v)&&v>=0&&v<=WEEK?v:null;}
+  function d(a,b){var v=b-a;return a!=null&&b!=null&&Number.isFinite(v)&&v>=0&&v<=WEEK?v:null;}
   function note(r,text){if(text)r.timing=r.timing?r.timing+' · '+text:text;}
   function open(r,props){cur=Object.assign({key:r.key,source:r.source,target:r.target,kind:switchKind(r),failure:null,start:null,reserve:null,returnStart:null,back:null,rolledBack:null,recovery:null,down:null,returnKind:null},props);episodes.push(cur);return cur;}
   list.forEach(function(r){
@@ -25,38 +26,54 @@ function switchTimeline(records){
       if(cur&&cur.source===r.profile&&cur.reserve!==null&&cur.back===null&&cur.recovery===null){cur.recovery=r.time;cur.down=down;}
       return;
     }
+    var g=r.fault,gu=/GIVEN|INTEGRITY/.test(g),rc=cur&&cur.kind==='recovery';
+    if(rc&&!cur.closed&&r.state==='AUTO-START-REQUESTED'){cur.closed=1;cur.outcome='restart';}
+    if(g&&!(rc&&cur.outcome==='gave-up'&&gu)){
+      if(rc&&cur.outcome==='gave-up'){cur.closed=0;cur.outcome=cur.end=null;}
+      else if(!rc||cur.closed){
+        var o=cur&&!cur.closed&&cur.back===null&&cur.rolledBack===null;
+        if(o&&cur.restore&&cur.reserve===null){delete cur.restore.timing;cur.kind='recovery';cur.rec=cur.start;cur.start=cur.failure=null;}
+        else{if(o){cur.closed=1;cur.cut=r.time;}open(r,{kind:'recovery',rec:r.time});}
+        note(r,bi('recovery after a fault or restart','восстановление после сбоя'));
+      }
+      if(gu){cur.closed=1;cur.outcome='gave-up';cur.code=g;cur.end=r.time;}
+    }
     var t=savedTransition(r),s=r.state,dir=null,done=false;
     if(t.present){if(t.changed&&!t.reapply&&!t.unchanged&&t.outcome!=='refused'&&!t.invalid){dir=t.to;done=t.completed&&(t.outcome==='committed'||t.outcome==='restored');}}
     else{dir=['APPLYING','WAIT-CLIENT','COMMITTED','STOPPED-ON-RESERVE'].indexOf(s)>=0?'target':['RESTORING','ROLLED-BACK'].indexOf(s)>=0||r.return_primary?'source':null;done=s==='COMMITTED'||s==='ROLLED-BACK'||r.return_primary;}
     if(!dir)return;
-    var starting=!done&&(s==='APPLYING'||s==='RESTORING');
+    if(cur&&cur.kind==='recovery'&&!cur.closed){
+      if(done){cur.closed=1;cur.outcome=dir;cur.end=r.time;if(r.time>cur.rec)note(r,bi('recovery ','восстановление ')+spanText(r.time-cur.rec));return;}
+      if(s!=='APPLYING')return;cur.closed=1;
+    }
+    var starting=!done&&(s==='APPLYING'||s==='RESTORING'),c=cur&&!cur.closed?cur:null,shut=!c||c.back!==null||c.rolledBack!==null;
     if(dir==='target'&&starting){
-      if(cur&&cur.start!==null&&cur.reserve===null&&cur.rolledBack===null)return;
+      if(c&&c.start!==null&&c.reserve===null&&c.rolledBack===null)return;
       var f=r.source&&fails[r.source];if(f&&d(f.time,r.time)===null)f=null;
-      open(r,{start:r.time,failure:f?f.time:null});
+      open(r,{start:r.time,failure:f?f.time:null,restore:s==='RESTORING'&&r});
       if(f)note(r,bi('failure confirmed ','сбой подтверждён за ')+spanText(r.time-f.time)+bi(' after the first failed check',' после первой неудачной проверки'));
     }else if(dir==='target'&&done){
-      if(cur&&cur.reserve===null&&cur.rolledBack===null&&cur.returnStart===null&&cur.back===null){cur.reserve=r.time;
+      if(c&&c.reserve===null&&c.rolledBack===null&&c.returnStart===null&&c.back===null){cur.reserve=r.time;
         if(cur.start!==null)note(r,bi('switch took ','переключение ')+spanText(r.time-cur.start)+bi(' (from switch start)',' (с начала перехода)'));
         if(cur.failure!==null)note(r,bi('from the first failed check ','от первой неудачной проверки ')+spanText(r.time-cur.failure));
-      }else if(!cur||cur.back!==null||cur.rolledBack!==null)open(r,{reserve:r.time});
+      }else if(shut)open(r,{reserve:r.time});
     }else if(dir==='source'&&starting){
-      if(cur&&cur.reserve!==null&&cur.returnStart===null&&cur.back===null){cur.returnStart=r.time;cur.returnKind=switchKind(r);
+      if(c&&c.reserve!==null&&c.returnStart===null&&c.back===null){cur.returnStart=r.time;cur.returnKind=switchKind(r);
         note(r,bi('on the reserve for ','на резерве ')+spanText(r.time-cur.reserve));
         var u=cur.source&&ups[cur.source];if(u&&u.time>=cur.reserve&&u.time<=r.time)note(r,bi('primary working again for ','основной снова работает ')+spanText(r.time-u.time));
-      }else if(!cur||cur.back!==null||cur.rolledBack!==null)open(r,{returnStart:r.time,returnKind:switchKind(r)});
+      }else if(shut)open(r,{returnStart:r.time,returnKind:switchKind(r)});
     }else if(dir==='source'&&done){
-      if(cur&&cur.start!==null&&cur.reserve===null&&cur.rolledBack===null){cur.rolledBack=r.time;note(r,bi('attempt ended without a switch after ','попытка завершилась без переключения через ')+spanText(r.time-cur.start));}
-      else if(cur&&(cur.reserve!==null||cur.returnStart!==null)&&cur.back===null){cur.back=r.time;if(!cur.returnKind)cur.returnKind=switchKind(r);
+      if(c&&c.start!==null&&c.reserve===null&&c.rolledBack===null){cur.rolledBack=r.time;note(r,bi('attempt ended without a switch after ','попытка завершилась без переключения через ')+spanText(r.time-cur.start));}
+      else if(c&&(c.reserve!==null||c.returnStart!==null)&&c.back===null){cur.back=r.time;if(!cur.returnKind)cur.returnKind=switchKind(r);
         if(cur.returnStart!==null)note(r,bi('return took ','возврат ')+spanText(r.time-cur.returnStart)+bi(' (from return start)',' (с начала возврата)'));
         if(cur.reserve!==null)note(r,bi('reserve used for ','на резерве ')+spanText(r.time-cur.reserve));
         if(cur.failure!==null)note(r,bi('whole episode ','весь эпизод ')+spanText(r.time-cur.failure)+bi(' from the first failed check',' от первой неудачной проверки'));
-      }else if(!cur||cur.back!==null||cur.rolledBack!==null)open(r,{back:r.time,returnKind:switchKind(r)});
+      }else if(shut)open(r,{back:r.time,returnKind:switchKind(r)});
     }
   });
   episodes.forEach(function(e){
     e.detect=d(e.failure,e.start);e.switching=d(e.start,e.reserve);e.total=d(e.failure,e.reserve);e.onReserve=d(e.reserve,e.returnStart);e.returning=d(e.returnStart,e.back);
-    e.time=[e.failure,e.start,e.reserve,e.returnStart,e.back].find(Number.isFinite);
+    e.time=[e.failure,e.start,e.reserve,e.returnStart,e.back,e.rec].find(Number.isFinite);
   });
   return episodes;
 }

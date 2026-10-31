@@ -159,8 +159,12 @@ def v_recovery(a):
     return all(is_int(a[k],*r) for k,r in RECOVERY.items()) and all(k not in a or is_int(a[k],*r) for k,r in optional.items()) and a['return_policy'] in ('healthy_primary','hold_reserve')
 
 
+# The current operational terms version of the program under test (agent.TERMS_VERSION, '2' since the license transition).
+TERMS_VERSION = re.search(r"^TERMS_VERSION = '([0-9]+)'", (LIB/'agent.py').read_text(encoding='utf-8'), re.M).group(1)
+
+
 def v_terms(a):
-    return isinstance(a, dict) and set(a) == {'version'} and a['version'] == '1'
+    return isinstance(a, dict) and set(a) == {'version'} and a['version'] == TERMS_VERSION
 
 
 def v_empty(a):
@@ -231,7 +235,7 @@ SPECS = {
     'setup_speed': (lambda: {'enabled': True, 'auto_new': False, 'budget_mib': 8, 'duration': 5, 'streams': 2, 'daily_mib': 128, 'busy_mbps': 2}, v_speed_cfg),
     'setup_monitor': (lambda: {'interval': 30, 'checkpoint': 600, 'probe_limit': 8, 'planning_enabled': True,'live_log_limit':100,'history_days':2}, v_monitor_cfg),
     'setup_recovery': (lambda: {'failures': 3, 'successes': 2, 'cooldown': 60, 'min_dwell': 60, 'return_policy': 'healthy_primary', 'primary_successes': 2, 'primary_stable': 30, 'attempt_limit': 3, 'attempt_window': 15, 'interval': 10}, v_recovery),
-    'terms_accept': (lambda: {'version': '1'}, v_terms),
+    'terms_accept': (lambda: {'version': TERMS_VERSION}, v_terms),
     'telegram_forget': (dict, v_empty),
     'priority_preview': (lambda: {'ordered': ['wg_b', 'wg_a']}, lambda a: v_ordered(a, False)),
     'priority_apply': (lambda: {'ordered': ['wg_b', 'wg_a'], 'revision': STATE['revision']}, lambda a: v_ordered(a, True)),

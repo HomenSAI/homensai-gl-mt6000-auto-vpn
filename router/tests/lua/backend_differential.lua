@@ -75,9 +75,11 @@ function H.section_ids(c)
 end
 function H.choose(c) return identity.choose(c.data,c.profiles) end
 function H.resolve_pair(c)
-  local r=diagnosis.resolve_pair(c.status,c.settings,c.now,c.max_age,c.settle)
+  local r=diagnosis.resolve_pair(c.status,c.settings,c.now,c.max_age,c.settle,none(c.source_window))
   return canon.object({source=r.source,target=r.target,coordination=r.coordination})
 end
+function H.source_unstable(c) return diagnosis.source_unstable(c.samples,c.row,c.anchor,c.now,c.max_age,c.window) end
+function H.flap_window(c) return canon.array({none(diagnosis.flap_window(c.settle)) or NULL}) end
 function H.diagnose(c) return canon.object(diagnosis.diagnose(c.status,c.source,c.now,none(c.settings))) end
 function H.scoped_samples(c) return diagnosis.scoped_samples(c.samples,c.profile) end
 function H.attest(c) return attest.attest(c.policy,c.selection,c.mangle,c.rules) end

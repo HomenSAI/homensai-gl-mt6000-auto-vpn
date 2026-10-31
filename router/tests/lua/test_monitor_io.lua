@@ -99,4 +99,39 @@ t.test('capture: output through a RAM file (no pipe to interrupt), exit status k
   os.execute('rm -rf '..base)
 end)
 
+t.test('datagram: raw ICMP is sent with sendto (the router nixio refuses connect(host,0)); UDP stays connected',function()
+  local log={}
+  local fd_cb
+  local function sock()
+    local s={}
+    function s:setopt() return true end
+    function s:setblocking() return true end
+    function s:connect(host,port) log[#log+1]={'connect',host,port};if port==0 then return nil,-8,'Unrecognized service' end;return true end
+    function s:sendto(packet,host,port) log[#log+1]={'sendto',host,port};return #packet end
+    function s:send(packet) log[#log+1]={'send'};return #packet end
+    function s:fileno() return 7 end
+    function s:recvfrom() return 'reply','1.1.1.1' end
+    function s:close() end
+    return s
+  end
+  local saved={nixio=package.loaded['nixio'],mio=package.loaded['monitor_io']}
+  package.loaded['nixio']={socket=function() return sock() end}
+  local loop={ULOOP_READ=1,fd_add=function(fd,cb) fd_cb=cb;return {delete=function() end} end,
+    timer=function(cb) return {set=function() end,cancel=function() end} end}
+  package.loaded['monitor_io']=nil
+  local ok,err=pcall(function()
+    local m=require('monitor_io')
+    m.attach_loop(loop)
+    local got
+    m.datagram('icmp','wgclient1','1.1.1.1',0,'pkt',1,function() return true end,function(data) got=data end)
+    t.eq(log,{{'sendto','1.1.1.1',0}},'no connect for ICMP')
+    fd_cb();t.eq(got,'reply')
+    log={}
+    m.datagram('udp','wgclient1','9.9.9.9',53,'q',3,function() return true end,function() end)
+    t.eq(log,{{'connect','9.9.9.9',53},{'send'}})
+  end)
+  package.loaded['nixio'],package.loaded['monitor_io']=saved.nixio,saved.mio
+  if not ok then error(err,0) end
+end)
+
 t.run()

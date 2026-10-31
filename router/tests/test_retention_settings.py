@@ -8,10 +8,24 @@ from native_history import History
 from reliability import Reliability
 BASE=1792750000
 class RetentionSettingsTests(unittest.TestCase):
- def test_configured_days_uses_bounded_cache_and_falls_back_on_invalid_config(self):
-  with patch.object(retention_settings,'_cached',None),patch.object(retention_settings.time,'monotonic',side_effect=[10,12,16]),patch.object(retention_settings.subprocess,'run',side_effect=[MagicMock(returncode=0,stdout=b'2\n'),MagicMock(returncode=0,stdout=b'999\n')]) as read:
-   self.assertEqual(retention_settings.configured_days(),2);self.assertEqual(retention_settings.configured_days(),2)
-   self.assertEqual(retention_settings.configured_days(),7);self.assertEqual(read.call_count,2)
+ def test_configured_days_reads_the_main_section_with_a_bounded_cache_and_falls_back(self):
+  with tempfile.TemporaryDirectory() as d:
+   config=Path(d)/'homensai_vpn'
+   config.write_text("config main 'main'\n    option interval '10'\n    option history_days '2'\n\nconfig server 'x'\n    option history_days '5'\n")
+   self.assertEqual(retention_settings.configured_days(config),2,'old option, main section only')
+   config.write_text("config main 'main'\n    option history_days '2'\n    option stats_retention_mode 'time'\n    option stats_retention_days '30'\n")
+   self.assertEqual(retention_settings.configured_days(config),30)
+   config.write_text("config main 'main'\n    option interval '10'\n    option stats_retention_mode 'size'\n    option stats_retention_mb '4'\n    option stats_retention_days '30'\n")
+   self.assertEqual(retention_settings.configured_days(config),11,'size mode: whole days of the model')
+   config.write_text("config main 'main'\n    option history_days '999'\n")
+   self.assertEqual(retention_settings.configured_days(config),7)
+   self.assertEqual(retention_settings.configured_days(Path(d)/'missing'),7,'no package config: 7 days as before')
+   with patch.object(retention_settings,'_cached',None),patch.object(retention_settings,'CONFIG',config),patch.object(retention_settings.time,'monotonic',side_effect=[10,12,16]):
+    config.write_text("config main 'main'\n    option history_days '3'\n")
+    self.assertEqual(retention_settings.configured_days(),3)
+    config.write_text("config main 'main'\n    option history_days '1'\n")
+    self.assertEqual(retention_settings.configured_days(),3,'cached for 5 s')
+    self.assertEqual(retention_settings.configured_days(),1)
  def test_exact_monitor_ranges_and_legacy_payload_preservation(self):
   legacy=dict(interval=30,checkpoint=900,probe_limit=2,planning_enabled=False)
   self.assertNotIn('history_days',setup_config.monitor_payload(legacy)['main'])

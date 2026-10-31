@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- response_history.lua: ping_response_history.PingResponseHistory (on website_response_history's minute rows)
 -- for the Lua monitor's Diagnostics mode. Same file /etc/homensai-vpn/ping-response-history.json
 -- ({"data":...,"sha256":<canonical sha256>}), same 13-column minute rows, same public view; Python loads what
@@ -6,8 +6,7 @@
 -- Work mode: an empty in-memory history that is neither filled nor saved (agent.monitor_loop load_histories).
 -- Minimal port (owner plan item 2): only the ICMP metric. The website/latency/compare histories stay with the
 -- Python line; with metric 'websites' the status carries Python's WEBSITE-HISTORY-UNAVAILABLE fallback.
--- Difference: the route kind of a minute uses a reduced observed_route (no channel_path kernel proof:
--- 'switching'/'off'/'down'/'blocked'/'unknown' and the certified legacy roles).
+-- Item 6: the route kind of a minute is the full route_history.observed_route (reliability.lua).
 local canon=require('canon')
 
 local M={}
@@ -15,7 +14,7 @@ M.METRIC='icmp-rtt-ms';M.TARGET_SET='icmp-echo';M.MAX_MS=60000;M.VALID_FOR=465;M
 M.DEFINITION='one ICMP echo per channel per check through its own tunnel; minute means of replies'
 M.SCOPE='observed ICMP replies only; a lost echo is a gap; website history is separate'
 M.WEBSITE_METRIC='websites-https-mean-ms-v1';M.WEBSITE_TARGET_SET='google-cloudflare-wikipedia-v1'
-M.DAY=86400;M.WEEK=7*86400;M.MAX_ROWS=7*1440+1;M.MAX_BYTES=2*1024*1024
+M.DAY=86400;M.WEEK=7*86400;M.MAX_ROWS=30*1440+1;M.MAX_BYTES=4*1024*1024  -- up to 30 days (retention.lua)
 M.NAME='ping-response-history.json'
 local KINDS={source=true,target=true,unknown=true,off=true,switching=true,blocked=true,down=true}
 local NULL=canon.null
@@ -38,8 +37,9 @@ local function pair_key(ids)
 end
 M.pair_key=pair_key
 
-local function empty()
-  return canon.object({version=1,metric=M.METRIC,target_set=M.TARGET_SET,rows=canon.array(),pairs=canon.object(),current=NULL,
+local function empty(spec)
+  spec=spec or M
+  return canon.object({version=1,metric=spec.METRIC,target_set=spec.TARGET_SET,rows=canon.array(),pairs=canon.object(),current=NULL,
     seen=canon.object(),saved=NULL,stats_since=NULL,reset_floor=NULL})
 end
 M.empty=empty
@@ -52,11 +52,12 @@ local function sum_tenths(row,side) return math.floor((num(row[2+side]) or 0)*ro
 M.sum_tenths=sum_tenths
 
 -- website_response_history.validate (row indexes are 1-based here: row[1] is Python's row[0])
-function M.validate(d)
+function M.validate(d,spec)
+  spec=spec or M
   local function fail(code) error(code,0) end
   if not is_dict(d) then fail('WEBSITE-HISTORY-SCHEMA') end
-  local keys=0;for k in pairs(empty()) do keys=keys+1;if d[k]==nil then fail('WEBSITE-HISTORY-SCHEMA') end end
-  if count(d)~=keys or d.version~=1 or d.metric~=M.METRIC or d.target_set~=M.TARGET_SET or not canon.is_array(d.rows) or #d.rows>M.MAX_ROWS
+  local keys=0;for k in pairs(empty(spec)) do keys=keys+1;if d[k]==nil then fail('WEBSITE-HISTORY-SCHEMA') end end
+  if count(d)~=keys or d.version~=1 or d.metric~=spec.METRIC or d.target_set~=spec.TARGET_SET or not canon.is_array(d.rows) or #d.rows>M.MAX_ROWS
      or not is_dict(d.pairs) or count(d.pairs)>32 or not is_dict(d.seen) or count(d.seen)>64 then fail('WEBSITE-HISTORY-SCHEMA') end
   for _,key in ipairs({'saved','stats_since','reset_floor'}) do if not none(d[key]) and (not finite(d[key]) or num(d[key])<0) then fail('WEBSITE-HISTORY-SCHEMA') end end
   for key,pair in pairs(d.pairs) do
@@ -72,29 +73,31 @@ function M.validate(d)
       local value,c,success,attempted,partial=row[2+side],row[4+side],row[8+side],row[10+side],row[12+side]
       for _,v in ipairs({c,success,attempted,partial}) do if not int(v) or v<0 then fail('WEBSITE-HISTORY-VALUE') end end
       if c+partial>120 or attempted~=3*(c+partial) or not (c*3<=success and success<=c*3+partial*2) or (c==0)~=none(value)
-         or (not none(value) and (not finite(value) or num(value)<0 or num(value)>M.MAX_MS)) then fail('WEBSITE-HISTORY-VALUE') end
+         or (not none(value) and (not finite(value) or num(value)<0 or num(value)>spec.MAX_MS)) then fail('WEBSITE-HISTORY-VALUE') end
     end
     previous=num(row[1])
   end
 end
 
 local History={};History.__index=History
-function M.new(data,notice)
-  local self=setmetatable({data=data or empty(),notice=notice,retention_seconds=M.WEEK},History)
-  M.validate(self.data)
+function M.new(data,notice,spec)
+  spec=spec or M
+  local self=setmetatable({data=data or empty(spec),notice=notice,spec=spec,retention_seconds=M.WEEK,byte_budget=nil},History)
+  M.validate(self.data,spec)
   return self
 end
 -- load(io, path): io.read_json(path) raises on a broken file; a missing file is an empty history.
-function M.load(io_,path)
+function M.load(io_,path,spec)
+  spec=spec or M
   local ok,result=pcall(function()
     if io_.unsafe and io_.unsafe(path,M.MAX_BYTES) then error('size',0) end
     local value=io_.read_json(path,nil)
-    if value==nil then return M.new() end
+    if value==nil then return M.new(nil,nil,spec) end
     if not is_dict(value) or count(value)~=2 or type(value.sha256)~='string' or value.data==nil or value.sha256~=canon.digest(value.data) then error('checksum',0) end
-    return M.new(value.data)
+    return M.new(value.data,nil,spec)
   end)
   if ok then return result end
-  return M.new(nil,M.PREFIX..'-UNAVAILABLE')
+  return M.new(nil,spec.PREFIX..'-UNAVAILABLE',spec)
 end
 
 -- ping_response_history.measurement
@@ -112,30 +115,8 @@ function M.measurement(profile,now)
   return {time=stamp,avg_ms=math.floor(rtt*10+0.5)/10,successes=3}
 end
 
--- route_history.observed_route, reduced (see the header)
-function M.observed_route(status,now)
-  local native=is_map(status) and status.native_failover or nil
-  if not is_map(native) or not finite(native.time) or not (0<=now-num(native.time) and now-num(native.time)<=30) then return 'unknown' end
-  local state=native.state
-  if state=='STOPPED' or state=='DISABLED' or state=='EXPIRED' or state=='SERVICE-STOPPED' then return 'off' end
-  if state=='ARMED' or state=='APPLYING' or state=='WAIT-CLIENT' or state=='RESTORING' then return 'switching' end
-  local function row_of(id) for _,p in ipairs(type(status.profiles)=='table' and status.profiles or {}) do if is_map(p) and p.id==id then return p end end end
-  local function fresh(p) return p and finite(p.time) and 0<=now-num(p.time) and now-num(p.time)<=90 end
-  local function failing(id)
-    local p=id and row_of(id)
-    return fresh(p) and not (none(p.code) and p.dns_ok==true and (num(p.https_success) or 0)>=2)
-  end
-  if type(native.source)=='string' and type(native.target)=='string' and native.source~=native.target and failing(native.source) and failing(native.target) then return 'down' end
-  local required=native.mode=='continuous-pair' or native.proof_scope=='router-probed-ipv4' or native.transition_metadata_present==true
-  local role
-  if not required then
-    if state=='COMMITTED' or state=='DEGRADED-ON-RESERVE' or state=='STOPPED-ON-RESERVE' then role='target'
-    elseif state=='OBSERVING' and native.certified==true then role='source' end
-  end
-  if role then return fresh(row_of(native[role])) and role or 'unknown' end
-  if state=='BLOCKED' or state=='FAILED' then return 'blocked' end
-  return 'unknown'
-end
+-- route_history.observed_route: the full classification (reliability.lua, with the channel_path kernel proof)
+function M.observed_route(status,now) return require('reliability').observed_route(status,now) end
 
 -- observe(status, settings, now, retention_days)
 function History:observe(status,settings,now,retention_days)
@@ -235,17 +216,40 @@ end
 
 -- save(io, path, now): io.write_json(path, envelope). Raises the PREFIX codes like Python.
 function History:save(io_,path,now)
-  if not finite(now) or now<0 then error(M.PREFIX..'-TIME',0) end
-  if self.notice==M.PREFIX..'-UNAVAILABLE' then error(self.notice,0) end
-  M.validate(self.data)
+  if not finite(now) or now<0 then error(self.spec.PREFIX..'-TIME',0) end
+  if self.notice==self.spec.PREFIX..'-UNAVAILABLE' then error(self.notice,0) end
+  require('retention').trim_to_budget(self.data,self.byte_budget)  -- size mode: the oldest rows give way
+  M.validate(self.data,self.spec)
   local data=canon.decode(canon.encode(self.data))
   data.saved=canon.float(now)
   local raw=canon.encode(data)
-  if #raw>M.MAX_BYTES then error(M.PREFIX..'-SIZE',0) end
+  if #raw>M.MAX_BYTES then error(self.spec.PREFIX..'-SIZE',0) end
   io_.write_json(path,canon.object({data=data,sha256=canon.sha256(raw)}))
   self.data.saved=canon.float(now)
-  if self.notice==M.PREFIX..'-WRITE-FAILED' then self.notice=nil end
+  if self.notice==self.spec.PREFIX..'-WRITE-FAILED' then self.notice=nil end
 end
+
+-- website_response_history.clear(now) / clear_statistics(now): the owner's statistics reset (stats_reset.lua)
+function History:clear(now)
+  if self.notice==self.spec.PREFIX..'-UNAVAILABLE' then error(self.notice,0) end
+  local floor=now
+  if floor==nil then
+    floor=0;for _,v in pairs(self.data.seen) do if num(v)>num(floor) then floor=v end end
+  end
+  if not finite(floor) or num(floor)<0 then error(self.spec.PREFIX..'-TIME',0) end
+  self.data=empty(self.spec);self.data.reset_floor=floor;self.notice=nil
+end
+function History:clear_statistics(now)
+  if self.notice==self.spec.PREFIX..'-UNAVAILABLE' then error(self.notice,0) end
+  if not finite(now) or num(now)<0 then error(self.spec.PREFIX..'-TIME',0) end
+  self.data.stats_since=math.ceil(num(now)/60)*60  -- an int, as math.ceil in Python
+end
+
+-- The website-response history file (website-response-history.json): the same rows and envelope with the
+-- website metric. The Lua monitor does not measure websites; it loads, resets and saves this file for the
+-- owner's statistics reset (stats_reset.lua), as agent.monitor_loop does in Work mode.
+M.WEBSITE={METRIC='websites-https-mean-ms-v1',TARGET_SET='google-cloudflare-wikipedia-v1',MAX_MS=6000,PREFIX='WEBSITE-HISTORY',
+  NAME='website-response-history.json'}
 
 -- The status field when the owner's metric is 'websites' (not ported): Python's own fallback shape.
 function M.website_unavailable()

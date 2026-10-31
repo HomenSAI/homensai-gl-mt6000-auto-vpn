@@ -102,7 +102,7 @@ def profiles(now=NOW):
 def policy_data(sections=None,**settings):
     data={'sections':sections if sections is not None else stock_sections(),
           'settings':dict({'plan_source':'wireguard:peer_2002','plan_target':'openvpn:40354_2020','native_order_direction':'first',
-                           'terms_version':'1','interval':'10'},**settings),
+                           'terms_version':agent.TERMS_VERSION,'interval':'10'},**settings),
           'firewall_defaults':[{'.name':'cfg01','.type':'defaults','.anonymous':True,'flow_offloading':'0'}],
           'firewall_include':{'path':'/usr/bin/rtp2.sh','type':'script','reload':'0'},'hnat_enable':'0','ipv6':'0','lan':'br-lan'}
     return data

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- monitor_status.lua: the page fields that agent.status_reply() composed from separate Python modules, read
 -- from the same files by the Lua monitor (owner plan item 2):
 --   switch_timing        switch_timing.read                  /etc/homensai-vpn/switch-timing.json
@@ -7,14 +7,13 @@
 --                                                            pair-auto-control.json, pair-auto-state.json
 --   manual_switch        pair_manual.public_for_status       pair-manual-control.json, manual-control.json
 --   native_history       native_history.read_public          native-history.json (+ backup), cached by file key
---   manual_switch_control, channel_path: TEMPORARY BRIDGE (see below)
--- TEMPORARY BRIDGE (until backend.lua, plan item 1/4): pair_manual.controls() and channel_path.public_status()
--- need the Linux backend's kernel attestation (fw3 marking, iptables-save) which is not in Lua yet. The monitor
--- starts status_bridge.py (Python, non-blocking child under uloop) at most every BRIDGE_EVERY seconds and only
--- while the page polls status; its answer (RAM file status-bridge.json) is used while it is younger than
--- BRIDGE_VALID seconds. Without a fresh answer the fields are fail-safe: manual buttons blocked with
--- PAIR-MANUAL-STATE-UNVERIFIED, channel_path from the supervisor's own cached projection in native-status.json
--- (channel_path.cached_projection) or KERNEL-POLICY-UNVERIFIED. Never a false "allowed"/"confirmed".
+--   manual_switch_control: page_controls.lua (pair_manual.controls / manual_control.control_status, no Python);
+--   scan: page_controls.scan_public; channel_path: channel_path.lua (plan item 4, no Python)
+-- FALLBACK BRIDGE: status_bridge.py (Python, non-blocking child under uloop) is started only when the Lua
+-- computation of manual_switch_control fails (Bridge:request, at most every BRIDGE_EVERY seconds, never on a
+-- timer). Its answer (RAM file status-bridge.json) is used while it is younger than BRIDGE_VALID seconds; without
+-- one the field is fail-safe: manual buttons blocked with PAIR-MANUAL-STATE-UNVERIFIED. Never a false "allowed".
+-- (channel_path_fallback below stays for auto_live-style cached projections and the tests.)
 local canon=require('canon')
 
 local M={}
@@ -289,17 +288,18 @@ function M.controls_fallback(now)
 end
 
 ------------------------------------------------------------------------------------------------------
--- the bridge to status_bridge.py
+-- the fallback bridge to status_bridge.py
 ------------------------------------------------------------------------------------------------------
 local Bridge={};Bridge.__index=Bridge
 function M.Bridge(runner,runtime)
-  return setmetatable({runner=runner,path=runtime..'/'..M.BRIDGE_NAME,running=false,started=nil,polled=nil,value=nil,key=nil},Bridge)
+  return setmetatable({runner=runner,path=runtime..'/'..M.BRIDGE_NAME,running=false,started=nil,requested=nil,value=nil,key=nil},Bridge)
 end
--- The page asked for status: start a refresh when due (never more than one child; never blocks).
-function Bridge:poll()
+-- The Lua computation failed for this status reply: start a refresh when due (never more than one child; never
+-- blocks). Nothing else starts it.
+function Bridge:request()
   local runner=self.runner
   local now=runner.clock()
-  self.polled=now
+  self.requested=now
   if self.running or not runner.bridge then return end
   if self.started and now-self.started<M.BRIDGE_EVERY then return end
   self.running=true;self.started=now

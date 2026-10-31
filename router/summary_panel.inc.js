@@ -212,16 +212,36 @@ function ownGet(map,key){return typeof key==='string'&&Object.prototype.hasOwnPr
 function safeCode(code){return typeof code==='string'&&/^[A-Z][A-Z0-9-]{1,95}$/.test(code);}
 function errorCodeLink(code){return E('a',{'href':'#events','class':'hv-errlink','click':function(ev){ev.preventDefault();showErrorCode(code);}},code);}
 
-/* Getting started: its own first section. Until every step is done the page opens here; once all steps were done in this
-   browser it always opens on the Overview (a later problem is shown on the Overview, not by sending the user back here). */
-var START_DONE_KEY='homensai-vpn-start-done';
-function startAllDone(steps){return steps.every(function(s){return s.done;});}
-function startLanding(status,inventory){
-  try{if(window.localStorage.getItem(START_DONE_KEY)==='1')return 'overview';}catch(e){}
-  var steps=startSteps(status||{},inventory||{},(typeof statusNow==='function'?statusNow(status):Date.now()/1000));
-  if(startAllDone(steps)){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}return 'overview';}
-  return 'start';
+/* One rule for the menu order and the landing page (owner, 31 Oct 2026). While the system is being set up, Getting
+   started and System readiness are on top and the page opens on Getting started. Once it is set up - the VPN pair is
+   saved and Auto runs now or was started before (auto_control, controller history) - the Overview is first and opens
+   first; Getting started and System readiness move down. Only router data decides; without a status answer the last
+   decision of this browser is kept, so the menu never jumps on a failed refresh. */
+var START_DONE_KEY='homensai-vpn-start-done',SETUP_STATE_KEY='homensai-vpn-setup-state';
+var SIDEBAR_SETUP_ORDER=['start','readiness','overview','channels','settings','help','learn'],SIDEBAR_WORK_ORDER=['overview','channels','settings','help','learn','readiness','start'];
+function systemSetUp(status,inventory,now){
+  var s=(inventory||{}).settings||{},ac=status.auto_control||{},h=status.native_history||{};
+  if((inventory||{}).error||!(s.setup_complete&&s.plan_source&&s.plan_target))return false;
+  return ac.requested==='on'||ac.requested_at>0||h.retained_events>0||typeof autoControlModel==='function'&&autoControlModel(status,now).on;
 }
+function sidebarSetUp(status,inventory){
+  var done;
+  if(!status||status.rpc_error||(inventory||{}).error){try{done=window.localStorage.getItem(SETUP_STATE_KEY)==='work';}catch(e){done=false;}return done;}
+  done=systemSetUp(status,inventory,typeof statusNow==='function'?statusNow(status):Date.now()/1000);
+  try{window.localStorage.setItem(SETUP_STATE_KEY,done?'work':'setup');}catch(e){}
+  return done;
+}
+function sidebarOrder(status,inventory){return sidebarSetUp(status,inventory)?SIDEBAR_WORK_ORDER:SIDEBAR_SETUP_ORDER;}
+function applySidebarOrder(root,order){
+  var nav=root&&root.querySelector('#hv-expanded-nav');if(!nav)return;
+  var links=Array.prototype.filter.call(nav.children,function(n){return n.getAttribute('data-hv-tab');});
+  nav.setAttribute('data-hv-order',order[0]==='overview'?'work':'setup');
+  if(links.map(function(n){return n.getAttribute('data-hv-tab');}).join()===order.filter(function(k){return links.some(function(n){return n.getAttribute('data-hv-tab')===k;});}).join())return;
+  var before=links.length?links[links.length-1].nextSibling:null;
+  order.forEach(function(key){var link=links.filter(function(n){return n.getAttribute('data-hv-tab')===key;})[0];if(link)nav.insertBefore(link,before);});
+}
+function startAllDone(steps){return steps.every(function(s){return s.done;});}
+function startLanding(status,inventory){return sidebarSetUp(status,inventory)?'overview':'start';}
 function renderStartPage(status,inventory){
   var steps=startSteps(status,inventory,(typeof statusNow==='function'?statusNow(status):Date.now()/1000)),open=steps.filter(function(s){return !s.done;}),next=open[0];
   if(!open.length){try{window.localStorage.setItem(START_DONE_KEY,'1');}catch(e){}}

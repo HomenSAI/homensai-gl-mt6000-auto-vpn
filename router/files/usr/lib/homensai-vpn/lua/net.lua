@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- net.lua: the network side of pair_auto.py for the Lua supervisor (2.0.0-lua line) - env.net of pair.lua:
 -- network(), identity(rows,managed) (normalized_network), configs(managed), changed(state,observed,skip),
 -- firewall_bytes(), static_firewall_digest([data]), set_disabled(state,interface,value,revision),

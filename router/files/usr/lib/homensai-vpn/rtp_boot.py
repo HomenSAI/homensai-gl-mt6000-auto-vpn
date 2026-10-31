@@ -55,6 +55,24 @@ def assess(root=None):
     return {'safe':True,'ready':all(directories) and marker,'kernel_verified':False}
 
 
+def recovery_prefix(root=None):
+    """Boot recovery (soak trial 31.10.2026): recreate exactly the prefix stock boot creates (two empty
+    directories, the zero-byte gate) for the supervisor's own rollback after a power cut. No Auto intent is
+    required: this is neither an Auto start nor consent, and nothing else is written."""
+    root=ROOT if root is None else Path(root)
+    contract(root)
+    for name in ('tmp/resolv.conf.d','tmp/hosts.vpn'):
+        if checked(root/name,directory=True,optional=True) is None:
+            try:(root/name).mkdir(mode=0o755)
+            except FileExistsError:pass
+    marker=root/'tmp/run/vpn-client-booted'
+    if checked(marker,optional=True) is None:
+        fd=os.open(str(marker),os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+    return ready(root)
+
+
 def prepare(revision,root=None):
     import native_switch as n
     from agent import RUNTIME,atomic_json

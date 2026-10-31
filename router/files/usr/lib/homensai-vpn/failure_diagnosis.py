@@ -38,11 +38,62 @@ def scoped_samples(samples,profile):
         seen[stamp]=health
     return points
 
-def resolve_pair(status,settings,now,max_age=90,settle_seconds=60):
+# A primary the vendor keeps rebuilding (MT3000 soak 31.10.2026: netifd set wgclient1 up again every ~2 min
+# after REKEY-GIVEUP / endpoint "Try again") gets a new vendor generation on every re-setup, so VENDOR-SETTLING
+# and PROFILE-IDENTITY-CHANGED never ended and its generation-scoped failure streak restarted each time: Auto
+# stayed BLOCKED with a healthy reserve. Short windows keep that safety meaning; a source observed only
+# unhealthy for a whole bounded window is unstable and no longer blocks a verified reserve.
+SOURCE_UNSTABLE='PAIR-SOURCE-UNSTABLE'
+UNSTABLE_CODES=frozenset({'VPN-001','VPN-003','DNS-001','ROUTE-001','CHECK-001','VENDOR-IDENTITY-CHANGED','VENDOR-IDENTITY-UNKNOWN'})
+PROBE_FAILURES=frozenset({'VPN-001','VPN-003','DNS-001'})
+
+def flap_window(settle_seconds):
+    """Three vendor settle periods, never shorter than 120 s nor longer than 900 s."""
+    if not finite(settle_seconds):return None
+    return min(900,max(120,3*int(settle_seconds)))
+
+def source_unstable(samples,row,anchor,now,max_age,window):
+    """The configured source tunnel was observed only unhealthy, continuously, for the whole window.
+
+    Samples of every vendor generation of the same tunnel count (a rebuild does not reset this evidence):
+    at least three observations, at least one real probe failure, no gap longer than max_age, the newest
+    fresh, the oldest at least window old, no healthy or unverified (CHECK-LIMIT/None) observation.
+    """
+    if (not isinstance(samples,list) or not isinstance(row,dict) or not isinstance(anchor,str)
+            or not finite(now) or not finite(max_age) or max_age<=0 or not finite(window) or window<=0):return False
+    identifier=row.get('id');interface=row.get('interface')
+    if not isinstance(identifier,str) or not isinstance(interface,str):return False
+    seen={}
+    for point in samples:
+        if (not isinstance(point,dict) or point.get('id')!=identifier or point.get('interface')!=interface
+                or point.get('vendor_tunnel_id')!=anchor or not finite(point.get('time'))
+                or not 0<=now-point['time']<=window+max_age):continue
+        code=point.get('code');stamp=point['time']
+        if stamp in seen and seen[stamp]!=code:return False
+        seen[stamp]=code
+    stamps=sorted(seen,reverse=True)
+    if len(stamps)<3 or now-stamps[0]>max_age or now-stamps[-1]<window:return False
+    for index,stamp in enumerate(stamps):
+        if index and stamps[index-1]-stamp>max_age:return False
+        if not isinstance(seen[stamp],str) or seen[stamp] not in UNSTABLE_CODES:return False
+    return any(seen[stamp] in PROBE_FAILURES for stamp in stamps)
+
+def unstable_source(status,group,by_id,anchor,now,max_age,window):
+    """The source row when its tunnel group is unstable (see source_unstable), else None."""
+    identifier=group.get('current_profile')
+    if (not isinstance(identifier,str) or group.get('active_profiles')!=[identifier]
+            or group.get('protocol')!=anchor.split(':',1)[0]):return None
+    row=by_id.get(identifier)
+    if tunnel_identity(row)!=anchor or not fresh(row.get('time'),now,max_age):return None
+    return row if source_unstable(status.get('samples'),row,anchor,now,max_age,window) else None
+
+def resolve_pair(status,settings,now,max_age=90,settle_seconds=60,source_window=None):
     """Resolve durable tunnel anchors, never provider grouping or editable labels.
 
     Stable configuration is not proof of vendor retry exhaustion or permission
     for an application route action. Legacy inference requires an exact binding.
+    source_window (the Auto diagnostic only): a source still settling or rebound, but observed only
+    unhealthy for that whole window, no longer blocks a verified reserve (PAIR-SOURCE-UNSTABLE).
     """
     coordination={'version':1,'time':now if finite(now) else None,'state':'UNKNOWN',
         'code':'VENDOR-IDENTITY-UNKNOWN','source_tunnel':None,'target_tunnel':None,
@@ -78,29 +129,46 @@ def resolve_pair(status,settings,now,max_age=90,settle_seconds=60):
     if any(not isinstance(group,dict) for group in groups):return result
     group_ids=[group.get('id') for group in groups]
     if any(not isinstance(value,str) for value in group_ids) or len(set(group_ids))!=len(group_ids):return result
-    by_tunnel={group['id']:group for group in groups};settle_until=0
+    by_tunnel={group['id']:group for group in groups};settle_until=0;unstable=None
+    if source_window is not None and (not finite(source_window) or source_window<=0):source_window=None
     for role,anchor in zip(('source','target'),anchors):
         group=by_tunnel.get(anchor)
         if not group or not fresh(group.get('time'),now,max_age):return result
-        if group.get('state')=='PENDING':return refuse('VENDOR-SETTLING','HOLD')
+        # Only the source, only for the Auto diagnostic, only after the whole bounded window.
+        tolerant=role=='source' and source_window is not None
+        if group.get('state')=='PENDING':
+            unstable=unstable_source(status,group,by_id,anchor,now,max_age,source_window) if tolerant else None
+            if unstable is None:return refuse('VENDOR-SETTLING','HOLD')
+            continue
         if group.get('state')!='SETTLED':return result
         identifier=group.get('current_profile');active=group.get('active_profiles')
         if not isinstance(identifier,str) or active!=[identifier] or group.get('protocol')!=anchor.split(':',1)[0]:return result
         row=by_id.get(identifier);identity=profile_identity(row)
-        if not identity or identity['vendor_tunnel_id']!=anchor:return refuse('PROFILE-IDENTITY-CHANGED')
-        if identity['vendor_generation']!=group.get('generation'):return refuse('PROFILE-IDENTITY-CHANGED')
-        if row.get('vendor_state')=='PENDING':return refuse('VENDOR-SETTLING','HOLD')
+        if not identity or identity['vendor_tunnel_id']!=anchor or identity['vendor_generation']!=group.get('generation'):
+            unstable=unstable_source(status,group,by_id,anchor,now,max_age,source_window) if tolerant else None
+            if unstable is None:return refuse('PROFILE-IDENTITY-CHANGED')
+            continue
+        if row.get('vendor_state')=='PENDING':
+            unstable=unstable_source(status,group,by_id,anchor,now,max_age,source_window) if tolerant else None
+            if unstable is None:return refuse('VENDOR-SETTLING','HOLD')
+            continue
         if row.get('vendor_state')!='SETTLED':return result
         if not fresh(row.get('time'),now,max_age):return refuse('OBSERVATION-STALE')
         changed=group.get('changed_at')
         if (not finite(changed) or not 0<=changed<=now or row.get('vendor_changed_at')!=changed
                 or type(group.get('stable_samples')) is not int or group['stable_samples']<2):return result
+        if tolerant and now<changed+settle_seconds:
+            unstable=unstable_source(status,group,by_id,anchor,now,max_age,source_window)
+            if unstable is not None:continue
         settle_until=max(settle_until,changed+settle_seconds);result[role]=row
     coordination['settle_until']=settle_until
     if now<settle_until:return refuse('VENDOR-SETTLING','HOLD')
     uplink=status.get('uplink_observation')
     if isinstance(uplink,dict) and uplink.get('state')=='DOWN' and fresh(uplink.get('time'),now,max_age):
         return refuse('UPLINK-LINK-DOWN','HOLD')
+    if unstable is not None:
+        result['source']=unstable
+        coordination.update(state='READY',code=SOURCE_UNSTABLE);return result
     coordination.update(state='READY',code='CROSS-TUNNEL-READY');return result
 
 def diagnose(status,source,now,settings=None):

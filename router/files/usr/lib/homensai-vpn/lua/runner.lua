@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- runner.lua: the router side of every external call of instant_switch.lua (agent.command/atomic_json
 -- counterpart). Tests replace the whole table with fakes.
 --
@@ -156,31 +156,9 @@ function M.fs.unsafe(path)
   local size=f:seek('end');f:close()
   return size==nil or size>1024*1024
 end
--- atomic_json(): unique temp name in the same directory, mode 0600, flush, fsync, rename.
--- Lua io has no fsync: nixio's File:sync() when present, otherwise `sync` (measure on the device).
-function M.fs.write_atomic(path,text)
-  local directory,name=string.match(path,'^(.*)/([^/]+)$')
-  if not canon.safe_directory(directory) or not string.find(name,'^[A-Za-z0-9_.-]+$') then error('runner: unsafe path',0) end
-  local pending=directory..'/.'..name..'.'..canon.unique()..'.pending'
-  local f=io.open(pending,'wb')
-  if not f then
-    os.execute('mkdir -p '..directory..' && chmod 700 '..directory)
-    f=assert(io.open(pending,'wb'))
-  end
-  assert(f:write(text));assert(f:flush());f:close()
-  local synced=false
-  local ok,nixio=pcall(require,'nixio')
-  local ok2,nfs=pcall(require,'nixio.fs')
-  if ok and ok2 and type(nixio)=='table' and nixio.open and type(nfs)=='table' and nfs.chmod then
-    synced=pcall(function()
-      assert(nfs.chmod(pending,'rw-------'))
-      local h=assert(nixio.open(pending,'r'));assert(h:sync());h:close()  -- fsync of the inode
-    end)
-  end
-  if not synced then os.execute('chmod 600 '..pending..' && sync') end
-  local renamed,err=os.rename(pending,path)
-  if not renamed then os.remove(pending);error(err,0) end
-end
+-- atomic_json(): durable.write - unique temp name in the same directory, mode 0600, fsync of the file, rename,
+-- fsync of the directory (POWER-CUT-INTEGRITY-2026-10-31.ru.md). One primitive for every flash writer.
+function M.fs.write_atomic(path,text) return require('durable').write(path,text) end
 
 -- Resident memory of this process (kB) and the Lua heap.
 function M.memory()

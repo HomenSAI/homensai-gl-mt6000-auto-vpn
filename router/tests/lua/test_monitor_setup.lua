@@ -18,6 +18,12 @@ t.test('payload validation codes and keys (setup_config.probe_payload/response_p
   t.eq(code(setup.probe_payload,args('{"level":"3","boost":true}')),'PROBE-SETTINGS-RANGE')
   t.eq(setup.response_payload(args('{"metric":"websites","compare":true,"fast_switch":false}')),{response_metric='websites',response_compare='1',fast_switch='0'})
   t.eq(setup.response_payload(args('{"metric":"icmp-9.9.9.9"}')),{response_metric='icmp-9.9.9.9'})
+  t.eq(setup.response_payload(args('{"metric":"icmp-1.1.1.1","ping_interval":10}')),{response_metric='icmp-1.1.1.1',ping_interval='10'})
+  t.eq(setup.response_payload(args('{"metric":"websites","ping_interval":300}')),{response_metric='websites',ping_interval='300'})
+  for _,bad in ipairs({'0','5','15','301','310','-10','60.0','"60"','true','null','[60]'}) do
+    t.eq(code(setup.response_payload,args('{"metric":"icmp-1.1.1.1","ping_interval":'..bad..'}')),'PING-INTERVAL-INVALID',bad)
+  end
+  t.eq(code(setup.response_payload,args('{"metric":"x","ping_interval":5}')),'RESPONSE-METRIC-INVALID','the metric is checked first')
   for _,bad in ipairs({'{}','{"metric":"icmp-1.1.1.2"}','{"metric":"websites","compare":1}','{"metric":"websites","other":true}','{"metric":5}'}) do
     t.eq(code(setup.response_payload,args(bad)),'RESPONSE-METRIC-INVALID',bad)
   end
@@ -43,6 +49,12 @@ t.test('save: the UCI keys are written, verified and acknowledged like setup_sav
   R.advance(3)
   t.eq(setup.save(d,'setup_response',args('{"metric":"icmp-8.8.8.8","fast_switch":true}')).saved,true)
   t.eq(store.main.response_metric,'icmp-8.8.8.8');t.eq(store.main.fast_switch,'1')
+  R.advance(3)
+  t.eq(setup.save(d,'setup_response',args('{"metric":"icmp-8.8.8.8","ping_interval":120}')).saved,true)
+  t.eq(store.main.ping_interval,'120','the owner ping interval is written like setup_save.lua')
+  R.advance(3)
+  t.eq(setup.save(d,'setup_response',args('{"metric":"icmp-8.8.8.8","ping_interval":7}')),{saved=false,code='PING-INTERVAL-INVALID'})
+  t.eq(store.main.ping_interval,'120','a refused value changes nothing')
   t.eq(setup.save(d,'setup_stats',args('{"mode":"diagnostic","hours":24}')).saved,true)
   t.eq(store.main.stats_until,string.format('%d',math.floor(R.now+86400)))
   t.eq(setup.save(d,'setup_probe',args('{"level":9,"boost":true}')),{saved=false,code='PROBE-SETTINGS-RANGE'})

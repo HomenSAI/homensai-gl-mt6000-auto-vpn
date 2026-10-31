@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- history.lua: native_history.History for the Lua supervisor (2.0.0-lua-alpha2).
 --
 -- Same file (/etc/homensai-vpn/native-history.json + native-history.backup.json), same envelope
@@ -70,6 +70,30 @@ function M.clean_transition_latency(raw,value,now)
   return canon.object({profile=identifier,metric='https-rtt-ms',time=raw.time,rtt_ms=raw.rtt_ms,interface=interface,generation=generation})
 end
 
+-- native_history.capture_transition_latency (plan item 6): the destination channel's own HTTPS RTT from the
+-- monitor's status.json at the event, bound to the journal's vendor binding; never today's ping.
+function M.capture_transition_latency(value,status,binding,now)
+  local role,identifier=M.transition_destination(value)
+  if not identifier or not canon.is_object(status) or not canon.is_object(binding) or binding.id~=identifier then return nil end
+  local stamp=num(status.time)
+  local py=require('py')
+  if py.truthy(status.error) or py.truthy(status.rpc_error) or type(status.time)=='boolean' or not stamp or not (now-90<=stamp and stamp<=now+5) then return nil end
+  local rows=status.profiles
+  if rows==nil then rows=canon.array({}) end
+  if not canon.is_array(rows) then return nil end
+  local matched={}
+  for _,p in ipairs(rows) do if canon.is_object(p) and p.id==identifier then matched[#matched+1]=p end end
+  if #matched~=1 then return nil end
+  local p=matched[1]
+  if not isnone(p.code) or p.dns_ok~=true or not is_int(p.https_success) or p.https_success<2 or p.vendor_state~='SETTLED'
+     or (p.protocol~='wireguard' and p.protocol~='openvpn') or p.vendor_tunnel_id~=p.protocol..':'..py.str(getd(p,'interface',NULL)) then return nil end
+  for _,k in ipairs({'id','protocol','interface','vendor_tunnel_id','vendor_generation'}) do
+    if not py.eq(getd(p,k,NULL),getd(binding,k,NULL)) then return nil end
+  end
+  return M.clean_transition_latency(canon.object({profile=identifier,metric='https-rtt-ms',time=getd(p,'time',NULL),rtt_ms=getd(p,'rtt_ms',NULL),
+    interface=getd(p,'interface',NULL),generation=getd(p,'vendor_generation',NULL)}),value,now)
+end
+
 ------------------------------------------------------------------------------------------------------
 -- History
 ------------------------------------------------------------------------------------------------------
@@ -80,7 +104,7 @@ function M.new(env,directory,limit,detail_days)
   if detail_days==nil then
     detail_days=env.backend and env.backend.history_days and env.backend.history_days() or 7
   end
-  if not is_int(detail_days) or detail_days<1 or detail_days>7 then fail('HISTORY-RETENTION') end
+  if not is_int(detail_days) or detail_days<1 or detail_days>30 then fail('HISTORY-RETENTION') end  -- retention.MAX_DAYS
   limit=limit or 10000
   if not is_int(limit) or limit<1 or limit>10000 then fail('HISTORY-LIMIT') end
   return setmetatable({env=env,detail_days=detail_days,limit=limit,path=directory..'/native-history.json',

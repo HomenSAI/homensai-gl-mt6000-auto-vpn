@@ -1,11 +1,13 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- rpc.lua: the page methods answered by the Lua monitor (owner plan item 3).
 --   read methods   status / events / history / auto_live / inventory: from the monitor's memory, no Python;
 --   setup methods  setup_probe / setup_response / setup_stats: natively in Lua (setup.lua), same codes;
---   other methods  (pair_manual, native_start, native_stop, fault_start, fault_cancel, every other setup_*, ...):
---                  answered by agent.py exactly as before. The rpcd dispatcher sends them there directly; this
---                  module answers FALLBACK for them so a caller of the bridge method is never left without
---                  an answer. pair_manual/native_* move to Lua with plan item 4; fault_* stay with Python.
+--   button methods pair_manual (manual_request.lua) and native_start / native_stop / fault_start / fault_cancel
+--                  (control_request.lua, plan item 4): the request files are written in Lua with Python's checks
+--                  and codes; FALLBACK (agent.py answers) when Lua cannot decide without waiting.
+--   other methods  (every other setup_*, statistics, speed, telegram, ...): answered by agent.py exactly as
+--                  before. The rpcd dispatcher sends them there directly; this module answers FALLBACK for them
+--                  so a caller of the bridge method is never left without an answer.
 -- Argument validation is rpc_input.decode_request (size, duplicate keys, depth, node count, finite numbers,
 -- ubus_rpc_session dropped) applied to the raw request text, so the codes are identical to Python's.
 --
@@ -23,18 +25,21 @@ M.OBJECT='homensai-vpn-lua'
 M.READ={'status','events','history','auto_live','inventory'}
 M.NATIVE={'setup_probe','setup_response','setup_stats'}
 M.MANUAL={'pair_manual'}  -- plan item 4: the click request in Lua (manual_request.lua), agent.py on FALLBACK
-M.FORWARD={'native_start','native_stop','native_return','native_trial_start','native_confirm',
-  'fault_start','fault_cancel','setup_monitor','setup_system',
-  'setup_telegram','setup_speed','setup_recovery','setup_onboarding','setup_check','stats_reset','speed_start',
-  'speed_cancel','speed_live','statistics','telegram_test','telegram_retry','telegram_forget','terms_accept',
+M.CONTROL={'native_start','native_stop','fault_start','fault_cancel'}  -- plan item 4: control_request.lua
+-- plan item 7: speed test (speed.lua) and Telegram retry (telegram.lua) in the monitor; agent.py on FALLBACK (control
+-- lock busy). telegram_test sends synchronously (up to 15 s): the rpcd dispatcher runs `lua telegram.lua call` for it.
+M.SPEED={'speed_start','speed_cancel','speed_live','telegram_retry'}
+M.FORWARD={'native_return','native_trial_start','native_confirm','setup_monitor','setup_system',
+  'setup_telegram','setup_speed','setup_recovery','setup_onboarding','setup_check','stats_reset',
+  'statistics','telegram_test','telegram_forget','terms_accept',
   'manual_switch','monitor_control','scan','priority_preview','priority_apply','preparation_preview','preparation_apply'}
 M.PAGE_SAMPLE_OMIT={vendor_generation=true,vendor_tunnel_id=true,interface=true}
 M.STATUS_DEFAULT=function(version) return canon.object({version=version,mode='monitor',error='SERVICE-STOPPED'}) end
 M.FALLBACK=setmetatable({},{__tostring=function() return 'FALLBACK' end})
 
 local function is_set(list) local s={};for _,v in ipairs(list) do s[v]=true end;return s end
-local READ_SET,NATIVE_SET,FORWARD_SET=is_set(M.READ),is_set(M.NATIVE),is_set(M.FORWARD)
-M.READ_SET,M.NATIVE_SET,M.FORWARD_SET=READ_SET,NATIVE_SET,FORWARD_SET
+local READ_SET,NATIVE_SET,FORWARD_SET,CONTROL_SET,SPEED_SET=is_set(M.READ),is_set(M.NATIVE),is_set(M.FORWARD),is_set(M.CONTROL),is_set(M.SPEED)
+M.READ_SET,M.NATIVE_SET,M.FORWARD_SET,M.CONTROL_SET,M.SPEED_SET=READ_SET,NATIVE_SET,FORWARD_SET,CONTROL_SET,SPEED_SET
 
 local function fail(code) error({code=code},0) end
 local function code_of(err)
@@ -124,7 +129,8 @@ local function shallow(t) local out={};for k,v in pairs(t) do out[k]=v end;retur
 -- state: {version=, now=function(), status=function() -> published status or nil, native_status=function(),
 --   inventory=function(), native_history=function(), extras=function(status) (page fields, mutates the copy),
 --   live_extras=function(result,native,clean), setup=function(method,arguments) -> reply | FALLBACK,
---   polled=function() (the page asked: bridge refresh)}
+--   polled=function() (the page asked: bridge refresh), pair_manual=function(arguments) -> reply | FALLBACK,
+--   control=function(method,arguments) -> reply | FALLBACK (native_start/native_stop/fault_start/fault_cancel)}
 function M.new(state,runner)
   local self={state=state,runner=runner}
   local runtime=(runner and runner.RUNTIME) or '/var/run/homensai-vpn'
@@ -134,7 +140,11 @@ function M.new(state,runner)
     local status=state.status()
     if status==nil then return default end
     local copy=shallow(status)
-    if is_dict(copy.accounting) then copy.accounting=shallow(copy.accounting) end
+    if is_dict(copy.accounting) then
+      copy.accounting=shallow(copy.accounting)
+      -- split_history moves reliability.events out of the reply: never out of the published status
+      if is_dict(copy.accounting.reliability) then copy.accounting.reliability=shallow(copy.accounting.reliability) end
+    end
     if is_dict(copy.native_history) then copy.native_history=shallow(copy.native_history) end
     return copy
   end
@@ -243,6 +253,14 @@ function M.new(state,runner)
         if not state.pair_manual then return M.FALLBACK end
         return state.pair_manual(arguments)
       end
+      if CONTROL_SET[method] then
+        if not state.control then return M.FALLBACK end
+        return state.control(method,arguments)
+      end
+      if SPEED_SET[method] then
+        if not state.speed then return M.FALLBACK end
+        return state.speed(method,arguments)
+      end
       if NATIVE_SET[method] and state.setup then return state.setup(method,arguments) end
       if NATIVE_SET[method] then return M.FALLBACK end
       fail('RPC-UNKNOWN-METHOD')
@@ -282,6 +300,7 @@ function M.new(state,runner)
     for _,name in ipairs(M.READ) do bind(name) end
     for _,name in ipairs(M.NATIVE) do bind(name) end
     for _,name in ipairs(M.MANUAL) do bind(name) end
+    for _,name in ipairs(M.CONTROL) do bind(name) end
     methods.rpc={function(req,msg) conn:reply(req,self.bridge_call(msg or {})) end,
       {method=ubus.STRING,request_file=ubus.STRING,reply_file=ubus.STRING}}
     return {[M.OBJECT]=methods}

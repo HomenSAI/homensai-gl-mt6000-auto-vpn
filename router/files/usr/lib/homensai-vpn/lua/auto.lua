@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- auto.lua: the hv-auto supervisor (native_switch.serve) in Lua on uloop (2.0.0-lua-alpha2).
 --
 --   lua auto.lua daemon          procd entry (homensai_vpn.main.lua_auto='1'): sys.lua + backend.lua (the
@@ -32,6 +32,28 @@ local function restored_order_is(env,active)
   return active.phase=='ROLLED-BACK' and order_is(env,getd(active,'restored_order',active.before),active.hash)
 end
 
+-- Power cut (POWER-CUT-INTEGRITY-2026-10-31.ru.md): after a boot the nft guard is gone (volatile) and the VPN
+-- clients come up some seconds after this service. The recovery that ends in the VPN-only guard (COMMITTED, and
+-- every rollback) first waits for a tunnel device, bounded: guard() refuses an empty device list
+-- (UNSAFE-GUARD-DEVICE), which used to end the daemon at every boot until the tunnels were up and counted
+-- towards the Python fallback. While it waits no guard exists: the LAN is never blocked by the wait.
+M.BOOT_DEVICE_WAIT=60
+function M.tunnel_devices(env,seconds)
+  local ok,devices=pcall(env.backend.devices)
+  if ok and type(devices)=='table' and #devices>0 then return devices end
+  -- a prepared router does not start the VPN clients itself (the vendor autostart is off; the pair starts them):
+  -- the pair session found on flash starts its own clients first (bounded, logged, no guard while it waits)
+  local revived=pair.boot_devices(env)
+  if revived then return revived end
+  local deadline=env.run.clock()+(seconds or M.BOOT_DEVICE_WAIT)
+  while true do
+    local ok,devices=pcall(env.backend.devices)
+    if ok and type(devices)=='table' and #devices>0 then return devices end
+    if env.stop() or env.run.clock()>=deadline then return nil end
+    env.sleep(2)
+  end
+end
+
 -- serve() up to the loop: returns 'stopped' when the daemon must end (give_up / CONTROL-REVISION-STALE),
 -- 'ready' otherwise.
 function M.recover(env)
@@ -44,6 +66,9 @@ function M.recover(env)
     local aok,alarm=pcall(ctl.read_json,env.run,paths.alarm,nil)
     local first=aok and alarm==nil
     if first then
+      -- the damaged bytes are kept once for the maintainer (<persist>/quarantine), the journal itself stays in place:
+      -- give_up() holds the VPN-only guard until the operator closes it (it is the only record of the orders)
+      pcall(function() require('durable').quarantine(paths.journal,env.run.fs.read(paths.journal),'JOURNAL-INTEGRITY-FAILED',env.run.fs) end)
       pcall(env.backend.guard)
       pcall(ctl.write_json,env.run,paths.alarm,canon.object({first_block=fwall(env),code='JOURNAL-INTEGRITY-FAILED'}))
     end
@@ -57,6 +82,11 @@ function M.recover(env)
   pair.fence_recovery(env)
   if value.phase=='RELEASE-PENDING' then R.abandon(env,value,getd(value,'reason','EXTERNAL-POLICY-CHANGE')) end
   local phase=value.phase
+  -- every recovery below may write the kernel through rtp2.sh: recreate the stock boot prefix a power cut removed
+  if phase~=nil and phase~='ROLLED-BACK' and env.deps and env.deps.rtp_boot and env.deps.rtp_boot.recovery_prefix then
+    local pok,perr=pcall(env.deps.rtp_boot.recovery_prefix)
+    if not pok then pcall(function() require('durable').log('BOOT-PREFIX-UNVERIFIED: '..tostring(type(perr)=='table' and perr.code or perr)) end) end
+  end
   if phase=='ARMED' or phase=='APPLYING' or phase=='WAIT-CLIENT' or phase=='RESTORING' then
     -- No apply child exists in the Lua line (the steps ran in this process); a recorded pid is a Python child.
     if phase=='APPLYING' and not isnone(value.pid) and env.backend.kill_apply_child then env.backend.kill_apply_child(value.pid,value.tx) end
@@ -66,6 +96,7 @@ function M.recover(env)
       failures=0
     end
     if failures>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
+    M.tunnel_devices(env)  -- the rollback ends with guard(devices()): wait for a tunnel (bounded), never count its absence
     local ok,err=pcall(R.rollback_counted,env,value,'SUPERVISOR-RECOVERY')
     if not ok then
       if (num(getd(value,'rollback_failures',0)) or 0)>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
@@ -74,7 +105,13 @@ function M.recover(env)
   elseif phase=='COMMITTED' then
     if not order_is(env,value.after,value.hash) then R.abandon(env,value,'EXTERNAL-POLICY-CHANGE')
     else
-      env.backend.guard(env.backend.devices())
+      local devices=M.tunnel_devices(env)
+      if devices then env.backend.guard(devices)
+      else
+        -- no tunnel came up: no guard rather than a LAN-wide block or a restart loop; the loop below decides
+        -- (lease, Stop, return to the primary - each of those ends with its own guard step)
+        pcall(function() require('durable').log('GUARD-DEVICE-UNAVAILABLE: COMMITTED journal recovered without the VPN-only guard') end)
+      end
       if not isnone(value.manual_request_id) and not isnone(value.confirmed) then
         value.phase='HELD-ON-RESERVE';value.reason='OPERATOR-MANUAL';T.journal_write(env,value)
       end
@@ -87,6 +124,11 @@ function M.recover(env)
     T.publish(env,{state='BLOCKED',blockers=canon.array({'CONTROL-REVISION-STALE'}),alarm='CONTROL-REVISION-STALE',original_restored=false})
     return 'stopped'
   end
+  -- Owner decision extension 31.10.2026 (boot_resume.lua): this start finished its recovery (the intent fence is
+  -- behind it); a fresh token lets the monitor resume the owner's Auto after an unintended restart (crash, kill)
+  pcall(function()
+    env.run.fs.write_atomic(env.runtime..'/supervisor-start.json',canon.encode(canon.object({id=ctl.uuid_hex(),time=fwall(env)})))
+  end)
   return 'ready'
 end
 
@@ -339,8 +381,10 @@ end
 -- native_switch.serve(): one supervisor per router. RUNTIME/native.lock is held with flock(LOCK_EX|LOCK_NB) for the
 -- life of the process, so the Lua and the Python supervisor can never run at the same time. Long-lived children
 -- (rtp2.sh, ifup, the guard release job, the probe bridge) never inherit it (sys.close_fds).
-function M.hold_native_lock(runtime)
-  local path=runtime..'/native.lock'
+function M.hold_native_lock(runtime) return M.hold_lock(runtime,'native.lock') end
+-- hold_lock(runtime, name): the same flock on RUNTIME/<name> (hv-core also holds agent.lock, the monitor's own)
+function M.hold_lock(runtime,name)
+  local path=runtime..'/'..name
   os.execute('mkdir -p '..runtime..' && chmod 700 '..runtime)
   local file=io.open(path,'a')
   if not file then return nil end
@@ -403,6 +447,8 @@ function M.daemon()
   local lockfile,lockfd=M.hold_native_lock(run.RUNTIME)
   if not lockfile then io.stderr:write('NATIVE-SUPERVISOR-BUSY\n');os.exit(1) end
   sys.close_fds={lockfd}
+  -- leftovers of writes a power cut interrupted (.pending of this module and of the Python writers)
+  for _,directory in ipairs({'/etc/homensai-vpn','/etc/homensai-vpn/session-recovery'}) do pcall(sys.sweep_pending,directory) end
   local backend=require('backend').new(sys)
   local stop=false
   local env={run=run,backend=backend,runtime=run.RUNTIME,persist='/etc/homensai-vpn',

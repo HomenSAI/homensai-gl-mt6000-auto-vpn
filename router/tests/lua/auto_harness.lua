@@ -105,7 +105,7 @@ function H.selection(overrides)
 end
 function H.settings(overrides)
   local s=canon.object({native_trial=H.HEX32,native_until=tostring(1761830400+3600),native_enabled='1',native_session_loss='1',pair_auto_mode='router-probed-ipv4',
-    native_proof_scope='router-probed-ipv4',terms_version='1',interval='10'})
+    native_proof_scope='router-probed-ipv4',terms_version=require('terms'),interval='10'})
   for k,v in pairs(overrides or {}) do s[k]=v end
   return s
 end

@@ -1,10 +1,11 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- probe_policy.lua: probe_policy.py for the Lua monitor (owner probe level 1-5, the automatic boost, the dense
 -- suspicion episode bookkeeping and the decision log probe-history.json).
 -- Same files and rows as Python: state probe-boost.json in RAM (every pass), decisions probe-history.json on
 -- flash (only on a level change and at the start/end of a boost or suspicion episode; at most 500 rows).
--- The passive suspicion watcher (suspicion.py) is not ported yet: suspect() exists for it but nothing calls it
--- in the Lua monitor; a dense episode carried over from the Python monitor still ends by the same rules.
+-- The passive suspicion watcher (suspicion.py) is not ported; suspect() is called by the fast-detection pulse
+-- (fast_detect.lua, reason 'heartbeat-lost', only with option lua_fast_detect '1'); a dense episode carried over
+-- from the Python monitor still ends by the same rules.
 -- io: {read_json(path,default), write_json(path,value)} (the monitor's runner adapters).
 local canon=require('canon')
 
@@ -22,7 +23,7 @@ M.RESPONSE_METRICS={['icmp-1.1.1.1']='1.1.1.1',['icmp-8.8.8.8']='8.8.8.8',['icmp
 M.DEFAULT_RESPONSE='icmp-1.1.1.1'
 local TRANSITIONS={ARMED=true,APPLYING=true,['WAIT-CLIENT']=true,RESTORING=true,COMMITTED=true}
 local WATCHING={OBSERVING=true,COMMITTED=true,['DEGRADED-ON-RESERVE']=true}
-local SUSPICION_REASONS={['rx-stall']=true,['wg-handshake-stale']=true,['link-missing']=true}
+local SUSPICION_REASONS={['rx-stall']=true,['wg-handshake-stale']=true,['link-missing']=true,['heartbeat-lost']=true}
 local CARRIED={'dense','suspicion_rest','streaks'}
 local NULL=canon.null
 M.TRANSITIONS,M.WATCHING=TRANSITIONS,WATCHING
@@ -56,6 +57,18 @@ function M.boost_enabled(settings)
 end
 function M.measure_interval(settings) return int(get(settings,'measure_interval'),30,300) or M.LEVELS[M.level(settings)][2] end
 function M.measure_valid_for(interval) return math.floor(interval*3/2)+15 end
+-- probe_policy.ping_interval / ping_valid_for: the owner ping cadence (option ping_interval, 10..300 s in steps
+-- of 10, otherwise 60) and its freshness window: 1.5 x max(ping cadence, normal check interval) + 15 s, at least 45 s.
+M.PING_INTERVAL_DEFAULT=60;M.PING_INTERVAL_MIN=10;M.PING_INTERVAL_MAX=300;M.PING_INTERVAL_STEP=10;M.PING_VALID_FLOOR=45
+function M.ping_interval(settings)
+  local v=int(get(settings,'ping_interval'),M.PING_INTERVAL_MIN,M.PING_INTERVAL_MAX)
+  if v and v%M.PING_INTERVAL_STEP==0 then return v end
+  return M.PING_INTERVAL_DEFAULT
+end
+function M.ping_valid_for(settings)
+  local spacing=math.max(M.ping_interval(settings),int(get(settings,'interval'),10,300) or 10)
+  return math.max(M.PING_VALID_FLOOR,M.measure_valid_for(spacing))
+end
 function M.response_metric(settings)
   local v=get(settings,'response_metric')
   if type(v)=='string' and M.RESPONSE_METRICS[v]~=nil then return v end
@@ -195,7 +208,7 @@ function Booster:suspect(settings,suspicions,pair,native_state,now)
       local streak=is_dict(get(streaks,profile)) and streaks[profile] or {}
       if now>=(num(get(held,'until')) or 0) and (num(get(streak,'failures')) or 0)<M.CONFIRM_FAILURES then
         local evidence=canon.object()
-        for _,k in ipairs({'stalled_s','tx_packets','handshake_age_s'}) do local e=get(item,'evidence');if is_dict(e) and e[k]~=nil then evidence[k]=e[k] end end
+        for _,k in ipairs({'stalled_s','tx_packets','handshake_age_s','losses','cause'}) do local e=get(item,'evidence');if is_dict(e) and e[k]~=nil then evidence[k]=e[k] end end
         local episode=canon.object({profile=profile,role=roles[profile],reason=item.reason,evidence=evidence,started=canon.float(now),
           ['until']=canon.float(now+M.DENSE_MAX),native_state=native_state,checks=0,failures=0,good=0,reserve_good=0,last_code=NULL})
         self.state.dense=episode
@@ -277,6 +290,8 @@ function Booster:public(settings,now)
   return canon.object({level=M.level(settings),interval=int(get(settings,'interval'),10,300) or 10,measure_interval=M.measure_interval(settings),
     boost_enabled=M.boost_enabled(settings),boost_active=active,boost_until=active and n0(get(self.state,'until')) or NULL,
     boost_trigger=active and trigger or NULL,effective_interval=self:interval(settings,now),effective_measure_interval=self:measure(settings),
+    ping_interval=M.ping_interval(settings),ping_valid_for=M.ping_valid_for(settings),
+    effective_ping_interval=math.max(M.ping_interval(settings),self:interval(settings,now)),
     suspicion=suspicion,dense_interval=M.DENSE_INTERVAL,boost_interval=M.BOOST_INTERVAL,boost_hold=M.BOOST_HOLD,levels=levels})
 end
 

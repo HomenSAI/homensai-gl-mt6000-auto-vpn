@@ -85,7 +85,7 @@ end)
 t.test('export/public_export shapes, compact and detail retention',function()
   local acc=accounting.new()
   local exported=acc:export()
-  t.eq(canon.encode(exported),'{"activity":{},"days":{},"gaps":0,"months":{},"quality":{},"retention":{},"wan":null}')
+  t.eq(canon.encode(exported),'{"activity":{},"days":{},"gaps":0,"months":{},"quality":{},"reliability":{"details_dropped":0,"events":[],"months":{},"profiles":{},"route_history":{"dropped":0,"last":null,"segments":[],"since":null},"schema":1,"sequence":0,"since":null,"totals":{}},"retention":{},"wan":null}')
   local stamp=1761825600
   for i=0,30 do acc:observe({id='p'..(i%3),time=stamp+i*3600,code=canon.null,rtt_ms=i}) end
   local limit=#canon.encode(acc:export())-200
@@ -96,7 +96,7 @@ t.test('export/public_export shapes, compact and detail retention',function()
   for i=0,10 do acc:observe({id='q',time=stamp+i*86400,code=canon.null,rtt_ms=1}) end
   acc:apply_detail_retention(2,stamp+10*86400)
   local kept=0;for _ in pairs(acc.quality.q.buckets) do kept=kept+1 end
-  t.eq(kept,3);t.eq(acc.detail_days,2)
+  t.eq(kept,3);t.eq(acc:detail_days(),2)
   local public=acc:public_export(stamp)
   t.truthy(canon.is_object(public));t.eq(public.rpc_aggregated,nil)
 end)

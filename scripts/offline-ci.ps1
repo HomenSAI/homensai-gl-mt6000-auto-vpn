@@ -29,9 +29,9 @@ foreach($targetImage in @($Image,$RuntimeImage)){
     $runtimeOnly=if($targetImage -eq $RuntimeImage){' --runtime-only'}else{''}
     $command="set -eu; tar --no-same-owner --no-same-permissions -xf /input/source.tar -C /work; python3 qa/run_offline_ci.py --manifest /input/manifest.json --source $sourceSha$runtimeOnly"
     if($InjectFailure){$command='exit 17'}
-    $dockerArgs=@('run','--rm','--pull=never','--network=none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--user=65534:65534','--pids-limit=128','--memory=512m','--cpus=2',
+    $dockerArgs=@('run','--rm','--pull=never','--network=none','--read-only','--cap-drop=ALL','--security-opt=no-new-privileges','--user=65534:65534','--pids-limit=128','--memory=1g','--cpus=2',
       '--mount',"type=bind,source=$archivePath,target=/input/source.tar,readonly",'--mount',"type=bind,source=$manifestPath,target=/input/manifest.json,readonly",
-      '--tmpfs','/work:rw,nosuid,nodev,size=256m,mode=1777','--tmpfs','/tmp:rw,nosuid,nodev,size=128m,mode=1777',
+      '--tmpfs','/work:rw,nosuid,nodev,size=448m,mode=1777','--tmpfs','/tmp:rw,nosuid,nodev,size=128m,mode=1777',
       '--workdir','/work','--env','PYTHONDONTWRITEBYTECODE=1','--entrypoint','sh',$targetImage,'-c',$command)
     $output=& docker @dockerArgs;Assert-Exit 'Isolated checks'
     $lines=@($output|Where-Object {$_ -like 'CI-RECEIPT *'})

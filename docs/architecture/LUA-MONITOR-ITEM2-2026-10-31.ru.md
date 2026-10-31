@@ -72,7 +72,11 @@
 
 ## 6. Что не перенесено (поля отсутствуют или упрощены)
 
-`decision_explanation` (failure_diagnosis), `failover_plan`, `candidate_recommendations`, наблюдатель подозрений, истории сайтов/задержки/сравнения, `accounting.reliability`, `system_readiness`, тест скорости и Telegram в мониторе, обработка `stats-reset-request.json` (кнопка «сбросить статистику» под Lua-монитором не применяется, пока не перенесён `stats_reset`), `scan_control` (новый `scan.request` только запускает проход сразу), `trim_status_reply`, `measurement_request_id`, `telegram`. Решения Auto (Python `native_switch.py`/`pair_auto.py`) берут из `status.json` строки профилей и выборки с `vendor_*` — они есть; `failover_plan` Auto из статуса не читает (`failover_plan.streak` — функция).
+`decision_explanation` (failure_diagnosis), `failover_plan`, `candidate_recommendations`, наблюдатель подозрений, истории сайтов/задержки/сравнения, `accounting.reliability`, тест скорости и Telegram в мониторе, обработка `stats-reset-request.json` (кнопка «сбросить статистику» под Lua-монитором не применяется, пока не перенесён `stats_reset`), `scan_control` (новый `scan.request` только запускает проход сразу), `trim_status_reply`, `measurement_request_id`, `telegram`. Решения Auto (Python `native_switch.py`/`pair_auto.py`) берут из `status.json` строки профилей и выборки с `vendor_*` — они есть; `failover_plan` Auto из статуса не читает (`failover_plan.streak` — функция).
+
+Дополнение 31.10.2026: `system_readiness` перенесён (`lua/readiness.lua`, те же коды, что `system_readiness.py`; обновление не чаще раза в 30 с, ответ `ubus call system board` — один раз на процесс; дифференциальный тест `tests/test_lua_readiness.py`).
+
+Дополнение 31.10.2026 (адрес сервера): `profiles[].server_endpoint` перенесён (`lua/server_endpoint.lua`, те же поля, правила и отказы, что `server_endpoint.observe`: один пир или ничего, ifindex до и после, у OpenVPN — время старта процесса до и после чтения сокетов, предел 0,5 с). Поле ставится в пробе после повторной проверки маршрута, как в `agent.probe`. Стоимость: WireGuard вызывает `wg show <if> endpoints` только при смене эпохи туннеля (ifindex) или раз в 300 с (после пустого ответа — раз в 60 с), в остальных проходах — одно чтение sysfs; OpenVPN — только чтения `/proc` в каждом проходе. `response_metric` публикуется всегда (раньше — только при успешном усилителе), иначе страница показывала прочерк рядом с измеренным пингом. Тесты: `tests/lua/test_server_endpoint.lua`, `tests/test_lua_server_endpoint.py` (Python против Lua на одних фикстурах), `tests/test_server_endpoint_ui.js`.
 
 ## 7. Тесты на ПК
 
@@ -168,3 +172,24 @@ Auto на Lua, монитор переключён на Lua по шагу C (Aut
 Ручная кнопка при обеих службах на Lua, 3+3: запрос 1,2 с (идёт через `agent.py`, резидентного сокета нет), трафик 3,8 с (3,3–4,8), готово 6,0 с (5,5–6,9); все 6 завершены. С Python-монитором и Lua Auto было 0,3 / 2,6 / 4,0 с. Это ожидаемая цена моста до пункта 4 (кнопка в Lua).
 
 Ещё через мост: `channel_path` на странице (активный канал) приходит от `status_bridge.py`, только пока страница открыта; без него — кэш супервизора или «не подтверждено».
+
+## 12. alpha14: последние поля моста — в Lua, Python не запускается (31.10.2026, только ПК)
+
+Факт [Ф] на MT3000 с alpha13 (обе службы на Lua): пока открыта страница, монитор запускал `status_bridge.py` каждые ~15 с (6 раз за 90 с), ~12 % ядра в дочерних процессах (запуск Python ~2 с процессора каждый). Мост к тому времени считал только `manual_switch_control` и `scan`.
+
+Теперь оба поля считает монитор (`lua/page_controls.lua`), Python на опрос страницы не запускается:
+
+| Поле | Python | Lua | Источник данных |
+|---|---|---|---|
+| `manual_switch_control` (пара) | `pair_manual.controls()` | `page_controls.pair_controls` | состояние пары (кэш по ключу файла), намерение, ревизия, `pair-manual-control.json`, `native-status.json`, статус монитора из памяти, журнал (кэш), бюджет попыток, настройки и порядок политики из уже кэшированного `native_policy.lua` (перечитывается только при изменении UCI) |
+| `manual_switch_control` (без пары) | `manual_control.control_status()` | `page_controls.legacy_controls` | те же записи; диагностика — `display-diagnostic.json` моложе 15 с (общий файл с Python), иначе один раз диагностика Lua-бэкенда в процессе монитора (команды через файл в ОЗУ, не через трубу) |
+| выбор между ними | `pair_manual.public_for_status` | `monitor_status.manual_switch` | тот же `native_failover`, что и в поле `manual_switch` |
+| `scan` | `scan_control.public()` | `page_controls.scan_public` | `scan.state` (кэш по ключу файла) |
+
+Одно сознательное отличие — доказательство ядра для кнопок пары: вместо собственной аттестации (`pair_manual.attested`, iptables-save + ip rule, ~5 с процессора) берётся аттестация супервизора этой сессии из `native-status.json` по тому же правилу, что и `channel_path` на странице (`channel_path.page_kernel`: подтверждена, та же пара, роль совпадает с живым порядком, не старше 15 с). Кнопки и «активный канал» опираются на одно чтение и не могут разойтись. Нет свежего доказательства — `KERNEL-POLICY-UNVERIFIED`, как у Python без проверенной аттестации; ложного «разрешено» нет.
+
+`status_bridge.py` оставлен для линии Python и как запасной путь: монитор запускает его только если вычисление в Lua упало (не чаще раза в 10 с, никогда по таймеру); до ответа — прежние безопасные значения. `status.lua_backend.bridges` теперь пуст, `bridge_fallback` описывает запасной путь.
+
+Проверка на ПК: `tests/test_lua_page_controls.py` — 104 случая: 54 пары, 36 без пары, 14 `scan` (пара без политики ролей и с ней, ожидающие/выполненные/неверные запросы, удержание вручную, аттестация ядра, мгновенное переключение, лимит и пауза попыток, журнал, без пары: сертификат, попытки, срок, Stop, Auto, ожидающий запрос; `scan`: пусто, идёт, готово, ошибка, срок) — ответ Lua байт в байт равен ответу Python (ключи, значения, int/float, коды); `tests/lua/test_page_controls.lua` — 6 проверок монитора (6 опросов за 90 с — 0 запусков Python; запасной мост только после сбоя Lua; повтор диагностики не чаще 15 с).
+
+Ожидаемый эффект на MT3000 [О]: минус ~12 % ядра (дочерние процессы Python) при открытой странице; ответ `status` прибавляет чтение нескольких малых файлов в ОЗУ (единицы мс). Проверить на роутере: `top`/`/proc/<pid>/stat` монитора за 90–240 с при открытой странице, `ps` без `status_bridge.py`, кнопки ручного переключения доступны сразу после открытия страницы.

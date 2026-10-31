@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Calendar report planning; process TZ is configured as Europe/Berlin by agent."""
 from datetime import datetime, timedelta
 import time

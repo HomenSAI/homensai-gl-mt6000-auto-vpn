@@ -5,6 +5,12 @@ STOP=10
 
 start_service() {
     local enabled monitor_only lua_monitor
+    # Power-cut integrity: an own config that no longer parses (flash damage) is reported with a code instead of
+    # a silent stop; enabled then reads as 0, so the service stays off and never touches LAN traffic.
+    if command -v uci >/dev/null 2>&1 && ! uci -q show homensai_vpn >/dev/null 2>&1; then
+        logger -t homensai-vpn 'HOMENSAI-CONFIG-UNREADABLE: /etc/config/homensai_vpn is missing or does not parse; service stays off' 2>/dev/null || true
+        echo 'HOMENSAI-CONFIG-UNREADABLE' >&2
+    fi
     config_load homensai_vpn
     chmod 0600 /etc/config/homensai_vpn
     config_get_bool enabled main enabled 0
@@ -30,15 +36,30 @@ start_service() {
     # variable so a missing/invalid value keeps the Python monitor.
     lua_monitor=0
     [ "${CONFIG_main_lua_monitor:-0}" = 1 ] && [ -f /usr/lib/homensai-vpn/lua/monitor.lua ] && lua_monitor=1
+    # Lua plan item 8 (owner switch, default off): option lua_core_process '1' runs the Lua monitor and the Lua
+    # Auto supervisor in ONE process, hv-core, in the `monitor` instance; the `native` instance only stands by
+    # (watchdog of hv-core; the separate Lua Auto supervisor after HV-CORE-FALLBACK). Used only when both Lua
+    # halves are already switched on (lua_monitor='1', lua_auto='1') and installed; otherwise ignored.
+    # Back to two processes: uci set homensai_vpn.main.lua_core_process='0'; uci commit homensai_vpn.
+    local lua_core lua_auto
+    lua_core=0
+    if [ "$monitor_only" = 0 ] && [ "$lua_monitor" = 1 ] && [ "${CONFIG_main_lua_core_process:-0}" = 1 ]; then
+        config_get lua_auto main lua_auto 0
+        [ "$lua_auto" = 1 ] && [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/hv_core.lua ] && [ -f /usr/lib/homensai-vpn/lua/auto.lua ] && [ -f /usr/lib/homensai-vpn/lua/backend.lua ] && lua_core=1
+    fi
     rm -f /var/run/homensai-vpn/lua-monitor.ready
     procd_open_instance monitor
-    if [ "$lua_monitor" = 1 ]; then
+    if [ "$lua_core" = 1 ]; then
+        procd_set_param command /usr/bin/lua /usr/lib/homensai-vpn/lua/hv_core.lua daemon
+        procd_set_param env TZ='CET-1CEST,M3.5.0,M10.5.0/3' LUA_PATH='/usr/lib/homensai-vpn/lua/?.lua;;'
+    elif [ "$lua_monitor" = 1 ]; then
         procd_set_param command /usr/bin/lua /usr/lib/homensai-vpn/lua/monitor.lua daemon
     else
         procd_set_param command /usr/bin/python3 /usr/lib/homensai-vpn/agent.py daemon
     fi
     procd_set_param respawn 3600 5 0
-    procd_set_param term_timeout 15
+    # hv-core ends the running Auto pass before it exits (the stop budget of the native instance)
+    if [ "$lua_core" = 1 ]; then procd_set_param term_timeout 300; else procd_set_param term_timeout 15; fi
     procd_set_param file /etc/config/homensai_vpn
     procd_set_param stdout 1
     procd_set_param stderr 1
@@ -47,10 +68,12 @@ start_service() {
     # 2.0.0-lua line, plan item 1: option lua_auto '1' runs the Lua Auto supervisor in the same procd
     # instance (default off: the Python supervisor below is unchanged). Both hold native.lock, so only one
     # of them can ever run. Return to Python: uci set homensai_vpn.main.lua_auto='0'; uci commit homensai_vpn.
-    local lua_auto
     config_get lua_auto main lua_auto 0
     procd_open_instance native
-    if [ "$lua_auto" = 1 ] && [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/auto.lua ] && [ -f /usr/lib/homensai-vpn/lua/backend.lua ]; then
+    if [ "$lua_core" = 1 ]; then
+        procd_set_param command /usr/bin/lua /usr/lib/homensai-vpn/lua/hv_core.lua standby
+        procd_set_param env TZ='CET-1CEST,M3.5.0,M10.5.0/3' LUA_PATH='/usr/lib/homensai-vpn/lua/?.lua;;'
+    elif [ "$lua_auto" = 1 ] && [ -x /usr/bin/lua ] && [ -f /usr/lib/homensai-vpn/lua/auto.lua ] && [ -f /usr/lib/homensai-vpn/lua/backend.lua ]; then
         procd_set_param command /usr/bin/lua /usr/lib/homensai-vpn/lua/auto.lua daemon
         procd_set_param env TZ='CET-1CEST,M3.5.0,M10.5.0/3' LUA_PATH='/usr/lib/homensai-vpn/lua/?.lua;;'
     else
@@ -68,6 +91,8 @@ start_service() {
 stop_service() {
     ubus -t 10 call homensai-vpn-lua shutdown >/dev/null 2>&1 || true
     rm -f /var/run/homensai-vpn/lua-monitor.ready
+    # hv-core: a fallback to separate processes lasts until the service stops; a stop is clean, not a crash
+    rm -f /var/run/homensai-vpn/hv-core-fallback.json /var/run/homensai-vpn/hv-core.json /var/run/homensai-vpn/hv-core-watchdog.json
 }
 
 reload_service() {

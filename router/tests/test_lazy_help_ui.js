@@ -85,7 +85,11 @@ function fixture(language='en',savedState=null){
  assert(source.includes("if(activeTab==='events'&&key!=='events')hideErrorBack();"),'leaving the catalogue clears its return state synchronously');
  // alpha79: the code catalogue gained ~115 owner-readable rows (eager names); the bound moved from 30% to 28%.
  // 1.0.0-beta1 switch statistics: the measured-timing core (journal/live-log durations) is eager; its page renderer is lazy. 28% -> 27%.
- assert(Buffer.byteLength(source)<1256446*.73,'main module shrank by at least 27% from alpha51');
+ // 1.0.0-beta14 license transition: the version-2 terms in both languages (shown eagerly at first run, legally required
+ // before Auto) are 8.8 KB longer. 27% -> 26.3%.
+ // 2.0.0-alpha14: the owner ping interval control and the shared last-ping reading on every table (eager: they render
+ // on first paint) add about 4.9 KB, the recovery episodes of the switch statistics about 2 KB. 26.3% -> 25.5%.
+ assert(Buffer.byteLength(source)<1256446*.745,'main module shrank by at least 25.5% from alpha51');
  assert(!source.includes('var LEARN_LESSONS=')&&!source.includes('var AI_PROMPT_EN='),'long optional payload absent from main');
  assert(source.includes('lazyHelpRoute(window.location.hash.slice(1));var requestedTab='),'initial direct Help topic is remembered before alias normalization');
  console.log('PASS: lazy actual factory EN/RU, first-screen no acquisition, title map, Telegram/terms, concurrency, success, cached failure+Retry, deep links, persistent hosts, >=30% smaller main');

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- vendor.lua: vendor_observation.VendorObserver for the Lua monitor. Read-only configured tunnel identity
 -- epochs: a profile measurement keeps its health fields only when the same profile was bound to the same
 -- tunnel before and after the measurement; each row then carries vendor_tunnel_id, vendor_generation (a new

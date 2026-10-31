@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- manual.lua: pair_manual.py (supervisor side) + manual_dispatch.py confirmations for the Lua supervisor.
 --
 -- pair-manual-control.json keeps the Python record and states QUEUED/CLAIMED/COMPLETED/REFUSED/CANCELLED/
@@ -152,7 +152,13 @@ function M.instant_manual(env,selection,until_,revision,request_id,request_sourc
   kernel_before=kernel_before or env.backend.attest_policy(selection)
   local fingerprint=kernel_before.kernel_fingerprint
   if not (kernel_before.verified==true or kernel_before.repairable_missing==true) or not ctl.hex(fingerprint,64) then refuse('KERNEL-POLICY-UNVERIFIED') end
-  if env.deps and env.deps.rtp_boot then env.deps.rtp_boot.assess();env.deps.rtp_boot.prepare(revision) end
+  -- assess() checks the stock boot prefix (pins, owners, modes) and says whether it is already in place. Only
+  -- then is prepare() skipped: it would take the control lock just to re-run the same checks and write nothing;
+  -- a Stop in between is caught by the control revision of every fenced write of instant.switch below.
+  if env.deps and env.deps.rtp_boot then
+    local assessed=env.deps.rtp_boot.assess()
+    if not (type(assessed)=='table' and assessed.ready==true) then env.deps.rtp_boot.prepare(revision) end
+  end
   local tx=ctl.uuid_hex();local wall_,mono_=env.run.wall(),env.run.clock()
   local settings=env.backend.policy().settings
   local lease_end,lease_error=T.monotonic_lease(env,settings,until_,wall_,mono_)

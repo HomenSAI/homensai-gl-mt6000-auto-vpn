@@ -444,9 +444,9 @@ def set_disabled(state, interface, value, revision=None):
 
 def preflight(backend, settings):
     import native_switch as n
-    from agent import inventory
+    from agent import inventory, TERMS_VERSION
     from preparation_status import snapshot
-    if settings.get('pair_auto_mode') != MODE or settings.get('terms_version') != '1':
+    if settings.get('pair_auto_mode') != MODE or settings.get('terms_version') != TERMS_VERSION:
         raise ValueError('PAIR-MODE-NOT-CONFIGURED')
     if settings.get('native_session_loss') != '1':
         raise ValueError('SESSION-LOSS-NOT-ACCEPTED')
@@ -490,6 +490,7 @@ def preflight(backend, settings):
 REVIVE_PAUSE = 120
 REVIVE_LIMIT = 4
 REVIVE_PHASES = (None, 'ROLLED-BACK', 'COMMITTED', 'HELD-ON-RESERVE')
+DEVICE_WAIT = 60  # seconds a recovery revive waits for a revived tunnel device (bounded; no guard meanwhile)
 
 
 def client_down(interface):
@@ -549,6 +550,105 @@ def revive(backend, state, revision, journal, rows):
         backend.guard(backend.devices(), control_revision=revision)
         return True
     return False
+
+
+def _log(line):
+    try:subprocess.run(['logger','-t','homensai-vpn',str(line)[:400]],timeout=5,check=False,
+                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    except (OSError,subprocess.SubprocessError):pass
+
+
+PROFILE_CONFIGS = ('wireguard', 'ovpnclient')
+SKIP_LOG_EVERY = 300
+_skip_logged = {}
+
+
+def _revive_log(line, key=None):
+    if key is not None:
+        now=time.monotonic()
+        if key in _skip_logged and now-_skip_logged[key]<SKIP_LOG_EVERY:return
+        _skip_logged[key]=now
+    _log(line)
+
+
+def ensure_devices(backend, state):
+    """Start the pair's two configured clients when a recovery needs a tunnel device and none is up.
+
+    Power cut with a held/committed journal (MT3000 sysrq-b, 31.10.2026): after the boot the intent (RAM) is
+    gone and the prepared router does not start the VPN clients itself (vendor autostart off; the pair starts
+    them). The cleanup of a COMMITTED/HELD-ON-RESERVE journal ends with guard(devices()), which refuses an empty
+    list (UNSAFE-GUARD-DEVICE): the journal stayed held and Start refused TRANSACTION-IN-PROGRESS forever.
+    The interfaces are the pair state's `interfaces` (not only `owned`: clients already up when the session
+    began are not owned - alpha14 cut). Checks as in begin(): each row exists with its protocol, auto='0' and
+    disabled='0', netifd reports it stopped, and the profile definitions (wireguard/ovpnclient configs) are the
+    session's. The whole-network identity and the other protected configs (wireless, dhcp, DNS - the vendor
+    rewrites some at boot) are only logged. Stop-fenced ifup, shared pair-revive.json budget, bounded wait, no
+    guard while waiting. A client the session did not own stays up after the cleanup (as before the session).
+    Every skip is logged (PAIR-RECOVERY-REVIVE-SKIPPED, at most once per reason per 5 min). Returns the devices
+    or None; never raises. Lua counterpart: pair.ensure_devices.
+    """
+    import native_switch as n
+    try:
+        devices=backend.devices()
+        if devices:return devices
+    except (n.Refused,OSError,ValueError,subprocess.SubprocessError):pass
+    if n.STOP or not isinstance(state,dict) or not state:return None
+    started=[]
+    def skip(reason):_revive_log('PAIR-RECOVERY-REVIVE-SKIPPED: '+reason,reason)
+    try:
+        from agent import RUNTIME, atomic_json, read_json
+        from auto_control import current_revision
+        from pair_interfaces import state as state_interfaces
+        managed=state_interfaces(state)
+        rows=network()
+        if normalized_network(rows,managed)!=state['network_identity']:
+            _revive_log('PAIR-RECOVERY-REVIVE: network identity differs from the session (profiles checked one by one)','identity')
+        others=tuple(name for name in state.get('protected',{}) if name not in PROFILE_CONFIGS)
+        if changed(state,configs(managed),skip=('firewall',)+others):
+            skip('PAIR-EXTERNAL-CONFIG-CHANGE');return None
+        revision=current_revision(RUNTIME)
+        now=time.time()
+        path=RUNTIME/'pair-revive.json'
+        try:ledger=read_json(path,{})
+        except (OSError,ValueError):ledger={}
+        if not isinstance(ledger,dict):ledger={}
+        by_name={row.get('.name'):row for row in rows}
+        for interface in sorted(managed):
+            events=ledger.get(interface,[])
+            events=[x for x in events if type(x) in (int,float) and math.isfinite(x) and 0<=now-x<900] if isinstance(events,list) else []
+            row=by_name.get(interface)
+            if not row or row.get('proto')!=managed[interface] or row.get('auto')!='0' or row.get('disabled')!='0':
+                skip('PAIR-PROFILES-UNVERIFIED '+interface);continue
+            if events and now-events[-1]<REVIVE_PAUSE or len(events)>=REVIVE_LIMIT:
+                skip('REVIVE-BUDGET '+interface);continue
+            if not client_down(interface):
+                skip('NOT-STOPPED '+interface);continue
+            ledger=dict(ledger,**{interface:events+[now]});atomic_json(path,ledger)
+            started.append(interface)
+            try:
+                n.forward_dispatch(['ifup','-w',interface],revision,timeout=20)
+                _revive_log('PAIR-RECOVERY-REVIVE: ifup '+interface)
+            except (n.Refused,OSError,ValueError,subprocess.SubprocessError) as error:
+                _revive_log('PAIR-RECOVERY-REVIVE: ifup '+interface+' failed '+str(getattr(error,'code',error)))
+    except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
+        _revive_log('PAIR-RECOVERY-REVIVE: '+str(getattr(error,'code',error)))
+    if not started:return None
+    deadline=time.monotonic()+DEVICE_WAIT
+    while True:
+        try:
+            devices=backend.devices()
+            if devices:return devices
+        except (n.Refused,OSError,ValueError,subprocess.SubprocessError):pass
+        if n.STOP or time.monotonic()>=deadline:return None
+        time.sleep(2)
+
+
+def boot_devices(backend):
+    """ensure_devices() for the pair session a boot recovery finds (none or a terminal one: None)."""
+    try:state=read_state()
+    except (OSError,ValueError,KeyError,TypeError):return None
+    if not state or state.get('phase') in TERMINAL:return None
+    return ensure_devices(backend,state)
 
 
 def begin(backend, settings, request):
@@ -618,6 +718,7 @@ def cleanup(backend, state, stop_revision=None):
             finalize(backend,state,journal,allow_stopping=True)
         else:raise ValueError('PAIR-RECOVERY-REQUIRED')
     if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
+        ensure_devices(backend,state)  # finish_committed/rollback end with guard(devices()): the pair's own tunnels first
         finished=(n.finish_committed(backend,journal,'PAIR-STOPPED',restore_order=state['order']) if context is not None
                   else n.finish_committed(backend,journal,'PAIR-STOPPED'))
         if not finished:
@@ -625,6 +726,7 @@ def cleanup(backend, state, stop_revision=None):
             save(state)
             return False
     elif context is not None and state_order_matches(state,journal,backend.order()) and backend.order()!=(state['order'],state['policy_hash']):
+        ensure_devices(backend,state)
         if backend.recovery_ready(journal[role(context,state['order'])],backend.policy()['settings']) is not True:raise ValueError('PAIR-RECOVERY-REQUIRED')
         n.rollback(backend,journal,'PAIR-STOPPED',restore_order=state['order'])
     if backend.order() != (state['order'], state['policy_hash']):
@@ -714,6 +816,13 @@ def charge_attempt(settings,revision):
     atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
 
 
+def source_unstable(selection):
+    """The diagnostic accepted a source that keeps being rebuilt only to leave it (failure_diagnosis)."""
+    from failure_diagnosis import SOURCE_UNSTABLE
+    coordination=selection.get('coordination') if isinstance(selection,dict) else None
+    return isinstance(coordination,dict) and coordination.get('code')==SOURCE_UNSTABLE
+
+
 def reapply_missing_policy(backend,state,settings,revision,journal,observed=None):
     """A valid ON intent may repair absent compiled rules, without changing policy order."""
     if state.get('policy_roles') is None:return False
@@ -742,6 +851,8 @@ def reapply_missing_policy(backend,state,settings,revision,journal,observed=None
                    'source':selection['source']['id'],'target':selection['target']['id'],'mode':'continuous-pair','proof_scope':MODE})
         return True
     destination=role(state['policy_roles'],selection['order'])
+    # Never rebuild the policy towards a source the vendor keeps rebuilding: the decision below leaves it.
+    if destination=='source' and source_unstable(selection):return False
     if state.get('manual_hold') not in (None,destination):raise n.Refused('PAIR-MANUAL-HOLD-UNVERIFIED')
     recovery=normalized(settings);now=time.time()
     events,allowed=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
@@ -901,9 +1012,13 @@ def tick(backend, settings, revision):
         recovery = normalized(settings)
         from observation_freshness import valid_for
         age = valid_for(settings)
-        failed = streak(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, False, selection['source'])
+        # An unstable source (no healthy observation for the whole bounded window, across its vendor rebuilds)
+        # is the failure evidence itself: its generation-scoped streak restarts on every rebuild.
+        unstable = source_unstable(selection)
+        failed = unstable or streak(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, False, selection['source'])
         healthy = streak(status.get('samples', []), selection['target']['id'], recovery['successes'], now, age, True, selection['target'])
         diagnosis = diagnose(status, selection['source']['id'], now, settings)
+        if unstable and diagnosis.get('suppress_switch'):diagnosis = dict(diagnosis, suppress_switch=False)
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
         events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])

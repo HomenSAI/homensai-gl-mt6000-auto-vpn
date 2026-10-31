@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- recovery.lua: rollback_recovery.py and activation_recovery.finalize for the Lua supervisor (2.0.0-lua line).
 -- env.deps.rollback_recovery (the helper table rollback.lua calls) and env.deps.activation_finalize.
 --

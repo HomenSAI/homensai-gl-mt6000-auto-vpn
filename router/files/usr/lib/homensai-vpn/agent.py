@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """OpenWrt monitor alpha. No route/firewall/VPN write commands exist here."""
 import argparse
 import base64
@@ -24,14 +24,14 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '2.0.0-alpha11'
+VERSION = '2.0.0-alpha16'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
 SAFE = re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 SO_MARK = getattr(socket, 'SO_MARK', 36)
 SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
-TERMS_VERSION = '1'  # bump when DISCLAIMER.md changes; the UI gate and the controller both compare it
+TERMS_VERSION = '2'  # operational terms v2; regenerate immutable LuCI assets before packaging
 STOP = False
 EXIT_SEEN = {}
 EXIT_CONTEXT = local()
@@ -121,6 +121,43 @@ def atomic_json(path, value):
         os.fsync(directory)
     finally:
         os.close(directory)
+
+
+PENDING_NAME = re.compile(r'\.[A-Za-z0-9_.-]+\.pending')
+
+
+def sweep_pending(directory, max_age=120, now=None):
+    """Remove leftover '.<name>.<x>.pending' files of a write a power cut interrupted (atomic_json and the Lua
+    durable.write use this pattern). Only files whose mtime is more than max_age away from now in either
+    direction (the router has no battery clock), so a writer running right now keeps its file. Never raises."""
+    import stat as file_mode
+    now = time.time() if now is None else now
+    removed = 0
+    try:
+        names = os.listdir(str(directory))
+    except OSError:
+        return 0
+    for name in names:
+        if not PENDING_NAME.fullmatch(name):
+            continue
+        path = os.path.join(str(directory), name)
+        try:
+            info = os.lstat(path)
+            if file_mode.S_ISREG(info.st_mode) and abs(now - info.st_mtime) > max_age:
+                os.unlink(path)
+                removed += 1
+        except OSError:
+            pass
+    if removed:
+        try:
+            fd = os.open(str(directory), os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+        except OSError:
+            pass
+    return removed
 
 
 FLOAT_EDGE = 2 ** 1023  # integers above this are checked against the float range
@@ -778,6 +815,8 @@ def pair_manual_reply(arguments):
 
 def serve():
     RUNTIME.mkdir(mode=0o700, parents=True, exist_ok=True)
+    for directory in (PERSIST, PERSIST/'session-recovery'):
+        sweep_pending(directory)
     lock = os.open(str(RUNTIME/'agent.lock'), os.O_CREAT|os.O_RDWR|getattr(os, 'O_NOFOLLOW', 0), 0o600)
     fcntl.flock(lock, fcntl.LOCK_EX|fcntl.LOCK_NB)
     server = start_status_server()
@@ -790,6 +829,12 @@ def serve():
 
 
 def monitor_loop():
+    # Owner decision 31.10.2026: Auto the owner switched on comes back after a power cut (boot_resume.py)
+    try:
+        from boot_resume import start_thread as boot_resume
+        boot_resume()
+    except Exception:
+        pass
     try:
         accounting, storage_error = restore()
     except (OSError, ValueError, KeyError, TypeError):
@@ -913,10 +958,11 @@ def monitor_loop():
                 storage_error = 'CLOCK-001'
             from reliability import failure_pair_context
             failure_pair=failure_pair_context(data,after_inventory)
-            # Ping/website cadence follows the probe level (shorter while boosting); the owner picks the metric.
-            from probe_policy import response_metric,RESPONSE_METRICS
+            # Ping cadence is the owner's own setting (ping_interval, default 1 min); the website cadence
+            # follows the probe level (shorter while boosting); the owner picks the metric.
+            from probe_policy import response_metric,RESPONSE_METRICS,ping_interval,ping_valid_for
             metric=response_metric(settings)
-            ping_sampler.configure(booster.measure(settings),RESPONSE_METRICS[metric] if metric!='websites' else None)
+            ping_sampler.configure(ping_interval(settings),RESPONSE_METRICS[metric] if metric!='websites' else None,ping_valid_for(settings))
             website_sampler.configure(booster.measure(settings))
             # Optional ICMP latency is cached by a separate bounded worker. It never enters health/Auto decisions.
             try:ping_sampler.apply(rows,failure_pair,time.time())
@@ -931,7 +977,7 @@ def monitor_loop():
                 sampler=compare_samplers.get(target)
                 if sampler is None:
                     sampler=compare_samplers[target]=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists(),compare=True)
-                sampler.configure(booster.measure(settings),target)
+                sampler.configure(ping_interval(settings),target,ping_valid_for(settings))
                 try:sampler.apply(rows,failure_pair,time.time())
                 except Exception:pass
             if metric!='websites' and not compare:
@@ -996,7 +1042,11 @@ def monitor_loop():
                 status['response_metric']=response_metric(settings)
             except (OSError,ValueError,TypeError,KeyError):status['probe_policy']={'code':'PROBE-POLICY-UNAVAILABLE'}
             from stats_mode import storage as stats_storage
-            status['stats_mode']=dict(stats_public(),storage=stats_storage(RUNTIME,PERSIST))
+            from retention_settings import public as retention_public,capacity as retention_capacity,resolve as retention_resolve
+            # the owner's retention (time or size) with its size model, and the room the page warns about
+            status['stats_mode']=dict(stats_public(),storage=stats_storage(RUNTIME,PERSIST),retention=retention_public(settings),capacity=retention_capacity(PERSIST))
+            budgets=retention_resolve(settings)  # size mode: the minute-row files keep to their share when saved
+            latency.byte_budget=budgets['latency_bytes'];website_history.byte_budget=budgets['response_bytes'];ping_history.byte_budget=budgets['response_bytes']
             if diagnosing:latency.observe(status,settings,time.time())
             status['latency_history']=technical_history_tail(latency.public(),time.time())
             try:
@@ -1232,8 +1282,8 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
-                          'setup_response':{'metric':'','compare':False,'fast_switch':False},
-                          'setup_stats':{'mode':'','hours':0},
+                          'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0},
+                          'setup_stats':{'mode':'','hours':0,'retention':'','days':0,'mb':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},

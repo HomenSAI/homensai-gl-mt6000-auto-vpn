@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '2.0.0-alpha11-1'
+VERSION = '2.0.0-alpha16-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 
@@ -109,7 +109,7 @@ def build(output=None):
     # opkg reports Installed-Size as unpacked bytes, not the size of the compressed archive.
     unpacked = sum(len(payload) for _, payload, _ in files)
     control = ('Package: %s\nVersion: %s\nArchitecture: all\n'
-               'Maintainer: HomenSAI <info@homensai.com>\nLicense: MIT\n'
+               'Maintainer: HomenSAI <info@homensai.com>\nLicense: LicenseRef-HomenSAI-Personal-Commercial-1.0\n'
                'Depends: python3, lua, lua-cjson, libuci-lua, ip-full, ubus, rpcd, luci-base, ca-bundle\n'
                'Description: HomenSAI VPN monitor; bounded controlled native trials; optional speed tests\n'
                'Source: https://homensai.com\nInstalled-Size: %d\n' % (NAME, VERSION, unpacked)).encode()

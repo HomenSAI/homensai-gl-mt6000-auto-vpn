@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- canon.lua: canonical JSON and SHA-256 of the Lua core, byte-identical to Python
 --   native_switch.digest(v)   = sha256(json.dumps(v, sort_keys=True, separators=(',',':')))
 --   native_history.encoded(v) = json.dumps(v, sort_keys=True, separators=(',',':'), allow_nan=False)
@@ -194,7 +194,11 @@ local function quote(s)
 end
 M.quote=quote
 
-local function key_less(a,b)  -- code point order of Python's sort_keys (byte order of UTF-8/WTF-8)
+-- Python's sort_keys is code point order = byte order of UTF-8/WTF-8. Lua's own string '<' is strcoll; in the C
+-- locale (the daemons never call os.setlocale) that is byte order too, and it runs in C: the byte-by-byte Lua
+-- comparator it replaces was the hottest function of the supervisor on the MT3000 (alpha13 profile, ~1/3 of its CPU
+-- during manual switches). The locale is checked once; a non-C collation keeps the exact Lua comparator.
+local function key_less_lua(a,b)
   local n=math.min(#a,#b)
   for i=1,n do
     local x,y=string.byte(a,i),string.byte(b,i)
@@ -202,6 +206,12 @@ local function key_less(a,b)  -- code point order of Python's sort_keys (byte or
   end
   return #a<#b
 end
+local key_less=nil
+do
+  local locale=os.setlocale(nil,'collate')
+  if locale=='C' or locale=='POSIX' then key_less=nil else key_less=key_less_lua end
+end
+M.key_less=key_less_lua
 
 local function kind(t)
   local mt=getmetatable(t)
@@ -248,7 +258,7 @@ local function encode_value(v,out,depth)
         if type(key)~='string' then error('canon: object key is not a string') end
         keys[#keys+1]=key
       end
-      table.sort(keys,key_less)
+      if key_less then table.sort(keys,key_less) else table.sort(keys) end
       out[#out+1]='{'
       for i,key in ipairs(keys) do
         if i>1 then out[#out+1]=',' end

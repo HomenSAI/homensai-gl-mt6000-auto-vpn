@@ -191,7 +191,7 @@ class History:
     def __init__(self,directory,limit=10000,detail_days=None):
         from retention_settings import configured_days
         self.detail_days=configured_days() if detail_days is None else detail_days
-        if type(self.detail_days) is not int or not 1<=self.detail_days<=7:raise HistoryError("HISTORY-RETENTION")
+        if type(self.detail_days) is not int or not 1<=self.detail_days<=30:raise HistoryError("HISTORY-RETENTION")  # retention_settings.MAX_DAYS
         if type(limit) is not int or not 1<=limit<=10000:raise HistoryError('HISTORY-LIMIT')
         self.path=Path(directory)/'native-history.json'
         self.backup=self.path.with_name('native-history.backup.json')

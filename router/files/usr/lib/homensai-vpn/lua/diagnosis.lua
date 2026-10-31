@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- diagnosis.lua: failure_diagnosis.py for the Lua supervisor (2.0.0-lua line): fresh, scoped_samples,
 -- resolve_pair, diagnose. Pure functions over the decoded status.json; results equal the Python dicts.
 local canon=require('canon')
@@ -45,7 +45,72 @@ end
 
 local function boxed(x,like) if canon.is_float(like) then return canon.float(x) end;return x end
 
-function M.resolve_pair(status,settings,now,max_age,settle_seconds)
+-- A primary the vendor keeps rebuilding (MT3000 soak 31.10.2026: netifd set wgclient1 up again every ~2 min
+-- after REKEY-GIVEUP / endpoint "Try again") gets a new vendor generation on every re-setup, so VENDOR-SETTLING
+-- and PROFILE-IDENTITY-CHANGED never ended and its generation-scoped failure streak restarted each time: Auto
+-- stayed BLOCKED with a healthy reserve. Short windows keep that safety meaning; a source observed only
+-- unhealthy for a whole bounded window is unstable and no longer blocks a verified reserve. (failure_diagnosis.py)
+M.SOURCE_UNSTABLE='PAIR-SOURCE-UNSTABLE'
+M.UNSTABLE_CODES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['ROUTE-001']=true,['CHECK-001']=true,
+  ['VENDOR-IDENTITY-CHANGED']=true,['VENDOR-IDENTITY-UNKNOWN']=true}
+local PROBE_FAILURES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true}
+
+-- Three vendor settle periods, never shorter than 120 s nor longer than 900 s.
+function M.flap_window(settle_seconds)
+  if not finite(settle_seconds) then return nil end
+  local s=num(settle_seconds);s=s<0 and -math.floor(-s) or math.floor(s)
+  return math.min(900,math.max(120,3*s))
+end
+
+-- The configured source tunnel was observed only unhealthy, continuously, for the whole window. Samples of
+-- every vendor generation of the same tunnel count (a rebuild does not reset this evidence): at least three
+-- observations, at least one real probe failure, no gap longer than max_age, the newest fresh, the oldest at
+-- least window old, no healthy or unverified (CHECK-LIMIT/None) observation.
+function M.source_unstable(samples,row,anchor,now,max_age,window)
+  if not canon.is_array(samples) or not canon.is_object(row) or type(anchor)~='string' or not finite(now)
+     or not finite(max_age) or num(max_age)<=0 or not finite(window) or num(window)<=0 then return false end
+  local identifier,interface=get(row,'id'),get(row,'interface')
+  if type(identifier)~='string' or type(interface)~='string' then return false end
+  now,max_age,window=num(now),num(max_age),num(window)
+  local seen,stamps={},{}
+  for _,point in ipairs(samples) do
+    if canon.is_object(point) and get(point,'id')==identifier and get(point,'interface')==interface
+       and get(point,'vendor_tunnel_id')==anchor and finite(get(point,'time')) then
+      local stamp=num(point.time)
+      if 0<=now-stamp and now-stamp<=window+max_age then
+        local code=get(point,'code');if code==nil then code=NULL end
+        if seen[stamp]~=nil and not eq(seen[stamp],code) then return false end
+        if seen[stamp]==nil then stamps[#stamps+1]=stamp end
+        seen[stamp]=code
+      end
+    end
+  end
+  table.sort(stamps,function(a,b) return a>b end)
+  if #stamps<3 or now-stamps[1]>max_age or now-stamps[#stamps]<window then return false end
+  local probe=false
+  for index,stamp in ipairs(stamps) do
+    if index>1 and stamps[index-1]-stamp>max_age then return false end
+    local code=seen[stamp]
+    if type(code)~='string' or not M.UNSTABLE_CODES[code] then return false end
+    if PROBE_FAILURES[code] then probe=true end
+  end
+  return probe
+end
+
+-- The source row when its tunnel group is unstable (see source_unstable), else nil.
+function M.unstable_source(status,group,by_id,anchor,now,max_age,window)
+  local identifier,active=group.current_profile,group.active_profiles
+  if type(identifier)~='string' or not (canon.is_array(active) and #active==1 and active[1]==identifier)
+     or group.protocol~=string.match(anchor,'^([^:]*):') then return nil end
+  local row=by_id[identifier]
+  if identity.tunnel_identity(row)~=anchor or not fresh(get(row,'time'),now,max_age) then return nil end
+  if M.source_unstable(get(status,'samples'),row,anchor,now,max_age,window) then return row end
+  return nil
+end
+
+-- source_window (the Auto diagnostic only): a source still settling or rebound, but observed only unhealthy
+-- for that whole window, no longer blocks a verified reserve (PAIR-SOURCE-UNSTABLE).
+function M.resolve_pair(status,settings,now,max_age,settle_seconds,source_window)
   local coordination=canon.object({version=1,time=finite(now) and now or NULL,state='UNKNOWN',code='VENDOR-IDENTITY-UNKNOWN',
     source_tunnel=NULL,target_tunnel=NULL,transition=NULL,vendor_reason='UNOBSERVED',can_apply=false,vendor_attempts_exhausted=NULL,
     vendor_settle_seconds=settle_seconds,settle_until=NULL,scope='application planning gate; current configured tunnel identity only'})
@@ -90,33 +155,64 @@ function M.resolve_pair(status,settings,now,max_age,settle_seconds)
     if type(id)~='string' or by_tunnel[id] then return result end
     by_tunnel[id]=group
   end
-  local settle_until,settle_box=0,nil
+  local settle_until,settle_box,unstable=0,nil,nil
+  if source_window~=nil and source_window~=NULL and (not finite(source_window) or num(source_window)<=0) then source_window=nil end
+  if source_window==NULL then source_window=nil end
   for i,role in ipairs({'source','target'}) do
     local anchor=anchors[i]
     local group=by_tunnel[anchor]
     if not group or not py.truthy(group) or not fresh(get(group,'time'),now,max_age) then return result end
-    if group.state=='PENDING' then return refuse('VENDOR-SETTLING','HOLD') end
-    if group.state~='SETTLED' then return result end
-    local identifier,active=group.current_profile,group.active_profiles
-    if type(identifier)~='string' or not (canon.is_array(active) and #active==1 and active[1]==identifier) or group.protocol~=proto(anchor) then return result end
-    local row=by_id[identifier]
-    local id=identity.profile_identity(row)
-    if not id or id.vendor_tunnel_id~=anchor then return refuse('PROFILE-IDENTITY-CHANGED') end
-    if not eq(id.vendor_generation,get(group,'generation')) then return refuse('PROFILE-IDENTITY-CHANGED') end
-    if row.vendor_state=='PENDING' then return refuse('VENDOR-SETTLING','HOLD') end
-    if row.vendor_state~='SETTLED' then return result end
-    if not fresh(get(row,'time'),now,max_age) then return refuse('OBSERVATION-STALE') end
-    local changed=get(group,'changed_at')
-    if not finite(changed) or not (0<=num(changed) and num(changed)<=num(now)) or not eq(get(row,'vendor_changed_at'),changed)
-       or not py.is_int(group.stable_samples) or group.stable_samples<2 then return result end
-    local candidate=num(changed)+num(settle_seconds)
-    if candidate>settle_until then settle_until=candidate;settle_box=boxed(candidate,canon.is_float(changed) and changed or settle_seconds) end
-    result[role]=row
+    -- Only the source, only for the Auto diagnostic, only after the whole bounded window.
+    local tolerant=role=='source' and source_window~=nil
+    local function unstable_now() if tolerant then return M.unstable_source(status,group,by_id,anchor,now,max_age,source_window) end;return nil end
+    local skip=false
+    if group.state=='PENDING' then
+      unstable=unstable_now()
+      if unstable==nil then return refuse('VENDOR-SETTLING','HOLD') end
+      skip=true
+    end
+    if not skip then
+      if group.state~='SETTLED' then return result end
+      local identifier,active=group.current_profile,group.active_profiles
+      if type(identifier)~='string' or not (canon.is_array(active) and #active==1 and active[1]==identifier) or group.protocol~=proto(anchor) then return result end
+      local row=by_id[identifier]
+      local id=identity.profile_identity(row)
+      if not id or id.vendor_tunnel_id~=anchor or not eq(id.vendor_generation,get(group,'generation')) then
+        unstable=unstable_now()
+        if unstable==nil then return refuse('PROFILE-IDENTITY-CHANGED') end
+        skip=true
+      elseif row.vendor_state=='PENDING' then
+        unstable=unstable_now()
+        if unstable==nil then return refuse('VENDOR-SETTLING','HOLD') end
+        skip=true
+      end
+      if not skip then
+        if row.vendor_state~='SETTLED' then return result end
+        if not fresh(get(row,'time'),now,max_age) then return refuse('OBSERVATION-STALE') end
+        local changed=get(group,'changed_at')
+        if not finite(changed) or not (0<=num(changed) and num(changed)<=num(now)) or not eq(get(row,'vendor_changed_at'),changed)
+           or not py.is_int(group.stable_samples) or group.stable_samples<2 then return result end
+        local candidate=num(changed)+num(settle_seconds)
+        if tolerant and num(now)<candidate then
+          unstable=unstable_now()
+          if unstable~=nil then skip=true end
+        end
+        if not skip then
+          if candidate>settle_until then settle_until=candidate;settle_box=boxed(candidate,canon.is_float(changed) and changed or settle_seconds) end
+          result[role]=row
+        end
+      end
+    end
   end
   coordination.settle_until=settle_box or 0
   if num(now)<settle_until then return refuse('VENDOR-SETTLING','HOLD') end
   local uplink=status.uplink_observation
   if canon.is_object(uplink) and uplink.state=='DOWN' and fresh(get(uplink,'time'),now,max_age) then return refuse('UPLINK-LINK-DOWN','HOLD') end
+  if unstable~=nil then
+    result.source=unstable
+    coordination.state='READY';coordination.code=M.SOURCE_UNSTABLE
+    return result
+  end
   coordination.state='READY';coordination.code='CROSS-TUNNEL-READY'
   return result
 end

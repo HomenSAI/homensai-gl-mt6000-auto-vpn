@@ -160,7 +160,8 @@ console.log('PASS: revision-3 five sections, OFF/UNKNOWN display without readine
  assert.strictEqual(speedPanel.parentNode,speedView,'Actual speed controls are primary, not buried among rankings');
  const speedDetails=composed.pages.diagnostics.querySelector('[data-minimum-disclosure="speed-settings"]');
  assert(speedDetails&&!speedDetails.attrs.open&&speedDetails.all().includes(cascade),'Other test/ranking details remain collapsed');
- assert(!composed.pages.diagnostics.querySelector('[data-minimum-disclosure="passed-checks"]'),'Stale environment cannot produce passed-check count');
+ const passedChecks=composed.pages.diagnostics.querySelector('[data-minimum-disclosure="passed-checks"]'),passedText=passedChecks?passedChecks.all().flatMap(n=>n.children.filter(x=>typeof x==='string')):[];
+ assert(!passedText.includes('uci'),'Stale environment cannot produce a passed check');assert(passedText.includes('ubus'),'Parts proven by this fresh status are counted on every page (shared readinessModel)');
  q.minimumApplyRoute(root,{page:'home',subview:'summary'},composed.control);assert.strictEqual(power.parentNode,homePower);assert.strictEqual(action.parentNode,homeAction);
  q.minimumApplyRoute(root,{page:'diagnostics',subview:'recovery'},composed.control);assert.strictEqual(power.parentNode,composed.control.fullPower);assert.strictEqual(action.parentNode,command);
  assert.strictEqual(composed.pages.diagnostics.querySelector('[data-minimum-subview="diagnostics/recovery"]').hidden,false);

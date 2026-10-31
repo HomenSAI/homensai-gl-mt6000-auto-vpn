@@ -1,21 +1,207 @@
-MIT License
+HomenSAI PERSONAL & COMMERCIAL SOURCE LICENSE
+Version 1.0 — 31 October 2026
 
-Copyright (c) 2026 Serhii Khomenko / HomenS.AI — https://homensai.com
+Copyright (c) 2026 Serhii Khomenko. All rights reserved.
+Project and brand: HomenS.AI
+Official website: https://homensai.com
+Commercial licensing contact: info@homensai.com
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+IMPORTANT: THIS IS A PROPRIETARY, SOURCE-AVAILABLE LICENSE, NOT AN OPEN-SOURCE
+LICENSE. PUBLIC ACCESS TO THE SOURCE DOES NOT MEAN PERMISSION TO MODIFY,
+REDISTRIBUTE, SELL, OR USE IT IN A BUSINESS. THIS LICENSE CANNOT REVOKE RIGHTS
+VALIDLY GRANTED IN PREVIOUS MIT-LICENSED RELEASES. SEE SECTIONS 2 AND 10.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. PARTIES, COVERED MATERIAL, AND PRIORITY
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1.1. "Licensor" means Serhii Khomenko, a natural person. HomenS.AI is a
+project/brand name and is not represented here as a separate legal entity.
+
+1.2. "Software" means the original source code, object code, builds, images,
+interfaces, documentation, designs, and other copyright-protected material in
+the HomenS.AI Auto VPN project to the extent the Licensor owns the applicable
+rights and first offers that material under this License.
+
+1.3. "You" means a natural person or legal entity obtaining or using the
+Software. "Commercial Use" includes any use by, for, on behalf of, or for the
+benefit of a company, sole proprietorship, partnership, association, school,
+government body, non-profit organization, employer, client, or other
+organization; any professional, revenue-generating, paid, or business-related
+activity; and operation of a service for other persons or organizations.
+No actual profit or revenue is required for a use to be Commercial Use.
+
+1.4. "Personal Use" means use by a natural person solely for private,
+non-commercial purposes on their own or their household's devices/network,
+without provision of a service to outside users. Ordinary configuration of
+the Software through documented settings is not a modification of its code.
+
+1.5. This License governs only rights the Licensor has authority to grant.
+Separately licensed third-party components and the previously MIT-licensed
+material described in Section 10 retain their own applicable terms. If this
+License conflicts with a mandatory law, that law prevails to the extent
+required. The commercial agreement, if any, governs only rights expressly
+granted by that agreement.
+
+2. EXISTING MIT RIGHTS ARE PRESERVED
+
+2.1. Earlier published versions, copies, and copyrightable material already
+made available under the MIT License remain available under the grants validly
+made for those versions or material. No new condition here retroactively
+terminates, narrows, or adds payment to an existing MIT grant.
+
+2.2. The original MIT text is preserved as LICENSE-MIT-LEGACY. Historical
+release archives, commit history, tags, and their existing terms are not
+rewritten by this License. In particular, the HomenS.AI-owned style, brand,
+logo, and robot materials previously granted MIT rights specifically for
+inclusion in this project keep those historic permissions. The separate
+upstream HomenSAI Style repository is not relicensed here.
+
+2.3. The Licensor offers this License for this and subsequent distributions
+under the new terms, and for new copyrightable contributions or revisions
+first provided under these terms. A recipient entitled to use an earlier
+MIT-licensed copy may continue to do so under MIT, including commercially,
+subject to that license. Merely replacing a license file does not remove
+those earlier rights.
+
+3. FREE PERSONAL-USE PERMISSION
+
+3.1. Subject to compliance with this License, the Licensor grants an
+individual a limited, non-exclusive, worldwide, no-charge, non-transferable
+permission to download, install, run, and examine unmodified Software solely
+for Personal Use. The individual may make copies reasonably necessary for
+their own installations and back-ups, without providing copies to third
+parties, and must preserve all applicable notices.
+
+3.2. The permission does not extend to Commercial Use, redistribution,
+publication of modified versions, incorporation into other products,
+sublicensing, or creating or distributing derivative works. The rights
+necessarily provided by GitHub's terms for viewing and forking a public
+repository within GitHub's service remain unaffected; a GitHub fork by
+itself is not authorization for further exploitation outside those terms.
+
+3.3. This permission is not an authorization to access or interfere with
+someone else's network or systems.
+
+4. COMMERCIAL USE REQUIRES AN INDIVIDUAL PAID AGREEMENT
+
+4.1. Commercial Use is NOT licensed for free under this document.
+Before Commercial Use, You must obtain a separate written commercial
+license from the Licensor, agreeing the scope, installations, users,
+duration, fees, support (if any), and permitted deployment.
+
+4.2. No automatic commercial right is created by downloading, forking,
+receiving a copy, paying an unsolicited sum, displaying an attribution
+notice, or receiving a quotation. Pricing is agreed individually.
+Commercial rights may be refused.
+
+4.3. A commercial license does not, without express separate written
+permission, include source modification, derivative works, redistribution,
+resale, sublicensing, white-labeling, embedding in third-party products,
+or offering the Software as a hosted service.
+
+5. MODIFICATION, COPYING, AND DISTRIBUTION RESTRICTIONS
+
+5.1. Except as expressly allowed in Section 3, under a separate written
+agreement, or by non-waivable law, You may not modify, adapt, translate,
+repackage, port, combine, create derivative works from, redistribute,
+publish, sublicense, sell, lease, provide as a service, or make copies of
+the Software for third parties. You may not remove or circumvent copyright
+or license notices.
+
+5.2. Permission to modify the Software or publish changes must be obtained
+from the Licensor in writing IN ADVANCE. Permission for one contribution,
+device, version, or deployment does not imply permission for others.
+Documented configuration and ordinary use of provided extension points do
+not alone count as modification of the underlying code.
+
+5.3. Nothing in this License is intended to restrict mandatory statutory
+rights of lawful users, such as legally protected back-up, observation,
+interoperability, or other non-waivable exceptions, or independent
+development not infringing the Licensor's rights. Where such rights apply,
+this Section is interpreted subject to them.
+
+6. ATTRIBUTION AND AUTHOR NOTICE
+
+6.1. All permitted copies must retain the following notice unaltered and
+reasonably accessible, together with this License:
+
+    HomenS.AI Auto VPN
+    Original developer and copyright holder: Serhii Khomenko
+    https://homensai.com
+    Copyright (c) 2026 Serhii Khomenko. All rights reserved.
+
+6.2. If the Licensor separately authorizes distribution, a hosted
+deployment, integration, or derivative work, the written permission shall
+specify any additional attribution placement. Unless that permission
+expressly provides otherwise, the above notice must also be prominently
+accessible in the product's About/Credits or comparable interface,
+documentation, and accompanying license notices, with a working hyperlink
+where reasonably possible. Existing in-app developer attribution must not
+be hidden, removed, or misrepresented.
+
+6.3. Attribution alone never substitutes for consent or a paid commercial
+license, and does not imply endorsement, co-authorship, or a partnership.
+
+7. THIRD-PARTY RIGHTS AND BRANDING
+
+7.1. The IBM Plex font files included in the project remain licensed under
+the SIL Open Font License 1.1; preserve their OFL.txt and NOTICE.txt.
+OpenWrt, LuCI, Lua, Python, and any other dependencies remain governed by
+their respective licenses and notices. This License does not relicense,
+override, or limit their independent grants. No GL.iNet firmware is
+provided under this License.
+
+7.2. Third-party files and components retain the applicable original terms
+even if distributed together with the Software. If a file has a more
+specific notice, check it and the related LICENSING.md; this License may
+not be used to remove third-party attributions.
+
+7.3. No trademark, domain, trade name, logo, or endorsement rights are
+granted beyond using the brand and author names as necessary to identify
+the Software and provide required attribution.
+
+8. NO WARRANTY; LIMITED LIABILITY
+
+8.1. THE SOFTWARE IS EXPERIMENTAL AND PROVIDED "AS IS" AND "AS AVAILABLE"
+WITHOUT WARRANTIES, TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+IT CAN INTERRUPT NETWORK CONNECTIVITY, CHANGE ROUTING OR FIREWALL
+SETTINGS, OR RESULT IN LOSS OF SERVICE. IT MUST NOT BE USED FOR SAFETY-
+CRITICAL SYSTEMS.
+
+8.2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSOR IS NOT LIABLE
+FOR INDIRECT OR CONSEQUENTIAL DAMAGES, LOSS OF DATA OR PROFITS, NETWORK
+INTERRUPTION, OR SIMILAR LOSSES. NOTHING IN THIS LICENSE EXCLUDES OR
+RESTRICTS LIABILITY THAT CANNOT LAWFULLY BE EXCLUDED, INCLUDING LIABILITY
+FOR INTENTIONAL MISCONDUCT, GROSS NEGLIGENCE, OR INJURY TO LIFE, BODY,
+OR HEALTH WHERE APPLICABLE, OR MANDATORY CONSUMER RIGHTS.
+
+8.3. The separate DISCLAIMER.md and DISCLAIMER.ru.md describe operating
+risks and the in-app acknowledgement. They do not grant broader usage
+rights than this License.
+
+9. TERMINATION
+
+9.1. Rights under this License terminate upon a material violation,
+subject to applicable mandatory law. On termination, cease uses not
+otherwise authorized and remove unauthorized copies. Rights previously
+validly granted under a separate MIT license or paid agreement are not
+cancelled merely by termination of this License.
+
+9.2. A new revision of this License applies to future distributions only
+unless You separately agree otherwise; changes are not retroactive.
+
+10. GENERAL PROVISIONS
+
+10.1. No assignment or sublicensing is authorized by this License.
+An express permission or commercial agreement must be in writing from
+the Licensor or an authorized representative.
+
+10.2. If a provision is unenforceable, the remaining provisions apply to
+the extent permitted by law. This License is interpreted under German
+law to the extent a choice of law is legally permitted, without removing
+mandatory protection applicable to consumers or other users.
+
+10.3. This License does not compel You to accept new terms as a condition
+of exercising rights already validly granted under MIT or by mandatory law.
+
+10.4. For a commercial license, a modification/distribution permission, or
+other rights not expressly provided here, contact info@homensai.com.

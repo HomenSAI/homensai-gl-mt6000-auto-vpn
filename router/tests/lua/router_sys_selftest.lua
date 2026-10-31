@@ -105,6 +105,24 @@ check('runner_fs',function()
   runner.fs.write_atomic(p,'1');want(sys.read(p)=='1','write_atomic')
   sys.remove(p)
 end)
+-- Power-cut primitive (durable.lua): the fsync of a directory through nixio.open(dir,'r'):sync() is the one nixio
+-- use the PC cannot exercise. /etc is the UBIFS overlay: an fsync of the directory only flushes, it changes nothing.
+check('durable_write_dir_sync_sweep',function()
+  local durable=require('durable')
+  want(durable.have_nixio,'nixio missing')
+  local p=scratch..'/dur-'..sys.unique()..'.json'
+  durable.write(p,'{"a":1}',{sync=true})
+  want(sys.read(p)=='{"a":1}','content')
+  local st=sys.lstat_exact(p);want(st.mode==384,'mode '..tostring(st.mode))
+  want(durable.sync_directory(scratch),'fsync of a tmpfs directory')
+  want(durable.sync_directory('/etc/config'),'fsync of an overlay directory')
+  local leftover=scratch..'/.x.json.dead-1.pending'
+  local f=io.open(leftover,'wb');f:write('x');f:close()
+  want(durable.sweep(scratch,120,os.time())==0,'a fresh .pending is kept')
+  want(durable.sweep(scratch,120,os.time()+1000)==1,'an old .pending is removed')
+  want(not sys.exists(leftover),'gone')
+  sys.remove(p)
+end)
 check('chunk_stdin',function()
   want(sys.chunk('echo_stdin',"print(io.read('*a'))",'abc')=='abc\n','stdin')
 end)
@@ -140,5 +158,21 @@ check('network_read_write_on_copy',function()
   local c=require('uci').cursor(conf,stage)
   want(c:get('network',iface,'disabled')==value,'value in the copy')
   want(sys.read('/etc/config/network')==before,'the real network config is unchanged')
+end)
+-- The live probe I/O (plan item 4) with the router's own nixio and curl, bound to the loopback device: nothing
+-- leaves the router (1.1.1.1/9.9.9.9 are not reachable through lo), but the curl group, its files and marker,
+-- and every nixio socket call (bindtodevice, setblocking, connect, send, recvfrom, poll) really run.
+check('probe_io_on_lo',function()
+  want(sys.probe_capable(),'probe_capable (nixio bindtodevice + '..sys.CURL..')')
+  local started=sys.clock()
+  local answers,data,kind=sys.probe_io('lo',{{address='1.1.1.1',hostname='one.one.one.one',path='/cdn-cgi/trace',seconds=2},
+    {address='8.8.8.8',hostname='dns.google',path='/resolve?name=example.com&type=A',seconds=2}},
+    {host='9.9.9.9',port=53,packet=string.rep('\0',12),seconds=1,accept=function() return true end})
+  want(#answers==2,'two answers')
+  for i=1,2 do want(answers[i].response==nil and type(answers[i].kind)=='string','answer '..i..' must fail on lo, got '..tostring(answers[i].kind)) end
+  want(data==nil and type(kind)=='string','dns on lo: '..tostring(kind))
+  want(sys.clock()-started<6,'bounded time')
+  local left=sys.dir(scratch) or {}
+  for _,name in ipairs(left) do want(not string.find(name,'^%.probe%-'),'probe file left: '..name) end
 end)
 print(canon.encode(canon.object({ok=all,checks=canon.object(checks)})))

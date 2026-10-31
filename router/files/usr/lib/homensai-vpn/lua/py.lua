@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- py.lua: the few Python value semantics the backend port needs over canon values (2.0.0-lua line).
 --   isnone(v)        v is None (missing key or JSON null)
 --   truthy(v)        bool(v): None/False/0/0.0/''/[]/{} are false
