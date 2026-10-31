@@ -204,7 +204,8 @@ def assess(evidence, now=None):
             refuse('MONITOR-ONLY-INVALID')
         if settings.get('native_enabled') != '0':
             refuse('NATIVE-CONTROLLER-STATE-UNVERIFIED')
-        if settings.get('terms_version') != '1':
+        from agent import TERMS_VERSION
+        if settings.get('terms_version') != TERMS_VERSION:
             refuse('TERMS-NOT-ACCEPTED')
         if policy.get('lan') != 'br-lan':
             refuse('LAN-LAYOUT-UNSUPPORTED')

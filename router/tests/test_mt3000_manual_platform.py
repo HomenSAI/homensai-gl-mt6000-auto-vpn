@@ -41,7 +41,7 @@ def fixture():
         ],
         'settings': {'plan_source': profiles[0]['id'], 'plan_target': profiles[1]['id'],
                      'native_order_direction': 'first', 'monitor_only': '0',
-                     'native_enabled': '0', 'terms_version': '1'},
+                     'native_enabled': '0', 'terms_version': __import__('agent').TERMS_VERSION},
         'ipv6': '0', 'lan': 'br-lan', 'firewall_defaults': [{}],
     }
     metadata = {'profiles': copy.deepcopy(profiles)}

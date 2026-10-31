@@ -444,9 +444,9 @@ def set_disabled(state, interface, value, revision=None):
 
 def preflight(backend, settings):
     import native_switch as n
-    from agent import inventory
+    from agent import inventory, TERMS_VERSION
     from preparation_status import snapshot
-    if settings.get('pair_auto_mode') != MODE or settings.get('terms_version') != '1':
+    if settings.get('pair_auto_mode') != MODE or settings.get('terms_version') != TERMS_VERSION:
         raise ValueError('PAIR-MODE-NOT-CONFIGURED')
     if settings.get('native_session_loss') != '1':
         raise ValueError('SESSION-LOSS-NOT-ACCEPTED')

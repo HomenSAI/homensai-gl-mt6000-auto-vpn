@@ -99,7 +99,7 @@ class ReconfigurationTests(unittest.TestCase):
 
     def test_preparation_reports_the_exact_failed_check_before_starting_any_profiles(self):
         import preparation_status
-        settings={'pair_auto_mode':pair.MODE,'terms_version':'1','native_session_loss':'1'}
+        settings={'pair_auto_mode':pair.MODE,'terms_version':__import__('agent').TERMS_VERSION,'native_session_loss':'1'}
         for code in ('PREP-HNAT-CONFIG','PREP-SFE-AUTOLOAD','PREP-WGCLIENT1-AUTOSTART'):
             def read(path, **kwargs):return 'glinet,mt3000-snand' if path.name=='board_name' else '4.11.0'
             with patch.object(Path,'read_text',read), patch.object(preparation_status,'snapshot',return_value={'state':'incomplete','checks':[{'code':code,'state':'fail'}]}), patch.object(native,'command') as command:
