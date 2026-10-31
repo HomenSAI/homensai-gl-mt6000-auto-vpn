@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """OpenWrt monitor alpha. No route/firewall/VPN write commands exist here."""
 import argparse
 import base64
@@ -31,7 +31,7 @@ INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
 SAFE = re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 SO_MARK = getattr(socket, 'SO_MARK', 36)
 SO_BINDTODEVICE = getattr(socket, 'SO_BINDTODEVICE', 25)
-TERMS_VERSION = '1'  # bump when DISCLAIMER.md changes; the UI gate and the controller both compare it
+TERMS_VERSION = '2'  # operational terms v2; regenerate immutable LuCI assets before packaging
 STOP = False
 EXIT_SEEN = {}
 EXIT_CONTEXT = local()

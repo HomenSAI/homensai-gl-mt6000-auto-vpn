@@ -6,6 +6,8 @@ HomenS.AI Auto VPN watches two existing OpenVPN or WireGuard connections on a GL
 
 Author and copyright holder: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
+**Licensing:** free for private, non-commercial use of the unmodified software; business/organizational use requires a separate paid written license. Modification or redistribution requires prior written consent. Previous MIT grants remain valid for historical MIT-licensed copies. See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
+
 The documented continuous Auto setup is the dedicated **GL-MT3000 with GL.iNet firmware 4.11.0**. Continuous mode on the MT6000 has not been accepted. The package architecture `all` does not qualify other hardware or firmware.
 
 Choose an explicitly named version from [GitHub Releases](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases). Download its `.ipk` and checksum from that release. The router-test-kit is in the source archive for the same tag. Follow the [installation guide](docs/INSTALL.en.md): identify the intended router, verify an encrypted backup, stop Auto before upgrading, check the package hash, install the application and verify it. The `.ipk` is an application package, not router firmware. First-run terms are accepted by the person using it.
@@ -20,4 +22,4 @@ The response shown for each VPN is measured one way, chosen in Settings and shar
 
 [Current guide](docs/CURRENT-STATE.en.md) · [Built-in Help](docs/BUILTIN-HELP.en.md) · [Training](docs/TRAINING.en.md) · [Error codes and remedies](docs/ERROR_CODES.md) · [Documentation index](docs/DOCUMENTATION-INDEX.md)
 
-Release history is in the [release notes](releases) and dated verification reports. [MIT License](LICENSE) · [Terms](DISCLAIMER.md).
+Release history is in the [release notes](releases) and dated verification reports. [HomenSAI Personal & Commercial Source License v1.0](LICENSE) · [Licensing guide](LICENSING.md) · [Commercial licensing](COMMERCIAL-LICENSING.md) · [Terms](DISCLAIMER.md).
