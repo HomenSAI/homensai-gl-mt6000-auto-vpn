@@ -151,3 +151,31 @@ Other resources:
 - state files in RAM (/var/run/homensai-vpn): 0.6 MB;
 - data on flash (/etc/homensai-vpn): 4.1 MB, of which the history takes 2 × 1.27 MB;
 - the flash overlay partition is 18% used (24 of 139 MB).
+
+## 6. Lua line: the Auto supervisor in Lua (2.0.0-alpha3/alpha4, 31 Oct 2026)
+
+Same MT3000 and channels. Compared with Python 1.0.0-beta13. The Auto supervisor runs in Lua 5.1 (`option lua_auto '1'`); monitoring and the page stay in Python.
+
+| | Python (beta13) | Lua (alpha3) |
+|---|---|---|
+| Idle Auto, CPU (240 s window) | 55.7 % of a core | **22.5 %** (alpha3) → **15.7 %** (alpha6: 12.4 % itself + 3.3 % child processes) |
+| Auto, memory (RSS) | 40.6 MB | **12.1 MB** (alpha3) → **9.1 MB** (alpha6) |
+| Manual button: traffic on the new channel | 4.1 s | **2.6 s** (1.9–3.6), 6 of 6 |
+| Manual button: done | 5.5 s | **4.0 s** (3.3–4.9) |
+
+Automatic faults (150 s fault of the primary, probe level unchanged), Lua alpha3:
+
+| Fault | Detected | Switch started | Reserve confirmed | Back on the primary |
+|---|---|---|---|---|
+| 1 | 41 s | 76 s | 97 s | 216 s |
+| 2 | 13 s | 44 s | 65 s | 211 s |
+
+Resilience (alpha4): `kill -9` of the Lua process during APPLYING — procd restarted it after 5 s, the journal was rolled back 9.5 s after the kill (SUPERVISOR-RECOVERY), the pair cleanup finished and the LAN guard was removed. Auto is off afterwards — by design, as in Python (a restarted supervisor never resumes the intent). Stop during APPLYING (alpha6): the switch was rolled back after 5 s, the cleanup finished, Auto stopped, the LAN guard was removed, the Lua process was not restarted.
+
+Where Lua's CPU went (alpha5 profiler, 60 s): ~40 % parsing the monitor's `status.json` (230 KB every 10.5 s, the exact Lua parser takes 360 ms, and it ran twice). alpha5 parses once per file version, alpha6 builds only the 7 fields the supervisor reads (170 ms). The rest: the GL process check in `/proc` (~9 %), JSON encoding and Python number format (~10 %), the kernel rule proof (~8 %). The next step is plan item 8 (monitor and Auto in one process, no file between them).
+
+Monitor in Lua (items 2–3, alpha9, same conditions: level 1, a probe every 60 s): CPU 3.4 % of a core against 4.6 % for the Python monitor, memory 8 MB against ~37 MB, `status` answer 0.09 s against 0.14 s. Both services in Lua together: ~22 MB against ~78 MB for the two Python services. Until the buttons move to Lua (item 4) they go through `agent.py`, so a manual switch is slower: done after 6.0 s (4.0 s with the Python monitor).
+
+Item 4, first step (alpha10–11, both services in Lua): the manual click request is answered by the Lua monitor in 0.04 s; traffic on the new channel after 2.7–2.9 s, done after 5.0–5.3 s (3+3). In the hold after a manual switch the Lua supervisor uses 15.6 % of a core (alpha10: 37.6 %, every re-check of the held channel started Python). Both services in Lua together at idle: about 19 % of a core and ~20 MB against ~60 % and ~78 MB for the two Python services.
+
+What the first router runs found (and the PC tests with a fake system layer could not): quotes in the LAN guard release job, nixio argument forms (modes as strings, open flags), no `stat` command, the stdin of the in-process network write script. All fixed; a router self-test of the system layer (17 checks) now runs before Lua is enabled.

@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '1.0.0-beta13-1'
+VERSION = '2.0.0-alpha11-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 

@@ -29,6 +29,14 @@ function M.float(x)
   return setmetatable({value=x},FLOAT)
 end
 function M.is_float(v) return type(v)=='table' and getmetatable(v)==FLOAT end
+-- Plain Lua values for modules that do not care about float/int typing (monitor): floats become numbers.
+function M.plain(v)
+  if M.is_float(v) then return v.value end
+  if type(v)~='table' or v==NULL then return v end
+  local out={}
+  for k,item in pairs(v) do out[k]=M.plain(item) end
+  return setmetatable(out,getmetatable(v))
+end
 function M.is_array(v) return type(v)=='table' and getmetatable(v)==ARRAY end
 function M.is_object(v) return type(v)=='table' and getmetatable(v)==OBJECT end
 -- Numeric value of a Python int or float; nil for anything else (bool is not a number, as in Python checks).
@@ -78,7 +86,24 @@ local function shortest(x)
   end
   error('canon: no round-trip digits')
 end
+-- The shortest-repr search costs up to 17 format/parse rounds per number; the monitor re-encodes thousands of
+-- unchanged numbers every pass (measured on the MT3000: ~80 % of the Lua monitor's CPU). The text of a number
+-- never changes, so it is kept; the table is emptied when it grows past REPR_CACHE_MAX entries. Zero is not
+-- cached (0.0 and -0.0 are one table key).
+local repr_cache,repr_count={},0
+M.REPR_CACHE_MAX=50000
+local repr_float
 function M.repr_float(x)
+  local cached=repr_cache[x]
+  if cached then return cached end
+  local text=repr_float(x)
+  if x~=0 then
+    if repr_count>=M.REPR_CACHE_MAX then repr_cache,repr_count={},0 end
+    repr_cache[x]=text;repr_count=repr_count+1
+  end
+  return text
+end
+repr_float=function(x)
   if x~=x or x==math.huge or x==-math.huge then error('canon: float is not finite') end
   if x==0 then return (1/x<0) and '-0.0' or '0.0' end
   local sign='';if x<0 then sign='-';x=-x end
@@ -362,6 +387,77 @@ parse_value=function(s,i,depth)
   return parse_number(s,i)
 end
 
+-- skip_value(s,i): the index after one JSON value, scanned structurally (strings with their escapes, nesting)
+-- without building it. Used for the top-level fields a reader never looks at.
+local skip_value
+skip_value=function(s,i)
+  i=skip(s,i)
+  local c=string.sub(s,i,i)
+  if c=='"' then
+    local j=i+1
+    while true do
+      local k=string.find(s,'["\\]',j)
+      if not k then fail(i,'unterminated string') end
+      if string.sub(s,k,k)=='"' then return k+1 end
+      j=k+2
+    end
+  elseif c=='{' or c=='[' then
+    local depth,j=0,i
+    while true do
+      local k=string.find(s,'[%[%]{}"]',j)
+      if not k then fail(i,'unterminated container') end
+      local d=string.sub(s,k,k)
+      if d=='"' then j=skip_value(s,k)
+      else
+        if d=='{' or d=='[' then depth=depth+1 else depth=depth-1 end
+        if depth>64 then fail(k,'nesting limit') end
+        j=k+1
+        if depth==0 then return j end
+      end
+    end
+  end
+  local _,j=parse_value(s,i,0)
+  return j
+end
+
+-- decode_keys(text, keys): decode() of a top-level object, keeping only the fields named in `keys` (a set);
+-- the others are skipped structurally. The monitor's status.json is 205 KB, of which the supervisor reads ~30 KB.
+function M.decode_keys(text,keys)
+  if type(text)~='string' then error('canon: text expected',0) end
+  if string.sub(text,1,3)=='\239\187\191' then fail(1,'unexpected UTF-8 BOM') end
+  if not M.valid_utf8(text) then fail(1,'invalid UTF-8') end
+  local s=text
+  local i=skip(s,1)
+  if string.sub(s,i,i)~='{' then fail(i,'expected object') end
+  local obj,seen={},{}
+  i=skip(s,i+1)
+  if string.sub(s,i,i)=='}' then i=i+1
+  else
+    while true do
+      if string.sub(s,i,i)~='"' then fail(i,'expected property name') end
+      local key;key,i=parse_string(s,i)
+      i=skip(s,i)
+      if string.sub(s,i,i)~=':' then fail(i,'expected colon') end
+      if seen[key] then fail(i,'duplicate field') end
+      seen[key]=true
+      if keys[key] then
+        local value;value,i=parse_value(s,i+1,1)
+        obj[key]=value
+      else
+        i=skip_value(s,i+1)
+      end
+      i=skip(s,i)
+      local d=string.sub(s,i,i)
+      if d=='}' then i=i+1;break end
+      if d~=',' then fail(i,'expected , or }') end
+      i=skip(s,i+1)
+    end
+  end
+  i=skip(s,i)
+  if i<=#s then fail(i,'extra data') end
+  return M.object(obj)
+end
+
 -- agent.read_json() of the file text (json.loads with its hooks); errors are raised as strings.
 function M.decode(text)
   if type(text)~='string' then error('canon: text expected',0) end
@@ -431,17 +527,27 @@ local function pipe_sha256(text)
 end
 
 local provider,provider_name
+-- The supervisor re-verifies the same small files (journal, pair state) on every pass; without nixio.crypto
+-- each digest is a process. A bounded memo of small texts (pure function: same text, same digest).
+local memo,memo_count={},0
+local MEMO_TEXT,MEMO_ENTRIES=16384,64
 function M.sha256(text)
   if not provider then
     provider=nixio_sha256()
     provider_name=provider and 'nixio.crypto' or 'sha256sum'
     provider=provider or pipe_sha256
   end
-  return provider(text)
+  if #text>MEMO_TEXT then return provider(text) end
+  local hit=memo[text]
+  if hit then return hit end
+  hit=provider(text)
+  if memo_count>=MEMO_ENTRIES then memo={};memo_count=0 end
+  memo[text]=hit;memo_count=memo_count+1
+  return hit
 end
 function M.sha256_backend() M.sha256('');return provider_name end
 -- Tests and the dry run may pin a provider (e.g. Python's hashlib result checked separately).
-function M.set_sha256(fn,name) provider,provider_name=fn,name or 'custom' end
+function M.set_sha256(fn,name) provider,provider_name=fn,name or 'custom';memo={};memo_count=0 end
 
 -- native_switch.digest(value)
 function M.digest(value) return M.sha256(M.encode(value)) end

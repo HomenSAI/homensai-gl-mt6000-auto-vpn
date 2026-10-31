@@ -4753,6 +4753,30 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **Action:** The switch is undone by the usual rules; if it repeats, send the code to the developer.
 
+## LUA-AUTO-FALLBACK
+
+Auto на Lua передал работу Python / Lua Auto handed over to Python
+
+**RU:** Супервизор Auto на Lua трижды за 10 минут остановился из-за внутренней ошибки и заменил себя обычным супервизором на Python. Каждый раз журнал переключения восстанавливался при перезапуске; Auto продолжает работать на Python до перезапуска службы.
+
+**EN:** The Lua Auto supervisor stopped with an internal error three times within 10 minutes, so it replaced itself with the usual Python supervisor. Each time the switch journal was put right on restart; Auto keeps working on Python until the service is restarted.
+
+**Что делать:** Выключите супервизор Lua (option lua_auto 0) и отправьте код и файл /var/run/homensai-vpn/lua-auto-fallback.json разработчику.
+
+**Action:** Turn the Lua supervisor off (option lua_auto 0) and send the code and /var/run/homensai-vpn/lua-auto-fallback.json to the developer.
+
+## BRIDGE-REQUEST-INVALID
+
+Мост проверки Lua отклонил запрос / Lua probe bridge refused the request
+
+**RU:** Временный мост, через который супервизор Auto на Lua запускает живую проверку канала в Python, получил недопустимый файл запроса. Проверка не выполнялась, ничего не изменено; переключение или возврат ждут следующего прохода.
+
+**EN:** The temporary bridge that lets the Lua Auto supervisor run a live channel probe in Python got a request file it does not accept. No probe ran and nothing was changed; the switch or return waits for the next pass.
+
+**Что делать:** Если повторяется, выключите супервизор Lua (option lua_auto 0) и сообщите код разработчику.
+
+**Action:** If it repeats, turn the Lua supervisor off (option lua_auto 0) and send the code to the developer.
+
 ## RPC-NONFINITE-NUMBER
 
 Неверное число / Invalid number

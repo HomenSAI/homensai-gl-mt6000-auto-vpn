@@ -1,12 +1,46 @@
 #!/bin/sh
 # HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
-# Read-only page polls and the queue/save buttons (manual click, Start/Stop, failure test, probe/response
-# settings) are answered by the running monitor
-# (status.sock) through a light client (python3 -I -S, no application imports). Every other call,
-# and any failure of that path, runs agent.py exactly as before.
+# The page keeps calling the rpcd object 'homensai-vpn' (ACL unchanged); this dispatcher picks who answers.
+# Lua monitor (option lua_monitor '1', marker /var/run/homensai-vpn/lua-monitor.ready present): the read polls
+# and setup_probe/setup_response/setup_stats/pair_manual go to the Lua monitor's ubus object 'homensai-vpn-lua' through
+# two RAM files (request in, canonical JSON reply out) - no Python. When Lua answers {"fallback":true} (it cannot
+# decide a guard without waiting) or its object is missing, agent.py answers with the same request bytes.
+# Python monitor: read-only page polls and the queue/save buttons are answered by the running monitor
+# (status.sock) through a light client (python3 -I -S, no application imports).
+# Every other call, and any failure of these paths, runs agent.py exactly as before.
+LUA_READY=/var/run/homensai-vpn/lua-monitor.ready
 case "$1:$2:$#" in
-    call:status:2|call:events:2|call:history:2|call:auto_live:2|call:pair_manual:2|\
-    call:native_start:2|call:native_stop:2|call:fault_start:2|call:fault_cancel:2|call:setup_probe:2|call:setup_response:2|call:setup_stats:2)
+    call:status:2|call:events:2|call:history:2|call:auto_live:2|call:inventory:2|\
+    call:setup_probe:2|call:setup_response:2|call:setup_stats:2|call:pair_manual:2)
+        if [ -f "$LUA_READY" ] && req=$(mktemp /var/run/homensai-vpn/rpc-in.XXXXXX 2>/dev/null); then
+            out=$(mktemp /var/run/homensai-vpn/rpc-out.XXXXXX 2>/dev/null) || out=
+            head -c 65537 >"$req"
+            if [ -n "$out" ]; then
+                answer=$(ubus -t 15 call homensai-vpn-lua rpc "{\"method\":\"$2\",\"request_file\":\"$req\",\"reply_file\":\"$out\"}" 2>/dev/null)
+                rc=$?
+                case "$rc:$answer" in
+                    0:*'"ok": true'*|0:*'"ok":true'*)
+                        cat "$out"; rm -f "$req" "$out"; exit 0 ;;
+                    0:*'"fallback": true'*|0:*'"fallback":true'*|4:*) ;;
+                    *)
+                        case "$2" in
+                            setup_*) printf '{"saved":false,"code":"SETUP-SAVE-UNCONFIRMED"}\n'; rm -f "$req" "$out"; exit 0 ;;
+                        esac ;;
+                esac
+                rm -f "$out"
+            fi
+            /usr/bin/python3 /usr/lib/homensai-vpn/agent.py "$@" <"$req"
+            rc=$?; rm -f "$req"; exit $rc
+        fi
+        case "$2" in
+            inventory) ;;
+            *)
+                [ -S /var/run/homensai-vpn/status.sock ] &&
+                    exec /usr/bin/python3 -I -S /usr/lib/homensai-vpn/status_client.py "$2"
+                ;;
+        esac
+        ;;
+    call:pair_manual:2|call:native_start:2|call:native_stop:2|call:fault_start:2|call:fault_cancel:2)
         [ -S /var/run/homensai-vpn/status.sock ] &&
             exec /usr/bin/python3 -I -S /usr/lib/homensai-vpn/status_client.py "$2"
         ;;

@@ -134,6 +134,14 @@ function M.fs.read(path)
   local text=f:read('*a');f:close()
   return text
 end
+-- key(path): (inode, size, mtime, ctime) for caches of unchanged files; nil without nixio (no caching)
+function M.fs.key(path)
+  local ok,fs=pcall(require,'nixio.fs')
+  if not (ok and type(fs)=='table' and fs.lstat) then return nil end
+  local st=fs.lstat(path)
+  if not st then return 'absent' end
+  return table.concat({tostring(st.type),tostring(st.ino),tostring(st.size),tostring(st.mtime),tostring(st.ctime)},':')
+end
 -- A symlink, a non-file or more than 1 MB is refused (journal_read). Without nixio only the size is known;
 -- the directory is root-only (0700) and rename() never follows a symlink at the destination.
 function M.fs.unsafe(path)

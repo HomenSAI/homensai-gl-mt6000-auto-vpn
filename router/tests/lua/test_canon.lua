@@ -61,4 +61,17 @@ t.test('unsafe runtime directories are refused',function()
   end
 end)
 
+t.test('repr_float: cached texts equal fresh ones, zero signs stay apart, the cache is bounded',function()
+  local xs={0.1,1/3,1793405535.045466,40.0,-2.5,1e22,5e-324,2^70,123.456,-0.0001}
+  local first={}
+  for i,x in ipairs(xs) do first[i]=json.repr_float(x) end
+  for i,x in ipairs(xs) do t.eq(json.repr_float(x),first[i],'cached '..first[i]) end
+  local zero=tonumber('0')
+  t.eq(json.repr_float(zero),'0.0');t.eq(json.repr_float(-zero),'-0.0');t.eq(json.repr_float(zero),'0.0')
+  local max=json.REPR_CACHE_MAX;json.REPR_CACHE_MAX=5
+  for i=1,20 do t.eq(json.repr_float(i+0.5),tostring(i)..'.5') end
+  json.REPR_CACHE_MAX=max
+  t.eq(json.repr_float(0.1),'0.1')
+end)
+
 t.run()
