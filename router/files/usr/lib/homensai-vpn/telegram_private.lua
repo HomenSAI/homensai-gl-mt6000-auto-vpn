@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- Root-only pipe, never a public RPC result. Read credentials/config atomically.
 local c=require('uci').cursor()
 local json=require('cjson')

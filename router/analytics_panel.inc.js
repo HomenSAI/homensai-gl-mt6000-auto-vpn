@@ -1,4 +1,4 @@
-/* HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT */
+/* HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE */
 function cascadePathModel(status,now){
   var fresh=!status.rpc_error&&Number.isFinite(status.time)&&now>=status.time&&now-status.time<=90;
   var selected=fresh?selectedProfile(status,now):null,rows=status.profiles||[];

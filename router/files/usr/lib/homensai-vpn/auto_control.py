@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Serialized UI intent; only the supervisor writes network state.
 
 Resume keeps the existing nonce, certified policy and bounded deadline.

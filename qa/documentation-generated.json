@@ -2,11 +2,11 @@
   "schema": 1,
   "scope": "Generated reference equality, not device or external AI acceptance",
   "inputs": {
-    "DISCLAIMER.md": "df146b4741b61afc184b946056b088fc01dc33021915a3579e9c6a7b247a7184",
-    "DISCLAIMER.ru.md": "f43e01049e62851ae4e63b0e1e04950e1cc2686cadabaa063d199150b5538579",
+    "DISCLAIMER.md": "31a85e7339a026edc4e127ea118c3db9f2849d23f45123882b718d265a853d6b",
+    "DISCLAIMER.ru.md": "3d5b5ac20c9df1e4c78abd60ba7edb0f4f98475e3913ead34ca2ce78ae2170e8",
     "qa/export_documentation.js": "1fa7ed7afcd06a3b9a60f971751109bd0380a799992e3a8d3324b9b05bdfc4de",
     "router/ai_prompt.inc.js": "81e17c50ba5f89b1395c47452b0553fad96c09925347d4d2818c5d88846d80ac",
-    "router/analytics_panel.inc.js": "bdabd12ef66a5b092c88c28e6dd8e790fe3b01c5a5df3af26f3db3836063cc33",
+    "router/analytics_panel.inc.js": "8d2107e1dfa63147ef753be8c91c2340f0cd60360036c526c30daed0e509cb42",
     "router/attribution_panel.inc.js": "dc9f4026fd4656da6e3bf2500602e4fd117571f019258fb6a69db07cc73e2431",
     "router/auto_live_chart.inc.js": "30817089a5ced3c64ab612d119640be2c6f01dbfea3d548a6d1a5d1b70eba54d",
     "router/auto_panel.inc.js": "4551edd19dd8295bed70ad37fc45c9a1ad69c9ffeafcd9a83a4d460ed6ba03f5",
@@ -20,7 +20,7 @@
     "router/error_rows_extra.inc.js": "f637f4d1778363931911be48868bf543d6d9852120368edf553c0d41a39274e1",
     "router/error_table.inc.js": "5ab4c9ade767af4a46a6f7c9655499d8753859799f257dbcc73de8aa438ca7c9",
     "router/fault_panel.inc.js": "6ee9d416241f4da6e7374815b8f4d0aa6b8674c46084c2ab9bb8c5cc2cee52db",
-    "router/files/usr/lib/homensai-vpn/agent.py": "d16302af4df13b9a1a87c0e31cd841b91054f6cd7a3735e4ad64fa44f31559bc",
+    "router/files/usr/lib/homensai-vpn/agent.py": "82cd92d904c8ee905f1804e88e011cdb006255c97870a8f8d314ccd25cd97fa1",
     "router/fool_guard.inc.js": "1288a5e44e6ed75c079461380a767e2a0543362e1de52f0168a161df53f1c335",
     "router/help_panel.inc.js": "547f6f7b722fa6f4db65c503cfbe1102821decaa264efd138ddb3569094cda83",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -63,24 +63,24 @@
     "router/summary_panel.inc.js": "38db35c711f6a02118ba1a948e3a502da93aab29f941221db1530fbf86c1cfb2",
     "router/switch_stats_page.inc.js": "243f816bd5cd55580271317f837e8df14e1e32120349707b1381f3a90ccbf230",
     "router/switch_timing.inc.js": "b4ce3170226a956897d63586b686e594e22c7fa5725a0def3de366d865753839",
-    "router/terms_panel.inc.js": "fadd35b6e8c8a08eafe721bde8e5fcadcca28eda0c82f509eb765b89c970c681",
+    "router/terms_panel.inc.js": "c62628d2c009d41cf113045beebb8e4637ed543ba0a6f0cd0ec014857ed7a252",
     "router/theme_panel.inc.js": "e9ef63f1ac3b1f41edd0ba1f4c20b177ed335c609477c6d1f836c93957da97aa",
     "router/traffic_chart.inc.js": "8b0c33594714f8112dbe4643b5a634ce43ed75d59b49db3eaee67c888bea8c18",
     "router/traffic_panel.inc.js": "6528c9d3659145bd3746ccc4b7976e249f3e10519864fdd354e6a6af04188138",
     "router/ui_logic.inc.js": "6d9809d2e51843f1703f49f7731de1d9b6381fdbc5fe0a3f4f2379850888ab42",
     "router/vendor_diagnostics.inc.js": "340b357f1c87d74e4a2bc1ef9530b32c47826050135fb410fea5ec6e04269f1e",
     "router/viewport_state.inc.js": "42c3bbf8b69d69a0058ac089ed455ff05fc00a73c7adfa80d6ab1280bcdfdb1b",
-    "scripts/sync-documentation.py": "94740b403ba7bd1ba0c5f737a8418e5157fa9a586d3f742f8d2b755e5ec2c700"
+    "scripts/sync-documentation.py": "92600ba3deba754646bca7fc917a9edcef7c05b22d176e64f68d84d59ba6f5cf"
   },
   "outputs": {
     "docs/TRAINING.en.md": "b615a944fff6d00754cc1c34b8a9c6c3e39e86300a4266fed86fd38cd2863961",
     "docs/AI-INSTALL.en.md": "07d74af69c786e834a2c9d66235fd662623524aa1005ea0caf767170cc7273ef",
     "docs/AI-LAN.en.md": "5162804e7f9c13268827913d10763088e57b419487ef6a0836e0acd774250657",
-    "docs/BUILTIN-HELP.en.md": "88478cbdf85b3aa1afc894fb8f78547845d4054718388b9ec15223f37fd258a3",
+    "docs/BUILTIN-HELP.en.md": "9ea7672ab5492cfc8c31c1bc52c8714130611033a9d6ddec6a6291f4c1add5f0",
     "docs/TRAINING.ru.md": "0b3c6c393cafe320436e8b78d6d72f7b0d278a3905aa47b8761d095f6a2ffe25",
     "docs/AI-INSTALL.ru.md": "094d356abf404474e78eaa18851ab45caa3901b0005737ae29ac6c60d0faddb1",
     "docs/AI-LAN.ru.md": "6516e76271e6d4cb4c4c17f802b141c12ec600fa100296abd0aa7f1d412fc2f7",
-    "docs/BUILTIN-HELP.ru.md": "c8fcf93b9d4bc8a31a5539d1c12d4a0c6a43d4c8cee86da55385d6c272290e4b",
+    "docs/BUILTIN-HELP.ru.md": "154e675b24ef113f0c909492764af46c7280716eb825d1695e110995ee2f92de",
     "docs/ERROR_CODES.md": "f5b46a6ee2740b6f51705f97483ea8491ecf1d71b56ae2a5f1939d6728ad5f60"
   }
 }

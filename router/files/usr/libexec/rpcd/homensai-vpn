@@ -1,5 +1,5 @@
 #!/bin/sh
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 # Read-only page polls and the queue/save buttons (manual click, Start/Stop, failure test, probe/response
 # settings) are answered by the running monitor
 # (status.sock) through a light client (python3 -I -S, no application imports). Every other call,

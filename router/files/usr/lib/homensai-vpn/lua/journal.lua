@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- journal.lua: the native transaction journal (/etc/homensai-vpn/native-transaction.json) of the Lua core.
 --
 -- Same file as native_switch.journal_write/journal_read: {"schema":1,"data":<journal>,"sha256":<hex>} where

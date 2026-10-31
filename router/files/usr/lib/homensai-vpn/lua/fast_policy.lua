@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- fast_policy.lua: Lua 5.1 port of fast_policy.py (Lua line 2.0.0-lua, branch feat/lua-core-20261030).
 --
 -- Same three functions, same results and the same Unsupported codes as the Python module:

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- runner.lua: the router side of every external call of instant_switch.lua (agent.command/atomic_json
 -- counterpart). Tests replace the whole table with fakes.
 --

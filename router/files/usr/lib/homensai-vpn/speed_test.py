@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 """Optional bounded HTTPS goodput test. No route, VPN or firewall writes.
 
 Cloudflare's public download/upload API is used without its JS engine or logging

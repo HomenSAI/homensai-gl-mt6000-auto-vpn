@@ -33,7 +33,8 @@ def generate(check=False):
     if step['command']:body+=['```text',step['command'],'```','']
    if topic['custom']:
     custom=topic['custom']
-    if topic['id']=='terms':custom=re.sub(r'\]\((DISCLAIMER(?:\.ru)?\.md)\)',r'](../\1)',custom)
+    # The terms text links root files (disclaimers, license texts); the generated help lives in docs/.
+    if topic['id']=='terms':custom=re.sub(r'\]\((DISCLAIMER(?:\.ru)?\.md|LICENSE(?:-MIT-LEGACY)?|LICENSING\.md|COMMERCIAL-LICENSING\.md)\)',r'](../\1)',custom)
     body+=[custom,'']
    if topic['id']=='ai-prompt':body+=['[Full installation prompt](AI-INSTALL.'+lang+'.md)','']
    body+=['### '+('Diagnostic prompt' if lang=='en' else 'Промпт диагностики'),'','```text',topic['diagnostic'],'```','']

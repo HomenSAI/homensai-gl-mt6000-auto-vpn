@@ -2,7 +2,7 @@
 # HomenSAI Auto VPN test kit, step 3: READ-ONLY post-install verification.
 # Usage: sh 03-verify.sh            (add "wait" to give the monitor up to 90 s to produce a first sample)
 KIT=/tmp/homensai-kit
-EXPECTED_VERSION=1.0.0-beta13
+EXPECTED_VERSION=1.0.0-beta14
 FAIL=0
 ok()  { echo "PASS  $*"; }
 bad() { echo "FAIL  $*"; FAIL=1; }

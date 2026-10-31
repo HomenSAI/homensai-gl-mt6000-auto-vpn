@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- instant_switch.lua: the write stage of native_switch.instant_manual in Lua (2.0.0-lua-alpha1).
 --
 --   lua instant_switch.lua <primary|reserve> [request.json]   one switch, one JSON line, exit 0 / 2

@@ -1,4 +1,4 @@
--- HomenS.AI / Serhii Khomenko / https://homensai.com -- MIT
+-- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- canon.lua: canonical JSON and SHA-256 of the Lua core, byte-identical to Python
 --   native_switch.digest(v)   = sha256(json.dumps(v, sort_keys=True, separators=(',',':')))
 --   native_history.encoded(v) = json.dumps(v, sort_keys=True, separators=(',',':'), allow_nan=False)
