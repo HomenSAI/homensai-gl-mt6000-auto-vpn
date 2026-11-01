@@ -752,6 +752,7 @@ function Monitor:finish_pass(ctx)
   if status.package==nil then status.package=NULL end
   status.native_failover=native
   if native.state==nil then status.native_failover=canon.object({state='SERVICE-STOPPED'}) end
+  pcall(function() return self.booster:note_wait(settings,status.vendor_observation,pair,status.native_failover,runner.wall()) end)
   local okb=pcall(function() return self.booster:observe(settings,measured,pair,status.native_failover.state,runner.wall()) end)
   local okf=pcall(function() self.fast:configure(self:fast_option(),rows,pair,status.native_failover.state) end)
   if not okf then pcall(function() self.fast:close() end) end

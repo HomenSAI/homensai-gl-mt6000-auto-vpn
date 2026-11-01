@@ -24,7 +24,7 @@ import time
 from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, remaining
 
-VERSION = '2.0.0-alpha22'
+VERSION = '2.0.0-alpha23'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -1036,6 +1036,7 @@ def monitor_loop():
             status['candidate_recommendations']=rank_candidates(rows,data.get('servers',[]),samples,status['failover_plan'].get('source',settings.get('plan_source','')),time.time(),max_age=settings.get('interval',10)*3,observation=vendor_observation,settings=settings)
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             try:
+                booster.note_wait(settings,status.get('vendor_observation'),failure_pair,status['native_failover'],time.time())
                 booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time())
                 status['probe_policy']=booster.public(settings,time.time())
                 from probe_policy import response_metric

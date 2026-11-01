@@ -113,4 +113,29 @@ t.test('a dense episode carried from the Python monitor ends by the same rules',
   t.eq(b.state.dense.evidence,{stalled_s=5})
 end)
 
+-- Owner decision 01.11.2026, variant A (same cases as test_probe_policy.FirmwareWait).
+t.test('firmware wait: pair tunnel pending or settling, or Auto waits for the firmware -> 10 s passes, bounded',function()
+  local s={probe_level=1,interval=60}
+  local P2={source='wg',target='ovpn'}
+  local function obs(state,changed,current) return canon.object({groups=canon.array({canon.object({id='wireguard:w',current_profile=current or 'wg',state=state,changed_at=changed})})}) end
+  local stable=obs('SETTLED',100)
+  t.eq(policy.firmware_wait(s,stable,P2,{state='OBSERVING',blockers=canon.array()},1000),false,'settled long ago')
+  t.eq(policy.firmware_wait(s,obs('PENDING',990),P2,{state='OBSERVING'},1000),true,'pending')
+  t.eq(policy.firmware_wait(s,obs('SETTLED',900),P2,{state='OBSERVING'},1000),true,'inside settle 120 s')
+  t.eq(policy.firmware_wait(s,obs('SETTLED',880),P2,{state='OBSERVING'},1000),false,'settle over')
+  t.eq(policy.firmware_wait(s,obs('PENDING',990,'other'),P2,{state='OBSERVING'},1000),false,'not a pair tunnel')
+  t.eq(policy.firmware_wait(s,stable,P2,{state='ARMED'},1000),true,'ARMED')
+  t.eq(policy.firmware_wait(s,stable,P2,{state='BLOCKED',blockers=canon.array({'VENDOR-SETTLING','VENDOR-WORKER-BUSY'})},1000),true)
+  t.eq(policy.firmware_wait(s,stable,P2,{state='BLOCKED',blockers=canon.array({'VENDOR-SETTLING','UPLINK-LINK-DOWN'})},1000),false,'other blocker')
+  t.eq(policy.firmware_wait(s,stable,P2,{state='BLOCKED',blockers=canon.array()},1000),false)
+  local files,io_=memory()
+  local b=policy.Booster('/run','/persist',io_)
+  t.eq(b:interval(s,1000),60)
+  t.eq(b:note_wait(s,obs('PENDING',990),P2,{state='OBSERVING'},1000),true);t.eq(b:interval(s,1000),10)
+  t.eq(b:note_wait(s,obs('PENDING',990),P2,{state='OBSERVING'},1600),true);t.eq(b:interval(s,1601),60,'bounded by WAIT_MAX')
+  t.eq(b:note_wait(s,stable,P2,{state='OBSERVING'},1700),false);t.eq(b:interval(s,1700),60)
+  t.eq(b:interval(canon.object({probe_level=5,interval=10}),1000),10)
+  t.eq(files['/run/probe-boost.json'],nil,'the wait is memory only')
+end)
+
 t.run()

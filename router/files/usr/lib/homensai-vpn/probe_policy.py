@@ -27,6 +27,13 @@ HISTORY_LIMIT=500
 TRANSITIONS=('ARMED','APPLYING','WAIT-CLIENT','RESTORING','COMMITTED')
 WATCHING=('OBSERVING','COMMITTED','DEGRADED-ON-RESERVE')  # Auto is watching: a failure here is real evidence
 HISTORY_NAME='probe-history.json';STATE_NAME='probe-boost.json'
+# Firmware wait (owner decision 01.11.2026, variant A): while the firmware rebuilds a tunnel of the Auto pair the
+# vendor gate (failure_diagnosis.resolve_pair) needs two equal observations and a settle period after the last
+# change. At probe level 1 the second observation came a whole interval later. While a pair tunnel is PENDING or
+# inside its settle period, or Auto waits only for the firmware, passes run every WAIT_INTERVAL seconds; the gate
+# rules are unchanged. At most WAIT_MAX seconds per wait, so a firmware that rebuilds forever does not keep it.
+WAIT_INTERVAL=10;WAIT_MAX=600
+WAIT_BLOCKERS=('VENDOR-SETTLING','PROFILE-IDENTITY-CHANGED','VENDOR-WORKER-BUSY','OBSERVATION-STALE')
 # Dense confirmation after a passive suspicion. Start-to-start spacing of full checks:
 # three failed checks still span at least 2*DENSE_INTERVAL seconds of real outage.
 DENSE_INTERVAL=4;DENSE_MAX=60;DENSE_GOOD=2
@@ -103,6 +110,30 @@ def failing(row):
             or not isinstance(row.get('https_success'),int) or row['https_success']<2)
 
 
+def firmware_wait(settings,observation,pair,native,now):
+    """A tunnel of the Auto pair is PENDING or inside its settle period, or Auto waits only for the firmware."""
+    from observation_freshness import settle_for
+    if isinstance(native,dict):
+        state=native.get('state');blockers=native.get('blockers')
+        if state=='ARMED':return True
+        if (state=='BLOCKED' and isinstance(blockers,list) and blockers
+                and all(isinstance(x,str) and x in WAIT_BLOCKERS for x in blockers)):return True
+    ids=set()
+    if isinstance(pair,dict):
+        for role in ('source','target'):
+            if isinstance(pair.get(role),str):ids.add(pair[role])
+    groups=observation.get('groups') if isinstance(observation,dict) else None
+    if not ids or not isinstance(groups,list):return False
+    settle=settle_for(settings)
+    for group in groups:
+        if not isinstance(group,dict) or group.get('current_profile') not in ids:continue
+        if group.get('state')=='PENDING':return True
+        changed=group.get('changed_at')
+        if (group.get('state')=='SETTLED' and type(changed) in (int,float) and not isinstance(changed,bool)
+                and 0<=now-changed<settle):return True
+    return False
+
+
 class Booster:
     def __init__(self,runtime,persist,atomic_json,read_json):
         self.runtime=runtime;self.persist=persist;self.atomic_json=atomic_json;self.read_json=read_json
@@ -111,6 +142,20 @@ class Booster:
         self.state=state if isinstance(state,dict) and isinstance(state.get('active'),bool) else {'active':False}
 
     def active(self):return self.state.get('active') is True
+
+    def waiting(self,now=None):
+        """True while a firmware wait (see WAIT_INTERVAL) runs and is younger than WAIT_MAX."""
+        now=time.time() if now is None else now
+        since=getattr(self,'wait_since',None)
+        return since is not None and 0<=now-since<=WAIT_MAX
+
+    def note_wait(self,settings,observation,pair,native,now=None):
+        """Start, keep or end the firmware wait from this pass's vendor observation and Auto state (memory only)."""
+        now=time.time() if now is None else now
+        if firmware_wait(settings,observation,pair,native,now):
+            if getattr(self,'wait_since',None) is None or now<self.wait_since:self.wait_since=now
+        else:self.wait_since=None
+        return self.waiting(now)
 
     def dense(self,now=None):
         """The running dense-confirmation episode, or None (also once it outlived its bound)."""
@@ -122,6 +167,7 @@ class Booster:
     def interval(self,settings,now=None):
         normal=_int(settings.get('interval'),10,300) or 10
         if self.dense(now):return min(normal,DENSE_INTERVAL)
+        if self.waiting(now):return min(normal,WAIT_INTERVAL)
         return min(normal,BOOST_INTERVAL) if self.active() else normal
 
     def measure(self,settings):

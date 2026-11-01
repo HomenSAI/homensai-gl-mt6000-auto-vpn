@@ -3078,7 +3078,7 @@ function lanHelperExplain(){
     E('p',{},[helpLink('helper-what',bi('Manual LAN check instructions','Проверить LAN самостоятельно')),' · ',helpLink('ai-lan-prompt',bi('Copy an AI testing prompt','Промпт для проверки с ИИ')),' · ',helpLink('ai-prompt',bi('AI installation and setup','Установка и настройка с ИИ')),' · ',helpLink('helper',bi('Help with a failed check','Помощь при ошибке проверки'))])]);
 }
 
-var LAZY_HELP_NAME='homensai-vpn.help192';
+var LAZY_HELP_NAME='homensai-vpn.help193';
 var LAZY_HELP={api:null,promise:null,failed:false,attempt:0,hosts:Object.create(null),inventory:null,pendingTopic:null,pendingCode:null};
 var helpNode=null,learnNode=null,errorTable=null,ERROR_GROUP_OF={},ERROR_GROUPS=[],ERROR_TABLE_STATE={query:'',open:Object.create(null),selected:null};
 var ERROR_FAMILIES=ERROR_ROWS.filter(function(row){return row[0].endsWith('*');}).map(function(row){return [row[0].slice(0,-1)].concat(row.slice(1));});
@@ -3196,7 +3196,7 @@ function renderTermsGate(inventory,status){
   var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');
   applyTheme(storedTheme());
   var gate=E('div',{'class':'hv-app hv-terms','data-terms-gate':TERMS_VERSION,'data-hv-design':currentDesign(),'style':'width:100%;box-sizing:border-box;overflow-wrap:anywhere'},[
-    E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui158.css')}),
+    E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui159.css')}),
     E('section',{'class':'hv-chart-card hv-terms-card'},[
       E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),versionBadge]),
       E('h1',{},bi('Experimental software: please read','Экспериментальное ПО: прочитайте, пожалуйста')),
@@ -3489,7 +3489,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
     var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');host.appendChild(footer);
   }
   applyTheme(storedTheme());
-  if(firstRun){['style/css/tokens.css','style/css/fonts.css','style/css/author.css','ui158.css'].forEach(function(path){host.appendChild(E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/'+path)}));});}
+  if(firstRun){['style/css/tokens.css','style/css/fonts.css','style/css/author.css','ui159.css'].forEach(function(path){host.appendChild(E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/'+path)}));});}
   var shell=firstRun?E('div',{},[]):host;
   if(firstRun){while(host.firstChild)shell.appendChild(host.firstChild);shell.appendChild(host);}
   show();return shell;
@@ -3502,7 +3502,7 @@ function openOnboardingSettings(inventory,status,requestedStep){
 }
 
 
-var UI_BUILD='dashboard192',UI_AGENT='2.0.0-alpha22';
+var UI_BUILD='dashboard193',UI_AGENT='2.0.0-alpha23';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';
@@ -6239,7 +6239,7 @@ put('start',renderStartPage(status,inventory));
       advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','aria-label':bi('Advanced settings','Расширенные настройки'),'title':bi('Advanced settings','Расширенные настройки'),'click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{'class':'hv-advanced-icon','aria-hidden':'true'},'☰'),E('span',{'class':'hv-advanced-label'},bi('Advanced settings','Расширенные настройки'))]);
       var links=sidebarOrder(data[1],inventory).map(tabLink).concat([advancedToggle,advancedBox]);
       appRoot=E('div',{'class':'hv-app hv-workspace hv-hybrid-release','data-hv-design':currentDesign()},[E('a',{'class':'hv-skip','href':'#','click':function(ev){ev.preventDefault();var m=appRoot.querySelector('main');if(m){m.setAttribute('tabindex','-1');m.focus();}}},bi('Skip to content','К содержимому')),
-        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui158.css')+'?build=080-alpha8'}),
+        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui159.css')+'?build=080-alpha8'}),
         E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},routerModelLabel()),E('nav',{'id':'hv-expanded-nav','aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('small',{},bi('Real IPv4 router measurements','Реальные IPv4-измерения роутера')),E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{'class':'hv-identity'},identityLine(data[1]))])]),
         E('main',{'class':'hv-main'},[E('header',{'class':'hv-page-header'},[E('div',{'class':'hv-header-main','style':'min-width:0;max-width:100%'},[E('div',{'class':'hv-eyebrow'},bi('AVAILABILITY CONTROL','УПРАВЛЕНИЕ ДОСТУПНОСТЬЮ')),E('div',{'class':'hv-heading-row'},[heading,(homeShortcut=renderSimpleHomeShortcut(function(){return simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));},goSimpleHome))]),(subtitle=E('p',{},bi('Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.')))].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'},[versionBadge,language,renderThemeSelect()])]),panel,settingsHost,renderAttribution(data[1]),footer])
       ]);

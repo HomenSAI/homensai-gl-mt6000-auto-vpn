@@ -126,6 +126,9 @@ t.test('next_delay follows the probe policy (boost) and never overlaps the pass 
   local R,m=fresh()
   m:pass()
   t.eq(m:next_delay(),10)
+  -- the first observation of a pair tunnel is PENDING: the firmware wait (alpha23) also paces at 10 s
+  t.eq(m.booster:waiting(R.wall()),true)
+  m.booster.wait_since=nil
   m.booster.state.active=true
   m.settings={interval=30}
   t.eq(m:next_delay(),10,'boost: at most every 10 s')

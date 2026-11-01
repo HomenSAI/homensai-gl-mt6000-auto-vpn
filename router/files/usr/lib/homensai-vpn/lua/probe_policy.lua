@@ -16,6 +16,11 @@ M.BOOST_INTERVAL=10;M.BOOST_MEASURE=30;M.BOOST_HOLD=600
 M.CONFIRM_FAILURES=3
 M.HISTORY_LIMIT=500
 M.HISTORY_NAME='probe-history.json';M.STATE_NAME='probe-boost.json'
+-- Firmware wait (owner decision 01.11.2026, variant A; probe_policy.py): while a tunnel of the Auto pair is
+-- PENDING or inside its settle period, or Auto waits only for the firmware, passes run every WAIT_INTERVAL s
+-- (memory only, at most WAIT_MAX s per wait). The vendor gate rules are unchanged.
+M.WAIT_INTERVAL=10;M.WAIT_MAX=600
+M.WAIT_BLOCKERS={['VENDOR-SETTLING']=true,['PROFILE-IDENTITY-CHANGED']=true,['VENDOR-WORKER-BUSY']=true,['OBSERVATION-STALE']=true}
 M.DENSE_INTERVAL=4;M.DENSE_MAX=60;M.DENSE_GOOD=2
 M.SUSPICION_REST=30
 M.FORCED_BOOST_LEVELS={[1]=true,[2]=true}
@@ -80,6 +85,40 @@ function M.failing(row)
 end
 local function bad_code(row) return get(row,'code') or (get(row,'dns_ok')==false and 'DNS-001' or 'VPN-003') end
 
+-- probe_policy.firmware_wait: a tunnel of the Auto pair is PENDING or inside its settle period, or Auto waits
+-- only for the firmware (ARMED, or BLOCKED with WAIT_BLOCKERS only).
+function M.firmware_wait(settings,observation,pair,native,now)
+  if is_dict(native) then
+    local state,blockers=get(native,'state'),get(native,'blockers')
+    if state=='ARMED' then return true end
+    if state=='BLOCKED' and canon.is_array(blockers) and #blockers>0 then
+      local all=true
+      for _,x in ipairs(blockers) do if type(x)~='string' or not M.WAIT_BLOCKERS[x] then all=false end end
+      if all then return true end
+    end
+  end
+  local ids,any={},false
+  if is_dict(pair) then
+    for _,role in ipairs({'source','target'}) do
+      local v=get(pair,role);if type(v)=='string' then ids[v]=true;any=true end
+    end
+  end
+  local groups=is_dict(observation) and get(observation,'groups') or nil
+  if not any or not canon.is_array(groups) then return false end
+  -- pair.settle_for reads only a canon object (plain monitor settings would give the legacy 60 s)
+  local settle=require('pair').settle_for(canon.object({interval=get(settings,'interval')}))
+  for _,group in ipairs(groups) do
+    local current=is_dict(group) and get(group,'current_profile') or nil
+    if type(current)=='string' and ids[current] then
+      if get(group,'state')=='PENDING' then return true end
+      local changed=get(group,'changed_at')
+      if get(group,'state')=='SETTLED' and type(changed)~='boolean' and finite(changed)
+         and 0<=now-num(changed) and now-num(changed)<settle then return true end
+    end
+  end
+  return false
+end
+
 local Booster={};Booster.__index=Booster
 function M.Booster(runtime,persist,io_)
   local self=setmetatable({runtime=runtime,persist=persist,io=io_},Booster)
@@ -88,6 +127,16 @@ function M.Booster(runtime,persist,io_)
   return self
 end
 function Booster:active() return self.state.active==true end
+function Booster:waiting(now)
+  local since=self.wait_since
+  return since~=nil and 0<=now-since and now-since<=M.WAIT_MAX
+end
+function Booster:note_wait(settings,observation,pair,native,now)
+  if M.firmware_wait(settings,observation,pair,native,now) then
+    if self.wait_since==nil or now<self.wait_since then self.wait_since=now end
+  else self.wait_since=nil end
+  return self:waiting(now)
+end
 function Booster:dense(now)
   local episode=get(self.state,'dense')
   if not is_dict(episode) or not finite(get(episode,'until')) then return nil end
@@ -97,6 +146,7 @@ end
 function Booster:interval(settings,now)
   local normal=int(get(settings,'interval'),10,300) or 10
   if self:dense(now) then return math.min(normal,M.DENSE_INTERVAL) end
+  if self:waiting(now) then return math.min(normal,M.WAIT_INTERVAL) end
   return self:active() and math.min(normal,M.BOOST_INTERVAL) or normal
 end
 function Booster:measure(settings)

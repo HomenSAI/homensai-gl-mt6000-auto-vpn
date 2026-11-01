@@ -20,6 +20,35 @@ def row(id,code=None,dns=True,https=2):return {'id':id,'code':code,'dns_ok':dns,
 PAIR={'source':'wg','target':'ovpn'}
 
 
+class FirmwareWait(unittest.TestCase):
+    """Owner decision 01.11.2026, variant A (same cases as lua/test_monitor_policy.lua)."""
+    S={'probe_level':1,'interval':60}
+    @staticmethod
+    def obs(state,changed,current='wg'):return {'groups':[{'id':'wireguard:w','current_profile':current,'state':state,'changed_at':changed}]}
+
+    def test_cases(self):
+        f=P.firmware_wait;s=self.S;stable=self.obs('SETTLED',100)
+        self.assertFalse(f(s,stable,PAIR,{'state':'OBSERVING','blockers':[]},1000))
+        self.assertTrue(f(s,self.obs('PENDING',990),PAIR,{'state':'OBSERVING'},1000))
+        self.assertTrue(f(s,self.obs('SETTLED',900),PAIR,{'state':'OBSERVING'},1000))
+        self.assertFalse(f(s,self.obs('SETTLED',880),PAIR,{'state':'OBSERVING'},1000))
+        self.assertFalse(f(s,self.obs('PENDING',990,'other'),PAIR,{'state':'OBSERVING'},1000))
+        self.assertTrue(f(s,stable,PAIR,{'state':'ARMED'},1000))
+        self.assertTrue(f(s,stable,PAIR,{'state':'BLOCKED','blockers':['VENDOR-SETTLING','VENDOR-WORKER-BUSY']},1000))
+        self.assertFalse(f(s,stable,PAIR,{'state':'BLOCKED','blockers':['VENDOR-SETTLING','UPLINK-LINK-DOWN']},1000))
+        self.assertFalse(f(s,stable,PAIR,{'state':'BLOCKED','blockers':[]},1000))
+
+    def test_booster_pace_is_bounded(self):
+        with tempfile.TemporaryDirectory() as d:
+            b=P.Booster(Path(d),Path(d),lambda p,v:write(p,v),read);s=self.S
+            self.assertEqual(b.interval(s,1000),60)
+            self.assertTrue(b.note_wait(s,self.obs('PENDING',990),PAIR,{'state':'OBSERVING'},1000));self.assertEqual(b.interval(s,1000),10)
+            self.assertTrue(b.note_wait(s,self.obs('PENDING',990),PAIR,{'state':'OBSERVING'},1600));self.assertEqual(b.interval(s,1601),60)
+            self.assertFalse(b.note_wait(s,self.obs('SETTLED',100),PAIR,{'state':'OBSERVING'},1700));self.assertEqual(b.interval(s,1700),60)
+            self.assertEqual(b.interval({'probe_level':5,'interval':10},1000),10)
+            self.assertFalse((Path(d)/P.STATE_NAME).exists(),'the wait is memory only')
+
+
 class Levels(unittest.TestCase):
     def test_explicit_level_wins_and_legacy_interval_maps_to_a_level(self):
         self.assertEqual(P.level({'probe_level':'2','interval':10}),2)
