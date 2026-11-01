@@ -17,9 +17,17 @@ def cached(status):
     return value if type(value) is int and 30<=value<=900 else LEGACY_VALID_FOR
 
 
+# Owner decision 01.11.2026 (variant B): the vendor settle period follows the firmware, not the probe level.
+# Two-thirds of the observation validity gave 120 s at probe level 1 (MT3000 soaks: every tunnel rebuild
+# blocked Auto for 119-139 s) while the GL rebuild chain (fw3 reload, dnsmasq restarts) finishes in 20-33 s.
+# The settle period is now at most SETTLE_MAX; the two equal observations (stable_samples) and the separate
+# VENDOR-WORKER-BUSY quiet check stay. Lua: pair.settle_for.
+SETTLE_MAX=45
+
+
 def settle_for(settings=None):
-    """Use the same validated scan cadence for vendor stability evidence."""
-    return max(30,min(600,valid_for(settings)*2//3))
+    """Vendor stability period: two-thirds of the observation validity, 30..SETTLE_MAX seconds."""
+    return max(30,min(SETTLE_MAX,valid_for(settings)*2//3))
 
 
 def attach(status,settings=None):

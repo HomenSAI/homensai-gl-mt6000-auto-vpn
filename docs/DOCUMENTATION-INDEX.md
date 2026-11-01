@@ -9,6 +9,23 @@ Current instructions describe source behavior. Installed state requires a separa
 
 `current*` — действующее руководство; `historical-reference` / `versioned-evidence` — архив; `recovery-record` — передача задачи; `technical-reference` — контракт/справка, не доказательство аппаратной приёмки; `preserved-legal` — неизменённые правовые тексты. Inventory/link/source checks do not re-certify every historical claim or an external AI's autonomy.
 
+
+**Линия Lua 2.0.0-alpha (01.11.2026) / Lua line:** актуальные расчёты и проекты, датированные и на русском языке; не входят в таблицу ниже, которая сохраняет прежний снимок. These dated design and evidence documents (Russian) are not in the table below, which keeps its earlier snapshot.
+
+|Документ / Document|Область / Scope|
+|---|---|
+|[docs/MEASUREMENTS.ru.md](MEASUREMENTS.ru.md) · [docs/MEASUREMENTS.en.md](MEASUREMENTS.en.md)|current: sections 7-8, runtime pyramid and switch times|
+|[docs/architecture/MASTER-PLAN-2026-10-31.ru.md](architecture/MASTER-PLAN-2026-10-31.ru.md)|versioned-evidence: plan and progress|
+|[docs/architecture/LUA-PLAN-2026-10-30.ru.md](architecture/LUA-PLAN-2026-10-30.ru.md)|versioned-evidence: eight Lua items|
+|[docs/architecture/CORE-LEVELS-2026-10-31.ru.md](architecture/CORE-LEVELS-2026-10-31.ru.md)|design: levels and fallbacks|
+|[docs/architecture/HISTORY-JOURNAL-2026-11-01.ru.md](architecture/HISTORY-JOURNAL-2026-11-01.ru.md)|design: switch history journal, schema 2|
+|[docs/architecture/DIAGNOSTIC-CACHE-2026-11-01.ru.md](architecture/DIAGNOSTIC-CACHE-2026-11-01.ru.md)|design: diagnostic cache|
+|[docs/architecture/SOAK-LUA-VS-C-2026-11-01.ru.md](architecture/SOAK-LUA-VS-C-2026-11-01.ru.md)|versioned-evidence: 3 h Lua against C|
+|[docs/architecture/VENDOR-SETTLING-2026-11-01.ru.md](architecture/VENDOR-SETTLING-2026-11-01.ru.md)|versioned-evidence: firmware wait|
+|[docs/architecture/SWITCH-SPEED-2026-11-01.ru.md](architecture/SWITCH-SPEED-2026-11-01.ru.md)|versioned-evidence: automatic switch speed|
+|[docs/handoff/TODO-PERF-2026-11-01.ru.md](handoff/TODO-PERF-2026-11-01.ru.md)|recovery-record: core speed plan|
+|[releases/v2.0.0-alpha17.md](../releases/v2.0.0-alpha17.md) … [alpha24](../releases/v2.0.0-alpha24.md)|release notes of the Lua line|
+
 |Документ / Document|Область / Scope|
 |---|---|
 |[.claude/handoff/REVIEW-PROMPT.md](../.claude/handoff/REVIEW-PROMPT.md)|historical-reference|

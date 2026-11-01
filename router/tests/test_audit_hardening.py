@@ -219,7 +219,7 @@ class Hardening(unittest.TestCase):
         context=MagicMock();context.wrap_socket.return_value=left
         started=time.monotonic()
         try:
-            with patch.object(agent,'HTTP_SECONDS',.15),patch.object(agent,'bound_socket',return_value=Bound()),patch.object(agent.ssl,'create_default_context',return_value=context):
+            with patch.object(agent,'MONITOR_HTTP_SECONDS',.15),patch.object(agent,'bound_socket',return_value=Bound()),patch.object(agent.ssl,'create_default_context',return_value=context):
                 with self.assertRaises(socket.timeout):agent.https_probe('test',1,agent.TARGETS[0])
             self.assertLess(time.monotonic()-started,1)
         finally:left.close();worker.join(2)

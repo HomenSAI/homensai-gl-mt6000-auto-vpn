@@ -1,5 +1,6 @@
 """Read-only hierarchy selection; eligibility never authorizes route writes."""
 from failover_plan import streak
+from observation_freshness import SETTLE_MAX  # vendor settle cap (owner decision 01.11.2026, variant B)
 
 
 def rank_candidates(profiles, metadata, samples, source, now, max_age=90,observation=None,settings=None):
@@ -26,7 +27,7 @@ def rank_candidates(profiles, metadata, samples, source, now, max_age=90,observa
         if row.get('protocol') not in ('openvpn','wireguard') or not row.get('interface'):continue
         pair=resolve_pair({'time':now,'profiles':profiles,'vendor_observation':observation},
             {'plan_source':source,'plan_target':identifier},now,max_age,
-            max(30,min(600,max_age*2/3)) if finite(max_age) and max_age>0 else 60)
+            max(30,min(SETTLE_MAX,max_age*2/3)) if finite(max_age) and max_age>0 else 60)
         if pair['coordination']['state']!='READY':continue
         if not streak(samples,identifier,2,now,max_age,True,row):continue
         same_protocol=row.get('protocol')==current.get('protocol')

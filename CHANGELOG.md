@@ -1,5 +1,7 @@
 # Changelog
 
+This file stops at 0.9.1-alpha26. Later versions (0.9.1-alpha27 onward, the 1.0.0-beta releases and the Lua line 2.0.0-alpha1 to 2.0.0-alpha24) are described only in the [release notes](releases). The current line is 2.0.0-alpha24: [notes](releases/v2.0.0-alpha24.md), [state](docs/CURRENT-STATUS.md). / Файл заканчивается на 0.9.1-alpha26; более поздние версии описаны только в [примечаниях к релизам](releases), текущая — 2.0.0-alpha24.
+
 ## 0.9.1-alpha26 — Minimum UI candidate · 2026-10-26
 
 - Accepted Minimum home and five-section Advanced menu with route compatibility.

@@ -23,7 +23,8 @@ SKIP_PARTS = {'__pycache__', 'dist', 'tests'}
 # Files that carry the version as a literal (everything else, such as docs and release notes, is written by hand at release time).
 LITERAL_FILES = ('router/Makefile', 'router/build_ipk.py', 'router/files/usr/lib/homensai-vpn/agent.py',
                  'router/files/usr/lib/lua/luci/controller/homensai_vpn.lua', 'router-test-kit/02-install.sh',
-                 'router-test-kit/03-verify.sh', 'lab/storage_adversity_guest.py')
+                 'router-test-kit/03-verify.sh', 'lab/storage_adversity_guest.py',
+                 'router/files/usr/lib/homensai-vpn/lua/version.lua')
 
 
 def source_files():

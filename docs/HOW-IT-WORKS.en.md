@@ -15,6 +15,12 @@ The qualified prepared MT3000/4.11.0 path uses fresh router IPv4 DNS/HTTPS evide
 
 Manual selection is an explicit command with a confirmed result, not an immediate lamp change on queue ACK. A manual switch never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails, and after an Auto restart or package upgrade it returns to the primary when that is healthy. Automatic return follows saved policy and readiness; a hold-reserve policy does not promise return just because primary recovers. A deliberate bounded fault test is separately labelled and can test both directions without changing the saved preference.
 
+## Runtime layers and switching time
+
+The router part runs on layers that share the same files and rules. Python 3.9 is the base and the last fallback. On top of it, in the 2.0.0-alpha line, Lua 5.1 runs the monitor and Auto as two services (an optional single process `hv-core` exists); a C module `canon_c.so` does the canonical JSON inside Lua, and if it fails to load or fails its self-probe the same code runs in pure Lua by itself (`HOMENSAI_CANON_C=0` forces Lua). If the Lua services fail repeatedly, Auto falls back to the Python supervisor (`LUA-AUTO-FALLBACK`). The switch history is an append-only journal.
+
+Fast detection is on by default since alpha24 (`option lua_fast_detect '0'` turns it off): a 1 s heartbeat of both Auto channels starts a dense confirmation within about 3 s of an outage; the failure count (3 failed checks), the live reserve and the firmware checks are unchanged. Measured on the MT3000: a manual switch is done in about 0.7 s; the automatic decision comes 26-28 s after an outage (58-88 s without fast detection) and traffic moves 1.3-1.6 s after it. [Numbers per layer](MEASUREMENTS.en.md#8-runtime-pyramid-and-switch-times).
+
 ## Other proof modes
 
 A client-confirmed trial uses the Windows helper; its DNS/HTTPS/exit evidence comes from that real client. Router-hosted namespace and router-probed evidence are not external-client proof. CheckOnly is prerequisite inspection; ProbeOnly sends bound data probes; a full trial can change router traffic. None changes PC routes/NIC/DNS automatically.

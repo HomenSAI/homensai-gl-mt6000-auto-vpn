@@ -144,7 +144,7 @@ class SwitchingRecovery(unittest.TestCase):
         row['state'] = 'CLAIMED'
         agent.atomic_json(manual.path(), row)
         with patch.object(native, 'JOURNAL_ALARM', case.persist / 'alarm.json'), \
-                patch.object(native, 'rollback_counted', side_effect=native.Refused('ROLLBACK-UNVERIFIED')):
+                patch.object(native, 'boot_rollback', side_effect=native.Refused('ROLLBACK-UNVERIFIED')):
             with self.assertRaisesRegex(native.Refused, 'ROLLBACK-UNVERIFIED'):
                 native.serve()
         self.assertEqual(pair.intent()['mode'], 'off')

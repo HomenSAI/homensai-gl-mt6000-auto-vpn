@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '1.0.0-beta15-1'
+VERSION = '2.0.0-beta1-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
 
@@ -95,7 +95,7 @@ def selected_files(source=None):
         if '..' in Path(name).parts:
             raise ValueError('unsafe package member')
         payload = path.read_bytes()
-        if '/style/' not in name and path.suffix.lower() not in ('.woff2','.woff','.ttf','.otf','.png','.jpg','.jpeg','.ico'):
+        if '/style/' not in name and path.suffix.lower() not in ('.woff2','.woff','.ttf','.otf','.png','.jpg','.jpeg','.ico','.so'):
             payload = payload.replace(b'\r\n', b'\n')
         files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
     return files

@@ -5,10 +5,10 @@ var PROBE_APPLIED=null,PROBE_LOG_KEY='homensai-vpn-probe-log-open',PROBE_LOG_ROW
 function probeLevelText(level,boost){
   var v=PROBE_LEVELS[level]||PROBE_LEVELS[5],detect=v[0]*3,fast=v[0]+20;
   var names={1:bi('Economy','Экономно'),2:bi('Light','Лёгкий'),3:bi('Balanced','Сбалансировано'),4:bi('Reliable','Надёжно'),5:bi('Maximum reliability','Максимальная надёжность')};
-  return names[level]+' · '+bi('channel check every '+v[0]+' s, ping and websites every '+v[1]+' s. A failure is confirmed in about '+(boost?fast:detect)+' s','проверка каналов раз в '+v[0]+' с, пинг и сайты раз в '+v[1]+' с. Сбой подтверждается примерно за '+(boost?fast:detect)+' с')+(boost&&fast<detect?bi(' (without boost '+detect+' s).',' (без ускорения '+detect+' с).'):'.');
+  return names[level]+' · '+bi('channel check every '+v[0]+' s, websites every '+v[1]+' s (ping: its own setting in Settings). A failure is confirmed in about '+(boost?fast:detect)+' s','проверка каналов раз в '+v[0]+' с, сайты раз в '+v[1]+' с (пинг — отдельная настройка в «Настройках»). Сбой подтверждается примерно за '+(boost?fast:detect)+' с')+(boost&&fast<detect?bi(' (without boost '+detect+' s).',' (без ускорения '+detect+' с).'):'.');
 }
 function probeDecision(row){
-  var level=bi('level ','уровень ')+row.level,cadence=bi('check every ','проверка раз в ')+row.interval+bi(' s, ping/websites every ',' с, пинг/сайты раз в ')+row.measure_interval+bi(' s',' с');
+  var level=bi('level ','уровень ')+row.level,cadence=bi('check every ','проверка раз в ')+row.interval+bi(' s, websites every ',' с, сайты раз в ')+row.measure_interval+bi(' s',' с');
   var role=row.role==='source'?bi('primary channel','основной канал'):row.role==='target'?bi('reserve channel','резервный канал'):bi('channel','канал');
   if(row.kind==='level')return [bi('Level ','Выбран уровень ')+row.level,cadence+'; '+(row.boost_enabled?bi('boost on','ускорение включено'):bi('boost off','ускорение выключено'))];
   if(row.kind==='boost-start')return [bi('Boost started','Ускорение включено'),role+bi(' failed a check; checks every ',' не прошёл проверку; проверка раз в ')+row.boost_interval+bi(' s for 10 min (',' с на 10 мин (')+level+')'];
@@ -173,11 +173,25 @@ function probeCountdown(status){
 // Settings: what the "response" numbers measure. Ping is the default (light, compares channels);
 // three websites over HTTPS are closer to opening real pages but cost the router more work.
 var RESPONSE_CHOICES=[['icmp-1.1.1.1','Ping 1.1.1.1 (Cloudflare DNS) — recommended','Пинг 1.1.1.1 (Cloudflare DNS) — рекомендуется'],['icmp-8.8.8.8','Ping 8.8.8.8 (Google DNS)','Пинг 8.8.8.8 (Google DNS)'],['icmp-9.9.9.9','Ping 9.9.9.9 (Quad9)','Пинг 9.9.9.9 (Quad9)'],['websites','Three websites over HTTPS (Google, Cloudflare, Wikipedia)','Три сайта по HTTPS (Google, Cloudflare, Wikipedia)']];
+// Owner ping interval (option ping_interval, probe_policy.ping_interval): every 10 s .. every 5 min, default once a minute.
+var PING_INTERVAL_DEFAULT=60,PING_INTERVAL_CHOICES=[];
+for(var pingStep=10;pingStep<=300;pingStep+=10)PING_INTERVAL_CHOICES.push(pingStep);
+function pingIntervalValue(value){var n=Number(value);return Number.isInteger(n)&&n>=10&&n<=300&&n%10===0?n:PING_INTERVAL_DEFAULT;}
+function pingIntervalLabel(seconds){
+  var m=Math.floor(seconds/60),s=seconds%60;
+  var text=m?(m+bi(' min',' мин')+(s?' '+s+bi(' s',' с'):'')):s+bi(' s',' с');
+  return seconds===PING_INTERVAL_DEFAULT?text+bi(' (default)',' (по умолчанию)'):text;
+}
 function responseSettings(inventory){
   var current=((inventory||{}).settings||{}).response_metric||'icmp-1.1.1.1',chosen=current,busy=false;
+  var pingNow=pingIntervalValue(((inventory||{}).settings||{}).ping_interval);
+  var pingSelect=E('select',{'class':'hv-ping-interval','aria-label':bi('Ping interval','Интервал пинга')},PING_INTERVAL_CHOICES.map(function(n){
+    return E('option',{'value':String(n),'selected':n===pingNow?'':null},bi('every ','раз в ')+pingIntervalLabel(n));}));
+  pingSelect.value=String(pingNow);
   var compareNow=((inventory||{}).settings||{}).response_compare===true,compareBox=E('input',{'type':'checkbox','class':'hv-response-compare'});compareBox.checked=compareNow;
   var fastNow=((inventory||{}).settings||{}).fast_switch!==false,fastBox=E('input',{'type':'checkbox','class':'hv-fast-switch'});fastBox.checked=fastNow;
-  function dirty(){return chosen!==current||compareBox.checked!==compareNow||fastBox.checked!==fastNow;}
+  function dirty(){return chosen!==current||compareBox.checked!==compareNow||fastBox.checked!==fastNow||pingIntervalValue(pingSelect.value)!==pingNow;}
+  pingSelect.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
   compareBox.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
   fastBox.addEventListener('change',function(){if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
   var save=E('button',{'type':'button','class':'cbi-button cbi-button-action','disabled':''},bi('Save','Сохранить'));
@@ -186,15 +200,17 @@ function responseSettings(inventory){
     input.addEventListener('change',function(){chosen=c[0];if(dirty())save.removeAttribute('disabled');else save.setAttribute('disabled','');});
     return E('label',{'class':'hv-response-choice'},[input,' ',bi(c[1],c[2])]);}));
   save.addEventListener('click',function(){
-    if(busy||!dirty())return;busy=true;save.setAttribute('disabled','');var compare=compareBox.checked,fast=fastBox.checked;
-    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric','compare','fast_switch'],expect:{}})(chosen,compare,fast).then(function(r){
-      if(r&&r.saved){current=chosen;compareNow=compare;fastNow=fast;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
+    if(busy||!dirty())return;busy=true;save.setAttribute('disabled','');var compare=compareBox.checked,fast=fastBox.checked,pingEvery=pingIntervalValue(pingSelect.value);
+    rpc.declare({object:PROBE_RPC,reject:true,method:'setup_response',params:['metric','compare','fast_switch','ping_interval'],expect:{}})(chosen,compare,fast,pingEvery).then(function(r){
+      if(r&&r.saved){current=chosen;compareNow=compare;fastNow=fast;pingNow=pingEvery;ui.addNotification(null,E('p',{},bi('Saved. The router uses it from its next check.','Сохранено. Роутер применит со следующей проверки.')));}
       else ui.addNotification(null,E('p',{},(r&&r.code)||'SETUP-SAVE-FAILED'));
     }).catch(function(){ui.addNotification(null,E('p',{},'SETUP-SAVE-UNCONFIRMED'));}).finally(function(){busy=false;if(dirty())save.removeAttribute('disabled');});
   });
   return E('section',{'class':'hv-chart-card hv-response-settings'},[E('h3',{},bi('How the response is measured','Как измеряется отклик')),
     E('p',{'class':'hv-step-note'},bi('Ping is a short echo through each VPN to a public DNS address. It shows which channel is faster, gives small numbers and barely loads the router; recommended. Three websites over HTTPS measure opening real pages (DNS, connection, encryption, headers); the numbers are closer to what you feel but larger, and each check costs the router three encrypted connections per channel. The response is information only: Auto decides on its own health checks either way.','Пинг — короткий запрос через каждый VPN к публичному DNS-адресу. Он показывает, какой канал быстрее, даёт небольшие числа и почти не нагружает роутер; рекомендуется. Три сайта по HTTPS измеряют открытие настоящих страниц (DNS, соединение, шифрование, заголовки): числа ближе к ощущениям, но больше, и каждая проверка стоит роутеру трёх зашифрованных соединений на канал. Отклик — только информация: Auto в любом случае решает по своим проверкам исправности.')),
     list,
+    E('label',{'class':'hv-ping-interval-label'},[E('strong',{},bi('Ping interval','Интервал пинга')),' ',pingSelect]),
+    E('p',{'class':'hv-step-note hv-ping-interval-note'},bi('How often the router pings each of the two selected channels: from every 10 s to every 5 min, default once a minute. More frequent pings give fresher numbers but cost the router a little more CPU and traffic; rarer pings save both. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. Tables show the last ping with its age, for example 42 ms (12 s ago). The ping is information only: switching decides on the channel checks.','Как часто роутер пингует каждый из двух выбранных каналов: от раза в 10 с до раза в 5 мин, по умолчанию раз в минуту. Чаще — свежее числа, но немного больше нагрузка на процессор роутера и трафик; реже — экономнее. Пинг отправляется во время проверки каналов, поэтому не бывает чаще проверок уровня опроса. Таблицы показывают последний пинг и его возраст, например 42 мс (12 с назад). Пинг — только информация: переключение решается по проверкам каналов.')),
     E('label',{'class':'hv-response-compare-label'},[compareBox,' ',E('strong',{},bi('Measure all methods (comparison)','Мерить все способы (сравнение)'))]),
     E('p',{'class':'hv-step-note'},bi('Each check also pings the other two DNS addresses and opens the three websites through both channels. The ranking on the Tests page then shows every method side by side. Switching still uses only the method chosen above. Costs a little more router load and traffic.','Каждая проверка дополнительно пингует два других DNS-адреса и открывает три сайта через оба канала. Тогда рейтинг на странице «Тесты» показывает все способы рядом. Переключение по-прежнему использует только способ, выбранный выше. Немного больше нагрузка на роутер и трафик.')),
     E('label',{'class':'hv-fast-switch-label'},[fastBox,' ',E('strong',{},bi('Fast switch (without the GL rebuild)','Быстрое переключение (без перестройки GL)'))]),
@@ -218,7 +234,9 @@ function statsWorkNote(status){
 // Advanced > Statistics collection: the page itself is optional (lazy); this model gives it the router call.
 function collectionModel(status){
   var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,m=statsModeModel(status||{},now);
-  return {diagnostic:m.diagnostic,until:m.until,storage:(status&&status.stats_mode&&status.stats_mode.storage)||{},
+  var sm=(status&&status.stats_mode)||{};
+  return {diagnostic:m.diagnostic,until:m.until,storage:sm.storage||{},retention:sm.retention,capacity:sm.capacity,
+    saveRetention:function(kind,value){return rpc.declare({object:PROBE_RPC,reject:true,method:'setup_stats',params:['mode','retention',kind==='time'?'days':'mb'],expect:{}})('retention',kind,value);},
     save:function(mode,hours){return mode==='work'?rpc.declare({object:PROBE_RPC,reject:true,method:'setup_stats',params:['mode'],expect:{}})('work')
       :rpc.declare({object:PROBE_RPC,reject:true,method:'setup_stats',params:['mode','hours'],expect:{}})('diagnostic',hours);},
     notify:function(text){ui.addNotification(null,E('p',{},text));}};

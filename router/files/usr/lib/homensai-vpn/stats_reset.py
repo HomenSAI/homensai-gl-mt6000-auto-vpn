@@ -72,8 +72,9 @@ def reset_native_history(persist,writer,now,before=None):
         history.migrate(data)
         data.update({'events':[],'months':{},'days':{},'totals':{},'counted':{},'daily_since':now,'returns_since':now,
                      'detail_budget_dropped':0,'counter_accuracy':'reset by the owner','legacy_months':{}})
-        for key in ('counted_state','counted_reason'):data.pop(key,None)
-        writer(history.path,history.envelope(data));writer(history.backup,history.envelope(data))
+        for key in ('counted_state','counted_reason','archive_gap'):data.pop(key,None)
+        # Journal layout (schema 2): state (main, backup) then the emptied archive - History.store, not writer.
+        history.store(data)
     return old
 
 

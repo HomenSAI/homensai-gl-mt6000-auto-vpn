@@ -13,6 +13,11 @@ from agent import RUNTIME, atomic_json, read_json
 from auto_control import control_lock, revision_locked
 
 ROLES={'monitor':'agent.py','auto':'native_switch.py'}
+# The daemon of each role may be the Python line or the Lua line (lua_monitor / lua_auto, plan item 7).
+COMMANDS={'monitor':('agent.py','lua/monitor.lua','lua/hv_core.lua'),'auto':('native_switch.py','lua/auto.lua')}
+# Lua plan item 8: hv-core runs the monitor AND the Auto supervisor in the `monitor` instance; the `native`
+# instance then only stands by (`hv_core.lua standby`), so the Auto role is owned by the monitor's process.
+CORE=b'/usr/lib/homensai-vpn/lua/hv_core.lua'
 INTENTS=('pair-auto-control.json','auto-control.json','pair-manual-control.json',
          'manual-control.json','native-return.json')
 
@@ -48,7 +53,14 @@ def participants():
         if row.get('running')is not True:continue
         owner=identity(row['pid'])
         command=Path('/proc',str(owner['pid']),'cmdline').read_bytes().split(b'\0')
-        if ('/usr/lib/homensai-vpn/'+name).encode()not in command or b'daemon'not in command:
+        if role=='auto' and CORE in command and b'standby' in command:
+            core=rows.get('monitor',{})
+            if core.get('running') is not True:raise PauseError('SPEED-PAUSE-UNVERIFIED')
+            owner=identity(core['pid'])
+            command=Path('/proc',str(owner['pid']),'cmdline').read_bytes().split(b'\0')
+            if CORE not in command or b'daemon' not in command:raise PauseError('SPEED-PAUSE-UNVERIFIED')
+            result[role]=owner;continue
+        if not any(('/usr/lib/homensai-vpn/'+script).encode()in command for script in COMMANDS[role])or b'daemon'not in command:
             raise PauseError('SPEED-PAUSE-UNVERIFIED')
         result[role]=owner
     return result

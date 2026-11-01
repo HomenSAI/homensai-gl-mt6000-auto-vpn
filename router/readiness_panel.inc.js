@@ -1,16 +1,35 @@
 /* Read-only readiness; missing evidence never grants Auto permission. Missing information is shown as "waiting", never as a blank. */
+// Parts already proven by what works right now (one shared rule for every page): a fresh status reached this page
+// through ubus and the rpcd plugin; the Lua monitor that built it runs Lua; a running Auto passed its preflight, which
+// reads the preparation with uci and proves the kernel policy with ip. Nothing else is inferred.
+function readinessProof(status,now,fresh){
+  var proof={},ns=status.native_failover||{};if(!fresh)return proof;
+  proof['DEPENDENCY-UBUS']=proof['RPC-PLUGIN']='page';
+  if((status.lua_backend||{}).monitor==='lua')proof['DEPENDENCY-LUA']='page';
+  if(typeof autoControlModel==='function'&&autoControlModel(status,now).on&&ns.mode==='continuous-pair'&&ns.readiness_verified===true&&ns.kernel_policy_verified===true)proof['DEPENDENCY-UCI']=proof['DEPENDENCY-IP']='auto';
+  return proof;
+}
 function readinessModel(status,now){
   var data=status.system_readiness||{},native=status.native_failover||{};
   var fresh=!status.rpc_error&&Number.isFinite(status.time)&&now>=status.time&&now-status.time<=90;
-  var environmentFresh=fresh&&Number.isFinite(data.time)&&now>=data.time&&now-data.time<=90;
+  var reported=!status.rpc_error&&Number.isFinite(data.time)&&data.time<=now+5;
+  var environmentFresh=fresh&&reported&&now>=data.time&&now-data.time<=90;
   var blockers=Array.isArray(native.blockers)?native.blockers.slice(0,32):[];
   if(!environmentFresh)blockers.push('ENVIRONMENT-EVIDENCE-UNAVAILABLE');
   if(!fresh)blockers.push('MONITOR-EVIDENCE-STALE');
   if(!blockers.length)blockers.push('NATIVE-START-CERTIFICATION-REQUIRED');
-  return {fresh:fresh,environmentFresh:environmentFresh,board:environmentFresh?data.board||{}:{},
-    checks:environmentFresh&&Array.isArray(data.checks)?data.checks.slice(0,16):[],blockers:blockers,
+  // The last router report is shown with its age even when old (stale:true); a proof of the running system wins.
+  var proof=readinessProof(status,now,fresh),checks=[],seen={};
+  (reported&&Array.isArray(data.checks)?data.checks.slice(0,16):[]).forEach(function(c){
+    var code=String(c.code);if(seen[code])return;seen[code]=1;
+    checks.push(proof[code]&&!(environmentFresh&&c.state==='pass')?{code:code,state:'pass',proof:proof[code]}:{code:code,state:String(c.state),stale:!environmentFresh});
+  });
+  Object.keys(proof).forEach(function(code){if(!seen[code])checks.push({code:code,state:'pass',proof:proof[code]});});
+  return {fresh:fresh,environmentFresh:environmentFresh,reported:reported,age:reported?Math.max(0,now-data.time):null,board:reported?data.board||{}:{},
+    checks:checks,blockers:blockers,
     auto:(status.auto_control||{}).requested==='on'&&fresh?'requested':'off_or_unknown'};
 }
+function readinessAge(seconds){return seconds<90?Math.round(seconds)+bi(' s ago',' с назад'):Math.round(seconds/60)+bi(' min ago',' мин назад');}
 var READINESS_CHECKS={
   'PYTHON-39-MINIMUM':['Python 3.9 or newer','Python 3.9 или новее','Runs the program','Запускает программу','🐍'],
   'DEPENDENCY-UBUS':['ubus','ubus','Talks to the router system','Связь с системой роутера','⇄'],
@@ -62,12 +81,12 @@ function renderReadinessHelp(code){
   ].filter(Boolean));
 }
 function readinessCheckState(state){return state==='pass'?'ok':state==='fail'?'bad':state==='waiting'?'waiting':'unknown';}
-function readinessTile(code,state){
+function readinessTile(code,state,note){
   var r=Object.prototype.hasOwnProperty.call(READINESS_CHECKS,code)?READINESS_CHECKS[code]:[code,code,'',' ','•'];
   var st=readinessCheckState(state);
   var word=st==='ok'?bi('OK','Есть'):st==='bad'?bi('Missing','Нет'):st==='waiting'?bi('Waiting…','Ожидается…'):bi('Not reported by the router','Роутер не сообщил');
   var mark=st==='ok'?'✓':st==='bad'?'✗':st==='waiting'?'…':'?';
-  return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3])),typeof helpLink==='function'?helpLink('dependency-'+code,bi('Help','Помощь')):null].filter(Boolean)),E('b',{'class':'hv-rd-word'},word)]);
+  return E('div',{'class':'hv-rd-tile hv-rd-'+st},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},mark),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},bi(r[0],r[1])),E('small',{},bi(r[2],r[3])),note?E('small',{'class':'hv-rd-note'},note):null,typeof helpLink==='function'?helpLink('dependency-'+code,bi('Help','Помощь')):null].filter(Boolean)),E('b',{'class':'hv-rd-word'},word)]);
 }
 function readinessInfo(icon,label,value,waiting){
   return E('div',{'class':'hv-rd-info'+(waiting?' hv-rd-info-waiting':'')},[E('span',{'class':'hv-rd-info-icon','aria-hidden':'true'},icon),E('small',{},label),waiting?E('span',{'class':'hv-rd-skeleton'},bi('waiting for data…','ожидаются данные…')):E('strong',{},value)]);
@@ -96,6 +115,7 @@ function preparationModel(status,now){
 function renderPreparation(status,now){
   var m=preparationModel(status,now);
   var explanation=m.state==='unsupported'?bi('These persistent checks apply to the tested MT3000 setup. This is not a compatibility verdict for another model.','Эти постоянные настройки проверяются для испытанной конфигурации MT3000. Это не заключение о совместимости другой модели.'):
+    m.state==='unknown'&&readinessProof(status,now,readinessModel(status,now).fresh)['DEPENDENCY-IP']?bi('Auto is running: its start check found every preparation item ready. The detailed table appears with the next router report.','Auto работает: при запуске он проверил подготовку, все пункты были готовы. Подробная таблица появится со следующим отчётом роутера.'):
     m.state==='unknown'?bi('Fresh preparation evidence is not available.','Свежие сведения о подготовке отсутствуют.'):
     bi('These settings keep the tested MT3000 preparation across reboot. A passing check does not start a VPN or authorize Auto.','Эти настройки сохраняют проверенную подготовку MT3000 после перезагрузки. Успешная проверка не запускает VPN и не разрешает Auto.');
   var meaning={
@@ -122,9 +142,10 @@ function renderPreparation(status,now){
 function renderReadiness(status,inventory){
   var now=(typeof routerWall==='function'?routerWall():Date.now()/1000),m=readinessModel(status,now),b=m.board||{};
   function known(v){return v&&v!=='unknown';}
-  var order=Object.keys(READINESS_CHECKS),byCode={};
-  m.checks.forEach(function(c){byCode[String(c.code)]=String(c.state);});
-  var waiting=!m.environmentFresh;
+  var order=Object.keys(READINESS_CHECKS),byCode={},rowOf={};
+  m.checks.forEach(function(c){byCode[c.code]=c.state;rowOf[c.code]=c;});
+  var waiting=!m.checks.length;
+  function note(code){var c=rowOf[code];return !c?null:c.proof==='auto'?bi('Proven by the running Auto','Подтверждено работающим Auto'):c.proof?bi('Proven: this page works through it','Подтверждено: страница работает через него'):c.stale?bi('Last report ','Последний отчёт ')+readinessAge(m.age):null;}
   var passCount=order.filter(function(code){return byCode[code]==='pass';}).length;
   var failCount=order.filter(function(code){return byCode[code]==='fail';}).length;
   var auto=autoReadiness(status,inventory||{},now);
@@ -142,15 +163,15 @@ function renderReadiness(status,inventory){
   var hero=E('section',{'class':'hv-chart-card hv-rd-hero'},[ring,E('div',{'class':'hv-rd-hero-text'},[E('h2',{},verdict[0]),E('p',{},verdict[1]),E('p',{'class':'hv-ready-intro'},bi('This page only reads; it changes nothing.','Эта страница только читает и ничего не меняет.'))])]);
   var tested=known(b.firmware)?(String(b.firmware).indexOf(READINESS_TESTED_FIRMWARE)===0||String(b.firmware)===READINESS_TESTED_FIRMWARE):null;
   var router=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Your router','Ваш роутер')),E('div',{'class':'hv-rd-info-grid'},[
-    readinessInfo('▣',bi('Model','Модель'),b.model,waiting||!known(b.model)),
-    readinessInfo('▦',bi('Board','Плата'),b.board_name,waiting||!known(b.board_name)),
-    readinessInfo('⚑',bi('GL.iNet firmware','Прошивка GL.iNet'),b.firmware,waiting||!known(b.firmware)),
-    readinessInfo('⚑','OpenWrt',b.openwrt,waiting||!known(b.openwrt))]),
-    waiting?E('p',{'class':'hv-ready-intro'},bi('Waiting for router information.','Ожидаются данные роутера.')):null
+    readinessInfo('▣',bi('Model','Модель'),b.model,!known(b.model)),
+    readinessInfo('▦',bi('Board','Плата'),b.board_name,!known(b.board_name)),
+    readinessInfo('⚑',bi('GL.iNet firmware','Прошивка GL.iNet'),b.firmware,!known(b.firmware)),
+    readinessInfo('⚑','OpenWrt',b.openwrt,!known(b.openwrt))]),
+    m.reported?E('p',{'class':'hv-ready-intro','data-readiness-age':String(Math.round(m.age))},bi('Checked by the router ','Проверено роутером ')+readinessAge(m.age)):E('p',{'class':'hv-ready-intro'},bi('Waiting for router information.','Ожидаются данные роутера.'))
   ].filter(Boolean));
   var monitor=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Data from the monitor','Данные от мониторинга')),E('div',{'class':'hv-rd-tile hv-rd-'+(m.fresh?'ok':'waiting')},[E('span',{'class':'hv-rd-mark','aria-hidden':'true'},m.fresh?'✓':'…'),E('div',{'class':'hv-rd-tile-text'},[E('strong',{},m.fresh?bi('Fresh data','Свежие данные'):bi('Waiting for data','Ожидаем данные')),E('small',{},m.fresh?bi('The monitor is running and sends data.','Мониторинг работает и присылает данные.'):bi('Monitoring starts by itself; wait a minute and reload the page.','Мониторинг запускается сам; подождите минуту и обновите страницу.'))]),E('b',{'class':'hv-rd-word'},m.fresh?bi('OK','Есть'):bi('Waiting…','Ожидается…'))])]);
   var parts=E('section',{'class':'hv-chart-card'},[E('h3',{},bi('Required parts on the router','Нужные части на роутере')+(waiting?'':' ('+passCount+' / '+order.length+')')),
-    E('div',{'class':'hv-rd-grid'},order.map(function(code){return readinessTile(code,waiting?'waiting':(byCode[code]||'unknown'));}))]);
+    E('div',{'class':'hv-rd-grid'},order.map(function(code){return readinessTile(code,byCode[code]||(m.reported?'unknown':'waiting'),note(code));}))]);
   // Auto steps as a stepper; blocker codes open their row in the error table.
   var stepper=E('ol',{'class':'hv-rd-steps'},auto.steps.map(function(step,i){
     var current=auto.next&&auto.next.key===step.key;

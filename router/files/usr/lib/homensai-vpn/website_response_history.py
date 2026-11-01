@@ -5,8 +5,9 @@ from website_response import METRIC,TARGET_SET,VALID_FOR,MAX_MS,TARGETS,DEFINITI
 
 DAY=86400
 WEEK=7*DAY
-MAX_ROWS=7*1440+1
-MAX_BYTES=2*1024*1024
+MAX_ROWS=30*1440+1  # up to 30 days of minute rows (retention_settings)
+MAX_BYTES=4*1024*1024
+PUBLIC_ROWS=7*1440+1  # rows_json/coverage_rows_json carry at most the newest week (status transport bound)
 IDENTIFIER=re.compile(r'^(?:openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$')
 KINDS={'source','target','unknown','off','switching','blocked','down'}
 
@@ -78,7 +79,7 @@ class WebsiteResponseHistory:
 
     def __init__(self,data=None,notice=None):
         self.data=copy.deepcopy(data)if data is not None else self.empty()
-        self.notice=notice;self.retention_seconds=WEEK;self.validate()
+        self.notice=notice;self.retention_seconds=WEEK;self.byte_budget=None;self.validate()
 
     @classmethod
     def empty(cls):return {'version':1,'metric':cls.METRIC,'target_set':cls.TARGET_SET,'rows':[],'pairs':{},'current':None,'seen':{},'saved':None,'stats_since':None,'reset_floor':None}
@@ -178,7 +179,7 @@ class WebsiteResponseHistory:
             'statistics':{role:self.statistics(rows,side,since)for side,role in enumerate(('source','target'))},
             'scope':self.SCOPE}
         result['profile_statistics']={identifier:result['statistics'][role]for identifier,role in zip(result['pair'],('source','target'))}
-        if len(rows)>1441:result['rows_json']=json.dumps(packed,separators=(',',':'),allow_nan=False);result['coverage_rows_json']=json.dumps(coverage,separators=(',',':'))
+        if len(rows)>1441:result['rows_json']=json.dumps(packed[-PUBLIC_ROWS:],separators=(',',':'),allow_nan=False);result['coverage_rows_json']=json.dumps(coverage[-PUBLIC_ROWS:],separators=(',',':'))
         return result
 
     @staticmethod
@@ -199,6 +200,8 @@ class WebsiteResponseHistory:
     def save(self,path,writer,now):
         if not number(now)or now<0:raise ValueError(self.PREFIX+'-TIME')
         if self.notice==self.PREFIX+'-UNAVAILABLE':raise ValueError(self.notice)
+        from retention_settings import trim_to_budget
+        trim_to_budget(self.data,self.byte_budget)  # size mode: the oldest rows give way to the owner's budget
         self.validate();data=copy.deepcopy(self.data);data['saved']=now
         if len(json.dumps(data,separators=(',',':')).encode())>MAX_BYTES:raise ValueError(self.PREFIX+'-SIZE')
         writer(Path(path),{'data':data,'sha256':checksum(data)});self.data['saved']=now

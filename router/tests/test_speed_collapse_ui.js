@@ -30,7 +30,7 @@ for(const lang of ['en','ru']){
  const built=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+manifest.application.ui_module+'.js','utf8');
  const rankingPage=built.includes('function ensureVisiblePage(key)')?'tests':'ranking';
  const start=built.indexOf("var ranking=E('table'"),newAnchor="addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',limitTableRows(ranking,5,'server-ranking-other'));",anchor=built.includes(newAnchor)?newAnchor:"addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',ranking);",end=built.indexOf(anchor,start)+anchor.length;
- assert(start>=0&&end>start);c.ranked=profiles.map(p=>({p,r:{n:30,good:30,sum:300}}));c.cell=v=>new N('td',{},v);c.tr=x=>x;c.rankConfidence=n=>n;c.addSearch=()=>{};
+ assert(start>=0&&end>start);c.ranked=profiles.map(p=>({p,r:{n:30,good:30,sum:300}}));c.cell=v=>new N('td',{},v);c.tr=x=>x;c.rankConfidence=n=>n;c.addSearch=()=>{};c.status={time:0,profiles};  // the page scope's status (Last ping column)
  let output;c.put=(_,node)=>{output=node;};
  vm.runInContext(built.slice(start,end).replace(anchor,"addSearch('"+rankingPage+"',ranking);put('"+rankingPage+"',limitTableRows(ranking,5,'server-ranking-other'));"),c);
  const rank=check(output,8);rank.rows().forEach((row,i)=>row.hidden=i!==7);observers.forEach(fn=>fn());assert.equal(rank.visible().length,1);assert(rank.button.hidden,'search includes entries after the initial five');

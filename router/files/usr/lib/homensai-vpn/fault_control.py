@@ -139,7 +139,8 @@ def eligibility(arguments,data,status,native,settings,selection,blockers,now,cer
     try:interval=int(settings.get('interval',10))
     except (ValueError,TypeError,OverflowError):raise FaultError('FAULT-IDENTITY-UNVERIFIED') from None
     if not 10<=interval<=300:raise FaultError('FAULT-IDENTITY-UNVERIFIED')
-    pair=resolve_pair(status,settings,now,max(30,min(900,interval*3)),max(30,min(600,interval*2)))
+    from observation_freshness import SETTLE_MAX
+    pair=resolve_pair(status,settings,now,max(30,min(900,interval*3)),max(30,min(SETTLE_MAX,interval*2)))
     if pair['coordination']['state']!='READY':raise FaultError('FAULT-IDENTITY-UNVERIFIED')
     bindings=current_bindings(data.get('profiles',[]))
     for role in ('source','target'):

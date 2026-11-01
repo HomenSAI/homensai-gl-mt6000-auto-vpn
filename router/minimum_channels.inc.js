@@ -13,6 +13,8 @@ function renderMinimumChannels(status,inventory,routerUrl){
   function details(profile){
     var health=simpleHomeHealth(profile,now,model.dataUnavailable),known=!!profile;
     var measured=health.state==='healthy'&&known&&Number.isFinite(profile.rtt_ms)&&profile.rtt_ms>=0;
+    // The shared response reading (ping: last answer with its age) when the page has it; the same value as every table.
+    var delay=known&&typeof channelDelayModel==='function'?channelDelayModel(profile,status,now):null;
     var stamp=known&&Number.isFinite(profile.time)&&manualFresh(profile.time,now,90)?new Date(profile.time*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{timeZone:'Europe/Berlin'}):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'));
     return E('details',{'class':'hv-minimum-details'},[
       E('summary',{},bi('Details','Подробнее')),
@@ -20,7 +22,7 @@ function renderMinimumChannels(status,inventory,routerUrl){
         E('dt',{},bi('Server','Сервер')),E('dd',{},endpointText(profile,now)),
         E('dt',{},bi('Protocol','Протокол')),E('dd',{},known&&['wireguard','openvpn'].indexOf(profile.protocol)>=0?protocolLabel(profile):bi('Not reported by the router','Роутер не сообщил')),
         E('dt',{},bi('Country','Страна')),E('dd',{},known&&countryName(profile)||bi('Not reported by the router','Роутер не сообщил')),
-        E('dt',{},bi('Delay','Задержка')),E('dd',{},measured?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'))),
+        E('dt',{},bi('Delay','Задержка')),E('dd',{},delay&&delay.rtt_ms!==null?delay.text:measured?profile.rtt_ms.toFixed(0)+' '+bi('ms','мс'):(typeof channelCheckText==='function'?channelCheckText(profile,now):bi('No fresh measurement','Нет свежего измерения'))),
         E('dt',{},bi('Checked · Europe/Berlin','Проверено · Europe/Berlin')),E('dd',{},stamp)
       ])
     ]);

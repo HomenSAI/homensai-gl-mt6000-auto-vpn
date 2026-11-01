@@ -5,6 +5,11 @@ import socket
 import time
 
 HTTP_SECONDS = 6
+# Owner decision 01.11.2026: during a dense confirmation (a channel already suspected by the heartbeat or a
+# passive signal) the monitor's HTTPS checks wait at most DENSE_HTTP_SECONDS, so three failed checks of a cut
+# channel take about 12 s instead of about 23 s. The failure count, the DNS check and Auto's own confirmation
+# probe (native_switch, live_probe.lua) are unchanged.
+DENSE_HTTP_SECONDS = 3
 
 
 def remaining(deadline):

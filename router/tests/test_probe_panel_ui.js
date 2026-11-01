@@ -12,6 +12,8 @@ for(const language of ['en','ru']){
   // Every level states its cadence and the detection time; the boost shortens it.
   for(const level of [1,2,3,4,5]){const t=c.probeLevelText(level,false);assert(/\d+/.test(t)&&t.includes(String(c.PROBE_LEVELS[level][0])),'level '+level+' cadence');}
   assert(c.probeLevelText(1,true).includes(language==='ru'?'без ускорения 180':'without boost 180'),'boost shortens economy detection');
+  // The ping has its own setting now: the level text no longer claims a ping cadence.
+  for(const level of [1,5]){const t=c.probeLevelText(level,false);assert(!/ping and websites|пинг и сайты/.test(t)&&t.includes(language==='ru'?'пинг — отдельная настройка':'ping: its own setting'),'level '+level+' ping wording');}
   // Panel: slider 1-5, checkbox, Apply disabled until something changes.
   const status={probe_policy:{level:3,boost_enabled:true,boost_active:false,interval:20,measure_interval:60}};
   const panel=c.renderProbeControl(status,{settings:{}}),all=panel.all();
@@ -30,6 +32,7 @@ for(const language of ['en','ru']){
   // Decision log: level choice, boost start and every result have a decision and a reason.
   const level=c.probeDecision({kind:'level',level:2,interval:30,measure_interval:120,boost_enabled:false});
   assert(level[0].includes('2')&&level[1].includes('30')&&level[1].includes('120'));
+  assert(level[1].includes(language==='ru'?'сайты раз в 120':'websites every 120')&&!/ping\/websites|пинг\/сайты/.test(level[1]),'the level row names the website cadence only');
   const start=c.probeDecision({kind:'boost-start',level:1,interval:60,measure_interval:300,role:'target',boost_interval:10});
   assert(start[1].includes(language==='ru'?'резервный канал':'reserve channel')&&start[1].includes('10'));
   for(const result of ['switched','failure-confirmed','false-alarm','disabled']){

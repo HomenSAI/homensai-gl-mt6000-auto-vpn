@@ -90,7 +90,24 @@ function lastHistoryDelay(status,id){
   for(var i=h.rows.length-1;i>=0;i--){var r=h.rows[i];if(Array.isArray(r)&&Number.isInteger(r[side+3])&&r[side+3]>0&&Number.isFinite(r[side+1]))return {rtt_ms:r[side+1]/(10*r[side+3]),time:r[0]+30,metric:h.metric};}
   return null;
 }
-function delayAge(seconds){seconds=Math.max(0,Math.round(seconds));return seconds<90?seconds+' '+bi('s ago','с назад'):Math.round(seconds/60)+' '+bi('min ago','мин назад');}
+function delayAge(seconds){seconds=Math.max(0,Math.round(seconds));return seconds<90?seconds+' '+bi('s ago','с назад'):seconds<5400?Math.round(seconds/60)+' '+bi('min ago','мин назад'):Math.round(seconds/3600)+' '+bi('h ago','ч назад');}
+// The one shared ping reading (owner rule, 31 Oct 2026): every table, card and statistics view that shows a ping
+// reads it here. Source: the router's status.json, served the same by the Python agent and the Lua monitor -
+// profiles[].ping_last (the channel's last real answer, kept in router RAM) or profiles[].ping when it is a newer
+// answer. Shown as "42 ms (12 s ago)". null only when the router never measured this channel since it started;
+// an old answer keeps its value and age: the age shows it is old, it never means the VPN is down.
+function pingReading(p,status,now){
+  if(!p||typeof p!=='object')return null;
+  var best=null;
+  function take(x){if(x&&typeof x==='object'&&Number.isFinite(x.rtt_ms)&&x.rtt_ms>=0&&x.rtt_ms<=60000&&Number.isFinite(x.time)&&(!best||x.time>best.time))best={rtt_ms:x.rtt_ms,time:x.time,target:typeof x.target==='string'?x.target:null};}
+  if(p.ping&&p.ping.metric==='icmp-rtt-ms'&&p.ping.state==='ok')take(p.ping);
+  take(p.ping_last);
+  if(!best)return null;
+  var at=Number.isFinite(now)?now:(typeof statusNow==='function'&&status?statusNow(status):Date.now()/1000),age=Math.max(0,at-best.time);
+  return {rtt_ms:best.rtt_ms,time:best.time,age:age,target:best.target,text:websiteMs(best.rtt_ms)+' '+bi('ms','мс')+' ('+delayAge(age)+')'};
+}
+// A table cell from the shared reading: the value with its age, a dash only when there was never a measurement.
+function pingCellText(p,status,now){var r=pingReading(p,status,now);return r?r.text:'—';}
 // The current measurement only (strict); channelDelayModel adds the last known delay for display.
 function channelPingModel(p,status,now){
   if(status&&typeof status.response_metric==='string'&&status.response_metric.indexOf('icmp-')===0)return channelIcmpModel(p,status,now);
@@ -98,17 +115,22 @@ function channelPingModel(p,status,now){
 }
 function channelDelayModel(p,status,now){
   var ping=status&&typeof status.response_metric==='string'&&status.response_metric.indexOf('icmp-')===0;
-  var model=channelPingModel(p,status,now),id=p&&p.id,metric=ping?status.response_metric:'websites';
+  var model=channelPingModel(p,status,now),id=p&&p.id;
   if(!id)return model;
-  if(model.state==='ok'&&Number.isFinite(model.rtt_ms)){UI_LAST_DELAY[id+'|'+metric]={rtt_ms:model.rtt_ms,time:now};return model;}
+  if(ping){
+    // Ping: only the shared router reading, the same value and age on every page (no page-side memory).
+    var r=pingReading(p,status,now);
+    if(!r)return model;
+    return {state:model.state==='ok'?'ok':'last',code:model.state==='ok'?null:model.code,rtt_ms:r.rtt_ms,successes:model.successes,kind:'ping',
+      time:r.time,age:r.age,target:r.target||String(status.response_metric).slice(5),text:r.text};
+  }
+  if(model.state==='ok'&&Number.isFinite(model.rtt_ms)){UI_LAST_DELAY[id+'|websites']={rtt_ms:model.rtt_ms,time:now};return model;}
   if(model.state==='inactive')return model;
-  var last=UI_LAST_DELAY[id+'|'+metric],x=ping&&p.ping;
-  if(!last&&x&&Number.isFinite(x.rtt_ms)&&Number.isFinite(x.time)&&x.target===String(status.response_metric).slice(5))last={rtt_ms:x.rtt_ms,time:x.time};
-  if(!last){var h=lastHistoryDelay(status,id);if(h&&(ping?h.metric==='icmp-rtt-ms':h.metric===WEBSITE_METRIC))last=h;}
+  var last=UI_LAST_DELAY[id+'|websites'];
+  if(!last){var h=lastHistoryDelay(status,id);if(h&&h.metric===WEBSITE_METRIC)last=h;}
   if(!last)return model;
-  var label=ping?bi('ping ','пинг ')+String(status.response_metric).slice(5):bi('three sites','три сайта');
   return {state:'last',code:model.code,rtt_ms:last.rtt_ms,successes:model.successes,kind:model.kind,
-    text:websiteMs(last.rtt_ms)+' '+bi('ms','мс')+' · '+label+' · '+bi('last measured ','последний замер ')+delayAge(now-last.time)};
+    text:websiteMs(last.rtt_ms)+' '+bi('ms','мс')+' · '+bi('three sites','три сайта')+' · '+bi('last measured ','последний замер ')+delayAge(now-last.time)};
 }
 // Ping (ICMP echo through the tunnel to the chosen public DNS address): the owner's default response metric.
 function channelIcmpModel(p,status,now){
@@ -141,7 +163,7 @@ function channelWebsiteModel(p,status,now){
   return {state:'ok',code:null,rtt_ms:x.avg_ms,successes:3,text:websiteMs(x.avg_ms)+' '+bi('ms','мс')};
 }
 function renderChannelPing(profile,status,now){
-  var model=channelDelayModel(profile,status,now),detail=bi('Mean response of Google, Cloudflare and Wikipedia, all 3 required. Fresh DNS+TCP+TLS+HTTP headers; not a full page.','Средний ответ Google, Cloudflare и Wikipedia, нужны все 3. Новый DNS+TCP+TLS+HTTP-заголовки, не полная страница.')+' '+model.text+(model.code?' · '+model.code:'');
+  var model=channelDelayModel(profile,status,now),detail=(model.kind==='ping'?bi('Ping: one ICMP echo through this channel to ','Пинг: один ICMP-запрос через этот канал к ')+(model.target||String((status||{}).response_metric).slice(5))+bi('. The value is the last answer and its age; an old ping does not mean the VPN is down.','. Значение — последний ответ и его возраст; старый пинг не означает, что VPN не работает.'):bi('Mean response of Google, Cloudflare and Wikipedia, all 3 required. Fresh DNS+TCP+TLS+HTTP headers; not a full page.','Средний ответ Google, Cloudflare и Wikipedia, нужны все 3. Новый DNS+TCP+TLS+HTTP-заголовки, не полная страница.'))+' '+model.text+(model.code?' · '+model.code:'');
   var labels={checking:bi('Checking','Проверяется'),stale:bi('Check is out of date','Проверка устарела'),partial:bi('Incomplete check','Неполная проверка'),failed:bi('Check failed','Проверка не прошла'),inactive:bi('Tunnel is off','Туннель отключён'),unavailable:bi('No current result','Нет актуального результата')};
   var shown=model.rtt_ms==null?'— · '+(labels[model.state]||labels.unavailable)+(model.kind==='ping'?'':' · '+model.successes+'/3'):model.text;
   return E('small',{'class':'hv-channel-ping','data-ping-state':model.state,'data-latency-metric':WEBSITE_METRIC,'data-latency-state':model.state,'data-coverage':model.successes+'/3','title':detail,'aria-label':detail},shown);

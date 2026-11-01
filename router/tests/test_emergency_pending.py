@@ -24,7 +24,7 @@ class EmergencyPendingEdits(unittest.TestCase):
  def test_clean_stop_disables_only_saved_auto_flag(self):
   for name in ['router/files/usr/sbin/homensai-vpn-emergency','router-test-kit/05-emergency.sh']:
    with self.subTest(source=name):
-    result,calls=self.run_case(ROOT/name,'');self.assertEqual(result.returncode,0);self.assertEqual(calls,['service:stop','uci:set homensai_vpn.main.native_enabled=0','uci:commit homensai_vpn'])
+    result,calls=self.run_case(ROOT/name,'');self.assertEqual(result.returncode,0);self.assertEqual(calls,['service:stop','uci:set homensai_vpn.main.native_enabled=0','uci:commit homensai_vpn','service:stop'])
  def test_failed_service_stop_never_commits(self):
   for name in ['router/files/usr/sbin/homensai-vpn-emergency','router-test-kit/05-emergency.sh']:
    with self.subTest(source=name):

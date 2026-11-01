@@ -12,6 +12,8 @@
 7. Manual channel selection can work while Auto runs and never turns it off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails. A working reserve is normal. Return only under current readiness, policy and operator intent; a lower-delay recommendation never switches traffic itself.
 8. To finish, use normal Stop and verify its actual restoration/cleanup. A retained reserve or failed recovery is a separate outcome, not successful restoration. Auto needs explicit Start after restart.
 
+Timing (dedicated MT3000, Lua line): with fast detection (on by default since alpha24) Auto decides about 26-28 s after an outage at probe level 1, because it still needs 3 failed checks in a row; traffic moves 1.3-1.6 s after the decision, and a manual click is done in about 0.7 s. [Numbers per layer](MEASUREMENTS.en.md#8-runtime-pyramid-and-switch-times).
+
 The live log groups consecutive repeats, newest first. Its first two pinned rows are monitor/Auto, followed by the working channel. Saved Events starts with 20 rows and expands/searches the retained snapshot. M/R graphics identify direction; confirmed route selection and tunnel health are distinct.
 
 [No internet / recovery](../router-test-kit/EMERGENCY.md) · [LAN modes](LAN-HELPER.en.md) · [Retention](HISTORY-RETENTION.md).

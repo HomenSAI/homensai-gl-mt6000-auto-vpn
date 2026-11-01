@@ -7,7 +7,9 @@
 
 ## Один неизменяемый выпуск
 
-Stable по умолчанию: [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0), `homensai-auto-vpn_0.9.0-1_all.ipk`,769849байт, SHA256 `7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a`. Нужны его checksum, verification JSON и router-test-kit **того же тега**.
+Рекомендуется для GL-MT3000 (основная линия с 01.11.2026): [v2.0.0-beta1](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v2.0.0-beta1), `homensai-auto-vpn_2.0.0-beta1-1_all.ipk`, 1453760 байт, SHA256 `b27e1cc31612981fd051c817b82afb5cb31e346895f663162e61b3fada4e0076` — линия Lua (службы Lua и модуль JSON на C по умолчанию, Python — запасной уровень); `.sha256` и router-test-kit берите из **того же тега**. Инструкция живого теста: [OWNER-LIVE-TEST.ru.md](OWNER-LIVE-TEST.ru.md).
+
+Предыдущий stable: [v0.9.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/releases/tag/v0.9.0), `homensai-auto-vpn_0.9.0-1_all.ipk`,769849байт, SHA256 `7cf93df74cbf72271c93235cdeece7e1e4eaa70fac249bfddeef647af29f287a`. Нужны его checksum, verification JSON и router-test-kit **того же тега**.
 
 Для явно выбранного prerelease берите его версию/имя/размер/хеш/доказательства и скрипты того же тега. Комплект этой ветки следует VERSION.json и может быть новее stable. Не смешивайте его со stable0.9.0 и не понижайте более новую установленную версию. Поле release_tag в исходниках само по себе не доказывает существование серверного Release.
 
@@ -22,5 +24,7 @@ Stable по умолчанию: [v0.9.0](https://github.com/HomenSAI/homensai-gl
 7. Выполните `03-verify.sh wait`. Проверьте пакет/работающую версию, новые даты, службы и реально отданные module/CSS по проверенному payload, где возможно. Exit0 от opkg, кешированная страница или зелёная лампа сами по себе недостаточны. Устаревшая RPC-регистрация может требовать осознанного документированного reload/повторного входа.
 8. Откройте «Службы» → HomenS.AI Auto VPN, обновите кеш и пройдите условия/объяснение/мастер. Условия принимает человек; прежнее принятие той же версии сохраняется. Save не включает Auto и не отправляет Telegram-тест.
 9. Отделяйте [подготовку платформы](ROUTER-PREPARATION.md) от установки. Запускайте Auto только для выбранного результата и текущей готовности. Если разрешённое обновление сохраняет прежние Auto/канал, восстановите и перепроверьте их обычными командами; при невозможности честно укажите безопасный отказ.
+
+Линия Lua (пакеты 2.0.0-alpha): в пакете службы Lua и модуль на C `/usr/lib/lua/canon_c.so`; службам Lua нужны `lua`, `lua-cjson` и `libuci-lua` из шага 6, с 2.0.0-alpha24 они работают по умолчанию (`option lua_monitor '0'` / `option lua_auto '0'` возвращают службы Python). Если модуль C не загрузился, код Lua работает сам. Первая запись истории после обновления переводит `native-history.json` на schema 2 (маленький файл состояния и `native-history.events.jsonl`) и оставляет прежний файл как `native-history.v1.json`. Возврат на более старый пакет: штатный Stop, затем `cp /etc/homensai-vpn/native-history.v1.json /etc/homensai-vpn/native-history.json`, затем установка старого пакета; события, записанные после перехода, будут потеряны.
 
 [LAN-помощник](LAN-HELPER.ru.md) необязателен для подготовленного router-probed Auto и обязателен своему отдельному клиентскому тесту. [Аварийное восстановление/удаление](../router-test-kit/EMERGENCY.md) — осознанные операции после проверки состояния, не универсальное лечение Интернета. Generic x86 VM тестирует monitor-only только в явно выбранной изолированной области; не подделывайте модель и не обходите отказ реального устройства.

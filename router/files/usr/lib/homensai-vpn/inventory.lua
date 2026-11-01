@@ -109,10 +109,19 @@ uci:foreach('homensai_vpn','main',function(s)
   main.lua_core=s.lua_core=='1'
   local measure=tonumber(s.measure_interval)
   main.measure_interval=(measure and measure>=30 and measure<=300) and math.floor(measure) or 0
+  -- Owner ping cadence (probe_policy.ping_interval): 10..300 s in steps of 10, otherwise once a minute.
+  local ping=tonumber(s.ping_interval)
+  main.ping_interval=(ping and ping>=10 and ping<=300 and ping%10==0) and math.floor(ping) or 60
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
   main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))
   main.history_days=math.max(1,math.min(7,math.floor(tonumber(s.history_days) or 7)))
+  -- Owner retention (retention_settings.choice): time (1..7, 14, 30 days) or size (1..32 MB); absent -> history_days.
+  main.stats_retention_mode=(s.stats_retention_mode=='time' or s.stats_retention_mode=='size') and s.stats_retention_mode or nil
+  local rdays=type(s.stats_retention_days)=='string' and s.stats_retention_days:match('^%d%d?$') and tonumber(s.stats_retention_days)
+  main.stats_retention_days=rdays or nil
+  local rmb=type(s.stats_retention_mb)=='string' and s.stats_retention_mb:match('^%d%d?$') and tonumber(s.stats_retention_mb)
+  main.stats_retention_mb=rmb or nil
 end)
 -- Model preference never replaces hardware detection or controller platform guards.
 local board_file=io.open('/tmp/sysinfo/board_name','r')

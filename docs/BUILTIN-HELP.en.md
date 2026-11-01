@@ -74,9 +74,9 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want to know exactly when the router checks more often and when it returns to the chosen level.
 
-Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Response measurement (ping or the three sites): 300, 120, 60, 45 and 30 s. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
+Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The ping has its own interval in Settings → How the response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
 
-Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the response every 30 s, whatever level you chose. Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
+Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
 
 An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.
 
@@ -107,7 +107,7 @@ The response shown is the average of the three sites and appears only when all t
 
 Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.
 
-How often it is measured follows the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
+How often: the ping has its own setting in Settings → How the response is measured, Ping interval: from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Every table shows the last ping with its age, for example 42 ms (12 s ago); a dash means the router has not pinged that channel since it started. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
 
 The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option "Measure all methods (comparison)" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.
 
@@ -1227,6 +1227,29 @@ If it is already off but the check still fails, open System readiness → Persis
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Auto blocked: hardware and network acceleration.
 Start reports HNAT, hardware acceleration or PREP-HNAT-CONFIG.
+Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
+Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
+https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
+```
+
+<a id="stats-retention"></a>
+## How long statistics are kept: by time or by size
+
+You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
+
+Open Advanced → Statistics collection and find "How long statistics are kept".
+
+By time: move the slider from 1 to 7 days, 2 weeks or 1 month. By size: set a limit from 1 to 32 MB; the page shows how many days it holds.
+
+Read the estimate next to the slider: about how much flash and RAM the statistics take while Diagnostics records. A warning appears when flash or memory could run short.
+
+Press Save. The router applies the period from its next check and deletes statistics older than it. Switching and Auto do not depend on this setting.
+
+### Diagnostic prompt
+
+```text
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How long statistics are kept: by time or by size.
+You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md

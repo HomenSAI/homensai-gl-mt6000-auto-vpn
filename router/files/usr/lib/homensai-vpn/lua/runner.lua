@@ -134,45 +134,42 @@ function M.fs.read(path)
   local text=f:read('*a');f:close()
   return text
 end
--- A symlink, a non-file or more than 1 MB is refused (journal_read). Without nixio only the size is known;
--- the directory is root-only (0700) and rename() never follows a symlink at the destination.
-function M.fs.unsafe(path)
+-- key(path): (inode, size, mtime, ctime) for caches of unchanged files; nil without nixio (no caching)
+function M.fs.key(path)
+  local ok,fs=pcall(require,'nixio.fs')
+  if not (ok and type(fs)=='table' and fs.lstat) then return nil end
+  local st=fs.lstat(path)
+  if not st then return 'absent' end
+  return table.concat({tostring(st.type),tostring(st.ino),tostring(st.size),tostring(st.mtime),tostring(st.ctime)},':')
+end
+-- A symlink, a non-file or more than 1 MB (or limit bytes) is refused (journal_read). Without nixio only the size
+-- is known; the directory is root-only (0700) and rename() never follows a symlink at the destination.
+function M.fs.unsafe(path,limit)
+  limit=limit or 1024*1024
   local ok,fs=pcall(require,'nixio.fs')
   if ok and type(fs)=='table' and fs.lstat then
     local st=fs.lstat(path)
     if not st then return false end
-    return st.type~='reg' or st.size>1024*1024
+    return st.type~='reg' or st.size>limit
   end
   local f=io.open(path,'rb')
   if not f then return false end
   local size=f:seek('end');f:close()
-  return size==nil or size>1024*1024
+  return size==nil or size>limit
 end
--- atomic_json(): unique temp name in the same directory, mode 0600, flush, fsync, rename.
--- Lua io has no fsync: nixio's File:sync() when present, otherwise `sync` (measure on the device).
-function M.fs.write_atomic(path,text)
-  local directory,name=string.match(path,'^(.*)/([^/]+)$')
-  if not canon.safe_directory(directory) or not string.find(name,'^[A-Za-z0-9_.-]+$') then error('runner: unsafe path',0) end
-  local pending=directory..'/.'..name..'.'..canon.unique()..'.pending'
-  local f=io.open(pending,'wb')
-  if not f then
-    os.execute('mkdir -p '..directory..' && chmod 700 '..directory)
-    f=assert(io.open(pending,'wb'))
-  end
-  assert(f:write(text));assert(f:flush());f:close()
-  local synced=false
-  local ok,nixio=pcall(require,'nixio')
-  local ok2,nfs=pcall(require,'nixio.fs')
-  if ok and ok2 and type(nixio)=='table' and nixio.open and type(nfs)=='table' and nfs.chmod then
-    synced=pcall(function()
-      assert(nfs.chmod(pending,'rw-------'))
-      local h=assert(nixio.open(pending,'r'));assert(h:sync());h:close()  -- fsync of the inode
-    end)
-  end
-  if not synced then os.execute('chmod 600 '..pending..' && sync') end
-  local renamed,err=os.rename(pending,path)
-  if not renamed then os.remove(pending);error(err,0) end
+-- size(path): bytes, nil when absent (the switch-history archive check)
+function M.fs.size(path)
+  local f=io.open(path,'rb')
+  if not f then return nil end
+  local size=f:seek('end');f:close()
+  return size
 end
+-- append/rename: durable.append (fsync) and a rename with the directory fsync (switch-history journal)
+function M.fs.append(path,text) return require('durable').append(path,text) end
+function M.fs.rename(from,to) return require('durable').rename(from,to) end
+-- atomic_json(): durable.write - unique temp name in the same directory, mode 0600, fsync of the file, rename,
+-- fsync of the directory (POWER-CUT-INTEGRITY-2026-10-31.ru.md). One primitive for every flash writer.
+function M.fs.write_atomic(path,text) return require('durable').write(path,text) end
 
 -- Resident memory of this process (kB) and the Lua heap.
 function M.memory()

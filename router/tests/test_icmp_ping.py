@@ -110,7 +110,8 @@ class PingSamplerTests(unittest.TestCase):
         self.assertEqual(profile,original)
         with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=100):
             sampler.cache[P.signature(profile)]=result;sampler.apply([profile],{'source':profile['id']},result['time'])
-        self.assertEqual({k:v for k,v in profile.items()if k!='ping'},original)
+        self.assertEqual({k:v for k,v in profile.items()if k not in('ping','ping_last')},original)
+        self.assertIsNone(profile['ping_last'],'a timeout is never a last ping value')
 
     def test_socket_error_is_named_without_private_exception(self):
         with patch.object(P,'echo',side_effect=PermissionError('PRIVATE_SENTINEL')):result=self.sampler().measure(row())
@@ -156,17 +157,56 @@ class PingSamplerTests(unittest.TestCase):
             self.assertEqual(len(QueuedThread.instances),1,'no duplicate or queued worker')
         self.assertTrue(all(p['ping']['state']=='checking'for p in profiles))
 
-    def test_finished_worker_cannot_resample_channel_before_thirty_seconds(self):
-        QueuedThread.instances=[];profile=row();sampler=self.sampler()
+    def test_finished_worker_cannot_resample_channel_before_its_interval(self):
+        QueuedThread.instances=[];profile=row();sampler=self.sampler();sampler.configure(30)
         with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=100):
             sampler.apply([profile],{'source':profile['id']},1000)
         with patch.object(sampler,'measure',return_value=P.public(profile,'ok',None,1001,12)):QueuedThread.instances[0].run()
-        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=129):
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=127.9):
             sampler.apply([profile],{'source':profile['id']},1029)
-        self.assertEqual(len(QueuedThread.instances),1)
-        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=130):
+        self.assertEqual(len(QueuedThread.instances),1,'never earlier than interval - SLACK')
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=128):
             sampler.apply([profile],{'source':profile['id']},1030)
         self.assertEqual(len(QueuedThread.instances),2)
+
+    def test_owner_interval_default_valid_for_and_slack(self):
+        sampler=self.sampler()
+        self.assertEqual((sampler.interval,P.INTERVAL),(60,60),'default once a minute')
+        sampler.configure(10);self.assertEqual(sampler.valid_for,45,'never below the former 45 s window')
+        sampler.configure(300);self.assertEqual(sampler.valid_for,465)
+        sampler.configure(10,None,105);self.assertEqual((sampler.interval,sampler.valid_for),(10,105),'valid_for from probe_policy.ping_valid_for')
+        # 10 s chosen, passes every 10 s: an echo sent 0.4 s after its pass is still due at the next pass.
+        QueuedThread.instances=[];profile=row();sampler=self.sampler();sampler.configure(10)
+        sampler.attempts[profile['vendor_tunnel_id']]=100.4
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=110):
+            sampler.apply([profile],{'source':profile['id']},1000)
+        self.assertEqual(len(QueuedThread.instances),1)
+
+    def test_last_ping_reading_is_kept_per_channel_and_only_from_real_answers(self):
+        QueuedThread.instances=[];profile=row();sampler=self.sampler();sampler.configure(30)
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=100):
+            sampler.apply([profile],{'source':profile['id']},1000)
+        self.assertIsNone(profile['ping_last'],'never measured: null')
+        with patch.object(sampler,'measure',return_value=P.public(profile,'ok',None,1001,42.5)):QueuedThread.instances[0].run()
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=140):
+            sampler.apply([profile],{'source':profile['id']},1040)
+        self.assertEqual(profile['ping_last'],{'rtt_ms':42.5,'time':1001,'target':'1.1.1.1'})
+        # A timeout keeps the last real answer; a stale or rebinding channel and a deselected one keep it too.
+        with patch.object(sampler,'measure',return_value=P.public(profile,'failed','PING-FAILED',1041)):QueuedThread.instances[1].run()
+        other=row(id='openvpn:1_1',protocol='openvpn',interface='ovpnclient2',device='ovpnclient2',vendor_tunnel_id='openvpn:ovpnclient2')
+        stale=row(time=500)
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=150):
+            sampler.apply([stale,other],{'source':other['id']},1050)
+        self.assertEqual(stale['ping_last']['rtt_ms'],42.5);self.assertEqual(stale['ping']['code'],'PING-NOT-SELECTED')
+        self.assertIsNone(other['ping_last'])
+        # A channel no longer listed is forgotten; a comparison sampler never writes the shared reading.
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=160):sampler.apply([other],{},1060)
+        self.assertEqual(sampler.last,{})
+        compare=P.PingSampler(lambda:inventory(row()),lambda _:binding(row()),compare=True);fresh=row()
+        with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=100):compare.apply([fresh],{'source':fresh['id']},1000)
+        self.assertNotIn('ping_last',fresh)
+        self.assertIsNone(P.last_reading(P.public(profile,'stale','PING-DATA-STALE',1000,12)))
+        sampler.close();self.assertEqual(sampler.last,{})
 
     def test_rate_limit_records_actual_packet_send_after_batch_delay(self):
         sampler=self.sampler();profile=row();sampler.attempts[profile['vendor_tunnel_id']]=100
@@ -201,7 +241,7 @@ class PingSamplerTests(unittest.TestCase):
         self.assertNotIn(key,sampler.cache);self.assertEqual(new['ping']['state'],'checking')
 
     def test_disabled_gap_and_rebind_do_not_bypass_per_channel_packet_limit(self):
-        QueuedThread.instances=[];profile=row();sampler=self.sampler()
+        QueuedThread.instances=[];profile=row();sampler=self.sampler();sampler.configure(30)
         with patch.object(P,'Thread',QueuedThread),patch.object(P.time,'monotonic',return_value=100):sampler.apply([profile],{'source':profile['id']},1000)
         with patch.object(sampler,'measure',return_value=P.public(profile,'ok',None,1001,10)):QueuedThread.instances[0].run()
         disabled=row(administrative_state='disabled')
