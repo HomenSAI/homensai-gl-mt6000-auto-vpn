@@ -1,5 +1,5 @@
 -- monitor_status.lua and the status reply: switch_timing, auto_control, manual_switch, channel_path, the Lua page
--- controls (no Python bridge), native_history public, the ping response history (Diagnostics only), auto_live extras.
+-- controls (no Python bridge), native_history public, the ping response history (saved in Diagnostics only), auto_live extras.
 local t=dofile((arg[0]:match('^(.*)/[^/]*$') or '.')..'/monitor_harness.lua')
 local canon=t.canon
 local page=require('monitor_status')
@@ -222,7 +222,7 @@ t.test('native_history public: the flash history file, cached by file key',funct
   t.eq(page.native_history(env,7,R.now),{available=false,error='HISTORY-001'})
 end)
 
-t.test('ping history: filled and saved only in Diagnostics; work mode keeps nothing',function()
+t.test('ping history: filled and saved in Diagnostics; work mode fills a RAM-only day, never saved',function()
   local R=t.fake_runner({config=DIAG})
   put(R,'/run/hv/native-status.json',obj({state='OBSERVING',mode='continuous-pair',proof_scope='router-probed-ipv4',readiness_verified=true,
     time=R.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))
@@ -249,8 +249,16 @@ t.test('ping history: filled and saved only in Diagnostics; work mode keeps noth
     time=W.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))
   local w=monitor.new(W)
   status=w:pass()
-  t.eq(#status.website_response_history.rows,0,'work mode: no rows recorded')
-  W.advance(86400);w:pass();w:shutdown()
+  W.advance(10);put(W,'/run/hv/native-status.json',obj({state='OBSERVING',mode='continuous-pair',proof_scope='router-probed-ipv4',readiness_verified=true,
+    time=W.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))
+  status=w:pass()
+  h=status.website_response_history
+  t.eq(h.pair,{'wireguard:peer_7','wireguard:peer_8'},'work mode: the Channels chart gets RAM rows')
+  t.eq(h.rows[#h.rows][2],123);t.eq(h.statistics.source.complete_samples,1);t.eq(h.retention_seconds,86400)
+  W.advance(86400);put(W,'/run/hv/native-status.json',obj({state='OBSERVING',mode='continuous-pair',proof_scope='router-probed-ipv4',readiness_verified=true,
+    time=W.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))
+  status=w:pass();w:shutdown()
+  for _,row in ipairs(status.website_response_history.rows) do t.truthy(row[1]>=W.now-86400,'work mode keeps one day in RAM') end
   t.eq(W.files['/etc/hv/ping-response-history.json'],nil,'work mode: never saved')
   t.truthy(W.files['/etc/hv/checkpoint.json']~=nil)
   local S=t.fake_runner({config=DIAG})

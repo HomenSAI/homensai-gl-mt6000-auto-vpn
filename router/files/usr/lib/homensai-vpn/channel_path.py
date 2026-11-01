@@ -147,6 +147,19 @@ def pair_snapshot(status, state, journal, live_order, now=None, kernel=None):
 
 
 def public_status(status):
+    """The route projection, with the supervisor's last LAN DNS follow (native channel_path.dns_mark,
+    dns_mark.project) carried over unchanged: a reading of /proc/dns_mark, not part of the route proof."""
+    result=route_status(status)
+    native=status.get('native_failover') if isinstance(status,dict) else None
+    path=native.get('channel_path') if isinstance(native,dict) else None
+    if isinstance(path,dict) and isinstance(result,dict):
+        from dns_mark import project
+        dns=project(path.get('dns_mark'))
+        if dns is not None:result['dns_mark']=dns
+    return result
+
+
+def route_status(status):
     native=status.get('native_failover',{}) if isinstance(status,dict) else {}
     required=native.get('mode')=='continuous-pair' or native.get('proof_scope')=='router-probed-ipv4'
     try:

@@ -3,6 +3,8 @@
 
 [Current version/evidence](CURRENT-STATUS.md) · [Full guide](CURRENT-STATE.en.md)
 
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+
 ## Roles, clients and traffic
 
 Main and reserve are roles, not WireGuard/OpenVPN names. Stock firmware owns provider profiles, credentials and server selection within a tunnel. The application observes exact protocol/interface/profile generations and coordinates the saved pair of distinct clients. A country/display group such as `default` is metadata, not proof of channel membership.

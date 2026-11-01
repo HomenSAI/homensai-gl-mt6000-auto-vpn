@@ -682,7 +682,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 Help for the complete setup wizard. Reading it saves nothing.
 
 
-Before step 1, first-time setup shows the experimental-software agreement and MIT License. Read it, tick the confirmations and accept to continue. Previously accepted terms are remembered on this router. Next comes a short explanation with three diagrams; press OK to open the wizard.
+Before step 1, first-time setup shows the experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0). Read it, tick the confirmations and accept to continue. Previously accepted terms are remembered on this router. Next comes a short explanation with three diagrams; press OK to open the wizard.
 
 
 Language and appearance

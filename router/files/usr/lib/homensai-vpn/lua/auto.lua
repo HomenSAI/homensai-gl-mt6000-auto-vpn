@@ -104,12 +104,35 @@ function M.boot_rollback(env,value)
   end
 end
 
+-- Interruption codes (owner request 01.11.2026, interruption.lua): why this supervisor is starting - one code per start
+-- in the system log and the history, decided before the recovery below changes the journal or the intent.
+function M.interruption_context(env)
+  local I=require('interruption')
+  local ctx=I.context(env.runtime,env.persist,{now=env.run.wall,stopping=env.stop,record=function(code)
+    require('history').new(env,env.persist,10000):record(canon.object({state=code,reason=code}))
+  end})
+  if env.interruption_io then for k,v in pairs(env.interruption_io) do ctx[k]=v end end  -- tests
+  return I,ctx
+end
+-- only the daemons (env.interruption) and tests (env.interruption_io) take part
+function M.start_cause(env,phase)
+  if not (env.interruption or env.interruption_io) then return nil end
+  local ok,handle=pcall(function() local I,ctx=M.interruption_context(env);return I.start(ctx,phase) end)
+  if ok then env.start_cause=handle end
+  return ok and handle or nil
+end
+function M.mark_running(env)
+  if env.start_cause==nil then return end
+  pcall(function() local I,ctx=M.interruption_context(env);I.mark_running(ctx,env.start_cause) end)
+end
+
 -- serve() up to the loop: returns 'stopped' when the daemon must end (give_up / CONTROL-REVISION-STALE),
 -- 'ready' otherwise.
 function M.recover(env)
   local rok=pcall(ctl.current_revision,env,true)
   local revision_error=not rok
   local jok,value=pcall(T.journal_read,env)
+  M.start_cause(env,jok and canon.is_object(value) and value.phase or nil)
   local paths=T.paths(env)
   if not jok then
     if not is_refused(value) then error(value,0) end
@@ -174,6 +197,7 @@ function M.recover(env)
   M.boot_step(env,'pair recovery')
   pair.recover(env)
   M.boot_step(env,'recovery finished')
+  M.mark_running(env)
   if revision_error then
     pcall(ctl.stop_latch,env,getd(value,'trial_nonce',NULL))
     T.publish(env,{state='BLOCKED',blockers=canon.array({'CONTROL-REVISION-STALE'}),alarm='CONTROL-REVISION-STALE',original_restored=false})
@@ -528,7 +552,7 @@ function M.daemon()
   local env={run=run,backend=backend,runtime=run.RUNTIME,persist='/etc/homensai-vpn',
              stop=function() return stop or M.stop_flagged(run.RUNTIME,started) end,
              sleep=function(s) sys.sleep(s) end,
-             history_lock=ctl.flock_file,version=backend.VERSION}
+             history_lock=ctl.flock_file,version=backend.VERSION,interruption=true}
   backend.bind(env)
   local ok,err=xpcall(function()
     if pcall(require,'uloop') then M.serve(env,function() stop=true end)

@@ -106,7 +106,7 @@ const restart=status([...HELD,
   assert.equal(cells[2][8],en?'Interrupted by a fault or restart':'Прервано сбоем или перезапуском');
   assert.equal(cells[0][8],en?'Back on the primary':'Снова на основном');
   const mean=table.children[table.children.length-1].children.map(text);
-  assert.equal(mean[3],en?'1 min 10 s':'1 мин 10 с','switching mean = the manual switch only');assert.equal(mean[6],en?'6 s':'6 с','return mean = the automatic return only');
+  assert.equal(mean[3],en?'1 min 10 s':'1 мин 10 с','switching mean = the manual switch only');assert.equal(mean[6],en?'6000 ms':'6000 мс','return mean = the automatic return only (under 10 s in ms)');
   const cards=page.all().find(n=>n.attrs['data-switch-cards']),cardText=text(cards);
   assert(cardText.includes(en?'recoveries after a fault 1':'восстановлений после сбоя 1'),cardText);
   assert(/Switching \(mean\) 1 min 10 s|Переключение \(среднее\) 1 мин 10 с/.test(cardText),cardText);

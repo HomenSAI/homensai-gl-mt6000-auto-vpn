@@ -95,7 +95,8 @@ function status(){
   assert(page.all().some(n=>n.tag==='svg'),'phase chart always drawn');
   const table=page.all().find(n=>n.attrs['data-switch-table']);assert(table,'table');
   assert.equal(table.children.length,1+4+1,'header, four episodes, mean row');
-  assert.equal(page.all().filter(n=>n.tag==='rect').length,4+3+1+2,'phase segments incl. still running');assert.equal(page.all().filter(n=>n.tag==='rect'&&n.attrs['fill-opacity']).length,1,'running switch drawn up to now');assert(all.includes(language==='en'?'Switching now':'Идёт переключение'));
+  // owner 01.11: with fewer than 5 episodes a finished one above 120 s is an outlier: not drawn, kept in the table
+  assert.equal(page.all().filter(n=>n.tag==='rect').length,3,'phase segments incl. still running, outliers left out');assert(page.all().some(n=>n.attrs['data-switch-outlier-note']),'outlier note');assert.equal(page.all().filter(n=>n.tag==='rect'&&n.attrs['fill-opacity']).length,1,'running switch drawn up to now');assert(all.includes(language==='en'?'Switching now':'Идёт переключение'));
   assert(all.includes(language==='en'?'Switch statistics':'Статистика переключений'));
   assert(all.includes('1 min 1 s')||all.includes('1 мин 1 с'));
   assert(all.includes(language==='en'?'Router switch average':'Среднее роутера')&&all.includes(language==='en'?'1 min 1 s':'1 мин 1 с'));
@@ -109,7 +110,7 @@ function status(){
 
 
  }
- const c=context('en');assert.equal(c.spanText(59.6),'1 min');assert.equal(c.spanText(3725),'1 h 2 min');assert.equal(c.spanText(-1),'—');assert.equal(c.spanText(null),'—');
+ const c=context('en');assert.equal(c.spanText(59.6),'59.6 s');assert.equal(c.spanText(60.4),'1 min');assert.equal(c.spanText(0.712),'712 ms');assert.equal(c.spanText(3725),'1 h 2 min');assert.equal(c.spanText(-1),'—');assert.equal(c.spanText(null),'—');
  assert(source.includes("['switches','⏱',"),'Advanced tab');assert(source.includes("var ADVANCED_KEYS=['tests','statistics','traffic','services','events','switches','collection'];"));
  assert(source.includes("'analytics','switches','collection'].indexOf(page)>=0?60000"),'history refresh every minute on the page');
  console.log('PASS: switch episodes (auto/manual/missing/running), journal+live-log durations, Switch statistics page EN/RU, empty states');

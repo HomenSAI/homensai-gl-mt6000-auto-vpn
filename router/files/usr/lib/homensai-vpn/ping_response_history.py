@@ -33,3 +33,24 @@ class PingResponseHistory(WebsiteResponseHistory):
     SCOPE='observed ICMP replies only; a lost echo is a gap; website history is separate'
     @staticmethod
     def measure(profile,now):return measurement(profile,now)
+
+
+# Work mode (stats_mode 'work', owner decision 01.11.2026): the Channels chart still needs the ping minute rows.
+# They are kept in RAM only, for the last WORK_DAYS, and never written to flash (the 30.10 flash-wear rule stays):
+# the agent's checkpoint saves this history only while Diagnostics is on. Lua: response_history.work_observe.
+WORK_DAYS=1
+
+
+def work_observe(history,status,settings,now):
+    """Record one pass into the RAM-only Work-mode history and keep its last WORK_DAYS."""
+    history.observe(status,settings,now)
+    if not number(now):return
+    history.retention_seconds=WORK_DAYS*86400
+    d=history.data;d['rows']=[r for r in d['rows']if r[0]>=now-history.retention_seconds]
+
+
+def work_reset(history,scope,now):
+    """The owner's statistics reset also clears the RAM-only Work-mode copy (the flash copy is reset by stats_reset)."""
+    if history is None or history.notice=='PING-HISTORY-UNAVAILABLE':return
+    if scope in('latency','all'):history.clear(now)
+    elif scope in('quality','ranking'):history.clear_statistics(now)

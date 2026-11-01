@@ -1,0 +1,222 @@
+#!/bin/sh
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
+# Self-check and self-restore of the installed program files (TODO item 15; design and failure matrix:
+# docs/architecture/INTEGRITY-MATRIX-2026-11-01.ru.md). POSIX sh + busybox sha256sum, stat, tar, awk.
+#
+#   verify   [ROOT]               every file of ROOT/usr/lib/homensai-vpn/integrity.sha256 (sha256 + mode, written by
+#                                 build_ipk.py); one "CODE /path" line per problem; exit 0 clean, 3 damaged, 4 no manifest
+#   snapshot                      postinst: the freshly unpacked files, verified against the manifest, become the pristine
+#                                 copy PERSIST/pristine/payload.tar.gz (+ .sha256); exit 0 made, 7 refused
+#   boot                          init start_service, before the instances: verify; on damage restore from the pristine
+#                                 copy (limits below), verify again, write RUNTIME/integrity.json, log the code; the last
+#                                 stdout line is mode=normal|no-c|python|stopped (what the init may start)
+#   restore  SOURCE SHAFILE [ROOT]  manual restore from a payload.tar.gz or an .ipk whose sha256 is SHAFILE's first word;
+#                                 exit 0 restored+verified, 5 refused, 6 did not verify
+#
+# Never written, never compared: conffiles (the owner's /etc/config/homensai_vpn with the terms acceptance; no hash
+# in the manifest), anything under /etc/config/ or /etc/homensai-vpn/ (journal, history, certificates, tokens), nft,
+# routes, the Auto flag. Damaged files are replaced only while the service is stopped (init start_service).
+# No restore loop: one restore per boot (RAM marker) and at most RESTORE_LIMIT in 24 h (PERSIST log; a time in the
+# future still counts, so a clock jump can only make the limit stricter).
+set -u
+ROOT=${HOMENSAI_INTEGRITY_ROOT:-}
+RUNTIME=${HOMENSAI_INTEGRITY_RUNTIME:-/var/run/homensai-vpn}
+PERSIST=${HOMENSAI_INTEGRITY_PERSIST:-/etc/homensai-vpn}
+OPKG_LOCK=${HOMENSAI_INTEGRITY_OPKG_LOCK:-/var/lock/opkg.lock}
+MANIFEST_REL=usr/lib/homensai-vpn/integrity.sha256
+PRISTINE_DIR=$PERSIST/pristine
+PRISTINE=$PRISTINE_DIR/payload.tar.gz
+RESTORE_LIMIT=3
+SNAPSHOT_RESERVE_KB=8192
+NOHASH=----------------------------------------------------------------
+log() { echo "$1"; logger -t homensai-vpn "$1" 2>/dev/null || true; }
+
+# valid MANIFEST -> 0 when the header and every row are well formed (the paths are later used in file names)
+valid() {
+    [ -f "$1" ] && head -n 1 "$1" | grep -q '^# homensai-auto-vpn payload manifest v1$' || return 1
+    awk -v nohash="$NOHASH" '
+        /^#/ {next}
+        NF!=3 || ($1 !~ /^[0-9a-f]+$/ && $1!=nohash) || length($1)!=64 || $2 !~ /^0[0-7][0-7][0-7]$/ ||
+        $3 !~ /^\/[A-Za-z0-9_.+\/-]+$/ || $3 ~ /\.\./ {bad=1}
+        !/^#/ {rows++}
+        END {exit (bad || rows==0) ? 1 : 0}' "$1"
+}
+
+# check ROOT MANIFEST -> "CODE /path" lines, sorted; return 0 clean, 3 damaged, 4 manifest unusable.
+# Three processes in all (sha256sum, ls, awk), whatever the number of files. The GL busybox has no stat(1)
+# (MT3000, 01.11.2026), so the mode comes from the ls -ln permission string.
+check() {
+    local root=$1 manifest=$2 present='' out='' path
+    valid "$manifest" || { echo "INTEGRITY-MANIFEST-UNREADABLE /$MANIFEST_REL"; return 4; }
+    for path in $(awk -v nohash="$NOHASH" '!/^#/ && $1!=nohash {print $3}' "$manifest"); do
+        if [ -f "$root$path" ] && [ ! -L "$root$path" ]; then present="$present $root$path"
+        else out="${out}INTEGRITY-FILE-MISSING $path
+"; fi
+    done
+    if [ -n "$present" ]; then
+        # shellcheck disable=SC2086
+        out="$out$({ sha256sum $present 2>/dev/null | sed 's/^/H /'; ls -ln $present 2>/dev/null | sed 's/^/M /'; } |
+            awk -v root="$root" -v man="$manifest" -v nohash="$NOHASH" '
+                BEGIN { while ((getline line < man) > 0) { if (line ~ /^#/) continue; split(line, f, " ")
+                        if (f[1] == nohash) continue; want[root f[3]] = f[1]; m = f[2]; sub(/^0+/, "", m); mode[root f[3]] = m } }
+                $1 == "H" { seen[$3] = $2 }
+                function octal(s,   v, i, c, d) { v = 0; for (i = 2; i <= 10; i += 3) { d = 0
+                        c = substr(s, i, 1); if (c == "r") d += 4; c = substr(s, i + 1, 1); if (c == "w") d += 2
+                        c = substr(s, i + 2, 1); if (c == "x" || c == "s" || c == "t") d += 1; v = v * 8 + d }
+                        return sprintf("%o", v) }
+                $1 == "M" { perm[$NF] = octal($2) }
+                END { for (p in want) { if (!(p in seen) && !(p in perm)) continue
+                        rel = substr(p, length(root) + 1)
+                        if (seen[p] != want[p]) print "INTEGRITY-FILE-DAMAGED " rel
+                        else { x = perm[p]; sub(/^0+/, "", x); if (x != mode[p]) print "INTEGRITY-FILE-MODE " rel } } }')"
+    fi
+    out=$(printf '%s' "$out" | sed '/^$/d' | sort)
+    [ -z "$out" ] && return 0
+    printf '%s\n' "$out"; return 3
+}
+
+version_of() { sed -n 's/^# version //p' "$1" | head -n 1; }
+
+# unpack SOURCE DIR: a payload.tar.gz, or an .ipk (outer tar with ./data.tar.gz); 0 when DIR holds the payload
+unpack() {
+    if tar -tzf "$1" 2>/dev/null | grep -qx './data.tar.gz'; then
+        tar -xzf "$1" -C "$2" ./data.tar.gz 2>/dev/null && mkdir -p "$2/pkg" && tar -xzf "$2/data.tar.gz" -C "$2/pkg" 2>/dev/null
+    else
+        mkdir -p "$2/pkg" && tar -xzf "$1" -C "$2/pkg" 2>/dev/null
+    fi
+}
+
+# limits -> 0 when one more restore is allowed (and records it), else logs INTEGRITY-RESTORE-LIMIT and returns 1
+limits() {
+    local now recent t
+    mkdir -p "$RUNTIME" "$PERSIST"
+    [ -f "$RUNTIME/integrity-restore.done" ] && { log "INTEGRITY-RESTORE-LIMIT once per boot"; return 1; }
+    now=$(date +%s); recent=0
+    if [ -f "$PERSIST/integrity-restores.log" ]; then
+        for t in $(tail -n 20 "$PERSIST/integrity-restores.log"); do
+            case "$t" in *[!0-9]*|'') continue ;; esac
+            if [ "$t" -gt "$now" ] || [ $((now-t)) -lt 86400 ]; then recent=$((recent+1)); fi
+        done
+    fi
+    [ "$recent" -lt "$RESTORE_LIMIT" ] || { log "INTEGRITY-RESTORE-LIMIT $recent in 24 h"; return 1; }
+    : > "$RUNTIME/integrity-restore.done"
+    echo "$now" >> "$PERSIST/integrity-restores.log"
+    return 0
+}
+
+# restore_from SOURCE SHAFILE ROOT -> 0 restored and verified, 5 refused, 6 did not verify (prints the codes)
+restore_from() {
+    local source=$1 shafile=$2 root=$3 want have work ref installed problems
+    { [ -f "$source" ] && [ -f "$shafile" ]; } || { log "INTEGRITY-SOURCE-MISSING $source"; return 5; }
+    want=$(cut -d' ' -f1 "$shafile" | head -n 1); have=$(sha256sum "$source" | cut -d' ' -f1)
+    { [ -n "$want" ] && [ "$want" = "$have" ]; } || { log "INTEGRITY-SOURCE-DAMAGED $source"; return 5; }
+    limits || return 5
+    work=$(mktemp -d "${TMPDIR:-/tmp}/homensai-integrity.XXXXXX") || return 5
+    unpack "$source" "$work" || { rm -rf "$work"; log "INTEGRITY-SOURCE-DAMAGED unpack"; return 5; }
+    ref="$work/pkg/$MANIFEST_REL"
+    # the pristine payload matches its own manifest and is the installed version
+    check "$work/pkg" "$ref" >/dev/null || { rm -rf "$work"; log "INTEGRITY-SOURCE-DAMAGED manifest"; return 5; }
+    installed="$root/$MANIFEST_REL"
+    if valid "$installed" && [ "$(version_of "$installed")" != "$(version_of "$ref")" ]; then
+        log "INTEGRITY-SOURCE-VERSION $(version_of "$ref") != $(version_of "$installed")"; rm -rf "$work"; return 5
+    fi
+    # the pristine manifest is the reference: the installed one may itself be the damaged file
+    problems=$(check "$root" "$ref")
+    cmp -s "$ref" "$installed" 2>/dev/null || problems="$problems
+INTEGRITY-FILE-DAMAGED /$MANIFEST_REL"
+    printf '%s\n' "$problems" | while read -r code path; do
+        [ -n "$path" ] || continue
+        case "$path" in /etc/config/*|/etc/homensai-vpn/*) log "INTEGRITY-NEVER-RESTORED $path"; continue ;; esac
+        src="$work/pkg$path"; dst="$root$path"
+        mode=$(awk -v p="$path" '$3==p {print $2}' "$ref"); [ -n "$mode" ] || mode=0644
+        if mkdir -p "${dst%/*}" && cp "$src" "$dst.integrity-new" && chmod "$mode" "$dst.integrity-new" && mv -f "$dst.integrity-new" "$dst"; then
+            log "INTEGRITY-FILE-RESTORED $code $path"
+        else
+            rm -f "$dst.integrity-new"; log "INTEGRITY-RESTORE-FAILED $path"
+        fi
+    done
+    rm -rf "$work"
+    sync
+    if check "$root" "$installed" >/dev/null; then log "INTEGRITY-RESTORED"; return 0; fi
+    log "INTEGRITY-RESTORE-FAILED verify after restore"; return 6
+}
+
+# mode_of PROBLEMS -> normal | no-c | python | stopped (which layers may still run)
+mode_of() {
+    # Only real damage counts; a permission difference alone never stops a layer (MT3000, 01.11.2026: a mode
+    # misread stopped the whole service after a power cut).
+    printf '%s\n' "$1" | awk '
+        $1 != "INTEGRITY-FILE-DAMAGED" && $1 != "INTEGRITY-FILE-MISSING" {next}
+        $2 ~ /^\/usr\/lib\/homensai-vpn\/lua\// {lua=1}
+        $2 == "/usr/lib/homensai-vpn/inventory.lua" {lua=1; py=1}
+        $2 ~ /^\/usr\/lib\/homensai-vpn\/[^\/]+\.py$/ {py=1}
+        $2 == "/usr/lib/lua/canon_c.so" {c=1}
+        END { if (lua && py) print "stopped"; else if (lua) print "python"; else if (c) print "no-c"; else print "normal" }'
+}
+
+# report CODE MODE RESTORED PROBLEMS -> RUNTIME/integrity.json (RAM; the page reads it as status.integrity)
+report() {
+    local files version
+    mkdir -p "$RUNTIME"
+    files=$(printf '%s\n' "$4" | awk 'NF==2 && n<20 {printf "%s\"%s\"", (n++ ? "," : ""), $2}')
+    version=$(version_of "$ROOT/$MANIFEST_REL" 2>/dev/null)
+    printf '{"code":"%s","mode":"%s","restored":%s,"files":[%s],"version":"%s","time":%s}\n' \
+        "$1" "$2" "$3" "$files" "$version" "$(date +%s)" > "$RUNTIME/.integrity.json.new" && mv -f "$RUNTIME/.integrity.json.new" "$RUNTIME/integrity.json"
+}
+
+case "${1:-}" in
+verify)
+    check "${2:-$ROOT}" "${2:-$ROOT}/$MANIFEST_REL"
+    ;;
+snapshot)
+    problems=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); rc=$?
+    [ "$rc" = 0 ] || { log "INTEGRITY-SNAPSHOT-REFUSED $(printf '%s' "$problems" | head -n 1)"; exit 7; }
+    mkdir -p "$PRISTINE_DIR" && chmod 0700 "$PRISTINE_DIR"
+    free=$(df -k "$PRISTINE_DIR" 2>/dev/null | awk 'NR==2 {print $4}')
+    case "$free" in ''|*[!0-9]*) free=0 ;; esac
+    [ "$free" -ge "$SNAPSHOT_RESERVE_KB" ] || { log "INTEGRITY-SNAPSHOT-NO-SPACE ${free} KB free"; exit 7; }
+    list=$(awk -v nohash="$NOHASH" '!/^#/ && $1!=nohash {print "." $3}' "$ROOT/$MANIFEST_REL")
+    # shellcheck disable=SC2086
+    if tar -czf "$PRISTINE.new" -C "${ROOT:-/}" ./$MANIFEST_REL $list 2>/dev/null; then
+        sha256sum "$PRISTINE.new" | sed 's|  .*|  payload.tar.gz|' > "$PRISTINE.sha256.new"
+        sync
+        mv -f "$PRISTINE.new" "$PRISTINE" && mv -f "$PRISTINE.sha256.new" "$PRISTINE.sha256" && sync
+        log "INTEGRITY-SNAPSHOT-MADE $(version_of "$ROOT/$MANIFEST_REL")"; exit 0
+    fi
+    rm -f "$PRISTINE.new" "$PRISTINE.sha256.new"; log "INTEGRITY-SNAPSHOT-REFUSED tar"; exit 7
+    ;;
+boot)
+    if [ -e "$OPKG_LOCK" ]; then
+        log "INTEGRITY-DEFERRED opkg is running"; report INTEGRITY-DEFERRED normal 0 ''; echo mode=normal; exit 0
+    fi
+    problems=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); rc=$?
+    if [ "$rc" = 0 ]; then report INTEGRITY-OK normal 0 ''; echo mode=normal; exit 0; fi
+    printf '%s\n' "$problems" | head -n 20 | while read -r line; do log "$line"; done
+    if ! printf '%s\n' "$problems" | grep -qE '^INTEGRITY-(FILE-DAMAGED|FILE-MISSING|MANIFEST-)'; then
+        # permissions differ but every file's content is right: start as usual, nothing to restore
+        report INTEGRITY-MODE-DIFFERS normal 0 "$problems"; echo mode=normal; exit 0
+    fi
+    if [ ! -f "$PRISTINE" ] && [ "$rc" = 4 ]; then
+        # no manifest and no pristine copy (a hand-copied or pre-manifest install): nothing to compare with
+        log "INTEGRITY-UNVERIFIED no manifest and no pristine copy"; report INTEGRITY-UNVERIFIED normal 0 ''; echo mode=normal; exit 0
+    fi
+    rout=$(restore_from "$PRISTINE" "$PRISTINE.sha256" "$ROOT"); rrc=$?
+    if [ "$rrc" = 0 ]; then report INTEGRITY-RESTORED normal 1 "$problems"; echo mode=normal; exit 0; fi
+    left=$(check "$ROOT" "$ROOT/$MANIFEST_REL"); lrc=$?
+    [ "$lrc" = 4 ] && left=$problems
+    if [ ! -f "$PRISTINE" ]; then code=INTEGRITY-SOURCE-MISSING
+    elif [ "$rrc" = 6 ]; then code=INTEGRITY-RESTORE-FAILED
+    else code=$(printf '%s\n' "$rout" | awk '$1 ~ /^INTEGRITY-[A-Z-]+$/ {c=$1} END {print c}'); [ -n "$code" ] || code=INTEGRITY-RESTORE-FAILED; fi
+    mode=$(mode_of "$left")
+    case "$mode" in
+        python) log "INTEGRITY-LUA-DAMAGED: Lua files damaged and not restored; the Python monitor and supervisor run" ;;
+        stopped) log "INTEGRITY-SERVICE-STOPPED: Lua and Python files damaged and not restored; the service stays off, the guard is kept" ;;
+        no-c) log "INTEGRITY-C-MODULE-DAMAGED: canon_c.so damaged and not restored; pure Lua JSON" ;;
+    esac
+    report "$code" "$mode" 0 "$left"; echo "mode=$mode"; exit 0
+    ;;
+restore)
+    restore_from "${2:-}" "${3:-}" "${4:-$ROOT}"
+    ;;
+*) echo "usage: homensai-vpn-integrity verify [ROOT] | snapshot | boot | restore SOURCE SHAFILE [ROOT]"; exit 2 ;;
+esac

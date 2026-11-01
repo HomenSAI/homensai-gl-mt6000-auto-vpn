@@ -3,7 +3,7 @@
 -- for the Lua monitor's Diagnostics mode. Same file /etc/homensai-vpn/ping-response-history.json
 -- ({"data":...,"sha256":<canonical sha256>}), same 13-column minute rows, same public view; Python loads what
 -- Lua saves and the other way round (tests/test_lua_monitor_item2.py).
--- Work mode: an empty in-memory history that is neither filled nor saved (agent.monitor_loop load_histories).
+-- Work mode: an in-memory history, never saved; filled in RAM for the last day only (M.work_observe).
 -- Minimal port (owner plan item 2): only the ICMP metric. The website/latency/compare histories stay with the
 -- Python line; with metric 'websites' the status carries Python's WEBSITE-HISTORY-UNAVAILABLE fallback.
 -- Item 6: the route kind of a minute is the full route_history.observed_route (reliability.lua).
@@ -243,6 +243,23 @@ function History:clear_statistics(now)
   if self.notice==self.spec.PREFIX..'-UNAVAILABLE' then error(self.notice,0) end
   if not finite(now) or num(now)<0 then error(self.spec.PREFIX..'-TIME',0) end
   self.data.stats_since=math.ceil(num(now)/60)*60  -- an int, as math.ceil in Python
+end
+
+-- Work mode (owner decision 01.11.2026): the Channels chart still needs the ping minute rows. They are kept in
+-- RAM only, for the last WORK_DAYS, and never written to flash (Monitor:checkpoint saves only in Diagnostics).
+-- Python: ping_response_history.work_observe / work_reset.
+M.WORK_DAYS=1
+function M.work_observe(history,status,settings,now)
+  history:observe(status,settings,now,M.WORK_DAYS)
+  if not finite(now) then return end
+  local kept=canon.array()
+  for _,r in ipairs(history.data.rows) do if num(r[1])>=now-history.retention_seconds then kept[#kept+1]=r end end
+  history.data.rows=kept
+end
+function M.work_reset(history,scope,now)
+  if history==nil or history.notice==M.PREFIX..'-UNAVAILABLE' then return end
+  if scope=='latency' or scope=='all' then history:clear(now)
+  elseif scope=='quality' or scope=='ranking' then history:clear_statistics(now) end
 end
 
 -- The website-response history file (website-response-history.json): the same rows and envelope with the

@@ -1,4 +1,4 @@
-"""MIT. HomenS.AI / Serhii Khomenko. FALLBACK probe bridge of the Lua Auto supervisor (2.0.0-lua, plan items 1 and 4).
+"""HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE. FALLBACK probe bridge of the Lua Auto supervisor (2.0.0-lua, plan items 1 and 4).
 
 Since plan item 4 the Lua supervisor probes natively (lua/live_probe.lua over sys.probe_io) with the same fields
 and codes as this file. It still runs this bridge for the three places that need a live probe of one profile -

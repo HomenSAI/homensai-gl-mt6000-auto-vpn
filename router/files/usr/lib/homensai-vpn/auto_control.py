@@ -219,7 +219,13 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     except Refused:return {'accepted':False,'blockers':['JOURNAL-INTEGRITY-FAILED']}
     except (OSError,ValueError,TypeError,KeyError):return {'accepted':False,'blockers':['START-STATE-UNVERIFIED']}
     if phase in ('ARMED','APPLYING','WAIT-CLIENT','COMMITTED','HELD-ON-RESERVE','RESTORING','RELEASE-PENDING'):
-        return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
+        # Owner decision 01.11.2026 (variant D): a boot handover on the reserve is the one held journal Start accepts;
+        # the new session checks it again and adopts it (pair_auto.boot_handover / pair_auto.begin)
+        try:
+            from pair_auto import read_state as pair_state,handover_matches
+            handed=handover_matches(pair_state(),journal_read())
+        except (Refused,OSError,ValueError,TypeError,KeyError):handed=False
+        if not handed:return {'accepted':False,'blockers':['TRANSACTION-IN-PROGRESS']}
     from preparation_control import auto_blocker,auto_prepare
     preparation_reason=auto_blocker()
     if preparation_reason:return {'accepted':False,'blockers':[preparation_reason]}

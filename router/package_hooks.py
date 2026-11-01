@@ -24,6 +24,9 @@ if [ "$board" != "glinet,gl-mt6000" ] && [ "$board" != "glinet,mt3000-snand" ]; 
     [ "$monitor_only" = "1" ] || { echo MONITOR-ONLY-DEPLOYMENT >&2; exit 1; }
 fi
 /usr/bin/python3 -c "from pathlib import Path; p=Path('/usr/lib/homensai-vpn/__pycache__'); [x.unlink() for x in p.glob('*.pyc') if x.is_file() and not x.is_symlink()]"
+# Self-restore source (TODO item 15): opkg 21.02 does not tell maintainer scripts where the .ipk is, so the pristine
+# copy is made from the files opkg has just unpacked, each verified against the shipped manifest first.
+/usr/sbin/homensai-vpn-integrity snapshot >/dev/null || echo INTEGRITY-SNAPSHOT-REFUSED >&2
 /etc/init.d/homensai-vpn enable
 /etc/init.d/homensai-vpn restart
 /etc/init.d/rpcd reload

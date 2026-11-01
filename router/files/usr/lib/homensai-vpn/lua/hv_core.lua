@@ -1010,7 +1010,7 @@ function M.daemon()
         local backend=require('backend').new(sys)
         local env={run=run,backend=backend,runtime=runtime,persist='/etc/homensai-vpn',
           stop=function() return c.stopping end,sleep=function(s) sys.sleep(s) end,
-          history_lock=ctl.flock_file,version=backend.VERSION}
+          history_lock=ctl.flock_file,version=backend.VERSION,interruption=true}
         backend.bind(env)
         return env
       end,

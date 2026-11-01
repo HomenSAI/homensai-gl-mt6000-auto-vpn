@@ -154,6 +154,37 @@ t.test('reorder moves are those of Linux.reorder',function()
   t.code('UNSAFE-SECTION',s.uci_apply,{},nil,{{id='x',index=0}},{x='bad;name'})
 end)
 
+-- LAN DNS follows the switch (dns_mark.lua): a fake /proc/dns_mark tree in a temp directory
+local function dns_tree()
+  local root=os.tmpname();os.remove(root)
+  assert(os.execute("mkdir -p '"..root.."/rule5841' '"..root.."/rule4192'"))
+  local function put(path,text) local f=assert(io.open(path,'wb'));f:write(text);f:close() end
+  put(root..'/dump','Rule 5841: Mark: 0x1000\nRule 4192: Mark: 0xb000\n')
+  put(root..'/rule5841/mark','0x1000\n');put(root..'/rule4192/mark','0xb000\n')
+  return root,function(rule) local f=io.open(root..'/'..rule..'/mark','rb');local s=f and f:read('*a');if f then f:close() end;return s end
+end
+
+t.test('LAN DNS follows the switch to the reserve; a DNS failure never fails the switch',function()
+  local root,mark=dns_tree()
+  local run,st=router()
+  local result,code=s.switch(run,request(),'reserve',{dns_mark_root=root})
+  t.eq(code,0);t.eq(result.phase,'HELD-ON-RESERVE')
+  t.eq({result.dns_mark.active,result.dns_mark.verified,result.dns_mark.written},{'0xb000',true,1})
+  t.eq({mark('rule5841'),mark('rule4192')},{'0xb000\n','0xb000\n'})
+  os.execute("rm -rf '"..root.."'")
+  root,mark=dns_tree()
+  os.remove(root..'/rule5841/mark');assert(os.execute("mkdir '"..root.."/rule5841/mark'"))
+  run,st=router()
+  result,code=s.switch(run,request(),'reserve',{dns_mark_root=root})
+  t.eq({code,result.ok,result.phase},{0,true,'HELD-ON-RESERVE'})
+  t.eq({result.dns_mark.code,result.dns_mark.verified},{'DNS-MARK-UNVERIFIED',false})
+  t.eq(saved(st).phase,'HELD-ON-RESERVE')
+  os.execute("rm -rf '"..root.."'")
+  run,st=router()
+  result,code=s.switch(run,request(),'reserve',{dns_mark_root='/nonexistent/dns_mark'})
+  t.eq({code,result.dns_mark.code},{0,'DNS-MARK-UNAVAILABLE'})
+end)
+
 t.test('dry run writes nothing',function()
   local run,st=router()
   local result,code=s.dry_run(run)

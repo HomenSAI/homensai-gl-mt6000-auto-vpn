@@ -11,9 +11,10 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '2.0.0-beta2-1'
+VERSION = '2.0.0-beta4-1'
 NAME = 'homensai-auto-vpn'
-EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency'}
+EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency',
+              'usr/sbin/homensai-vpn-integrity'}
 
 
 def archive(items):
@@ -69,6 +70,11 @@ def selected_ui(source):
 NOT_SHIPPED=frozenset('usr/lib/homensai-vpn/'+name+'.py' for name in ('cascade_model','cascade_executor','candidate_runtime','configuration_migrations'))
 
 def selected_files(source=None):
+    """The payload: the selected source files plus the integrity manifest (both builders, custom IPK and SDK)."""
+    return with_manifest(selected_source_files(source))
+
+
+def selected_source_files(source=None):
     files = []
     source=Path(source) if source is not None else ROOT/'files'
     selected_js,selected_css=selected_ui(source)
@@ -99,6 +105,28 @@ def selected_files(source=None):
             payload = payload.replace(b'\r\n', b'\n')
         files.append((name, payload, 0o755 if name in EXECUTABLE else 0o644))
     return files
+
+
+# Integrity manifest (TODO item 15, docs/architecture/INTEGRITY-MATRIX-2026-11-01.ru.md): a per-file sha256 + mode
+# list of the payload, read by /usr/sbin/homensai-vpn-integrity at every service start. opkg 21.02 keeps only file names in
+# /usr/lib/opkg/info/<pkg>.list (checksums only for conffiles), so a damaged installed file is invisible to it.
+# Conffiles (the owner's config) are listed with mode only, never with a hash: they must never be auto-restored.
+MANIFEST_PATH='usr/lib/homensai-vpn/integrity.sha256'
+CONFFILES=('etc/config/homensai_vpn',)
+
+def payload_manifest(files,version=VERSION):
+    """Text of the manifest: header, then '<sha256> <octal mode> /<path>' per shipped file, sorted by path."""
+    lines=['# homensai-auto-vpn payload manifest v1','# version '+version]
+    for name,payload,mode in sorted(files):
+        if name==MANIFEST_PATH:raise ValueError('PACKAGE-MANIFEST-SELF')
+        if not re.fullmatch(r'[A-Za-z0-9_.+/-]+',name) or '..' in name:raise ValueError('PACKAGE-MANIFEST-PATH')
+        digest='-'*64 if name in CONFFILES else hashlib.sha256(payload).hexdigest()
+        lines.append('%s %04o /%s'%(digest,mode,name))
+    return ('\n'.join(lines)+'\n').encode()
+
+def with_manifest(files,version=VERSION):
+    """files plus the manifest member."""
+    return list(files)+[(MANIFEST_PATH,payload_manifest(files,version),0o644)]
 
 
 def build(output=None):

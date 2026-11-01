@@ -36,6 +36,42 @@ def lua(*args):
 
 
 @unittest.skipUnless(LUA, 'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
+class WorkModePingHistoryParity(unittest.TestCase):
+    """Work mode keeps the ping minute rows in RAM (one day, never saved): Lua and Python give the same view."""
+    def test_same_public_view_after_observe_trim_and_reset(self):
+        import icmp_ping
+        from ping_response_history import PingResponseHistory, work_observe, work_reset
+        settings = {'plan_source': 'wireguard:peer_1', 'plan_target': 'openvpn:1_2'}
+        def snapshot(stamp, source, target):
+            rows = []
+            for identifier, protocol, interface, rtt in (('wireguard:peer_1', 'wireguard', 'wgclient1', source),
+                                                         ('openvpn:1_2', 'openvpn', 'ovpnclient2', target)):
+                row = {'id': identifier, 'protocol': protocol, 'interface': interface, 'vendor_tunnel_id': protocol+':'+interface,
+                       'vendor_generation': 'a'*32, 'vendor_state': 'SETTLED', 'time': stamp, 'code': None}
+                row['ping'] = icmp_ping.public(row, 'ok' if rtt is not None else 'failed', None if rtt is not None else 'PING-FAILED', stamp, rtt)
+                rows.append(row)
+            return {'time': stamp, 'profiles': rows, 'native_failover': {}}
+        now = 180000
+        steps = [{'now': now, 'status': snapshot(now, 35.74, None)},
+                 {'now': now+30, 'status': snapshot(now+30, 40.25, 120.5)},
+                 {'now': now+90, 'status': snapshot(now+90, 50.0, 99.9)},
+                 {'now': now+90, 'reset': 'quality'},
+                 {'now': now+86460, 'status': snapshot(now+86460, 41.0, 88.0)}]
+        for final in (steps, steps+[{'now': now+86460, 'reset': 'latency'}]):
+            history = PingResponseHistory(); last = None
+            for step in final:
+                last = step['now']
+                if 'reset' in step: work_reset(history, step['reset'], last)
+                else: work_observe(history, step['status'], settings, last)
+            with tempfile.TemporaryDirectory() as directory:
+                path = Path(directory)/'scenario.json'
+                path.write_text(json.dumps({'settings': settings, 'steps': final}))
+                lua_view = json.loads(lua('work_ping', str(path)))
+            self.assertEqual(lua_view, json.loads(json.dumps(history.public(last))))
+            self.assertEqual(lua_view['retention_seconds'], 86400)
+
+
+@unittest.skipUnless(LUA, 'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
 class LuaFilesForPython(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

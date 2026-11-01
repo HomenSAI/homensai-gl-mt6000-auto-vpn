@@ -503,6 +503,7 @@ function M.new(sys)
 
   function B.attest_policy(selection)
     local failed=canon.object({verified=false,repairable_missing=false,code='KERNEL-POLICY-UNVERIFIED',time=canon.float(sys.wall())})
+    caches.attested_chains=nil
     local ok,result=pcall(function()
       if selection==nil then
         local blockers,current=B.diagnostic()
@@ -564,6 +565,7 @@ function M.new(sys)
         failed.repairable_missing=verdict.missing
         return failed
       end
+      caches.attested_chains=(parsed(before))  -- dns_mark_follow(): the verified graph of this attestation
       local out=py.copy(verdict.result)
       out.time=canon.float(sys.wall());out.kernel_fingerprint=fingerprint
       return out
@@ -738,6 +740,31 @@ function M.new(sys)
     end
     local vok,verified=pcall(identity.applied,policy_row().value.sections,B.process_bindings)
     if not vok or not verified then refuse('POLICY-IDENTITY-CHANGED') end
+    B.dns_mark=B.dns_mark_sync()  -- LAN DNS follows the route just applied (switch, rollback, boot restore)
+  end
+
+  -- dns_mark_sync(chains): the GL dns_mark rules follow the first ROUTE_POLICY jump of the live kernel graph
+  -- (dns_mark.lua). Never raises; DNS-MARK-UNVERIFIED is logged and never rolls a traffic switch back. Without
+  -- /proc/dns_mark (other firmware) nothing is read: DNS-MARK-UNAVAILABLE.
+  function B.dns_mark_sync(chains)
+    local dm=require('dns_mark')
+    local ok,result=pcall(function()
+      if not dm.available() then return dm.sync(nil) end
+      if chains==nil then chains=attest.parse(mangle_text()) end
+      return dm.sync(dm.active_from_chains(chains,kernel.fields))
+    end)
+    if not ok or type(result)~='table' then result=dm.failed() end
+    if result.code==dm.UNVERIFIED or (tonumber(result.written) or 0)>0 then
+      require('durable').log('DNS-MARK-SYNC: active '..tostring(result.active)..' written '..tostring(result.written)
+        ..' code '..tostring(result.code==NULL and 'none' or result.code))
+    end
+    return result
+  end
+  -- The Auto supervisor's pass: only after a verified attestation of this very pass (its graph, no new read).
+  function B.dns_mark_follow()
+    local chains=caches.attested_chains
+    if chains==nil then return nil end
+    return B.dns_mark_sync(chains)
   end
 
   ------------------------------------------------------------------------------------------------------

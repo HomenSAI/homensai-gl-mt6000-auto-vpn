@@ -22,8 +22,12 @@ vm.runInContext(src.slice(start),c);
 const page=new N('div',{},[new N('section',{'data-stats-reset':'latency'}),new N('details',{'data-stats-reset':'auto'}),new N('section',{})]);
 assert.equal(c.attachStatsResets(page),2);assert.equal(c.attachStatsResets(page),0,'no duplicate buttons');
 const buttons=page.querySelectorAll('[data-stats-reset-button]');assert.deepEqual(buttons.map(b=>b.attrs['data-stats-reset-button']),['latency','auto']);
-assert.equal(buttons[0].textContent,'Reset chart');
-console.log('PASS: one Reset chart button per chart and statistics card');
+assert.equal(buttons[0].textContent,'Reset statistics');
+// Owner 01.11.2026: the button sits right under the card heading, next to the chart, not after a long table.
+{const h=new N('h3',{},['Chart']);h.tagName='H3';const card=new N('section',{'data-stats-reset':'traffic'},[h,new N('table',{})]);card.firstElementChild=h;
+ card.insertBefore=(n,ref)=>{card.children.splice(card.children.indexOf(ref),0,n);n.parentNode=card;return n;};
+ c.attachStatsResets(new N('div',{},[card]));assert.equal(card.children[1].attrs['class'],'hv-stats-reset-row','reset row right after the heading');}
+console.log('PASS: one Reset statistics button per chart and statistics card, right under its heading');
 
 // Pressing asks first; nothing is sent until the owner confirms.
 buttons[1].attrs.click({currentTarget:buttons[1]});assert.equal(calls.length,0,'confirmation comes first');

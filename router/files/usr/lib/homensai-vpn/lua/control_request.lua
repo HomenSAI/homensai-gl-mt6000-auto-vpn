@@ -140,6 +140,12 @@ end
 -- deps: read, write, exists, now, try_lock, runtime, persist, native_policy() -> text|nil, journal() -> journal
 --   (raises on an integrity failure), auto_blocker() -> code|nil, preparation(settings) -> snapshot,
 --   read_state() -> pair state (raises), intent() -> pair intent (raises)
+function M.handover_matches(deps,journal)
+  local ok,state=pcall(deps.read_state)
+  local h=ok and canon.is_object(state) and state.phase=='STOPPED' and state.handover or nil
+  return canon.is_object(h) and h.tx==journal.tx and (journal.phase=='COMMITTED' or journal.phase=='HELD-ON-RESERVE')
+end
+
 function M.start(deps,arguments)
   if arguments.control_revision==nil or not only(arguments,{control_revision=true,request_source=true}) then
     return start_refused('CONTROL-REVISION-STALE')
@@ -165,7 +171,9 @@ function M.start(deps,arguments)
     if not canon.is_object(settings) then return start_refused('START-STATE-UNVERIFIED') end
     local jok,journal=pcall(deps.journal)
     if not jok or not canon.is_object(journal) then return start_refused('JOURNAL-INTEGRITY-FAILED') end
-    if START_BUSY[journal.phase] then return start_refused('TRANSACTION-IN-PROGRESS') end
+    -- Owner decision 01.11.2026 (variant D): a boot handover on the reserve is the one held journal Start accepts;
+    -- the new session checks it again and adopts it (pair.boot_handover / pair.begin)
+    if START_BUSY[journal.phase] and not M.handover_matches(deps,journal) then return start_refused('TRANSACTION-IN-PROGRESS') end
     local blocker=deps.auto_blocker()
     if blocker then return start_refused(blocker) end
     -- auto_prepare: anything Start would repair first stays with agent.py

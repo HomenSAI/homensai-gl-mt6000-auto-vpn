@@ -86,12 +86,15 @@ end
 local function cut(env)
   for path in pairs(env.run.fs.files) do if string.sub(path,1,#env.runtime+1)==env.runtime..'/' then env.run.fs.files[path]=nil end end
   for _,name in ipairs(env.names) do env.up[name]=false end
-  pair.revive_log_reset()
+  pair.revive_log_reset();pair.handover_log_reset()
   env.backend.guarded=false;env.backend.guard_calls={}
   env.backend.kernel={};for i,x in ipairs(env.backend.uci) do env.backend.kernel[i]=x end
   env.run.mono_now=40  -- uptime when the supervisor starts
   env.slept={}
 end
+
+-- today's path (no variant D handover at this boot): the one-per-boot RAM marker is already there
+local function today(env) env.run.fs.write_atomic(env.runtime..'/'..pair.HANDOVER_FILE,canon.encode(canon.object({state='refused'}))) end
 
 -- the monitor's Start (control_request.start) on this router
 local function start_deps(env)
@@ -148,20 +151,315 @@ t.test('boot recovery starts the pair clients, the held journal settles at once,
   local j=T.journal_read(env)
   t.eq({j.phase,j.reason},{'ROLLED-BACK','PAIR-STOPPED'})
   t.eq(env.backend.uci,{'r1','r2'});t.eq(env.backend.kernel,{'r1','r2'})
-  t.eq(pair.read_state(env).phase,'STOPPED')
-  t.eq(env.net_log.ifdown,{'ovpnclient1','wgclient1'},'and returned them to the state before the session')
-  t.eq(env.backend.guarded,false,'no guard left')
+  local state=pair.read_state(env)
+  t.eq(state.phase,'STOPPED')
+  -- owner decision 01.11.2026 (variant C): the boot resume will press Start, both clients are up: they stay up
+  t.eq(#env.net_log.ifdown,0,'the healthy clients are kept for the boot resume Start')
+  t.eq(state.kept,canon.array({'wgclient1','ovpnclient1'}));t.eq(state.kept_flags,canon.object({wgclient1='0',ovpnclient1='0'}))
+  t.eq(env.backend.guarded,true,'the guard stays');t.eq(env.backend.guard_calls[#env.backend.guard_calls],'vpn-only')
   for _,call in ipairs(env.backend.guard_calls) do t.truthy(call=='vpn-only' or call=='full') end
-  t.truthy(string.find(table.concat(lines,'\n'),'PAIR-RECOVERY-REVIVE: ifup wgclient1',1,true),'logged')
+  local text=table.concat(lines,'\n')
+  t.truthy(string.find(text,'PAIR-RECOVERY-REVIVE: ifup wgclient1',1,true),'logged')
+  t.truthy(string.find(text,'BOOT-RECOVERY-STEP: pair cleanup kept wgclient1 ovpnclient1',1,true),text)
   local r=resume_of(env)
   t.eq(r.tick(),'RESUMED')
   t.eq(pair.intent(env).mode,'on')
+end)
+
+------------------------------------------------------------------------------------------------------
+-- Owner decision 01.11.2026 (variant C): healthy clients kept across the boot cleanup for the boot resume Start
+------------------------------------------------------------------------------------------------------
+local function quiet_log() local log=durable.log;durable.log=function() end;return function() durable.log=log end end
+
+t.test('variant C: the next Start adopts the kept clients as owned (flags before the old session), no second ifup',function()
+  local restore=quiet_log()
+  local env=router()
+  cut(env)
+  t.eq(A.recover(env),'ready')
+  local old=pair.read_state(env)
+  local r=resume_of(env)
+  t.eq(r.tick(),'RESUMED')
+  local ctx={last_return=0,consumed=canon.object({}),last_attempt=0}
+  A.iteration(env,ctx)
+  restore()
+  local state=pair.read_state(env)
+  t.truthy(state.id~=old.id,'a new session');t.eq(state.kept,nil)
+  t.eq(state.owned,canon.array({'wgclient1','ovpnclient1'}),'still owned: a later Stop returns them')
+  t.eq(state.before_flags,canon.object({wgclient1='0',ovpnclient1='0'}))
+  t.eq(env.net_log.ifup,{'ovpnclient1','wgclient1'},'only the revive brought them up')
+  t.eq(#env.net_log.ifdown,0)
+  -- the owner's Stop of the new session returns them as before
+  ctl.stop_latch(env,canon.null);pair.stop_locked(env,ctl.revision_locked(env))
+  pair.cleanup(env,state)
+  t.eq(env.net_log.ifdown,{'ovpnclient1','wgclient1'})
+end)
+
+t.test('variant C off: no owner marker, a newer Stop latch, or a client down - the old cleanup stops the clients',function()
+  local restore=quiet_log()
+  for _,case in ipairs({'no-marker','stop','down'}) do
+    local env=router()
+    cut(env)
+    if case=='no-marker' then env.run.fs.files[env.persist..'/'..boot_resume.MARKER]=nil end
+    if case=='stop' then ctl.stop_latch(env,canon.null) end
+    if case=='down' then
+      local up=env.net.client_down;env.net.client_down=function(name) if name=='ovpnclient1' then return true end;return up(name) end
+    end
+    t.eq(A.recover(env),'ready')
+    local state=pair.read_state(env)
+    t.eq(state.phase,'STOPPED',case);t.eq(state.kept,nil,case)
+    t.eq(env.net_log.ifdown,{'ovpnclient1','wgclient1'},case)
+    t.eq(env.backend.guarded,false,case)
+  end
+  restore()
+end)
+
+t.test('variant C: without the Start (expiry, Stop, failed boot resume) the kept clients are released as the old cleanup',function()
+  local restore=quiet_log()
+  for _,case in ipairs({'expiry','stop','failed'}) do
+    local env=router()
+    cut(env)
+    t.eq(A.recover(env),'ready')
+    t.eq(#pair.read_state(env).kept,2,case)
+    local ctx={last_return=0,consumed=canon.object({}),last_attempt=0}
+    A.iteration(env,ctx)
+    t.eq(#env.net_log.ifdown,0,case..': kept while the Start is still coming')
+    if case=='expiry' then env.run.advance(pair.KEEP_SECONDS) end
+    if case=='stop' then env.run.advance(5);ctl.stop_latch(env,canon.null) end
+    if case=='failed' then env.run.fs.write_atomic(env.runtime..'/'..boot_resume.STATE,canon.encode(canon.object({state='FAILED'}))) end
+    A.iteration(env,ctx)
+    local state=pair.read_state(env)
+    t.eq(env.net_log.ifdown,{'ovpnclient1','wgclient1'},case);t.eq(state.kept,nil,case);t.eq(state.phase,'STOPPED',case)
+    t.eq(env.backend.guarded,false,case..': guard removed with them')
+  end
+  restore()
+end)
+
+t.test('variant C: an owner Stop of a running session never keeps; the kept fields are validated',function()
+  local restore=quiet_log()
+  local env=router()
+  local state=pair.read_state(env)
+  env.run.mono_now=40
+  local revision=ctl.revision_locked(env);pair.stop_locked(env,revision)
+  t.eq(pair.cleanup(env,state,revision),true)
+  t.eq(env.net_log.ifdown,{'ovpnclient1','wgclient1'})
+  restore()
+  t.eq(pair.read_state(env).kept,nil)
+  local bad=pair.read_state(env);bad.phase='RUNNING';bad.kept=canon.array({'wgclient1'});bad.kept_flags=canon.object({wgclient1='0'});bad.kept_at=1
+  pair.save(env,bad)
+  t.code('PAIR-STATE-UNVERIFIED',pair.read_state,env)
+  bad.phase='STOPPED';bad.kept_flags=canon.object({wgclient1='2'});pair.save(env,bad)
+  t.code('PAIR-STATE-UNVERIFIED',pair.read_state,env)
+  bad.kept_flags=canon.object({wgclient1='1'});pair.save(env,bad)
+  t.eq(pair.read_state(env).kept_flags.wgclient1,'1')
+end)
+
+------------------------------------------------------------------------------------------------------
+-- Owner decision 01.11.2026 (variant D): a completed switch on the reserve is handed over to the boot resume Start
+------------------------------------------------------------------------------------------------------
+-- the primary is not proven yet after the boot (no fresh probes), the reserve is healthy
+local function reserve_only(env)
+  local sel=env.backend.selection
+  local primary={ok=false}
+  env.backend.health=function(id) if id==sel.target.id then return env.up['ovpnclient1'] end;return primary.ok and env.up['wgclient1'] end
+  env.backend.recovery_ready=function(id) return env.backend.health(id) end
+  return primary
+end
+local function fresh_ctx() return {last_return=0,consumed=canon.object({}),last_attempt=0} end
+
+t.test('variant D: the held reserve is handed over at once; Start adopts it (COMMITTED BOOT-RESERVE-ADOPTED); the return policy brings the primary back',function()
+  local restore=quiet_log()
+  local env=router()
+  cut(env)
+  local primary=reserve_only(env)
+  t.eq(A.recover(env),'ready')
+  local old=pair.read_state(env);local held=T.journal_read(env)
+  t.eq(old.phase,'STOPPED');t.eq(old.handover.tx,held.tx);t.eq(old.handover.order,canon.array({'r1','r2'}))
+  t.eq({held.phase,held.reason},{'HELD-ON-RESERVE','OPERATOR-MANUAL'},'the journal is untouched until the Start')
+  t.eq(env.backend.uci,{'r2','r1'},'traffic stays on the reserve');t.eq(env.backend.guarded,true,'the guard stays')
+  t.eq(#env.net_log.ifdown,0)
+  local ctx=fresh_ctx()
+  A.iteration(env,ctx)
+  t.eq(T.journal_read(env).phase,'HELD-ON-RESERVE','nothing else finishes the journal while the Start is coming')
+  t.eq(resume_of(env).tick(),'RESUMED','Start accepted without the primary proof')
+  A.iteration(env,ctx)
+  restore()
+  local j=T.journal_read(env);local state=pair.read_state(env)
+  t.eq({j.phase,j.reason,j.tx},{'COMMITTED','BOOT-RESERVE-ADOPTED',held.tx})
+  t.eq({j.boot_adopted.session,j.boot_adopted.from_phase,j.boot_adopted.from_reason},{state.id,'HELD-ON-RESERVE','OPERATOR-MANUAL'})
+  t.eq(j.manual_request_id,nil,'automatic from here')
+  t.eq(state.phase,'RUNNING');t.truthy(state.id~=old.id);t.eq(state.order,canon.array({'r1','r2'}),'the old session order')
+  t.eq(state.owned,canon.array({'wgclient1','ovpnclient1'}));t.eq(state.handover,nil)
+  t.eq(env.backend.uci,{'r2','r1'});t.eq(env.net_log.ifup,{'ovpnclient1','wgclient1'},'no second ifup')
+  -- the normal committed return policy: the primary proven, min_dwell counted from the adoption
+  primary.ok=true
+  A.iteration(env,ctx)
+  t.eq(T.journal_read(env).phase,'COMMITTED','min_dwell from the adoption')
+  env.run.advance(61)
+  A.iteration(env,ctx)
+  j=T.journal_read(env)
+  t.eq(j.phase,'ROLLED-BACK');t.eq(env.backend.uci,{'r1','r2'});t.eq(pair.read_state(env).phase,'RUNNING')
+end)
+
+-- 01.11.2026 (MT3000 beta3 cut: no handover, no reason): bounded retry on every cleanup pass, each refusal logged once
+local function handover_lines(lines)
+  local out={};for _,l in ipairs(lines) do local r=string.match(l,'^BOOT%-RECOVERY%-STEP: handover refused (.-) at ') if r then out[#out+1]=r end end;return out
+end
+
+t.test('variant D retry: the reserve not healthy yet at the first pass - refused once in the log, handed over on a later pass',function()
+  local lines={};local log=durable.log;durable.log=function(l) lines[#lines+1]=l end
+  local env=router()
+  cut(env)
+  reserve_only(env)
+  local probe=env.backend.health
+  local ready=false
+  env.backend.health=function(id) if id==env.backend.selection.target.id and not ready then return nil end;return probe(id) end
+  t.eq(A.recover(env),'ready')
+  t.eq(pair.read_state(env).phase,'HELD');t.eq(pair.read_state(env).handover,nil)
+  local ctx=fresh_ctx()
+  for _=1,3 do env.run.advance(2);A.iteration(env,ctx) end
+  t.eq(handover_lines(lines),{'RESERVE-HEALTH UNKNOWN'},'one line per reason, not per pass')
+  ready=true
+  env.run.advance(2);A.iteration(env,ctx)
+  durable.log=log
+  local state=pair.read_state(env)
+  t.eq(state.phase,'STOPPED');t.truthy(state.handover~=nil,'handed over on a later pass')
+  t.eq(t.read(env,env.runtime..'/'..pair.HANDOVER_FILE).state,'handed')
+end)
+
+t.test('variant D retry: the primary client still connecting does not block the handover; all owned clients are kept',function()
+  local restore=quiet_log()
+  local env=router()
+  cut(env)
+  reserve_only(env)
+  local down=env.net.client_down
+  env.net.client_down=function(name) if name=='wgclient1' then return true end;return down(name) end
+  t.eq(A.recover(env),'ready')
+  restore()
+  local state=pair.read_state(env)
+  t.truthy(state.handover~=nil);t.eq(state.kept,canon.array({'wgclient1','ovpnclient1'}))
+end)
+
+t.test('variant D retry is bounded: after HANDOVER_WAIT today\'s path goes on without further checks',function()
+  local lines={};local log=durable.log;durable.log=function(l) lines[#lines+1]=l end
+  local env=router()
+  cut(env)
+  reserve_only(env)
+  local probe=env.backend.health
+  local ready=false
+  env.backend.health=function(id) if id==env.backend.selection.target.id and not ready then return false end;return probe(id) end
+  t.eq(A.recover(env),'ready')
+  local ctx=fresh_ctx()
+  for _=1,8 do env.run.advance(10);A.iteration(env,ctx) end
+  t.eq(t.read(env,env.runtime..'/'..pair.HANDOVER_FILE).state,'refused')
+  ready=true
+  env.run.advance(2);A.iteration(env,ctx)
+  durable.log=log
+  t.eq(pair.read_state(env).handover,nil,'no handover after the wait');t.eq(pair.read_state(env).phase,'HELD')
+  t.eq(handover_lines(lines),{'RESERVE-HEALTH false','WAIT-OVER after RESERVE-HEALTH false'})
+end)
+
+t.test('variant D: every refusal names its reason (kernel, order, primary proven, no marker)',function()
+  for _,case in ipairs({'kernel','primary','marker'}) do
+    local lines={};local log=durable.log;durable.log=function(l) lines[#lines+1]=l end
+    local env=router()
+    cut(env)
+    local primary=reserve_only(env)
+    if case=='kernel' then env.backend.kernel={'r1','r2'} end
+    if case=='primary' then primary.ok=true end
+    if case=='marker' then env.run.fs.files[env.persist..'/'..boot_resume.MARKER]=nil end
+    A.recover(env)
+    durable.log=log
+    local got=handover_lines(lines)[1] or ''
+    local want=({kernel='KERNEL ',primary='PRIMARY-PROVEN',marker='AUTO-RESUME-NOT-REQUESTED'})[case]
+    t.truthy(string.find(got,want,1,true)==1,case..': '..got)
+  end
+end)
+
+t.test('variant D off: an unhealthy reserve, an unverified kernel, a proven primary, no marker - today\'s path',function()
+  local restore=quiet_log()
+  for _,case in ipairs({'reserve-down','kernel','primary-proven','no-marker'}) do
+    local env=router()
+    cut(env)
+    local primary=reserve_only(env)
+    if case=='reserve-down' then env.backend.health=function() return false end end
+    if case=='kernel' then env.backend.kernel={'r1','r2'} end
+    if case=='primary-proven' then primary.ok=true end
+    if case=='no-marker' then env.run.fs.files[env.persist..'/'..boot_resume.MARKER]=nil end
+    t.eq(A.recover(env),'ready')
+    local state=pair.read_state(env)
+    t.eq(state.handover,nil,case)
+    if case=='primary-proven' then  -- returns at once, as today
+      t.eq(T.journal_read(env).phase,'ROLLED-BACK',case)
+    elseif case~='kernel' then
+      t.eq(state.phase,'HELD',case);t.eq(T.journal_read(env).phase,'HELD-ON-RESERVE',case)
+    end
+  end
+  restore()
+end)
+
+t.test('variant D: a reserve that fails the fresh check at Start - the request fails, the old session is HELD, today\'s path',function()
+  local restore=quiet_log()
+  local env=router()
+  cut(env)
+  reserve_only(env)
+  t.eq(A.recover(env),'ready')
+  t.truthy(pair.read_state(env).handover~=nil)
+  t.eq(resume_of(env).tick(),'RESUMED')
+  env.backend.health=function() return false end  -- the reserve dropped before the new session began
+  A.iteration(env,fresh_ctx())
+  restore()
+  local intent=pair.intent(env)
+  t.eq({intent.mode,intent.failure_code},{'off','BOOT-RESERVE-UNVERIFIED'})
+  local state=pair.read_state(env)
+  t.eq(state.phase,'HELD');t.eq(state.handover,nil);t.eq(T.journal_read(env).phase,'HELD-ON-RESERVE','not adopted')
+end)
+
+t.test('variant D: an owner Stop, a failed boot resume or no Start within KEEP_SECONDS release the handover',function()
+  local restore=quiet_log()
+  for _,case in ipairs({'stop','failed','expiry'}) do
+    local env=router()
+    cut(env)
+    reserve_only(env)
+    t.eq(A.recover(env),'ready')
+    local ctx=fresh_ctx()
+    if case=='stop' then env.run.advance(5);ctl.stop_latch(env,canon.null) end
+    if case=='failed' then env.run.fs.write_atomic(env.runtime..'/'..boot_resume.STATE,canon.encode(canon.object({state='FAILED'}))) end
+    if case=='expiry' then env.run.advance(pair.KEEP_SECONDS) end
+    A.iteration(env,ctx)
+    local state=pair.read_state(env)
+    t.eq(state.handover,nil,case)
+    A.iteration(env,ctx)
+    t.eq(pair.read_state(env).phase,'HELD',case..': the old cleanup waits for the primary proof again')
+    t.eq(T.journal_read(env).phase,'HELD-ON-RESERVE',case)
+    t.eq(control.start(start_deps(env),canon.object({control_revision=ctl.revision_locked(env),request_source='programmatic'})).blockers[1],'TRANSACTION-IN-PROGRESS',case)
+  end
+  restore()
+end)
+
+t.test('variant D: an interrupted switch still rolls back; Start accepts only the handed-over journal',function()
+  local restore=quiet_log()
+  local env=router()
+  local j=T.journal_read(env);j.phase='WAIT-CLIENT';T.journal_write(env,j)
+  cut(env)
+  reserve_only(env)
+  A.recover(env)
+  t.eq(T.journal_read(env).phase,'ROLLED-BACK');t.eq(pair.read_state(env).handover,nil)
+  local env2=router()
+  cut(env2)
+  reserve_only(env2)
+  A.recover(env2)
+  local deps=start_deps(env2)
+  t.eq(control.handover_matches(deps,T.journal_read(env2)),true)
+  local other=T.journal_read(env2);other.tx=string.rep('9',32)
+  t.eq(control.handover_matches(deps,other),false)
+  restore()
 end)
 
 t.test('settles by itself ~80 s later through the supervisor passes; boot resume waits and survives an NTP step',function()
   local log=durable.log;durable.log=function() end
   local env=router({settle=80})
   cut(env)
+  today(env)
   t.eq(A.recover(env),'ready')
   t.eq(env.net_log.ifup,{'ovpnclient1','wgclient1'})
   -- the primary is not verified yet: held (the guard on the started devices), not a dead end

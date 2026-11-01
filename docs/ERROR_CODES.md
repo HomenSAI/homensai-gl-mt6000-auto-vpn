@@ -367,6 +367,90 @@ VPN отклонил вход / VPN login rejected
 
 **Action:** Reload the page and sign in to LuCI again. Then Help → “The page is old, empty or says the monitor is not running”.
 
+## PRIMARY-PROVEN
+
+Основной уже проверен / The primary is already proven
+
+**RU:** После перезапуска основной канал уже проверен, поэтому Auto сразу возвращается на него, а не продолжает на резерве.
+
+**EN:** After a restart the primary channel was already proven healthy, so Auto returns to it directly instead of continuing on the reserve.
+
+**Что делать:** Ничего делать не нужно; Auto продолжает по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by the usual rules.
+
+## SESSION-ORDER
+
+Сохранённый порядок каналов другой / Saved channel order differs
+
+**RU:** После перезапуска сохранённый порядок каналов сессии Auto не совпал, поэтому Auto идёт обычным восстановлением.
+
+**EN:** After a restart the saved channel order of the Auto session did not match, so Auto uses the usual recovery.
+
+**Что делать:** Ничего делать не нужно; Auto продолжает по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by the usual rules.
+
+## RESUME-MARKER-UNREADABLE
+
+Метка возобновления не читается / Resume marker unreadable
+
+**RU:** Метку о том, что Auto был включён до перезапуска, прочитать не удалось, поэтому быстрый старт на резерве не используется.
+
+**EN:** The marker that Auto was on before the restart could not be read, so the fast start on the reserve is not used.
+
+**Что делать:** Ничего делать не нужно; Auto продолжает по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by the usual rules.
+
+## BOOT-RESERVE-ADOPTED
+
+Auto возобновлён на резерве после перезапуска / Auto resumed on the reserve after a restart
+
+**RU:** Роутер перезапускался, когда трафик шёл через резерв. Auto заново проверил маршрут и резерв и продолжил на резерве; на основной вернётся по обычным правилам.
+
+**EN:** The router restarted while the reserve carried traffic. Auto checked the route and the reserve again and continued on the reserve; it returns to the primary by the usual rules.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## BOOT-RESERVE-UNVERIFIED
+
+Резерв не подтверждён после перезапуска / Reserve not confirmed after a restart
+
+**RU:** После перезапуска не удалось подтвердить маршрут или работу резерва, поэтому Auto идёт обычным восстановлением и ждёт основной канал.
+
+**EN:** After a restart the reserve route or its health could not be confirmed, so Auto uses the usual recovery and waits for the primary.
+
+**Что делать:** Ничего делать не нужно; Auto включится сам.
+
+**Action:** Nothing to do; Auto turns on by itself.
+
+## DNS-MARK-UNVERIFIED
+
+DNS-канал LAN не подтверждён / LAN DNS channel not confirmed
+
+**RU:** После переключения или в работе Auto программа записывает метку активного канала во все правила GL dns_mark (/proc/dns_mark/rule*/mark), чтобы DNS клиентов LAN шёл через тот же туннель, что и трафик. Запись или её проверка чтением не подтвердились. Само переключение трафика остаётся верным и не откатывается; DNS клиентов LAN может идти через прежний туннель.
+
+**EN:** After a switch or during Auto the program writes the mark of the active channel into every GL dns_mark rule (/proc/dns_mark/rule*/mark), so LAN DNS goes through the same tunnel as the traffic. A write or its read-back did not confirm it. The traffic switch itself stays valid and is not rolled back; LAN DNS may still go through the previous tunnel.
+
+**Что делать:** Посмотрите строку DNS-MARK-SYNC в системном журнале и вывод cat /proc/dns_mark/dump. Auto повторит запись на следующем подтверждённом проходе; перезапуск VPN в GL (fw3 / vpn-client reload) пересоздаёт правила.
+
+**Action:** Look at the system log line DNS-MARK-SYNC and at cat /proc/dns_mark/dump. Auto repeats the write on its next verified pass; a GL VPN restart (fw3 / vpn-client reload) rebuilds the rules.
+
+## DNS-MARK-UNAVAILABLE
+
+Нет модуля GL dns_mark / No GL dns_mark module
+
+**RU:** В этой прошивке нет /proc/dns_mark, поэтому нет пометки DNS клиентов LAN по туннелям. Ничего не записывается; DNS клиентов LAN идёт по правилам самой прошивки.
+
+**EN:** This firmware has no /proc/dns_mark, so there is no per-tunnel LAN DNS marking to follow. Nothing is written; LAN DNS follows the rules of the firmware itself.
+
+**Что делать:** На прошивке без модуля ничего делать не нужно. На GL 4.11 модуль ожидается: сверьте lsmod и версию прошивки.
+
+**Action:** Nothing to do on firmware without the module. On GL 4.11 the module is expected: compare with lsmod and the firmware version.
+
 ## AUTO-RESUME-PENDING
 
 Auto возвращается после перезапуска / Auto is coming back after a restart
@@ -378,6 +462,102 @@ Auto возвращается после перезапуска / Auto is coming
 **Что делать:** Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания. Если через 10 минут Auto всё ещё выключен, нажмите «Старт».
 
 **Action:** Nothing needs to be pressed; it usually takes 3–4 minutes after power-on. If Auto is still off after 10 minutes, press Start.
+
+## RESTART-CLEAN
+
+Штатный перезапуск / Clean restart
+
+**RU:** Роутер или служба остановлены штатно (перезагрузка, остановка или перезапуск службы, применение настроек, обновление пакета). Это не прерывание.
+
+**EN:** The router or the service was stopped properly (reboot, service stop or restart, settings reload, package update). This is not an interruption.
+
+**Что делать:** Делать ничего не нужно. Auto, включённый владельцем, вернётся сам.
+
+**Action:** Nothing to do. Auto that the owner switched on comes back by itself.
+
+## RESTART-FIRST-START
+
+Первый запуск / First start
+
+**RU:** У программы нет записи о том, как закончилась прошлая работа: первый запуск после установки или обновления пакета. Это не прерывание.
+
+**EN:** The program has no record of how its previous run ended: the first start after installing or updating the package. This is not an interruption.
+
+**Что делать:** Делать ничего не нужно. Со следующего запуска причина записывается точно.
+
+**Action:** Nothing to do. From the next start the cause is recorded exactly.
+
+## RESTART-PROCESS
+
+Процесс перезапущен / Process restarted
+
+**RU:** Супервизор Auto или мониторинг завершились без остановки службы (сбой или принудительное завершение), и система перезапустила процесс. Сам роутер не перезагружался; восстановление доводит незавершённое переключение.
+
+**EN:** The Auto supervisor or the monitor ended without a service stop (crash or kill) and the system restarted it. The router itself did not reboot; the recovery puts an unfinished switch right.
+
+**Что делать:** Один раз — не страшно. Если повторяется (в журнале restart limit), сохраните системный журнал (logread | grep homensai) и передайте разработчику.
+
+**Action:** Once is harmless. If it repeats (the log says restart limit), save the system log (logread | grep homensai) and send it to the maintainer.
+
+## RESTART-INTERRUPTED-BOOT
+
+Сбой при запуске / Cut while starting
+
+**RU:** Питание пропало или роутер завис во время запуска: прошлый запуск не завершил восстановление.
+
+**EN:** Power was lost or the router hung while it was starting: the previous start never finished its recovery.
+
+**Что делать:** Проверьте блок питания и кабель. Если повторяется после каждого включения, оставьте роутер включённым на 10 минут и посмотрите в «Событиях» код после этого.
+
+**Action:** Check the power supply and cable. If it repeats after every power-on, leave the router on for 10 minutes and check Events for a code after this one.
+
+## RESTART-INTERRUPTED-SWITCH
+
+Сбой при переключении / Cut during a switch
+
+**RU:** Питание пропало (или роутер завис), когда Auto переключал канал. После запуска переключение откатывается к сохранённому порядку каналов.
+
+**EN:** Power was lost (or the router hung) while Auto was switching the channel. After the start the switch is rolled back to the saved channel order.
+
+**Что делать:** Подождите 3–4 минуты. Если затем появится ROLLBACK-GIVEN-UP или PAIR-RECOVERY-REQUIRED, откройте этот код. Проверьте питание.
+
+**Action:** Wait 3–4 minutes. If ROLLBACK-GIVEN-UP or PAIR-RECOVERY-REQUIRED follows, open that code. Check the power supply.
+
+## RESTART-INTERRUPTED-RESERVE-HOLD
+
+Сбой на резерве / Cut on the reserve
+
+**RU:** Питание пропало (или роутер завис), когда работал резервный канал. После запуска резерв сохраняется или роутер возвращается на основной канал по своим правилам.
+
+**EN:** Power was lost (or the router hung) while the reserve channel was in use. After the start the reserve is kept or the router returns to the main channel by its rules.
+
+**Что делать:** Нажимать ничего не нужно. Если повторяется, проверьте питание.
+
+**Action:** Nothing needs to be pressed. Check the power supply if it repeats.
+
+## RESTART-INTERRUPTED-OPERATION
+
+Сбой при обычной работе / Cut in normal operation
+
+**RU:** Питание пропало (или роутер завис), когда Auto был включён и работал на основном канале, без переключения.
+
+**EN:** Power was lost (or the router hung) while Auto was on and working on the main channel, with no switch in progress.
+
+**Что делать:** Нажимать ничего не нужно: Auto вернётся сам (AUTO-RESUME-PENDING). Если повторяется, проверьте питание.
+
+**Action:** Nothing needs to be pressed: Auto comes back by itself (AUTO-RESUME-PENDING). Check the power supply if it repeats.
+
+## RESTART-INTERRUPTED-AUTO-OFF
+
+Сбой при выключенном Auto / Cut with Auto off
+
+**RU:** Питание пропало (или роутер завис), когда Auto был выключен. Переключений не было; Auto остаётся выключенным.
+
+**EN:** Power was lost (or the router hung) while Auto was off. Nothing was switching; Auto stays off.
+
+**Что делать:** Делать ничего не нужно. Если повторяется, проверьте питание.
+
+**Action:** Nothing to do. Check the power supply if it repeats.
 
 ## STATUS-STALE
 
@@ -1158,6 +1338,294 @@ VPN не подключён / VPN not connected
 **Что делать:** Не удаляйте его. Следуйте router-test-kit/EMERGENCY.md и просите помощи, приложив вывод show.
 
 **Action:** Do not delete it. Follow router-test-kit/EMERGENCY.md and ask for help with the output of show.
+
+## INTEGRITY-MODE-DIFFERS
+
+Права файлов отличаются / File permissions differ
+
+**RU:** Содержимое всех файлов программы верное, но у части файлов права отличаются от списка пакета. Служба запускается как обычно.
+
+**EN:** Every program file has the right content, but some file permissions differ from the package list. The service starts as usual.
+
+**Что делать:** Ничего срочного; переустановка пакета вернёт права.
+
+**Action:** Nothing urgent; a reinstall of the package sets the permissions again.
+
+## INTEGRITY-OK
+
+Файлы программы проверены / Program files verified
+
+**RU:** При запуске службы каждый установленный файл программы совпал со списком контрольных сумм из пакета.
+
+**EN:** At the service start every installed program file matched the checksum list shipped in the package.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## INTEGRITY-RESTORED
+
+Повреждённые файлы программы восстановлены / Damaged program files restored
+
+**RU:** При запуске службы часть файлов программы не совпала с контрольными суммами. Они заменены из проверенной эталонной копии на роутере, проверены снова, служба запущена как обычно. Настройки, условия, журнал и история не затронуты.
+
+**EN:** At the service start some program files did not match their checksums. They were replaced from the verified pristine copy kept on the router, checked again, and the service started normally. Settings, terms, journal and history were not touched.
+
+**Что делать:** Ничего срочного. Если повторяется, возможно, изнашивается флеш-память: сохраните резервную копию и переустановите пакет.
+
+**Action:** Nothing urgent. If it repeats, the flash memory may be wearing out: save a backup and reinstall the package.
+
+## INTEGRITY-FILE-RESTORED
+
+Файл программы восстановлен / A program file was restored
+
+**RU:** Один повреждённый, отсутствующий или с неверными правами файл программы возвращён из эталонной копии (строка системного журнала).
+
+**EN:** One damaged, missing or wrongly permitted program file was put back from the pristine copy (system log line).
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## INTEGRITY-FILE-DAMAGED
+
+Файл программы повреждён / A program file is damaged
+
+**RU:** Установленный файл программы не совпадает с контрольной суммой из пакета.
+
+**EN:** An installed program file does not match the checksum shipped in the package.
+
+**Что делать:** Служба восстанавливает его сама, когда может. Иначе переустановите ту же версию пакета.
+
+**Action:** The service restores it by itself when it can. Otherwise reinstall the same package version.
+
+## INTEGRITY-FILE-MISSING
+
+Файл программы отсутствует / A program file is missing
+
+**RU:** Установленный файл программы из списка пакета отсутствует.
+
+**EN:** An installed program file listed in the package is missing.
+
+**Что делать:** Служба восстанавливает его сама, когда может. Иначе переустановите ту же версию пакета.
+
+**Action:** The service restores it by itself when it can. Otherwise reinstall the same package version.
+
+## INTEGRITY-FILE-MODE
+
+У файла программы неверные права / A program file has wrong permissions
+
+**RU:** У установленного файла программы права отличаются от пакета (например, скрипт запуска больше не исполняемый).
+
+**EN:** An installed program file has other permissions than in the package (for example a start script that is no longer executable).
+
+**Что делать:** Служба восстанавливает права сама, когда может. Иначе переустановите ту же версию пакета.
+
+**Action:** The service restores the permissions by itself when it can. Otherwise reinstall the same package version.
+
+## INTEGRITY-MANIFEST-UNREADABLE
+
+Список контрольных сумм повреждён / Checksum list damaged
+
+**RU:** Список контрольных сумм из пакета отсутствует или повреждён, поэтому сверить файлы с ним нельзя.
+
+**EN:** The list of checksums shipped in the package is missing or damaged, so the files cannot be compared with it.
+
+**Что делать:** Служба берёт список из эталонной копии, когда может. Иначе переустановите ту же версию пакета.
+
+**Action:** The service takes the list from the pristine copy when it can. Otherwise reinstall the same package version.
+
+## INTEGRITY-SOURCE-MISSING
+
+Нет эталонной копии для восстановления / No pristine copy to restore from
+
+**RU:** Найдены повреждённые файлы программы, но эталонной копии файлов пакета на роутере нет (например, установка прервалась до её создания).
+
+**EN:** Damaged program files were found, but the pristine copy of the package files is not on the router (for example the installation ended before the copy was made).
+
+**Что делать:** Переустановите ту же версию пакета; установка снова создаст копию.
+
+**Action:** Reinstall the same package version; the installation makes the copy again.
+
+## INTEGRITY-SOURCE-DAMAGED
+
+Эталонная копия повреждена / Pristine copy damaged
+
+**RU:** Эталонная копия не прошла собственную проверку контрольной суммы, поэтому из неё ничего не восстановлено.
+
+**EN:** The pristine copy failed its own checksum, so nothing was restored from it.
+
+**Что делать:** Переустановите ту же версию пакета; установка заменит копию.
+
+**Action:** Reinstall the same package version; the installation replaces the copy.
+
+## INTEGRITY-SOURCE-VERSION
+
+Эталонная копия другой версии / Pristine copy is another version
+
+**RU:** Эталонная копия относится к другой версии пакета, чем установленные файлы (например, после прерванного обновления), поэтому из неё ничего не восстановлено.
+
+**EN:** The pristine copy belongs to another package version than the installed files (for example after an interrupted update), so nothing was restored from it.
+
+**Что делать:** Установите нужную версию пакета ещё раз и дождитесь окончания установки.
+
+**Action:** Install the package version you want again and let the installation finish.
+
+## INTEGRITY-RESTORE-LIMIT
+
+Достигнут предел восстановлений / Restore limit reached
+
+**RU:** Программа восстанавливает свои файлы не чаще раза за запуск роутера и трёх раз за сутки, чтобы постоянно возвращающееся повреждение не вызвало цикл.
+
+**EN:** The program restores its files at most once per router start and three times in 24 hours, so a damage that keeps coming back cannot cause a loop.
+
+**Что делать:** Повреждение возвращается: проверьте свободное место на флеше, сохраните резервную копию и переустановите пакет.
+
+**Action:** The damage keeps coming back: check free flash space, save a backup and reinstall the package.
+
+## INTEGRITY-RESTORE-FAILED
+
+Восстановление не удалось / Restore did not succeed
+
+**RU:** Файлы скопированы из эталонной копии, но после этого не прошли проверку (например, флеш заполнен или только для чтения).
+
+**EN:** Files were copied from the pristine copy but did not pass the check afterwards (for example the flash is full or read-only).
+
+**Что делать:** Проверьте свободное место и системный журнал, затем переустановите пакет.
+
+**Action:** Check free space and the system log, then reinstall the package.
+
+## INTEGRITY-NEVER-RESTORED
+
+Данные владельца не восстанавливаются / Owner data is never restored
+
+**RU:** Восстановление никогда не записывает ваши настройки, принятие условий, журнал, историю и сертификаты.
+
+**EN:** A restore never writes your settings, terms acceptance, journal, history or certificates.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## INTEGRITY-LUA-DAMAGED
+
+Файлы Lua повреждены, работает Python / Lua files damaged, Python runs
+
+**RU:** Повреждённые файлы программы на Lua восстановить не удалось, поэтому мониторинг и Auto работают на проверенном коде Python. Auto сохраняет свои проверки.
+
+**EN:** Damaged Lua program files could not be restored, so the monitor and the Auto supervisor run on the proven Python code. Auto keeps its own checks.
+
+**Что делать:** Переустановите ту же версию пакета, чтобы вернуться на Lua.
+
+**Action:** Reinstall the same package version to return to Lua.
+
+## INTEGRITY-C-MODULE-DAMAGED
+
+C-модуль повреждён, работает чистый Lua / C module damaged, pure Lua runs
+
+**RU:** Быстрый C-модуль canon_c.so повреждён и не восстановлен; JSON обрабатывает более медленный код на чистом Lua.
+
+**EN:** The fast C module canon_c.so is damaged and could not be restored; JSON is processed by the slower pure Lua code.
+
+**Что делать:** Переустановите ту же версию пакета.
+
+**Action:** Reinstall the same package version.
+
+## INTEGRITY-SERVICE-STOPPED
+
+Программа повреждена, служба не запущена / Program damaged, service stays off
+
+**RU:** Повреждены и не восстановлены файлы программы и на Lua, и на Python. Служба не запущена; существующая защита «только VPN» остаётся, трафик LAN не меняется.
+
+**EN:** Both the Lua and the Python program files are damaged and could not be restored. The service stays off; an existing VPN-only protection stays in place and LAN traffic is not changed.
+
+**Что делать:** Переустановите ту же версию пакета. Если у клиентов LAN нет интернета, используйте homensai-vpn-emergency (см. EMERGENCY.md).
+
+**Action:** Reinstall the same package version. If LAN clients have no internet, use homensai-vpn-emergency (see EMERGENCY.md).
+
+## INTEGRITY-UNVERIFIED
+
+Файлы не проверены / Files not verified
+
+**RU:** Нет ни списка контрольных сумм, ни эталонной копии (установка вручную или старая), поэтому файлы не проверены. Служба запускается как раньше.
+
+**EN:** There is neither a checksum list nor a pristine copy (a hand-copied or older installation), so the files were not checked. The service starts as before.
+
+**Что делать:** Установите пакет через opkg, чтобы включить самопроверку.
+
+**Action:** Install the package with opkg to enable the self-check.
+
+## INTEGRITY-DEFERRED
+
+Проверка отложена на время установки / Check postponed during installation
+
+**RU:** Шла установка пакета, поэтому файлы не проверялись; по окончании установка перезапустит службу.
+
+**EN:** A package installation was running, so the files were not checked; the installation restarts the service when it ends.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## INTEGRITY-SNAPSHOT-MADE
+
+Эталонная копия сохранена / Pristine copy saved
+
+**RU:** Установка проверила распакованные файлы и сохранила их как эталонную копию для самовосстановления (около 1,5 МБ).
+
+**EN:** The installation verified the unpacked files and saved them as the pristine copy for later self-restore (about 1.5 MB).
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## INTEGRITY-SNAPSHOT-REFUSED
+
+Эталонная копия не сохранена / Pristine copy not saved
+
+**RU:** Установка не сохранила эталонную копию: распакованные файлы не совпали с контрольными суммами или копию не удалось записать.
+
+**EN:** The installation did not save the pristine copy because the unpacked files did not match their checksums or the copy could not be written.
+
+**Что делать:** Переустановите пакет; проверьте системный журнал.
+
+**Action:** Reinstall the package; check the system log.
+
+## INTEGRITY-SNAPSHOT-NO-SPACE
+
+Нет места для эталонной копии / No space for the pristine copy
+
+**RU:** На флеше было свободно меньше 8 МБ, поэтому эталонная копия не сохранена; самовосстановление недоступно.
+
+**EN:** Less than 8 MB was free on the flash, so the pristine copy was not saved; the self-restore is not available.
+
+**Что делать:** Освободите место на флеше и переустановите пакет.
+
+**Action:** Free flash space and reinstall the package.
+
+## INTEGRITY-TOOL-MISSING
+
+Нет инструмента самопроверки / Self-check tool missing
+
+**RU:** Инструмент самопроверки не установлен, поэтому файлы не проверены.
+
+**EN:** The self-check tool is not installed, so the files were not checked.
+
+**Что делать:** Переустановите пакет.
+
+**Action:** Reinstall the package.
+
+## INTEGRITY-TOOL-DAMAGED
+
+Инструмент самопроверки повреждён / Self-check tool damaged
+
+**RU:** Сам инструмент самопроверки не совпадает с контрольной суммой. Он возвращается из эталонной копии, если она цела; иначе файлы не проверяются.
+
+**EN:** The self-check tool itself does not match its checksum. It is put back from the pristine copy when that copy is intact; otherwise the files are not checked.
+
+**Что делать:** Переустановите пакет.
+
+**Action:** Reinstall the package.
 
 ## WEBSITE-*
 
@@ -2487,9 +2955,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The router wrote the archive of the old data, but reading it back did not match, so it reset nothing.
 
-**Что делать:** Проверьте свободное место на роутере и снова нажмите «Сброс графика».
+**Что делать:** Проверьте свободное место на роутере и снова нажмите «Сброс статистики».
 
-**Action:** Check free space on the router and press Reset chart again.
+**Action:** Check free space on the router and press Reset statistics again.
 
 ## STATS-RESET-FIELDS
 
@@ -2499,9 +2967,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The page asked to reset a chart the router does not know. Nothing was reset.
 
-**Что делать:** Обновите страницу (Ctrl+F5) и снова нажмите «Сброс графика».
+**Что делать:** Обновите страницу (Ctrl+F5) и снова нажмите «Сброс статистики».
 
-**Action:** Reload the page (Ctrl+F5) and press Reset chart again.
+**Action:** Reload the page (Ctrl+F5) and press Reset statistics again.
 
 ## STATS-RESET-FAILED
 

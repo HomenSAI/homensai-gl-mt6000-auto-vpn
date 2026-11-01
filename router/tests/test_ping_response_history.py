@@ -47,6 +47,15 @@ class PingHistoryTests(unittest.TestCase):
             other=Path(directory)/'web.json';WebsiteResponseHistory().save(other,agent.atomic_json,NOW)
             self.assertEqual(PingResponseHistory.load(other).notice,'PING-HISTORY-UNAVAILABLE')
 
+    def test_work_mode_keeps_one_day_in_ram_and_the_reset_clears_it(self):
+        from ping_response_history import work_observe,work_reset
+        h=PingResponseHistory();work_observe(h,snapshot(),SETTINGS,NOW)
+        self.assertEqual(h.public(NOW)['rows'][0][1:5],[357,None,1,0]);self.assertEqual(h.retention_seconds,86400)
+        work_observe(h,snapshot(NOW+86400+60,source=40),SETTINGS,NOW+86400+60)
+        self.assertTrue(all(r[0]>=NOW+60 for r in h.data['rows']),'older than one day is dropped')
+        work_reset(h,'quality',NOW+86400+60);self.assertEqual(h.data['stats_since'],NOW+86400+60)
+        work_reset(h,'latency',NOW+86400+60);self.assertEqual(h.public(NOW+86400+60)['rows'],[])
+
     def test_reset_clears_the_chart(self):
         h=PingResponseHistory();h.observe(snapshot(),SETTINGS,NOW);h.clear(NOW)
         self.assertEqual(h.public(NOW)['rows'],[])

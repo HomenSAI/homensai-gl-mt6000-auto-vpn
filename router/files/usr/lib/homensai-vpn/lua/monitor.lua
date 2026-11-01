@@ -542,7 +542,8 @@ function Monitor:stats_reset()
       local saved=pcall(resets.save,ctx,self.accounting,state)
       if saved then self.last_save=runner.clock();self.accounting.reliability.critical=false
       else result.done=false;result.code='STORAGE-001' end
-      if self.diagnosing then self.latency=state.latency;self.ping_history=state.ping end
+      if self.diagnosing then self.latency=state.latency;self.ping_history=state.ping
+      elseif result.done then pcall(responses.work_reset,self.ping_history,request.scope,runner.wall()) end
     end
     pcall(function() (runner.write_ram or runner.write_atomic)(self.runtime..'/'..resets.RESULT,canon.encode(result)) end)
   end
@@ -776,10 +777,11 @@ function Monitor:finish_pass(ctx)
   if self.diagnosing then pcall(function() self.latency:observe(status,settings,canon.float(runner.wall())) end) end
   local okl,lpublic=pcall(function() return latency.technical_history_tail(self.latency:public(),runner.wall()) end)
   if okl then status.latency_history=lpublic end
-  -- Work mode keeps no response history (stats_mode.py); Diagnostics fills the ping history every pass.
+  -- Diagnostics fills and saves the ping history; Work mode fills a RAM-only copy of the last day (never saved).
   if metric=='websites' then status.website_response_history=responses.website_unavailable()
   else
-    if self.diagnosing then pcall(function() self.ping_history:observe(status,settings,runner.wall(),M.retention_days(settings)) end) end
+    if self.diagnosing then pcall(function() self.ping_history:observe(status,settings,runner.wall(),M.retention_days(settings)) end)
+    else pcall(responses.work_observe,self.ping_history,status,settings,runner.wall()) end  -- RAM only, never saved
     local okh,public=pcall(function() return self.ping_history:public(runner.wall()) end)
     status.website_response_history=okh and public or responses.website_unavailable()
   end
@@ -1028,6 +1030,8 @@ function Monitor:page_fields(status)
   -- boot_resume (owner 01.11.2026): the page tells a recovery after a power cut, which resumes Auto by itself,
   -- from a stuck one (agent.py does the same)
   status.boot_resume=self:read_json(self.runtime..'/boot-resume.json',NULL)
+  -- the self-check of the installed files at the service start (homensai-vpn-integrity boot; agent.py the same)
+  status.integrity=self:read_json(self.runtime..'/integrity.json',NULL)
   status.switch_timing=page.switch_timing(env)
   status.auto_control=page.auto_control(env,now)
   -- manual_switch_control in Lua (page_controls.lua). status_bridge.py is only the fallback of a failed Lua
@@ -1260,6 +1264,14 @@ function M.run(runner,options)
   if runner.setup_timezone then runner.setup_timezone() end
   uloop.init()
   local handle=M.start(runner,options)
+  -- Interruption codes (owner request 01.11.2026, interruption.lua): a monitor restarted by procd without a service
+  -- stop (crash, kill) is one event and one system log line. Python: agent.monitor_loop. (hv-core: auto.start_cause.)
+  pcall(function()
+    local I=require('interruption')
+    local m=handle.monitor
+    local code=I.monitor_start(I.context(m.runtime,m.persist))
+    if code then m.events[#m.events+1]=canon.object({time=runner.wall(),code=code}) end
+  end)
   uloop.run()
   pcall(os.remove,handle.ready)
   handle.conn:close()

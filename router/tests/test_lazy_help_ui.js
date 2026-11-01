@@ -89,7 +89,10 @@ function fixture(language='en',savedState=null){
  // before Auto) are 8.8 KB longer. 27% -> 26.3%.
  // 2.0.0-alpha14: the owner ping interval control and the shared last-ping reading on every table (eager: they render
  // on first paint) add about 4.9 KB, the recovery episodes of the switch statistics about 2 KB. 26.3% -> 25.5%.
- assert(Buffer.byteLength(source)<1256446*.745,'main module shrank by at least 25.5% from alpha51');
+ // 2.0.0-beta3: the owner-requested error codes shown in popups and the events table (31 rows: power-cut and restart
+ // classification RESTART-*, file integrity INTEGRITY-*) and the event severity column add about 13 KB; the unused
+ // legacy translation table entries dropped by the builder give back about 5 KB. 25.5% -> 25.05%.
+ assert(Buffer.byteLength(source)<1256446*.7495,'main module shrank by at least 25.05% from alpha51');
  assert(!source.includes('var LEARN_LESSONS=')&&!source.includes('var AI_PROMPT_EN='),'long optional payload absent from main');
  assert(source.includes('lazyHelpRoute(window.location.hash.slice(1));var requestedTab='),'initial direct Help topic is remembered before alias normalization');
  console.log('PASS: lazy actual factory EN/RU, first-screen no acquisition, title map, Telegram/terms, concurrency, success, cached failure+Retry, deep links, persistent hosts, >=30% smaller main');

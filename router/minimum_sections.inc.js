@@ -134,7 +134,7 @@ function minimumComposePages(legacy,panel,status,inventory,controlCard,commandHo
       E('p',{},bi('Version: ','Версия: ')+(status.version||'unknown')),
       typeof renderAttribution==='function'?renderAttribution(status):null,
       E('p',{},bi('Tested on GL-MT3000 with firmware 4.11.0.','Проверено на GL-MT3000 с прошивкой 4.11.0.')),
-      E('a',{'href':'https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE','target':'_blank','rel':'noopener noreferrer'},bi('MIT license and project source','Лицензия MIT и исходники проекта'))
+      E('a',{'href':'https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE','target':'_blank','rel':'noopener noreferrer'},bi('License (HomenSAI Personal & Commercial Source License v1.0) and project source','Лицензия (HomenSAI Personal & Commercial Source License v1.0) и исходники проекта'))
     ])
   ]);
   return {pages:result,control:control};

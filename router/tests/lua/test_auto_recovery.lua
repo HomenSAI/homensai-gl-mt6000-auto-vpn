@@ -254,4 +254,22 @@ t.test('status.json is decoded once per monitor write',function()
   t.eq(ctl.read_json(env.run,env.runtime..'/missing/status.json','x'),'x')
 end)
 
+t.test('interruption code: a cut in RESTORING is one RESTART-INTERRUPTED-SWITCH event, then running on flash',function()
+  local env=wired()
+  pair_attempt(env)
+  local j=t.journal(env);j.phase='RESTORING';T.journal_write(env,j)
+  local files={['/etc/hv/service-run.json']='{"state":"running","time":1}'};local logs={}
+  local before=#t.history(env).events
+  env.interruption_io={read=function(p) return files[p] end,mtime=function() return nil end,uptime=function() return 40 end,
+    write_ram=function(p,x) files[p]=x end,write_persist=function(p,x) files[p]=x end,log=function(l) logs[#logs+1]=l end}
+  t.eq(A.recover(env),'ready')
+  local events=t.history(env).events
+  local found=0
+  for i=before+1,#events do if events[i].state=='RESTART-INTERRUPTED-SWITCH' then found=found+1 end end
+  t.eq(found,1)
+  t.truthy(string.find(logs[1],'^RESTART%-INTERRUPTED%-SWITCH: '),logs[1])
+  t.eq(canon.decode(files['/etc/hv/service-run.json']).state,'running')
+  t.truthy(files['/run/hv/supervisor-run.json']~=nil)
+end)
+
 t.run()

@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard198'
+UI_MODULE='dashboard200'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -68,7 +68,7 @@ replacements={
 "panel.appendChild(E('h3',{},tr(\"Подключённые VPN-серверы\")))":"put('channels',E('h3',{},tr(\"Подключённые VPN-серверы\")))",
 "panel.appendChild(cards)":"put('channels',cards)",
 "panel.appendChild(E('section',{'class':'hv-chart-card'},[E('h3',{},tr(\"Задержка серверов во времени\")),chart(status.samples||[],active)]))":"put('statistics',E('section',{'class':'hv-chart-card'},[E('h3',{},tr(\"Задержка серверов во времени\")),chart(status.samples||[],active)]))",
-"panel.appendChild(histogram(status.accounting||{},function(value){period=value;draw(status);},period))":"put('statistics',histogram(status.accounting||{},function(value){period=value;draw(status);},period))",
+"panel.appendChild(histogram(status.accounting||{},function(value){period=value;draw(status);},period))":"put('statistics',serverPairHistogram(status.accounting||{},function(value){period=value;draw(status);},period,(inventory&&inventory.settings)||{},status,function(){draw(status);}))",
 "panel.appendChild(planning)":"put('overview',planning)",
 "panel.appendChild(nativePanel)":"put('settings',nativePanel)",
 "panel.appendChild(historyPanel)":"put('events',historyPanel)",
@@ -112,7 +112,7 @@ source=source[:bottom]+"""    return m.render().then(function(formNode){
       var links=tabs.map(function(tab){return E('a',{'href':'#'+tab[0],'data-hv-tab':tab[0],'click':function(){showPage(tab[0]);}},[E('span',{'aria-hidden':'true'},tab[1]),E('span',{},tab[2])]);});
       appRoot=E('div',{'class':'hv-app hv-workspace'},[
         E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui13.css')+'?build=060-alpha1'}),
-        E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},routerModelLabel()),E('nav',{'aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('small',{},bi('Real IPv4 router measurements','Реальные IPv4-измерения роутера')),E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{},'HomenS.AI Style 1.14.3')])]),
+        E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},routerModelLabel()),E('nav',{'aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{},'HomenS.AI Style 1.14.3')])]),
         E('main',{'class':'hv-main'},[E('header',{'class':'hv-page-header'},[E('div',{'class':'hv-header-main','style':'min-width:0;max-width:100%'},[E('div',{'class':'hv-eyebrow'},bi('AVAILABILITY CONTROL','УПРАВЛЕНИЕ ДОСТУПНОСТЬЮ')),heading,E('p',{},bi('Channels, servers and switching reasons in one place.','Каналы, серверы и причины переключений — в одном месте.'))]),E('div',{'class':'hv-page-actions'},[versionBadge,language,E('button',{'type':'button','class':'btn hv-test','click':function(){return scanCall().then(function(){return statusCall().then(draw);}).catch(function(){ui.addNotification(null,E('p',{},bi('Probe request failed. See service status.','Запрос проверки не прошёл. Смотрите состояние службы.')));});}},bi('Probe now','Проверить сейчас'))])]),panel,settingsHost,footer])
       ]);
       showPage(activeTab);window.addEventListener('hashchange',function(){showPage(window.location.hash.slice(1));});
@@ -187,6 +187,7 @@ must_replace("E('div',{'class':'hv-server-top'},[E('span',{'class':'hv-protocol'
 must_replace("var tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+'-'+index,headers=table.querySelectorAll('tr:first-child th');","var headers=table.querySelectorAll('tr:first-child th'),tableKey=(table.closest('[data-hv-page]')||{dataset:{hvPage:'overview'}}).dataset.hvPage+':'+Array.from(headers).map(function(th){return th.textContent;}).join('|');")
 must_replace("var c=Number.isFinite(nx)&&Number.isFinite(ny)?nx-ny:x.localeCompare(y,locale,{numeric:true,sensitivity:'base'});return (direction==='asc'?c:-c)||a.i-b.i;","return compareTableValues(a.value,b.value,direction)||a.i-b.i;")
 must_replace('return view.extend({',(Path(__file__).parent/'analytics_panel.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
+must_replace('return view.extend({',(Path(__file__).parent/'server_pair_histogram.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
 must_replace("var controlCard=renderAutoControl(status,inventory);put('overview',controlCard);","var controlCard=renderAutoControl(status,inventory);put('overview',vpnSetupCard());put('overview',controlCard);put('overview',renderCascadePath(status));")
 must_replace("put('events',historyPanel)","put('events',historyPanel);put('events',renderTransitionAnalytics(status))")
 must_replace('ui13.css','ui15.css')
@@ -364,7 +365,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui164.css',expected=3)
+must_replace('ui15.css','ui166.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -525,7 +526,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui164.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui166.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -587,5 +588,15 @@ must_replace("""    });
 }""","""    });
   }));
 }""")
+# Size: the legacy tr() dictionary keeps only the Russian keys that some code still names as a literal in the main module
+# (lazy modules have no tr()); entries of replaced legacy panels are dead weight in the main module.
+def _prune_translations():
+    global source
+    import json as _json
+    match=re.search(r'(?m)^var translations = (.*);$',source)
+    table=_json.loads(match.group(1));rest=source[:match.start()]+source[match.end():]
+    kept={k:v for k,v in table.items() if any(q+k+q in rest for q in ('"',"'"))}
+    source=source[:match.start()]+'var translations = '+_json.dumps(kept,ensure_ascii=False)+';'+source[match.end():]
+_prune_translations()
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

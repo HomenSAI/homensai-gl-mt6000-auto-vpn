@@ -3,6 +3,10 @@
 
 [Русский обзор](README.ru.md) · [English overview](README.md) · [Фактическая версия и приёмка / Version and acceptance](docs/CURRENT-STATUS.md)
 
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [подробнее](LICENSING.md)).
+
+**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [details](LICENSING.md)).
+
 1. Выберите один выпуск. Для GL-MT3000 рекомендуется 2.0.0-beta1 (линия Lua, основная с 01.11.2026; [живой тест](docs/OWNER-LIVE-TEST.ru.md)); предыдущий stable — 0.9.0. Пакет, SHA256, описание проверки и установочные скрипты должны относиться к одному тегу. Не понижайте более новую установленную версию.
 2. [Установка RU](docs/INSTALL.ru.md) / [Install EN](docs/INSTALL.en.md). Для агента с инструментами — [полный промпт RU](docs/AI-INSTALL.ru.md) / [full prompt EN](docs/AI-INSTALL.en.md).
 3. [Первая настройка](docs/FIRST-RUN-SETUP.md): условия → объяснение → восемь шагов → проверка → сохранение. Условия принимает человек. Сохранение не включает Auto.

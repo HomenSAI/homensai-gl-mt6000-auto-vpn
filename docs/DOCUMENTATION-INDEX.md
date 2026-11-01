@@ -3,6 +3,10 @@
 
 [Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [Фактически доставлено / Delivered](CURRENT-STATUS.md)
 
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [подробнее](../LICENSING.md)).
+
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+
 Текущие инструкции описывают исходники. Состояние установленного пакета подтверждается только отдельным отчётом о доставке. Исторические отчёты сохраняют свои даты, версии, результаты и прежние ограничения: их команды не являются текущим планом работ. Правовые тексты сохранены без изменения условий.
 
 Current instructions describe source behavior. Installed state requires a separate delivery receipt. Historical reports retain their dates, versions, outcomes and former restrictions; they are not current execution plans. Legal terms remain unchanged. Generated Help, four AI prompts and error-code references are checked against runtime sources by `scripts/sync-documentation.py --check`.

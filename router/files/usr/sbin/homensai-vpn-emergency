@@ -6,6 +6,9 @@
 #   homensai-vpn-emergency remove-guard    delete ONLY the owned nft table, after printing state
 #   homensai-vpn-emergency start           start the own monitor and controller again
 #   homensai-vpn-emergency close-journal   archive a stale journal after YOU restored the VPN rules by hand
+#   homensai-vpn-emergency verify          read-only: compare the installed program files with the package checksums
+#   homensai-vpn-emergency restore         stop own services, restore damaged program files from the pristine copy
+#                                          (never the config, terms, journal or history), start them again
 # Stop delegates managed restoration to the native controller. See EMERGENCY.md; verify the resulting route.
 TABLE=homensai_vpn_guard
 case "$1" in
@@ -45,5 +48,16 @@ remove-guard)
   nft delete table inet $TABLE && echo "owned guard removed"
   echo "Verify: the VPN rule order equals the journal 'before' list (homensai-vpn-emergency show) and the LAN client has internet."
   ;;
-*) echo "usage: homensai-vpn-emergency show|start|stop-auto|close-journal|remove-guard"; exit 2;;
+verify)
+  sh /usr/sbin/homensai-vpn-integrity verify; rc=$?
+  [ "$rc" = 0 ] && echo "INTEGRITY-OK"; exit $rc
+  ;;
+restore)
+  # The owner's explicit request: the once-per-boot and 24 h limits still apply (homensai-vpn-integrity).
+  /etc/init.d/homensai-vpn stop
+  sh /usr/sbin/homensai-vpn-integrity restore /etc/homensai-vpn/pristine/payload.tar.gz /etc/homensai-vpn/pristine/payload.tar.gz.sha256; rc=$?
+  /etc/init.d/homensai-vpn start
+  exit $rc
+  ;;
+*) echo "usage: homensai-vpn-emergency show|start|stop-auto|close-journal|remove-guard|verify|restore"; exit 2;;
 esac

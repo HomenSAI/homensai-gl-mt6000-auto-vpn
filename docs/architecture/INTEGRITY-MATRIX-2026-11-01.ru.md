@@ -2,8 +2,8 @@
 
 HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-integrity-20261101`
 
-Статус: **анализ + прототип**. Прототип (`build_ipk.payload_manifest`, `router/integrity/homensai-vpn-integrity`)
-**не входит в пакет и не подключён к службе** до проверки координатором. Поведение существующих путей не менялось.
+Статус: §1–8 — анализ 01.11.2026 (исторически: тогда прототип не входил в пакет). **Реализация (TODO 15) — §9**:
+манифест в пакете, эталонная копия из postinst, проверка в `start_service`. Находка Н1 закрыта `LUA-AUTO-LOAD-FAILED`.
 Роутер не использовался. Отметки: **[Ф]** — выполнено на ПК (docker `homensai-vpn-python39:local`, lua5.1),
 **[К]** — прочитано из кода, **[П]** — проверить на MT3000.
 
@@ -143,3 +143,40 @@ HomenS.AI Auto VPN · Serhii Khomenko · 01.11.2026 · ветка `lua/agent-int
 
 Формат `.list`/`status` opkg 21.02; время `verify` на 4,4 МБ; `stat -c %a` в busybox сборки GL; входит ли
 `/etc/homensai-vpn` в `sysupgrade -l`; поведение procd при вечном перезапуске (нагрузка, `logread`).
+
+## 9. Реализация (TODO 15, ветка `lua/agent-integrity2-20261101`)
+
+**Источник байтов — выбрано: снимок из postinst, а не `.ipk`.** opkg 21.02 не передаёт сценариям пакета путь к
+`.ipk` (скачанный пакет лежит во временном каталоге и удаляется; `$PKG` нет) [К; П — проверить `env` в postinst].
+Поэтому postinst вызывает `homensai-vpn-integrity snapshot`: только что распакованные opkg файлы сверяются с
+манифестом **из того же пакета** (каждый файл, sha256 + режим); если всё совпало — `tar.gz` этих файлов (без conffile)
++ манифест → `/etc/homensai-vpn/pristine/payload.tar.gz` (+ `.sha256`, каталог 0700; временный файл → `sync` → `mv`).
+По содержимому это ровно полезная нагрузка пакета, и способ работает при любой установке (набор, LuCI, opkg по URL).
+Отказ (`INTEGRITY-SNAPSHOT-REFUSED`, `-NO-SPACE` при < 8 МБ свободных) установку не прерывает.
+
+| Часть | Где |
+|---|---|
+| Манифест `usr/lib/homensai-vpn/integrity.sha256` (`sha256 режим /путь`, conffile без хэша, версия пакета) | `build_ipk.selected_files()` → оба сборщика (своя IPK и SDK через `stage_files.py`) |
+| Инструмент `verify / snapshot / boot / restore` (sh + busybox sha256sum/stat/tar/awk; 3 процесса на проверку) | `/usr/sbin/homensai-vpn-integrity` |
+| Проверка до запуска экземпляров | init `integrity_gate` в `start_service`: режим `normal` / `no-c` (`HOMENSAI_CANON_C=0`) / `python` (оба экземпляра на Python) / `stopped` (ни одного экземпляра; guard не трогается) |
+| Сам инструмент повреждён | init сверяет его sha256 с манифестом и достаёт из снимка (снимок сверяется с `.sha256`); иначе не запускает его и стартует как раньше |
+| Отчёт | `/var/run/homensai-vpn/integrity.json` {code, mode, restored, files ≤ 20, version, time} → `status.integrity` (agent.py и Lua-монитор), строки `logread` |
+| Коды на странице | 23 строки `INTEGRITY-*` одним блоком в конце `router/error_table.inc.js` (страница появится после пересборки UI координатором) |
+| Ручное | `homensai-vpn-emergency verify` / `restore` (стоп → восстановление → старт; пределы те же) |
+| Набор | `03-verify.sh`: файлы = манифест, снимок есть, отчёт |
+
+Никогда не пишется: conffile (настройки, `terms_version`, токены), всё под `/etc/config/` и `/etc/homensai-vpn/`
+(журнал, история, сертификаты), nft, маршруты, флаг Auto. Пределы: 1 восстановление за загрузку (метка в RAM) и 3 за
+24 ч (журнал в `/etc`, будущие отметки считаются). Во время `opkg` (есть `/var/lock/opkg.lock`) — `INTEGRITY-DEFERRED`.
+Нет ни манифеста, ни снимка — `INTEGRITY-UNVERIFIED`, служба стартует как раньше.
+
+Проверено [Ф]: `router/tests/test_integrity_faults.py` — 34 теста (docker python39); тот же инструмент под busybox
+(alpine 3.20) на настоящей полезной нагрузке: снимок 1 469 197 байт, проверка 0,14 с, `boot` с восстановлением трёх
+файлов 1,1 с. Существующие `test_package`, `test_sdk_staging`, `test_package_lifecycle`, `test_lua_auto_service`,
+`test_lua_monitor*`, `test_lifecycle_*`, `test_canon_c_module`, `test_status_server`, `test_emergency_pending`, UI-тесты
+таблицы ошибок — зелёные; `test_monitor_control` (4 падения) падает и на исходной ветке без изменений.
+
+[П] на MT3000: время `boot` на 175 файлах; `busybox stat -c %a`, `tar -czf/-xzOf`, `df -k` сборки GL; путь
+блокировки opkg; что postinst видит снимок до `restart`; `INTEGRITY-OK` в `status.integrity` после установки;
+повреждение модуля → перезапуск службы → `INTEGRITY-RESTORED`; повреждение без снимка → режим `python`.
+

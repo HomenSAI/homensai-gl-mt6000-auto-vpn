@@ -314,6 +314,25 @@ function M.read_state(env)
     if not canon.is_object(ps) or ps.firewall==nil or not ctl.hex(ps.firewall,64) then value_error('PAIR-STATE-UNVERIFIED') end
     for k in pairs(ps) do if k~='firewall' then value_error('PAIR-STATE-UNVERIFIED') end end
   end
+  if data.kept~=nil or data.kept_flags~=nil or data.kept_at~=nil then
+    -- the boot handover (M.boot_keep): only on a STOPPED session, owned clients with their flags before the session
+    local kept,kf=data.kept,data.kept_flags
+    if data.phase~='STOPPED' or not canon.is_array(kept) or #kept==0 or not canon.is_object(kf) or not finite(data.kept_at) or num(data.kept_at)<0 then
+      value_error('PAIR-STATE-UNVERIFIED')
+    end
+    for _,x in ipairs(kept) do if type(x)~='string' or not managed[x] or (kf[x]~='0' and kf[x]~='1') then value_error('PAIR-STATE-UNVERIFIED') end end
+    if not distinct(kept) then value_error('PAIR-STATE-UNVERIFIED') end
+    local n=0;for _ in pairs(kf) do n=n+1 end
+    if n~=#kept then value_error('PAIR-STATE-UNVERIFIED') end
+  end
+  if data.handover~=nil then
+    -- the boot handover on the reserve (M.boot_handover): only on a STOPPED session, its own order and policy
+    local h=data.handover
+    local ok=data.phase=='STOPPED' and canon.is_object(h) and ctl.hex(h.tx,32) and h.policy_hash==data.policy_hash and canon.is_array(h.order)
+      and canon.is_array(data.order) and same_list(h.order,data.order) and finite(h.at) and num(h.at)>=0
+    if ok then local n=0;for _ in pairs(h) do n=n+1 end;ok=n==4 end
+    if not ok then value_error('PAIR-STATE-UNVERIFIED') end
+  end
   if data.manual_hold~=nil and data.manual_hold~='source' and data.manual_hold~='target' then value_error('PAIR-MANUAL-HOLD-UNVERIFIED') end
   local mhs=data.manual_hold_source
   if mhs~=nil and mhs~='manual' and mhs~='test' and mhs~='programmatic' and mhs~='unknown' then value_error('PAIR-MANUAL-HOLD-UNVERIFIED') end
@@ -530,9 +549,29 @@ function M.begin(env,settings,request)
     if row.proto~=managed[name] or row.auto~='0' or (row.disabled~='0' and row.disabled~='1') then value_error('PAIR-PROFILES-UNVERIFIED') end
   end
   local flags=canon.object({});for name,row in pairs(selected) do flags[name]=row.disabled end
+  -- variant D: a boot handover on the reserve is adopted only after a fresh check of everything (else the old path)
+  local handover=nil
+  local hok,hprior=pcall(M.read_state,env)
+  if hok and M.has_handover(hprior) then
+    local jok,value=pcall(T.journal_read,env)
+    if jok and M.handover_matches(hprior,value) then
+      local cok,kernel=pcall(M.adoptable,env,selection,value,hprior)
+      if not cok or kernel==nil then M.release_handover(env,hprior);value_error('BOOT-RESERVE-UNVERIFIED') end
+      handover={prior=hprior,value=value,kernel=kernel}
+    end
+  end
+  -- the clients a boot cleanup kept up for this Start (M.boot_keep) stay owned, with their flags before the old session:
+  -- a later Stop returns them exactly as the old cleanup would have. Everything else of the session is read fresh here.
+  local adopted=canon.array({})
+  local pok,prior=pcall(M.read_state,env)
+  if pok and M.has_kept(prior) then
+    for _,name in ipairs(prior.kept) do
+      if selected[name] and selected[name].disabled=='0' then adopted[#adopted+1]=name;flags[name]=prior.kept_flags[name] end
+    end
+  end
   local state=canon.object({id=request.id,phase='STARTING',started=fwall(env),revision=request.revision,network_identity=n.identity(data,managed),
-    interfaces=managed,protected=n.configs(managed),owned=canon.array({}),before_flags=flags,process_bindings=getd(selection,'process_bindings',NULL),
-    order=copy_list(selection.order),policy_hash=selection.hash})
+    interfaces=managed,protected=n.configs(managed),owned=adopted,before_flags=flags,process_bindings=getd(selection,'process_bindings',NULL),
+    order=copy_list(handover and handover.prior.handover.order or selection.order),policy_hash=selection.hash})
   pcall(function() state.protected_static=canon.object({firewall=n.static_firewall_digest()}) end)
   state.policy_roles=P.proof(selection)
   M.save(env,state)
@@ -547,7 +586,7 @@ function M.begin(env,settings,request)
       n.ifup(interface,request.revision)
       n.quiet(45,request.revision)
     elseif n.client_down(interface) then
-      state.owned[#state.owned+1]=interface;M.save(env,state)
+      if not index_of(state.owned,interface) then state.owned[#state.owned+1]=interface;M.save(env,state) end
       pcall(n.ifup,interface,request.revision)
       n.quiet(45,request.revision)
     end
@@ -556,6 +595,7 @@ function M.begin(env,settings,request)
   M.require_running(env,request.revision)
   env.backend.guard(env.backend.devices(),request.revision)
   M.save(env,state)
+  if handover then M.adopt_journal(env,state,handover.value,handover.kernel,request.revision) end
   return state
 end
 
@@ -563,6 +603,178 @@ end
 local function boot_step(env,step)
   local ok,now=pcall(env.run.clock)
   if ok then pcall(function() require('durable').boot_step(now,step) end) end
+end
+
+-- Owner decision 01.11.2026 (variant C, BOOT-RECOVERY-2026-11-01.ru.md; physical power cuts on beta1): the boot
+-- cleanup stopped the pair's two healthy clients (ifdown + vendor quiet, ~20 s) only for the boot resume's Start to
+-- bring them up again. Now, when the boot resume will press Start (the owner's marker, no newer Stop latch, the boot
+-- resume not finished, uptime below BOOT_KEEP_UPTIME) and every owned client is up, the cleanup keeps them: the route
+-- is restored and verified exactly as before (rollback / finish_committed, order_is), the session ends STOPPED and
+-- records the kept clients with their flags before the session (kept, kept_flags, kept_at). The next Start's begin()
+-- adopts them as owned and reads everything else fresh (preflight, identity, configs, the kernel attestation of the
+-- running session), so no tunnel identity of the old session is reused. Without that Start within KEEP_SECONDS (or
+-- after a Stop, a failed boot resume, the boot window) release_kept() stops them as the old cleanup would have.
+-- An owner Stop (stop_revision) and any client that is not up keep the old behaviour. Python: pair_auto.boot_keep.
+M.BOOT_KEEP_UPTIME=900   -- boot_resume.UNTIL_UPTIME
+M.KEEP_SECONDS=600
+function M.has_kept(state) return canon.is_object(state) and state.phase=='STOPPED' and canon.is_array(state.kept) and #state.kept>0 end
+-- pending, uptime, and the reason when not pending (the handover refusal log)
+local function resume_pending(env)
+  local ok,now=pcall(env.run.clock)
+  if not ok or type(now)~='number' or now<0 or now>=M.BOOT_KEEP_UPTIME then return false,now,'UPTIME' end
+  local br=require('boot_resume')
+  local wok,wanted,why=pcall(br.wanted,function(p) return env.run.fs.read(p) end,env.persist)
+  if not wok then return false,now,'RESUME-MARKER-UNREADABLE' end
+  if not wanted then return false,now,tostring(why or 'AUTO-RESUME-NOT-REQUESTED') end
+  local row=ctl.read_json_safe(env.run,env.runtime..'/'..br.STATE,canon.object({}))
+  if canon.is_object(row) and (row.state=='FAILED' or row.state=='SKIPPED') then return false,now,'RESUME-'..row.state end
+  return true,now
+end
+function M.boot_keep(env,state,stop_revision)
+  if stop_revision~=nil or not canon.is_array(state.owned) or #state.owned==0 or not resume_pending(env) then return false end
+  local n=env.net
+  for _,interface in ipairs(state.owned) do
+    local ok,up=pcall(function() return n.interface_exists(interface) and not n.client_down(interface) end)
+    if not (ok and up) then return false end
+  end
+  return true
+end
+function M.kept_valid(env,state)
+  local pending,now=resume_pending(env)
+  local at=num(state.kept_at)
+  return pending and at~=nil and at<=now and now-at<M.KEEP_SECONDS
+end
+-- release_kept(): the kept clients are stopped and their flags restored, as the old boot cleanup would have done
+function M.release_kept(env,state)
+  local n=net(env)
+  local managed=M.state_interfaces(state)
+  for i=#state.kept,1,-1 do
+    local interface=state.kept[i]
+    if n.identity(n.network(),managed)~=state.network_identity then value_error('PAIR-EXTERNAL-NETWORK-CHANGE') end
+    if n.changed(state,n.configs(managed),{firewall=true}) then value_error('PAIR-EXTERNAL-CONFIG-CHANGE') end
+    n.ifdown(interface)
+    n.quiet(45)
+    n.set_disabled(state,interface,state.kept_flags[interface])
+    if n.interface_exists(interface) then value_error('PAIR-PROFILE-STOP-UNVERIFIED') end
+  end
+  env.backend.unguard()
+  state.kept=nil;state.kept_flags=nil;state.kept_at=nil;M.save(env,state)
+  boot_step(env,'pair kept clients released')
+end
+
+-- Owner decision 01.11.2026 (variant D, BOOT-RECOVERY-2026-11-01.ru.md; physical power cuts on beta1): after a boot
+-- with a completed switch on the reserve (journal COMMITTED or HELD-ON-RESERVE, current role target) the cleanup
+-- waited ~60-130 s for the primary proof (primary_successes + primary_stable) before it could end the session, and
+-- only then the boot resume's Start was accepted. Now, when the boot resume will press Start and the reserve route
+-- is proven freshly (attest_policy verified with role target, the reserve healthy by a fresh probe, the live order
+-- the journal's), the old session hands over: it ends STOPPED with handover={tx,order,policy_hash,at} (and its kept
+-- clients, variant C), the guard stays VPN-only, the journal is untouched. Start accepts exactly this journal; the
+-- new session's begin() checks everything again (preflight, the journal's policy identity, the live order, the
+-- kernel proof role target, the reserve health) and then records the adoption in the journal (COMMITTED,
+-- BOOT-RESERVE-ADOPTED, boot_adopted={session,time,from_phase,from_reason}, confirmed=now so min_dwell counts from
+-- here, no manual request). From there the normal committed return policy (committed_recovery_decision:
+-- recovery_ready = primary_successes + primary_stable, min_dwell) brings it back to the primary. Any failed check,
+-- an owner Stop, no Start within KEEP_SECONDS, a failed boot resume: release_handover() and today's path (cleanup,
+-- finish_committed, the primary-proof wait). Interrupted switches (ARMED/APPLYING/WAIT-CLIENT/RESTORING) never get
+-- here: they roll back as before. One handover per boot (RAM marker). Python: pair_auto.boot_handover.
+M.HANDOVER_FILE='pair-handover.json'
+function M.has_handover(state) return canon.is_object(state) and state.phase=='STOPPED' and canon.is_object(state.handover) end
+function M.handover_matches(state,value)
+  return M.has_handover(state) and canon.is_object(value) and state.handover.tx==value.tx and (value.phase=='COMMITTED' or value.phase=='HELD-ON-RESERVE')
+end
+-- the reserve route the old session left, freshly: kernel proof role target and a healthy reserve; the kernel or nil
+local function reserve_proven(env,value,selection)
+  local kernel=env.backend.attest_policy(selection)
+  if not canon.is_object(kernel) or kernel.verified~=true or kernel.role~='target' then return nil end
+  if env.backend.health(value.target)~=true then return nil end
+  return kernel
+end
+-- 01.11.2026 (MT3000 sysrq-b on beta3: no handover, no reason in the log): the checks run on every cleanup pass for
+-- at most HANDOVER_WAIT s from the first one (the revive and the vendor need some seconds after the boot), each
+-- refusal is logged once per reason (BOOT-RECOVERY-STEP: handover refused <reason>), and after the wait today's path
+-- goes on without further checks. The reserve health is the backend's live probe (health(): live_probe or the
+-- lua_bridge probe, never the monitor samples). Only the reserve has to be up: the primary may still be connecting
+-- (all owned clients are kept and adopted; begin() starts the ones that are down). RAM marker HANDOVER_FILE:
+-- {state='waiting',first} -> {state='handed'|'refused'}. Python: pair_auto.boot_handover.
+M.HANDOVER_WAIT=60
+local handover_logged=nil
+local function handover_refused(env,reason)
+  if handover_logged~=reason then handover_logged=reason;boot_step(env,'handover refused '..reason) end
+  return false
+end
+function M.handover_log_reset() handover_logged=nil end
+-- nil when the reserve route can be handed over, else the refusal reason; the kernel proof as the second value
+function M.handover_check(env,state,value,context)
+  local role=P.current_role(value)
+  if role~='target' then return 'ROLE '..tostring(role) end
+  if not same_list(context.session_order,state.order) then return 'SESSION-ORDER' end
+  -- a primary already proven returns at once on today's path; the handover only replaces the wait for the proof
+  if env.backend.recovery_ready(value.source,env.backend.policy().settings)==true then return 'PRIMARY-PROVEN' end
+  local lo,lh=env.backend.order()
+  if not P.state_order_matches(state,value,lo,lh) then return 'ORDER' end
+  local kernel=env.backend.attest_policy()
+  if not canon.is_object(kernel) or kernel.verified~=true then return 'KERNEL '..tostring(canon.is_object(kernel) and kernel.code or 'UNVERIFIED') end
+  if kernel.role~='target' then return 'KERNEL-ROLE '..tostring(kernel.role) end
+  local health=env.backend.health(value.target)
+  if health~=true then return 'RESERVE-HEALTH '..tostring(health==nil and 'UNKNOWN' or health) end
+  return nil,kernel
+end
+function M.boot_handover(env,state,value,context,stop_revision)
+  if stop_revision~=nil or context==nil or (value.phase~='COMMITTED' and value.phase~='HELD-ON-RESERVE') then return false end
+  local path=env.runtime..'/'..M.HANDOVER_FILE
+  local marker=ctl.read_json_safe(env.run,path,canon.object({}))
+  if not canon.is_object(marker) then marker=canon.object({}) end
+  if marker.state=='handed' or marker.state=='refused' then return false end
+  local pending,now,why=resume_pending(env)
+  if not pending then return handover_refused(env,why) end
+  local first=num(marker.first)
+  if first==nil or first>now then first=now;ctl.write_json(env.run,path,canon.object({state='waiting',first=canon.float(now)})) end
+  if now-first>=M.HANDOVER_WAIT then
+    ctl.write_json(env.run,path,canon.object({state='refused',first=canon.float(first),reason=handover_logged or NULL}))
+    return handover_refused(env,'WAIT-OVER after '..tostring(handover_logged))
+  end
+  local ok,reason=pcall(M.handover_check,env,state,value,context)
+  if not ok then reason='ERROR '..tostring(is_refused(reason) and reason.code or reason) end
+  if reason~=nil then return handover_refused(env,reason) end
+  env.backend.guard(env.backend.devices())  -- VPN-only on the running tunnels, as the held journal had
+  ctl.write_json(env.run,path,canon.object({state='handed',first=canon.float(first),tx=value.tx,time=fwall(env)}))
+  state.handover=canon.object({tx=value.tx,order=copy_list(state.order),policy_hash=state.policy_hash,at=canon.float(env.run.clock())})
+  if #state.owned>0 then
+    local flags=canon.object({});for _,interface in ipairs(state.owned) do flags[interface]=state.before_flags[interface] end
+    state.kept=copy_list(state.owned);state.kept_flags=flags;state.kept_at=state.handover.at
+  end
+  state.phase='STOPPED';M.save(env,state)
+  boot_step(env,'pair cleanup handover on the reserve '..value.tx)
+  return true
+end
+-- back to today's path: the old session is HELD again and the next cleanup waits for the primary proof as before
+function M.release_handover(env,state)
+  state.handover=nil;state.kept=nil;state.kept_flags=nil;state.kept_at=nil
+  state.phase='HELD';M.save(env,state)
+  boot_step(env,'pair handover released')
+end
+-- begin(): the fresh checks of the adoption; the kernel proof or nil
+function M.adoptable(env,selection,value,prior)
+  local ctx=P.metadata(value)
+  if ctx==nil or selection.hash~=value.hash or selection.hash~=prior.handover.policy_hash then return nil end
+  if getd(selection.source,'id',nil)~=value.source or getd(selection.target,'id',nil)~=value.target then return nil end
+  if not same_list(ctx.session_order,prior.handover.order) or not same_set(selection.order,prior.handover.order) then return nil end
+  for key,item in pairs(P.proof(selection)) do if canon.encode(getd(ctx,key,NULL))~=canon.encode(item) then return nil end end
+  local lo,lh=env.backend.order()
+  if not same_list(lo,P.current_order(value)) or lh~=value.hash or P.current_role(value)~='target' then return nil end
+  return reserve_proven(env,value,selection)
+end
+-- the new session's journal says where it started: on the reserve, adopted at this boot
+function M.adopt_journal(env,state,value,kernel,revision)
+  local now=fwall(env)
+  value.boot_adopted=canon.object({session=state.id,time=now,from_phase=value.phase,from_reason=getd(value,'reason',NULL)})
+  value.phase='COMMITTED';value.reason='BOOT-RESERVE-ADOPTED';value.confirmed=now;value.control_revision=revision
+  value.manual_request_id=nil
+  T.journal_write(env,value)
+  pcall(M.remember_selected,env,state,kernel)
+  T.publish(env,{state='COMMITTED',reason='BOOT-RESERVE-ADOPTED',source=value.source,target=value.target,mode='continuous-pair',proof_scope=M.MODE,
+    readiness_verified=true,kernel_policy_verified=true,kernel_proof=kernel,original_restored=false,blockers=canon.array({})})
+  boot_step(env,'pair session adopted the reserve '..value.tx)
 end
 
 function M.cleanup(env,state,stop_revision)
@@ -582,6 +794,7 @@ function M.cleanup(env,state,stop_revision)
   end
   if phase=='COMMITTED' or phase=='HELD-ON-RESERVE' then
     M.ensure_devices(env,state)  -- finish_committed/rollback end with guard(devices()): the pair's own tunnels first
+    if M.boot_handover(env,state,value,context,stop_revision) then return true end
     local finished
     if context~=nil then finished=T.finish_committed(env,value,'PAIR-STOPPED',state.order) else finished=T.finish_committed(env,value,'PAIR-STOPPED') end
     if not finished then state.phase='HELD';M.save(env,state);return false end
@@ -594,6 +807,16 @@ function M.cleanup(env,state,stop_revision)
     end
   end
   if not order_is(env,state.order,state.policy_hash) then value_error('PAIR-EXTERNAL-POLICY-CHANGE') end
+  if M.boot_keep(env,state,stop_revision) then
+    if n.identity(n.network(),managed)~=state.network_identity then value_error('PAIR-EXTERNAL-NETWORK-CHANGE') end
+    if n.changed(state,n.configs(managed),{firewall=true}) then value_error('PAIR-EXTERNAL-CONFIG-CHANGE') end
+    local flags=canon.object({});for _,interface in ipairs(state.owned) do flags[interface]=state.before_flags[interface] end
+    -- the guard stays: the next session's begin() guards again, release_kept() removes it
+    state.kept=copy_list(state.owned);state.kept_flags=flags;state.kept_at=canon.float(env.run.clock())
+    state.phase='STOPPED';M.save(env,state)
+    boot_step(env,'pair cleanup kept '..table.concat(state.kept,' '))
+    return true
+  end
   for i=#state.owned,1,-1 do
     local interface=state.owned[i]
     if n.identity(n.network(),managed)~=state.network_identity then value_error('PAIR-EXTERNAL-NETWORK-CHANGE') end
@@ -775,6 +998,9 @@ function M.reapply_missing_policy(env,state,settings,revision,value,observed)
   local kernel=env.backend.attest_policy(selection)
   if kernel.verified==true then
     M.remember_selected(env,state,kernel)
+    -- LAN DNS follows the verified active channel: repairs drift after a GL rebuild of dns_mark (fw3/vpn-client
+    -- reload, boot). Observation-grade: never fails the pass.
+    if (kernel.role=='source' or kernel.role=='target') and env.backend.dns_mark_follow then pcall(env.backend.dns_mark_follow) end
     if observed then observed.selection=selection;observed.kernel=kernel end
     return false
   end
@@ -807,6 +1033,18 @@ function M.tick(env,settings,revision)
     local state=M.read_state(env)
     local has_state=next(state)~=nil
     local running=request_row.mode=='on' and request_row.revision==revision
+    if not running and M.has_handover(state) then
+      -- the journal stays as the old session left it until the Start: nothing else may finish it meanwhile
+      if M.kept_valid(env,canon.object({kept_at=state.handover.at})) then return true end
+      M.release_handover(env,state)
+      return true
+    end
+    if not running and M.has_kept(state) then
+      if M.kept_valid(env,state) then return false end  -- the boot resume's Start is still coming
+      M.release_kept(env,state)
+      T.publish(env,{state='STOPPED',mode='continuous-pair',proof_scope=M.MODE,original_restored=true,blockers=canon.array({})})
+      return true
+    end
     local relevant=running or (has_state and not M.TERMINAL[state.phase])
     if not relevant then return false end
     if not running then
@@ -943,6 +1181,11 @@ function M.tick(env,settings,revision)
   if pending.phase=='RUNNING' and M.READOPT_CODES[code] and request_row.mode=='on' then
     local rok,handed=pcall(M.readopt_running,env,pending,request_row,revision,code)
     if rok and handed then return true end
+  end
+  if code=='BOOT-RESERVE-UNVERIFIED' and request_row.mode=='on' then
+    pcall(M.fail_request,env,request_row,revision,err)  -- the old session is HELD again; today's path follows
+    M.publish_failure(env,err)
+    return true
   end
   if pending.phase=='STARTING' then
     local cok=pcall(function() M.cleanup(env,pending);pending=M.read_state(env) end)

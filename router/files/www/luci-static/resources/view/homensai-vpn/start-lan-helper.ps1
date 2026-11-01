@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com — MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 # Friendly launcher for client-test.ps1. Run it on a Windows computer in your home network (not on the router):
 #   pwsh -NoProfile -File .\start-lan-helper.ps1
 # Both files must be in the same folder. This launcher only asks questions and starts client-test.ps1; it changes nothing itself.

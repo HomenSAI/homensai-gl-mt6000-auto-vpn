@@ -1,7 +1,18 @@
 /* Advanced > Switch statistics: episodes derived from saved events (switchTimeline in the main page), drawn with the shared phase chart.
    A recovery after a fault or restart (power cut, crashed supervisor, give-up) has its own kind, colour and outcome; it is never drawn
    as a switch and never enters the averages. */
-var SWITCH_RESERVE_CAP=120;
+var SWITCH_RESERVE_CAP=120,SWITCH_SHOW_OUTLIERS=false;
+// Outliers (owner 01.11.2026): an episode whose measured length (all its saved phases) is above
+// max(3 x median, median + 3 x MAD, 30 s) of the saved episodes - or above 120 s when there are fewer than 5 -
+// is not drawn and not averaged (a bench or power-cut test would squeeze every other bar). The table keeps it, marked.
+function switchSpan(e){var v=[e.detect,e.switching,e.onReserve,e.returning,e.kind==='recovery'&&Number.isFinite(e.end)?e.end-e.rec:null].filter(Number.isFinite);return v.length?v.reduce(function(a,b){return a+b;},0):null;}
+function switchOutliers(list){
+  var spans=list.filter(function(e){return e.kind!=='recovery';}).map(switchSpan).filter(Number.isFinite).sort(function(a,b){return a-b;});
+  function med(v){var n=v.length;return n?(v[(n-1)>>1]+v[n>>1])/2:0;}
+  var m=med(spans),limit=spans.length<5?120:Math.max(3*m,m+3*med(spans.map(function(x){return Math.abs(x-m);}).sort(function(a,b){return a-b;})),30);
+  // only finished switches qualify: a recovery has its own colour and is never averaged; a running episode stays visible
+  return list.filter(function(e){var s=switchSpan(e);return e.kind!=='recovery'&&(e.back!==null||e.rolledBack!==null)&&Number.isFinite(s)&&s>limit;});
+}
 function switchKindText(kind){return {auto:bi('Automatic','Автоматическое'),manual:bi('Manual','Ручное'),test:bi('Test','Тест'),recovery:bi('Recovery after a fault or restart','Восстановление после сбоя или перезапуска')}[kind]||bi('Not saved','Не сохранено');}
 function switchPhases(){return MEASURE_PHASES.concat([['Recovery after a fault or restart (not a switch)','Восстановление после сбоя или перезапуска (не переключение)','#8e44ad']]);}
 function switchWhen(t){return Number.isFinite(t)?new Date(t*1000).toLocaleString(locale==='ru'?'ru-RU':'en-GB',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';}
@@ -48,8 +59,10 @@ function renderSwitchPage(model){
     E('li',{},bi('Recovery after a fault or restart: from the first saved recovery step (after a reboot, a power cut or a restart of the supervisor) to its saved result - traffic restored, or the recovery given up and Auto stopped. It is drawn in its own colour, cut to '+SWITCH_RESERVE_CAP+' s like the reserve phase, and is not a switch: the averages above do not include it.','Восстановление после сбоя или перезапуска: от первого сохранённого шага восстановления (после перезагрузки, отключения питания или перезапуска супервизора) до его сохранённого итога — трафик восстановлен, либо попытки прекращены и Auto остановлен. Оно нарисовано своим цветом, укорочено до '+SWITCH_RESERVE_CAP+' с, как фаза резерва, и не является переключением: средние выше его не учитывают.')),
     E('li',{},bi('The moment the fault really began is not known to the router: it can only see the first failed check. Help → Measured results of Auto mode shows controlled tests where the fault start was known.','Момент, когда сбой действительно начался, роутеру неизвестен: он видит только первую неудачную проверку. В «Помощи → Результаты замеров работы в автоматическом режиме» есть контролируемые тесты, где начало сбоя было известно.'))]);
   var nodes=[E('h3',{},bi('Switch statistics','Статистика переключений')),intro];
+  var outliers=switchOutliers(all),plotted=SWITCH_SHOW_OUTLIERS?shown:shown.filter(function(e){return outliers.indexOf(e)<0;}),longest=outliers.reduce(function(a,e){return Math.max(a,switchSpan(e));},0);
+  var averaged=all.filter(function(e){return outliers.indexOf(e)<0;});
   var switched=all.filter(function(e){return e.reserve!==null;}),returned=all.filter(function(e){return e.back!==null;}),recovered=all.filter(function(e){return e.kind==='recovery';});
-  var stats={detect:switchStatsOf(all.map(function(e){return e.detect;})),switching:switchStatsOf(all.map(function(e){return e.switching;})),total:switchStatsOf(all.map(function(e){return e.total;})),returning:switchStatsOf(all.map(function(e){return e.returning;}))};
+  var stats={detect:switchStatsOf(averaged.map(function(e){return e.detect;})),switching:switchStatsOf(averaged.map(function(e){return e.switching;})),total:switchStatsOf(averaged.map(function(e){return e.total;})),returning:switchStatsOf(averaged.map(function(e){return e.returning;}))};
   function card(label,value,detail){return E('div',{'class':'hv-switch-card'},[E('span',{},label),E('strong',{},value),E('small',{},detail)]);}
   function range(st){return st?bi('min ','мин. ')+spanText(st.min)+' · '+bi('max ','макс. ')+spanText(st.max)+' · n='+st.n:bi('No measurements yet','Замеров пока нет');}
   nodes.push(E('div',{'class':'hv-switch-cards','data-switch-cards':'1'},[
@@ -61,17 +74,21 @@ function renderSwitchPage(model){
     card(bi('Router switch average','Среднее роутера'),timing&&Number.isFinite(timing.avg_seconds)?spanText(timing.avg_seconds):'—',timing&&Number.isFinite(timing.avg_seconds)?bi('switches counted ','учтено переключений ')+timing.count+(Number.isFinite(timing.last_seconds)?' · '+bi('last ','последнее ')+spanText(timing.last_seconds):'')+' · '+bi('used by the countdown','используется обратным отсчётом'):bi('No confirmed switch saved yet','Подтверждённых переключений ещё нет'))]));
   if(!all.length){
     nodes.push(E('p',{'class':'alert-message','data-switch-empty':'1'},model.history===false?bi('The event history has not arrived yet. It is loaded about once a minute while this page is open.','История событий ещё не загружена. Пока страница открыта, она загружается примерно раз в минуту.'):bi('No switches in the saved history yet. When Auto or you switch the channel, the measured times appear here.','В сохранённой истории пока нет переключений. Когда Auto или вы переключите канал, здесь появятся измеренные времена.')));
-    nodes.push(E('h4',{},bi('Phases','Фазы')),phases);return E('div',{'class':'hv-switch-stats'},nodes);
+    nodes.push(E('h4',{},bi('Phases','Фазы')),phases);return E('div',{'class':'hv-switch-stats','data-stats-reset':'auto'},nodes);
   }
   nodes.push(E('h4',{},bi('The switching process over time','Процесс переключения во времени')+' · '+(shown.length<all.length?bi('last ','последние ')+shown.length+bi(' of ',' из ')+all.length:String(all.length))));
-  nodes.push(legend,phaseChart(switchChartRows(shown,now),{phases:switchPhases(),title:bi('Switching phases per episode, seconds from the first known moment','Фазы каждого переключения, секунды от первого известного момента'),left:110}));
+  nodes.push(legend,phaseChart(switchChartRows(plotted,now),{phases:switchPhases(),title:bi('Switching phases per episode, seconds from the first known moment','Фазы каждого переключения, секунды от первого известного момента'),left:110}));
   nodes.push(E('p',{},bi('Each bar is one episode, the newest is at the bottom. A = automatic, M = manual, T = test, R = recovery after a fault or restart (purple, not a switch, not in the averages), ? = type not saved. The bar starts at the first failed check, or at the first saved moment if that check is not known.','Каждая полоса — один эпизод, новый внизу. A — автоматическое, M — ручное, T — тест, R — восстановление после сбоя или перезапуска (фиолетовая, не переключение, в средние не входит), ? — тип не сохранён. Полоса начинается с первой неудачной проверки или с первого сохранённого момента, если она неизвестна.')));
+  if(outliers.length){
+    var root=null,toggle=E('button',{'type':'button','class':'cbi-button','data-switch-outliers':SWITCH_SHOW_OUTLIERS?'hide':'show','click':function(){SWITCH_SHOW_OUTLIERS=!SWITCH_SHOW_OUTLIERS;root=toggle.closest&&toggle.closest('.hv-switch-stats');if(root&&root.parentNode)root.parentNode.replaceChild(renderSwitchPage(model),root);}},SWITCH_SHOW_OUTLIERS?bi('Hide them','Скрыть их'):bi('Show them','Показать их'));
+    nodes.push(E('p',{'class':'hv-step-note','data-switch-outlier-note':'1'},[(SWITCH_SHOW_OUTLIERS?bi('Shown on the chart: abnormally long episodes: ','Показаны на графике аномально длинные эпизоды: '):bi('Not shown: abnormally long episodes: ','Не показано аномально длинных эпизодов: '))+outliers.length+' ('+bi('the longest ','самый длинный ')+spanText(longest)+'). '+bi('Rule: longer than max(3 × median, median + 3 × MAD, 30 s) of the saved episodes, or 120 s with fewer than 5. They are never in the averages; the table keeps them, marked. ','Правило: длиннее max(3 × медиана, медиана + 3 × MAD, 30 с) сохранённых эпизодов, при менее чем 5 эпизодах — длиннее 120 с. В средние они не входят никогда; в таблице они есть с пометкой. '),toggle]));
+  }
   var cols=[bi('Time','Время'),bi('Type','Тип'),bi('Detection','Обнаружение'),bi('Switching','Переключение'),bi('Failure → reserve','Сбой → резерв'),bi('On the reserve','На резерве'),bi('Return','Возврат'),bi('Primary was down','Основной не работал'),bi('Result','Итог')];
   var table=E('table',{'class':'table hv-measure-table','data-hv-no-sort':'1','data-switch-table':'1'},[E('tr',{},cols.map(function(c){return E('th',{'scope':'col'},c);}))]);
-  shown.slice().reverse().forEach(function(e,i){table.appendChild(E('tr',{'data-switch-key':e.key},[switchWhen(e.time),switchKindText(e.kind)+(e.returnKind&&e.returnKind!==e.kind&&e.back!==null?' / '+switchKindText(e.returnKind):''),spanText(e.detect),spanText(e.switching),spanText(e.total),spanText(e.onReserve),spanText(e.returning),spanText(e.down),switchResult(e,i===0,now)].map(function(v){return E('td',{},v);})));});
-  var mean=['detect','switching','total','onReserve','returning','down'].map(function(k){var st=switchStatsOf(shown.map(function(e){return e[k];}));return st?spanText(st.mean):'—';});
-  table.appendChild(E('tr',{'class':'hv-measure-mean'},[E('th',{'scope':'row'},bi('Mean','Среднее')),E('td',{},'')].concat(mean.map(function(v){return E('td',{},v);}),[E('td',{},'')])));
+  shown.slice().reverse().forEach(function(e,i){table.appendChild(E('tr',{'data-switch-key':e.key},[switchWhen(e.time),switchKindText(e.kind)+(e.returnKind&&e.returnKind!==e.kind&&e.back!==null?' / '+switchKindText(e.returnKind):'')+(outliers.indexOf(e)>=0?' · '+bi('abnormally long, not averaged','аномально длинный, не в средних'):''),spanText(e.detect),spanText(e.switching),spanText(e.total),spanText(e.onReserve),spanText(e.returning),spanText(e.down),switchResult(e,i===0,now)].map(function(v){return E('td',{},v);})));});
+  var mean=['detect','switching','total','onReserve','returning','down'].map(function(k){var st=switchStatsOf(shown.filter(function(e){return outliers.indexOf(e)<0;}).map(function(e){return e[k];}));return st?spanText(st.mean):'—';});
+  table.appendChild(E('tr',{'class':'hv-measure-mean'},[E('th',{'scope':'row'},outliers.length?bi('Mean (without outliers)','Среднее (без выбросов)'):bi('Mean','Среднее')),E('td',{},'')].concat(mean.map(function(v){return E('td',{},v);}),[E('td',{},'')])));
   nodes.push(E('div',{'class':'hv-dv-tablewrap'},table),E('h4',{},bi('Phases','Фазы')),phases);
   nodes.push(E('p',{},[bi('The same times are written in ','Те же времена записаны в '),E('a',{'href':'#events'},bi('Events and errors','Событиях и ошибках')),bi(' and in the ',' и в '),E('a',{'href':'#services'},bi('Live log','Живом журнале')),'.']));
-  return E('div',{'class':'hv-switch-stats'},nodes);
+  return E('div',{'class':'hv-switch-stats','data-stats-reset':'auto'},nodes);
 }

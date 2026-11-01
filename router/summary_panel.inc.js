@@ -77,7 +77,7 @@ function uiRenderFailed(error){
   if(Date.now()-UI_RENDER_FAILED_AT<60000)return;UI_RENDER_FAILED_AT=Date.now();
   if(typeof ui!=='undefined'&&ui&&typeof ui.addNotification==='function')ui.addNotification(null,typeof autoCodeNotice==='function'?autoCodeNotice('UI-RENDER-FAILED'):E('p',{},'UI-RENDER-FAILED'));
 }
-/* "Reset chart" on every chart and statistics card. The router archives the old data first, then measures from zero. */
+/* "Reset chart" (shown as "Reset statistics") on every chart and statistics card, right under its heading. The router archives the old data first, then measures from zero. */
 var STATS_RESET_NAMES={latency:['latency chart and table','график и таблицу задержки'],auto:['switching charts and outage statistics','графики переключений и статистику сбоев'],traffic:['traffic chart and counters','график и счётчики трафика'],ranking:['speed tests and server ranking','тесты скорости и рейтинг серверов'],quality:['server quality statistics','статистику качества серверов'],speed:['speed test history','историю тестов скорости'],all:['all charts and statistics','все графики и статистику']};
 function statsResetError(code){
   var node=typeof autoCodeNotice==='function'?autoCodeNotice(code):E('p',{},code);
@@ -117,14 +117,15 @@ function statsResetButton(scope){
       E('p',{},bi('This resets the ','Будет сброшено: ')+bi(name[0],name[1])+'. '+bi('The current data is first saved to an archive on the router (the last 10 resets are kept), then measurements start again from zero.','Текущие данные сначала сохраняются в архив на роутере (хранятся 10 последних сбросов), затем измерения начинаются заново с нуля.')),
       E('div',{'class':'right'},[E('button',{'type':'button','class':'cbi-button','click':function(){ui.hideModal();}},bi('Cancel','Отмена')),' ',
         E('button',{'type':'button','class':'cbi-button cbi-button-negative','click':function(){ui.hideModal();statsResetRun(scope,self);}},bi('Reset','Сбросить'))])]);
-  }},bi('Reset chart','Сброс графика'));
+  }},bi('Reset statistics','Сброс статистики'));
   return button;
 }
 function attachStatsResets(root){
   if(!root||typeof root.querySelectorAll!=='function')return 0;var added=0;
   root.querySelectorAll('[data-stats-reset]').forEach(function(card){
     if(card.querySelector('[data-stats-reset-button]'))return;
-    card.appendChild(E('div',{'class':'hv-stats-reset-row'},statsResetButton(card.getAttribute('data-stats-reset'))));added++;
+    var row=E('div',{'class':'hv-stats-reset-row'},statsResetButton(card.getAttribute('data-stats-reset'))),h=card.firstElementChild;
+    if(h&&/^(H[2-4]|SUMMARY)$/.test(h.tagName)&&card.insertBefore)card.insertBefore(row,h.nextSibling);else card.appendChild(row);added++;
   });
   return added;
 }

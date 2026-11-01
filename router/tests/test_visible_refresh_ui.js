@@ -37,7 +37,7 @@ const c={console,Date,Intl,Number,JSON,Object,Array,Promise,Math,URL,Blob,Node,
   hideErrorBack(){calls.hideErrorBack=(calls.hideErrorBack||0)+1;},
 };
 function spy(name){c[name]=function(status){calls[name]=(calls[name]||0)+1;lastStatus[name]=status;return new Node('section',{'data-spy':name});};}
-for(const name of ['renderServerSummary','renderVendorChannels','renderLatencyPanel','chart','histogram','renderCascadePath','renderSummary','renderIdentityNotice','renderDesignOverview','fillSideStatus','fillMonitorBlock','renderStartPage','readinessIntro','renderReadiness','renderEventHistory','renderTransitionAnalytics','renderVendorEvents','renderLiveLog','speedPanel','faultPanel','trafficHistoryPanel','renderMonitorInfo','renderErrorTable','renderHelp','renderLearn','lanHelperExplain','metricInfo','metric','badge'])spy(name);
+for(const name of ['renderServerSummary','renderVendorChannels','renderLatencyPanel','chart','histogram','serverPairHistogram','renderCascadePath','renderSummary','renderIdentityNotice','renderDesignOverview','fillSideStatus','fillMonitorBlock','renderStartPage','readinessIntro','renderReadiness','renderEventHistory','renderTransitionAnalytics','renderVendorEvents','renderLiveLog','speedPanel','faultPanel','trafficHistoryPanel','renderMonitorInfo','renderErrorTable','renderHelp','renderLearn','lanHelperExplain','metricInfo','metric','badge'])spy(name);
 c.currentDesign=()=> 'c';
 c.renderAutoControl=function(status){calls.renderAutoControl=(calls.renderAutoControl||0)+1;lastStatus.renderAutoControl=status;return new Node('section',{'class':'hv-auto-control'},[new Node('button',{'class':'hv-auto-power'}),new Node('strong',{'class':'hv-auto-action'})]);};
 c.renderSimpleHome=function(status,inventory,model,control){calls.renderSimpleHome=(calls.renderSimpleHome||0)+1;const power=control.querySelector('.hv-auto-power'),action=control.querySelector('.hv-auto-action');return new Node('section',{},[new Node('div',{'class':'hv-simple-power'},power),new Node('div',{'class':'hv-simple-power-unit'},action)]);};
@@ -49,7 +49,7 @@ const draw=serial=>c.draw({serial,profiles:[]});
 draw(1);draw(2);
 assert.deepEqual(pageCalls,['channels','channels'],'one actual page factory per poll');
 assert.equal(calls.renderServerSummary,2);assert.equal(calls.renderAutoControl,2);
-for(const name of ['renderReadiness','renderLiveLog','renderEventHistory','speedPanel','renderHelp','renderLearn','chart','histogram','renderSimpleHome'])assert.equal(calls[name]||0,0,'hidden renderer is not called: '+name);
+for(const name of ['renderReadiness','renderLiveLog','renderEventHistory','speedPanel','renderHelp','renderLearn','chart','histogram','serverPairHistogram','renderSimpleHome'])assert.equal(calls[name]||0,0,'hidden renderer is not called: '+name);
 c.showPage('services');assert.equal(calls.renderLiveLog,1);assert.equal(lastStatus.renderLiveLog.serial,2,'stale page renders most recent status on opening');
 c.showPage('services');assert.equal(calls.renderLiveLog,1,'already fresh page is kept');
 draw(3);assert.equal(calls.renderLiveLog,2);assert.equal(calls.renderServerSummary,2,'other page remains untouched');

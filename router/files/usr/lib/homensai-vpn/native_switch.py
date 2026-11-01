@@ -1,4 +1,4 @@
-"""MIT. Experimental, deadline-limited switching of existing GL.iNet rules.
+"""HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE. Experimental, deadline-limited switching of existing GL.iNet rules.
 
 Separate procd supervisor; does not start profiles, edit keys, or disable Kill Switch.
 Only two adjacent, unrestricted, already connected VPN rules may exchange order.
@@ -133,6 +133,11 @@ def publish(value):
     except (OSError,ValueError,KeyError,TypeError):
         atomic_json(STATE,{'state':'BLOCKED','blockers':['HISTORY-001']})
         raise Refused('HISTORY-001')
+    if isinstance(value.get('channel_path'),dict):
+        # The last LAN DNS follow of this process (dns_mark.py), status only: not part of the history record.
+        from dns_mark import view
+        dns=view()
+        if dns is not None:value=dict(value,channel_path=dict(value['channel_path'],dns_mark=dns))
     atomic_json(STATE,value)
 
 
@@ -591,6 +596,9 @@ def lua_instant_switch(backend,selection,journal,pair_destination,after):
     try:result=json.loads(process.stdout.decode('utf8','replace').strip().splitlines()[-1])
     except (ValueError,IndexError):raise Refused('LUA-CORE-UNAVAILABLE') from None
     if not isinstance(result,dict):raise Refused('LUA-CORE-UNAVAILABLE')
+    if isinstance(result.get('dns_mark'),dict):
+        import dns_mark
+        dns_mark.LAST=result['dns_mark']  # the Lua switch's LAN DNS follow, published by this supervisor
     if process.returncode==0 and result.get('ok') is True:return result
     code=result.get('code') if isinstance(result.get('code'),str) and re.fullmatch(r'[A-Z0-9_-]{1,96}',result['code']) else 'LUA-CORE-UNAVAILABLE'
     error=Refused(code);error.lua_result=result;raise error
@@ -749,6 +757,7 @@ class Linux:
     def attest_policy(self,selection=None):
         """Read back the actual FW3 packet-mark graph; tunnel health is not this proof."""
         from kernel_policy import attest,parse_mangle,missing_only,static_bindings
+        self.attested_mangle=None
         failed={'verified':False,'repairable_missing':False,'code':'KERNEL-POLICY-UNVERIFIED','time':time.time()}
         try:
             if selection is None:
@@ -778,8 +787,29 @@ class Linux:
             except (ValueError,TypeError,KeyError):
                 failed['repairable_missing']=missing_only(policy,selection,before,rules)
                 return failed
+            self.attested_mangle=before  # dns_mark_follow(): the verified graph of this attestation
             return dict(result,time=time.time(),kernel_fingerprint=fingerprint)
         except (Refused,OSError,ValueError,KeyError,TypeError,UnicodeError,subprocess.SubprocessError):return failed
+    def dns_mark_sync(self,mangle=None):
+        """The GL dns_mark rules follow the first ROUTE_POLICY jump of the live kernel graph (dns_mark.py). Never
+        raises; DNS-MARK-UNVERIFIED is logged and never rolls a traffic switch back. Without /proc/dns_mark (other
+        firmware) nothing is read: DNS-MARK-UNAVAILABLE."""
+        import dns_mark
+        try:
+            if not dns_mark.available():return dns_mark.sync(None)
+            from kernel_policy import parse_mangle,fields
+            if mangle is None:mangle=command(['iptables-save','-t','mangle']).decode('utf8')
+            result=dns_mark.sync(dns_mark.active_from_chains(parse_mangle(mangle),fields))
+        except Exception:result=dns_mark.failed()
+        if result.get('code')==dns_mark.UNVERIFIED or result.get('written'):
+            try:subprocess.run(['logger','-t','homensai-vpn','DNS-MARK-SYNC: active %s written %s code %s'%(result.get('active'),result.get('written'),result.get('code') or 'none')],
+                               timeout=5,check=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            except (OSError,subprocess.SubprocessError):pass
+        return result
+    def dns_mark_follow(self):
+        """The Auto supervisor's pass: only after a verified attestation of this very pass (its graph, no new read)."""
+        mangle=getattr(self,'attested_mangle',None)
+        return None if mangle is None else self.dns_mark_sync(mangle)
     def reorder(self,order,before_write=None,write_command=None):
         sections=self.policy()['sections']
         current=policy_order(sections,self.process_bindings)
@@ -835,6 +865,7 @@ class Linux:
         try:verified=applied(self.policy()['sections'],self.process_bindings)
         except (ValueError,KeyError,TypeError):verified=False
         if not verified:raise Refused('POLICY-IDENTITY-CHANGED')
+        self.dns_mark=self.dns_mark_sync()  # LAN DNS follows the route just applied (switch, rollback, boot restore)
     def apply_fast(self,write):
         import fast_policy
         order,local_tunnel,local_mark=fast_policy.uci_rules(command(['uci','show','route_policy']).decode('utf8','replace'))
@@ -1921,6 +1952,36 @@ def nap(seconds):
         time.sleep(min(.2,left))
 
 
+# Interruption codes (owner request 01.11.2026, interruption.py): why this supervisor is starting - one code per start
+# in the system log and the history, decided before the recovery changes the journal or the intent. Lua: auto.start_cause.
+def _interruption_context():
+    import interruption
+    from stats_mode import history_target
+    def record(code):
+        directory,limit=history_target(RUNTIME,PERSIST)
+        History(directory,limit=limit).record({'state':code,'reason':code})
+    return interruption,interruption.context(RUNTIME,PERSIST,record=record,stopping=lambda:STOP)
+
+
+INTERRUPTION=False  # only the daemon takes part (tests call serve() with their own files)
+
+
+def start_cause(phase):
+    if not INTERRUPTION:return None
+    try:
+        interruption,ctx=_interruption_context()
+        return interruption.start(ctx,phase)
+    except Exception:return None
+
+
+def mark_running(handle):
+    if handle is None:return
+    try:
+        interruption,ctx=_interruption_context()
+        interruption.mark_running(ctx,handle)
+    except Exception:pass
+
+
 def serve():
     global PROOF_SCOPE
     RUNTIME.mkdir(parents=True,exist_ok=True);PERSIST.mkdir(mode=0o700,parents=True,exist_ok=True)
@@ -1935,6 +1996,7 @@ def serve():
         backend=Linux()
         try:journal=journal_read()
         except Refused:
+            start_cause(None)
             # Block the LAN once (timed release); on every later start only the VPN-only guard is used, never another full block.
             missing_alarm=object()
             try:first=read_json(JOURNAL_ALARM,missing_alarm) is missing_alarm
@@ -1945,6 +2007,7 @@ def serve():
                 try:atomic_json(JOURNAL_ALARM,{'first_block':time.time(),'code':'JOURNAL-INTEGRITY-FAILED'})
                 except (OSError,ValueError):pass
             give_up(backend,{},'JOURNAL-INTEGRITY-FAILED');return
+        cause=start_cause(journal.get('phase'))
         try:JOURNAL_ALARM.unlink()
         except OSError:pass
         bind_policy_context(backend,journal)
@@ -2001,6 +2064,7 @@ def serve():
         boot_step('pair recovery')
         pair_recover(backend)
         boot_step('recovery finished')
+        mark_running(cause)
         if revision_error:
             # A UI freshness marker failure alone does not authorize a traffic
             # guard on a monitor-only installation. Preserve the durable stop
@@ -2205,5 +2269,7 @@ if __name__=='__main__':
                 except (Refused,OSError,ValueError,subprocess.SubprocessError):result['context_unavailable']=True
             atomic_json(RUNTIME/'native-apply-result.json',result)
             raise SystemExit(1)
-    elif len(sys.argv)==2 and sys.argv[1]=='daemon':serve()
+    elif len(sys.argv)==2 and sys.argv[1]=='daemon':
+        INTERRUPTION=True
+        serve()
     else:raise SystemExit('fixed daemon/apply actions only')

@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.0.0-beta2'
+VERSION = '2.0.0-beta4'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -829,6 +829,9 @@ def serve():
             server.close()
 
 
+INTERRUPTION=False  # only the daemon takes part (tests run monitor_loop with their own files)
+
+
 def monitor_loop():
     # Owner decision 31.10.2026: Auto the owner switched on comes back after a power cut (boot_resume.py)
     try:
@@ -841,13 +844,22 @@ def monitor_loop():
     except (OSError, ValueError, KeyError, TypeError):
         accounting, storage_error = Accounting(), 'STORAGE-001'
     events, samples, last_save = [], [], time.monotonic()
+    # Interruption codes (owner request 01.11.2026, interruption.py): a monitor restarted by procd without a service
+    # stop (crash, kill) is one event and one system log line. Lua: monitor.run.
+    if INTERRUPTION:
+        try:
+            import interruption
+            code=interruption.monitor_start(interruption.context(RUNTIME,PERSIST))
+            if code:events.append({'time':time.time(),'code':code})
+        except Exception:pass
     from stats_mode import diagnostic as stats_diagnostic,public as stats_public,WORK_SAMPLE_SECONDS,WORK_CHECKPOINT_SECONDS
     from latency_history import LatencyHistory
     from website_response_history import WebsiteResponseHistory,technical_history_tail
     from ping_response_history import PingResponseHistory
     from response_compare import ResponseCompare
     def load_histories(diagnosing):
-        # Work mode: empty in-memory histories that are neither filled nor saved (the flash copies stay intact).
+        # Work mode: empty in-memory histories, never saved (the flash copies stay intact); only the ping history
+        # is filled, in RAM, for the Channels chart (ping_response_history.work_observe).
         if not diagnosing:return LatencyHistory(),WebsiteResponseHistory(),PingResponseHistory(),ResponseCompare()
         return (LatencyHistory.load(PERSIST/'latency-history.json'),WebsiteResponseHistory.load(PERSIST/'website-response-history.json'),
                 PingResponseHistory.load(PERSIST/'ping-response-history.json'),ResponseCompare.load(PERSIST/'response-compare.json'))
@@ -910,6 +922,10 @@ def monitor_loop():
             try:
                 if reset_result.get('done'):checkpoint(accounting,*reset_histories);last_save=time.monotonic()
             except (OSError,ValueError):reset_result.update({'done':False,'code':'STORAGE-001'})
+            if reset_result.get('done') and not diagnosing:
+                from ping_response_history import work_reset
+                try:work_reset(ping_history,reset_request['scope'],time.time())
+                except (ValueError,TypeError):pass
             try:atomic_json(RUNTIME/RESET_RESULT,reset_result)
             except (OSError,ValueError):pass
         now_diagnosing=stats_diagnostic()
@@ -1059,7 +1075,11 @@ def monitor_loop():
                     if diagnosing:website_history.observe(status,settings,time.time())
                     status['website_response_history']=website_history.public(time.time())
                 else:
+                    # Work mode: RAM-only rows of the last day for the Channels chart, never saved (ping_response_history)
                     if diagnosing:ping_history.observe(status,settings,time.time())
+                    else:
+                        from ping_response_history import work_observe
+                        work_observe(ping_history,status,settings,time.time())
                     status['website_response_history']=ping_history.public(time.time())
                 if compare_enabled(settings):
                     if diagnosing:compare_history.observe(status,failure_pair,time.time())
@@ -1245,6 +1265,7 @@ def status_reply(load=read_monitor_status):
     status['native_history']=native_history_public()
     status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
     status['boot_resume']=read_json(RUNTIME/'boot-resume.json',None)  # recovery after a power cut (owner 01.11.2026)
+    status['integrity']=read_json(RUNTIME/'integrity.json',None)  # self-check of the installed files (TODO 15)
     from switch_timing import read as switch_timing
     status['switch_timing']=switch_timing(PERSIST)
     from auto_control import public_status
@@ -1462,6 +1483,8 @@ def main():
         STOP = True
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
+    global INTERRUPTION
+    INTERRUPTION = True
     serve()
 
 

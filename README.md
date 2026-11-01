@@ -6,7 +6,9 @@ HomenS.AI Auto VPN watches two existing OpenVPN or WireGuard connections on a GL
 
 Author and copyright holder: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
-**Licensing:** free for private, non-commercial use of the unmodified software; business/organizational use requires a separate paid written license. Modification or redistribution requires prior written consent. Previous MIT grants remain valid for historical MIT-licensed copies. See [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [details](LICENSING.md)).
+
+In short: free for private, non-commercial use of the unmodified software; business/organizational use requires a separate paid written license ([commercial licensing](COMMERCIAL-LICENSING.md), info@homensai.com). Modification or redistribution requires prior written consent. The license text governs.
 
 The documented continuous Auto setup is the dedicated **GL-MT3000 with GL.iNet firmware 4.11.0**. Continuous mode on the MT6000 has not been accepted. The package architecture `all` does not qualify other hardware or firmware.
 

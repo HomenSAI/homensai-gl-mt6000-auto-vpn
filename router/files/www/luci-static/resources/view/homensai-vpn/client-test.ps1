@@ -1,4 +1,4 @@
-# HomenS.AI / Serhii Khomenko / https://homensai.com — MIT
+# HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 # Run on an independently connected Windows LAN client. Secrets stay in memory.
 param([uri]$Router='http://192.168.8.1:8080/',[DateTimeOffset]$Until=[DateTimeOffset]::Now.AddMinutes(10),[int]$CableInterface=0,[switch]$CheckOnly,[switch]$ProbeOnly,[switch]$SelfTest)
 $ErrorActionPreference='Stop'

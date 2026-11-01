@@ -1,4 +1,4 @@
-"""MIT. Bounded persistent native transition history; no keys, tokens or exit IPs."""
+"""HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE. Bounded persistent native transition history; no keys, tokens or exit IPs."""
 import contextlib
 import fcntl
 import hashlib

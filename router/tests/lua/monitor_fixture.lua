@@ -41,6 +41,20 @@ if arg[1]=='vendor' then
   print(canon.encode(out))
   os.exit(0)
 end
+if arg[1]=='work_ping' then
+  -- lua5.1 monitor_fixture.lua work_ping <scenario.json>: the Work-mode RAM ping history (response_history.work_observe,
+  -- work_reset) over {settings, steps:[{status,now} | {reset,now}]}; prints the public view (test_lua_monitor_item2.py).
+  local f=assert(io.open(arg[2],'rb'));local scenario=canon.decode(f:read('*a'));f:close()
+  local responses=require('response_history')
+  local h=responses.new()
+  local now
+  for _,step in ipairs(scenario.steps) do
+    now=canon.number(step.now)
+    if step.reset then responses.work_reset(h,step.reset,now) else responses.work_observe(h,step.status,scenario.settings,now) end
+  end
+  print(canon.encode(h:public(now)))
+  os.exit(0)
+end
 if arg[1]=='item2' then
   -- Diagnostics run with a trusted pair: writes the files the Python readers check (test_lua_monitor_item2.py).
   local out=arg[2]

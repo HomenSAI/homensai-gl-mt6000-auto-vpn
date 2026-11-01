@@ -1,0 +1,373 @@
+{
+ "monitor": [
+  {
+   "auto": "off",
+   "expect": null,
+   "files": {},
+   "logged": false,
+   "mtimes": {},
+   "name": "first monitor start of the boot",
+   "phase": null,
+   "recorded": false,
+   "uptime": 120
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-PROCESS",
+   "files": {
+    "/run/monitor-run.json": "{\"time\": 50.0, \"stop\": 40, \"restarts\": []}"
+   },
+   "logged": true,
+   "mtimes": {
+    "/run/service-stop.flag": 40
+   },
+   "name": "monitor killed, procd restart",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120
+  },
+  {
+   "auto": "off",
+   "expect": null,
+   "files": {
+    "/run/monitor-run.json": "{\"time\": 50.0, \"stop\": 40, \"restarts\": []}"
+   },
+   "logged": false,
+   "mtimes": {
+    "/run/service-stop.flag": 95
+   },
+   "name": "monitor after a service stop",
+   "phase": null,
+   "recorded": false,
+   "uptime": 120
+  },
+  {
+   "auto": "off",
+   "expect": null,
+   "files": {
+    "/run/monitor-run.json": "{\"time\": 50.0, \"stop\": null, \"restarts\": [150.0, 250.0, 350.0]}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "monitor crash loop is only logged",
+   "phase": null,
+   "recorded": false,
+   "uptime": 400
+  }
+ ],
+ "note": "Shared cases of lua/interruption.lua and interruption.py (runtime /run, persist /etc).",
+ "start": [
+  {
+   "auto": "off",
+   "expect": "RESTART-CLEAN",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"stopped\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "clean reboot",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-FIRST-START",
+   "files": {},
+   "logged": true,
+   "mtimes": {},
+   "name": "first start after install or upgrade",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-BOOT",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"starting\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost while booting",
+   "phase": "ROLLED-BACK",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-SWITCH",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost during a switch",
+   "phase": "APPLYING",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-SWITCH",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"starting\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost during a switch, recovery unfinished",
+   "phase": "RESTORING",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-SWITCH",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost in WAIT-CLIENT",
+   "phase": "WAIT-CLIENT",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-SWITCH",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost in ARMED",
+   "phase": "ARMED",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-RESERVE-HOLD",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost holding the reserve",
+   "phase": "HELD-ON-RESERVE",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "on",
+   "expect": "RESTART-INTERRUPTED-RESERVE-HOLD",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost on a committed reserve",
+   "phase": "COMMITTED",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "on",
+   "expect": "RESTART-INTERRUPTED-OPERATION",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost in operation, Auto on",
+   "phase": "ROLLED-BACK",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "on",
+   "expect": "RESTART-INTERRUPTED-OPERATION",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost in operation, no journal",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-AUTO-OFF",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/native-stop.json": "{\"requested\": 600.0}",
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost, Auto stopped after its Start",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-AUTO-OFF",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost, Auto never started",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-INTERRUPTED-AUTO-OFF",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/native-stop.json": "{",
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "power lost, unreadable stop latch",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "on",
+   "expect": "RESTART-INTERRUPTED-OPERATION",
+   "files": {
+    "/etc/auto-resume.json": "{\"enabled\": true, \"time\": 500.0, \"request_source\": \"manual\"}",
+    "/etc/service-run.json": "{"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "damaged marker is read as an interrupted run",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-CLEAN",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"stopped\", \"time\": 100}",
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": 40, \"restarts\": []}"
+   },
+   "logged": true,
+   "mtimes": {
+    "/run/service-stop.flag": 90
+   },
+   "name": "service restart (stop, start)",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "on",
+   "expect": "RESTART-PROCESS",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}",
+    "/run/pair-auto-control.json": "{\"mode\": \"on\"}",
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": 40, \"restarts\": []}"
+   },
+   "logged": true,
+   "mtimes": {
+    "/run/service-stop.flag": 40
+   },
+   "name": "supervisor killed, procd restart",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "running"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-PROCESS",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"starting\", \"time\": 100}",
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": null, \"restarts\": []}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "supervisor crashed during its recovery",
+   "phase": "RESTORING",
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-CLEAN",
+   "files": {
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": 40, \"restarts\": []}"
+   },
+   "logged": true,
+   "mtimes": {
+    "/run/service-stop.flag": 90
+   },
+   "name": "no flash marker, the stop flag changed",
+   "phase": null,
+   "recorded": true,
+   "uptime": 120,
+   "written": "starting"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-PROCESS",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}",
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": null, \"restarts\": [150.0, 250.0, 350.0]}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "crash loop: the fourth restart is only logged",
+   "phase": null,
+   "recorded": false,
+   "uptime": 400,
+   "written": "running"
+  },
+  {
+   "auto": "off",
+   "expect": "RESTART-PROCESS",
+   "files": {
+    "/etc/service-run.json": "{\"state\": \"running\", \"time\": 100}",
+    "/run/supervisor-run.json": "{\"time\": 50.0, \"stop\": null, \"restarts\": [1.0, 2.0, 3.0]}"
+   },
+   "logged": true,
+   "mtimes": {},
+   "name": "old restarts leave the window",
+   "phase": null,
+   "recorded": true,
+   "uptime": 900,
+   "written": "running"
+  }
+ ]
+}

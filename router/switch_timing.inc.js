@@ -1,7 +1,10 @@
 /* Measured switch timing from saved events: first failed check, switch start/end, return start/end. Missing pieces stay null.
    A fault (restart recovery, give-up) is a 'recovery' episode: never a switch, never averaged. */
 function spanText(s){
-  if(!Number.isFinite(s)||s<0)return '—';s=Math.round(s);
+  if(!Number.isFinite(s)||s<0)return '—';
+  if(s<10)return Math.round(s*1000)+bi(' ms',' мс');  // owner 01.11: fast switches are 0.5-0.8 s, never "0 s"
+  if(s<60)return String(Math.round(s*10)/10).replace('.',locale==='ru'?',':'.')+bi(' s',' с');
+  s=Math.round(s);
   var h=Math.floor(s/3600),m=Math.floor(s%3600/60),r=s%60,u=function(n,en,ru){return n+bi(' '+en,' '+ru);};
   return h?u(h,'h','ч')+(m?' '+u(m,'min','мин'):''):m?u(m,'min','мин')+(r?' '+u(r,'s','с'):''):u(r,'s','с');
 }

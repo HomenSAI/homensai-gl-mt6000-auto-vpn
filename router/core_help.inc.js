@@ -3,40 +3,39 @@
 function coreSvg(tag,attrs){var n=document.createElementNS('http://www.w3.org/2000/svg',tag);Object.keys(attrs||{}).forEach(function(k){n.setAttribute(k,String(attrs[k]));});return n;}
 function coreLevelsDiagram(){
   if(typeof document==='undefined'||!document.createElementNS)return E('p',{},'');
-  var svg=coreSvg('svg',{viewBox:'0 0 1100 530',role:'img','aria-label':bi('Program core levels and fallback steps','Уровни ядра программы и переходы при сбое'),style:'width:100%;height:auto;display:block'});
+  // Maslow-style pyramid: C on top, Lua in the middle, Python at the base; in every tier the measured MT3000 switch
+  // times (docs/MEASUREMENTS.ru.md section 8). Fixed light fills with dark text read the same in light and dark themes.
+  var svg=coreSvg('svg',{viewBox:'0 0 1100 585',role:'img','aria-label':bi('Program core pyramid with switch times and fallback steps','Пирамида ядра программы со временем переключения и переходами при сбое'),style:'width:100%;height:auto;display:block'});
   var defs=coreSvg('defs'),marker=coreSvg('marker',{id:'hv-core-arrow',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'});
   marker.appendChild(coreSvg('path',{d:'M0,0 L10,5 L0,10 z',fill:'#c0392b'}));defs.appendChild(marker);svg.appendChild(defs);
+  var NM=bi('not measured','не измерено');
   function text(x,y,value,size,weight,fill,anchor){var n=coreSvg('text',{x:x,y:y,'text-anchor':anchor||'middle','font-size':size||13,'font-weight':weight||400,fill:fill||'currentColor'});n.textContent=value;svg.appendChild(n);}
-  function tier(points,fill,dashed,lines,y){
-    var attrs={points:points,fill:fill,stroke:'currentColor','stroke-opacity':.45};if(dashed)attrs['stroke-dasharray']='6 4';
-    svg.appendChild(coreSvg('polygon',attrs));
-    lines.forEach(function(t,i){text(420,y+i*23,t,i?14:18,i?400:700,'#14212e');});
+  function tier(points,fill,lines,y){
+    svg.appendChild(coreSvg('polygon',{points:points,fill:fill,stroke:'#14212e','stroke-opacity':.5}));
+    lines.forEach(function(t,i){text(420,y+i*20,t,i?13:16,!i||t.charAt(0)==='⏱'?700:400,'#14212e');});
   }
-  function arrow(d,dashed){var attrs={d:d,fill:'none',stroke:'#c0392b','stroke-width':2,'marker-end':'url(#hv-core-arrow)'};if(dashed)attrs['stroke-dasharray']='6 4';svg.appendChild(coreSvg('path',attrs));}
-  function note(x,y,lines,first){lines.forEach(function(t,i){text(x,y+i*18,t,i||!first?14:15,i||!first?400:700,i||!first?'currentColor':'#c0392b','start');});}
-  tier('360,20 480,20 550,110 290,110','#e6e2f7',false,[bi('C · canon_c','C · canon_c'),bi('JSON inside Lua · on','JSON внутри Lua · вкл.')],64);
-  tier('290,110 550,110 620,200 220,200','#bcd7ff',true,[bi('Lua · hv-core (option)','Lua · hv-core (параметр)'),bi('one process · lua_core_process','один процесс · lua_core_process')],150);
-  tier('220,200 620,200 690,290 150,290','#b7efc5',false,[bi('Lua 5.1 · monitor + Auto (default)','Lua 5.1 · монитор + Auto (по умолч.)'),bi('two processes · ~20 MB, ~16 % CPU','два процесса · ~20 МБ, ~16 % ядра')],240);
-  tier('150,290 690,290 760,380 80,380','#ffe9a8',false,[bi('Python 3.9 · the proven base','Python 3.9 · проверенное основание'),bi('agent.py · native_switch.py · ~78 MB, ~60 % CPU','agent.py · native_switch.py · ~78 МБ, ~60 % ядра')],330);
-  arrow('M 322 66 C 200 66, 110 245, 180 245');
-  note(14,88,[bi('C does not load or','C не загрузился или'),bi('differs → pure Lua','расходится → чистый Lua')],false);
-  arrow('M 590 155 C 700 155, 720 245, 662 245');
-  note(780,122,['HV-CORE-FALLBACK',bi('3 failures in 600 s →','3 сбоя за 600 с →'),bi('two Lua processes','два Lua-процесса'),bi('watchdog: loop silent 120 s','сторож: цикл молчит 120 с')],true);
-  arrow('M 660 245 C 770 245, 790 335, 732 335');
-  note(780,226,['LUA-AUTO-FALLBACK',bi('Auto: 3 errors in 600 s','Auto: 3 ошибки за 600 с'),bi('→ native_switch.py','→ native_switch.py'),bi('no Lua answer to the page','страница без ответа Lua'),bi('→ agent.py answers','→ отвечает agent.py')],true);
-  note(780,346,[bi('Python fails → procd','Python упал → procd'),bi('restarts it in 5 s','перезапустит за 5 с')],false);
-  svg.appendChild(coreSvg('line',{x1:30,y1:362,x2:30,y2:214,stroke:'currentColor','stroke-width':2,'marker-end':'url(#hv-core-arrow)'}));
-  text(14,204,bi('faster, lighter','быстрее, легче'),14,400,'currentColor','start');
-  text(14,400,bi('tested longer','дольше проверено'),14,400,'currentColor','start');
-  svg.appendChild(coreSvg('rect',{x:14,y:418,width:1072,height:104,rx:12,fill:'#f3f5f7',stroke:'currentColor','stroke-opacity':.35}));
-  text(550,445,bi('Under every level: journal + rollback · VPN-only guard','Под всеми уровнями: журнал + откат · защита «только VPN»'),17,700,'#14212e');
-  text(550,470,bi('Auto resumes after a power cut · homensai-vpn-emergency','Auto возвращается после обесточивания · homensai-vpn-emergency'),17,700,'#14212e');
-  text(550,503,bi('The levels share one journal and the same files, so a lower level can take over at any moment.','Уровни ведут один журнал и одни файлы, поэтому нижний уровень может подхватить работу в любой момент.'),15,400,'#14212e');
+  function arrow(d){svg.appendChild(coreSvg('path',{d:d,fill:'none',stroke:'#c0392b','stroke-width':2,'marker-end':'url(#hv-core-arrow)'}));}
+  function note(x,y,lines,first){lines.forEach(function(t,i){text(x,y+i*18,t,14,i||!first?400:700,i||!first?'currentColor':'#c0392b','start');});}
+  tier('420,0 580,180 260,180','#e6e2f7',[bi('C + Lua','C + Lua'),bi('JSON module in Lua · on','JSON-модуль в Lua · вкл.'),bi('⏱ manual: traffic 0.49–0.59 s','⏱ вручную: трафик 0,49–0,59 с'),bi('done 0.71–0.81 s','готово 0,71–0,81 с'),bi('⏱ Auto decides in 17–25 s','⏱ Auto решает за 17–25 с')],94);
+  tier('260,180 580,180 704,320 136,320','#b7efc5',[bi('Lua 5.1 · two services (default)','Lua 5.1 · две службы (по умолчанию)'),bi('~20 MB, ~16 % CPU · option: hv-core, one process','~20 МБ, ~16 % ядра · параметр: hv-core, один процесс'),bi('pure Lua (C module off):','чистый Lua (модуль C выключен):'),bi('⏱ manual: done 1.05–1.3 s','⏱ вручную: готово 1,05–1,3 с'),bi('⏱ Auto decision: ','⏱ решение Auto: ')+NM],207);
+  tier('136,320 704,320 820,450 20,450','#ffe9a8',[bi('Python 3.9 · the base and the fallback','Python 3.9 · основание и запас'),bi('agent.py · native_switch.py · ~78 MB, ~60 % CPU','agent.py · native_switch.py · ~78 МБ, ~60 % ядра'),bi('⏱ manual: done 4.2–6.6 s','⏱ вручную: готово 4,2–6,6 с'),bi('⏱ Auto decision: ','⏱ решение Auto: ')+NM],350);
+  arrow('M 300 120 C 180 120, 150 250, 196 262');
+  note(14,60,[bi('C does not load or','C не загрузился или'),bi('differs → pure Lua','расходится → чистый Lua')],false);
+  note(830,150,['HV-CORE-FALLBACK',bi('hv-core: 3 failures in 600 s','hv-core: 3 сбоя за 600 с'),bi('→ two Lua services','→ две службы Lua'),bi('watchdog: loop silent 120 s','сторож: цикл молчит 120 с')],true);
+  arrow('M 650 262 C 790 262, 820 385, 768 392');
+  note(830,282,['LUA-AUTO-FALLBACK',bi('Auto: 3 errors in 600 s','Auto: 3 ошибки за 600 с'),bi('→ native_switch.py','→ native_switch.py'),bi('no Lua answer to the page','страница без ответа Lua'),bi('→ agent.py answers','→ отвечает agent.py')],true);
+  note(830,412,[bi('Python fails → procd','Python упал → procd'),bi('restarts it in 5 s','перезапустит за 5 с')],false);
+  text(14,170,bi('↑ faster, lighter','↑ быстрее, легче'),14,400,'currentColor','start');
+  text(14,470,bi('↓ tested longer','↓ дольше проверено'),14,400,'currentColor','start');
+  svg.appendChild(coreSvg('rect',{x:14,y:480,width:1072,height:100,rx:12,fill:'#f3f5f7',stroke:'#14212e','stroke-opacity':.35}));
+  text(550,506,bi('Under every level: journal + rollback · VPN-only guard','Под всеми уровнями: журнал + откат · защита «только VPN»'),17,700,'#14212e');
+  text(550,530,bi('Auto resumes after a power cut · homensai-vpn-emergency','Auto возвращается после обесточивания · homensai-vpn-emergency'),17,700,'#14212e');
+  text(550,560,bi('⏱ MT3000 measurements (MEASUREMENTS §8); Auto 17–25 s: from the outage, fast detection (alpha26 soak).','⏱ замеры MT3000 (MEASUREMENTS §8); Auto 17–25 с: от сбоя, с быстрым обнаружением (прогон alpha26).'),14,400,'#14212e');
   return svg;
 }
 function renderCoreLevels(){
   return E('div',{'class':'hv-core-levels'},[coreLevelsDiagram(),
-    E('p',{},bi('Faster levels sit on top of slower, longer-tested ones. When a level fails, the work moves one step down. Every step leaves a code in the system log (logread -e homensai).','Быстрые уровни стоят на медленных, но дольше проверенных. Если уровень отказал, работа переходит на ступень ниже. Каждый переход оставляет код в журнале системы (logread -e homensai).')),
+    E('p',{},bi('Faster levels sit on top of slower, longer-tested ones. When a level fails, the work moves one step down. Every step leaves a code in the system log (logread -e homensai). The ⏱ times are MT3000 measurements: a manual switch until traffic flows / until done, and how long Auto takes to decide after an outage; "not measured" means the project has no such measurement.','Быстрые уровни стоят на медленных, но дольше проверенных. Если уровень отказал, работа переходит на ступень ниже. Каждый переход оставляет код в журнале системы (logread -e homensai). Время ⏱ — замеры на MT3000: ручное переключение до пошедшего трафика / до готовности и сколько Auto решает после сбоя; «не измерено» — такого замера в проекте нет.')),
     E('ol',{'class':'hv-help-steps'},[
       [bi('Python 3.9 (base): agent.py checks the channels and answers the page, native_switch.py runs Auto. This is the longest-tested code; Lua and C are checked against it in tests with the same inputs. It is always installed and is the last step (options lua_monitor and lua_auto set to 0).','Python 3.9 (основание): agent.py проверяет каналы и отвечает странице, native_switch.py ведёт Auto. Это дольше всех проверенный код; Lua и C сверяются с ним в тестах на одних и тех же данных. Он всегда установлен и это последняя ступень (параметры lua_monitor и lua_auto в 0).')],
       [bi('Lua 5.1 (two processes, the default since 2.0.0-alpha24): the same files and codes with about 20 MB and 16 % of a core instead of about 78 MB and 60 % (MT3000). Manual switch on the MT3000: done in 0.7–0.8 s with the C module, 1.05–1.3 s in pure Lua, 4.2–6.6 s in Python.','Lua 5.1 (два процесса, по умолчанию с 2.0.0-alpha24): те же файлы и коды, около 20 МБ и 16 % ядра вместо примерно 78 МБ и 60 % (MT3000). Ручное переключение на MT3000: готово за 0,7–0,8 с с модулем C, 1,05–1,3 с на чистом Lua, 4,2–6,6 с на Python.')],

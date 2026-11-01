@@ -2,7 +2,7 @@
 # HomenSAI Auto VPN test kit, step 3: READ-ONLY post-install verification.
 # Usage: sh 03-verify.sh            (add "wait" to give the monitor up to 90 s to produce a first sample)
 KIT=/tmp/homensai-kit
-EXPECTED_VERSION=2.0.0-beta2
+EXPECTED_VERSION=2.0.0-beta4
 FAIL=0
 ok()  { echo "PASS  $*"; }
 bad() { echo "FAIL  $*"; FAIL=1; }
@@ -35,6 +35,14 @@ nft list table inet homensai_vpn_guard >/dev/null 2>&1 && bad "owned nft guard p
 
 N=$(ps w 2>/dev/null | grep -c '[h]omensai-vpn/agent.py daemon')
 [ "$N" = "1" ] && ok "one monitor process" || bad "monitor processes: $N (enable in LuCI Settings -> Start monitor)"
+
+# Self-check of the installed files (TODO item 15): every file matches the shipped manifest, the postinst made the
+# pristine copy and the service start wrote its report. Read-only.
+if [ -x /usr/sbin/homensai-vpn-integrity ]; then
+  sh /usr/sbin/homensai-vpn-integrity verify >/dev/null 2>&1 && ok "program files match the manifest" || bad "program files differ from the manifest (homensai-vpn-emergency verify)"
+  [ -s /etc/homensai-vpn/pristine/payload.tar.gz ] && ok "pristine copy present ($(wc -c </etc/homensai-vpn/pristine/payload.tar.gz) bytes)" || bad "no pristine copy (INTEGRITY-SNAPSHOT-* in logread)"
+  echo "INFO  integrity report: $(cat /var/run/homensai-vpn/integrity.json 2>/dev/null || echo none)"
+fi
 
 if [ -f "$KIT/fingerprint.before" ]; then
   NOWFP=$( ( uci export network; uci export firewall; ip -4 route show table main ) 2>/dev/null | sha256sum | cut -d' ' -f1)

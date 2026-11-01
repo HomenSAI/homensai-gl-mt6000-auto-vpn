@@ -16,7 +16,8 @@
 --      (process_policy.synchronization_script) - both fenced - and read back by content;
 --   4. iptables-save once -> plan; iptables-restore --noflush through a pipe (fenced); read once more ->
 --      verify + attest subset; conntrack -D of the old mark (unfenced, as in Python);
---   5. journal HELD-ON-RESERVE (fenced).
+--   5. LAN DNS follows the new first channel (dns_mark.lua; reported, never a rollback reason);
+--   6. journal HELD-ON-RESERVE (fenced).
 -- Failure before any write: journal ROLLED-BACK / FAILED-BEFORE-APPLY, as Python. After a write: the
 -- journal keeps APPLYING with failure_code and the result says rollback_required; the Python supervisor
 -- runs rollback_counted() exactly as after its own failure. Unsupported layouts are reported with
@@ -29,6 +30,7 @@ local canon=require('canon')
 local fp=require('fast_policy')
 local kernel=require('kernel')
 local journal=require('journal')
+local dns_mark=require('dns_mark')
 
 local M={}
 M.REQUEST='/var/run/homensai-vpn/instant-request.json'
@@ -286,6 +288,15 @@ function M.switch(run,request,direction,env)
     local proof=kernel.attest_route(kernel.parse_mangle(after),rules.order)
     if proof.first~=req.tunnels[1] then refuse('KERNEL-POLICY-UNVERIFIED') end
     stamp('verified')
+    -- LAN DNS follows the channel now first (dns_mark.lua): every GL dns_mark rule gets its mark. A failure is
+    -- reported (result.dns_mark, the system log) and never rolls this verified traffic switch back.
+    local dok,dns=pcall(dns_mark.sync,dns_mark.format(proof.marks[proof.first]),{root=env.dns_mark_root})
+    if not dok or type(dns)~='table' then dns=dns_mark.failed() end
+    result.dns_mark=dns
+    if dns.code==dns_mark.UNVERIFIED or (tonumber(dns.written) or 0)>0 then
+      pcall(function() require('durable').log('DNS-MARK-SYNC: active '..tostring(dns.active)..' written '..tostring(dns.written)
+        ..' code '..tostring(dns.code==canon.null and 'none' or dns.code)) end)
+    end
   end)
   result.kernel=swap
   if not success then

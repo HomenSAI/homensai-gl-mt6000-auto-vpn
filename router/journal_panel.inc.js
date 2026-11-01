@@ -459,6 +459,35 @@ function journalDescriptionLink(entry,status,stateOnly,extra){
   if(!stateOnly)return E('span',{'class':'hv-journal-description'},journalMessage(entry,status,true)+(extra||''));
   return E('a',{'href':'#events','class':'hv-errlink hv-journal-state','data-journal-description':code,'data-original-state':entry.state,'title':bi('Open the event explanation','Открыть расшифровку события'),'click':function(ev){ev.preventDefault();ensureJournalDictionary();showErrorCode(code);}},(stateOnly?journalStateText(entry):journalMessage(entry,status,true))+(extra||''));
 }
+/* Event severity (owner request 01.11.2026): the one place that grades an event. critical - the owner is needed or Auto
+   cannot work; medium - Auto worked around it (reserve, rollback, a restart outside a switch, a failed check); low -
+   normal states and observations. Exact codes first, then code families, then the row state; any other code or state
+   (refusals and unverified preconditions of one action, failed checks, speed/Telegram/settings failures, reserve and
+   rollback states) is medium. Only codes that a family rule or the medium default would grade differently are listed.
+   A failure of the Auto core itself (AUTO-/PAIR-/MANUAL-/LIFECYCLE-/LEASE-/NATIVE-/COMMAND-...-FAILED) is critical.
+   The marker always comes with its text. */
+var EVENT_SEVERITY={critical:[3,'Critical','Критичная','#d93025'],medium:[2,'Medium','Среднекритичная','#e37400'],low:[1,'Non-critical','Некритичная','#1e8e3e']};
+var EVENT_SEVERITY_CODES=Object.create(null);
+[['critical','ROLLBACK-GIVEN-UP PAIR-RECOVERY-REQUIRED RECOVERY-REQUIRED STATE-FILE-DAMAGED STORAGE-001 CONFIG-001 LUA-CORE-UNAVAILABLE EXTERNAL-POLICY-CHANGE-GUARD-RETAINED ROLLBACK-UNVERIFIED-GUARD-RETAINED FOREIGN-GUARD-TABLE NFT-GUARD-UNAVAILABLE KILLSWITCH-NOT-ENABLED AUTO-OPTIONS-NOT-CLEARED WATCHDOG-DID-NOT-ARM CONTROL-REVISION-STALE SYSTEM-001 NATIVE-SYSTEM-001 PAIR-SYSTEM-001 STOPPED-NO-HEALTHY-PATH MANUAL-SUPERVISOR-UNAVAILABLE UNSUPPORTED-BOARD UNSUPPORTED-FIRMWARE TERMS-NOT-ACCEPTED RESTART-INTERRUPTED-SWITCH FAILED'],
+ ['medium','RESERVE-FAILED-PRIMARY-VERIFIED RELEASE-PENDING AUTO-RESUME-PENDING'],
+ ['low','OK RECOVERY OBSERVING OBSERVATION RUNNING IDLE STARTING QUEUED CLAIMED CANCELLED STOPPED DISABLED ARMED APPLYING WAIT-CLIENT RESTORING RETURNED TRIAL-REQUIRED PAIR-WATCHING PAIR-CONNECTING PAIR-WAITING-PROBES PAIR-WAITING-VENDOR PAIR-STOPPED PAIR-CLEANUP PAIR-READOPTED VENDOR-SETTLING VENDOR-FIRST-OBSERVATION CLIENT-STOP SERVICE-STOPPED RESTORE-PRIMARY TRIAL-PASSED TRIAL-ENDED OPERATOR-MANUAL OPERATOR-RETURN OPERATOR-TRIAL OPERATOR-HOLD-RESERVE SELECTED-BY-CONTROLLER LINK-UP EXTERNAL-POLICY-CHANGE-RELEASED RESTART-CLEAN RESTART-FIRST-START STOP-SUPERSEDED-START STOP-SUPERSEDED-MANUAL EVENT-ROUTER-OBSERVATION']].forEach(function(p){p[1].split(' ').forEach(function(c){EVENT_SEVERITY_CODES[c]=p[0];});});
+/* codeSeverity(code) -> level or null (no rule): the exact codes, then the code families */
+function codeSeverity(code){
+  if(typeof code!=='string'||!code)return null;
+  if(EVENT_SEVERITY_CODES[code])return EVENT_SEVERITY_CODES[code];
+  if(/^(GUARD|JOURNAL|HISTORY|LUA-AUTO|HV-CORE|UNSAFE|DEPENDENCY|DEVICE-MODEL)-/.test(code))return 'critical';
+  if(/-(OK|SAVED|DELIVERED|COMPLETE|READY|VERIFIED|CONFIRMED|HEALTHY|RECOVERED|PENDING|WAITING|QUEUED|REQUESTED)$/.test(code))return 'low';
+  return /^(AUTO|PAIR|MANUAL|LIFECYCLE|LEASE|NATIVE|COMMAND)-.*FAILED$/.test(code)?'critical':null;
+}
+/* eventSeverity(row): the strongest of its code and saved fault (a code without a rule is medium); the row state only
+   when the row has no code; else medium */
+function eventSeverity(row){
+  row=row||{};var best=null;
+  [row.code==='OK'?'':row.code,row.fault].forEach(function(c){if(typeof c==='string'&&c){var l=codeSeverity(c)||'medium';if(!best||EVENT_SEVERITY[l][0]>EVENT_SEVERITY[best][0])best=l;}});
+  return best||(row.code==='OK'?'low':codeSeverity(row.state)||'medium');
+}
+function eventSeverityText(level){var t=EVENT_SEVERITY[level]||EVENT_SEVERITY.medium;return bi(t[1],t[2]);}
+function renderEventSeverity(row){var level=eventSeverity(row);return E('span',{'data-severity':level},[E('span',{'aria-hidden':'true','style':'color:'+EVENT_SEVERITY[level][3]},'● '),eventSeverityText(level)]);}
 /* Shared real-event vocabulary for the live terminal and persisted history. */
 var EVENT_VIEW={query:'',sort:'time',desc:true,expanded:false,page:0,stored:null,busy:false,error:null,request:0};
 function journalHistoryDays(status){
@@ -644,15 +673,15 @@ function journalRows(status,stored,now){
 }
 function filteredJournalRows(rows,status,query,sort,desc){
   var needle=String(query||'').trim().toLocaleLowerCase();
-  return rows.filter(function(row){return !needle||[row.state,journalStateText(row),row.kind,row.code,row.profile,row.origin,journalMessage(row,status),new Date(row.time*1000).toLocaleString()].join(' ').toLocaleLowerCase().includes(needle);}).sort(function(a,b){var compared=sort==='state'?journalStateText(a).localeCompare(journalStateText(b)):a.time-b.time;return (desc?-compared:compared)||b.time-a.time||a.key.localeCompare(b.key);});
+  return rows.filter(function(row){return !needle||[row.state,journalStateText(row),eventSeverityText(eventSeverity(row)),row.kind,row.code,row.profile,row.origin,journalMessage(row,status),new Date(row.time*1000).toLocaleString()].join(' ').toLocaleLowerCase().includes(needle);}).sort(function(a,b){var compared=sort==='state'?journalStateText(a).localeCompare(journalStateText(b)):sort==='severity'?EVENT_SEVERITY[eventSeverity(a)][0]-EVENT_SEVERITY[eventSeverity(b)][0]:a.time-b.time;return (desc?-compared:compared)||b.time-a.time||a.key.localeCompare(b.key);});
 }
 function renderEventHistory(status){
   EVENT_VIEW.status=status;
   if(EVENT_VIEW.root&&EVENT_VIEW.language===locale){if(!EVENT_VIEW.stored&&!EVENT_VIEW.expanded&&!EVENT_VIEW.query)EVENT_VIEW.draw();return EVENT_VIEW.root;}
   EVENT_VIEW.language=locale;
-  var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,host=E('section',{'class':'hv-chart-card','data-event-history':'1'}),tableHost=E('div'),note=E('p',{'role':'status'});
+  var now=typeof statusNow==='function'?statusNow(status):Date.now()/1000,host=E('section',{'class':'hv-chart-card','data-event-history':'1','data-stats-reset':'auto'}),tableHost=E('div'),note=E('p',{'role':'status'});
   var query=E('input',{'type':'search','class':'hv-search','maxlength':'256','aria-label':bi('Search all retained events','Поиск по всем сохранённым событиям'),'placeholder':bi('Search words, state or error code','Поиск по словам, состоянию или коду'),'input':function(ev){EVENT_VIEW.query=ev.target.value.slice(0,256);EVENT_VIEW.page=0;if(!EVENT_VIEW.stored)load();draw();}});query.value=EVENT_VIEW.query;
-  var order=E('select',{'aria-label':bi('Sort event history','Сортировка истории'),'change':function(ev){EVENT_VIEW.sort=ev.target.value==='state'?'state':'time';EVENT_VIEW.page=0;draw();}},[E('option',{value:'time'},bi('Date and time','Дата и время')),E('option',{value:'state'},bi('State','Состояние'))]);order.value=EVENT_VIEW.sort;
+  var order=E('select',{'aria-label':bi('Sort event history','Сортировка истории'),'change':function(ev){EVENT_VIEW.sort=['state','severity'].indexOf(ev.target.value)>=0?ev.target.value:'time';EVENT_VIEW.page=0;draw();}},[E('option',{value:'time'},bi('Date and time','Дата и время')),E('option',{value:'severity'},bi('Severity','Критичность')),E('option',{value:'state'},bi('State','Состояние'))]);order.value=EVENT_VIEW.sort;
   var direction=E('button',{'type':'button','class':'cbi-button','click':function(){EVENT_VIEW.desc=!EVENT_VIEW.desc;draw();}});
   var more=E('button',{'type':'button','class':'cbi-button','aria-expanded':EVENT_VIEW.expanded?'true':'false','click':function(){EVENT_VIEW.expanded=!EVENT_VIEW.expanded;EVENT_VIEW.page=0;if(EVENT_VIEW.expanded&&!EVENT_VIEW.stored)load();draw();}});
   async function load(){
@@ -670,8 +699,8 @@ function renderEventHistory(status){
     var rows=filteredJournalRows(journalRows(status,EVENT_VIEW.stored,now),status,EVENT_VIEW.query,EVENT_VIEW.sort,EVENT_VIEW.desc),size=EVENT_VIEW.expanded?500:20;
     EVENT_VIEW.page=Math.max(0,Math.min(EVENT_VIEW.page,Math.max(0,Math.ceil(rows.length/size)-1)));
     var selected=rows.slice(EVENT_VIEW.page*size,(EVENT_VIEW.page+1)*size),table=E('table',{'class':'table hv-event-history','data-hv-no-sort':'1'},[
-      E('thead',{},E('tr',{},[bi('Date and time','Дата и время'),bi('State','Состояние'),bi('Event','Событие')].map(function(label){return E('th',{},label);}))),
-      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},[renderJournalChannelBadge(row),journalDescriptionLink(row,status,true)].filter(Boolean)),E('td',{},journalDescriptionContent(row,status))]);}))]);
+      E('thead',{},E('tr',{},[bi('Date and time','Дата и время'),bi('Severity','Критичность'),bi('State','Состояние'),bi('Event','Событие')].map(function(label){return E('th',{},label);}))),
+      E('tbody',{},selected.map(function(row){return E('tr',{'data-event-key':row.key},[E('td',{},new Date(row.time*1000).toLocaleString()),E('td',{},renderEventSeverity(row)),E('td',{},[renderJournalChannelBadge(row),journalDescriptionLink(row,status,true)].filter(Boolean)),E('td',{},journalDescriptionContent(row,status))]);}))]);
     tableHost.appendChild(E('div',{'class':'hv-dv-tablewrap'},table));
     if(EVENT_VIEW.expanded&&rows.length>size){
       tableHost.appendChild(E('div',{'class':'hv-native-actions'},[

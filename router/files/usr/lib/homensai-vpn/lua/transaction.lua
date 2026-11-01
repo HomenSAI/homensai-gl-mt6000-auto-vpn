@@ -341,6 +341,11 @@ function M.publish(env,value)
     ctl.write_json(env.run,M.paths(env).state,canon.object({state='BLOCKED',blockers=canon.array({'HISTORY-001'})}))
     refuse('HISTORY-001')
   end
+  if canon.is_object(value.channel_path) then
+    -- the last LAN DNS follow of this process (dns_mark.lua), status only: not part of the history record
+    local dns=require('dns_mark').view()
+    if dns~=nil then value.channel_path=merge(value.channel_path,{dns_mark=dns}) end
+  end
   ctl.write_json(env.run,M.paths(env).state,value)
 end
 

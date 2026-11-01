@@ -79,6 +79,22 @@ def read_state():
     if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
             or not isinstance(data['protected_static']['firewall'],str) or not re.fullmatch('[a-f0-9]{64}',data['protected_static']['firewall'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
+    if any(key in data for key in ('kept','kept_flags','kept_at')):
+        # the boot handover (boot_keep): only on a STOPPED session, owned clients with their flags before the session
+        kept,flags,at=data.get('kept'),data.get('kept_flags'),data.get('kept_at')
+        if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or any(not isinstance(x,str) or x not in managed for x in kept) or not isinstance(flags,dict)
+                or set(flags)!=set(kept) or any(v not in ('0','1') for v in flags.values())
+                or type(at) not in (int,float) or not math.isfinite(at) or at<0):
+            raise ValueError('PAIR-STATE-UNVERIFIED')
+    if 'handover' in data:
+        # the boot handover on the reserve (boot_handover): only on a STOPPED session, its own order and policy
+        h=data['handover']
+        if (data['phase']!='STOPPED' or not isinstance(h,dict) or set(h)!={'tx','order','policy_hash','at'}
+                or not isinstance(h['tx'],str) or not re.fullmatch('[a-f0-9]{32}',h['tx']) or h['policy_hash']!=data.get('policy_hash')
+                or not isinstance(h['order'],list) or h['order']!=data.get('order')
+                or type(h['at']) not in (int,float) or not math.isfinite(h['at']) or h['at']<0):
+            raise ValueError('PAIR-STATE-UNVERIFIED')
     if 'manual_hold' in data and data['manual_hold'] not in ('source','target'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'manual_hold_source' in data and data['manual_hold_source'] not in ('manual','test','programmatic','unknown'):raise ValueError('PAIR-MANUAL-HOLD-UNVERIFIED')
     if 'policy_roles' in data:
@@ -564,7 +580,7 @@ BOOT_TRACE_UPTIME=600
 
 
 def boot_step(step,uptime=None):
-    try:now=time.monotonic() if uptime is None else uptime
+    try:now=_uptime() if uptime is None else uptime
     except (OSError,ValueError):return False
     if type(now) not in (int,float) or not math.isfinite(now) or not 0<=now<BOOT_TRACE_UPTIME:return False
     _log('BOOT-RECOVERY-STEP: %s at %.1f'%(step,now))
@@ -675,10 +691,33 @@ def begin(backend, settings, request):
             row.get('proto') != managed[name] or row.get('auto') != '0' or row.get('disabled') not in ('0', '1')
             for name, row in selected.items()):
         raise ValueError('PAIR-PROFILES-UNVERIFIED')
+    flags={name: row['disabled'] for name, row in selected.items()}
+    # variant D: a boot handover on the reserve is adopted only after a fresh check of everything (else the old path)
+    handover=None
+    try:hprior=read_state()
+    except (OSError,ValueError):hprior={}
+    if has_handover(hprior):
+        try:held=n.journal_read()
+        except (n.Refused,OSError,ValueError):held=None
+        if handover_matches(hprior,held):
+            try:kernel=adoptable(backend,selection,held,hprior)
+            except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):kernel=None
+            if kernel is None:
+                release_handover(hprior);raise ValueError('BOOT-RESERVE-UNVERIFIED')
+            handover={'prior':hprior,'journal':held,'kernel':kernel}
+    # the clients a boot cleanup kept up for this Start (boot_keep) stay owned, with their flags before the old session:
+    # a later Stop returns them exactly as the old cleanup would have. Everything else of the session is read fresh here.
+    adopted=[]
+    try:prior=read_state()
+    except (OSError,ValueError):prior={}
+    if has_kept(prior):
+        for name in prior['kept']:
+            if name in selected and selected[name].get('disabled')=='0':adopted.append(name);flags[name]=prior['kept_flags'][name]
     state = dict(id=request['id'], phase='STARTING', started=time.time(), revision=request['revision'],
-                 network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(managed), owned=[],
-                 before_flags={name: row['disabled'] for name, row in selected.items()},
-                 process_bindings=selection['process_bindings'], order=selection['order'], policy_hash=selection['hash'])
+                 network_identity=normalized_network(data,managed), interfaces=managed, protected=configs(managed), owned=adopted,
+                 before_flags=flags,
+                 process_bindings=selection['process_bindings'],
+                 order=list(handover['prior']['handover']['order']) if handover else selection['order'], policy_hash=selection['hash'])
     # Lets a later recovery tell vendor-only gl_vpn_rules drift from a foreign edit.
     try:state['protected_static']={'firewall':static_firewall_digest(firewall_bytes())}
     except (OSError,ValueError):pass  # the full protected digest above still applies
@@ -699,8 +738,9 @@ def begin(backend, settings, request):
             quiet(45,request['revision'])
         elif client_down(interface):
             # Enabled by the operator but stopped: Auto starts it and restores it on Stop.
-            state['owned'].append(interface)
-            save(state)
+            if interface not in state['owned']:
+                state['owned'].append(interface)
+                save(state)
             try:
                 n.forward_dispatch(['ifup', '-w', interface], request['revision'], timeout=20)
             except subprocess.SubprocessError:
@@ -711,7 +751,211 @@ def begin(backend, settings, request):
     require_running(request['revision'])
     backend.guard(backend.devices(), control_revision=request['revision'])
     save(state)
+    if handover:adopt_journal(state,handover['journal'],handover['kernel'],request['revision'])
     return state
+
+
+# Owner decision 01.11.2026 (variant C, BOOT-RECOVERY-2026-11-01.ru.md; physical power cuts on beta1): the boot
+# cleanup stopped the pair's two healthy clients (ifdown + vendor quiet, ~20 s) only for the boot resume's Start to
+# bring them up again. Now, when the boot resume will press Start (the owner's marker, no newer Stop latch, the boot
+# resume not finished, uptime below BOOT_KEEP_UPTIME) and every owned client is up, the cleanup keeps them: the route
+# is restored and verified exactly as before, the session ends STOPPED and records the kept clients with their flags
+# before the session. The next Start's begin() adopts them as owned and reads everything else fresh, so no tunnel
+# identity of the old session is reused. Without that Start within KEEP_SECONDS (or after a Stop, a failed boot
+# resume, the boot window) release_kept() stops them as the old cleanup would have. An owner Stop and any client
+# that is not up keep the old behaviour. Lua: pair.boot_keep.
+BOOT_KEEP_UPTIME=900   # boot_resume.UNTIL_UPTIME
+KEEP_SECONDS=600
+
+
+def _uptime():
+    return time.monotonic()
+
+
+def interface_up(interface):
+    return Path('/sys/class/net',interface).exists() and not client_down(interface)
+
+
+def has_kept(state):
+    return isinstance(state,dict) and state.get('phase')=='STOPPED' and isinstance(state.get('kept'),list) and bool(state['kept'])
+
+
+def _resume_pending():
+    """-> (pending, uptime, the reason when not pending: the handover refusal log)."""
+    try:now=_uptime()
+    except (OSError,ValueError):return False,None,'UPTIME'
+    if type(now) not in (int,float) or not math.isfinite(now) or not 0<=now<BOOT_KEEP_UPTIME:return False,now,'UPTIME'
+    import boot_resume
+    from agent import RUNTIME,PERSIST,read_json
+    try:wanted,why=boot_resume.wanted(PERSIST)
+    except (OSError,ValueError):return False,now,'RESUME-MARKER-UNREADABLE'
+    if not wanted:return False,now,str(why or 'AUTO-RESUME-NOT-REQUESTED')
+    try:row=read_json(RUNTIME/boot_resume.STATE,{})
+    except (OSError,ValueError):row={}
+    if isinstance(row,dict) and row.get('state') in ('FAILED','SKIPPED'):return False,now,'RESUME-'+row['state']
+    return True,now,None
+
+
+def boot_keep(state,stop_revision=None):
+    if stop_revision is not None or not state.get('owned') or not _resume_pending()[0]:return False
+    try:return all(interface_up(interface) for interface in state['owned'])
+    except (OSError,ValueError,subprocess.SubprocessError):return False
+
+
+def kept_valid(state):
+    pending,now,_=_resume_pending()
+    at=state.get('kept_at')
+    return pending and type(at) in (int,float) and at<=now and now-at<KEEP_SECONDS
+
+
+def release_kept(backend,state):
+    """The kept clients are stopped and their flags restored, as the old boot cleanup would have done."""
+    import native_switch as n
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    for interface in reversed(state['kept']):
+        if normalized_network(network(),managed) != state['network_identity']:raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
+        if changed(state, configs(managed), skip=('firewall',)):raise ValueError('PAIR-EXTERNAL-CONFIG-CHANGE')
+        n.command(['ifdown', interface], timeout=20)
+        quiet(45)
+        set_disabled(state, interface, state['kept_flags'][interface])
+        if Path('/sys/class/net', interface).exists():raise ValueError('PAIR-PROFILE-STOP-UNVERIFIED')
+    backend.unguard()
+    for key in ('kept','kept_flags','kept_at'):state.pop(key,None)
+    save(state)
+    boot_step('pair kept clients released')
+
+
+# Owner decision 01.11.2026 (variant D, BOOT-RECOVERY-2026-11-01.ru.md; physical power cuts on beta1): after a boot
+# with a completed switch on the reserve (journal COMMITTED or HELD-ON-RESERVE, current role target) the cleanup
+# waited ~60-130 s for the primary proof before it could end the session, and only then the boot resume's Start was
+# accepted. Now, when the boot resume will press Start, the primary is not proven yet and the reserve route is proven
+# freshly (attest_policy verified with role target, the reserve healthy by a fresh probe, the live order the
+# journal's), the old session hands over: it ends STOPPED with handover={tx,order,policy_hash,at} (and its kept
+# clients, variant C), the guard stays VPN-only, the journal is untouched. Start accepts exactly this journal; the
+# new session's begin() checks everything again and then records the adoption in the journal (COMMITTED,
+# BOOT-RESERVE-ADOPTED, boot_adopted={session,time,from_phase,from_reason}, confirmed=now so min_dwell counts from
+# here, no manual request). The normal committed return policy brings it back to the primary. Any failed check, an
+# owner Stop, no Start within KEEP_SECONDS, a failed boot resume: release_handover() and today's path. Interrupted
+# switches never get here: they roll back as before. One handover per boot (RAM marker). Lua: pair.boot_handover.
+HANDOVER_FILE='pair-handover.json'
+
+
+def has_handover(state):
+    return isinstance(state,dict) and state.get('phase')=='STOPPED' and isinstance(state.get('handover'),dict)
+
+
+def handover_matches(state,journal):
+    return (has_handover(state) and isinstance(journal,dict) and state['handover'].get('tx')==journal.get('tx')
+            and journal.get('phase') in ('COMMITTED','HELD-ON-RESERVE'))
+
+
+def _reserve_proven(backend,journal,selection=None):
+    kernel=backend.attest_policy(selection)
+    if not isinstance(kernel,dict) or kernel.get('verified') is not True or kernel.get('role')!='target':return None
+    if backend.health(journal['target']) is not True:return None
+    return kernel
+
+
+# 01.11.2026 (MT3000 sysrq-b on beta3: no handover, no reason in the log): the checks run on every cleanup pass for
+# at most HANDOVER_WAIT s from the first one, each refusal is logged once per reason (BOOT-RECOVERY-STEP: handover
+# refused <reason>), and after the wait today's path goes on without further checks. The reserve health is the
+# backend's live probe (health()), never the monitor samples. Only the reserve has to be up: the primary may still be
+# connecting (all owned clients are kept and adopted). RAM marker HANDOVER_FILE: {state:'waiting',first} ->
+# {state:'handed'|'refused'}. Lua: pair.boot_handover.
+HANDOVER_WAIT=60
+_handover_logged=[None]
+
+
+def handover_log_reset():_handover_logged[0]=None
+
+
+def _handover_refused(reason):
+    if _handover_logged[0]!=reason:
+        _handover_logged[0]=reason;boot_step('handover refused '+reason)
+    return False
+
+
+def handover_check(backend,state,journal,context):
+    """-> (None, kernel) when the reserve route can be handed over, else (the refusal reason, None)."""
+    from pair_policy import current_role,state_order_matches
+    current=current_role(journal)
+    if current!='target':return 'ROLE %s'%current,None
+    if context['session_order']!=state['order']:return 'SESSION-ORDER',None
+    # a primary already proven returns at once on today's path; the handover only replaces the wait for the proof
+    if backend.recovery_ready(journal['source'],backend.policy()['settings']) is True:return 'PRIMARY-PROVEN',None
+    if not state_order_matches(state,journal,backend.order()):return 'ORDER',None
+    kernel=backend.attest_policy()
+    if not isinstance(kernel,dict) or kernel.get('verified') is not True:
+        return 'KERNEL %s'%(kernel.get('code') if isinstance(kernel,dict) and kernel.get('code') else 'UNVERIFIED'),None
+    if kernel.get('role')!='target':return 'KERNEL-ROLE %s'%kernel.get('role'),None
+    health=backend.health(journal['target'])
+    if health is not True:return 'RESERVE-HEALTH %s'%('UNKNOWN' if health is None else str(health).lower()),None
+    return None,kernel
+
+
+def boot_handover(backend,state,journal,context,stop_revision=None):
+    from agent import RUNTIME,atomic_json,read_json
+    import native_switch as n
+    if stop_revision is not None or context is None or journal.get('phase') not in ('COMMITTED','HELD-ON-RESERVE'):return False
+    path=RUNTIME/HANDOVER_FILE
+    try:marker=read_json(path,{})
+    except (OSError,ValueError):marker={}
+    if not isinstance(marker,dict):marker={}
+    if marker.get('state') in ('handed','refused'):return False
+    pending,now,why=_resume_pending()
+    if not pending:return _handover_refused(why)
+    first=marker.get('first')
+    if type(first) not in (int,float) or first>now:
+        first=now;atomic_json(path,{'state':'waiting','first':float(now)})
+    if now-first>=HANDOVER_WAIT:
+        atomic_json(path,{'state':'refused','first':float(first),'reason':_handover_logged[0]})
+        return _handover_refused('WAIT-OVER after %s'%_handover_logged[0])
+    try:reason,_=handover_check(backend,state,journal,context)
+    except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:reason='ERROR %s'%(error.args[0] if error.args else type(error).__name__)
+    if reason is not None:return _handover_refused(reason)
+    backend.guard(backend.devices())  # VPN-only on the running tunnels, as the held journal had
+    atomic_json(path,{'state':'handed','first':float(first),'tx':journal['tx'],'time':time.time()})
+    state['handover']={'tx':journal['tx'],'order':list(state['order']),'policy_hash':state['policy_hash'],'at':float(_uptime())}
+    if state.get('owned'):
+        state.update(kept=list(state['owned']),kept_flags={x:state['before_flags'][x] for x in state['owned']},kept_at=state['handover']['at'])
+    state['phase']='STOPPED';save(state)
+    boot_step('pair cleanup handover on the reserve '+journal['tx'])
+    return True
+
+
+def release_handover(state):
+    """Back to today's path: the old session is HELD again and the next cleanup waits for the primary proof."""
+    for key in ('handover','kept','kept_flags','kept_at'):state.pop(key,None)
+    state['phase']='HELD';save(state)
+    boot_step('pair handover released')
+
+
+def adoptable(backend,selection,journal,prior):
+    """begin(): the fresh checks of the adoption; the kernel proof or None."""
+    from pair_policy import metadata,proof,current_order,current_role
+    ctx=metadata(journal)
+    if ctx is None or selection['hash']!=journal['hash'] or selection['hash']!=prior['handover']['policy_hash']:return None
+    if selection['source'].get('id')!=journal['source'] or selection['target'].get('id')!=journal['target']:return None
+    if ctx['session_order']!=prior['handover']['order'] or sorted(selection['order'])!=sorted(prior['handover']['order']):return None
+    if any(ctx.get(key)!=item for key,item in proof(selection).items()):return None
+    if backend.order()!=(current_order(journal),journal['hash']) or current_role(journal)!='target':return None
+    return _reserve_proven(backend,journal,selection)
+
+
+def adopt_journal(state,journal,kernel,revision):
+    """The new session's journal says where it started: on the reserve, adopted at this boot."""
+    import native_switch as n
+    now=time.time()
+    journal['boot_adopted']={'session':state['id'],'time':now,'from_phase':journal['phase'],'from_reason':journal.get('reason')}
+    journal.update(phase='COMMITTED',reason='BOOT-RESERVE-ADOPTED',confirmed=now,control_revision=revision)
+    journal.pop('manual_request_id',None)
+    n.journal_write(journal)
+    try:remember_selected(state,kernel)
+    except (OSError,ValueError,KeyError,TypeError):pass
+    n.publish({'state':'COMMITTED','reason':'BOOT-RESERVE-ADOPTED','source':journal['source'],'target':journal['target'],'mode':'continuous-pair',
+               'proof_scope':MODE,'readiness_verified':True,'kernel_policy_verified':True,'kernel_proof':kernel,'original_restored':False,'blockers':[]})
+    boot_step('pair session adopted the reserve '+journal['tx'])
 
 
 def cleanup(backend, state, stop_revision=None):
@@ -733,6 +977,7 @@ def cleanup(backend, state, stop_revision=None):
         else:raise ValueError('PAIR-RECOVERY-REQUIRED')
     if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
         ensure_devices(backend,state)  # finish_committed/rollback end with guard(devices()): the pair's own tunnels first
+        if boot_handover(backend,state,journal,context,stop_revision):return True
         finished=(n.finish_committed(backend,journal,'PAIR-STOPPED',restore_order=state['order']) if context is not None
                   else n.finish_committed(backend,journal,'PAIR-STOPPED'))
         if not finished:
@@ -745,6 +990,14 @@ def cleanup(backend, state, stop_revision=None):
         n.rollback(backend,journal,'PAIR-STOPPED',restore_order=state['order'])
     if backend.order() != (state['order'], state['policy_hash']):
         raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
+    if boot_keep(state,stop_revision):
+        if normalized_network(network(),managed) != state['network_identity']:raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
+        if changed(state, configs(managed), skip=('firewall',)):raise ValueError('PAIR-EXTERNAL-CONFIG-CHANGE')
+        # the guard stays: the next session's begin() guards again, release_kept() removes it
+        state.update(kept=list(state['owned']),kept_flags={x:state['before_flags'][x] for x in state['owned']},kept_at=float(_uptime()),phase='STOPPED')
+        save(state)
+        boot_step('pair cleanup kept '+' '.join(state['kept']))
+        return True
     for interface in reversed(state['owned']):
         # Never stop a profile after an external identity/configuration change.
         if normalized_network(network(),managed) != state['network_identity']:
@@ -861,6 +1114,12 @@ def reapply_missing_policy(backend,state,settings,revision,journal,observed=None
     kernel=backend.attest_policy(selection)
     if kernel.get('verified') is True:
         remember_selected(state,kernel)
+        # LAN DNS follows the verified active channel: repairs drift after a GL rebuild of dns_mark (fw3/vpn-client
+        # reload, boot). Observation-grade: never fails the pass.
+        follow=getattr(backend,'dns_mark_follow',None)
+        if kernel.get('role') in ('source','target') and follow is not None:
+            try:follow()
+            except Exception:pass
         if observed is not None:observed.update(selection=selection,kernel=kernel)
         return False
     if kernel.get('repairable_missing') is not True:
@@ -942,6 +1201,16 @@ def tick(backend, settings, revision):
         request_row = intent()
         state = read_state()
         running = request_row.get('mode') == 'on' and request_row.get('revision') == revision
+        if not running and has_handover(state):
+            # the journal stays as the old session left it until the Start: nothing else may finish it meanwhile
+            if kept_valid({'kept_at':state['handover']['at']}):return True
+            release_handover(state)
+            return True
+        if not running and has_kept(state):
+            if kept_valid(state):return False  # the boot resume's Start is still coming
+            release_kept(backend,state)
+            n.publish({'state': 'STOPPED', 'mode': 'continuous-pair', 'proof_scope': MODE, 'original_restored': True, 'blockers': []})
+            return True
         relevant = running or state and state['phase'] not in TERMINAL
         if not relevant:
             return False
@@ -1089,6 +1358,11 @@ def tick(backend, settings, revision):
                     return True
             except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError):
                 pass  # Falls back to the ordinary held state below.
+        if str(error)=='BOOT-RESERVE-UNVERIFIED' and request_row.get('mode')=='on':
+            try:fail_request(request_row,revision,error)  # the old session is HELD again; today's path follows
+            except (n.Refused, OSError, ValueError, KeyError, TypeError):pass
+            publish_failure(error)
+            return True
         if pending.get('phase') == 'STARTING':
             try:
                 cleanup(backend, pending)

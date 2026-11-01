@@ -8,6 +8,7 @@ Now the supervisor starts the pair's own clients, the journal settles without ow
 Lua counterpart: tests/lua/test_boot_held.lua.
 """
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -200,6 +201,250 @@ class BootHeld(Fixture):
         boot_resume.watch(self.dir,self.dir,sleep=lambda s:None,handled=handled,rounds=1)
         self.assertEqual(json.loads((self.dir/boot_resume.STATE).read_text())['code'],'AUTO-RESUME-STOPPED')
         self.assertEqual(pair.intent()['mode'],'off')
+
+
+class VariantC(Fixture):
+    """Owner decision 01.11.2026 (variant C): healthy clients kept across the boot cleanup for the boot resume Start.
+    Lua counterpart: the variant C tests of tests/lua/test_boot_held.lua."""
+
+    def setUp(self):
+        super().setUp()
+        self.uptime=[40.0]
+        self.stack.enter_context(patch.object(pair,'_uptime',side_effect=lambda:self.uptime[0]))
+        self.stack.enter_context(patch.object(pair,'interface_up',side_effect=lambda name:self.b.up.get(name,False)))
+
+    def test_boot_cleanup_keeps_the_healthy_clients_and_the_guard(self):
+        native.serve()
+        self.assertEqual(self.ifup,['ovpnclient1','wgclient1'])
+        journal=native.journal_read()
+        self.assertEqual((journal['phase'],journal['reason']),('ROLLED-BACK','PAIR-STOPPED'),'the route is restored as before')
+        self.assertEqual(self.b.current,self.before)
+        state=pair.read_state()
+        self.assertEqual(state['phase'],'STOPPED')
+        self.assertEqual(self.ifdown,[],'kept for the boot resume Start')
+        self.assertEqual((state['kept'],state['kept_flags']),(['wgclient1','ovpnclient1'],{'wgclient1':'0','ovpnclient1':'0'}))
+        self.assertEqual(self.b.guarded,'vpn-only','the guard stays')
+        self.assertIn('BOOT-RECOVERY-STEP: pair cleanup kept wgclient1 ovpnclient1 at 40.0',self.lines)
+        native.STOP=False
+        self.assertTrue(self.start()['accepted'])
+
+    def test_the_next_start_adopts_the_kept_clients(self):
+        native.serve()
+        old=pair.read_state()
+        selection={'process_bindings':None,'order':self.before,'hash':self.b.fingerprint,
+                   'source':{'interface':'wgclient1'},'target':{'interface':'ovpnclient1'}}
+        with patch.object(pair,'preflight',return_value=selection),patch('pair_interfaces.selection',return_value=dict(self.INTERFACES)),\
+             patch('pair_policy.proof',return_value=None),patch.object(pair,'require_running'),patch.object(pair,'client_down',side_effect=lambda n:not self.b.up[n]):
+            state=pair.begin(self.b,self.b.data['settings'],{'id':'c'*32,'revision':self.revision})
+        self.assertNotEqual(state['id'],old['id']);self.assertNotIn('kept',state)
+        self.assertEqual(state['owned'],['wgclient1','ovpnclient1'],'still owned: a later Stop returns them')
+        self.assertEqual(state['before_flags'],{'wgclient1':'0','ovpnclient1':'0'})
+        self.assertEqual(self.ifup,['ovpnclient1','wgclient1'],'no second ifup')
+
+    def test_no_marker_a_newer_stop_or_a_client_down_keeps_the_old_cleanup(self):
+        for case in ('no-marker','stop','down'):
+            with self.subTest(case=case):
+                self.tearDown();self.setUp()
+                if case=='no-marker':(self.dir/boot_resume.MARKER).unlink()
+                if case=='stop':agent.atomic_json(self.dir/'native-stop.json',{'requested':time.time(),'trial':None})
+                if case=='down':self.stack.enter_context(patch.object(pair,'interface_up',side_effect=lambda name:name!='ovpnclient1'))
+                native.serve()
+                state=pair.read_state()
+                self.assertEqual(state['phase'],'STOPPED');self.assertNotIn('kept',state)
+                self.assertEqual(self.ifdown,['ovpnclient1','wgclient1'])
+                self.assertIsNone(self.b.guarded)
+
+    def test_without_the_start_the_kept_clients_are_released(self):
+        for case in ('expiry','stop','failed'):
+            with self.subTest(case=case):
+                self.tearDown();self.setUp()
+                native.serve()
+                self.assertEqual(len(pair.read_state()['kept']),2)
+                settings=self.b.data['settings']
+                self.assertFalse(pair.tick(self.b,settings,auto_control.current_revision()),'kept while the Start is still coming')
+                self.assertEqual(self.ifdown,[])
+                if case=='expiry':self.uptime[0]+=pair.KEEP_SECONDS
+                if case=='stop':agent.atomic_json(self.dir/'native-stop.json',{'requested':time.time(),'trial':None})
+                if case=='failed':agent.atomic_json(self.dir/boot_resume.STATE,{'state':'FAILED'})
+                self.assertTrue(pair.tick(self.b,settings,auto_control.current_revision()))
+                state=pair.read_state()
+                self.assertEqual(self.ifdown,['ovpnclient1','wgclient1']);self.assertNotIn('kept',state);self.assertEqual(state['phase'],'STOPPED')
+                self.assertIsNone(self.b.guarded)
+
+    def test_the_kept_fields_are_validated(self):
+        state=pair.read_state()
+        state.update(kept=['wgclient1'],kept_flags={'wgclient1':'0'},kept_at=1.0)
+        pair.save(state)
+        with self.assertRaisesRegex(ValueError,'PAIR-STATE-UNVERIFIED'):pair.read_state()  # RUNNING
+        state['phase']='STOPPED';state['kept_flags']={'wgclient1':'2'};pair.save(state)
+        with self.assertRaisesRegex(ValueError,'PAIR-STATE-UNVERIFIED'):pair.read_state()
+        state['kept_flags']={'wgclient1':'1'};pair.save(state)
+        self.assertEqual(pair.read_state()['kept_flags'],{'wgclient1':'1'})
+
+
+class VariantD(Fixture):
+    """Owner decision 01.11.2026 (variant D): a completed switch on the reserve is handed over to the boot resume Start.
+    Lua counterpart: the variant D tests of tests/lua/test_boot_held.lua."""
+
+    def setUp(self):
+        super().setUp()
+        import pair_policy
+        self.policy=pair_policy
+        self.uptime=[40.0];self.primary_ok=False
+        pair.handover_log_reset()
+        self.stack.enter_context(patch.object(pair,'_uptime',side_effect=lambda:self.uptime[0]))
+        self.stack.enter_context(patch.object(pair,'interface_up',side_effect=lambda name:self.b.up.get(name,False)))
+        # the held journal of a pair session (pair_transition), traffic on the reserve
+        sel=self.b.selection
+        journal=native.journal_read()
+        ctx=pair_policy.transition(sel,self.before,'target')
+        journal.update(pair_transition=ctx,after=pair_policy.desired_order(ctx,self.before,'target'))
+        native.journal_write(journal);self.b.current=journal['after'][:];self.held=journal
+        state=pair.read_state();state['policy_roles']=pair_policy.proof(sel);pair.save(state)
+        source,target=sel['source']['id'],sel['target']['id']
+        def health(identifier):
+            if identifier==target:return self.b.up[self.b.iface[target]]
+            return self.primary_ok and self.b.up[self.b.iface[source]]
+        self.b.health=health
+        self.b.recovery_ready=lambda identifier,settings:health(identifier) is True
+        self.b.attest_policy=lambda selection=None:{'verified':self.b.current==self.held['after'] or self.b.current==self.before,
+            'role':pair_policy.role(pair_policy.proof(sel),self.b.current),'kernel_fingerprint':'f'*64,'order':self.b.current[:],
+            'policy_hash':self.b.fingerprint,'time':time.time()}
+
+    def begin(self):
+        selection=dict(self.b.selection,process_bindings=None)
+        with patch.object(pair,'preflight',return_value=selection),patch('pair_interfaces.selection',return_value=dict(self.INTERFACES)),\
+             patch.object(pair,'require_running'),patch.object(pair,'client_down',side_effect=lambda n:not self.b.up[n]):
+            return pair.begin(self.b,self.b.data['settings'],{'id':'c'*32,'revision':auto_control.current_revision()})
+
+    def test_the_held_reserve_is_handed_over_and_the_start_adopts_it(self):
+        native.serve()
+        old=pair.read_state();held=native.journal_read()
+        self.assertEqual(old['phase'],'STOPPED');self.assertEqual(old['handover']['tx'],held['tx'])
+        self.assertEqual(old['handover']['order'],self.before)
+        self.assertEqual((held['phase'],held['reason']),('HELD-ON-RESERVE','OPERATOR-MANUAL'),'the journal is untouched until the Start')
+        self.assertEqual(self.b.current,self.held['after'],'traffic stays on the reserve');self.assertEqual(self.b.guarded,'vpn-only')
+        self.assertEqual(self.ifdown,[])
+        self.assertTrue(pair.tick(self.b,self.b.data['settings'],auto_control.current_revision()),'waits, touches nothing')
+        self.assertEqual(native.journal_read()['phase'],'HELD-ON-RESERVE')
+        native.STOP=False
+        self.assertTrue(self.start()['accepted'],'Start accepted without the primary proof')
+        state=self.begin()
+        journal=native.journal_read()
+        self.assertEqual((journal['phase'],journal['reason'],journal['tx']),('COMMITTED','BOOT-RESERVE-ADOPTED',held['tx']))
+        self.assertEqual(journal['boot_adopted']['session'],state['id'])
+        self.assertEqual((journal['boot_adopted']['from_phase'],journal['boot_adopted']['from_reason']),('HELD-ON-RESERVE','OPERATOR-MANUAL'))
+        self.assertNotIn('manual_request_id',journal)
+        self.assertEqual(state['order'],self.before,'the old session order');self.assertEqual(state['owned'],['wgclient1','ovpnclient1'])
+        self.assertNotIn('handover',pair.read_state())
+        self.assertEqual(self.b.current,self.held['after']);self.assertEqual(self.ifup,['ovpnclient1','wgclient1'],'no second ifup')
+
+    def test_today_s_path_when_the_reserve_or_kernel_is_not_proven_the_primary_is_or_no_marker(self):
+        for case in ('reserve-down','kernel','primary-proven','no-marker'):
+            with self.subTest(case=case):
+                self.tearDown();self.setUp()
+                if case=='reserve-down':self.b.health=lambda identifier:False
+                if case=='kernel':self.b.attest_policy=lambda selection=None:{'verified':False,'role':None}
+                if case=='primary-proven':self.primary_ok=True
+                if case=='no-marker':(self.dir/boot_resume.MARKER).unlink()
+                with patch.object(native,'finish_committed',return_value=False):native.serve()
+                state=pair.read_state()
+                self.assertNotIn('handover',state);self.assertEqual(state['phase'],'HELD')
+                self.assertEqual(native.journal_read()['phase'],'HELD-ON-RESERVE')
+
+    def test_a_reserve_that_fails_the_fresh_check_at_start_falls_back(self):
+        native.serve()
+        self.assertIn('handover',pair.read_state())
+        self.b.health=lambda identifier:False
+        with self.assertRaisesRegex(ValueError,'BOOT-RESERVE-UNVERIFIED'):self.begin()
+        state=pair.read_state()
+        self.assertEqual(state['phase'],'HELD');self.assertNotIn('handover',state)
+        self.assertEqual(native.journal_read()['phase'],'HELD-ON-RESERVE','not adopted')
+
+    def test_stop_failed_resume_or_expiry_release_the_handover(self):
+        for case in ('stop','failed','expiry'):
+            with self.subTest(case=case):
+                self.tearDown();self.setUp()
+                native.serve()
+                self.assertIn('handover',pair.read_state())
+                if case=='stop':agent.atomic_json(self.dir/'native-stop.json',{'requested':time.time(),'trial':None})
+                if case=='failed':agent.atomic_json(self.dir/boot_resume.STATE,{'state':'FAILED'})
+                if case=='expiry':self.uptime[0]+=pair.KEEP_SECONDS
+                self.assertTrue(pair.tick(self.b,self.b.data['settings'],auto_control.current_revision()))
+                state=pair.read_state()
+                self.assertNotIn('handover',state);self.assertEqual(state['phase'],'HELD')
+                native.STOP=False
+                self.assertEqual(self.start()['blockers'],['TRANSACTION-IN-PROGRESS'])
+
+    def test_interrupted_switch_never_and_start_accepts_only_the_handed_over_journal(self):
+        journal=dict(self.held,phase='WAIT-CLIENT')
+        self.assertFalse(pair.boot_handover(self.b,pair.read_state(),journal,self.policy.metadata(journal)))
+        native.serve()
+        state=pair.read_state()
+        self.assertTrue(pair.handover_matches(state,native.journal_read()))
+        self.assertFalse(pair.handover_matches(state,dict(native.journal_read(),tx='9'*32)))
+        self.assertFalse(pair.handover_matches(state,dict(native.journal_read(),phase='WAIT-CLIENT')))
+
+    # 01.11.2026 (MT3000 beta3 cut: no handover, no reason): bounded retry on every cleanup pass, each refusal logged once
+    def refusals(self):
+        return [m.group(1) for m in (re.match('^BOOT-RECOVERY-STEP: handover refused (.*) at ',l) for l in self.lines) if m]
+
+    def cleanup_pass(self,seconds):
+        self.uptime[0]+=seconds
+        pair.tick(self.b,self.b.data['settings'],auto_control.current_revision())
+
+    def test_retry_the_reserve_not_healthy_at_the_first_pass_is_handed_over_later(self):
+        probe=self.b.health;ready=[False];target=self.b.selection['target']['id']
+        self.b.health=lambda identifier:None if identifier==target and not ready[0] else probe(identifier)
+        with patch.object(native,'finish_committed',return_value=False):
+            native.serve()
+            self.assertNotIn('handover',pair.read_state())
+            for _ in range(3):self.cleanup_pass(2)
+            self.assertEqual(self.refusals(),['RESERVE-HEALTH UNKNOWN'],'one line per reason, not per pass')
+            ready[0]=True
+            self.cleanup_pass(2)
+        state=pair.read_state()
+        self.assertEqual(state['phase'],'STOPPED');self.assertIn('handover',state)
+        self.assertEqual(json.loads((self.dir/pair.HANDOVER_FILE).read_text())['state'],'handed')
+
+    def test_retry_the_primary_client_still_connecting_does_not_block(self):
+        self.stack.enter_context(patch.object(pair,'interface_up',side_effect=lambda name:name!='wgclient1'))
+        native.serve()
+        state=pair.read_state()
+        self.assertIn('handover',state);self.assertEqual(state['kept'],['wgclient1','ovpnclient1'])
+
+    def test_retry_is_bounded_then_today_s_path(self):
+        probe=self.b.health;ready=[False];target=self.b.selection['target']['id']
+        self.b.health=lambda identifier:False if identifier==target and not ready[0] else probe(identifier)
+        with patch.object(native,'finish_committed',return_value=False):
+            native.serve()
+            for _ in range(8):self.cleanup_pass(10)
+            self.assertEqual(json.loads((self.dir/pair.HANDOVER_FILE).read_text())['state'],'refused')
+            ready[0]=True
+            self.cleanup_pass(2)
+        state=pair.read_state()
+        self.assertNotIn('handover',state);self.assertEqual(state['phase'],'HELD')
+        self.assertEqual(self.refusals(),['RESERVE-HEALTH false','WAIT-OVER after RESERVE-HEALTH false'])
+
+    def test_every_refusal_names_its_reason(self):
+        for case,want in (('kernel','KERNEL '),('primary','PRIMARY-PROVEN'),('marker','AUTO-RESUME-NOT-REQUESTED')):
+            with self.subTest(case=case):
+                self.tearDown();self.setUp()
+                if case=='kernel':self.b.attest_policy=lambda selection=None:{'verified':False,'code':'KERNEL-POLICY-UNVERIFIED'}
+                if case=='primary':self.primary_ok=True
+                if case=='marker':(self.dir/boot_resume.MARKER).unlink()
+                with patch.object(native,'finish_committed',return_value=False):native.serve()
+                self.assertTrue(self.refusals() and self.refusals()[0].startswith(want),self.refusals())
+
+    def test_the_handover_fields_are_validated(self):
+        state=pair.read_state()
+        state['handover']={'tx':'a'*32,'order':state['order'],'policy_hash':state['policy_hash'],'at':1.0}
+        pair.save(state)
+        with self.assertRaisesRegex(ValueError,'PAIR-STATE-UNVERIFIED'):pair.read_state()  # RUNNING
+        state['phase']='STOPPED';state['handover']['order']=list(reversed(state['order']));pair.save(state)
+        with self.assertRaisesRegex(ValueError,'PAIR-STATE-UNVERIFIED'):pair.read_state()
+        state['handover']['order']=state['order'];pair.save(state)
+        self.assertEqual(pair.read_state()['handover']['tx'],'a'*32)
 
 
 class Alpha14PowerCut(Fixture):

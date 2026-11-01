@@ -3,7 +3,7 @@
 
 > Историческая справка (alpha14, 31.10.2026); примечание от 01.11.2026. К 2.0.0-alpha24 службы Lua работают на измеренном MT3000 (включены параметрами `lua_monitor` и `lua_auto`), быстрое обнаружение включено по умолчанию, модуль JSON на C `canon_c.so` установлен и включён (при ошибке загрузки или самопроверки код автоматически работает на чистом Lua; `HOMENSAI_CANON_C=0` принудительно включает Lua). «C hv-core» ниже по-прежнему план. Текущее состояние: [CURRENT-STATE.ru.md](../CURRENT-STATE.ru.md), [MEASUREMENTS.ru.md, раздел 8](../MEASUREMENTS.ru.md#8-пирамида-выполнения-и-время-переключения).
 
-HomenS.AI Auto VPN · Serhii Khomenko · https://homensai.com · MIT
+HomenS.AI Auto VPN · Serhii Khomenko · https://homensai.com · лицензия: [HomenSAI Personal & Commercial Source License v1.0](../../LICENSE)
 
 Дата: 31.10.2026 · Ветка: `lua/agent-pyramid-20261031` (от интеграции alpha14) · Связанные документы: [LUA-PLAN-2026-10-30.ru.md](LUA-PLAN-2026-10-30.ru.md), [LUA-HVCORE-ITEM8-2026-10-31.ru.md](LUA-HVCORE-ITEM8-2026-10-31.ru.md), [POWER-CUT-INTEGRITY-2026-10-31.ru.md](POWER-CUT-INTEGRITY-2026-10-31.ru.md), [MASTER-PLAN-2026-10-31.ru.md](MASTER-PLAN-2026-10-31.ru.md), замеры — [MEASUREMENTS.ru.md](../MEASUREMENTS.ru.md). Проект C — `c/DESIGN.ru.md` и `c/README.ru.md` в ветке `feat/c-core-20261031` (в этой ветке их нет).
 

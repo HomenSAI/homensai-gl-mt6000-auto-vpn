@@ -205,6 +205,39 @@ t.test('apply on a non-MT3000 board: process binding CAS, then rtp2.sh dispatche
   t.eq(t.raises(B.apply,function(kind,fn) local r=fn();if type(r)=='function' then r=r() end;return r end).code,'COMMAND-FAILED')
 end)
 
+t.test('apply: LAN DNS follows the first ROUTE_POLICY jump; follow() needs this pass verified attestation',function()
+  local dm=require('dns_mark')
+  local root=os.tmpname();os.remove(root)
+  assert(os.execute("mkdir -p '"..root.."/rule5841' '"..root.."/rule4192'"))
+  local function put(path,text) local f=assert(io.open(path,'wb'));f:write(text);f:close() end
+  local function get(path) local f=assert(io.open(path,'rb'));local s=f:read('*a');f:close();return s end
+  put(root..'/dump','Rule 5841: Mark: 0x1000\nRule 4192: Mark: 0xb000\n')
+  put(root..'/rule5841/mark','0x1000\n');put(root..'/rule4192/mark','0xb000\n')
+  local saved_root=dm.ROOT;dm.ROOT=root
+  local ok,err=pcall(function()
+    local w=world()
+    local B=backend(w)
+    B.use_process_bindings(O({wgclient1=4096,ovpnclient2=45056}))
+    w.commands['/usr/bin/rtp2.sh not_reload_network']={rc=0,out=''}
+    local mangle=table.concat({'*mangle',':PREROUTING ACCEPT [0:0]',':ROUTE_POLICY - [0:0]',':TUNNEL4192_ROUTE_POLICY - [0:0]',
+      ':TUNNEL5841_ROUTE_POLICY - [0:0]',
+      '-A ROUTE_POLICY -m addrtype ! --dst-type LOCAL -j TUNNEL4192_ROUTE_POLICY',
+      '-A ROUTE_POLICY -m addrtype ! --dst-type LOCAL -j TUNNEL5841_ROUTE_POLICY',
+      '-A TUNNEL4192_ROUTE_POLICY -m mark --mark 0x0/0xf000 -j MARK --set-xmark 0xb000/0xf000',
+      '-A TUNNEL5841_ROUTE_POLICY -m mark --mark 0x0/0xf000 -j MARK --set-xmark 0x1000/0xf000','COMMIT',''},'\n')
+    w.commands['iptables-save -t mangle']={rc=0,out=mangle}
+    B.apply(function(kind,fn) local r=fn();if type(r)=='function' then r=r() end;return r end)
+    t.eq({B.dns_mark.active,B.dns_mark.verified,B.dns_mark.written},{'0xb000',true,1})
+    t.eq({get(root..'/rule5841/mark'),get(root..'/rule4192/mark')},{'0xb000\n','0xb000\n'})
+    t.eq(B.dns_mark_follow(),nil,'no verified attestation in this pass: nothing written')
+    w.commands['iptables-save -t mangle']={rc=1,out=''}
+    B.invalidate()
+    t.eq(B.dns_mark_sync().code,'DNS-MARK-UNVERIFIED','an unreadable kernel graph is reported, never raised')
+  end)
+  dm.ROOT=saved_root;os.execute("rm -rf '"..root.."'")
+  if not ok then error(err,0) end
+end)
+
 t.test('fast_switch option and instant_request follow the Python readers',function()
   local w=world();local B=backend(w)
   t.eq(B.fast_switch_enabled(),false,'no config file')

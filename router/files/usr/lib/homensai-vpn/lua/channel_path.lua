@@ -153,8 +153,17 @@ function M.page_kernel(native,state,live,now)
 end
 
 -- channel_path.public_status(status). deps: journal() -> journal (raises), state() -> pair state (raises),
--- order(process_bindings) -> order, hash (raises).
+-- order(process_bindings) -> order, hash (raises). The supervisor's last LAN DNS follow (native channel_path.dns_mark,
+-- dns_mark.project) is carried over unchanged: it is a reading of /proc/dns_mark, not part of the route proof.
 function M.public_status(deps,status,now)
+  local result=M.route_status(deps,status,now)
+  local native=canon.is_object(status) and status.native_failover or nil
+  local path=canon.is_object(native) and native.channel_path or nil
+  local dns=canon.is_object(path) and require('dns_mark').project(path.dns_mark) or nil
+  if dns~=nil and canon.is_object(result) then result.dns_mark=dns end
+  return result
+end
+function M.route_status(deps,status,now)
   local native=canon.is_object(status) and status.native_failover or nil
   if not canon.is_object(native) then native=canon.object() end
   local required=native.mode=='continuous-pair' or native.proof_scope==M.MODE
