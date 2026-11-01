@@ -22,7 +22,7 @@ for(const language of ['en','ru']){
   // A critical controller alarm is red.
   s=fixture(2000);s.native_failover.state='BLOCKED';s.native_failover.blockers=['ROLLBACK-GIVEN-UP'];l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
   // Data late while the owner's Auto runs: yellow "refreshing", never "Auto off".
-  now=2200;s=fixture(2000);l=light(s);assert.equal(c.autoSignal(l),'green','late data keeps green while Auto runs');assert(c.autoRuns(l));
+  now=2200;s=fixture(2000);l=light(s);assert.equal(c.autoSignal(l),'yellow','late data is yellow while Auto runs (owner 01.11.2026: never better than monitoring)');assert(c.autoRuns(l));
   // A routine scheduled check is due: still green (the countdown shows it), not yellow.
   now=2012;s=fixture(2000);s.server_time=2012;s.channel_path.checked_at=s.channel_path.time=2010;s.probe_policy={effective_interval:10};l=light(s);assert.equal(c.autoSignal(l),'green');
   // The router itself reports the route unverified (not just aged): never held, yellow while Auto runs.
@@ -34,7 +34,7 @@ for(const language of ['en','ru']){
   // A completed failed check of the selected channel is red at once.
   s=fixture(2000);s.profiles[0].code='VPN-003';s.profiles[0].https_success=0;l=light(s);assert.equal(c.autoSignal(l),'red');assert(!c.autoRuns(l));
   // No connection to the router program: red.
-  s=fixture(2000);s.rpc_error='RPC';l=light(s);assert.equal(c.autoSignal(l),'green','one missed answer is a retry, not an error');assert(c.autoRuns(l));
+  s=fixture(2000);s.rpc_error='RPC';l=light(s);assert.equal(c.autoSignal(l),'yellow','one missed answer is a yellow retry, not green and not an error (owner 01.11.2026)');assert(c.autoRuns(l));
   now=2000+c.AUTO_RPC_GRACE+1;l=light(s);assert.equal(c.autoSignal(l),'red','no answer for longer than the grace is an error');now=2000;
   l=light(fixture(2000));
   // Auto off by the owner: a quiet dark light, not an error.

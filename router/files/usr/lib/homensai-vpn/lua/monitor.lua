@@ -1025,6 +1025,9 @@ function Monitor:page_fields(status)
   local okscan,scan=pcall(self.scan_status,self,now)
   if okscan then status.scan=scan end
   status.stats_reset=self:read_json(self.runtime..'/stats-reset-result.json',NULL)
+  -- boot_resume (owner 01.11.2026): the page tells a recovery after a power cut, which resumes Auto by itself,
+  -- from a stuck one (agent.py does the same)
+  status.boot_resume=self:read_json(self.runtime..'/boot-resume.json',NULL)
   status.switch_timing=page.switch_timing(env)
   status.auto_control=page.auto_control(env,now)
   -- manual_switch_control in Lua (page_controls.lua). status_bridge.py is only the fallback of a failed Lua

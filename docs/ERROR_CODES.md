@@ -367,6 +367,18 @@ VPN отклонил вход / VPN login rejected
 
 **Action:** Reload the page and sign in to LuCI again. Then Help → “The page is old, empty or says the monitor is not running”.
 
+## AUTO-RESUME-PENDING
+
+Auto возвращается после перезапуска / Auto is coming back after a restart
+
+**RU:** Роутер перезапускался с включённым Auto. Auto завершает прерванное переключение, ждёт VPN-каналы и включается сам.
+
+**EN:** The router was restarted with Auto on. Auto finishes an interrupted switch, waits for the VPN channels and turns itself back on.
+
+**Что делать:** Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания. Если через 10 минут Auto всё ещё выключен, нажмите «Старт».
+
+**Action:** Nothing needs to be pressed; it usually takes 3–4 minutes after power-on. If Auto is still off after 10 minutes, press Start.
+
 ## STATUS-STALE
 
 Статус устарел / Status is old

@@ -118,7 +118,7 @@ for(const language of ['en','ru']){
     const f=fixture(language),stale=base();stale.native_failover.time=T-200;const sv=surfaces(f,stale);
     assert(!/нет связи|no connection/i.test(sv.side.text()),'stale controller with fresh RPC is not a lost connection');assert(sv.side.text().includes(ru?'Auto вкл.':'Auto ON'),'Auto the owner turned on stays on while data is late');
     assert(!/Нет связи с роутером|No connection to the router/.test(sv.home.text()));
-    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(lv.side.text().includes(ru?'Auto вкл.':'Auto ON'),'one lost answer keeps Auto on');
+    const lost=Object.assign(base(),{rpc_error:'RPC-UNAVAILABLE'});const lv=surfaces(f,lost);assert(/No connection to the router program|Нет связи с программой роутера/.test(lv.side.text()),'owner 01.11.2026: a lost answer (monitoring red) is shown as no connection, never as Auto ON');
   }
   {
     // Reload during an operation: the backend request keeps the buttons busy with a deadline-bounded stage.

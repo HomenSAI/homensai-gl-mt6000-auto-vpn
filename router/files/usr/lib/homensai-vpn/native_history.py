@@ -349,7 +349,7 @@ class History:
                             if 'counted_metrics' in row:check_metrics(row['counted_metrics'])
                 self.restored=bool(index)
                 return ('v2' if envelope['schema']==2 else 'v1'),data,raw
-            except (OSError,ValueError,KeyError,TypeError,AttributeError):continue
+            except (OSError,ValueError,KeyError,TypeError,AttributeError,RecursionError):continue  # RecursionError: a deeply nested damaged file (QA hypothesis 01.11.2026) tries the backup
         if found:raise HistoryError('HISTORY-CORRUPT')
         return 'new',self.empty(),None
     def _read_archive(self):

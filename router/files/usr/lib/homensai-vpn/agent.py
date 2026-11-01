@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.0.0-beta1'
+VERSION = '2.0.0-beta2'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -1244,6 +1244,7 @@ def status_reply(load=read_monitor_status):
     status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
     status['native_history']=native_history_public()
     status['stats_reset']=read_json(RUNTIME/'stats-reset-result.json',None)
+    status['boot_resume']=read_json(RUNTIME/'boot-resume.json',None)  # recovery after a power cut (owner 01.11.2026)
     from switch_timing import read as switch_timing
     status['switch_timing']=switch_timing(PERSIST)
     from auto_control import public_status

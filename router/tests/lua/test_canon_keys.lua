@@ -22,7 +22,7 @@ end)
 
 t.test('random documents: every subset of keys equals the full decode',function()
   math.randomseed(7)
-  local pieces={'"a]b"','"q\\"[{"','"\\\\"','"\u00e9"','12','-0.5','1e+20','true','false','null','[]','{}',
+  local pieces={'"a]b"','"q\\"[{"','"\\\\"','"\\u00e9"','12','-0.5','1e+20','true','false','null','[]','{}',
     '[1,"]",{"k":"}"}]','{"n":{"m":[[["x"]]]}}'}
   for round=1,300 do
     local parts,names={},{}

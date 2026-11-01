@@ -8,3 +8,5 @@ router/files/www/luci-static/resources/view/homensai-vpn/style/** -text
 *.sh text eol=lf
 *.so binary
 router/native/** text eol=lf
+# Packages are built from git archive (LF); a Windows checkout must not get CRLF in shipped files (QA 01.11.2026).
+router/files/** text eol=lf

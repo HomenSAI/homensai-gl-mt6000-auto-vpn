@@ -26,6 +26,7 @@ function uiMergeHistory(status){
   status.history_split.forEach(function(path){
     var value=UI_HISTORY[path];if(value===undefined)return;
     var keys=path.split('.'),node=status;
+    if(keys.some(function(k){return k==='__proto__'||k==='constructor'||k==='prototype';}))return;  // semgrep 01.11.2026: no prototype writes
     for(var i=0;i<keys.length-1;i++){if(!node[keys[i]]||typeof node[keys[i]]!=='object')return;node=node[keys[i]];}
     node[keys[keys.length-1]]=value;
   });
@@ -209,8 +210,15 @@ function uiTransitionModel(status,now){
 }
 // An unfinished journal without a live operation is a recovery state, never "switching".
 var UI_RECOVERY_CODES=['PAIR-RECOVERY-REQUIRED','PAIR-STATE-UNVERIFIED','JOURNAL-INTEGRITY-FAILED'];
+// Recovery after a router restart (owner 01.11.2026): boot_resume is still bringing back the Auto the owner had on.
+// Until it gives up this is a normal, automatic phase: yellow, never "Recovery needed" or "Turning Auto off".
+function uiBootResuming(status,now){
+  var b=(status||{}).boot_resume,intent=(status||{}).auto_control||{};
+  return !!b&&typeof b==='object'&&b.state==='WAITING'&&Number.isFinite(b.time)&&now-b.time>=-5&&now-b.time<=120&&intent.requested!=='on';
+}
 function uiRecoveryModel(status,now){
   status=status||{};if(status.rpc_error||status.error||!observationFresh(status,now))return null;
+  if(uiBootResuming(status,now))return null;
   var ns=status.native_failover||{},intent=status.auto_control||{},t=uiTransitionModel(status,now);
   if(t.overdue)return {code:'SWITCH-RESULT-UNCONFIRMED',stage:t.state,deadline:t.deadline};
   if(t.live)return null;
