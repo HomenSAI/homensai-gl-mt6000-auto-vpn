@@ -1,11 +1,10 @@
 -- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- history.lua: native_history.History for the Lua supervisor (2.0.0-lua-alpha2).
 --
--- Same file (/etc/homensai-vpn/native-history.json + native-history.backup.json), same envelope
--- {"data":...,"schema":1,"sha256":sha256(encoded(data))}, same item fields, attempt/episode correlation,
--- METRICS counters (counter_version 2), pruning and the 2 MB retention budget. Python's resident writer copy
--- (diagnostic statistics mode only) is not kept: the owner runs the Work mode, where the history is read,
--- used and released per event. public()/read_public stay with the monitor (it serves the page).
+-- Same files as Python (journal layout, schema 2: state native-history.json + backup, append-only archive
+-- native-history.events.jsonl; a schema-1 file is migrated on the first write), same item fields, attempt/episode
+-- correlation, METRICS counters (counter_version 2), pruning and the 2 MB detail budget, byte for byte.
+-- public()/read_public stay with the monitor (it serves the page from the state only).
 -- Dates: env.localdate(format, seconds) (default os.date; the daemon runs with TZ set like Python's CET rule).
 local canon=require('canon')
 local ctl=require('auto_control')
@@ -95,6 +94,85 @@ function M.capture_transition_latency(value,status,binding,now)
 end
 
 ------------------------------------------------------------------------------------------------------
+-- Journal layout (schema 2, docs/architecture/HISTORY-JOURNAL-2026-11-01.ru.md), byte for byte the files
+-- native_history.py writes:
+--   native-history.json          the STATE: the schema-1 data without 'events', plus 'tail' (last TAIL retained
+--                                events, complete), 'index' ([sequence, time, counted_metrics|null, line bytes] per
+--                                retained event) and 'archive_lines'/'archive_bytes'; envelope schema 2
+--   native-history.backup.json   the previous state (rename)
+--   native-history.events.jsonl  the append-only ARCHIVE: '<sha256 of the JSON text> <canonical JSON>\n' per event
+--   native-history.v1.json       the schema-1 file a migration started from
+-- Per event: state first (atomic), then one archive line (append + fsync). A writer whose archive size differs
+-- from 'archive_bytes' rebuilds it from its verified lines plus the tail; events found nowhere leave the index and
+-- are counted in 'archive_gap'. Compaction: more than 25 % stale lines or more than COMPACT_BYTES.
+------------------------------------------------------------------------------------------------------
+M.ARCHIVE='native-history.events.jsonl'
+M.V1='native-history.v1.json'
+M.TAIL=100
+M.STATE_BYTES=3*1024*1024
+M.READ_BYTES=4*1024*1024
+M.ARCHIVE_READ_BYTES=8*1024*1024
+M.COMPACT_BYTES=M.RETENTION_BYTES+M.RETENTION_BYTES/4
+local LINE_OVERHEAD=66
+local STATE_ONLY={tail=true,index=true,archive_lines=true,archive_bytes=true}
+
+function M.envelope_bytes(raw,schema)
+  return '{"data":'..raw..',"schema":'..tostring(schema or 1)..',"sha256":"'..canon.sha256(raw)..'"}'
+end
+local function state_bytes(state) return M.envelope_bytes(encoded(state),2) end
+M.state_bytes=state_bytes
+
+function M.archive_line(event)
+  local text=encoded(event)
+  return canon.sha256(text)..' '..text..'\n'
+end
+
+-- archive_entries(raw) -> {{sequence, line}, ...}: the verified complete lines in file order. The piece after the
+-- last newline (a torn append) and any line whose checksum or shape fails are skipped.
+function M.archive_entries(raw)
+  local out={}
+  local pos=1
+  while true do
+    local nl=string.find(raw,'\n',pos,true)
+    if not nl then break end
+    local piece=string.sub(raw,pos,nl-1)
+    pos=nl+1
+    if #piece>=LINE_OVERHEAD and string.sub(piece,65,65)==' ' then
+      local body=string.sub(piece,66)
+      if canon.sha256(body)==string.sub(piece,1,64) then
+        local s=string.match(body,'"sequence":(%d+)[,}]')
+        if s and #s<=16 then out[#out+1]={tonumber(s),piece..'\n'} end
+      end
+    end
+  end
+  return out
+end
+
+-- state_of(data) -> state, lines: schema-1 data (with events) as the state plus its archive lines
+function M.state_of(data)
+  local state=canon.object({})
+  for k,v in pairs(data) do if k~='events' then state[k]=v end end
+  local events=data.events
+  local lines,index,total={},{},0
+  for i,row in ipairs(events) do
+    local line=M.archive_line(row)
+    lines[i]=line;total=total+#line
+    local cm=row.counted_metrics
+    if cm==nil then cm=NULL end
+    index[i]=canon.array({row.sequence,row.time,cm,#line})
+  end
+  local tail={}
+  for i=math.max(1,#events-M.TAIL+1),#events do tail[#tail+1]=events[i] end
+  state.tail=canon.array(tail);state.index=canon.array(index)
+  state.archive_lines=#lines;state.archive_bytes=total
+  return state,lines
+end
+
+function M.empty()
+  return canon.object({sequence=0,events=canon.array({}),months=canon.object({}),last_key=NULL,last_time=NULL,timezone='Europe/Berlin'})
+end
+
+------------------------------------------------------------------------------------------------------
 -- History
 ------------------------------------------------------------------------------------------------------
 local History={}
@@ -108,7 +186,8 @@ function M.new(env,directory,limit,detail_days)
   limit=limit or 10000
   if not is_int(limit) or limit<1 or limit>10000 then fail('HISTORY-LIMIT') end
   return setmetatable({env=env,detail_days=detail_days,limit=limit,path=directory..'/native-history.json',
-    backup=directory..'/native-history.backup.json',lock=directory..'/native-history.lock',restored=false},History)
+    backup=directory..'/native-history.backup.json',archive=directory..'/'..M.ARCHIVE,v1=directory..'/'..M.V1,
+    lock=directory..'/native-history.lock',restored=false},History)
 end
 
 function History:localdate(fmt,t)
@@ -116,11 +195,21 @@ function History:localdate(fmt,t)
   return f(fmt,math.floor(num(t)))
 end
 
--- Resident copy (plan item 1, CPU): decoding and re-hashing the whole history costs about a second per publish
--- on the MT3000 in Lua, and the supervisor publishes on every pass. The decoded data is kept while both files
--- read back with the same (inode, size, mtime, ctime) as when this process last loaded or wrote them; every
--- write renames a new file into place, so any change by anyone changes the key. A failed record drops it.
--- Without fs.key (tests, a router without nixio) nothing is kept: the full load runs as before.
+-- file helpers over env.run.fs (size/append/rename are optional: fakes without them get the same bytes)
+local function fs_size(fs,path)
+  if fs.size then return fs.size(path) end
+  local text=fs.read(path)
+  return text and #text or nil
+end
+local function fs_append(fs,path,text)
+  if fs.append then return fs.append(path,text) end
+  return fs.write_atomic(path,(fs.read(path) or '')..text)
+end
+
+-- Resident copy (plan item 1, CPU): the decoded STATE is kept while both state files read back with the same
+-- (inode, size, mtime, ctime) as when this process last loaded or wrote them; every write renames a new file into
+-- place, so any change by anyone changes the key. A failed record drops it. In hv-core the monitor (page) and the
+-- Auto supervisor share it (the parsed state does not depend on detail_days). Without fs.key nothing is kept.
 local resident=nil
 function M.forget_resident() resident=nil end
 function History:files_key()
@@ -130,84 +219,182 @@ function History:files_key()
   if a==nil or b==nil then return nil end
   return a..'|'..b
 end
-function History:load()
-  local key=self:files_key()
-  if key and resident and resident.key==key and resident.path==self.path and resident.detail_days==self.detail_days then
-    self.restored=resident.restored
-    return resident.data
+
+local function check_common(data,rows)
+  if not canon.is_object(data.months) or not is_int(data.sequence) or data.sequence<0 or data.sequence>=2^53 then fail('HISTORY-SCHEMA') end
+  for _,spec in ipairs({{'active_attempt',{id=true,episode=true,source=true,target=true,terminal=true}},{'retry_episode',{id=true,source=true,trial=true,closed=true}}}) do
+    local name,fields=spec[1],spec[2]
+    local metadata=getd(data,name,canon.object({}))
+    if canon.is_object(metadata) and next(metadata)==nil then
+    else
+      if not canon.is_object(metadata) then fail('HISTORY-METADATA') end
+      for k in pairs(metadata) do if not fields[k] then fail('HISTORY-METADATA') end end
+      for k in pairs(fields) do if metadata[k]==nil then fail('HISTORY-METADATA') end end
+      for _,key in ipairs({'id','episode'}) do
+        if fields[key] and (not is_int(metadata[key]) or metadata[key]<1 or metadata[key]>data.sequence) then fail('HISTORY-METADATA') end
+      end
+      for _,key in ipairs({'source','target'}) do
+        local identifier=metadata[key]
+        if not isnone(identifier) and not is_profile(identifier) then fail('HISTORY-METADATA') end
+      end
+      for _,key in ipairs({'terminal','trial','closed'}) do
+        if fields[key] and not is_bool(metadata[key]) then fail('HISTORY-METADATA') end
+      end
+    end
   end
-  resident=nil
-  local data=self:load_files()
-  if key then resident={key=key,path=self.path,detail_days=self.detail_days,restored=self.restored,data=data} end
-  return data
+  local days=getd(data,'days',canon.object({}))
+  if rows>10000 or count_keys(data.months)>1200 or not canon.is_object(days) or count_keys(days)>400 then fail('HISTORY-BOUNDS') end
+  if data.counter_version==2 then
+    for _,name in ipairs({'totals','counted'}) do
+      local values=data[name]
+      if not canon.is_object(values) then fail('HISTORY-COUNTERS') end
+      for key,value in pairs(values) do
+        if not METRIC_SET[key] or not is_int(value) or value<0 or value>=2^53 then fail('HISTORY-COUNTERS') end
+      end
+    end
+  end
+end
+local function check_metrics(cm)
+  if not canon.is_array(cm) or #cm>#M.METRICS then fail('HISTORY-COUNTERS') end
+  for _,key in ipairs(cm) do if not METRIC_SET[key] then fail('HISTORY-COUNTERS') end end
+end
+local function check_state(state)
+  local tail,index=state.tail,state.index
+  if not canon.is_array(tail) or not canon.is_array(index) or #tail>M.TAIL or #tail>#index or state.events~=nil then fail('HISTORY-SCHEMA') end
+  check_common(state,#index)
+  if state.counter_version~=2 then fail('HISTORY-COUNTERS') end
+  for _,name in ipairs({'archive_lines','archive_bytes'}) do
+    local v=state[name]
+    if not is_int(v) or v<0 or v>=2^53 then fail('HISTORY-SCHEMA') end
+  end
+  if state.archive_gap~=nil and (not is_int(state.archive_gap) or state.archive_gap<0 or state.archive_gap>=2^53) then fail('HISTORY-SCHEMA') end
+  local previous=0
+  for _,row in ipairs(index) do
+    if not canon.is_array(row) or #row~=4 or not is_int(row[1]) or not (previous<row[1] and row[1]<=state.sequence)
+       or not num(row[2]) or not finite(num(row[2])) or not is_int(row[4]) or not (LINE_OVERHEAD<row[4] and row[4]<2^53) then fail('HISTORY-SCHEMA') end
+    if row[3]~=NULL then check_metrics(row[3]) end
+    previous=row[1]
+  end
+  local offset=#index-#tail
+  for i,row in ipairs(tail) do
+    if not canon.is_object(row) or row.sequence~=index[offset+i][1] then fail('HISTORY-SCHEMA') end
+    if has(row,'counted_metrics') then check_metrics(row.counted_metrics) end
+  end
 end
 
-function History:load_files()
+-- read() -> kind, value, text: 'v2' (state) | 'v1' (schema-1 data) | 'new' (empty schema-1 data); main, else backup
+function History:read()
   local found=false
   local run=self.env.run
   for index,path in ipairs({self.path,self.backup}) do
-    local ok,data=pcall(function()
-      if run.fs.unsafe and run.fs.unsafe(path) then fail('HISTORY-PATH') end
+    local ok,kind,data,text=pcall(function()
+      if run.fs.unsafe and run.fs.unsafe(path,M.READ_BYTES) then
+        -- an existing regular file over the limit is a damaged history (HISTORY-CORRUPT, never overwritten), as in
+        -- Python; before alpha21 it read as absent and the next record started an empty history (MT3000, 31.10:
+        -- the 1.27 MB file over the old 1 MB limit lost 1288 events)
+        if not run.fs.unsafe(path,2^53) then found=true end
+        fail('HISTORY-PATH')
+      end
       local text=run.fs.read(path)
       if text==nil then return nil end
       found=true
-      if #text>2300*1024 then fail('HISTORY-SIZE') end
+      if #text>M.READ_BYTES then fail('HISTORY-SIZE') end
       local envelope=canon.decode(text)
       if not canon.is_object(envelope) then fail('HISTORY-SCHEMA') end
       local data=envelope.data
-      if envelope.schema~=1 or not canon.is_object(data) or canon.sha256(encoded(data))~=envelope.sha256 then fail('HISTORY-CHECKSUM') end
-      if not canon.is_array(data.events) or not canon.is_object(data.months) or not is_int(data.sequence) or data.sequence<0 or data.sequence>=2^53 then fail('HISTORY-SCHEMA') end
-      for _,spec in ipairs({{'active_attempt',{id=true,episode=true,source=true,target=true,terminal=true}},{'retry_episode',{id=true,source=true,trial=true,closed=true}}}) do
-        local name,fields=spec[1],spec[2]
-        local metadata=getd(data,name,canon.object({}))
-        if canon.is_object(metadata) and next(metadata)==nil then
-        else
-          if not canon.is_object(metadata) then fail('HISTORY-METADATA') end
-          for k in pairs(metadata) do if not fields[k] then fail('HISTORY-METADATA') end end
-          for k in pairs(fields) do if metadata[k]==nil then fail('HISTORY-METADATA') end end
-          for _,key in ipairs({'id','episode'}) do
-            if fields[key] and (not is_int(metadata[key]) or metadata[key]<1 or metadata[key]>data.sequence) then fail('HISTORY-METADATA') end
-          end
-          for _,key in ipairs({'source','target'}) do
-            local identifier=metadata[key]
-            if not isnone(identifier) and not is_profile(identifier) then fail('HISTORY-METADATA') end
-          end
-          for _,key in ipairs({'terminal','trial','closed'}) do
-            if fields[key] and not is_bool(metadata[key]) then fail('HISTORY-METADATA') end
-          end
-        end
+      if (envelope.schema~=1 and envelope.schema~=2) or not canon.is_object(data) or canon.sha256(encoded(data))~=envelope.sha256 then fail('HISTORY-CHECKSUM') end
+      if envelope.schema==2 then
+        check_state(data)
+        return 'v2',data,text
       end
-      local days=getd(data,'days',canon.object({}))
-      if #data.events>10000 or count_keys(data.months)>1200 or not canon.is_object(days) or count_keys(days)>400 then fail('HISTORY-BOUNDS') end
+      if not canon.is_array(data.events) then fail('HISTORY-SCHEMA') end
+      check_common(data,#data.events)
       if data.counter_version==2 then
-        for _,name in ipairs({'totals','counted'}) do
-          local values=data[name]
-          if not canon.is_object(values) then fail('HISTORY-COUNTERS') end
-          for key,value in pairs(values) do
-            if not METRIC_SET[key] or not is_int(value) or value<0 or value>=2^53 then fail('HISTORY-COUNTERS') end
-          end
-        end
-        for _,row in ipairs(data.events) do
-          if has(row,'counted_metrics') then
-            local cm=row.counted_metrics
-            if not canon.is_array(cm) or #cm>#M.METRICS then fail('HISTORY-COUNTERS') end
-            for _,key in ipairs(cm) do if not METRIC_SET[key] then fail('HISTORY-COUNTERS') end end
-          end
-        end
+        for _,row in ipairs(data.events) do if has(row,'counted_metrics') then check_metrics(row.counted_metrics) end end
       end
-      self.restored=index==2
-      return data
+      return 'v1',data,text
     end)
-    if ok and data~=nil then return data end
+    if ok and kind~=nil then self.restored=index==2;return kind,data,text end
   end
   if found then fail('HISTORY-CORRUPT') end
-  return canon.object({sequence=0,events=canon.array({}),months=canon.object({}),last_key=NULL,last_time=NULL,timezone='Europe/Berlin'})
+  return 'new',M.empty(),nil
+end
+
+local function read_archive(self)
+  local fs=self.env.run.fs
+  if fs.unsafe and fs.unsafe(self.archive,M.ARCHIVE_READ_BYTES) then return '' end
+  local text=fs.read(self.archive)
+  if text==nil or #text>M.ARCHIVE_READ_BYTES then return '' end
+  return text
+end
+
+-- events_of(state): the retained events in index order (tail from the state, older ones from the archive)
+function History:events_of(state)
+  local tail={}
+  for _,row in ipairs(state.tail) do tail[row.sequence]=row end
+  local wanted,any={},false
+  for _,row in ipairs(state.index) do if not tail[row[1]] then wanted[row[1]]=true;any=true end end
+  local found={}
+  if any then
+    local ok,raw=pcall(read_archive,self)
+    for _,entry in ipairs(M.archive_entries(ok and raw or '')) do
+      if wanted[entry[1]] then found[entry[1]]=entry[2] end
+    end
+  end
+  local events={}
+  for _,row in ipairs(state.index) do
+    local seq=row[1]
+    if tail[seq] then events[#events+1]=tail[seq]
+    elseif found[seq] then
+      local okd,event=pcall(canon.decode,string.sub(found[seq],66,-2))
+      if okd and canon.is_object(event) and event.sequence==seq then events[#events+1]=event end
+    end
+  end
+  return canon.array(events)
+end
+
+-- load(): the schema-1 shaped data (with events, without the state-only fields): statistics reset/export
+function History:load()
+  local kind,value=self:read()
+  if kind~='v2' then return value end
+  local data=canon.object({})
+  for k,v in pairs(value) do if not STATE_ONLY[k] then data[k]=v end end
+  data.events=self:events_of(value)
+  return data
+end
+
+-- state(): the state for the page (resident while both files are unchanged); a schema-1 file is converted in
+-- memory only (the writer migrates it on flash)
+function History:state()
+  local key=self:files_key()
+  if key and resident and resident.key==key and resident.path==self.path then
+    self.restored=resident.restored
+    return resident.data
+  end
+  local kind,value=self:read()
+  if kind~='v2' then
+    self:migrate(value);value=M.state_of(value)
+  end
+  if key then resident={key=key,path=self.path,kind=kind,restored=self.restored,data=value}
+  else resident=nil end
+  return value
 end
 
 function History:envelope(data)
   return canon.object({schema=1,data=data,sha256=canon.sha256(encoded(data))})
 end
-function M.envelope_bytes(raw) return '{"data":'..raw..',"schema":1,"sha256":"'..canon.sha256(raw)..'"}' end
+function History:atomic(path,value) self.env.run.fs.write_atomic(path,encoded(value)) end
+
+-- store(data): replace the whole history by schema-1 shaped data whose events are a subset of the archive's (the
+-- statistics reset): state (main, backup), then the archive
+function History:store(data)
+  local fs=self.env.run.fs
+  local state,lines=M.state_of(data)
+  local text=state_bytes(state)
+  fs.write_atomic(self.path,text);fs.write_atomic(self.backup,text)
+  fs.write_atomic(self.archive,table.concat(lines))
+  resident=nil
+end
 
 local function matches_active(item,active)
   for _,k in ipairs({'source','target'}) do
@@ -231,7 +418,8 @@ function History:correlate(data,item)
   local prepare=item.state=='ARMED' and not trial_passed
   local restoring=item.state=='RESTORING' and item.transition_metadata_present==true and item.route_changed==true
   local starting=prepare or item.state=='APPLYING' or (restoring and (not has_active or active.terminal==true))
-  local prior=#data.events>0 and data.events[#data.events].state or nil
+  local rows=data.events or data.tail
+  local prior=#rows>0 and rows[#rows].state or nil
   if starting and (not has_active or active.terminal==true or (prior~='ARMED' and prior~='APPLYING')
                    or active.source~=item.source or active.target~=item.target) then
     local sequence=data.sequence+1
@@ -331,14 +519,23 @@ function History:migrate(data)
   end
 end
 
+-- prune(data, now): detail outside [now-detail_days, now] leaves (events, or index+tail; new arrays), aggregates
+-- stay; month/day keys beyond the bounds are deleted from the given maps.
 function History:prune(data,now)
-  local kept={}
   local horizon=now-self.detail_days*86400
-  for _,row in ipairs(data.events) do
-    local t=num(row.time)
-    if t and horizon<=t and t<=now then kept[#kept+1]=row end
+  local function keep(rows,stamp)
+    local kept={}
+    for _,row in ipairs(rows) do
+      local t=num(stamp(row))
+      if t and horizon<=t and t<=now then kept[#kept+1]=row end
+    end
+    return canon.array(kept)
   end
-  data.events=canon.array(kept)
+  if data.events~=nil then data.events=keep(data.events,function(row) return row.time end) end
+  if data.index~=nil then
+    data.index=keep(data.index,function(row) return row[2] end)
+    data.tail=keep(data.tail,function(row) return row.time end)
+  end
   local months=sorted_keys(data.months)
   for i=1,#months-1200 do data.months[months[i]]=nil end
   local cutoff=self:localdate('%Y-%m-%d',math.max(0,horizon))
@@ -346,7 +543,74 @@ function History:prune(data,now)
   for _,day in ipairs(sorted_keys(days)) do if day<cutoff then days[day]=nil end end
 end
 
-function History:atomic(path,value) self.env.run.fs.write_atomic(path,encoded(value)) end
+-- rebuild(state) -> archive text for the state's index (tail first, else the verified archive line); events found
+-- nowhere leave the index ('archive_gap'); the archive accounting is set to the result.
+function History:rebuild(state)
+  local tail={}
+  for _,row in ipairs(state.tail) do tail[row.sequence]=row end
+  local wanted,any={},false
+  for _,row in ipairs(state.index) do if not tail[row[1]] then wanted[row[1]]=true;any=true end end
+  local found={}
+  if any then
+    for _,entry in ipairs(M.archive_entries(read_archive(self))) do
+      if wanted[entry[1]] then found[entry[1]]=entry[2] end
+    end
+  end
+  local kept,lines,total={},{},0
+  for _,row in ipairs(state.index) do
+    local line
+    if tail[row[1]] then line=M.archive_line(tail[row[1]]) else line=found[row[1]] end
+    if line then
+      row[4]=#line;kept[#kept+1]=row;lines[#lines+1]=line;total=total+#line
+    end
+  end
+  if #kept~=#state.index then
+    state.archive_gap=(num(state.archive_gap) or 0)+#state.index-#kept
+    state.index=canon.array(kept)
+  end
+  state.archive_lines=#lines;state.archive_bytes=total
+  return table.concat(lines)
+end
+
+-- Schema 1 -> 2 on flash: archive, a copy of the old file (native-history.v1.json), then the state (backup, main).
+-- The main file stays the schema-1 file until the last step: a power cut anywhere repeats the same migration.
+function History:migrate_files(state,lines,text)
+  local fs=self.env.run.fs
+  fs.write_atomic(self.archive,table.concat(lines))
+  fs.write_atomic(self.v1,text)
+  local raw=state_bytes(state)
+  fs.write_atomic(self.backup,raw);fs.write_atomic(self.path,raw)
+end
+
+-- writer_state() -> state, from_main, repaired: the resident state, else a read with the schema-1 migration;
+-- then the archive check (size == archive_bytes, else rebuilt)
+function History:writer_state()
+  local fs=self.env.run.fs
+  local key=self:files_key()
+  local data,from_main
+  if key and resident and resident.key==key and resident.path==self.path and resident.kind=='v2' then
+    self.restored=resident.restored;data=resident.data
+    from_main=not self.restored
+  else
+    resident=nil
+    local kind,value,text=self:read()
+    if kind~='v2' then
+      self:migrate(value)
+      local state,lines=M.state_of(value)
+      if kind=='v1' then self:migrate_files(state,lines,text);self.restored=false end
+      return state,kind=='v1',false
+    end
+    data=value
+    local exists
+    if fs.key then exists=fs.key(self.path)~='absent' else exists=fs.read(self.path)~=nil end
+    from_main=not self.restored and exists
+  end
+  if (fs_size(fs,self.archive) or 0)~=data.archive_bytes then
+    fs.write_atomic(self.archive,self:rebuild(data))
+    return data,from_main,true
+  end
+  return data,from_main,false
+end
 
 function History:record(value,now)
   local lock=self.env.history_lock or function(_,fn) return fn() end
@@ -355,17 +619,17 @@ function History:record(value,now)
   return result
 end
 
+-- kept(data): main and backup now hold data; keep it resident (no decode on the next record)
+function History:kept(data)
+  local key=self:files_key()
+  resident=key and {key=key,path=self.path,kind='v2',restored=false,data=data} or nil
+end
+
 function History:_record(value,now)
   now=now or self.env.run.wall()
   if type(now)~='number' or not finite(now) or now<0 then fail('HISTORY-CLOCK') end
   local run=self.env.run
-  local data=self:load()
-  local exists
-  if run.fs.key then exists=run.fs.key(self.path)~='absent' else exists=run.fs.read(self.path)~=nil end
-  local from_main=not self.restored and exists
-  local legacy=data.counter_version~=2
-  if legacy then from_main=false end
-  self:migrate(data)
+  local data,from_main,repaired=self:writer_state()
   if not isnone(data.last_time) and now<num(data.last_time) then now=num(data.last_time) end
   local state=getd(value,'state','UNKNOWN')
   if not is_code(state) then fail('HISTORY-STATE') end
@@ -453,59 +717,78 @@ function History:_record(value,now)
   for k,v in pairs(item) do if k~='latency' and k~='website_response' then keyed[k]=v end end
   local key=canon.sha256(encoded(keyed))
   if key==data.last_key then
-    local original_events,original_days=#data.events,count_keys(getd(data,'days',canon.object({})))
+    local original_index,original_days=#data.index,count_keys(getd(data,'days',canon.object({})))
     self:prune(data,now)
-    if legacy or #data.events~=original_events or count_keys(getd(data,'days',canon.object({})))~=original_days then
-      self:atomic(self.backup,self:envelope(clone(data)));self:atomic(self.path,self:envelope(data));resident=nil
+    if repaired or #data.index~=original_index or count_keys(getd(data,'days',canon.object({})))~=original_days then
+      local text=state_bytes(data)
+      run.fs.write_atomic(self.backup,text);run.fs.write_atomic(self.path,text)
     end
     if isnone(data.daily_since) then
-      local old=self:envelope(clone(data));data.daily_since=canon.float(now);data.days=canon.object({})
-      self:atomic(self.backup,old);self:atomic(self.path,self:envelope(data));resident=nil
+      local old=state_bytes(data);data.daily_since=canon.float(now);data.days=canon.object({})
+      run.fs.write_atomic(self.backup,old);run.fs.write_atomic(self.path,state_bytes(data))
     end
+    self:kept(data)
     return false
   end
   local legacy_old=nil
-  if not from_main then legacy_old=self:envelope(clone(data)) end
+  if not from_main then legacy_old=state_bytes(data) end
   if data.sequence>=2^53-1 then fail('HISTORY-SEQUENCE-LIMIT') end
   data.active_attempt=active;data.retry_episode=episode
   item.time=canon.float(now);item.sequence=data.sequence+1
   data.sequence=data.sequence+1;data.last_key=key;data.last_time=canon.float(now)
-  local retained={}
-  for _,row in ipairs(data.events) do retained[#retained+1]=row end
-  retained[#retained+1]=item
-  local dropped=num(getd(data,'detail_budget_dropped',0)) or 0
-  local excess=#retained-self.limit
-  for i=1,math.max(0,excess) do if num(retained[i].time)>=now-self.detail_days*86400 then dropped=dropped+1 end end
-  data.detail_budget_dropped=dropped
-  local events={}
-  for i=math.max(1,excess+1),#retained do events[#events+1]=retained[i] end
-  data.events=canon.array(events)
+  local index=data.index
+  local excess=#index+1-self.limit
+  local dropped=0
+  for i=1,math.max(0,excess) do if num(index[i][2])>=now-self.detail_days*86400 then dropped=dropped+1 end end
+  if excess>0 then
+    local rest={};for i=excess+1,#index do rest[#rest+1]=index[i] end
+    index=canon.array(rest);data.index=index
+  end
+  data.detail_budget_dropped=(num(getd(data,'detail_budget_dropped',0)) or 0)+dropped
   local month=self:localdate('%Y-%m',now);local day=self:localdate('%Y-%m-%d',now)
   if isnone(data.daily_since) then data.daily_since=canon.float(now) end
   if isnone(data.days) then data.days=canon.object({}) end
   item.counted_metrics=self:counters(data,item)
+  local line=M.archive_line(item)
+  index[#index+1]=canon.array({item.sequence,item.time,item.counted_metrics,#line})
+  local tail={};for i,row in ipairs(data.tail) do tail[i]=row end;tail[#tail+1]=item
+  data.tail=canon.array(tail)
   if isnone(data.months[month]) then data.months[month]=canon.object({}) end
   if isnone(data.days[day]) then data.days[day]=canon.object({}) end
   for _,totals in ipairs({data.totals,data.months[month],data.days[day]}) do
     for _,metric in ipairs(M.METRICS) do if totals[metric]==nil then totals[metric]=0 end end
   end
   self:prune(data,now)
-  local raw=encoded(data)
-  while #data.events>1 and #raw>M.RETENTION_BYTES do
-    table.remove(data.events,1)
-    data.detail_budget_dropped=(num(getd(data,'detail_budget_dropped',0)) or 0)+1
-    raw=encoded(data)
+  -- the detail budget is the archive's retained lines: the oldest events leave the index, counters stay
+  index=data.index
+  local size=0;for _,row in ipairs(index) do size=size+row[4] end
+  local drop=0
+  while #index-drop>1 and size>M.RETENTION_BYTES do drop=drop+1;size=size-index[drop][4] end
+  if drop>0 then
+    local rest={};for i=drop+1,#index do rest[#rest+1]=index[i] end
+    index=canon.array(rest);data.index=index
+    data.detail_budget_dropped=(num(getd(data,'detail_budget_dropped',0)) or 0)+drop
   end
-  if #raw>M.RETENTION_BYTES then fail('HISTORY-SIZE') end
-  -- main := new data, backup := the previous main (renamed), one full flash write per event
+  local keep={};for i=math.max(1,#index-M.TAIL+1),#index do keep[index[i][1]]=true end
+  local trimmed={};for _,row in ipairs(data.tail) do if keep[row.sequence] then trimmed[#trimmed+1]=row end end
+  local cut={};for i=math.max(1,#trimmed-M.TAIL+1),#trimmed do cut[#cut+1]=trimmed[i] end
+  data.tail=canon.array(cut)
+  data.archive_lines=data.archive_lines+1;data.archive_bytes=data.archive_bytes+#line
+  local body=nil
+  if (data.archive_lines-#index)*4>data.archive_lines or data.archive_bytes>M.COMPACT_BYTES then
+    body=self:rebuild(data)  -- compaction: only the retained events (the new one comes from the tail)
+  end
+  local encoded_state=encoded(data)
+  if #encoded_state>M.STATE_BYTES then fail('HISTORY-SIZE') end
+  -- main := new state, backup := the previous main (renamed)
   if from_main and run.fs.read(self.path)~=nil and run.fs.rename then
     run.fs.rename(self.path,self.backup)
   else
-    self:atomic(self.backup,legacy_old or self:envelope(clone(data)))
+    run.fs.write_atomic(self.backup,legacy_old or M.envelope_bytes(encoded_state,2))
   end
-  run.fs.write_atomic(self.path,M.envelope_bytes(raw))
-  local key=self:files_key()
-  resident=key and {key=key,path=self.path,detail_days=self.detail_days,restored=false,data=data} or nil
+  run.fs.write_atomic(self.path,M.envelope_bytes(encoded_state,2))
+  if body==nil then fs_append(run.fs,self.archive,line) else run.fs.write_atomic(self.archive,body) end
+  self:kept(data)
   return true
 end
 

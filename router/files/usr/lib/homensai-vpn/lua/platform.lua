@@ -4,8 +4,8 @@
 -- _workers); native_switch Linux.acceleration (+ fresh_hook_state, appended_hook_state) and slot_contract_verified;
 -- preparation_control.auto_blocker (records, boot_id); rollback_recovery vendor_lock_pid / rtp_lock_busy;
 -- rtp_boot (assess, ready, prepare). Every function takes the sys table (sys.lua or a test fake).
--- A file hash is cached by its (inode, size, mtime, ctime): the vendor pins are re-hashed only when the file
--- changed, never on every tick (the Python Auto re-hashed ten files every two seconds).
+-- A file hash and the fw3.state zones are cached by the file's (type, inode, size, mtime, ctime) with the racy and
+-- age rules of cached_file(): re-read only when the file changed, was written within 2 s of the read, or 30 s passed.
 local canon=require('canon')
 local py=require('py')
 local identity=require('identity')
@@ -37,18 +37,71 @@ function M.read_limited(sys,path,maximum)
   return text
 end
 
-local hashes={}  -- path -> {key=, sha=}
-function M.sha_file(sys,path,maximum)
-  local key=sys.key(path)
-  local row=hashes[path]
-  if row and row.key==key and key~='absent' then return row.sha end
-  local text=maximum and M.read_limited(sys,path,maximum) or sys.read(path)
-  if text==nil then value_error('UNVERIFIED-FILE') end
-  local sha=canon.sha256(text)
-  hashes[path]={key=key,sha=sha}
-  return sha
+------------------------------------------------------------------------------------------------------
+-- derived-value cache by file fingerprint (TODO-PERF 4.1). The same rules in native_platform.cached_file (Python)
+-- and the C core: see docs/architecture/DIAGNOSTIC-CACHE-2026-11-01.ru.md.
+--   key      = type:inode:size:mtime:ctime of lstat(path) taken BEFORE the read; no entry for a missing file;
+--   trusted  = the newest of mtime/ctime is at least CACHE_RACY seconds older than the wall clock at the read
+--              (stat times have one-second steps here: a rewrite of the same size within the same second keeps
+--              the key, so such a young file is read again next time - the "racy" rule of git's index);
+--   reused   = same key, trusted, and computed less than CACHE_MAX_AGE seconds ago (monotonic clock): even a
+--              clock step that recreated an old key is bounded;
+--   a compute() that raises leaves no entry (the next call repeats the read and raises again).
+------------------------------------------------------------------------------------------------------
+M.CACHE_RACY=2
+M.CACHE_MAX_AGE=30
+-- per sys table (the router has one; every test fake gets its own): name -> {key=, value=, trusted=, time=}
+local derived=setmetatable({},{__mode='k'})
+local function rows_of(sys) local rows=derived[sys];if not rows then rows={};derived[sys]=rows end;return rows end
+local function stat_key(st)
+  return table.concat({tostring(st.type),tostring(st.ino),tostring(st.size),tostring(st.mtime),tostring(st.ctime)},':')
 end
-function M.forget_hashes() hashes={} end
+M.stat_key=stat_key
+-- cache_reusable(row, st, clock): true when the cached row may answer for the file described by st
+function M.cache_reusable(row,st,clock)
+  if not row or not st or not row.trusted then return false end
+  if row.key~=stat_key(st) then return false end
+  local age=clock-row.time
+  return age>=0 and age<M.CACHE_MAX_AGE
+end
+function M.cache_trusted(st,wall)
+  local newest=math.max(tonumber(st.mtime) or math.huge,tonumber(st.ctime) or math.huge)
+  return newest+M.CACHE_RACY<=wall
+end
+-- cached_file(sys, name, path, compute): compute() reads path itself and returns the derived value; callers must
+-- not change the returned value (it is shared by later calls)
+function M.cached_file(sys,name,path,compute)
+  local rows=rows_of(sys)
+  local st=sys.lstat(path)
+  local row=rows[name]
+  if st and M.cache_reusable(row,st,sys.clock()) then return row.value,false end
+  rows[name]=nil
+  local value=compute()
+  if st then rows[name]={key=stat_key(st),value=value,trusted=M.cache_trusted(st,sys.wall()),time=sys.clock()} end
+  return value,true
+end
+function M.forget_derived(sys,name)
+  if sys==nil then derived=setmetatable({},{__mode='k'}) elseif name then rows_of(sys)[name]=nil else derived[sys]=nil end
+end
+
+function M.sha_file(sys,path,maximum)
+  return (M.cached_file(sys,'sha:'..tostring(maximum or '-')..':'..path,path,function()
+    local text=maximum and M.read_limited(sys,path,maximum) or sys.read(path)
+    if text==nil then value_error('UNVERIFIED-FILE') end
+    return canon.sha256(text)
+  end))
+end
+function M.forget_hashes() M.forget_derived() end
+
+-- fw3_zones(): the zone set of /var/run/fw3.state (read, UTF-8, M.zones), cached by the file's fingerprint
+M.FW3_STATE='/var/run/fw3.state'
+function M.fw3_zones(sys)
+  return (M.cached_file(sys,'fw3-zones',M.FW3_STATE,function()
+    local text=M.read_limited(sys,M.FW3_STATE,65536)
+    if not canon.valid_utf8(text) then value_error('STATE-UTF8') end
+    return M.zones(text)
+  end))
+end
 
 ------------------------------------------------------------------------------------------------------
 -- _zones(): the fw3 runtime state (shlex.split with comments, POSIX)
@@ -313,9 +366,7 @@ function M.assess(sys,board,data)
   end
   local ok=pcall(function()
     if sys.exists('/sbin/fw4') or sys.exists('/usr/sbin/fw4') then errors[#errors+1]='MT3000-FIREWALL-UNVERIFIED' end
-    local text=M.read_limited(sys,'/var/run/fw3.state',65536)
-    if not canon.valid_utf8(text) then value_error('STATE-UTF8') end
-    local zones=M.zones(text)
+    local zones=M.fw3_zones(sys)
     local settings=data.settings;if settings==nil then settings=canon.object({}) end
     local roles=identity.roles(settings)
     for _,zone in pairs(roles) do if not zones[zone] then errors[#errors+1]='FW3-SELECTED-ZONE-UNVERIFIED';break end end

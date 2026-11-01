@@ -552,7 +552,7 @@ function M.stats.public(runner,now)
     remaining=bounded and math.max(0,math.floor(until_time-now+0.5)) or 0,hours=canon.array({unpack(M.STATS_HOURS)}),default_hours=M.STATS_DEFAULT_HOURS})
 end
 M.stats.STORAGE={{'ram','status.json',nil},{'flash','native-transaction.json',nil},{'flash','pair-auto-state.json',nil},
-  {'flash','native-history.json','native-history.backup.json'},{'flash','checkpoint.json','checkpoint.backup.json'},
+  {'flash','native-history.json','native-history.backup.json','native-history.events.jsonl','native-history.v1.json'},{'flash','checkpoint.json','checkpoint.backup.json'},
   {'flash','latency-history.json',nil},{'flash','ping-response-history.json',nil},{'flash','website-response-history.json',nil},
   {'flash','response-compare.json',nil},{'flash','probe-history.json',nil},{'flash','switch-timing.json',nil},
   {'flash','speed-history.json','speed-history.backup.json'},{'flash','fault-history.json',nil}}
@@ -561,8 +561,8 @@ function M.stats.storage(runner,runtime,persist)
   for _,entry in ipairs(M.stats.STORAGE) do
     local base=entry[1]=='ram' and runtime or persist
     local total=nil
-    for _,item in ipairs({entry[2],entry[3]}) do
-      local size=runner.file_size(base..'/'..item)
+    for i=2,#entry do  -- the file and the copies counted with it (history: state, previous state, event archive)
+      local size=runner.file_size(base..'/'..entry[i])
       if size then total=(total or 0)+size end
     end
     if total~=nil then result[entry[1]..':'..entry[2]]=total end

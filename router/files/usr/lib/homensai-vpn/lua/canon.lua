@@ -536,6 +536,15 @@ local function pipe_sha256(text)
   return digest
 end
 
+-- canon_c.sha256 (below) when the C module is in use and passes the same known-answer test.
+local function c_sha256()
+  local mod=M.c_module
+  if not mod or type(mod.sha256)~='function' then return nil end
+  local ok,value=pcall(mod.sha256,KNOWN_INPUT)
+  if ok and value==KNOWN_DIGEST then return mod.sha256 end
+  return nil
+end
+
 local provider,provider_name
 -- The supervisor re-verifies the same small files (journal, pair state) on every pass; without nixio.crypto
 -- each digest is a process. A bounded memo of small texts (pure function: same text, same digest).
@@ -543,9 +552,13 @@ local memo,memo_count={},0
 local MEMO_TEXT,MEMO_ENTRIES=16384,64
 function M.sha256(text)
   if not provider then
-    provider=nixio_sha256()
-    provider_name=provider and 'nixio.crypto' or 'sha256sum'
-    provider=provider or pipe_sha256
+    provider=c_sha256()
+    if provider then provider_name='canon_c'
+    else
+      provider=nixio_sha256()
+      provider_name=provider and 'nixio.crypto' or 'sha256sum'
+      provider=provider or pipe_sha256
+    end
   end
   if #text>MEMO_TEXT then return provider(text) end
   local hit=memo[text]
@@ -561,5 +574,37 @@ function M.set_sha256(fn,name) provider,provider_name=fn,name or 'custom';memo={
 
 -- native_switch.digest(value)
 function M.digest(value) return M.sha256(M.encode(value)) end
+
+------------------------------------------------------------------------------------------------------
+-- canon_c: encode/decode/decode_keys/sha256 in C (router/native/canon_c.c -> /usr/lib/lua/canon_c.so)
+------------------------------------------------------------------------------------------------------
+-- Profiled on the MT3000: encode/quote and parse_value/parse_string/skip are most of both daemons' CPU. The C
+-- module is used only when it loads, serves this API (1), was built for this Lua's number model and gives this
+-- file's own results on a probe; otherwise, and with HOMENSAI_CANON_C=0 (read once), the Lua code above runs.
+M.lua_encode,M.lua_decode,M.lua_decode_keys=M.encode,M.decode,M.decode_keys
+M.c_module=nil
+local PROBE=[[{"a":[0,1,-7,9007199254740992,-0.0,0.1,2.5,1e+22,1.7976931348623157e+308,5e-324,null,true,false],]]..
+  [["b":{"":"\u00e9\ud83d\ude00\u0001\n\"\\/","z":{"y":[]}},"c":{},"d":"\ud800x"}]]
+local function c_module()
+  if os.getenv('HOMENSAI_CANON_C')=='0' then return nil end
+  local ok,mod=pcall(require,'canon_c')
+  if not ok or type(mod)~='table' or type(mod.init)~='function' then return nil end
+  local iok,ready=pcall(mod.init,NULL,ARRAY,OBJECT,FLOAT,1)
+  if not iok or ready~=true then return nil end
+  local pok,same=pcall(function()
+    local value=M.lua_decode(PROBE);local text=M.lua_encode(value)
+    return mod.encode(value)==text and M.lua_encode(mod.decode(PROBE))==text
+      and M.lua_encode(mod.decode_keys(PROBE,{b=true,d=true}))==M.lua_encode(M.lua_decode_keys(PROBE,{b=true,d=true}))
+  end)
+  if not pok or same~=true then return nil end
+  return mod
+end
+do
+  local mod=c_module()
+  if mod then
+    M.c_module=mod
+    M.encode,M.decode,M.decode_keys=mod.encode,mod.decode,mod.decode_keys
+  end
+end
 
 return M

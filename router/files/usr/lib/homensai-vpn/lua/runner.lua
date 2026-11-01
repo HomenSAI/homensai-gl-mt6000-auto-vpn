@@ -142,20 +142,31 @@ function M.fs.key(path)
   if not st then return 'absent' end
   return table.concat({tostring(st.type),tostring(st.ino),tostring(st.size),tostring(st.mtime),tostring(st.ctime)},':')
 end
--- A symlink, a non-file or more than 1 MB is refused (journal_read). Without nixio only the size is known;
--- the directory is root-only (0700) and rename() never follows a symlink at the destination.
-function M.fs.unsafe(path)
+-- A symlink, a non-file or more than 1 MB (or limit bytes) is refused (journal_read). Without nixio only the size
+-- is known; the directory is root-only (0700) and rename() never follows a symlink at the destination.
+function M.fs.unsafe(path,limit)
+  limit=limit or 1024*1024
   local ok,fs=pcall(require,'nixio.fs')
   if ok and type(fs)=='table' and fs.lstat then
     local st=fs.lstat(path)
     if not st then return false end
-    return st.type~='reg' or st.size>1024*1024
+    return st.type~='reg' or st.size>limit
   end
   local f=io.open(path,'rb')
   if not f then return false end
   local size=f:seek('end');f:close()
-  return size==nil or size>1024*1024
+  return size==nil or size>limit
 end
+-- size(path): bytes, nil when absent (the switch-history archive check)
+function M.fs.size(path)
+  local f=io.open(path,'rb')
+  if not f then return nil end
+  local size=f:seek('end');f:close()
+  return size
+end
+-- append/rename: durable.append (fsync) and a rename with the directory fsync (switch-history journal)
+function M.fs.append(path,text) return require('durable').append(path,text) end
+function M.fs.rename(from,to) return require('durable').rename(from,to) end
 -- atomic_json(): durable.write - unique temp name in the same directory, mode 0600, fsync of the file, rename,
 -- fsync of the directory (POWER-CUT-INTEGRITY-2026-10-31.ru.md). One primitive for every flash writer.
 function M.fs.write_atomic(path,text) return require('durable').write(path,text) end

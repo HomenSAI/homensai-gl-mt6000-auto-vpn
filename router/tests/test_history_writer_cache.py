@@ -31,7 +31,7 @@ class WriterCache(unittest.TestCase):
         self.assertTrue(self.record('ARMED',1000))
         main=self.root/'native-history.json'
         before=main.read_bytes()
-        with patch.object(h.History,'load',side_effect=AssertionError('no full load for our own last write')):
+        with patch.object(h.History,'_read',side_effect=AssertionError('no file read for our own last write')):
             self.assertTrue(self.record('APPLYING',1001))
         self.assertEqual((self.root/'native-history.backup.json').read_bytes(),before,'backup is the previous main, byte for byte')
         loaded=self.history().load()
@@ -42,9 +42,9 @@ class WriterCache(unittest.TestCase):
         other=self.history();data=other.load();data['events'][0]['state']='RESTORING'
         h.atomic(other.path,other.envelope(data))  # e.g. a statistics reset in another process
         calls=[]
-        real=h.History.load
+        real=h.History._read
         def counted(self):calls.append(1);return real(self)
-        with patch.object(h.History,'load',counted):self.record('APPLYING',1001)
+        with patch.object(h.History,'_read',counted):self.record('APPLYING',1001)
         self.assertEqual(len(calls),1)
         self.assertEqual([row['state'] for row in self.history().load()['events']],['RESTORING','APPLYING'])
 

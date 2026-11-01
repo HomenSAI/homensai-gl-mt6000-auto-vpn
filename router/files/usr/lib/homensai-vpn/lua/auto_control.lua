@@ -243,14 +243,18 @@ function M.flock_file(path,fn)
   end
   local file=io.open(path,'a')
   if not file then M.refuse('HISTORY-PATH') end
+  -- hv-core: the lock registry hears of the file (control.inproc; nil and a no-op in the separate daemons)
+  local control=package.loaded['control']
+  local token=type(control)=='table' and control.inproc_opened and control.inproc_opened(path) or nil
   local p=io.popen('for f in /proc/$$/fd/*; do if [ "$f" -ef '..path..' ]; then flock -x "${f##*/}" && echo ok; exit 0; fi; done; exit 97','r')
   local out=p and p:read('*a') or ''
   if p then p:close() end
-  if out~='ok\n' then file:close();M.refuse('HISTORY-PATH') end
-  M.flock_held=(M.flock_held or 0)+1  -- hv-core never lets the supervisor yield while a flock of it is held
+  if out~='ok\n' then file:close();if token then control.inproc_closed(token) end;M.refuse('HISTORY-PATH') end
+  M.flock_held=(M.flock_held or 0)+1  -- hv-core: counted (locked_yields) while the supervisor waits under it
   local results={pcall(fn)}
   M.flock_held=M.flock_held-1
   file:close()
+  if token then control.inproc_closed(token) end
   if not results[1] then error(results[2],0) end
   return unpack(results,2)
 end

@@ -23,6 +23,15 @@ function M.is_refused(e) return type(e)=='table' and getmetatable(e)==Refused en
 local held=nil  -- descriptor number of the held lock (children must not inherit it)
 function M.held_fd() return held end
 
+-- hv-core only (lua_core_process='1', hv_core.lock_registry): the Auto supervisor runs as a coroutine of the
+-- monitor's process and may wait (yield to the event loop) while it holds a flock. The flock helpers of this
+-- process then report every lock file the supervisor opens (opened(path) -> token, closed(token)), so the loop's
+-- non-blocking try_lock never takes the supervisor's descriptor of the same file as its own (/proc/$$/fd first
+-- match). nil in the separate daemons: nothing changes there.
+M.inproc=nil
+function M.inproc_opened(path) local r=M.inproc;if r then return r.opened(path) end;return nil end
+function M.inproc_closed(token) local r=M.inproc;if r and token then r.closed(token) end end
+
 local function directory_of(directory)
   directory=directory or M.RUNTIME
   if not canon.safe_directory(directory) then refuse('CONTROL-LOCK-UNAVAILABLE') end
@@ -53,12 +62,14 @@ function M.lock(fn,directory)
     file=io.open(path,'a')
   end
   if not file then refuse('CONTROL-LOCK-UNAVAILABLE') end
+  local token=M.inproc_opened(path)
   local fd=flock_inherited(path)
-  if not fd then file:close();refuse('CONTROL-LOCK-UNAVAILABLE') end
+  if not fd then file:close();M.inproc_closed(token);refuse('CONTROL-LOCK-UNAVAILABLE') end
   held=fd
   local results={pcall(fn)}
   held=nil
   file:close()  -- releases the flock
+  M.inproc_closed(token)
   if not results[1] then error(results[2],0) end
   return unpack(results,2)
 end

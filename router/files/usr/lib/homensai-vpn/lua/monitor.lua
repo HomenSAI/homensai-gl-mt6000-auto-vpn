@@ -1157,6 +1157,8 @@ function M.start(runner,options,hooks)
   -- leftovers of flash writes a power cut interrupted (POWER-CUT-INTEGRITY-2026-10-31.ru.md), before any read
   pcall(function() require('durable').sweep((options and options.persist) or runner.PERSIST or '/etc/homensai-vpn') end)
   local monitor=M.new(runner,options)
+  -- under the event loop a changed switch history is read by a child (monitor_status.native_history)
+  if runner.spawn then monitor.env.history_child=true end
   local conn=ubus.connect()
   if not conn then error('ubus connect failed') end
   local object=monitor.rpc.ubus_object(conn,ubus)

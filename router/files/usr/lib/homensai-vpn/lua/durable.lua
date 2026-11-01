@@ -33,6 +33,7 @@ if not (okf and type(nfs)=='table') then nfs=nil end
 local function default_ops()
   local ops={}
   function ops.open_write(path) return io.open(path,'wb') end
+  function ops.open_append(path) return io.open(path,'ab') end
   function ops.mkdir(path)
     if nfs and nfs.mkdir and nfs.mkdir(path,'700')~=nil then return true end
     return os.execute('mkdir -p '..path..' && chmod 700 '..path)==0  -- path checked by split(): [A-Za-z0-9_./-] only
@@ -134,6 +135,47 @@ function M.write(path,text,opts)
     if not M.sync_directory(directory) then ops.sync_all() end
     if created_directory then M.sync_directory(string.match(directory,'^(.*)/[^/]+$') or '/') end
   end
+  return true
+end
+
+-- append(path, text[, opts]) -> true: text added at the end of an append-only file (the switch-history archive
+-- native-history.events.jsonl): open for append, write, flush, close, fsync of the file; fsync of the directory
+-- when the file is new. A power cut can leave a torn last line; its reader drops it (history.archive_entries).
+-- A symlink or a non-file is refused. opts.sync as in write().
+function M.append(path,text,opts)
+  if type(text)~='string' then error('durable: text',0) end
+  local sync
+  if opts and opts.sync~=nil then sync=opts.sync==true else sync=not M.in_ram(path or '') end
+  local ops=M.ops
+  local directory=split(path)
+  local st=ops.lstat(path)
+  if st and st.type~='reg' then error('durable: not a file '..path,0) end
+  local probe=io.open(path,'rb')
+  local created=probe==nil
+  if probe then probe:close() end
+  local f=ops.open_append(path)
+  if not f then
+    ops.mkdir(directory)
+    f=ops.open_append(path)
+    if not f then error('durable: cannot append '..path,0) end
+  end
+  local ok,err=pcall(function() assert(f:write(text));assert(f:flush());f:close();f=nil end)
+  if not ok then if f then pcall(f.close,f) end;error(err,0) end
+  if created then ops.chmod600(path) end
+  if sync then
+    if not ops.fsync(path) and not ops.sync_all() then error('durable: fsync unavailable',0) end
+    if created and not M.sync_directory(directory) then ops.sync_all() end
+  end
+  return true
+end
+
+-- rename(from, to) -> true: rename inside one directory, then fsync of the directory (flash paths)
+function M.rename(from,to)
+  local directory=split(to)
+  split(from)
+  local ok,err=M.ops.rename(from,to)
+  if not ok then error(err or 'durable: rename',0) end
+  if not M.in_ram(to) and not M.sync_directory(directory) then M.ops.sync_all() end
   return true
 end
 

@@ -107,6 +107,18 @@ function H.zones(c)
   local list={};for k in pairs(set) do list[#list+1]=k end;table.sort(list)
   return canon.array(list)
 end
+-- TODO-PERF 4.1: the derived-value cache decisions over a scripted sequence of lstat facts and clocks
+function H.file_cache(c)
+  local cur
+  local sys={lstat=function() if cur.stat==NULL then return nil end;return cur.stat end,wall=function() return canon.number(cur.wall) end,clock=function() return canon.number(cur.clock) end}
+  local out={}
+  for i,step in ipairs(c.steps) do
+    cur=step
+    local ok,value,computed=pcall(platform.cached_file,sys,'diff','/x',function() if step.fail then error('boom') end;return i-1 end)
+    out[i]=ok and canon.array({value,computed}) or canon.array({'error',NULL})
+  end
+  return canon.array(out)
+end
 function H.hook_state(c) return platform.fresh_hook_state(c.lines,canon.number(c.after)) end
 function H.appended(c) return platform.appended_hook_state(c.before,c.after) end
 function H.selected_bindings(c) return identity.selected_bindings(c.sections,lua_table(c.interfaces)) end

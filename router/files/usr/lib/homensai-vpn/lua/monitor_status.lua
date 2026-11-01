@@ -31,8 +31,18 @@ local function code_ok(v) return type(v)=='string' and #v>=1 and #v<=96 and stri
 local function n0(v) if v==nil then return NULL end;return v end
 
 -- env for the shared Lua modules (pair.lua, auto_control.lua, history.lua): run.fs over the monitor's runner.
+function M.file_key(path)
+  local ok,fs=pcall(require,'nixio.fs')
+  if not (ok and type(fs)=='table' and fs.lstat) then return nil end
+  local st=fs.lstat(path)
+  if not st then return 'absent' end
+  return table.concat({tostring(st.type),tostring(st.ino),tostring(st.size),tostring(st.mtime),tostring(st.ctime)},':')
+end
 function M.env(runner,runtime,persist)
-  local fs={read=runner.read_file,write_atomic=runner.write_atomic,unsafe=runner.unsafe}
+  -- key: the history keeps its parsed copy for unchanged files. The same fingerprint as runner.fs.key, so in
+  -- hv-core (one process) the monitor reuses the copy the Auto supervisor holds instead of decoding in turn.
+  local fs={read=runner.read_file,write_atomic=runner.write_atomic,unsafe=runner.unsafe,key=M.file_key,
+    size=runner.file_size,append=runner.append,rename=runner.rename}
   return {run={fs=fs,wall=runner.wall,clock=runner.clock},runtime=runtime,persist=persist,runner=runner}
 end
 
@@ -322,43 +332,91 @@ end
 
 ------------------------------------------------------------------------------------------------------
 -- native_history.read_public, cached in memory by (detail days, hour, file keys)
+--
+-- Background build (MT3000, alpha19): the history file was about 1 MB; decoding it in the monitor took 1-4 s of
+-- its event loop after every write of the Auto supervisor (a switch writes it several times), so page reads
+-- waited. Since the journal layout (schema 2) the projection reads only the state (tens of KB); the child path is
+-- kept unchanged (it still keeps any decode out of the event loop and is proven on the router).
+-- With env.history_child (the monitor under uloop) a changed file is read by a child process (history_public.lua) that writes the public projection as a Lua table constructor; the monitor loads it with
+-- the C lexer (milliseconds) when the child exits. Until then the previous projection is served (seconds old);
+-- the very first one, or a child that fails, is built here as before.
 ------------------------------------------------------------------------------------------------------
 local history_cache={key=nil,value=nil}
+local history_job=nil  -- {key=} while a child builds that key
+M.HISTORY_CHILD_SECONDS=60
+M.HISTORY_SCRIPT='/usr/lib/homensai-vpn/lua/history_public.lua'
+function M.history_key(env,days,now)
+  local runner=env.runner
+  if not runner.file_key then return nil end
+  local persist=env.persist
+  return table.concat({tostring(days),tostring(math.floor(now/3600)),tostring(runner.file_key(persist..'/native-history.json')),
+    tostring(runner.file_key(persist..'/native-history.backup.json'))},'|')
+end
+local function start_child(env,days,now,key)
+  local mio=require('monitor_io')
+  local out=env.runtime..'/.history-public.lua'
+  history_job={key=key}
+  mio.spawn({'/usr/bin/env','TZ='..mio.TZ,'/usr/bin/lua',M.HISTORY_SCRIPT,env.persist,env.runtime,tostring(days),
+             string.format('%.3f',now),out},M.HISTORY_CHILD_SECONDS,function(code)
+    local job=history_job;history_job=nil
+    if not job then return end
+    if code~=0 then history_job={failed=job.key};return end
+    local ok,value=pcall(function()
+      local text=env.runner.read_file(out)
+      return text and require('history_public').load(text)
+    end)
+    os.remove(out)
+    if ok and canon.is_object(value) and value.available~=nil then history_cache.key=job.key;history_cache.value=value
+    else history_job={failed=job.key} end  -- built in-process at the next read
+  end)
+end
 function M.native_history(env,days,now)
+  local okk,key=pcall(M.history_key,env,days,now)
+  if not okk then key=nil end
+  if key and history_cache.key==key then return history_cache.value end
+  if key and env.history_child and history_cache.value~=nil and not (history_job and history_job.failed==key) then
+    if not (history_job and history_job.key) then pcall(start_child,env,days,now,key) end
+    return history_cache.value
+  end
+  local value=M.history_public(env,days,now)
+  if key and value.error==nil then history_cache.key=key;history_cache.value=value;history_job=nil end
+  return value
+end
+function M.history_public(env,days,now)
   local ok,value=pcall(function()
     local history=require('history')
     local h=history.new(env,env.persist,10000,days)
     local runner=env.runner
-    local key=table.concat({tostring(days),tostring(math.floor(now/3600)),tostring(runner.file_key and runner.file_key(h.path)),
-      tostring(runner.file_key and runner.file_key(h.backup))},'|')
-    if runner.file_key and history_cache.key==key then return history_cache.value end
-    local data=h:load()
-    h:migrate(data)
+    -- The STATE only (journal layout, schema 2: tens of KB instead of the ~1 MB event file). h:state() may hand back
+    -- the resident copy the Auto supervisor records into (hv-core: one process); prune() replaces index/tail with
+    -- new arrays and deletes month/day keys, so it works on a copy of the top level and of those two maps.
+    local loaded=h:state()
+    local data=canon.object({});for k,v in pairs(loaded) do data[k]=v end
+    for _,name in ipairs({'months','days'}) do
+      if canon.is_object(loaded[name]) then local copy=canon.object({});for k,v in pairs(loaded[name]) do copy[k]=v end;data[name]=copy end
+    end
     h:prune(data,now)
+    local index=data.index
     local weekly=NULL
     local all=true
-    for _,row in ipairs(data.events) do if row.counted_metrics==nil then all=false end end
-    if all and (num(data.detail_budget_dropped) or 0)==0 then
+    for _,row in ipairs(index) do if row[3]==NULL then all=false end end
+    if all and (num(data.detail_budget_dropped) or 0)==0 and (num(data.archive_gap) or 0)==0 then
       weekly=canon.object()
-      for _,metric in ipairs(history.METRICS) do
-        local n=0
-        for _,row in ipairs(data.events) do
-          for _,m in ipairs(canon.is_array(row.counted_metrics) and row.counted_metrics or {}) do if m==metric then n=n+1 end end
-        end
-        weekly[metric]=n
+      for _,metric in ipairs(history.METRICS) do weekly[metric]=0 end
+      for _,row in ipairs(index) do
+        for _,m in ipairs(row[3]) do if weekly[m]~=nil then weekly[m]=weekly[m]+1 end end
       end
     end
-    local events=data.events
+    local events=data.tail
     local tail=canon.array();for i=math.max(1,#events-99),#events do tail[#tail+1]=events[i] end
-    local complete=#events==0 or (events[#events].sequence-events[1].sequence+1==#events)
+    local complete=#index==0 or (index[#index][1]-index[1][1]+1==#index)
     local available=runner.exists and (runner.exists(h.path) or runner.exists(h.backup)) or false
     local public=canon.object({available=available,restored_from_backup=h.restored,timezone=data.timezone,sequence=data.sequence,
       events=tail,totals=data.totals or canon.object(),counter_accuracy=n0(data.counter_accuracy),returns_since=n0(data.returns_since),
-      weekly=weekly,weekly_detail_complete=complete,detail_days=days,retained_events=#events,
+      weekly=weekly,weekly_detail_complete=complete,detail_days=days,retained_events=#index,
       detail_budget_dropped=data.detail_budget_dropped or 0,months=data.months,days=data.days or canon.object(),
-      daily_since=n0(data.daily_since),event_history_truncated=data.sequence>math.min(100,#events),
+      daily_since=n0(data.daily_since),event_history_truncated=data.sequence>math.min(100,#index),
       scope='controller transitions; not LAN availability or router power-loss proof'})
-    history_cache.key=key;history_cache.value=public
     return public
   end)
   if ok then return value end

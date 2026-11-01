@@ -367,6 +367,9 @@ function M.random(n)
   return table.concat(out)
 end
 local probe_ready=nil
+-- hv-core only: cooperative() is true while the Auto task may yield; the DNS wait then polls through
+-- M.sleep (which yields) instead of blocking the shared event loop in poll(). nil in the separate daemons.
+M.cooperative=nil
 -- probe_capable(): nixio with SO_BINDTODEVICE and the curl binary; else the caller keeps the Python bridge
 function M.probe_capable()
   if probe_ready==nil then
@@ -465,7 +468,7 @@ local function dns_exchange(device,dns)
       -- poll until readable; should poll ever return at once without data, fall back to 20 ms naps (bounded CPU)
       idle=idle+1
       local polled=false
-      if flags and idle<=20 then
+      if flags and idle<=20 and not (M.cooperative and M.cooperative()) then
         local ok,count=pcall(nixio.poll,{{fd=sock,events=flags}},math.max(1,math.floor(left*1000)))
         polled=ok and type(count)=='number'
       end

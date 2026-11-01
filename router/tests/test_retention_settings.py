@@ -47,7 +47,7 @@ class RetentionSettingsTests(unittest.TestCase):
    h.record({'state':'COMMITTED','source':'wireguard:peer_1','target':'openvpn:1_1'},BASE+2*86400)
    self.assertEqual(h.load()['events'],[]);self.assertEqual(h.load()['totals'],totals)
    self.assertEqual(History(d,detail_days=7).load()['events'],[])
-   self.assertEqual(json.loads(h.backup.read_text())['data']['events'],[])
+   state=json.loads(h.backup.read_text())['data'];self.assertEqual((state['index'],state['tail']),([],[]))
    with patch.object(retention_settings,'configured_days',return_value=1):
     result=statistics_export.page(Path(d),dict(kind='controller',after=0,until=0),now=BASE+2*86400)
    self.assertEqual(result['detail_days'],1);self.assertEqual(result['events'],[])

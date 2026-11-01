@@ -109,12 +109,70 @@ class HistoryError(ValueError):
     pass
 
 
+# Journal layout (schema 2, docs/architecture/HISTORY-JOURNAL-2026-11-01.ru.md). Measured on the MT3000 (alpha18-20):
+# one ~1 MB document rewritten and re-read per event was most of the Lua Auto CPU and seconds of page delay.
+#   native-history.json         the STATE: every field of the schema-1 data except 'events', plus 'tail' (the last
+#                               TAIL retained events, complete), 'index' (one row per retained event:
+#                               [sequence, time, counted_metrics or null, bytes of its archive line]) and the
+#                               archive's expected 'archive_lines'/'archive_bytes'; envelope {"data","schema":2,"sha256"}
+#   native-history.backup.json  the previous state (rename, as before)
+#   native-history.events.jsonl the append-only ARCHIVE: '<sha256 of the JSON text> <canonical JSON of the event>\n'
+#   native-history.v1.json      the schema-1 file a migration started from (kept for analysis and downgrade)
+# Per event: the state first (atomic), then one archive line (append + fsync). The archive may lag behind the state
+# after a power cut, never lead it: a writer whose archive size differs from 'archive_bytes' rebuilds the archive
+# from its verified lines plus 'tail' (a torn or damaged line is dropped; retained events found nowhere leave the
+# index and are counted in 'archive_gap'). The archive is compacted (rewritten atomically with the retained events
+# only) when more than 25 % of its lines are stale or it exceeds COMPACT_BYTES. The page reads the state only.
+ARCHIVE='native-history.events.jsonl'
+V1='native-history.v1.json'
+TAIL=100
+STATE_ONLY=('tail','index','archive_lines','archive_bytes')
+STATE_BYTES=3*1024*1024        # bound of the state itself (an index of 10000 rows and a tail of large events)
+READ_BYTES=4*1024*1024         # a state/schema-1 file larger than this is refused on read
+ARCHIVE_READ_BYTES=8*1024*1024  # an archive larger than this is not read (never written: compaction keeps ~2.5 MB)
+LINE_OVERHEAD=66               # 64 hex digits, a space, the newline
+SEQUENCE=re.compile(rb'"sequence":([0-9]+)[,}]')  # the first one is the event's own (sorted keys; no nested one)
+
+
+def archive_line(event):
+    text=encoded(event)
+    return hashlib.sha256(text).hexdigest().encode()+b' '+text+b'\n'
+
+
+def archive_entries(raw):
+    """[(sequence, line)] of the verified complete lines of an archive text, in file order. The piece after the
+    last newline (a torn append) and any line whose checksum or shape fails are skipped."""
+    out=[]
+    pieces=raw.split(b'\n')
+    for piece in pieces[:-1]:
+        if len(piece)<LINE_OVERHEAD or piece[64:65]!=b' ':continue
+        body=piece[65:]
+        if hashlib.sha256(body).hexdigest().encode()!=piece[:64]:continue
+        found=SEQUENCE.search(body)
+        if found and len(found.group(1))<=16:out.append((int(found.group(1)),piece+b'\n'))
+    return out
+
+
+def state_of(data):
+    """Schema-1 data (with 'events') -> (schema-2 state, archive lines). Events are shared, not copied."""
+    state={key:value for key,value in data.items() if key!='events'}
+    events=data['events'];lines=[archive_line(row) for row in events]
+    state['tail']=events[-TAIL:]
+    state['index']=[[row['sequence'],row['time'],row.get('counted_metrics'),len(line)] for row,line in zip(events,lines)]
+    state['archive_lines']=len(lines);state['archive_bytes']=sum(len(line) for line in lines)
+    return state,lines
+
+
+def state_bytes(state):
+    return envelope_bytes(encoded(state),2)
+
+
 # Resident copy of the history for its long-lived writer (the Auto supervisor). Measured on the MT3000 (30 Oct 2026):
 # the file is 1.27 MB; every recorded transition parsed and checksummed it (0.42 s), encoded it four times (~0.19 s
 # each) and wrote it twice with fsync (main + full backup copy, 2.5 MB of flash per event, ~1.5-2 s per event and
-# several events per switch). The writer now keeps the data it last wrote, keyed by both files' inode, size and mtime:
-# any other writer (statistics reset, a restore, a second process) replaces a file, changes the key and forces a
-# normal full load. The previous main file becomes the backup by a rename instead of a second full write.
+# several events per switch). The writer now keeps the state it last wrote, keyed by both files' inode, size and
+# mtime: any other writer (statistics reset, a restore, a second process) replaces a file, changes the key and forces
+# a normal load. The previous main file becomes the backup by a rename instead of a second full write.
 _WRITER_CACHE={}
 
 
@@ -123,7 +181,7 @@ def _file_key(path):
     except FileNotFoundError:return None
 
 
-RESIDENT_MIN_AVAILABLE_KB=64*1024  # the resident copy (~8 MB parsed on the MT3000) is kept only with this much RAM free
+RESIDENT_MIN_AVAILABLE_KB=64*1024  # the resident copy is kept only with this much RAM free
 
 
 def memory_available_kb():
@@ -160,9 +218,26 @@ def atomic_bytes(path,raw):
     finally:os.close(fd)
 
 
-def envelope_bytes(raw):
+def append_bytes(path,raw):
+    """One archive line: O_APPEND write, fsync of the file (and of the directory when the file is new)."""
+    path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+    if path.is_symlink() or path.parent.is_symlink():raise HistoryError('HISTORY-PATH')
+    created=not path.exists()
+    fd=os.open(str(path),os.O_WRONLY|os.O_APPEND|os.O_CREAT|getattr(os,'O_NOFOLLOW',0),0o600)
+    try:
+        view=memoryview(raw)
+        while view:view=view[os.write(fd,view):]
+        os.fsync(fd)
+    finally:os.close(fd)
+    if created:
+        fd=os.open(str(path.parent),os.O_RDONLY|os.O_DIRECTORY)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+
+
+def envelope_bytes(raw,schema=1):
     """encoded(History.envelope(data)) built from encoded(data) without encoding the data again (sorted keys)."""
-    return b'{"data":'+raw+b',"schema":1,"sha256":"'+hashlib.sha256(raw).hexdigest().encode()+b'"}'
+    return b'{"data":'+raw+b',"schema":'+str(schema).encode()+b',"sha256":"'+hashlib.sha256(raw).hexdigest().encode()+b'"}'
 
 
 def encoded(value):
@@ -186,8 +261,58 @@ def atomic(path,value):
     finally:os.close(fd)
 
 
+def _number(value):
+    return type(value) in (int,float) and math.isfinite(value)
+
+
+def check_common(data,rows):
+    """The schema-1 checks shared by both layouts; rows: the events (schema 1) or index rows' counted_metrics."""
+    if not isinstance(data.get('months'),dict) or type(data.get('sequence')) is not int or not 0<=data['sequence']<2**53:raise HistoryError('HISTORY-SCHEMA')
+    for name,fields in (('active_attempt',{'id','episode','source','target','terminal'}),('retry_episode',{'id','source','trial','closed'})):
+        metadata=data.get(name,{})
+        if metadata=={}:continue
+        if not isinstance(metadata,dict) or set(metadata)!=fields:raise HistoryError('HISTORY-METADATA')
+        for key in ('id','episode'):
+            if key in fields and (type(metadata[key]) is not int or not 1<=metadata[key]<=data['sequence']):raise HistoryError('HISTORY-METADATA')
+        for key in ('source','target'):
+            identifier=metadata.get(key)
+            if identifier is not None and (not isinstance(identifier,str) or not PROFILE.fullmatch(identifier)):raise HistoryError('HISTORY-METADATA')
+        for key in ('terminal','trial','closed'):
+            if key in fields and type(metadata[key]) is not bool:raise HistoryError('HISTORY-METADATA')
+    if rows>10000 or len(data['months'])>1200 or not isinstance(data.get('days',{}),dict) or len(data.get('days',{}))>400:raise HistoryError('HISTORY-BOUNDS')
+    if data.get('counter_version')==2:
+        for name in ('totals','counted'):
+            values=data.get(name)
+            if not isinstance(values,dict) or any(key not in METRICS or type(value) is not int or not 0<=value<2**53 for key,value in values.items()):raise HistoryError('HISTORY-COUNTERS')
+
+
+def check_metrics(value):
+    if not isinstance(value,list) or len(value)>len(METRICS) or any(key not in METRICS for key in value):raise HistoryError('HISTORY-COUNTERS')
+
+
+def check_state(state):
+    """Schema-2 state: the schema-1 checks plus a consistent tail/index/archive accounting."""
+    tail,index=state.get('tail'),state.get('index')
+    if not isinstance(tail,list) or not isinstance(index,list) or len(tail)>TAIL or len(tail)>len(index) or 'events' in state:raise HistoryError('HISTORY-SCHEMA')
+    check_common(state,len(index))
+    if state.get('counter_version')!=2:raise HistoryError('HISTORY-COUNTERS')
+    for name in ('archive_lines','archive_bytes'):
+        if type(state.get(name)) is not int or not 0<=state[name]<2**53:raise HistoryError('HISTORY-SCHEMA')
+    if 'archive_gap' in state and (type(state['archive_gap']) is not int or not 0<=state['archive_gap']<2**53):raise HistoryError('HISTORY-SCHEMA')
+    previous=0
+    for row in index:
+        if (not isinstance(row,list) or len(row)!=4 or type(row[0]) is not int or not previous<row[0]<=state['sequence']
+                or not _number(row[1]) or type(row[3]) is not int or not LINE_OVERHEAD<row[3]<2**53):raise HistoryError('HISTORY-SCHEMA')
+        if row[2] is not None:check_metrics(row[2])
+        previous=row[0]
+    for row,entry in zip(tail,index[len(index)-len(tail):]):
+        if not isinstance(row,dict) or row.get('sequence')!=entry[0]:raise HistoryError('HISTORY-SCHEMA')
+        if 'counted_metrics' in row:check_metrics(row['counted_metrics'])
+
+
 class History:
     RETENTION_BYTES=2*1024*1024
+    COMPACT_BYTES=RETENTION_BYTES+RETENTION_BYTES//4
     def __init__(self,directory,limit=10000,detail_days=None):
         from retention_settings import configured_days
         self.detail_days=configured_days() if detail_days is None else detail_days
@@ -195,43 +320,92 @@ class History:
         if type(limit) is not int or not 1<=limit<=10000:raise HistoryError('HISTORY-LIMIT')
         self.path=Path(directory)/'native-history.json'
         self.backup=self.path.with_name('native-history.backup.json')
+        self.archive=self.path.with_name(ARCHIVE)
+        self.v1=self.path.with_name(V1)
         self.limit=limit
         self.restored=False
-    def load(self):
+    @staticmethod
+    def empty():
+        return {'sequence':0,'events':[],'months':{},'last_key':None,'last_time':None,'timezone':'Europe/Berlin'}
+    def _read(self):
+        """('v2', state, raw) | ('v1', schema-1 data, raw) | ('new', empty schema-1 data, None); main, else backup."""
         found=False
         for index,path in enumerate((self.path,self.backup)):
             try:
                 if path.is_symlink():raise HistoryError('HISTORY-PATH')
                 if not path.exists():continue
                 found=True
-                if path.stat().st_size>2300*1024:raise HistoryError('HISTORY-SIZE')
-                envelope=json.loads(path.read_text(encoding='utf8'));data=envelope['data']
-                if envelope.get('schema')!=1 or hashlib.sha256(encoded(data)).hexdigest()!=envelope.get('sha256'):raise HistoryError('HISTORY-CHECKSUM')
-                if not isinstance(data.get('events'),list) or not isinstance(data.get('months'),dict) or type(data.get('sequence')) is not int or not 0<=data['sequence']<2**53:raise HistoryError('HISTORY-SCHEMA')
-                for name,fields in (('active_attempt',{'id','episode','source','target','terminal'}),('retry_episode',{'id','source','trial','closed'})):
-                    metadata=data.get(name,{})
-                    if metadata=={}:continue
-                    if not isinstance(metadata,dict) or set(metadata)!=fields:raise HistoryError('HISTORY-METADATA')
-                    for key in ('id','episode'):
-                        if key in fields and (type(metadata[key]) is not int or not 1<=metadata[key]<=data['sequence']):raise HistoryError('HISTORY-METADATA')
-                    for key in ('source','target'):
-                        identifier=metadata.get(key)
-                        if identifier is not None and (not isinstance(identifier,str) or not PROFILE.fullmatch(identifier)):raise HistoryError('HISTORY-METADATA')
-                    for key in ('terminal','trial','closed'):
-                        if key in fields and type(metadata[key]) is not bool:raise HistoryError('HISTORY-METADATA')
-                if len(data['events'])>10000 or len(data['months'])>1200 or not isinstance(data.get('days',{}),dict) or len(data.get('days',{}))>400:raise HistoryError('HISTORY-BOUNDS')
-                if data.get('counter_version')==2:
-                    for name in ('totals','counted'):
-                        values=data.get(name)
-                        if not isinstance(values,dict) or any(key not in METRICS or type(value) is not int or not 0<=value<2**53 for key,value in values.items()):raise HistoryError('HISTORY-COUNTERS')
-                    for row in data['events']:
-                        if 'counted_metrics' in row and (not isinstance(row['counted_metrics'],list) or len(row['counted_metrics'])>len(METRICS) or any(key not in METRICS for key in row['counted_metrics'])):raise HistoryError('HISTORY-COUNTERS')
-                self.restored=bool(index);return data
-            except (OSError,ValueError,KeyError,TypeError):continue
+                if path.stat().st_size>READ_BYTES:raise HistoryError('HISTORY-SIZE')
+                raw=path.read_bytes()
+                envelope=json.loads(raw.decode('utf8'));data=envelope['data']
+                if envelope.get('schema') not in (1,2) or not isinstance(data,dict) or hashlib.sha256(encoded(data)).hexdigest()!=envelope.get('sha256'):raise HistoryError('HISTORY-CHECKSUM')
+                if envelope['schema']==2:
+                    check_state(data)
+                else:
+                    if not isinstance(data.get('events'),list):raise HistoryError('HISTORY-SCHEMA')
+                    check_common(data,len(data['events']))
+                    if data.get('counter_version')==2:
+                        for row in data['events']:
+                            if 'counted_metrics' in row:check_metrics(row['counted_metrics'])
+                self.restored=bool(index)
+                return ('v2' if envelope['schema']==2 else 'v1'),data,raw
+            except (OSError,ValueError,KeyError,TypeError,AttributeError):continue
         if found:raise HistoryError('HISTORY-CORRUPT')
-        return {'sequence':0,'events':[],'months':{},'last_key':None,'last_time':None,'timezone':'Europe/Berlin'}
+        return 'new',self.empty(),None
+    def _read_archive(self):
+        """The archive bytes; b'' when absent, a symlink or oversize (its events then come from the tail only)."""
+        if self.archive.is_symlink():return b''
+        try:
+            if self.archive.stat().st_size>ARCHIVE_READ_BYTES:return b''
+            return self.archive.read_bytes()
+        except FileNotFoundError:return b''
+    def _archive_size(self):
+        try:return os.lstat(str(self.archive)).st_size
+        except FileNotFoundError:return 0
+    def events_of(self,state):
+        """The retained events in index order: the tail from the state, older ones from the archive's verified lines.
+        A retained event found in neither (an archive behind by more than the tail) is left out."""
+        tail={row['sequence']:row for row in state['tail']}
+        wanted={row[0] for row in state['index'] if row[0] not in tail}
+        found={}
+        if wanted:
+            try:raw=self._read_archive()
+            except OSError:raw=b''
+            for sequence,line in archive_entries(raw):
+                if sequence in wanted:found[sequence]=line
+        events=[]
+        for row in state['index']:
+            if row[0] in tail:events.append(tail[row[0]]);continue
+            line=found.get(row[0])
+            if line is None:continue
+            try:event=json.loads(line[65:-1].decode('utf8'))
+            except ValueError:continue
+            if isinstance(event,dict) and event.get('sequence')==row[0]:events.append(event)
+        return events
+    def load(self):
+        """The schema-1 shaped data (with 'events', without the state-only fields): export, reset, tests."""
+        kind,value,_=self._read()
+        if kind!='v2':return value
+        data={key:item for key,item in value.items() if key not in STATE_ONLY}
+        data['events']=self.events_of(value)
+        return data
+    def load_state(self):
+        """The state alone (what the page needs); a schema-1 file is converted in memory, never written here."""
+        kind,value,_=self._read()
+        if kind=='v2':return value
+        self.migrate(value)
+        return state_of(value)[0]
     def envelope(self,data):
+        """Schema-1 envelope (the old file format; tests seed legacy files with it)."""
         return {'schema':1,'data':data,'sha256':hashlib.sha256(encoded(data)).hexdigest()}
+    def store(self,data):
+        """Replace the whole history by schema-1 shaped data whose events are a subset of the archive's (the statistics
+        reset): state (backup, main) first, then the archive, so a power cut leaves an archive the state can rebuild."""
+        state,lines=state_of(data)
+        raw=state_bytes(state)
+        atomic_bytes(self.path,raw);atomic_bytes(self.backup,raw)
+        atomic_bytes(self.archive,b''.join(lines))
+        _WRITER_CACHE.pop(str(self.path),None)
     def correlate(self,data,item):
         """Public sequential IDs, never auth sessions or acknowledgement nonces.
 
@@ -247,7 +421,8 @@ class History:
         prepare=item['state']=='ARMED' and 'TRIAL-PASSED' not in item['codes']
         restoring=item['state']=='RESTORING' and item.get('transition_metadata_present') is True and item.get('route_changed') is True
         starting=prepare or item['state']=='APPLYING' or restoring and (not active or active.get('terminal'))
-        prior=data['events'][-1]['state'] if data['events'] else None
+        rows=data['events'] if 'events' in data else data['tail']
+        prior=rows[-1]['state'] if rows else None
         if starting and (not active or active.get('terminal') or
                          prior not in ('ARMED','APPLYING') or
                          active.get('source')!=item.get('source') or
@@ -326,7 +501,12 @@ class History:
                 if key in replay:data[key]=replay[key]
 
     def prune(self,data,now):
-        data['events']=[row for row in data['events'] if now-self.detail_days*86400<=row['time']<=now]
+        """Detail older than detail_days (or in the future) leaves; aggregates stay. Either layout."""
+        low=now-self.detail_days*86400
+        if 'events' in data:data['events']=[row for row in data['events'] if low<=row['time']<=now]
+        if 'index' in data:
+            data['index']=[row for row in data['index'] if low<=row[1]<=now]
+            data['tail']=[row for row in data['tail'] if low<=row['time']<=now]
         for retired in sorted(data['months'])[:-1200]:del data['months'][retired]
         cutoff=time.strftime('%Y-%m-%d',time.localtime(max(0,now-self.detail_days*86400)))
         for retired in list(data.get('days',{})):
@@ -349,29 +529,66 @@ class History:
             except BaseException:
                 _WRITER_CACHE.pop(str(self.path),None)  # the resident copy may be half-changed: reload next time
                 raise
+    def rebuild(self,state):
+        """The archive text for the state's index: each retained event from the tail, else its verified archive line.
+        Updates the index (events found nowhere leave it, counted in 'archive_gap') and the archive accounting."""
+        tail={row['sequence']:row for row in state['tail']}
+        wanted={row[0] for row in state['index'] if row[0] not in tail}
+        found={}
+        if wanted:
+            try:raw=self._read_archive()
+            except OSError:raw=b''
+            for sequence,line in archive_entries(raw):
+                if sequence in wanted:found[sequence]=line
+        kept=[];lines=[]
+        for row in state['index']:
+            line=archive_line(tail[row[0]]) if row[0] in tail else found.get(row[0])
+            if line is None:continue
+            row[3]=len(line);kept.append(row);lines.append(line)
+        if len(kept)!=len(state['index']):
+            state['archive_gap']=state.get('archive_gap',0)+len(state['index'])-len(kept);state['index']=kept
+        state['archive_lines']=len(lines);state['archive_bytes']=sum(len(line) for line in lines)
+        return b''.join(lines)
+    def _migrate_files(self,state,lines,raw):
+        """Schema 1 -> 2 on flash. Archive, a copy of the old file as native-history.v1.json, then the state (backup,
+        main). Until the main file is replaced it is the schema-1 file, so a power cut at any step repeats the same
+        migration (idempotent); after it the archive matches the state."""
+        atomic_bytes(self.archive,b''.join(lines))
+        atomic_bytes(self.v1,raw)
+        text=state_bytes(state)
+        atomic_bytes(self.backup,text);atomic_bytes(self.path,text)
     def _writer_load(self):
-        """The resident copy when both files are exactly what this process last wrote, else a full load()."""
+        """The resident state when both files are exactly what this process last wrote, else a load with the schema-1
+        migration and the archive check (size == archive_bytes, else rebuilt from its verified lines plus the tail)."""
+        self._repaired=False
         cached=_WRITER_CACHE.pop(str(self.path),None)
         if cached is not None and cached['key']==(_file_key(self.path),_file_key(self.backup)) and cached['detail_days']==self.detail_days:
             self.restored=False;self._from_main=True
-            return cached['data']
-        data=self.load();self._from_main=not self.restored and _file_key(self.path) is not None
-        return data
+            value=cached['data']
+        else:
+            kind,value,raw=self._read()
+            if kind!='v2':
+                self.migrate(value)
+                state,lines=state_of(value)
+                if kind=='v1':self._migrate_files(state,lines,raw);self.restored=False
+                self._from_main=kind=='v1'
+                return state
+            self._from_main=not self.restored and _file_key(self.path) is not None
+        # the archive is checked even for the resident state (one lstat): only the state files are in the key
+        if self._archive_size()!=value['archive_bytes']:
+            atomic_bytes(self.archive,self.rebuild(value));self._repaired=True
+        return value
     def _write_new(self,data,raw):
-        """Main := new data, backup := the previous main (renamed, not rewritten); one full flash write per event."""
+        """Main := new state, backup := the previous main (renamed, not rewritten)."""
         if self._from_main and _file_key(self.path) is not None:
             os.replace(str(self.path),str(self.backup))  # until the new main lands, load() reads this backup
         else:
-            atomic(self.backup,self._old())  # first write after a backup restore or a legacy upgrade: full copy
-        atomic_bytes(self.path,envelope_bytes(raw))
-        remember(self,data)
+            atomic_bytes(self.backup,self._legacy_old)  # first write after a backup restore or into a new directory
+        atomic_bytes(self.path,envelope_bytes(raw,2))
     def _record(self,value,now=None):
         now=time.time() if now is None else now
         if type(now) not in (int,float) or not math.isfinite(now) or now<0:raise HistoryError('HISTORY-CLOCK')
         data=self._writer_load()
-        legacy=data.get('counter_version')!=2
-        if legacy:self._from_main=False  # a legacy upgrade keeps the full backup copy of the old format
-        self.migrate(data)
         if data['last_time'] is not None and now<data['last_time']:now=data['last_time']
         state=value.get('state','UNKNOWN')
         if not isinstance(state,str) or not CODE.fullmatch(state):raise HistoryError('HISTORY-STATE')
@@ -431,56 +648,70 @@ class History:
         # A new RTT sample alone is not a controller transition or flash event.
         key=hashlib.sha256(encoded({k:v for k,v in item.items() if k not in ('latency','website_response')})).hexdigest()
         if key==data['last_key']:
-            original_count=(len(data['events']),len(data.get('days',{})));self.prune(data,now)
-            if legacy or (len(data['events']),len(data.get('days',{})))!=original_count:
-                atomic(self.backup,self.envelope(json.loads(encoded(data))))
-                atomic(self.path,self.envelope(data))
+            original_count=(len(data['index']),len(data.get('days',{})));self.prune(data,now)
+            if self._repaired or (len(data['index']),len(data.get('days',{})))!=original_count:
+                text=state_bytes(data);atomic_bytes(self.backup,text);atomic_bytes(self.path,text)
             if data.get('daily_since') is None:
-                old=self.envelope(json.loads(encoded(data)));data['daily_since']=now;data['days']={}
-                atomic(self.backup,old);atomic(self.path,self.envelope(data))
-            # Unchanged or just rewritten from this very data: the resident copy stays valid for the next event.
+                old=state_bytes(data);data['daily_since']=now;data['days']={}
+                atomic_bytes(self.backup,old);atomic_bytes(self.path,state_bytes(data))
+            # Unchanged or just rewritten from this very state: the resident copy stays valid for the next event.
             remember(self,data)
             return False
-        if not self._from_main:self._legacy_old=self.envelope(json.loads(encoded(data)))
+        if not self._from_main:self._legacy_old=state_bytes(data)
         if data['sequence']>=2**53-1:raise HistoryError('HISTORY-SEQUENCE-LIMIT')
         data['active_attempt']=active;data['retry_episode']=episode
         item.update(time=now,sequence=data['sequence']+1)
         data['sequence']+=1;data['last_key']=key;data['last_time']=now
-        retained=data['events']+[item]
-        data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+sum(row['time']>=now-self.detail_days*86400 for row in retained[:-self.limit])
-        data['events']=retained[-self.limit:]
+        index=data['index'];excess=len(index)+1-self.limit
+        dropped=sum(row[1]>=now-self.detail_days*86400 for row in index[:max(0,excess)])
+        if excess>0:del index[:excess]
+        data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+dropped
         month=time.strftime('%Y-%m',time.localtime(now));day=time.strftime('%Y-%m-%d',time.localtime(now))
         if data.get('daily_since') is None:data['daily_since']=now
         daily=data.setdefault('days',{})
         item['counted_metrics']=self.counters(data,item)
+        line=archive_line(item)
+        index.append([item['sequence'],now,item['counted_metrics'],len(line)])
+        data['tail']=data['tail']+[item]
         for totals in (data['totals'],data['months'].setdefault(month,{}),daily.setdefault(day,{})):
             for metric in METRICS:totals.setdefault(metric,0)
         self.prune(data,now)
-        # New phase evidence must not make our own next read exceed its bound.
-        # Keep aggregate counters; trim only oldest detailed event observations.
+        # The detail budget is the archive's retained lines: the oldest events leave the index, counters stay.
+        index=data['index'];size=sum(row[3] for row in index);drop=0
+        while len(index)-drop>1 and size>self.RETENTION_BYTES:
+            size-=index[drop][3];drop+=1
+        if drop:del index[:drop];data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+drop
+        kept={row[0] for row in index[-TAIL:]}
+        data['tail']=[row for row in data['tail'] if row['sequence'] in kept][-TAIL:]
+        data['archive_lines']+=1;data['archive_bytes']+=len(line)
+        body=None
+        if (data['archive_lines']-len(index))*4>data['archive_lines'] or data['archive_bytes']>self.COMPACT_BYTES:
+            body=self.rebuild(data)  # compaction: only the retained events (the new one comes from the tail)
         raw=encoded(data)
-        while len(data['events'])>1 and len(raw)>self.RETENTION_BYTES:
-            del data['events'][0]
-            data['detail_budget_dropped']=data.get('detail_budget_dropped',0)+1
-            raw=encoded(data)
-        if len(raw)>self.RETENTION_BYTES:raise HistoryError('HISTORY-SIZE')
+        if len(raw)>STATE_BYTES:raise HistoryError('HISTORY-SIZE')
         self._write_new(data,raw)
+        if body is None:append_bytes(self.archive,line)
+        else:atomic_bytes(self.archive,body)
+        remember(self,data)
         return True
-    def _old(self):
-        return self._legacy_old
     def public(self,data=None,now=None):
-        data=self.load() if data is None else json.loads(encoded(data))
-        self.migrate(data);self.prune(data,now if now is not None else data['last_time'] if data['last_time'] is not None else time.time())
-        weekly=({key:sum(key in row.get('counted_metrics',[]) for row in data['events']) for key in METRICS}
-                if all('counted_metrics' in row for row in data['events']) and not data.get('detail_budget_dropped') else None)
+        """The page's projection, from the state only. data: a state, or schema-1 data (statistics export)."""
+        if data is None:state=self.load_state()
+        elif 'events' in data:
+            data=json.loads(encoded(data));self.migrate(data);state=state_of(data)[0]
+        else:state=json.loads(encoded(data))
+        self.prune(state,now if now is not None else state['last_time'] if state['last_time'] is not None else time.time())
+        index=state['index']
+        weekly=({key:sum(key in row[2] for row in index) for key in METRICS}
+                if all(row[2] is not None for row in index) and not state.get('detail_budget_dropped') and not state.get('archive_gap') else None)
         return {'available':self.path.exists() or self.backup.exists(),'restored_from_backup':self.restored,
-                'timezone':data['timezone'],'sequence':data['sequence'],'events':data['events'][-100:],
-                'totals':data.get('totals',{}),'counter_accuracy':data.get('counter_accuracy'),
-                'returns_since':data.get('returns_since'),
-                'weekly':weekly,'weekly_detail_complete':not data['events'] or data['events'][-1]['sequence']-data['events'][0]['sequence']+1==len(data['events']),
-                'detail_days':self.detail_days,'retained_events':len(data['events']),
-                'detail_budget_dropped':data.get('detail_budget_dropped',0),
-                'months':data['months'],'days':data.get('days',{}),'daily_since':data.get('daily_since'),'event_history_truncated':data['sequence']>min(100,len(data['events'])),'scope':'controller transitions; not LAN availability or router power-loss proof'}
+                'timezone':state['timezone'],'sequence':state['sequence'],'events':state['tail'][-100:],
+                'totals':state.get('totals',{}),'counter_accuracy':state.get('counter_accuracy'),
+                'returns_since':state.get('returns_since'),
+                'weekly':weekly,'weekly_detail_complete':not index or index[-1][0]-index[0][0]+1==len(index),
+                'detail_days':self.detail_days,'retained_events':len(index),
+                'detail_budget_dropped':state.get('detail_budget_dropped',0),
+                'months':state['months'],'days':state.get('days',{}),'daily_since':state.get('daily_since'),'event_history_truncated':state['sequence']>min(100,len(index)),'scope':'controller transitions; not LAN availability or router power-loss proof'}
 
 
 def read_public(directory,cache=None):

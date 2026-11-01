@@ -18,9 +18,14 @@
 -- switch. Lua 5.1 cannot yield across pcall/xpcall, so while the task runs pcall/xpcall are coroutine-safe
 -- versions (copcall/coxpcall: the protected call runs in its own coroutine and passes yields outwards; error
 -- values - tables of refusals included - are unchanged). Outside the task they are the native functions.
--- Every command the supervisor still runs synchronously is short and bounded (iptables-save, ip, uci, flock);
 -- io.popen is replaced by a RAM-file version: the SIGCHLD of the monitor's uloop children would otherwise
 -- interrupt a blocking pipe read (EINTR, a router fact) and turn a good command into a failed one.
+-- Responsiveness (after 2.0.0-alpha16): every command of the task (os.execute, so also io.popen, sys.exec,
+-- runner.capture/restore, uci/iptables/nft/rtp2/flock helpers) runs as a uloop child while the task yields
+-- (cooperative_exec); sleeps yield under the supervisor's flocks too (lock_registry keeps the loop's try_lock
+-- off the task's descriptors); the probe's DNS wait polls through sleeps. A step that must stay synchronous
+-- (no yield possible across a C boundary, the drain after the loop) is counted; every step >= 0.5 s is
+-- counted and logged with the place where it began and ended (HV-CORE-AUTO-STEP, hv-core.json).
 --
 -- Isolation: every uloop/ubus callback runs under pcall (a failing handler is logged and counted, the loop goes
 -- on; a failed ubus method answers {"fallback":true}, so the rpcd dispatcher asks agent.py as when the object is
@@ -55,6 +60,10 @@ M.WATCHDOG_SECONDS=120
 M.KILL_GRACE=10
 M.STANDBY_POLL=2
 M.LAG_LOG_SECONDS=5
+M.SLOW_STEP_SECONDS=0.5   -- an Auto step at least this long is slow: counted, logged with where it began and ended
+M.SLOW_LOG_EVERY=10       -- at most one such line per this many seconds (a step >= LAG_LOG_SECONDS is always logged)
+M.LAG_PROBE_SECONDS=1     -- a timer this often measures how late the loop runs (max_loop_lag_s, late_ticks)
+M.LATE_TICK_SECONDS=0.3   -- a probe at least this late counts as a late tick (a page reply would have waited)
 M.MONITOR_STALL_SECONDS=900
 M.STATE='hv-core.json'
 M.CRASHES='hv-core-crashes.json'
@@ -71,6 +80,16 @@ local native_pcall,native_xpcall=pcall,xpcall
 M.native_pcall,M.native_xpcall=native_pcall,native_xpcall
 local co_create,co_resume,co_yield,co_status=coroutine.create,coroutine.resume,coroutine.yield,coroutine.status
 M.in_task=false  -- true only while the supervisor task is being resumed
+M.draining=false -- true while the task is driven to its end after the loop (real sleeps, synchronous commands)
+-- the coroutines between the task driver and the running code, outermost first: the task, then one per
+-- protected call (yieldable() checks every one of them for a C boundary)
+M.chain={}
+local chain_pop=function(...) M.chain[#M.chain]=nil;return ... end
+local function resume_in(co,...)
+  M.chain[#M.chain+1]=co
+  return chain_pop(co_resume(co,...))
+end
+M.resume_in=resume_in
 
 local function settle(co,handler,ok,...)
   if not ok then
@@ -84,12 +103,12 @@ local function settle(co,handler,ok,...)
     return false,err
   end
   if co_status(co)=='dead' then return true,... end
-  -- the protected function yielded (a sleep of the task): pass it outwards, resume with what comes back
-  return settle(co,handler,co_resume(co,co_yield(...)))
+  -- the protected function yielded (a sleep or a command of the task): pass it outwards, resume with what comes back
+  return settle(co,handler,resume_in(co,co_yield(...)))
 end
 function M.coxpcall(f,handler,...)
   local co=co_create(function(...) return f(...) end)
-  return settle(co,handler,co_resume(co,...))
+  return settle(co,handler,resume_in(co,...))
 end
 function M.copcall(f,...) return M.coxpcall(f,nil,...) end
 function M.pcall(f,...)
@@ -105,61 +124,272 @@ function M.install_cooperative(G)
   G=G or _G
   G.pcall=M.pcall;G.xpcall=M.xpcall
 end
+-- yieldable(draining_ok): may the running code yield to the task driver? Only inside the task (and, for a
+-- command, not while it is drained after the loop), from the innermost coroutine of the chain, and with no C
+-- function (a native pcall, table.sort, gsub, require ...) or for-iterator between here and the driver - Lua
+-- 5.1 would raise "attempt to yield across metamethod/C-call boundary". When it may not, the caller does the
+-- old synchronous thing (counted: unyieldable).
+local getinfo=debug.getinfo
+local function frames_free(co,level)
+  while true do
+    local info
+    if co then info=getinfo(co,level,'Sn') else info=getinfo(level,'Sn') end
+    if not info then return true end
+    if info.what=='C' then
+      if not (co and level==0) then return false end  -- level 0 of a resuming coroutine: its coroutine.resume
+    elseif info.name=='(for generator)' then return false end
+    level=level+1
+  end
+end
+function M.yieldable(draining_ok)
+  if not M.in_task or (M.draining and not draining_ok) then return false end
+  local chain=M.chain
+  local n=#chain
+  if n==0 or coroutine.running()~=chain[n] then return false end
+  if not frames_free(nil,3) then return false end
+  for i=n-1,1,-1 do if not frames_free(chain[i],0) then return false end end
+  return true
+end
+M.unyieldable=0
+
 -- cooperative_sleep(sys, locked): sys.sleep (the bottom of env.sleep, sys.wait, the probe polls,
--- platform.wait_quiet) yields inside the task; elsewhere it is the real sleep. While the supervisor holds one of
--- its flocks (locked() true: the control lock, a try_lock, native-history.lock) it never yields: the monitor's
--- lock helpers find a held descriptor of the same file through /proc/self/fd and would take it as their own,
--- and a blocking lock in the loop would wait for a task that cannot run. That sleep blocks the loop, as the
--- separate supervisor's sleep under the lock blocked the monitor's request for it (counted: locked_sleeps).
+-- platform.wait_quiet) yields inside the task; elsewhere it is the real sleep.
+-- Under a flock of the supervisor (locked() true: the control lock, a try_lock, native-history.lock) it yields
+-- too when the lock registry is installed (control.inproc, see lock_registry below): the loop's non-blocking
+-- try_lock then answers "busy" for a file the task has open instead of taking the task's descriptor through the
+-- /proc/$$/fd first match, and nothing in the loop blocks on a lock (counted: locked_yields). Without the
+-- registry the old rule stays: a real sleep that blocks the loop (counted: locked_sleeps).
 M.locked_sleeps=0
+M.locked_yields=0
 function M.cooperative_sleep(sys,locked)
   local real=M.real_sleep or sys.sleep
   M.real_sleep=real
   sys.sleep=function(seconds)
     if M.in_task then
       if type(seconds)~='number' or seconds<=0 then return end
-      if locked and locked() then M.locked_sleeps=M.locked_sleeps+1;return real(seconds) end
+      if locked and locked() then
+        local control=package.loaded['control']
+        if not (type(control)=='table' and control.inproc) then M.locked_sleeps=M.locked_sleeps+1;return real(seconds) end
+        M.locked_yields=M.locked_yields+1
+      end
+      if not M.yieldable(true) then M.unyieldable=M.unyieldable+1;return real(seconds) end
+      M.yielder=coroutine.running()
       co_yield('sleep',seconds)
     else real(seconds) end
   end
 end
 
+-- await(start): inside the task, hand start(resume) to the driver and wait (the loop runs meanwhile) until
+-- resume(...) is called; returns those values. start arms the work (a child process ...) and may return
+-- block(), which waits for it synchronously and returns the same values: used when the loop has ended (stop)
+-- while the task waits.
+function M.await(start) M.yielder=coroutine.running();return co_yield('call',start) end
+
+------------------------------------------------------------------------------------------------------
+-- commands of the task as event-loop children
+------------------------------------------------------------------------------------------------------
+-- Every command of the supervisor reaches os.execute: sys.exec/runner.capture/the lock helpers through io.popen
+-- (file_popen below runs the line with os.execute), the rest directly. Inside the task os.execute(line) starts
+-- `/bin/sh -c '( line\n); echo $? >RC'` as a child of the event loop and yields until it exits: the monitor's
+-- passes, probes and ubus answers go on meanwhile. The result is what system(line) returns (the raw wait
+-- status: exit code * 256), read from RC; the subshell keeps an `exit` of the line inside it, and $$ is the
+-- same shell, so the /proc/$$/fd lock helpers see the same descriptors. Outside the task, while the task is
+-- drained, from a place that may not yield, or when the child cannot start: the native os.execute, as before.
+-- conf: spawn(script, on_exit(code), rc_path) -> block()|nil (raises when it cannot start), directory, unique(),
+-- clock().
+M.native_execute=os.execute
+M.async_commands=0
+M.sync_task_commands=0
+M.spawn_failures=0
+M.max_command_s=0
+M.last_slow_command=nil
+local function read_rc(path)
+  local f=io.open(path,'rb')
+  if not f then return nil end
+  local text=f:read('*l');f:close()
+  return tonumber(string.match(text or '','^(%d+)$'))
+end
+M.read_rc=read_rc
+function M.execute_async(line,conf)
+  local rc_path=conf.directory..'/.exec-'..conf.unique()..'.rc'
+  local script='( '..line..'\n); echo $? >'..rc_path
+  local started=conf.clock()
+  local ok,code=M.await(function(resume)
+    return conf.spawn(script,function(c) resume(true,c) end,rc_path)
+  end)
+  local rc=read_rc(rc_path)
+  os.remove(rc_path)
+  if not ok and rc==nil and code~='HV-CORE-STOPPED' then
+    -- the child never started: run the line here, as before
+    M.spawn_failures=M.spawn_failures+1
+    return M.native_execute(line)
+  end
+  M.async_commands=M.async_commands+1
+  local seconds=conf.clock()-started
+  if seconds>M.max_command_s then M.max_command_s=seconds end
+  if seconds>=1 then M.last_slow_command=string.format('%.1f s: %s',seconds,string.sub(line,1,120)) end
+  if rc then return rc*256 end
+  if type(code)=='number' and code>0 and code<256 then return code*256 end
+  return 255*256
+end
+function M.cooperative_exec(conf)
+  M.exec_conf=conf
+  os.execute=function(line,...)
+    if line==nil or not M.in_task then return M.native_execute(line,...) end
+    if not M.yieldable(false) then
+      if not M.draining then M.sync_task_commands=M.sync_task_commands+1 end  -- the drain runs after the loop
+      return M.native_execute(line,...)
+    end
+    return M.execute_async(line,M.exec_conf)
+  end
+end
+function M.restore_execute() os.execute=M.native_execute;M.exec_conf=nil end
+
+------------------------------------------------------------------------------------------------------
+-- the lock registry (control.inproc): which lock files the task has open
+------------------------------------------------------------------------------------------------------
+-- The flock helpers (control.lock, auto_control.flock_file, monitor_io.try_lock) find their descriptor by the
+-- first /proc/$$/fd entry of the file. In one process the loop's try_lock would find the descriptor the task
+-- holds (it opened it first) and take it as its own while the task waits. The helpers tell the registry of the
+-- files the task opens (opened -> token, closed(token)); the loop's try_lock asks busy(path) first and answers
+-- "not taken", as when another process holds the lock. Files are compared by device:inode (stat), else by path.
+-- held_fds(): the task's descriptors of those files (from /proc/self/fd), closed in the loop's own children so a
+-- curl started while the task holds the control lock does not keep it locked after the task lets it go.
+-- d: stat(path) -> {dev, ino}|nil, fds() -> list of descriptor numbers|nil.
+function M.lock_registry(d)
+  d=d or {}
+  local R={entries={}}
+  local function key(path)
+    local st=d.stat and d.stat(path)
+    if type(st)=='table' and st.dev and st.ino then return tostring(st.dev)..':'..tostring(st.ino) end
+    return 'path:'..tostring(path)
+  end
+  function R.opened(path)
+    if not M.in_task then return nil end
+    local token={key=key(path),path=path}
+    R.entries[token]=true
+    return token
+  end
+  function R.closed(token) if token then R.entries[token]=nil end end
+  function R.count() local n=0;for _ in pairs(R.entries) do n=n+1 end;return n end
+  function R.busy(path)
+    if M.in_task or next(R.entries)==nil then return false end
+    local k=key(path)
+    for token in pairs(R.entries) do if token.key==k then return true end end
+    return false
+  end
+  function R.reset() R.entries={} end
+  function R.held_fds()
+    if next(R.entries)==nil or not d.fds then return nil end
+    local keys={}
+    for token in pairs(R.entries) do keys[token.key]=true end
+    local out={}
+    for _,fd in ipairs(d.fds() or {}) do
+      if keys[key('/proc/self/fd/'..fd)] then out[#out+1]=fd end
+    end
+    return out
+  end
+  return R
+end
+
 ------------------------------------------------------------------------------------------------------
 -- task: one coroutine driven by a loop {after(ms, fn) -> {cancel()}, clock()}
 ------------------------------------------------------------------------------------------------------
--- on_done(ok, result) once at the end; on_step(seconds) after every resume (its duration = loop blocked).
+-- on_done(ok, result) once at the end; on_step(seconds, t) after every resume (its duration = loop blocked;
+-- t.from / t.at: where the step began and where it yielded, see where()).
+-- The task yields ('sleep', s): resumed by a timer after s; or ('call', start) (await): start(resume) arms the
+-- work, resume(...) - from a loop callback - resumes the task with those values.
+local function where(co)
+  -- the first two frames outside this file of a suspended coroutine: where a slow step began or ended
+  local parts={}
+  local level=0
+  while #parts<2 and level<40 do
+    local info=getinfo(co,level,'Sl')
+    if not info then break end
+    local file=info.short_src and string.match(info.short_src,'([^/]*)$')
+    if info.what~='C' and file and file~='hv_core.lua' then parts[#parts+1]=file..':'..tostring(info.currentline) end
+    level=level+1
+  end
+  return table.concat(parts,' < ')
+end
+M.where=where
 function M.task(fn,loop,on_done,on_step)
-  local t={done=false,draining=false,steps=0}
+  local t={done=false,draining=false,steps=0,from=''}
   t.co=co_create(fn)
-  local function step()
+  local step
+  local function wait_call(start)
+    local w={fired=false,pending=true}
+    t.waiting=w
+    local function resume(...)
+      if w.fired or t.done then return end
+      w.fired=true
+      if t.waiting==w then t.waiting=nil end
+      if w.pending then
+        -- fired inside start(): resume from the loop, never from inside this step
+        t.next_args={n=select('#',...),...}
+        if not t.draining then t.handle=loop.after(0,function() step() end) end
+        return
+      end
+      step(...)
+    end
+    local ok,block=native_pcall(start,resume)
+    w.pending=false
+    if not ok then resume(false,block);return end
+    if type(block)=='function' then w.block=block end
+  end
+  step=function(...)
     t.handle=nil
     if t.done then return end
+    local args
+    if select('#',...)==0 and t.next_args then args=t.next_args;t.next_args=nil end
     local started=loop.clock()
     M.in_task=true
-    local result={co_resume(t.co)}
+    local result
+    if args then result={resume_in(t.co,unpack(args,1,args.n))} else result={resume_in(t.co,...)} end
     M.in_task=false
     t.steps=t.steps+1
-    if on_step then on_step(loop.clock()-started) end
-    if co_status(t.co)=='dead' then
+    local seconds_held=loop.clock()-started
+    local dead=co_status(t.co)=='dead'
+    t.at=dead and 'end' or where(M.yielder or t.co)
+    M.yielder=nil
+    if on_step then on_step(seconds_held,t) end
+    if not dead then t.from=t.at end
+    if dead then
       t.done=true;t.ok=result[1];t.result=result[2]
       on_done(result[1],result[2])
+      return
+    end
+    if result[2]=='call' and type(result[3])=='function' then
+      t.wake_at=nil
+      wait_call(result[3])
       return
     end
     local seconds=result[2]=='sleep' and tonumber(result[3]) or 0
     if not seconds or seconds~=seconds or seconds<0 then seconds=0 end
     t.wake_at=loop.clock()+seconds
-    if not t.draining then t.handle=loop.after(math.floor(seconds*1000+0.5),step) end
+    if not t.draining then t.handle=loop.after(math.floor(seconds*1000+0.5),function() step() end) end
   end
   t.step=step
-  -- drain(sleep): runs the task to its end here, with real sleeps (after the loop has ended)
+  -- drain(sleep): runs the task to its end here, with real sleeps (after the loop has ended); a wait for a
+  -- child is finished by its block() (or ends as "not started" when there is none)
   function t.drain(sleep)
     t.draining=true
+    M.draining=true
     if t.handle then t.handle.cancel();t.handle=nil end
     while not t.done do
-      local left=(t.wake_at or 0)-loop.clock()
-      while left>0 do sleep(left);left=(t.wake_at or 0)-loop.clock() end
-      step()
+      if t.next_args then
+        step()
+      elseif t.waiting then
+        local w=t.waiting
+        t.waiting=nil;w.fired=true
+        if w.block then step(w.block()) else step(false,'HV-CORE-STOPPED') end
+      else
+        local left=(t.wake_at or 0)-loop.clock()
+        while left>0 do sleep(left);left=(t.wake_at or 0)-loop.clock() end
+        step()
+      end
     end
+    M.draining=false
   end
   return t
 end
@@ -183,7 +413,8 @@ end
 -- 'w': writes are kept and the command reads them from a file at close(). Same lines, same exit statuses
 -- (the callers echo $? themselves: Lua 5.1 popen close() never returned one).
 function M.file_popen(directory,unique,execute)
-  execute=execute or os.execute
+  -- os.execute looked up at each call: inside the task it is the cooperative one (cooperative_exec)
+  execute=execute or function(line) return os.execute(line) end
   return function(command,mode)
     mode=mode or 'r'
     local path=directory..'/.popen-'..unique()
@@ -229,25 +460,50 @@ function M.guard(where,fn,report)
     if not ok then report(where,err) end
   end
 end
--- guarded_uloop(real, report): uloop whose timer/process/fd callbacks run under pcall (package.loaded.uloop)
-function M.guarded_uloop(real,report)
+-- guarded_uloop(real, report, held_fds): uloop whose timer/process/fd callbacks run under pcall
+-- (package.loaded.uloop). A child the loop starts (curl ...) while the task holds a flock gets the task's
+-- descriptors of it closed (held_fds(), the lock registry): `/bin/sh -c 'exec "$0" "$@" N>&-' path args...`,
+-- the same pid and argv; a flock lives as long as any descriptor of it.
+M.wrapped_children=0
+function M.guarded_uloop(real,report,held_fds)
   local proxy=setmetatable({},{__index=real})
   proxy.timer=function(fn,ms)
     if ms~=nil then return real.timer(M.guard('timer',fn,report),ms) end
     return real.timer(M.guard('timer',fn,report))
   end
-  proxy.process=function(path,args,env,fn) return real.process(path,args,env,M.guard('process',fn,report)) end
+  proxy.process=function(path,args,env,fn)
+    local fds=(held_fds and not M.in_task) and held_fds() or nil
+    if fds and #fds>0 then
+      local closes={}
+      for i,fd in ipairs(fds) do closes[i]=string.format('%d',fd)..'>&-' end
+      local wrapped={'-c','exec "$0" "$@" '..table.concat(closes,' '),path}
+      for _,a in ipairs(args or {}) do wrapped[#wrapped+1]=a end
+      M.wrapped_children=M.wrapped_children+1
+      return real.process('/bin/sh',wrapped,env,M.guard('process',fn,report))
+    end
+    return real.process(path,args,env,M.guard('process',fn,report))
+  end
   proxy.fd_add=function(fd,fn,flags) return real.fd_add(fd,M.guard('fd',fn,report),flags) end
   return proxy
 end
--- guard_object(object, conn, report): a failing ubus method answers {"fallback":true} (rpcd -> agent.py)
-function M.guard_object(object,conn,report)
+-- task_uloop(real, report): the uloop for the task's own commands (cooperative_exec). The driver starts them
+-- outside the coroutine (in_task false), so the guarded proxy would close the task's lock descriptors in its own
+-- flock helpers (`/proc/$$/fd` then finds nothing: CONTROL-LOCK-UNAVAILABLE - MT3000, alpha17, three errors and
+-- HV-CORE-FALLBACK). Same guarded exit callback, never wrapped.
+function M.task_uloop(real,report)
+  return {process=function(path,args,env,fn) return real.process(path,args,env,M.guard('process',fn,report)) end}
+end
+-- guard_object(object, conn, report, observe, clock): a failing ubus method answers {"fallback":true}
+-- (rpcd -> agent.py); observe(name, seconds) hears how long each method held the loop
+function M.guard_object(object,conn,report,observe,clock)
   for _,methods in pairs(object) do
     for name,spec in pairs(methods) do
       local fn=spec[1]
       if type(fn)=='function' then
         spec[1]=function(req,msg)
+          local started=observe and clock and clock()
           local ok,result=native_pcall(fn,req,msg)
+          if started then native_pcall(observe,name,clock()-started) end
           if ok then return result end
           report('ubus '..tostring(name),result)
           native_pcall(conn.reply,conn,req,{fallback=true})
@@ -354,7 +610,8 @@ local Core={}
 Core.__index=Core
 function M.core(d)
   return setmetatable({d=d,auto_state='STARTING',auto_runs=0,auto_restarts=0,auto_crashes=0,handler_errors=0,
-    max_lag=0,max_step=0,stopping=false,started=d.wall(),started_clock=d.loop.clock()},Core)
+    max_lag=0,max_step=0,stopping=false,started=d.wall(),started_clock=d.loop.clock(),
+    auto_steps=0,slow_steps=0,late_ticks=0,rpc_calls=0,max_rpc=0},Core)
 end
 function Core:log(text) self.d.log(text) end
 function Core:handler_error(where,err)
@@ -364,7 +621,40 @@ function Core:handler_error(where,err)
 end
 function Core:start()
   self:beat()
+  self:lag_probe()
   self:start_auto()
+end
+-- lag_probe(): every LAG_PROBE_SECONDS - how late the loop ran this timer (what a page request waited, at most)
+function Core:lag_probe()
+  self.probe_handle=nil
+  if self.stopping then return end
+  local now=self.d.loop.clock()
+  if self.probe_expected then
+    local lag=now-self.probe_expected
+    if lag>self.max_lag then self.max_lag=lag end
+    if lag>=M.LATE_TICK_SECONDS then self.late_ticks=self.late_ticks+1 end
+  end
+  self.probe_expected=now+M.LAG_PROBE_SECONDS
+  self.probe_handle=self.d.loop.after(M.LAG_PROBE_SECONDS*1000,function() self:lag_probe() end)
+end
+-- step(seconds, t): one resume of the Auto task held the loop this long
+function Core:auto_step(seconds,t)
+  self.auto_steps=self.auto_steps+1
+  if seconds>self.max_step then self.max_step=seconds end
+  if seconds<M.SLOW_STEP_SECONDS then return end
+  self.slow_steps=self.slow_steps+1
+  local place=string.format('%s -> %s',tostring(t and t.from or ''),tostring(t and t.at or ''))
+  self.last_slow_step=string.format('%.2f s: %s',seconds,place)
+  local now=self.d.loop.clock()
+  if seconds>=M.LAG_LOG_SECONDS or not self.slow_logged or now-self.slow_logged>=M.SLOW_LOG_EVERY then
+    self.slow_logged=now
+    self:log(string.format('HV-CORE-AUTO-STEP: one Auto step held the loop %.1f s (%s)',seconds,place))
+  end
+end
+-- rpc(name, seconds): a ubus method of the monitor held the loop this long
+function Core:rpc(name,seconds)
+  self.rpc_calls=self.rpc_calls+1
+  if seconds>self.max_rpc then self.max_rpc=seconds;self.max_rpc_name=tostring(name) end
 end
 function Core:retry_auto()
   self.auto_retry=self.d.loop.after(M.RESTART_SECONDS*1000,function() self.auto_retry=nil;self:start_auto() end)
@@ -386,10 +676,7 @@ function Core:start_auto()
   local task
   task=M.task(function() return self.d.auto_run(env) end,self.d.loop,
     function(ok,result) self:auto_done(task,ok,result) end,
-    function(seconds)
-      if seconds>self.max_step then self.max_step=seconds end
-      if seconds>=M.LAG_LOG_SECONDS then self:log(string.format('HV-CORE-AUTO-STEP: one Auto step held the loop %.1f s',seconds)) end
-    end)
+    function(seconds,t) self:auto_step(seconds,t) end)
   self.auto_task=task
   task.step()
 end
@@ -397,6 +684,7 @@ function Core:auto_done(task,ok,result)
   if task~=self.auto_task then return end
   self.auto_task=nil
   native_pcall(self.d.collect)  -- the ended run's open files (and the flocks they hold) close with it
+  if self.d.locks_reset then native_pcall(self.d.locks_reset) end  -- nothing of the ended run stays "open"
   if self.stopping then self.auto_state='STOPPED';return end
   if ok then
     self.auto_state='RESTARTING'
@@ -426,6 +714,12 @@ function Core:snapshot(now)
     auto_runs=self.auto_runs,auto_restarts=self.auto_restarts,auto_crashes=self.auto_crashes,handler_errors=self.handler_errors,
     last_handler_error=self.last_handler_error or canon.null,last_error=self.last_error or canon.null,
     max_loop_lag_s=canon.float(self.max_lag),max_auto_step_s=canon.float(self.max_step),locked_sleeps=M.locked_sleeps,
+    locked_yields=M.locked_yields,unyieldable=M.unyieldable,auto_steps=self.auto_steps,slow_auto_steps=self.slow_steps,
+    last_slow_step=self.last_slow_step or canon.null,late_ticks=self.late_ticks,
+    async_commands=M.async_commands,sync_task_commands=M.sync_task_commands,spawn_failures=M.spawn_failures,
+    max_command_s=canon.float(M.max_command_s),last_slow_command=M.last_slow_command or canon.null,
+    wrapped_children=M.wrapped_children,rpc_calls=self.rpc_calls,max_rpc_s=canon.float(self.max_rpc),
+    max_rpc_method=self.max_rpc_name or canon.null,
     memory=(mok and type(memory)=='table') and canon.object(memory) or canon.null})
 end
 -- beat(): every HEARTBEAT_SECONDS - the loop's lateness, the monitor's liveness, the state file (the watchdog's input)
@@ -455,6 +749,7 @@ function Core:stop(sleep)
   self.stopping=true
   if self.auto_retry then self.auto_retry.cancel();self.auto_retry=nil end
   if self.beat_handle then self.beat_handle.cancel();self.beat_handle=nil end
+  if self.probe_handle then self.probe_handle.cancel();self.probe_handle=nil end
   local task=self.auto_task
   if task and not task.done then task.drain(sleep) end
   self.auto_state='STOPPED'
@@ -464,9 +759,25 @@ end
 -- standby (procd instance `native`): watchdog of hv-core and the separate Auto supervisor after a fallback
 ------------------------------------------------------------------------------------------------------
 -- standby_step(state, d) -> 'exec' | 'wait' | 'term' | 'kill'. d: exists(path), read(path), clock(),
--- cmdline(pid) -> text|nil (NUL as spaces), kill(pid, signal), log(text), write(path, text), runtime.
+-- cmdline(pid) -> text|nil (NUL as spaces), kill(pid, signal), log(text), write(path, text), runtime,
+-- lock_free(path) -> boolean (optional).
+-- After a fallback the standby becomes `auto.lua daemon` only once native.lock is free (hv-core and the children
+-- that inherited its descriptor have let it go; at most EXEC_WAIT s): the separate supervisor would otherwise
+-- exit with NATIVE-SUPERVISOR-BUSY and procd would restart the instance every 5 s until then (log noise only;
+-- the lock itself keeps the two supervisors apart).
+M.EXEC_WAIT=300
 function M.standby_step(state,d)
-  if d.exists(d.runtime..'/'..M.FALLBACK) then return 'exec' end
+  if d.exists(d.runtime..'/'..M.FALLBACK) then
+    if d.lock_free and not d.lock_free(d.runtime..'/native.lock') then
+      local now=d.clock()
+      if not state.exec_wait then
+        state.exec_wait=now
+        d.log('HV-CORE-FALLBACK: the standby waits for native.lock before it becomes the Lua Auto supervisor')
+      end
+      if now-state.exec_wait<M.EXEC_WAIT then return 'wait' end
+    end
+    return 'exec'
+  end
   local text=d.read(d.runtime..'/'..M.STATE)
   local pid=text and tonumber(string.match(text,'"pid":(%d+)'))
   local clock=text and tonumber(string.match(text,'"clock":([-+%deE.]+)'))
@@ -517,6 +828,12 @@ function M.standby()
     local f=io.open(path..'.part','wb');if not f then return end
     f:write(text);f:close();os.rename(path..'.part',path)
   end
+  -- a second description of native.lock taken and released at once by flock(1) (no flock(1): assume free)
+  local have_flock=os.execute('command -v flock >/dev/null 2>&1')==0
+  function d.lock_free(path)
+    if not have_flock then return true end
+    return os.execute('flock -xn '..path..' true >/dev/null 2>&1')==0
+  end
   local state={}
   while true do
     local ok,action=pcall(M.standby_step,state,d)
@@ -559,6 +876,66 @@ function M.exec_monitor(runtime,closers)
   os.exit(1)
 end
 
+-- router_lock_view(): stat (device, inode) and this process's descriptors through nixio.fs (no child process)
+function M.router_lock_view()
+  local ok,nfs=pcall(require,'nixio.fs')
+  if not (ok and type(nfs)=='table' and nfs.stat) then return {} end
+  return {stat=function(path) local sok,st=native_pcall(nfs.stat,path);return sok and st or nil end,
+    fds=function()
+      local out={}
+      local dok,iter=native_pcall(nfs.dir,'/proc/self/fd')
+      if dok and iter then for name in iter do local n=tonumber(name);if n and n>2 then out[#out+1]=n end end end
+      return out
+    end}
+end
+-- router_child_env(mio): the environment of this process for the task's children (system() passed it too)
+function M.router_child_env(mio)
+  local ok,nixio=pcall(require,'nixio')
+  if ok and type(nixio)=='table' and nixio.getenv then
+    local eok,all=native_pcall(nixio.getenv)
+    if eok and type(all)=='table' then
+      local out={}
+      for k,v in pairs(all) do if type(k)=='string' and type(v)=='string' then out[#out+1]=k..'='..v end end
+      table.sort(out)
+      if #out>0 then return out end
+    end
+  end
+  -- without nixio.getenv: what procd gives this instance (PATH, TZ, LUA_PATH), else the monitor's child set
+  local out={}
+  for _,name in ipairs({'PATH','TZ','LUA_PATH','HOME'}) do
+    local v=os.getenv(name)
+    if v then out[#out+1]=name..'='..v end
+  end
+  if os.getenv('PATH') then return out end
+  return mio.CHILD_ENV
+end
+-- router_spawn(uloop, env) -> spawn(script, on_exit, rc_path) for cooperative_exec: `/bin/sh -c script` as a
+-- uloop child (referenced until it exits: libubox-lua cancels a collected process); block() waits for it after
+-- the loop has ended (nixio.waitpid, else the status file).
+M.children={}
+function M.router_spawn(uloop,env)
+  local ok,nixio=pcall(require,'nixio')
+  if not (ok and type(nixio)=='table') then nixio=nil end
+  return function(script,on_exit,rc_path)
+    local key={}
+    local proc=uloop.process('/bin/sh',{'-c',script},env,function(code) M.children[key]=nil;on_exit(code) end)
+    if not proc then error('uloop.process',0) end
+    M.children[key]=proc
+    local pid=nil
+    native_pcall(function() pid=proc:pid() end)
+    if type(pid)~='number' then pid=nil end
+    return function()
+      while true do
+        if pid and nixio and nixio.waitpid then
+          local wok,r=native_pcall(nixio.waitpid,pid,'nohang')
+          if not wok or r==pid or r==nil then M.children[key]=nil;return true,nil end
+        elseif read_rc(rc_path) then M.children[key]=nil;return true,nil end
+        M.real_sleep(0.05)
+      end
+    end
+  end
+end
+
 function M.daemon()
   local run=require('runner')
   local canon=require('canon')
@@ -568,6 +945,7 @@ function M.daemon()
   -- a fallback in force (until the next service stop): the separate Lua monitor runs in this procd instance
   if present(runtime..'/'..M.FALLBACK) then M.exec_monitor(runtime,{}) end
   M.install_file_popen(runtime)
+  M.native_execute('rm -f '..runtime..'/.exec-*.rc')  -- status files of commands a killed run left behind
   local A=require('auto')
   local agent_file,agent_fd=A.hold_lock(runtime,'agent.lock')
   if not agent_file then io.stderr:write('HV-CORE-MONITOR-BUSY\n');os.exit(1) end
@@ -592,15 +970,25 @@ function M.daemon()
     end)
     sys.close_fds={agent_fd}
     for _,directory in ipairs({'/etc/homensai-vpn','/etc/homensai-vpn/session-recovery'}) do pcall(sys.sweep_pending,directory) end
+    -- the task waits (yields) under its flocks too: the registry keeps the loop's try_lock off its descriptors
+    local registry=M.lock_registry(M.router_lock_view())
+    control.inproc=registry
+    -- the probe's DNS wait of the task polls through sleeps (yields) instead of one blocking poll()
+    sys.cooperative=function() return M.yieldable(false) end
     local real=require('uloop')
     local function report(where,e)
       if core then core:handler_error(where,e) else io.stderr:write('hv-core: ',tostring(where),': ',tostring(e),'\n') end
     end
-    local uloop=M.guarded_uloop(real,report)
+    local uloop=M.guarded_uloop(real,report,registry.held_fds)
     package.loaded['uloop']=uloop
     if mio.setup_timezone then mio.setup_timezone() end
     real.init()
-    handle=require('monitor').start(mio,nil,{object=function(object,conn) M.guard_object(object,conn,report) end})
+    -- the task's commands: children of this loop (the guarded uloop reports a failing exit callback)
+    M.cooperative_exec({directory=runtime,unique=function() return canon.unique() end,clock=run.clock,
+      spawn=M.router_spawn(M.task_uloop(real,report),M.router_child_env(mio))})
+    handle=require('monitor').start(mio,nil,{object=function(object,conn)
+      M.guard_object(object,conn,report,function(name,seconds) if core then core:rpc(name,seconds) end end,run.clock)
+    end})
     local status_path=runtime..'/status.json'
     handle.monitor.on_status=function(status,text)
       if handle.monitor.runtime..'/status.json'~=status_path then return end
@@ -630,6 +1018,7 @@ function M.daemon()
       record_crash=record,
       fall_back=function(n,text) fallback={count=n,message=text};real.cancel() end,
       collect=function() collectgarbage('collect') end,
+      locks_reset=registry.reset,
       write_state=function(value) write_ram(runtime..'/'..M.STATE,canon.encode(value)) end,
       memory=run.memory,
       monitor_age=function() return run.clock()-(handle.monitor.published_at or core.started_clock) end,

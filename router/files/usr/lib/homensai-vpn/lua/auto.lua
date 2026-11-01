@@ -54,6 +54,29 @@ function M.tunnel_devices(env,seconds)
   end
 end
 
+-- A power cut during a switch (soak, alpha16: sysrq in RESTORING): right after boot the vendor still rebuilds the
+-- firewall and the tunnels (the pair's own revive triggers firewall reloads), so the kernel graph changes under the
+-- recovery rollback (KERNEL-POLICY-UNVERIFIED / ROLLBACK-UNVERIFIED). Two such failures ended in ROLLBACK-GIVEN-UP
+-- and a RESTORING journal only the operator could close. Within the first BOOT_SETTLE_UPTIME seconds of uptime
+-- these failures are not counted: wait BOOT_RETRY_WAIT and retry (ROLLBACK-BOOT-RETRY in the log). Later, or any
+-- other code, counts as before.
+M.BOOT_SETTLE_UPTIME=600
+M.BOOT_RETRY_WAIT=20
+M.BOOT_RETRY_CODES={['KERNEL-POLICY-UNVERIFIED']=true,['ROLLBACK-UNVERIFIED']=true}
+function M.boot_rollback(env,value)
+  while true do
+    local ok,err=pcall(R.rollback,env,value,'SUPERVISOR-RECOVERY')
+    if ok then return end
+    local code=is_refused(err) and err.code or nil
+    if not (code and M.BOOT_RETRY_CODES[code]) or env.stop() or env.run.clock()+M.BOOT_RETRY_WAIT>=M.BOOT_SETTLE_UPTIME then
+      R.count_failure(env,value)
+      error(err,0)
+    end
+    pcall(function() require('durable').log('ROLLBACK-BOOT-RETRY: '..code) end)
+    env.sleep(M.BOOT_RETRY_WAIT)
+  end
+end
+
 -- serve() up to the loop: returns 'stopped' when the daemon must end (give_up / CONTROL-REVISION-STALE),
 -- 'ready' otherwise.
 function M.recover(env)
@@ -97,7 +120,7 @@ function M.recover(env)
     end
     if failures>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
     M.tunnel_devices(env)  -- the rollback ends with guard(devices()): wait for a tunnel (bounded), never count its absence
-    local ok,err=pcall(R.rollback_counted,env,value,'SUPERVISOR-RECOVERY')
+    local ok,err=pcall(M.boot_rollback,env,value)
     if not ok then
       if (num(getd(value,'rollback_failures',0)) or 0)>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
       error(err,0)
@@ -381,6 +404,24 @@ end
 -- native_switch.serve(): one supervisor per router. RUNTIME/native.lock is held with flock(LOCK_EX|LOCK_NB) for the
 -- life of the process, so the Lua and the Python supervisor can never run at the same time. Long-lived children
 -- (rtp2.sh, ifup, the guard release job, the probe bridge) never inherit it (sys.close_fds).
+-- stop_flagged(runtime, since): /etc/init.d stop touches RUNTIME/service-stop.flag before procd's SIGTERM.
+-- uloop's SIGTERM handler only sets a flag that a wait inside a pass (give_up, transaction waits) never sees,
+-- so the process outlived the stop until procd's SIGKILL after term_timeout (soak, alpha16). Only a flag
+-- touched after `since` (the process start, wall seconds) counts: a restart's new process ignores it, and the
+-- old one still sees it (removing it at start hid it - MT3000, alpha17).
+M.STOP_FLAG='service-stop.flag'
+function M.stop_flagged(runtime,since)
+  local path=runtime..'/'..M.STOP_FLAG
+  local ok,fs=pcall(require,'nixio.fs')
+  if ok and type(fs)=='table' and fs.stat then
+    local mtime=fs.stat(path,'mtime')
+    return type(mtime)=='number' and mtime>(since or 0)
+  end
+  local f=io.open(path,'r')
+  if f then f:close();return true end
+  return false
+end
+
 function M.hold_native_lock(runtime) return M.hold_lock(runtime,'native.lock') end
 -- hold_lock(runtime, name): the same flock on RUNTIME/<name> (hv-core also holds agent.lock, the monitor's own)
 function M.hold_lock(runtime,name)
@@ -451,8 +492,9 @@ function M.daemon()
   for _,directory in ipairs({'/etc/homensai-vpn','/etc/homensai-vpn/session-recovery'}) do pcall(sys.sweep_pending,directory) end
   local backend=require('backend').new(sys)
   local stop=false
+  local started=os.time()
   local env={run=run,backend=backend,runtime=run.RUNTIME,persist='/etc/homensai-vpn',
-             stop=function() return stop end,
+             stop=function() return stop or M.stop_flagged(run.RUNTIME,started) end,
              sleep=function(s) sys.sleep(s) end,
              history_lock=ctl.flock_file,version=backend.VERSION}
   backend.bind(env)

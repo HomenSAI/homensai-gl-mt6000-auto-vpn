@@ -214,12 +214,16 @@ function M.rollback(env,value,reason,restore_order)
   end
 end
 
-function M.rollback_counted(env,value,reason)
-  local ok,err=pcall(M.rollback,env,value,reason)
-  if ok then return err end
+function M.count_failure(env,value)
   value.rollback_failures=(num(getd(value,'rollback_failures',0)) or 0)+1
   value.rollback_package=M.recovery_package(env)
   pcall(T.journal_write,env,value)
+end
+
+function M.rollback_counted(env,value,reason)
+  local ok,err=pcall(M.rollback,env,value,reason)
+  if ok then return err end
+  M.count_failure(env,value)
   error(err,0)
 end
 

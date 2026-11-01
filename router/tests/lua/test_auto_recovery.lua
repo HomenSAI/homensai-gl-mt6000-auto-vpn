@@ -71,6 +71,76 @@ t.test('a recorded restore step whose graph is unchanged needs authorize(): with
   t.eq(env.backend.uci,{'r2','r1'},'nothing was written')
 end)
 
+-- soak, alpha16: a power cut in RESTORING; right after boot the vendor rebuilt the firewall under the rollback
+local function restoring_after_boot(env,uptime)
+  pair_attempt(env)
+  local j=t.journal(env);j.phase='RESTORING';j.confirmed=nil;T.journal_write(env,j)
+  env.run.mono_now=uptime
+end
+local function failing_rollback(times,code)
+  local real,calls=R.rollback,{n=0}
+  R.rollback=function(...)
+    calls.n=calls.n+1
+    if calls.n<=times then require('auto_control').refuse(code) end
+    return real(...)
+  end
+  return calls,function() R.rollback=real end
+end
+
+t.test('boot window: KERNEL-POLICY-UNVERIFIED right after boot is retried, not counted (ROLLBACK-BOOT-RETRY)',function()
+  local env=wired()
+  restoring_after_boot(env,90)
+  local calls,restore=failing_rollback(2,'KERNEL-POLICY-UNVERIFIED')
+  local ok,res=pcall(A.recover,env)
+  restore()
+  t.truthy(ok,tostring(type(res)=='table' and res.code or res))
+  t.eq(calls.n,3)
+  t.eq(env.slept,{A.BOOT_RETRY_WAIT,A.BOOT_RETRY_WAIT})
+  local j=t.journal(env)
+  t.eq(j.phase,'ROLLED-BACK');t.eq(j.rollback_failures,nil)
+end)
+
+t.test('boot window ends: the same failure is counted as before',function()
+  local env=wired()
+  restoring_after_boot(env,A.BOOT_SETTLE_UPTIME-A.BOOT_RETRY_WAIT-5)
+  local calls,restore=failing_rollback(5,'KERNEL-POLICY-UNVERIFIED')
+  local ok=pcall(A.recover,env)
+  restore()
+  t.eq(ok,false);t.eq(calls.n,2);t.eq(#env.slept,1)
+  t.eq(t.journal(env).rollback_failures,1)
+end)
+
+t.test('boot window: any other code is counted at once',function()
+  local env=wired()
+  restoring_after_boot(env,90)
+  local calls,restore=failing_rollback(1,'POLICY-IDENTITY-CHANGED')
+  local ok=pcall(A.recover,env)
+  restore()
+  t.eq(ok,false);t.eq(calls.n,1);t.eq(#env.slept,0)
+  t.eq(t.journal(env).rollback_failures,1)
+end)
+
+t.test('boot window: Stop ends the retries and counts the failure',function()
+  local env=wired()
+  restoring_after_boot(env,90)
+  env.stopped=true
+  local calls,restore=failing_rollback(5,'ROLLBACK-UNVERIFIED')
+  local ok=pcall(A.recover,env)
+  restore()
+  t.eq(ok,false);t.eq(calls.n,1)
+  t.eq(t.journal(env).rollback_failures,1)
+end)
+
+t.test('stop_flagged: /etc/init.d stop touches RUNTIME/service-stop.flag; only a flag newer than the process counts',function()
+  local dir=os.tmpname();os.remove(dir);os.execute('mkdir -p "'..dir..'"')
+  local now=os.time()
+  t.eq(A.stop_flagged(dir,now-10),false)
+  local f=assert(io.open(dir..'/'..A.STOP_FLAG,'w'));f:close()
+  t.eq(A.stop_flagged(dir,now-10),true,'the old process sees a stop after its start')
+  if pcall(require,'nixio.fs') then t.eq(A.stop_flagged(dir,now+10),false,'a process started after the stop ignores it') end
+  os.remove(dir..'/'..A.STOP_FLAG);os.remove(dir)
+end)
+
 t.test('order_allowed with a recorded step allows exactly its before/after orders',function()
   local j=canon.object({phase='RESTORING',before=canon.array({'a','b','c'}),after=canon.array({'b','a','c'}),restore_before_order=canon.array({'b','a','c'}),
     restore_target_order=canon.array({'a','b','c'}),restore_before_verified=true,restore_kernel_fingerprint=string.rep('f',64)})

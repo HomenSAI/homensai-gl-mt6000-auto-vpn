@@ -183,10 +183,8 @@ function M.reset_native_history(env,persist,now,before)
   data.events=canon.array();data.months=canon.object();data.days=canon.object();data.totals=canon.object()
   data.counted=canon.object();data.daily_since=now;data.returns_since=now;data.detail_budget_dropped=0
   data.counter_accuracy='reset by the owner';data.legacy_months=canon.object()
-  data.counted_state=nil;data.counted_reason=nil
-  local text=canon.encode(h:envelope(data))
-  env.run.fs.write_atomic(h.path,text);env.run.fs.write_atomic(h.backup,text)
-  history.forget_resident()
+  data.counted_state=nil;data.counted_reason=nil;data.archive_gap=nil
+  h:store(data)  -- journal layout (schema 2): state (main, backup), then the emptied archive; drops the resident
   return old
 end
 

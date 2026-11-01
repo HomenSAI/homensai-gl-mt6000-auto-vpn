@@ -20,11 +20,26 @@ t.test('first record creates the file; the same event twice is not recorded agai
   env.run.advance(5)
   t.eq(record(env,h,{state='OBSERVING',reason='PAIR-WATCHING',source='wireguard:peer_1',target='openvpn:1_1',proof_scope='router-probed-ipv4'}),false)
   t.eq(t.history(env).sequence,1)
-  -- envelope shape: {"data":...,"schema":1,"sha256":...} with the checksum of the canonical data
+  -- envelope shape: {"data":...,"schema":2,"sha256":...} with the checksum of the canonical state; one archive line
   local text=env.run.fs.read(env.persist..'/native-history.json')
   t.truthy(text:sub(1,8)=='{"data":')
   local envelope=canon.decode(text)
-  t.eq(envelope.sha256,canon.sha256(canon.encode(envelope.data)))
+  t.eq(envelope.schema,2);t.eq(envelope.sha256,canon.sha256(canon.encode(envelope.data)))
+  t.eq(envelope.data.events,nil);t.eq(#envelope.data.index,1);t.eq(#envelope.data.tail,1)
+  local archive=env.run.fs.read(env.persist..'/native-history.events.jsonl')
+  t.eq(archive,history.archive_line(envelope.data.tail[1]));t.eq(envelope.data.archive_bytes,#archive)
+end)
+
+t.test('an existing history over the read limit is refused (HISTORY-CORRUPT), never replaced by an empty one',function()
+  local env,h=fresh()
+  t.eq(record(env,h,{state='OBSERVING',reason='PAIR-WATCHING',source='wireguard:peer_1',target='openvpn:1_1',proof_scope='router-probed-ipv4'}),true)
+  local before=env.run.fs.read(env.persist..'/native-history.json')
+  -- the MT3000 case of 31.10 (1.27 MB over the old 1 MB limit): unsafe() says "too large" for an existing file
+  env.run.fs.unsafe=function(path,limit) return limit<2^53 and string.find(path,'native%-history')~=nil and not string.find(path,'events') end
+  env.run.advance(5)
+  local ok,err=pcall(record,env,h,{state='BLOCKED',reason='SOURCE-FAILED',source='wireguard:peer_1',target='openvpn:1_1',proof_scope='router-probed-ipv4'})
+  t.eq(ok,false);t.eq(type(err)=='table' and err.code or err,'HISTORY-CORRUPT')
+  t.eq(env.run.fs.read(env.persist..'/native-history.json'),before,'the file is untouched')
 end)
 
 t.test('attempt correlation and counters over a switch',function()

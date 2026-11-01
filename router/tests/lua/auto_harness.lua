@@ -209,9 +209,15 @@ end
 
 function H.read(env,path) local text=env.run.fs.read(path);return text and canon.decode(text) or nil end
 function H.journal(env) return require('transaction').journal_read(env) end
+-- the history as schema-1 shaped data (journal layout: state + archive, read back by history.load)
 function H.history(env)
+  if env.run.fs.read(env.persist..'/native-history.json')==nil then return nil end
+  return require('history').new(env,env.persist,10000,7):load()
+end
+-- the raw state envelope of native-history.json (schema 2)
+function H.state(env)
   local text=env.run.fs.read(env.persist..'/native-history.json')
-  return text and canon.decode(text).data or nil
+  return text and canon.decode(text) or nil
 end
 function H.states(env)
   local out={}

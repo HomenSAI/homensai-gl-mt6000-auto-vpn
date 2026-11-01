@@ -34,8 +34,12 @@ local function file_runner(clock)
     for line in p:lines() do out[#out+1]=line end;p:close();return out
   end
   function R.try_lock(_,fn) return true,fn() end
+  function R.append(path,text) local f=assert(io.open(path,'ab'));f:write(text);f:close() end
+  function R.rename(a,b) assert(os.rename(a,b)) end
   return R
 end
+-- wall seconds with sub-second digits (os.clock leaves out the sha256sum child processes)
+local function wall() local p=io.popen('date +%s.%N');local s=p:read('*a');p:close();return tonumber(s) or os.time() end
 
 local function apply(acc,op)
   local kind=op.op
@@ -132,6 +136,6 @@ end
 
 -- extra drivers registered by other modules (latency history, stats reset, ...)
 local extra=dofile(here..'/history_differential_extra.lua')
-extra(cases,results,{canon=canon,read=read,write=write,file_runner=file_runner})
+extra(cases,results,{canon=canon,read=read,write=write,file_runner=file_runner,here=here,wall=wall})
 
 write(arg[2],canon.encode(results))

@@ -113,10 +113,13 @@ function M.read_file(path)
   local text=f:read('*a');f:close()
   return text
 end
-function M.unsafe(path)
+function M.unsafe(path,limit)
   local st=lstat(path)
-  return st~=nil and (st.type~='reg' or st.size>1024*1024)
+  return st~=nil and (st.type~='reg' or st.size>(limit or 1024*1024))
 end
+-- switch-history journal: one archive line (fsync) and the state rename (statistics reset, tests)
+function M.append(path,text) return require('durable').append(path,text) end
+function M.rename(from,to) return require('durable').rename(from,to) end
 -- Flash writes: durable.write (temporary file, fsync, rename, fsync of the directory) - the one primitive of
 -- the Lua line. RAM-only writes (reply files of the rpcd bridge, probe scratch files): the same rename, no fsync.
 function M.write_atomic(path,text) return require('durable').write(path,text) end
@@ -379,19 +382,26 @@ function M.try_lock(directory,fn,name)
   local st=lstat(directory)
   if st and st.type=='lnk' then return false end
   local path=directory..'/'..name
+  -- hv-core: a lock file the Auto task of this process has open is "held by another" for the loop (the first
+  -- /proc/$$/fd match would be the task's descriptor); the task's own try_lock is registered (control.inproc)
+  local control=package.loaded['control']
+  local inproc=type(control)=='table' and control.inproc or nil
+  if inproc and inproc.busy(path) then return false end
   local file=io.open(path,'a')
   if not file then os.execute('mkdir -p '..directory..' && chmod 700 '..directory);file=io.open(path,'a') end
   if not file then return false end
+  local token=inproc and inproc.opened(path) or nil
   local p=io.popen('for f in /proc/$$/fd/*; do if [ "$f" -ef '..path..' ]; then flock -n -x "${f##*/}" && echo "ok ${f##*/}"; exit 0; fi; done; exit 97','r')
   local out=p and p:read('*a') or ''
   if p then p:close() end
   local fd=tonumber(string.match(out,'^ok (%d+)\n$'))
-  if not fd then file:close();return false end
+  if not fd then file:close();if token then inproc.closed(token) end;return false end
   local outer=held_try
   held_try=fd
   local results={pcall(fn)}
   held_try=outer
   file:close()
+  if token then inproc.closed(token) end
   if not results[1] then error(results[2],0) end
   return true,unpack(results,2)
 end

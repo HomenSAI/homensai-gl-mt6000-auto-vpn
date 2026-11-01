@@ -249,9 +249,23 @@ function M.new(sys)
     if not ok then value_error('POLICY-READ-FAILED') end
     return text,value
   end
+  -- TODO-PERF 4.2: the route and rule tables are still read live on every call (`table all`: route_binding and the
+  -- cached `ip route get` answers depend on every table a rule can reach). Only the JSON decoding is reused, and
+  -- only for a byte-identical text: an unchanged output gives the same decoded value, any change is decoded anew.
+  -- The decoded rows are read, never changed, by route_binding. No `ip monitor`: see DIAGNOSTIC-CACHE-2026-11-01.
+  local function ip_json_memo(name,argv)
+    local text=sys.command(argv,{timeout=5})
+    local memo=caches[name]
+    if memo and memo.text==text then return text,memo.value end
+    caches[name]=nil
+    local ok,value=pcall(canon.decode,text)
+    if not ok then value_error('POLICY-READ-FAILED') end
+    caches[name]={text=text,value=value}
+    return text,value
+  end
   local function route_reads()
-    local routes_text,routes=ip_json({'ip','-4','-j','route','show','table','all'})
-    local rules_text,rules=ip_json({'ip','-4','-j','rule','show'})
+    local routes_text,routes=ip_json_memo('routes_json',{'ip','-4','-j','route','show','table','all'})
+    local rules_text,rules=ip_json_memo('rules_json',{'ip','-4','-j','rule','show'})
     local key=routes_text..'\0'..rules_text
     if not (caches.route_get and caches.route_get.key==key) then caches.route_get={key=key,answers={}} end
     return {routes=routes,rules=rules,answers=caches.route_get.answers}
@@ -305,14 +319,19 @@ function M.new(sys)
   ------------------------------------------------------------------------------------------------------
   -- diagnostic()
   ------------------------------------------------------------------------------------------------------
+  -- the package's own pin list, decoded once per file fingerprint (platform.cached_file, TODO-PERF 4.1)
   local function audit_order()
-    local text=sys.read(M.LIB..'/native-audit-hashes.json')
-    if not text then value_error('VENDOR-CODE-UNVERIFIED') end
-    local value=canon.decode(text)
-    if not canon.is_object(value) then value_error('VENDOR-CODE-UNVERIFIED') end
-    local names={}
-    for name in string.gmatch(text,'"([^"]+)"%s*:') do if value[name]~=nil then names[#names+1]=name end end
-    return value,names
+    local path=M.LIB..'/native-audit-hashes.json'
+    local row=platform.cached_file(sys,'audit-order',path,function()
+      local text=sys.read(path)
+      if not text then value_error('VENDOR-CODE-UNVERIFIED') end
+      local value=canon.decode(text)
+      if not canon.is_object(value) then value_error('VENDOR-CODE-UNVERIFIED') end
+      local names={}
+      for name in string.gmatch(text,'"([^"]+)"%s*:') do if value[name]~=nil then names[#names+1]=name end end
+      return {value=value,names=names}
+    end)
+    return row.value,row.names
   end
 
   function B.diagnostic()

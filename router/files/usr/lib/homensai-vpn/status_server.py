@@ -58,7 +58,8 @@ SELF_WRITTEN = frozenset(('pair-manual-kernel-cache.json', 'native-history-publi
 OBSERVATION = frozenset(('status.json', 'native-status.json', 'speed-traffic.json', 'checkpoint.json',
                          'checkpoint.backup.json', 'latency-history.json', 'ping-response-history.json',
                          'website-response-history.json', 'response-compare.json', 'probe-history.json',
-                         'native-history.json', 'native-history.backup.json'))
+                         'native-history.json', 'native-history.backup.json', 'native-history.events.jsonl',
+                         'native-history.v1.json'))
 CONFIGS = ('/etc/config/homensai_vpn', '/etc/config/route_policy', '/etc/config/network',
            '/etc/config/wireguard', '/etc/config/ovpnclient')
 # native-status.json is rewritten with a new time on every controller tick; only these fields are state.

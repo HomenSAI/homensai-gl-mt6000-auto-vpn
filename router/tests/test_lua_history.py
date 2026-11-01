@@ -576,10 +576,262 @@ class StatsResetDifferential(unittest.TestCase):
                 lua_files = sorted(p.relative_to(lua_persist).as_posix() for p in lua_persist.rglob('*') if p.is_file() and not p.name.endswith('.lock'))
                 self.assertEqual(lua_files, python_files)
                 for name in python_files:
+                    if name.endswith('.jsonl'):  # the switch-history archive (journal layout): bytes
+                        self.assertEqual((lua_persist/name).read_bytes(), (persist/name).read_bytes(), name)
+                        continue
                     theirs = json.loads((persist/name).read_text())
                     mine = json.loads((lua_persist/name).read_text())
                     self.assertEqual(canonical(mine), canonical(theirs), '%s: %s' % (name, first_difference(mine, theirs)))
 
+
+# ---------------------------------------------------------------------------------------------------------------
+# Switch-history journal (schema 2, docs/architecture/HISTORY-JOURNAL-2026-11-01.ru.md): Python and Lua write the
+# same state, backup and archive bytes after every record, from clean and from damaged directories.
+# ---------------------------------------------------------------------------------------------------------------
+JOURNAL_FILES = ('native-history.json', 'native-history.backup.json', 'native-history.events.jsonl', 'native-history.v1.json')
+WALL = 1761900000.25
+
+
+def sha(path):
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest() if path.exists() else None
+
+
+def python_journal(case, folder):
+    """The Python side of a journal case (same ops, same patches) -> steps like the Lua driver's."""
+    import native_history as nh
+    steps = []
+    with patch('time.time', return_value=case['wall']), patch.object(nh, 'TAIL', case.get('tail', 100)), \
+            patch.object(nh.History, 'RETENTION_BYTES', case.get('retention_bytes', 2*1024*1024)), \
+            patch.object(nh.History, 'COMPACT_BYTES', case.get('compact_bytes', 2*1024*1024 + 512*1024)):
+        days = case.get('days', 7)
+        history = nh.History(folder, limit=case.get('limit', 10000), detail_days=days)
+        for op in case['ops']:
+            row = {}
+            if op['op'] == 'record':
+                try:
+                    row['result'] = history.record(copy.deepcopy(op['value']), op['now'])
+                except Exception as error:  # noqa: BLE001 - the code is compared with Lua's
+                    row['result'] = 'error:' + str(error)
+                if case.get('trace'):
+                    row.update(main=sha(folder/JOURNAL_FILES[0]), backup=sha(folder/JOURNAL_FILES[1]), archive=sha(folder/JOURNAL_FILES[2]))
+            elif op['op'] == 'public':
+                row['public'] = canonical(nh.History(folder, detail_days=op.get('days', days)).public(now=op['now']))
+            elif op['op'] == 'load':
+                row['load'] = canonical(nh.History(folder, detail_days=days).load())
+            steps.append(row)
+    return steps
+
+
+def record_ops(values):
+    return [{'op': 'record', 'value': value, 'now': now} for value, now in values]
+
+
+@unittest.skipUnless(LUA, 'Lua 5.1 runtime absent; use homensai-vpn-python39:local')
+class JournalDifferential(unittest.TestCase):
+    """native_history.History (schema 2) against lua/history.lua on the same inputs: every record, byte for byte."""
+
+    def folder(self):
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, str(folder), True)
+        return folder
+
+    def compare(self, case, python_dir, lua_dir, label=''):
+        theirs = python_journal(case, python_dir)
+        ours = run_lua({'journal': [dict(case, persist=str(lua_dir))]})['journal'][0]
+        self.assertNotIn('error', ours, ours.get('error'))
+        for index, (mine, expected) in enumerate(zip(ours['steps'], theirs)):
+            self.assertEqual(mine, expected, '%s step %d: %s' % (label, index, first_difference(mine, expected)))
+        self.assertEqual(len(ours['steps']), len(theirs))
+        for name in JOURNAL_FILES:
+            self.assertEqual(sha(lua_dir/name), sha(python_dir/name), '%s %s' % (label, name))
+        return ours, theirs
+
+    def test_every_record_matches_with_pruning_budget_and_compaction(self):
+        import native_history as nh
+        from history_journal_cases import events
+        values = events(11, 300, 1761800000.5, spacing=465.0)
+        ops = record_ops(values)
+        for index in (40, 150, len(ops)):
+            ops.insert(index, {'op': 'public', 'now': values[min(index, len(values)) - 1][1] + 7.5})
+        ops.append({'op': 'load'})
+        # small bounds so the run prunes (1 day), drops by budget and compacts (25 % stale, size) several times
+        case = {'wall': WALL, 'days': 1, 'tail': 5, 'retention_bytes': 60000, 'compact_bytes': 70000, 'trace': True, 'ops': ops}
+        folder = self.folder()
+        self.compare(case, folder/'python', folder/'lua', 'small bounds')
+        state = json.loads((folder/'python'/'native-history.json').read_text())['data']
+        self.assertGreater(state['detail_budget_dropped'], 0, 'the budget dropped detail')
+        self.assertEqual((folder/'python'/nh.ARCHIVE).stat().st_size, state['archive_bytes'])
+
+    def test_every_record_matches_with_the_shipped_bounds(self):
+        from history_journal_cases import events
+        values = events(12, 160, 1761800000.5, spacing=900.0)
+        ops = record_ops(values) + [{'op': 'public', 'now': values[-1][1] + 1.0}, {'op': 'load'}]
+        folder = self.folder()
+        self.compare({'wall': WALL, 'trace': True, 'ops': ops}, folder/'python', folder/'lua', 'shipped bounds')
+
+    def seeded(self, count=40, tail=5):
+        """A directory with count events recorded by Python plus the next values."""
+        from history_journal_cases import events
+        values = events(21, count + 4, 1761800000.5, spacing=300.0)
+        folder = self.folder()
+        python_journal({'wall': WALL, 'tail': tail, 'ops': record_ops(values[:count])}, folder/'seed')
+        return folder, values[count:]
+
+    def damaged(self, damage, tail=5, label=''):
+        folder, more = self.seeded(tail=tail)
+        damage(folder/'seed')
+        for side in ('python', 'lua'):
+            shutil.copytree(folder/'seed', folder/side)
+        case = {'wall': WALL, 'tail': tail, 'trace': True, 'ops': record_ops(more) + [{'op': 'load'}]}
+        return self.compare(case, folder/'python', folder/'lua', label), folder
+
+    def test_power_cut_cases_recover_the_same_way(self):
+        import native_history as nh
+
+        def lines(path):
+            return (path/nh.ARCHIVE).read_bytes().split(b'\n')[:-1]
+
+        def keep(path, rows):
+            (path/nh.ARCHIVE).write_bytes(b''.join(row + b'\n' for row in rows))
+
+        def torn(path):
+            raw = (path/nh.ARCHIVE).read_bytes()
+            (path/nh.ARCHIVE).write_bytes(raw[:-37])
+
+        def garbage(path):
+            rows = lines(path)
+            rows[3] = rows[3][:70] + b'X' + rows[3][71:]
+            keep(path, rows)
+
+        def old_state(path):
+            shutil.copyfile(path/'native-history.backup.json', path/'native-history.json')
+
+        cases = {'torn last line': torn,
+                 'archive behind by one': lambda path: keep(path, lines(path)[:-1]),
+                 'archive behind by more than the tail': lambda path: keep(path, lines(path)[:-8]),
+                 'archive missing': lambda path: (path/nh.ARCHIVE).unlink(),
+                 'damaged middle line': garbage,
+                 'old state with a newer archive': old_state,
+                 'main state lost (backup only)': lambda path: (path/'native-history.json').unlink()}
+        for label, damage in cases.items():
+            with self.subTest(case=label):
+                self.damaged(damage, label=label)
+
+    def v1_directory(self, values):
+        """A schema-1 directory written by the frozen alpha20 writer."""
+        import native_history_v1_reference as v1
+        folder = self.folder()
+        with patch('time.time', return_value=WALL):
+            history = v1.History(folder/'seed', detail_days=7)
+            for value, now in values:
+                history.record(copy.deepcopy(value), now)
+        return folder
+
+    def test_migration_from_schema_1_and_its_interruptions(self):
+        import native_history as nh
+        from history_journal_cases import events
+        values = events(31, 64, 1761800000.5, spacing=300.0)
+        folder = self.v1_directory(values[:60])
+        clean = folder/'clean'
+        shutil.copytree(folder/'seed', clean)
+        python_journal({'wall': WALL, 'ops': record_ops(values[60:61])}, clean)  # an uninterrupted migration + record
+
+        def interrupted(after):
+            def damage(path):
+                calls = []
+                real = nh.atomic_bytes
+
+                def fail(target, raw):
+                    if len(calls) == after:
+                        raise OSError('power cut')
+                    calls.append(target)
+                    real(target, raw)
+                with patch.object(nh, 'atomic_bytes', fail), patch('time.time', return_value=WALL):
+                    with self.assertRaises(OSError):
+                        nh.History(path, detail_days=7).record(copy.deepcopy(values[60][0]), values[60][1])
+            return damage
+
+        for label, damage in (('clean', lambda path: None), ('after the archive', interrupted(1)),
+                              ('after the v1 copy', interrupted(2)), ('after the backup state', interrupted(3))):
+            with self.subTest(case=label):
+                work = self.folder()
+                shutil.copytree(folder/'seed', work/'seed')
+                damage(work/'seed')
+                for side in ('python', 'lua'):
+                    shutil.copytree(work/'seed', work/side)
+                case = {'wall': WALL, 'trace': True, 'ops': record_ops(values[60:61]) + [{'op': 'load'}]}
+                self.compare(case, work/'python', work/'lua', label)
+                for name in JOURNAL_FILES:  # the same files as an uninterrupted migration
+                    self.assertEqual(sha(work/'python'/name), sha(clean/name), '%s %s' % (label, name))
+                self.assertEqual(json.loads((work/'python'/'native-history.v1.json').read_text())['schema'], 1)
+
+    def test_lua_reads_python_files_load_and_page_projection(self):
+        from history_journal_cases import events
+        values = events(41, 120, 1761800000.5, spacing=600.0)
+        folder = self.folder()
+        python_journal({'wall': WALL, 'tail': 7, 'ops': record_ops(values)}, folder/'python')
+        shutil.copytree(folder/'python', folder/'lua')
+        now = values[-1][1] + 60.0
+        ops = [{'op': 'load'}, {'op': 'public', 'now': now}, {'op': 'public', 'now': now + 3*86400, 'days': 2}]
+        self.compare({'wall': WALL, 'tail': 7, 'ops': ops}, folder/'python', folder/'lua', 'read side')
+
+    def test_realistic_week_1300_events(self):
+        """About 1300 events over 7 days (the MT3000 history of 30 Oct 2026): the final files are the same. Lua runs
+        with a change key like nixio's (resident state, as on the router). With HOMENSAI_HISTORY_BENCH=1 also: Python
+        with its resident copy (diagnostic mode), Lua without one, and the frozen schema-1 writers of both lines for the
+        before/after sizes and timings (x86; Lua's sha256 goes through sha256sum here, nixio.crypto on the router)."""
+        import time as clock
+        import native_history as nh
+        import native_history_v1_reference as v1
+        from history_journal_cases import events
+        values = events(7, 1450, 1761300000.5, spacing=465.0)
+        folder = self.folder()
+
+        def python_run(target, module=nh, resident=False):
+            started = clock.perf_counter()
+            with patch('time.time', return_value=WALL), patch('stats_mode.diagnostic', return_value=resident), \
+                    patch.object(module, 'memory_available_kb', return_value=None):
+                history = module.History(target, detail_days=7)
+                for value, now in values:
+                    history.record(copy.deepcopy(value), now)
+            module._WRITER_CACHE.clear()
+            return round((clock.perf_counter() - started)/len(values), 5)
+
+        def lua_run(target, **options):
+            result = run_lua({'journal': [dict({'wall': WALL, 'persist': str(target), 'ops': record_ops(values)}, **options)]})['journal'][0]
+            self.assertNotIn('error', result, result.get('error'))
+            return result
+
+        report = {'values': len(values), 'python_s_per_record': python_run(folder/'python')}
+        ours = lua_run(folder/'lua', resident=True)
+        for name in JOURNAL_FILES:
+            self.assertEqual(sha(folder/'lua'/name), sha(folder/'python'/name), name)
+        state = json.loads((folder/'python'/'native-history.json').read_text())['data']
+        retained = len(state['index'])
+        self.assertGreater(retained, 1200)
+        self.assertLess((folder/'python'/'native-history.json').stat().st_size, 200*1024)
+        report.update({'events': state['sequence'], 'retained': retained,
+                       'state_kb': round((folder/'python'/'native-history.json').stat().st_size/1024, 1),
+                       'archive_kb': round((folder/'python'/nh.ARCHIVE).stat().st_size/1024, 1),
+                       'lua_resident_cpu_s_per_record': round(ours['cpu']/len(values), 5),
+                       'lua_resident_wall_s_per_record': round(ours['wall']/len(values), 5)})
+        if os.environ.get('HOMENSAI_HISTORY_BENCH') == '1':
+            report['python_resident_s_per_record'] = python_run(folder/'python-resident', resident=True)
+            cold = lua_run(folder/'lua-cold')
+            report['lua_cold_cpu_s_per_record'] = round(cold['cpu']/len(values), 5)
+            report['lua_cold_wall_s_per_record'] = round(cold['wall']/len(values), 5)
+            report['v1_python_s_per_record'] = python_run(folder/'v1-python', module=v1)
+            report['v1_python_resident_s_per_record'] = python_run(folder/'v1-python-resident', module=v1, resident=True)
+            report['v1_file_kb'] = round((folder/'v1-python'/'native-history.json').stat().st_size/1024, 1)
+            old = lua_run(folder/'v1-lua', reference=True, resident=True)
+            report['v1_lua_resident_cpu_s_per_record'] = round(old['cpu']/len(values), 5)
+            report['v1_lua_resident_wall_s_per_record'] = round(old['wall']/len(values), 5)
+            # the schema-1 page projection of the same events equals the journal's
+            now = values[-1][1] + 5.0
+            self.assertEqual(canonical(nh.History(folder/'python', detail_days=7).public(now=now)),
+                             canonical(v1.History(folder/'v1-python', detail_days=7).public(now=now)))
+        sys.stderr.write('\nHISTORY-JOURNAL-BENCH ' + json.dumps(report, sort_keys=True) + '\n')
 
 def first_difference(a, b, path='$'):
     if type(a) is not type(b):

@@ -89,6 +89,10 @@ start_service() {
 # The Lua monitor saves its accounting (and the Diagnostics ping history) before procd's SIGTERM: Lua's uloop
 # has no signal handler on OpenWrt 21.02. Harmless when the Python monitor runs (no such object).
 stop_service() {
+    # The Lua Auto supervisor inside a long wait (give-up alarm, transaction wait) never returns to uloop, whose
+    # SIGTERM handler only sets a flag: it reads this file instead (soak, alpha16: it outlived the stop). Only a
+    # flag written after the process started counts, so a restart's start never hides it from the old process.
+    mkdir -p /var/run/homensai-vpn && touch /var/run/homensai-vpn/service-stop.flag
     ubus -t 10 call homensai-vpn-lua shutdown >/dev/null 2>&1 || true
     rm -f /var/run/homensai-vpn/lua-monitor.ready
     # hv-core: a fallback to separate processes lasts until the service stops; a stop is clean, not a crash

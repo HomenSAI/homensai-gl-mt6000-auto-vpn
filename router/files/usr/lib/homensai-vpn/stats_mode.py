@@ -80,10 +80,11 @@ def payload(arguments,now=None):
     return {'main':{'stats_mode':'diagnostic','stats_until':str(int(now+arguments['hours']*3600))},'servers':[]}
 
 
-# Files listed on Advanced > Statistics collection: (where, name, backup copy or None).
+# Files listed on Advanced > Statistics collection: (where, name, further files counted with it or None...).
+# The switch history row counts its state, the previous state, the event archive and the kept schema-1 file.
 STORAGE=(('ram','status.json',None),
          ('flash','native-transaction.json',None),('flash','pair-auto-state.json',None),
-         ('flash','native-history.json','native-history.backup.json'),('flash','checkpoint.json','checkpoint.backup.json'),
+         ('flash','native-history.json','native-history.backup.json','native-history.events.jsonl','native-history.v1.json'),('flash','checkpoint.json','checkpoint.backup.json'),
          ('flash','latency-history.json',None),('flash','ping-response-history.json',None),('flash','website-response-history.json',None),
          ('flash','response-compare.json',None),('flash','probe-history.json',None),('flash','switch-timing.json',None),
          ('flash','speed-history.json','speed-history.backup.json'),('flash','fault-history.json',None))
@@ -92,9 +93,9 @@ STORAGE=(('ram','status.json',None),
 def storage(runtime,persist):
     """Bytes per listed file (with its backup copy), keyed 'ram:<name>' / 'flash:<name>'; only stat() calls."""
     result={}
-    for where,name,backup in STORAGE:
+    for where,name,*copies in STORAGE:
         base=Path(runtime if where=='ram' else persist);total=None
-        for item in (name,backup):
+        for item in (name,*copies):
             if item is None:continue
             try:total=(total or 0)+(base/item).stat().st_size
             except OSError:pass

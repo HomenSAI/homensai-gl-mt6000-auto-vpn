@@ -529,6 +529,45 @@ def misc_cases():
     return cases
 
 
+def py_file_cache(steps):
+    import native_platform
+    native_platform.forget_derived('diff')
+    out=[];cur={}
+    def compute(i,step):
+        if step.get('fail'):raise ValueError('boom')
+        return i
+    for i,step in enumerate(steps):
+        cur.update(step)
+        try:value,computed=native_platform.cached_file('diff','/x',lambda i=i,step=step:compute(i,step),lstat=lambda path:cur['stat'],
+                                                      wall=lambda:cur['wall'],clock=lambda:cur['clock'])
+        except ValueError:out.append(['error',None]);continue
+        out.append([value,computed])
+    native_platform.forget_derived('diff')
+    return out
+
+
+def file_cache_cases():
+    """TODO-PERF 4.1: Lua platform.cached_file and Python native_platform.cached_file decide the same."""
+    W=1761830400
+    def st(ino=7,size=100,mtime=W-100,ctime=None,kind='reg'):
+        return {'type':kind,'ino':ino,'size':size,'mtime':mtime,'ctime':mtime if ctime is None else ctime}
+    def step(stat,wall,clock,fail=False):return {'stat':stat,'wall':wall,'clock':clock,'fail':fail}
+    old=st()
+    sequences=[
+        [step(old,W+2*i,1000+2*i) for i in range(5)],                                         # unchanged old file: one compute
+        [step(st(mtime=W),W,1000),step(st(mtime=W),W+1,1001),step(st(mtime=W),W+1.9,1002),     # young: recompute until 2 s old
+         step(st(mtime=W),W+2,1003),step(st(mtime=W),W+3,1004)],
+        [step(old,W,1000),step(st(ino=8),W,1001),step(st(size=101),W,1002),step(st(mtime=W-99),W,1003),
+         step(st(ctime=W-50),W,1004),step(st(kind='lnk'),W,1005),step(st(kind='lnk'),W,1006)],  # every key field
+        [step(old,W,1000),step(old,W,1029.9),step(old,W,1030),step(old,W,1030.5),step(old,W,900),step(old,W,901)],  # age, clock back
+        [step(None,W,1000),step(None,W,1001),step(old,W,1002),step(None,W,1003),step(old,W,1004)],             # missing
+        [step(old,W,1000,True),step(old,W,1001),step(old,W,1002),step(st(size=5),W,1003,True),step(st(size=5),W,1004)],  # failures
+        [step(st(mtime=W-100,ctime=W-1),W,1000),step(st(mtime=W-100,ctime=W-1),W+1,1001),step(st(mtime=W-100,ctime=W-1),W+5,1002)],  # touch -r
+        [step(st(mtime=W+3600),W,1000),step(st(mtime=W+3600),W+1,1001)],                       # future stamp (clock went back)
+    ]
+    return [('file_cache',{'steps':steps},lambda s=steps:py_file_cache(s)) for steps in sequences]
+
+
 def backend_cases():
     cases=[]
     worlds=[base_world()]
@@ -605,6 +644,16 @@ class LuaBackendSameAsPython(unittest.TestCase):
     def test_network_identity_config_digests_and_settings_fingerprint(self):self.check(network_cases())
     def test_rollback_recovery_steps_and_proofs(self):self.check(recovery_cases())
     def test_channel_path_zones_hook_state_and_manual_record(self):self.check(misc_cases())
+    def test_diagnostic_file_cache_decisions(self):
+        results=self.check(file_cache_cases())
+        # sanity of the shared expectations (both sides already agree): the unchanged old file is computed once,
+        # the young one until it is 2 s old, every key field and the 30 s age force a recompute
+        self.assertEqual([r[1] for r in results[0]['ok']],[True,False,False,False,False])
+        self.assertEqual([r[1] for r in results[1]['ok']],[True,True,True,True,False])
+        self.assertEqual([r[1] for r in results[2]['ok']],[True,True,True,True,True,True,False])
+        self.assertEqual([r[1] for r in results[3]['ok']],[True,False,True,False,True,False])
+        self.assertEqual(results[4]['ok'],[[0,True],[1,True],[2,True],[3,True],[4,True]])
+        self.assertEqual(results[5]['ok'],[['error',None],[1,True],[1,False],['error',None],[4,True]])
 
     def test_linux_methods_on_one_fake_router(self):
         cases=backend_cases()

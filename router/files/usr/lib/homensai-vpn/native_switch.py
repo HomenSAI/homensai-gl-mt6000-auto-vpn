@@ -666,9 +666,13 @@ class Linux:
         try:command(['nft','--version'])
         except (OSError,subprocess.SubprocessError):blockers.append('NFT-GUARD-UNAVAILABLE')
         try:
-            expected=json.loads(Path(__file__).with_name('native-audit-hashes.json').read_text())
+            # TODO-PERF 4.1: the pin list and each pinned file's hash are reused while the file's fingerprint is
+            # unchanged (native_platform.cached_file; the same rules as the Lua backend).
+            from native_platform import cached_file,sha_file
+            audit=Path(__file__).with_name('native-audit-hashes.json')
+            expected=cached_file('audit-order',audit,lambda:json.loads(audit.read_text()))[0]
             for name,sha in expected.items():
-                if hashlib.sha256(Path(name).read_bytes()).hexdigest()!=sha:blockers.append('VENDOR-CODE-CHANGED')
+                if sha_file(Path(name))!=sha:blockers.append('VENDOR-CODE-CHANGED')
         except (OSError,ValueError):blockers.append('VENDOR-CODE-UNVERIFIED')
         try:
             data=self.policy(); lan=data.get('lan')
@@ -1093,15 +1097,40 @@ def recovery_package():
     return VERSION
 
 
+def count_failure(journal):
+    journal['rollback_failures']=int(journal.get('rollback_failures',0) or 0)+1
+    journal['rollback_package']=recovery_package()
+    try:journal_write(journal)
+    except (OSError,ValueError):pass
+
+
 def rollback_counted(backend,journal,reason):
     """rollback() that remembers each failure in the journal, so repeated failures end in give_up() instead of a loop."""
     try:return rollback(backend,journal,reason)
     except Exception:
-        journal['rollback_failures']=int(journal.get('rollback_failures',0) or 0)+1
-        journal['rollback_package']=recovery_package()
-        try:journal_write(journal)
-        except (OSError,ValueError):pass
+        count_failure(journal)
         raise
+
+
+# A power cut during a switch: right after boot the vendor still rebuilds the firewall and the tunnels, so the kernel
+# graph changes under the recovery rollback. Within the first BOOT_SETTLE_UPTIME seconds of uptime these failures are
+# not counted: wait and retry (ROLLBACK-BOOT-RETRY in the log). Same as auto.lua boot_rollback.
+BOOT_SETTLE_UPTIME=600
+BOOT_RETRY_WAIT=20
+BOOT_RETRY_CODES=('KERNEL-POLICY-UNVERIFIED','ROLLBACK-UNVERIFIED')
+
+
+def boot_rollback(backend,journal,uptime=time.monotonic,sleep=time.sleep):
+    while True:
+        try:return rollback(backend,journal,'SUPERVISOR-RECOVERY')
+        except Exception as error:
+            code=str(error.args[0]) if isinstance(error,(Refused,ValueError)) and error.args else None
+            if code not in BOOT_RETRY_CODES or STOP or uptime()+BOOT_RETRY_WAIT>=BOOT_SETTLE_UPTIME:
+                count_failure(journal)
+                raise
+            from pair_auto import _log
+            _log('ROLLBACK-BOOT-RETRY: '+code)
+            sleep(BOOT_RETRY_WAIT)
 
 
 def give_up(backend,journal,code):
@@ -1945,7 +1974,7 @@ def serve():
             # the rollback ends with guard(devices()): a prepared router starts no VPN client by itself
             from pair_auto import boot_devices
             boot_devices(backend)
-            try:rollback_counted(backend,journal,'SUPERVISOR-RECOVERY')
+            try:boot_rollback(backend,journal)
             except (Refused,OSError,ValueError,subprocess.SubprocessError):
                 if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
                     give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
