@@ -3,7 +3,7 @@
 
 [Current source/delivered state](CURRENT-STATUS.md) · [Quick start](AUTO-QUICKSTART.en.md) · [Terms](../DISCLAIMER.md)
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source.
 
 Use the [full AI prompt](AI-INSTALL.en.md) with an agent that actually has terminal/router access, or follow the manual sequence. A normal chat cannot install software. Never include secrets in the prompt.
 

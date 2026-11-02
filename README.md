@@ -6,7 +6,7 @@ HomenS.AI Auto VPN watches two existing OpenVPN or WireGuard connections on a GL
 
 Author and copyright holder: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [details](LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source.
 
 In short: free for private, non-commercial use of the unmodified software; business/organizational use requires a separate paid written license ([commercial licensing](COMMERCIAL-LICENSING.md), info@homensai.com). Modification or redistribution requires prior written consent. The license text governs.
 

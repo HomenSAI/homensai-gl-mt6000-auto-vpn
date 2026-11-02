@@ -17,6 +17,6 @@ done
 
 ## Exact block
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE-MIT-LEGACY), [details](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSING.md)). Contact: info@homensai.com.
+**License:** [HomenSAI Personal & Commercial Source License v1.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE) — source-available, not open source. Contact: info@homensai.com.
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE-MIT-LEGACY), [подробнее](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSING.md)). Контакт: info@homensai.com.
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/LICENSE) — исходный код доступен, но это не open source. Контакт: info@homensai.com.

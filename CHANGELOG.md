@@ -1,8 +1,8 @@
 # Changelog
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [подробнее](LICENSING.md)).
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — исходный код доступен, но это не open source.
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [details](LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — source-available, not open source.
 
 This file stops at 0.9.1-alpha26. Later versions (0.9.1-alpha27 onward, the 1.0.0-beta releases and the Lua line 2.0.0-alpha1 to 2.0.0-alpha24) are described only in the [release notes](releases). The current line is 2.0.0-alpha24: [notes](releases/v2.0.0-alpha24.md), [state](docs/CURRENT-STATUS.md). / Файл заканчивается на 0.9.1-alpha26; более поздние версии описаны только в [примечаниях к релизам](releases), текущая — 2.0.0-alpha24.
 

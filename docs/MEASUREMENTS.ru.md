@@ -1,6 +1,6 @@
 # Замеры скорости переключения на GL-MT3000
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [подробнее](../LICENSING.md)).
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source.
 
 Все цифры сняты на выделенном GL-MT3000 (OpenWrt 21.02 / прошивка GL 4.11). Основной канал — WireGuard, резервный — OpenVPN. Дата замеров — 30.10.2026.
 

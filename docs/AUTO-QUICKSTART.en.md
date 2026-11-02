@@ -3,7 +3,7 @@
 
 [Full guide](CURRENT-STATE.en.md) · [Actual installed/released state](CURRENT-STATUS.md)
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source.
 
 1. Open the intended router's Auto VPN page. Verify the device and management path; identical private IPs on two adapters can lead to different routers.
 2. Accept the current terms yourself if not already accepted. Read the introduction/training, then review the eight-step setup. A prior acceptance is normally skipped on later visits.

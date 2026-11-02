@@ -3,7 +3,7 @@
 
 [Current version/evidence](CURRENT-STATUS.md) · [Full guide](CURRENT-STATE.en.md)
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source.
 
 ## Roles, clients and traffic
 

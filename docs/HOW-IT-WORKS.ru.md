@@ -3,7 +3,7 @@
 
 [Версия и доказательства](CURRENT-STATUS.md) · [Полное руководство](CURRENT-STATE.ru.md)
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [подробнее](../LICENSING.md)).
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source.
 
 ## Роли, клиенты и трафик
 

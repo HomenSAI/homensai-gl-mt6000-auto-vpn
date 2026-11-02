@@ -6,7 +6,7 @@ HomenS.AI Auto VPN следит за двумя существующими по�
 
 Автор и правообладатель: **Serhii Khomenko / HomenS.AI** — [homensai.com](https://homensai.com).
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](LICENSE-MIT-LEGACY), [подробнее](LICENSING.md)).
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](LICENSE) — исходный код доступен, но это не open source.
 
 Кратко: бесплатное использование неизменённой программы только для личных некоммерческих целей. Компаниям и организациям нужна отдельная платная письменная лицензия ([коммерческое лицензирование](COMMERCIAL-LICENSING.md), info@homensai.com). Изменения кода и распространение — только с предварительного письменного согласия. Действует текст лицензии.
 

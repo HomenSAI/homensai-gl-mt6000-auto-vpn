@@ -3,9 +3,9 @@
 
 [Русское руководство](CURRENT-STATE.ru.md) · [English guide](CURRENT-STATE.en.md) · [Фактически доставлено / Delivered](CURRENT-STATUS.md)
 
-**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source. Более ранние версии под MIT сохраняют права MIT ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [подробнее](../LICENSING.md)).
+**Лицензия:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — исходный код доступен, но это не open source.
 
-**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source. Earlier versions released under MIT keep their MIT grant ([LICENSE-MIT-LEGACY](../LICENSE-MIT-LEGACY), [details](../LICENSING.md)).
+**License:** [HomenSAI Personal & Commercial Source License v1.0](../LICENSE) — source-available, not open source.
 
 Текущие инструкции описывают исходники. Состояние установленного пакета подтверждается только отдельным отчётом о доставке. Исторические отчёты сохраняют свои даты, версии, результаты и прежние ограничения: их команды не являются текущим планом работ. Правовые тексты сохранены без изменения условий.
 
