@@ -157,6 +157,10 @@ local function check_keys(text,keys)
   local ok2,r2=pcall(C.decode_keys,text,keys)
   stats.keys=stats.keys+1
   if ok1~=ok2 then mismatch('keys accept',show(text)..' => '..tostring(r1)..' | '..tostring(r2));return end
+  if type(keys)=='table' and string.find(text,'^[ \t\n\r]*{') then  -- F2: skipped fields as strict as decode()
+    local ok3,r3=pcall(L_decode,text)
+    if ok3~=ok1 or (not ok1 and r3~=r1) then mismatch('keys vs decode',show(text)..' => '..tostring(r1)..' | '..tostring(r3)) end
+  end
   if ok1 then
     if not same(r1,r2) then mismatch('keys value',show(text)) end
   else
@@ -371,6 +375,9 @@ check_keys('{"x":'..deep_obj..'}',{});check_keys('{"x":'..string.rep('[',65)..st
 check_keys('{"x":'..string.rep('[',64)..string.rep(']',64)..',"y":1}',{y=true})
 check_keys('{"x":"a\\"b\\\\","y":[1,"]",{"z":"}"}],"w":2}',{w=true})
 check_keys('{"x":[}],"y":1}',{y=true});check_keys('{"x":"abc','y',{y=true});check_keys('[1]',{});check_keys('{"a":1} x',{a=true})
+for _,v in ipairs({'[garbage}','"\\q"','"a\1b"','[1,]','{"k":1,"k":2}','1e400','01','nul','{"k":1]'}) do
+  check_keys('{"x":'..v..',"a":1}',{a=true});check_keys('{"a":1,"x":['..v..']}',{a=true})
+end
 check_keys('{"a":1}',nil);check_keys('{}',nil)
 for _=1,cases do
   local r=rnd(10)

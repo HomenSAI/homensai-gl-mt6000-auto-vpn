@@ -1,7 +1,7 @@
 -- HomenS.AI / Serhii Khomenko / https://homensai.com -- see LICENSE
 -- setup.lua: the three page settings answered natively by the Lua monitor (owner plan item 3):
 --   setup_probe     setup_config.probe_payload    -> probe_level, probe_boost, interval, measure_interval
---   setup_response  setup_config.response_payload -> response_metric [, response_compare] [, fast_switch] [, ping_interval]
+--   setup_response  setup_config.response_payload -> response_metric [, response_compare] [, fast_switch] [, ping_interval] [, server_pick]
 --   setup_stats     stats_mode.payload            -> stats_mode, stats_until
 --                   (mode 'retention': retention_settings.payload -> stats_retention_mode/_days/_mb [, history_days])
 -- Same validation codes, same guards and the same UCI keys/values as setup_config.save(); the write is the
@@ -53,9 +53,9 @@ function M.probe_payload(arguments)
 end
 
 function M.response_payload(arguments)
-  if not is_dict(arguments) or arguments.metric==nil or not keys_within(arguments,{'metric','compare','fast_switch','ping_interval'})
+  if not is_dict(arguments) or arguments.metric==nil or not keys_within(arguments,{'metric','compare','fast_switch','ping_interval','server_pick'})
      or type(arguments.metric)~='string' or not M.RESPONSE_METRICS[arguments.metric] then fail('RESPONSE-METRIC-INVALID') end
-  for _,key in ipairs({'compare','fast_switch'}) do
+  for _,key in ipairs({'compare','fast_switch','server_pick'}) do
     if arguments[key]~=nil and type(arguments[key])~='boolean' then fail('RESPONSE-METRIC-INVALID') end
   end
   -- Owner ping cadence: whole seconds 10..300 in steps of 10 (probe_policy.ping_interval reads it back).
@@ -65,6 +65,7 @@ function M.response_payload(arguments)
   if arguments.compare~=nil then main.response_compare=arguments.compare and '1' or '0' end
   if arguments.fast_switch~=nil then main.fast_switch=arguments.fast_switch and '1' or '0' end
   if ping~=nil then main.ping_interval=string.format('%d',ping) end
+  if arguments.server_pick~=nil then main.server_pick=arguments.server_pick and '1' or '0' end
   return main
 end
 
@@ -119,7 +120,7 @@ end
 ------------------------------------------------------------------------------------------------------
 -- the UCI write (setup_save.lua for 'main' keys)
 ------------------------------------------------------------------------------------------------------
-M.ALLOWED={response_metric=true,response_compare=true,fast_switch=true,stats_mode=true,stats_until=true,probe_level=true,
+M.ALLOWED={response_metric=true,response_compare=true,fast_switch=true,server_pick=true,stats_mode=true,stats_until=true,probe_level=true,
   stats_retention_mode=true,stats_retention_days=true,stats_retention_mb=true,history_days=true,
   probe_boost=true,interval=true,measure_interval=true,ping_interval=true}
 

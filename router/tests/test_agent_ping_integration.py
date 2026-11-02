@@ -32,6 +32,7 @@ class PingIntegrationTests(unittest.TestCase):
             stack.enter_context(patch.object(agent,'checkpoint'))
             stack.enter_context(patch('telegram_report.deliver',return_value=({'enabled':False},{},False)))
             stack.enter_context(patch('system_readiness.snapshot',return_value={}))
+            stack.enter_context(patch('server_pick.job'))  # the round thread writes into RUNTIME: never races the cleanup
             stack.enter_context(patch('speed_test.observe_traffic'));stack.enter_context(patch('speed_test.automatic_new',return_value=set()))
             stack.enter_context(patch('speed_test.active_job',return_value=False));stack.enter_context(patch('speed_test.cancel'))
             sampler=stack.enter_context(patch.object(icmp_ping,'PingSampler')).return_value

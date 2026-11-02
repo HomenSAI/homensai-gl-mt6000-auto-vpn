@@ -2017,6 +2017,14 @@ def serve():
         # independent supervisor restores owned work; it never resumes Auto.
         from pair_auto import fence_recovery
         fence_recovery()
+        # Server pick (stage 3): a server change cut short by a power cut or a crash (between its uci commits and the
+        # session write) is this supervisor's own write; re-bind the session and the journal to it before the COMMITTED
+        # journal is compared with the live order below (else abandon(EXTERNAL-POLICY-CHANGE)). The journal is read again
+        # whatever it returns: a re-bound journal whose session write failed must not be compared as the stale one.
+        from pair_auto import server_resume_boot
+        try:
+            server_resume_boot(backend);journal=journal_read()
+        except (Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):pass
         if journal.get('phase') not in (None,'ROLLED-BACK'):
             # A power cut removes the stock boot prefix (tmpfs); recovery may write the kernel through rtp2.sh.
             from rtp_boot import recovery_prefix

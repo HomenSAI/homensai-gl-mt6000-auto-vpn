@@ -153,6 +153,12 @@ function M.recover(env)
   T.PROOF_SCOPE=getd(value,'proof_scope','external-lan')
   if not T.SCOPES[T.PROOF_SCOPE] then ctl.refuse('JOURNAL-INTEGRITY-FAILED') end
   pair.fence_recovery(env)
+  -- server pick (stage 3): a server change cut short by a power cut or a crash (between its uci commits and the session
+  -- write) is this supervisor's own write; re-bind the session and the journal to it before the COMMITTED journal is
+  -- compared with the live order below (else abandon(EXTERNAL-POLICY-CHANGE)). The journal is read again whatever it
+  -- returns: a re-bound journal whose session write failed must not be compared as the stale one.
+  pcall(pair.server_resume_boot,env)
+  local jok2,again=pcall(T.journal_read,env);if jok2 then value=again end
   if value.phase=='RELEASE-PENDING' then R.abandon(env,value,getd(value,'reason','EXTERNAL-POLICY-CHANGE')) end
   local phase=value.phase
   -- every recovery below may write the kernel through rtp2.sh: recreate the stock boot prefix a power cut removed

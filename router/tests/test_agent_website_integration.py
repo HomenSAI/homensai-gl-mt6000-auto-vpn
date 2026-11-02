@@ -24,6 +24,8 @@ class WebsiteIntegration(unittest.TestCase):
             stack.enter_context(patch.object(agent,'checkpoint'));stack.enter_context(patch('icmp_ping.PingSampler'))
             stack.enter_context(patch('telegram_report.deliver',return_value=({'enabled':False},{},False)))
             stack.enter_context(patch('system_readiness.snapshot',return_value={}))
+            # the server-pick round is a thread that writes into RUNTIME; stubbed so it never races the cleanup (CI 02.11.2026)
+            stack.enter_context(patch('server_pick.job'))
             stack.enter_context(patch('speed_test.observe_traffic'));stack.enter_context(patch('speed_test.automatic_new',return_value=set()))
             stack.enter_context(patch('speed_test.active_job',return_value=False));stack.enter_context(patch('speed_test.cancel'))
             sampler=stack.enter_context(patch.object(web,'WebsiteSampler')).return_value

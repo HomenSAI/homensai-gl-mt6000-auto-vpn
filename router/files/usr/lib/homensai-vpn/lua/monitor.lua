@@ -535,6 +535,7 @@ function Monitor:stats_reset()
     if not request then return end
     -- Work mode holds empty histories: a reset works on the real flash copies and saves exactly those.
     local state=resets.histories(runner,self.persist,self.diagnosing and {latency=self.latency,ping=self.ping_history} or nil)
+    state.samples=self.samples
     local ctx={runner=runner,persist=self.persist,env=self.env,days=M.retention_days(self.settings)}
     local ok,result=pcall(resets.apply,ctx,request,self.accounting,state,runner.wall())
     if not ok then result=canon.object({nonce=request.nonce,scope=request.scope,time=canon.float(runner.wall()),done=false,code='STATS-RESET-FAILED'}) end
@@ -542,13 +543,14 @@ function Monitor:stats_reset()
       local saved=pcall(resets.save,ctx,self.accounting,state)
       if saved then self.last_save=runner.clock();self.accounting.reliability.critical=false
       else result.done=false;result.code='STORAGE-001' end
+      if result.done and request.scope=='samples' then self.samples=state.samples end
       if self.diagnosing then self.latency=state.latency;self.ping_history=state.ping
       elseif result.done then pcall(responses.work_reset,self.ping_history,request.scope,runner.wall()) end
     end
     pcall(function() (runner.write_ram or runner.write_atomic)(self.runtime..'/'..resets.RESULT,canon.encode(result)) end)
   end
   local function with_speed_lock()
-    if not parts.speed or not runner.try_lock then return work() end
+    if not (parts.speed or parts.faults) or not runner.try_lock then return work() end
     local taken=runner.try_lock(self.runtime,work)
     if not taken then error('busy',0) end
   end
@@ -805,6 +807,8 @@ function Monitor:finish_pass(ctx)
   status.wan_devices=wan_devices
   status.speed_tests=self:speed_tests()
   status.telegram=self:telegram_field(settings,status)
+  local okpick,picked=pcall(self.server_pick_field,self,settings,rows,status)
+  status.server_pick=okpick and picked or NULL
   local status_text=canon.encode(status)
   runner.write_atomic(self.runtime..'/status.json',status_text)
   self.status=status;self.published_at=runner.clock()
@@ -1015,6 +1019,46 @@ function Monitor:telegram_collect(job)
   elseif result.stored==false then public.storage_error='TELEGRAM-STATE-WRITE-FAILED' end
   if is_dict(result.saved) then self.telegram_saved=result.saved end
   self.telegram_public=public
+end
+
+-- Best server inside a channel (server_pick.lua, 2.1.0, off by default): one round at a time in a child, at most
+-- every 10 min and right after a channel newly failed; the published block is its RAM file (agent.py: a thread).
+function Monitor:server_pick_field(settings,rows,status)
+  local sp=require('server_pick')
+  local runner=self.runner
+  local picked=sp.project(self:read_json(self.runtime..'/'..sp.RESULT,NULL))
+  if self.pick_seen==nil then self.pick_seen=picked and picked.time or false
+  elseif picked then
+    for _,e in ipairs(sp.events(picked,self.pick_seen or nil)) do self.events[#self.events+1]=e;status.events[#status.events+1]=e end
+    self.pick_seen=picked.time
+  end
+  -- stage 2: the Auto supervisor's own server changes (SERVER-PICKED / SERVER-PICK-FAILED ...) are history events too
+  local outcome=self:read_json(self.runtime..'/'..sp.EVENT,NULL)
+  if self.pick_event_seen==nil then self.pick_event_seen=is_dict(outcome) and outcome.time or false
+  elseif is_dict(outcome) then
+    local fresh=sp.events(outcome,self.pick_event_seen or nil)
+    for _,e in ipairs(fresh) do self.events[#self.events+1]=e;status.events[#status.events+1]=e end
+    if #fresh>0 then self.pick_event_seen=outcome.time end
+  end
+  local failed=sp.failed_interfaces(rows)
+  -- a channel that recovered and fails again is a new failure (MT3000 02.11.2026: the second failure of the reserve
+  -- within 10 min started no round)
+  local still={};for _,iface in ipairs(self.pick_failed or {}) do for _,now_failed in ipairs(failed) do if iface==now_failed then still[#still+1]=iface end end end
+  self.pick_failed=still
+  local clock=runner.clock()
+  local kept={};for _,iface in ipairs(self.pick_retried or {}) do for _,now_failed in ipairs(failed) do if iface==now_failed then kept[#kept+1]=iface end end end
+  self.pick_retried=kept
+  if not self.pick_running then local retry=sp.carrying_retry(picked,self.pick_failed,self.pick_retried,self.pick_started,clock);self.pick_failed,self.pick_retried=retry.failed,retry.retried end
+  local enabled=settings.server_pick==true
+  if self.pick_enabled~=enabled then self.pick_started=nil end  -- the owner switch changed: a round now
+  if not self.pick_running and runner.spawn and sp.due(self.pick_started,self.pick_failed,failed,clock) then
+    local request=self.runtime..'/'..sp.REQUEST
+    local auto=is_dict(status.auto_control) and status.auto_control.requested=='on'
+    ;(runner.write_ram or runner.write_atomic)(request,canon.encode(canon.object({enabled=enabled,auto_on=auto,failed=failed})))
+    self.pick_running=true;self.pick_started=clock;self.pick_failed=failed;self.pick_enabled=enabled
+    runner.spawn({'/usr/bin/lua','/usr/lib/homensai-vpn/lua/server_pick.lua','job',request},150,function() self.pick_running=false end)
+  end
+  return picked or NULL
 end
 
 function Monitor:page_fields(status)

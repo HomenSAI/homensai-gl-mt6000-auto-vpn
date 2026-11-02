@@ -963,6 +963,7 @@ def cleanup(backend, state, stop_revision=None):
     from pair_interfaces import state as state_interfaces
     managed=state_interfaces(state)
     backend.use_process_bindings(state.get('process_bindings'))
+    if 'server_change' in state:server_resume(backend,state)  # a server change cut short: adopt this supervisor's own write
     journal = n.journal_read()
     from pair_policy import metadata,role,state_order_matches
     context=metadata(journal)
@@ -1232,6 +1233,11 @@ def tick(backend, settings, revision):
             raise ValueError('PAIR-MODE-NOT-CONFIGURED')
         from pair_interfaces import state as state_interfaces
         rows=network()
+        pending=state.get('server_change')
+        if isinstance(pending,dict) and (pending.get('phase')=='APPLYING' or normalized_network(rows,state_interfaces(state))!=state['network_identity']
+                                         or changed(state,configs(state_interfaces(state)))):
+            # a change cut short in any phase (a crash, a rollback that raised after its uci writes): resolved before the checks
+            server_resume(backend,state,revision);rows=network()
         if normalized_network(rows,state_interfaces(state))!=state['network_identity']:
             raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
         current_configs=configs(state_interfaces(state))
@@ -1240,9 +1246,13 @@ def tick(backend, settings, revision):
         journal = n.journal_read()
         status = read_json(RUNTIME / 'status.json', {})
         from pair_manual import consume as consume_manual,held_reserve
+        if 'server_change' in state:
+            if server_pending(backend,state,settings,revision):return True  # this session's own server change (stages 2, 3)
+            journal=n.journal_read()  # a finished change may have re-bound or completed the journal
         if consume_manual(backend,state,settings,revision):return True
         if revive(backend,state,revision,journal,rows):return True
         if held_reserve(backend,state,journal,settings,status):return True
+        if server_start(backend,state,settings,revision,journal):return True
         observed={}
         if reapply_missing_policy(backend,state,settings,revision,journal,observed):return True
         kernel=observed.get('kernel')
@@ -1383,4 +1393,290 @@ def tick(backend, settings, revision):
             fail_request(request_row,revision,error)
         # Leave unverified ownership intact. Stop is independent of this code.
         publish_failure(error)
+    return True
+
+
+# ---- best server inside a channel, stages 2 and 3 (server_pick.py; SERVER-PICK-DESIGN-2026-11-02.ru.md) ----------
+# MT3000 02.11.2026: a server change of the idle reserve made outside the pair (uci route_policy + network,
+# ifdown/ifup) was an external change for this session - PAIR-READOPTED, a 7.1 s LAN stall on the WORKING channel,
+# HELD after three in 15 min. Now this supervisor makes the change itself, inside its control lock, and re-binds its
+# own session to it (network_identity, protected route_policy digest, order, policy_hash, policy_roles,
+# selected_policy and the journal): no external code, no readopt. The monitor job only measures and writes the
+# hand-off (server_pick.CHANGE). The record state['server_change'] (phase APPLYING -> CONNECTING -> SETTLING, role)
+# keeps the pair waiting (reason SERVER-CHANGING, no switch decision) at most CONNECT_WAIT s for the tunnel to pass the
+# pair's own health check (DNS + HTTPS through it), else the previous server comes back the same way; then at most
+# SETTLE_WAIT s for the monitor to observe the new profile.
+# Stage 2 (role 'target'): the idle reserve while the traffic is on the primary and the pair rests.
+# Stage 3 (role 'source', the owner's main scenario): the failed primary while the traffic is on the reserve after a
+# completed automatic switch (journal COMMITTED). The open journal is re-bound too (server_pick.rebind): the normal
+# return rules (committed_recovery_decision -> finish_committed -> rollback to the context's primary_order) then bring
+# the traffic back to the primary on its new server - the return reads the journal's source id, so the recovery
+# streaks and the fresh return check follow the new profile id. The carrying reserve is never touched. Both tunnels
+# are bound by tunnel id (plan_source_tunnel / plan_target_tunnel), never by a profile id.
+# A crash or power cut inside a change (any phase, or a rollback that raised after its uci writes) leaves the record:
+# server_resume() adopts the live `from`, or `to` once its check passed (`verified`); an unverified `to` is restored
+# to `from` unless its tunnel carries the traffic. It runs before the boot recovery compares the journal with the
+# live order (native_switch.serve / auto.recover), in the cleanup and in tick before the external-change checks;
+# anything else stays an external change. The Lua twin is lua/pair.lua (same names).
+SERVER_IO=None  # tests: a fake server_pick io
+
+
+def _server_io():
+    if SERVER_IO is not None:return SERVER_IO
+    import server_pick
+    from agent import RUNTIME
+    return server_pick.router_io(str(RUNTIME))
+
+
+def _server_enabled(settings):return isinstance(settings,dict) and settings.get('server_pick') in ('1',True)
+
+
+def server_interfaces(state,settings):
+    """(source interface, reserve interface, the interfaces bound by their tunnel id: plan_source_tunnel and
+    plan_target_tunnel, alpha27). A tunnel chosen by its profile id would lose its binding with the new server's id."""
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    anchored={}
+    for role in ('source','target'):
+        anchor=settings.get('plan_'+role+'_tunnel') if isinstance(settings,dict) else None
+        kind,_,name=anchor.partition(':') if isinstance(anchor,str) else ('','','')
+        protocol={'wgclient':'wireguard','ovpnclient':'openvpn'}.get(managed.get(name))
+        if protocol is not None and kind==protocol:anchored[role]=name
+    names=sorted(managed);source,target=anchored.get('source'),anchored.get('target')
+    if source is None and target is not None:source=next(x for x in names if x!=target)
+    if target is None and source is not None:target=next(x for x in names if x!=source)
+    if source is None or source==target:return None,None,()
+    return source,target,tuple(sorted(set(anchored.values())))
+
+
+def _server_tunnel(pending):
+    return {key:pending.get(key) for key in ('tunnel_id','protocol','section','interface')}
+
+
+def server_rebind(backend,state,interface,protocol,role='target'):
+    """This supervisor's own server change adopted by the session (server_pick.rebind); ValueError when the live
+    change is not only the changed tunnel's (the normal checks then see an external change). The journal is written
+    before the session (rebind accepts a journal already re-bound)."""
+    import native_switch as n
+    import server_pick
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    rows=network()
+    config=next((row.get('config') for row in rows if row.get('.name')==interface),None)
+    profile=(('openvpn:' if protocol=='openvpn' else 'wireguard:')+config) if isinstance(config,str) else None
+    order,hash_=backend.order()
+    updated,journal=server_pick.rebind(state,n.journal_read(),order,hash_,profile,role)
+    updated['network_identity']=normalized_network(rows,managed)
+    protected=updated.get('protected')
+    if isinstance(protected,dict):
+        # route_policy always; wireguard after GL's update_provider_config step (server_pick.PROVIDER_SCRIPT)
+        names=[name for name in ('route_policy','wireguard') if name in protected and (name=='route_policy' or protocol=='wireguard')]
+        if names:
+            current=configs(managed)
+            for name in names:protected[name]=current[name]
+    if journal is not None:n.journal_write(journal)
+    state.clear();state.update(updated);save(state)
+
+
+def server_apply(backend,state,revision,tunnel,target,io,role='target'):
+    """One server change of an idle tunnel (stage 1's steps) under the control lock, the session re-bound before the
+    lock is released. -> server_pick.PICKED, or FAILED (a failed step, or a change the session cannot explain).
+    revision None: a resume outside a running Auto (boot, cleanup) - refused while any Auto intent is on."""
+    import native_switch as n
+    import server_pick
+    from agent import RUNTIME
+    from auto_control import control_lock,revision_locked
+    plan=server_pick.switch_plan(tunnel,target,True,True,False,False,1)
+    if plan['code'] is not None:return server_pick.FAILED
+    with control_lock():
+        current=intent()
+        if revision is None:
+            if current.get('mode')=='on':raise n.Refused('CLIENT-STOP')
+        elif (revision_locked(RUNTIME)!=revision or current.get('mode')!='on' or current.get('revision')!=revision
+                or current.get('id')!=state.get('id')):raise n.Refused('CLIENT-STOP')
+        code=server_pick.execute(plan,io,True)
+        try:server_rebind(backend,state,tunnel['interface'],tunnel['protocol'],role)
+        except (ValueError,TypeError,KeyError):return server_pick.FAILED
+    return code
+
+
+def _server_publish(state,kernel=None):
+    import native_switch as n
+    import server_pick
+    roles=state.get('policy_roles') or {}
+    n.publish({'state':'OBSERVING','mode':'continuous-pair','proof_scope':MODE,'reason':server_pick.CHANGING,
+               'source':roles.get('source_id'),'target':roles.get('target_id'),'readiness_verified':bool(kernel and kernel.get('verified') is True),
+               'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),'kernel_proof':kernel,'blockers':[]})
+
+
+def server_start(backend,state,settings,revision,journal):
+    """Takes a valid hand-off of the monitor job when the gate allows it. True: this pass changed a server."""
+    import server_pick as S
+    from pair_policy import state_order_matches
+    if not _server_enabled(settings):return False
+    io=_server_io()
+    try:row=json.loads(io['read'](io['runtime']+'/'+S.CHANGE) or 'null')
+    except (ValueError,TypeError):row=None
+    now=time.time()
+    try:taken=json.loads(io['read'](io['runtime']+'/'+S.STATE) or '{}')
+    except (ValueError,TypeError):taken=None
+    history=taken.get('changes') if isinstance(taken,dict) else None
+    taken=taken.get('taken') if isinstance(taken,dict) else None
+    if isinstance(row,dict) and S._stamp(taken) and S._stamp(row.get('time')) and row['time']<=taken:return False  # taken once
+    claimed=S.claim(io,row,now)
+    if claimed is None:return False
+    tunnel=claimed['tunnel']
+    source,reserve,anchors=server_interfaces(state,settings)
+    kernel=backend.attest_policy()
+    left,_=S.changes_left(history if isinstance(history,dict) else {},tunnel['tunnel_id'],now)
+    gate={'enabled':True,'phase':state.get('phase'),'journal_phase':journal.get('phase'),'journal_manual':journal.get('manual_request_id') is not None,
+          'kernel_verified':isinstance(kernel,dict) and kernel.get('verified') is True,
+          'kernel_role':kernel.get('role') if isinstance(kernel,dict) else None,'interface':tunnel['interface'],
+          'source_interface':source,'target_interface':reserve,'manual_hold':state.get('manual_hold'),
+          'pending':'server_change' in state,'anchored':tunnel['interface'] in anchors,'busy':S.vendor_busy(tunnel['tunnel_id'],io),'left':left}
+    code=S.gate(gate);role=S.role_of(gate)
+    if code is None:
+        live=backend.order()
+        # stage 2: the live order is the session's; stage 3: the COMMITTED journal's, with the session's context
+        if role=='target' and live!=(state.get('order'),state.get('policy_hash')):code=S.DEFERRED
+        if role=='source' and not state_order_matches(state,journal,live):code=S.DEFERRED
+    if code is not None:
+        if code in S.EVENT_CODES:S.event(io,code,tunnel,now,request=row['time'])
+        return False
+    change=S.project_change({'time':now,'from':row['from'],'to':row['to'],'from_ms':row.get('from_ms'),'to_ms':row.get('to_ms'),
+                             'from_location':row.get('from_location'),'to_location':row.get('to_location')})
+    if change is False:change={'time':now,'from':row['from'],'to':row['to'],'from_ms':None,'to_ms':None,'from_location':None,'to_location':None}
+    target=dict(claimed['target'],id=S.profile_id(tunnel['protocol'],claimed['target']['group_id'],claimed['target']['profile_id']))
+    pending=dict(_server_tunnel(tunnel),phase='APPLYING',role=role,**{'from':claimed['previous'],'to':target,'started':now,
+                 'deadline':now+S.CONNECT_WAIT,'request':row['time'],'change':change})
+    state['server_change']=pending;save(state)  # before the first write: a crash in between is seen by server_resume()
+    S.record(io,tunnel['tunnel_id'],now,taken=row['time'])  # every attempt counts for the hourly limit; taken once
+    if server_apply(backend,state,revision,tunnel,target,io,role)==S.PICKED:
+        state['server_change']=dict(pending,phase='CONNECTING')
+    else:
+        undone=server_apply(backend,state,revision,tunnel,claimed['previous'],io,role)==S.PICKED
+        S.event(io,S.FAILED,tunnel,now,change,row['time'],'rolled back' if undone else 'rollback failed')
+        state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,rolled_back=True)
+    save(state)
+    _server_publish(state,kernel)
+    return True
+
+
+def server_settled(selection):
+    """Stage 3: once the monitor observes the new primary profile (a clear diagnostic), the open COMMITTED journal
+    records its vendor identity (vendor_profiles.source, vendor_identity) the way attempt() records it at a switch,
+    so a later interrupted return compares the live profile, not the old server's. The reserve's recorded identity
+    must be unchanged. True when the journal was updated."""
+    import native_switch as n
+    from failure_diagnosis import profile_identity
+    try:journal=n.journal_read()
+    except n.Refused:return False
+    proofs=journal.get('vendor_profiles')
+    if journal.get('phase')!='COMMITTED' or not isinstance(proofs,dict) or not isinstance(selection,dict):return False
+    source=profile_identity(selection.get('source'));target=profile_identity(selection.get('target'))
+    if source is None or source.get('id')!=journal.get('source') or target is None or target!=proofs.get('target'):return False
+    identity=selection.get('vendor_identity')
+    identity=identity if isinstance(identity,str) and re.fullmatch('[a-f0-9]{64}',identity) else journal.get('vendor_identity')
+    if proofs.get('source')==source and journal.get('vendor_identity')==identity:return False
+    updated=dict(journal,vendor_profiles=dict(proofs,source=source))
+    if identity is not None:updated['vendor_identity']=identity
+    n.journal_write(updated)
+    return True
+
+
+def _server_carrying(backend,pending):
+    """At a resume: True unless the kernel proves the traffic on the other tunnel (an unknown route is carrying)."""
+    try:kernel=backend.attest_policy()
+    except Exception:return True  # noqa: BLE001 - any failure is an unknown route
+    role=pending.get('role') or 'target'
+    return not (isinstance(kernel,dict) and kernel.get('verified') is True and kernel.get('role') in ('source','target') and kernel['role']!=role)
+
+
+def server_resume(backend,state,revision=None):
+    """A server change record a crash, a power cut or a rollback that raised left behind (any phase). The live server
+    of the tunnel (route_policy and network both - this supervisor's own writes) is adopted (server_rebind) when it is
+    the recorded `from`, or `to` after its CONNECTING check passed (`verified`). An unverified `to` is restored to
+    `from` (server_apply, as a timeout rollback; revision None outside a running Auto) unless its tunnel now carries
+    the traffic (then adopted and logged); a failed restore adopts what is live. Anything else (a mixed state between
+    the two uci commits, an unreadable rule) is left to the normal checks, which see an external change. The record is
+    removed either way. Never raises. -> True when the session (and its journal) were re-bound."""
+    import native_switch as n
+    import server_pick as S
+    pending=state.get('server_change') if isinstance(state,dict) else None
+    if pending is None:return False
+    adopted=None;note=''
+    errors=(n.Refused,OSError,ValueError,KeyError,TypeError,AttributeError,subprocess.SubprocessError)
+    def live_side(io,tunnel):
+        live=S.live_server(io,tunnel)
+        config=next((row.get('config') for row in network() if row.get('.name')==tunnel['interface']),None)
+        return next((side for side in ('to','from') if isinstance(pending.get(side),dict) and live is not None
+                     and live==(pending[side].get('group_id'),pending[side].get('profile_id'))
+                     and config==S.network_config(tunnel['protocol'],pending[side].get('group_id'),pending[side].get('profile_id'))),None)
+    try:
+        io=_server_io();tunnel=_server_tunnel(pending);role=pending.get('role') or 'target'
+        side=live_side(io,tunnel)
+        if side=='to' and pending.get('verified') is not True:
+            if not isinstance(pending.get('from'),dict) or _server_carrying(backend,pending):note=' (not verified; its tunnel carries the traffic)'
+            else:
+                try:code=server_apply(backend,state,revision,tunnel,pending['from'],io,role)
+                except errors:code=None
+                if code==S.PICKED:adopted,side,note='from',None,' (the new one was not verified: restored)'
+                else:side,note=live_side(io,tunnel),' (the unverified new one could not be restored)'
+        if side is not None:
+            server_rebind(backend,state,tunnel['interface'],tunnel['protocol'],role)
+            adopted=side
+    except errors:adopted=None
+    try:
+        state.pop('server_change',None);save(state)
+    except (OSError,ValueError,TypeError):pass
+    _log('SERVER-PICK-RESUMED: %s'%('adopted the recorded '+adopted+' server'+note if adopted else 'not explainable; the normal checks decide'+note))
+    return adopted is not None
+
+
+def server_resume_boot(backend):
+    """The supervisor start (native_switch.serve, before it compares a COMMITTED journal with the live order)."""
+    try:state=read_state()
+    except (OSError,ValueError):return False
+    if not isinstance(state,dict) or 'server_change' not in state:return False
+    boot_step('server change resume')
+    return server_resume(backend,state)
+
+
+def server_pending(backend,state,settings,revision):
+    """While this supervisor's own server change is pending: True = this pass waited (no other decision)."""
+    import server_pick as S
+    pending=state.get('server_change')
+    if pending is None:return False
+    now=time.time()
+    stamps=[pending.get(key) for key in ('started','deadline')] if isinstance(pending,dict) else []
+    if isinstance(pending,dict) and pending.get('phase')=='APPLYING':
+        server_resume(backend,state,revision)  # a crash inside the change (the supervisor restarted mid-way)
+        return False
+    if (not isinstance(pending,dict) or pending.get('phase') not in ('CONNECTING','SETTLING') or len(stamps)!=2
+            or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) for x in stamps)
+            or not isinstance(pending.get('to'),dict) or not isinstance(pending.get('from'),dict)
+            or pending.get('role','target') not in ('source','target')):
+        state.pop('server_change',None);save(state)  # a damaged record: the normal checks decide
+        return False
+    io=_server_io();tunnel=_server_tunnel(pending);role=pending.get('role','target')
+    within=pending['started']<=now<pending['deadline']
+    if pending['phase']=='CONNECTING':
+        if backend.health(pending['to'].get('id')) is True:
+            S.record(io,pending['tunnel_id'],now,pending.get('change'),count=False)
+            S.event(io,S.PICKED,tunnel,now,pending.get('change'),pending.get('request'))
+            state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,verified=True);save(state)  # a resume keeps `to`
+        elif not within:
+            undone=server_apply(backend,state,revision,tunnel,pending['from'],io,role)==S.PICKED
+            S.event(io,S.FAILED,tunnel,now,pending.get('change'),pending.get('request'),'rolled back' if undone else 'rollback failed')
+            state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,rolled_back=True);save(state)
+        _server_publish(state)
+        return True
+    blockers,selection=backend.diagnostic()
+    if not blockers or not within:
+        if not blockers and role=='source':
+            try:server_settled(selection)
+            except (ValueError,TypeError,KeyError,OSError):pass  # observation-grade: the return compares ids and orders
+        state.pop('server_change',None);save(state)
+        return False
+    _server_publish(state)
     return True

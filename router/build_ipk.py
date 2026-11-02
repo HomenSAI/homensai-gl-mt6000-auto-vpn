@@ -11,7 +11,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parent))
 from package_hooks import scripts as lifecycle_scripts
 
 ROOT = Path(__file__).parent
-VERSION = '2.0.0-beta5-1'
+VERSION = '2.1.0-alpha5-1'
 NAME = 'homensai-auto-vpn'
 EXECUTABLE = {'etc/init.d/homensai-vpn', 'usr/libexec/rpcd/homensai-vpn', 'usr/sbin/homensai-vpn-emergency',
               'usr/sbin/homensai-vpn-integrity'}
@@ -88,12 +88,19 @@ def selected_source_files(source=None):
             if not path.is_file() or path.is_symlink():raise ValueError('PACKAGE-LAZY-UI-MISSING')
             lazy_selected.add(name)
         if 'LAZY_HELP_NAME=' in script and len(references)!=1:raise ValueError('PACKAGE-LAZY-UI-AMBIGUOUS')
+        # The server-pick panel (2.1.0) is a second optional module, also named per release: only the referenced one ships.
+        picks=set(re.findall(r"\bLAZY_PICK_NAME='(homensai-vpn\.pick[0-9]+)'",script))
+        for reference in picks:
+            name=reference.split('.')[-1]+'.js';path=source/lazy_root/name
+            if not path.is_file() or path.is_symlink():raise ValueError('PACKAGE-LAZY-UI-MISSING')
+            lazy_selected.add(name)
+        if 'LAZY_PICK_NAME=' in script and len(picks)!=1:raise ValueError('PACKAGE-LAZY-UI-AMBIGUOUS')
     for path in source.rglob('*'):
         if not path.is_file() or path.is_symlink() or '__pycache__' in path.parts:
             continue
         name = path.relative_to(source).as_posix()
         if name in NOT_SHIPPED:continue
-        if name.startswith(lazy_root) and '/' not in name[len(lazy_root):] and re.fullmatch(r'help[0-9]+\.js',path.name) and path.name not in lazy_selected:continue
+        if name.startswith(lazy_root) and '/' not in name[len(lazy_root):] and re.fullmatch(r'(?:help|pick)[0-9]+\.js',path.name) and path.name not in lazy_selected:continue
         ui_root='www/luci-static/resources/view/homensai-vpn/'
         if name.startswith(ui_root) and '/' not in name[len(ui_root):]:
             if re.fullmatch(r'dashboard[0-9]*\.js',path.name) and path.name!=selected_js:continue

@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.0.0-beta5'
+VERSION = '2.1.0-alpha5'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -872,6 +872,7 @@ def monitor_loop():
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
     telegram_job=None;telegram_public=None
+    pick_job=None;pick_started=None;pick_failed=[];pick_retried=[];pick_seen=None;pick_enabled=None;pick_event_seen=None  # server_pick.py rounds (2.1.0)
     def telegram_collect(job):
         # Applies a finished delivery: its saved state and its public answer. Runs only in the monitor thread.
         nonlocal telegram_saved,telegram_notice,telegram_public
@@ -914,7 +915,7 @@ def monitor_loop():
             reset_histories=(latency,website_history,ping_history,compare_history) if diagnosing else load_histories(True)
             try:
                 reset_latency,reset_result=None,None
-                accounting,reset_latency,reset_result=reset_apply(reset_request,accounting,reset_histories[0],time.time(),atomic_json,website_response=reset_histories[1],ping_response=reset_histories[2],compare_response=reset_histories[3])
+                accounting,reset_latency,reset_result=reset_apply(reset_request,accounting,reset_histories[0],time.time(),atomic_json,website_response=reset_histories[1],ping_response=reset_histories[2],compare_response=reset_histories[3],samples=samples)
                 reset_histories=(reset_latency,)+tuple(reset_histories[1:])
                 if diagnosing:latency=reset_latency
             except Exception:
@@ -1127,6 +1128,36 @@ def monitor_loop():
                     except Exception:
                         telegram_job=None;telegram_public={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
                 status['telegram']=dict(telegram_public) if telegram_public else {'enabled':bool(settings.get('telegram_enabled'))}
+            # Best server inside a channel (server_pick.py, 2.1.0, off by default): one round at a time in its own thread,
+            # at most every 10 min and right after a channel newly failed; the published block is its RAM file.
+            try:
+                import server_pick
+                picked=server_pick.project(read_json(RUNTIME/server_pick.RESULT,None))
+                if pick_seen is None:pick_seen=picked['time'] if picked else False
+                elif picked:
+                    fresh=server_pick.events(picked,pick_seen if pick_seen is not False else None)
+                    events.extend(fresh);status['events']=(status['events']+fresh)[-300:];pick_seen=picked['time']
+                # stage 2: the Auto supervisor's own server changes (SERVER-PICKED / SERVER-PICK-FAILED ...) are history events too
+                outcome=read_json(RUNTIME/server_pick.EVENT,None)
+                if pick_event_seen is None:pick_event_seen=outcome.get('time') if isinstance(outcome,dict) else False
+                elif isinstance(outcome,dict):
+                    fresh=server_pick.events(outcome,pick_event_seen if pick_event_seen is not False else None)
+                    events.extend(fresh);status['events']=(status['events']+fresh)[-300:]
+                    if fresh:pick_event_seen=outcome['time']
+                failed=server_pick.failed_interfaces(rows)
+                # a channel that recovered and fails again is a new failure (MT3000 02.11.2026: the second failure of the
+                # reserve within 10 min started no round)
+                pick_failed=[iface for iface in pick_failed if iface in failed]
+                pick_retried=[iface for iface in pick_retried if iface in failed]
+                if pick_job is None or not pick_job.is_alive():
+                    retry=server_pick.carrying_retry(picked,pick_failed,pick_retried,pick_started,time.monotonic());pick_failed,pick_retried=retry['failed'],retry['retried']
+                if pick_enabled is not (settings.get('server_pick') is True):pick_started=None  # the owner switch changed: a round now
+                if (pick_job is None or not pick_job.is_alive()) and server_pick.due(pick_started,pick_failed,failed,time.monotonic()):
+                    request={'enabled':settings.get('server_pick') is True,'auto_on':(status.get('auto_control') or {}).get('requested')=='on','failed':failed}
+                    pick_job=Thread(target=server_pick.job,args=(server_pick.router_io(str(RUNTIME)),request,time.time()),name='server-pick',daemon=True)
+                    pick_started=time.monotonic();pick_failed=failed;pick_enabled=request['enabled'];pick_job.start()
+                status['server_pick']=picked
+            except Exception:status['server_pick']=None
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             published_status=status
@@ -1308,7 +1339,7 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
-                          'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0},
+                          'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0,'server_pick':False},
                           'setup_stats':{'mode':'','hours':0,'retention':'','days':0,'mb':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
                           'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},

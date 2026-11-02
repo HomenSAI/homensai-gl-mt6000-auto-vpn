@@ -104,6 +104,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.response_metric=(metric=='icmp-1.1.1.1' or metric=='icmp-8.8.8.8' or metric=='icmp-9.9.9.9' or metric=='websites') and metric or 'icmp-1.1.1.1'
   main.response_compare=s.response_compare=='1'
   main.fast_switch=s.fast_switch~='0'
+  main.server_pick=s.server_pick=='1'  -- best server inside a channel (2.1.0): off unless the owner switched it on
   main.stats_mode=s.stats_mode=='diagnostic' and 'diagnostic' or 'work'
   main.stats_until=math.max(0,math.floor(tonumber(s.stats_until) or 0))
   main.lua_core=s.lua_core=='1'

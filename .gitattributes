@@ -10,3 +10,7 @@ router/files/www/luci-static/resources/view/homensai-vpn/style/** -text
 router/native/** text eol=lf
 # Packages are built from git archive (LF); a Windows checkout must not get CRLF in shipped files (QA 01.11.2026).
 router/files/** text eol=lf
+# Binaries keep their bytes: these lines come after the eol rule above, which would otherwise convert CR LF inside them.
+*.so binary
+*.woff2 binary
+router/files/www/luci-static/resources/view/homensai-vpn/style/** -text

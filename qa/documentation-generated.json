@@ -19,9 +19,9 @@
     "router/element_guard.inc.js": "6588f7f5d65b8c7eb0d3bb4e90e572f5a69aaaceab6b335c6291094e8e85a45e",
     "router/error_links.inc.js": "b893f5680ba66892716fcf822603261cdc895f26dc71308955367180e10cc5a7",
     "router/error_rows_extra.inc.js": "09d377c7a5c3f7d70c1306ae8811c19c60eb84abbf36f90f5d8ef856ec3695db",
-    "router/error_table.inc.js": "bc5a06edabec14fc86f34a15dc3b440bf36aa344d765d988549752851df3ea06",
-    "router/fault_panel.inc.js": "6ee9d416241f4da6e7374815b8f4d0aa6b8674c46084c2ab9bb8c5cc2cee52db",
-    "router/files/usr/lib/homensai-vpn/agent.py": "f06cb7747f2de84a5c41844f65ac90e8225f87d3991d13a961e345c64ba3fcb0",
+    "router/error_table.inc.js": "9dba238b8226334a008f8a7cf8c15499a61d0f6bd50adc0d3a53e09ddb178340",
+    "router/fault_panel.inc.js": "ea1c6dc955624d00f39072ce9098cb32b8e5ab0c3e17572ba4516c68345e2bd0",
+    "router/files/usr/lib/homensai-vpn/agent.py": "e7f463a0e4d79b57a30f823d1ae3beeb4bb46d170bcdc408d0fe1ed5fde82a2e",
     "router/fool_guard.inc.js": "1288a5e44e6ed75c079461380a767e2a0543362e1de52f0168a161df53f1c335",
     "router/help_panel.inc.js": "3e0eacbf890085f00afaeda4dd599e84b7b3e2e5525c7361c3ec886cda83a05e",
     "router/identity_panel.inc.js": "181254517816e76324ef86fa43c4668657920c25c801e362c2ff79da8c3ebd58",
@@ -42,7 +42,7 @@
     "router/minimum_navigation.inc.js": "5f6c901e3312e8b0aca9a93ecebb4c7c373a8e327f211142a1d121aebf21f6bc",
     "router/minimum_sections.inc.js": "d53809d69a6750a51a174c15fa4eaebf219b0f5e7401c054a797e6c7d6254dce",
     "router/minimum_settings.inc.js": "3d2446212e6d42301151b156f949c53ec7e1bff00bcd9db7b9612915702ffd35",
-    "router/monitor_panel.inc.js": "27712fac27ee7c7edc68c6513f23c7eb1cac4867a75f5a54de2132c7f094cbd6",
+    "router/monitor_panel.inc.js": "4d6679b4c3ebda0185c7d7062289f84865b3a22ebeab484184fa2f3bb704cdf8",
     "router/navigation_context.inc.js": "3c58749749fd3a3934d0c6cbf133b704acbe13e7051f5a1d6d45ffc561e59fb4",
     "router/onboarding_panel.inc.js": "e57122f343936e952e675a5f3ecb6f6fe55931c450595615af228ebe60e2a175",
     "router/preparation_control.inc.js": "6b5297706aa01992671bd54575671e786b146ad159769c33db04b08624d3ae70",
@@ -51,6 +51,8 @@
     "router/recovery_panel.inc.js": "ef067beb35a8e679ac469b111e5f1bb75e06139ea82ee0f56dca7268344dbb34",
     "router/router_link.inc.js": "f4a58635375bde0a27dcdd0a15806ae3135cfc465efefdbd30d5bbce55d88126",
     "router/server_pair_histogram.inc.js": "09e5afd8c9cc94caa5dc83a01c21e2645cccb38cf68c7f2a51ac2b46214ad8e9",
+    "router/server_pick_loader.inc.js": "ae8109c20446b6bd36eebe1400d72d3027e1a8be7cd750313ab96229c9de079b",
+    "router/server_pick_panel.inc.js": "b01591e19f25352ff2e108b17cdbb8d1bf65a09792876019ebd8d9778736658a",
     "router/servers_panel.inc.js": "6b39ef948573e2a208ecb9c918d62860122cfd5fadbf8e2b40899505062cb1e9",
     "router/setup_guides.inc.js": "3f4137e6747714695dc81573c58d0262cae42582429165738250d79ddec3cf4a",
     "router/setup_wizard.inc.js": "300f983c65d37a1e4869cbba520ce832e6016b2eb10f93502ee3159ff853d2d1",
@@ -62,7 +64,7 @@
     "router/speed_panel.inc.js": "863076bc1d8cd15316052c696504f5c80a6316b5bf85cd115cab77341aa2efcf",
     "router/speed_table.inc.js": "4f147cee86dab056a40e3bf7d4ff7441aedcacf8208d8eb7cca7eca691f7638c",
     "router/stats_page.inc.js": "e82e85bf02a4ad2e16ae80f75547442641d7b5dc89e327ef9bf042604917771b",
-    "router/summary_panel.inc.js": "00feda77aacef6b4b43cba6cfd2700a0e21ea71bda40502063a4c858c385f4fb",
+    "router/summary_panel.inc.js": "e51b61681b2c2eaaaedd7544e895b43dfe911faa422c16117a20015187c64d9e",
     "router/switch_stats_page.inc.js": "bb6c130013ab2e1a200ff22a4cc0fa7ae5d7de318b2e10ee587cf41549578829",
     "router/switch_timing.inc.js": "31ee9a1d053b5561b9dd50160c0d9f210d695d754b546f57408957f2fd9500d8",
     "router/terms_panel.inc.js": "c62628d2c009d41cf113045beebb8e4637ed543ba0a6f0cd0ec014857ed7a252",
@@ -83,6 +85,6 @@
     "docs/AI-INSTALL.ru.md": "094d356abf404474e78eaa18851ab45caa3901b0005737ae29ac6c60d0faddb1",
     "docs/AI-LAN.ru.md": "6516e76271e6d4cb4c4c17f802b141c12ec600fa100296abd0aa7f1d412fc2f7",
     "docs/BUILTIN-HELP.ru.md": "8312819d4cef7dbd91ae6e3bb04b8256fb35223148097645c7a644241f044e5a",
-    "docs/ERROR_CODES.md": "2960d977b621d278ba0bad5a509d9649809f15fd5954c7743925d187ab4c6843"
+    "docs/ERROR_CODES.md": "d6238ab0763dd3f25cc18e50c7d8b6dd2292f4151f8dda847586c75a79cd27dd"
   }
 }
