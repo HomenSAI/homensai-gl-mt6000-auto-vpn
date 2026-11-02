@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.0.0-beta4'
+VERSION = '2.0.0-beta5'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'

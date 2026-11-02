@@ -142,3 +142,4 @@
 .hv-app .hv-monitor-page-head{display:flex;align-items:center;gap:12px}
 .hv-app .hv-monitor-page-head .hv-monitor-lamp{width:32px;height:32px;min-width:32px;flex:0 0 32px;border-radius:50%}
 .hv-app .hv-monitor-table td,.hv-app .hv-monitor-table th{white-space:nowrap}
+.hv-app .hv-ts{display:flex;gap:.6em;flex-wrap:wrap;margin:.3em 0}.hv-app .hv-tn{display:inline-flex;align-items:center;gap:.35em;padding:.15em .55em;border:1px solid transparent;border-radius:1em;opacity:.75}.hv-app .hv-tc{border-color:currentColor;font-weight:700;opacity:1}

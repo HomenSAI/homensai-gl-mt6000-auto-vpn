@@ -922,7 +922,7 @@ function autoLightModel(status,inventory,now){
   var blockers=(Array.isArray(ns.blockers)?ns.blockers:[]).filter(function(code){return AUTO_LAN_ONLY.indexOf(code)<0;});
   var sessionRuns=intent.requested==='on'&&['RUNNING','HELD'].indexOf(intent.pair_phase)>=0&&!model.awaiting;
   function out(key,title,hint,code,running){return {running:running===true,key:key,lamp:(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).lamp||null,
-    icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null};}
+    icon:key==='off'?'○':key==='unknown'?'?':(AUTO_LIGHTS.filter(function(l){return l.key===key;})[0]||{}).icon,title:title,hint:hint,code:code||null,tunnels:T};}
   if(!status.rpc_error&&!status.error){UI_RPC_LOST_SINCE=null;
     if(intent.requested==='on'&&['STARTING','RUNNING'].indexOf(intent.pair_phase)>=0)UI_AUTO_LAST_ON=now;else UI_AUTO_LAST_ON=null;}
   else if(UI_RPC_LOST_SINCE===null)UI_RPC_LOST_SINCE=now;
@@ -955,6 +955,7 @@ function autoLightModel(status,inventory,now){
       if(health==='failed'||health==='inactive')return out('problem',bi('The selected VPN channel has failed','Выбранный VPN-канал не работает'),bi('Auto is watching the route, but the selected channel has failed its connection check.','Auto следит за маршрутом, но выбранный канал не прошёл проверку соединения.'),active&&active.code);
       if(!active||health!=='healthy')return out('unknown',bi('Waiting for a current channel check','Ждём актуальную проверку канала'),bi('The selected route is verified, but current channel health has not been confirmed.','Выбранный маршрут проверен, но актуальная доступность канала не подтверждена.'),null,true);
       if(state==='DEGRADED-ON-RESERVE')return out('unknown',bi('Recovery is being confirmed','Восстановление подтверждается'),bi('The latest channel check passed after a controller failure. Waiting for Auto to confirm recovery.','Последняя проверка канала прошла после сбоя контроллера. Ждём подтверждения восстановления от Auto.'));
+      var T=[ns.source,ns.target].map(function(id){var p=(status.profiles||[]).filter(function(x){return x.id===id})[0];return [p&&profileHealth(p,now).state==='healthy',id===route.selected];});
       if(route.selected===ns.target)return out('reserve',bi('Working on the reserve','Работаю на резерве'),scopeHint);
       return out('ok',bi('Two-channel Auto is on','Авторежим двух каналов включён'),scopeHint);
     }
@@ -1000,7 +1001,7 @@ function renderAutoLight(light,technicalCode,countdown){
     E('li',{'class':signal==='green'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),bi('Green: automatic switching works. It watches the primary and moves traffic to the reserve if the primary fails.','Зелёный: автопереключение работает. Оно следит за основным и при его отказе переводит трафик на резерв.')]),
     E('li',{'class':signal==='red'?'hv-legend-current':''},[E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),light.hold?manualHoldText():bi('Red: a real failure: the selected channel failed its check, the controller raised an alarm, or the router has not answered for 90 s. All lamps dark: you turned Auto off.','Красный: настоящий сбой: выбранный канал не прошёл проверку, служба сообщила об аварии или роутер не отвечает 90 с. Все лампы погашены: вы выключили Auto.')]),
     E('li',{},[E('span',{'class':'hv-dot hv-dot-green','aria-hidden':'true'}),' / ',E('span',{'class':'hv-dot hv-dot-red','aria-hidden':'true'}),bi(' Primary and Reserve: green works in Auto, yellow is alive; the button shows whether switching is available, grey is waiting for the router answer, red is an error.',' Основной и Резерв: зелёный — работает в автомате, жёлтый — живой, доступность переключения показана на кнопке, серый — ждём ответа роутера, красный — ошибка.')])]);
-  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},light.title),E('p',autoHintLive(light.hint),light.hint),E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
+  return E('div',{'class':'hv-light-block'},[countdown?E('div',{'class':'hv-light-column'},[housing,countdown]):housing,E('div',{'class':'hv-light-text'},[E('strong',{'class':'hv-auto-label hv-light-title'},light.title),E('p',autoHintLive(light.hint),light.hint),light.tunnels?E('div',{'class':'hv-ts'},light.tunnels.map(function(t,i){return E('span',{'class':'hv-tn'+(t[1]?' hv-tc':'')},[E('span',{'class':'hv-dot hv-dot-'+(t[0]?'green':'red')}),i?bi('Reserve','Резерв'):bi('Primary','Основной')]);})):null,E('small',{'class':'hv-auto-tech'},[bi('Technical state: ','Техническое состояние: ')].concat(techCodeNodes(technicalCode)).concat([light.code&&typeof errorCodeLink==='function'?' · ':null,light.code&&typeof errorCodeLink==='function'?errorCodeLink(light.code):null]).filter(Boolean)),E('details',{'class':'hv-light-help'},[E('summary',{},bi('What do the colours mean?','Что означают цвета?')),legend])])]);
 }
 
 function autoCodeNotice(code,extra){
@@ -3120,7 +3121,7 @@ function lanHelperExplain(){
     E('p',{},[helpLink('helper-what',bi('Manual LAN check instructions','Проверить LAN самостоятельно')),' · ',helpLink('ai-lan-prompt',bi('Copy an AI testing prompt','Промпт для проверки с ИИ')),' · ',helpLink('ai-prompt',bi('AI installation and setup','Установка и настройка с ИИ')),' · ',helpLink('helper',bi('Help with a failed check','Помощь при ошибке проверки'))])]);
 }
 
-var LAZY_HELP_NAME='homensai-vpn.help200';
+var LAZY_HELP_NAME='homensai-vpn.help201';
 var LAZY_HELP={api:null,promise:null,failed:false,attempt:0,hosts:Object.create(null),inventory:null,pendingTopic:null,pendingCode:null};
 var helpNode=null,learnNode=null,errorTable=null,ERROR_GROUP_OF={},ERROR_GROUPS=[],ERROR_TABLE_STATE={query:'',open:Object.create(null),selected:null};
 var ERROR_FAMILIES=ERROR_ROWS.filter(function(row){return row[0].endsWith('*');}).map(function(row){return [row[0].slice(0,-1)].concat(row.slice(1));});
@@ -3238,7 +3239,7 @@ function renderTermsGate(inventory,status){
   var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');
   applyTheme(storedTheme());
   var gate=E('div',{'class':'hv-app hv-terms','data-terms-gate':TERMS_VERSION,'data-hv-design':currentDesign(),'style':'width:100%;box-sizing:border-box;overflow-wrap:anywhere'},[
-    E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui166.css')}),
+    E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui167.css')}),
     E('section',{'class':'hv-chart-card hv-terms-card'},[
       E('header',{'class':'hv-page-header','style':'flex-wrap:wrap;gap:12px'},[E('p',{'class':'hv-eyebrow'},bi('HomenS.AI Auto VPN · first start','HomenS.AI Auto VPN · первый запуск')),versionBadge]),
       E('h1',{},bi('Experimental software: please read','Экспериментальное ПО: прочитайте, пожалуйста')),
@@ -3532,7 +3533,7 @@ function renderOnboarding(inventory,status,firstRun,requestedStep){
     var footer=E('footer',{'class':'hv-brand-footer'});window.HomenS.brandUi.renderFooter(footer,locale,'platform');host.appendChild(footer);
   }
   applyTheme(storedTheme());
-  if(firstRun){['style/css/tokens.css','style/css/fonts.css','style/css/author.css','ui166.css'].forEach(function(path){host.appendChild(E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/'+path)}));});}
+  if(firstRun){['style/css/tokens.css','style/css/fonts.css','style/css/author.css','ui167.css'].forEach(function(path){host.appendChild(E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/'+path)}));});}
   var shell=firstRun?E('div',{},[]):host;
   if(firstRun){while(host.firstChild)shell.appendChild(host.firstChild);shell.appendChild(host);}
   show();return shell;
@@ -3545,7 +3546,7 @@ function openOnboardingSettings(inventory,status,requestedStep){
 }
 
 
-var UI_BUILD='dashboard200',UI_AGENT='2.0.0-beta4';
+var UI_BUILD='dashboard201',UI_AGENT='2.0.0-beta5';
 var HV_DETECTED_ROUTER_MODEL='unknown';
 function routerModelLabel(){
   return {mt6000:'GL.iNet GL-MT6000 · Flint 2',mt3000:'GL.iNet GL-MT3000 · Beryl AX'}[HV_DETECTED_ROUTER_MODEL]||'GL.iNet GL-MT6000 · Flint 2 / GL-MT3000 · Beryl AX';
@@ -6305,7 +6306,7 @@ put('start',renderStartPage(status,inventory));
       advancedToggle=E('button',{'type':'button','class':'hv-advanced-toggle','aria-controls':'hv-advanced-links','aria-expanded':advancedOpen?'true':'false','aria-label':bi('Advanced settings','Расширенные настройки'),'title':bi('Advanced settings','Расширенные настройки'),'click':function(){var open=advancedBox.hidden;advancedBox.hidden=!open;advancedToggle.setAttribute('aria-expanded',open?'true':'false');try{localStorage.setItem('homensai-vpn-advanced',open?'1':'0');}catch(e){}}},[E('span',{'class':'hv-advanced-icon','aria-hidden':'true'},'☰'),E('span',{'class':'hv-advanced-label'},bi('Advanced settings','Расширенные настройки'))]);
       var links=sidebarOrder(data[1],inventory).map(tabLink).concat([advancedToggle,advancedBox]);
       appRoot=E('div',{'class':'hv-app hv-workspace hv-hybrid-release','data-hv-design':currentDesign()},[E('a',{'class':'hv-skip','href':'#','click':function(ev){ev.preventDefault();var m=appRoot.querySelector('main');if(m){m.setAttribute('tabindex','-1');m.focus();}}},bi('Skip to content','К содержимому')),
-        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui166.css')+'?build=080-alpha8'}),
+        E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/tokens.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/fonts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/author.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/style/css/charts.css')}),E('link',{rel:'stylesheet',href:L.resource('view/homensai-vpn/ui167.css')+'?build=080-alpha8'}),
         E('aside',{'class':'hv-sidebar'},[E('a',{'class':'hv-side-brand','href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer','aria-label':bi('HomenS.AI website','Сайт HomenS.AI')},[robotHost,E('span',{},[E('strong',{},['HomenS',E('span',{'class':'ai'},'.AI')]),E('small',{},'Auto VPN')])]),E('p',{'class':'hv-model'},routerModelLabel()),E('nav',{'id':'hv-expanded-nav','aria-label':bi('VPN sections','Разделы VPN')},links),E('div',{'class':'hv-side-footer'},[sideState,E('a',{'href':'https://homensai.com','target':'_blank','rel':'noopener noreferrer'},bi('Developer · Serhii Khomenko','Разработчик · Serhii Khomenko')),E('small',{'class':'hv-identity'},identityLine(data[1]))])]),
         E('main',{'class':'hv-main'},[E('header',{'class':'hv-page-header'},[E('div',{'class':'hv-header-main','style':'min-width:0;max-width:100%'},[E('div',{'class':'hv-eyebrow'},bi('AVAILABILITY CONTROL','УПРАВЛЕНИЕ ДОСТУПНОСТЬЮ')),E('div',{'class':'hv-heading-row'},[heading,(homeShortcut=renderSimpleHomeShortcut(function(){return simpleHomeModel(homeLatest,inventory,statusNow(homeLatest));},goSimpleHome))]),(subtitle=E('p',{},bi('Your VPNs, how healthy they are, and what the router did about it.','Ваши VPN, насколько они исправны и что сделал роутер.')))].filter(function(node){return node!=null;})),E('div',{'class':'hv-page-actions'},[versionBadge,language,renderThemeSelect()])]),panel,settingsHost,renderAttribution(data[1]),footer])
       ]);
