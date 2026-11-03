@@ -182,6 +182,61 @@ t.test('start: what Lua cannot decide without waiting goes to agent.py, nothing 
   end
 end)
 
+-- MT3000 03.11.2026 (2.1.0-alpha6): the owner changed VPN clients in the GL panel; Auto HELD with
+-- PAIR-EXTERNAL-POLICY-CHANGE, a new ovpnclient1 (auto unset) and the stock boot link back. The owner's Start goes to
+-- agent.py BEFORE the preparation snapshot: there pair_auto.release_for_start hands the session over under the
+-- control lock, then auto_prepare repairs and pair_auto.request queues (test_held_start_handover.py,
+-- test_lua_control_request.py). Before, the hand-over came only after preparation, which refuses while HELD.
+local HELD=obj({phase='HELD',id=string.rep('c',32),recovery_error='PAIR-EXTERNAL-POLICY-CHANGE',owned=arr({'wgclient1','ovpnclient2'})})
+local HELD_PREP={checks={{code='PREP-SOURCE-AUTOSTART',state='pass'},{code='PREP-TARGET-AUTOSTART',state='fail'},
+  {code='PREP-STOCK-VPN-BOOT',state='fail'}}}
+local OFF=canon.encode(obj({mode='off',revision=string.rep('e',32),time=canon.float(NOW-600),request_source='manual'}))
+local function copy_of(row,over) local c=canon.decode(canon.encode(row));for k,v in pairs(over or {}) do c[k]=v end;return c end
+
+t.test('start: the owners Start on a session HELD by an outside change goes to agent.py before preparation',function()
+  for _,code in ipairs({'PAIR-EXTERNAL-POLICY-CHANGE','PAIR-EXTERNAL-NETWORK-CHANGE','PAIR-EXTERNAL-CONFIG-CHANGE','SOURCE-ORDER-MISMATCH'}) do
+    for _,journal in ipairs({obj(),obj({phase='ROLLED-BACK'})}) do
+      local d=world({state=copy_of(HELD,{recovery_error=code}),journal=journal,prep=HELD_PREP,files={['/run/pair-auto-control.json']=OFF}})
+      t.truthy(M.start(d,start_args())==M.FALLBACK,code)
+      t.eq(d.calls.preparation,nil,code..': agent.py hands over first, then prepares')
+      t.eq(d.files['/run/pair-auto-control.json'],OFF,code..': nothing written')
+      t.eq(d.files['/etc/auto-resume.json'],nil)
+    end
+  end
+  t.truthy(M.held_by_outside_change(world({state=HELD})),'no intent at all')
+end)
+
+t.test('start: no early hand-over for a busy journal, a Stop, other codes, an active intent or a non-owner Start',function()
+  -- a held/committed journal: Lua answers itself, nothing handed over or written
+  for _,phase in ipairs({'COMMITTED','HELD-ON-RESERVE','APPLYING','RESTORING'}) do
+    local d=world({state=HELD,journal=obj({phase=phase}),prep=HELD_PREP,files={['/run/pair-auto-control.json']=OFF}})
+    t.eq(blockers(M.start(d,start_args())),'TRANSACTION-IN-PROGRESS',phase)
+    t.eq(d.files['/run/pair-auto-control.json'],OFF,phase)
+  end
+  -- Stop rotated the revision: the Start that was pending is refused
+  local d=world({state=HELD,prep=HELD_PREP,files={['/run/pair-auto-control.json']=OFF,
+    ['/run/auto-control-revision.json']=canon.encode(obj({revision=string.rep('b',32)}))}})
+  t.eq(blockers(M.start(d,start_args())),'CONTROL-REVISION-STALE')
+  t.eq(d.files['/run/pair-auto-control.json'],OFF)
+  -- a preparation record to recover/restart for decides first
+  d=world({state=HELD,prep=HELD_PREP,blocker='PREPARATION-RECOVERY-REQUIRED',files={['/run/pair-auto-control.json']=OFF}})
+  t.eq(blockers(M.start(d,start_args())),'PREPARATION-RECOVERY-REQUIRED')
+  t.eq(d.calls.preparation,nil)
+  -- other HELD codes, an active intent, a programmatic/test Start: the ordinary order (snapshot first)
+  d=world({state=copy_of(HELD,{recovery_error='UNSAFE-GUARD-DEVICE'}),files={['/run/pair-auto-control.json']=OFF}})
+  t.eq(blockers(M.start(d,start_args())),'PAIR-RECOVERY-REQUIRED')
+  t.truthy(d.calls.preparation~=nil)
+  local on=canon.encode(obj({mode='on',revision=REV,time=canon.float(NOW),id=string.rep('d',32)}))
+  t.eq(M.held_by_outside_change(world({state=HELD,files={['/run/pair-auto-control.json']=on}})),false,'an active intent')
+  t.eq(M.held_by_outside_change(world({state_error=true})),false,'an unreadable state')
+  t.eq(M.held_by_outside_change(world({state=copy_of(HELD,{phase='STOPPED'})})),false,'a stopped session')
+  for _,source in ipairs({'programmatic','test','browser'}) do
+    d=world({state=HELD,prep={checks={}},files={['/run/pair-auto-control.json']=OFF}})
+    t.truthy(M.start(d,start_args({request_source=source}))==M.FALLBACK,source..': release_session in pair_auto.request, as before')
+    t.truthy(d.calls.preparation~=nil,source..': preparation snapshot first, as before')
+  end
+end)
+
 ------------------------------------------------------------------------------------------------------
 -- native_stop
 ------------------------------------------------------------------------------------------------------

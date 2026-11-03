@@ -79,6 +79,18 @@ VPN отклонил вход / VPN login rejected
 
 **Action:** Read the saved HTTPS success count, DNS result and endpoint details. Retry the check; investigate repeated failures before reconnecting a working VPN.
 
+## VPN-MTU
+
+Большие пакеты теряются / Large packets are lost
+
+**RU:** Малые проверки (HTTPS, DNS, малый ping) через этот VPN проходят, но ни один большой эхо-пакет размером с туннель не вернулся ни от одного адреса проверки: «чёрная дыра» MTU. Страницы могут открываться, а загрузки, видеозвонки и другие большие передачи зависают. Проверка больших пакетов идёт раз в 5 минут и на каждой проверке, пока дыра видна; Auto считает каждую такую проверку сбоем и предпочитает другой туннель, если он её проходит.
+
+**EN:** Small checks (HTTPS, DNS, a small ping) pass through this VPN, but no large echo of tunnel size came back from either check address: a path MTU black hole. Pages may open while uploads, video calls and other large transfers hang. The large-packet check runs every 5 minutes and on every check while the hole is seen; Auto counts each such check as a failure and prefers the other tunnel when it passes the check.
+
+**Что делать:** Уменьшите MTU этого VPN-профиля в GL.iNet (для WireGuard попробуйте 1280-1380) или выберите другой сервер провайдера. Если это видно на обоих туннелях, проверьте подключение к интернету (PPPoE, мобильная связь или модем с малым MTU). TCP MSS на туннелях роутер уже ограничивает сам (зоны брандмауэра GL, mtu_fix).
+
+**Action:** Lower the MTU of this VPN profile in GL.iNet (for WireGuard try 1280-1380) or try another server of the provider. If both tunnels show it, check the uplink (PPPoE, mobile or a modem with a small MTU). The router itself already clamps TCP MSS on the tunnels (GL firewall zones, mtu_fix).
+
 ## VPN-004
 
 Имя VPN-сервера не находится / VPN server name does not resolve
@@ -450,6 +462,138 @@ DNS-канал LAN не подтверждён / LAN DNS channel not confirmed
 **Что делать:** На прошивке без модуля ничего делать не нужно. На GL 4.11 модуль ожидается: сверьте lsmod и версию прошивки.
 
 **Action:** Nothing to do on firmware without the module. On GL 4.11 the module is expected: compare with lsmod and the firmware version.
+
+## DNS-DUAL-UNVERIFIED
+
+DNS через оба туннеля не подтверждён / DNS through both tunnels not confirmed
+
+**RU:** При включённой опции dns_dual Auto даёт dnsmasq каждого туннеля (отдельный экземпляр GL на туннель) ещё и DNS-серверы другого туннеля, чтобы запрос клиента LAN получил ответ через тот туннель, который ответит первым. Запись этого небольшого файла (/tmp/dnsmasq.d.<туннель>/homensai-dns-dual.conf), проверка dnsmasq --test, перезапуск этого dnsmasq или его рабочее состояние не подтвердились. Прежний файл возвращён (если его не было — конфигурация GL), поэтому DNS клиентов LAN работает как раньше, только через активный туннель; тот же файл не пробуется снова до перезапуска Auto. Трафик и его маршрут не затронуты; DNS не уходит в WAN.
+
+**EN:** With option dns_dual on, Auto gives the dnsmasq of each tunnel (GL per-tunnel instance) the DNS servers of the other tunnel as well, so a LAN lookup is answered through whichever tunnel replies first. Writing that small file (/tmp/dnsmasq.d.<tunnel>/homensai-dns-dual.conf), the dnsmasq --test check, the restart of that dnsmasq or its running state was not confirmed. The previous file was put back (none: the GL configuration), so LAN DNS keeps working as before through the active tunnel only; the same file is not tried again until Auto restarts. Traffic and its route are not affected; no DNS goes to the WAN.
+
+**Что делать:** Посмотрите logread -e DNS-DUAL-SYNC и logread -e dnsmasq (например failed to bind server socket). Проверьте, что /var/etc/dnsmasq.conf.<туннель> существует и ubus call service list показывает экземпляр запущенным. Выключить функцию: uci set homensai_vpn.main.dns_dual=0; uci commit homensai_vpn.
+
+**Action:** Look at logread -e DNS-DUAL-SYNC and at logread -e dnsmasq (for example failed to bind server socket). Check that /var/etc/dnsmasq.conf.<tunnel> exists and ubus call service list shows the instance running. To switch the feature off: uci set homensai_vpn.main.dns_dual=0; uci commit homensai_vpn.
+
+## DNS-DUAL-UNAVAILABLE
+
+DNS через оба туннеля здесь невозможен / DNS through both tunnels not possible here
+
+**RU:** Опция dns_dual включена, но найдено меньше двух экземпляров dnsmasq GL для туннелей пары Auto (/var/etc/dnsmasq.conf.<туннель> с conf-dir /tmp/dnsmasq.d.<туннель> и его меткой). Ничего не меняется: DNS клиентов LAN идёт через активный туннель так, как его настроил GL.
+
+**EN:** Option dns_dual is on, but fewer than two per-tunnel GL dnsmasq instances of the Auto pair were found (/var/etc/dnsmasq.conf.<tunnel> with conf-dir /tmp/dnsmasq.d.<tunnel> and its mark). Nothing is changed: LAN DNS goes through the active tunnel as GL configures it.
+
+**Что делать:** Ожидаемо на прошивке, отличной от GL 4.x с экземплярами VPN, или пока экземпляр туннеля ещё не запущен. На GL 4.11 сравните ls /tmp/dnsmasq.d.* и /var/etc/dnsmasq.conf.*; Auto проверяет снова на каждом проходе.
+
+**Action:** Expected on firmware other than GL 4.x with VPN instances, or while a tunnel instance is not running yet. On GL 4.11 compare ls /tmp/dnsmasq.d.* and /var/etc/dnsmasq.conf.*; Auto checks again on every pass.
+
+## SERVER-PICKED
+
+Сервер канала сменён / Channel server changed
+
+**RU:** Резервный канал не работал и не вёз трафик, поэтому сам Auto поставил в него самый быстрый живой сервер из списка серверов GL этого канала (uci и ifdown/ifup только этого интерфейса), внутри своей блокировки: работающий канал не трогается, Auto не перезапускается. Новый сервер прошёл обычную проверку канала (DNS и HTTPS через туннель). В строке журнала названы оба сервера и их пинг.
+
+**EN:** The reserve channel was down and carried no traffic, so Auto itself put the fastest live server of its GL server list into it (uci and ifdown/ifup of that interface only), inside its own lock: the working channel is not touched and Auto is not restarted. The new server passed the usual channel check (DNS and HTTPS through the tunnel). The log line names both servers and their ping.
+
+**Что делать:** Ничего делать не нужно. Чтобы отключить, снимите «Подбирать лучший сервер» на странице «Каналы».
+
+**Action:** Nothing to do. To stop it, switch off "Pick the best server" on the Channels page.
+
+## SERVER-PICK-FAILED
+
+Сервер канала не сменён / Channel server not changed
+
+**RU:** Команда смены сервера (uci или ifdown/ifup) не выполнилась или новый сервер не прошёл проверку канала (DNS и HTTPS через туннель) за 60 с. Auto тем же способом вернул прежний сервер; в строке журнала написано «rolled back» (или «rollback failed», если вернуть не удалось).
+
+**EN:** A command of the server change (uci or ifdown/ifup) did not succeed, or the new server did not pass the channel check (DNS and HTTPS through the tunnel) within 60 s. Auto put the previous server back the same way; the log line says "rolled back" (or "rollback failed").
+
+**Что делать:** Откройте VPN > VPN Client в GL.iNet и проверьте этот канал. Если повторяется, сохраните системный журнал (logread | grep homensai).
+
+**Action:** Open VPN > VPN Client in GL.iNet and check this channel. Save the system log (logread | grep homensai) if it repeats.
+
+## SERVER-PICK-WAITING-VENDOR
+
+GL сам меняет сервер / GL is switching the server itself
+
+**RU:** Прошивка GL сама меняет сервер этого канала (занята её блокировка tunnel-switch). Программа не вмешивается и посмотрит позже.
+
+**EN:** The GL firmware is switching the server of this channel itself (its tunnel-switch lock is held). The program does not interfere and looks again later.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-LIMIT
+
+Достигнут предел смены серверов / Server change limit reached
+
+**RU:** Сервер этого канала уже меняли 4 раза за последний час. Следующие смены ждут, чтобы канал с проблемой на всех серверах не перебирался по кругу.
+
+**EN:** The server of this channel was changed 4 times within the last hour. Further changes wait, so a channel with a problem on every server is not switched around in a loop.
+
+**Что делать:** Проверьте канал в GL.iNet: если не работает ни один сервер, причина, скорее всего, в подписке или у провайдера.
+
+**Action:** Check the channel in GL.iNet: if every server fails, the cause is likely the account or the provider.
+
+## SERVER-PICK-CARRYING
+
+Канал везёт трафик: сервер не меняется / Channel carries traffic: server kept
+
+**RU:** Программа никогда не меняет сервер канала, который сейчас везёт трафик (или когда не удаётся подтвердить, какой именно).
+
+**EN:** The program never changes the server of the channel that carries the traffic right now (or when it cannot confirm which one does).
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-REQUESTED
+
+Смена сервера передана Auto / Server change handed to Auto
+
+**RU:** Проверка серверов нашла более быстрый живой сервер для канала, который не работает и не везёт трафик. Сервер меняет только Auto: у незанятого резерва, пока трафик на основном канале, или у упавшего основного, пока трафик на резерве после автоматического переключения.
+
+**EN:** The server check found a faster live server for a channel that is down and carries no traffic. Only Auto changes servers: for the idle reserve while the traffic is on the primary, or for the failed primary while the traffic is on the reserve after an automatic switch.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-DEFERRED
+
+Смена сервера ждёт Auto / Server change waits for Auto
+
+**RU:** Auto сейчас не готов менять этот сервер: идёт переключение или возврат, резерв удерживается, включено ручное переключение или удержание, ещё не закончена другая смена или канал выбран по серверу, а не по туннелю. Заявка действует 15 минут.
+
+**EN:** Auto is not ready to change this server now: a switch or a return is in progress, the reserve is held, a manual switch or hold is set, another change is pending, or the channel is chosen by its server rather than by its tunnel. The request stays valid for 15 minutes.
+
+**Что делать:** Ничего делать не нужно. Если повторяется, выберите оба канала по туннелю на странице Auto.
+
+**Action:** Nothing to do. If it repeats, choose both channels by their tunnels on the Auto page.
+
+## SERVER-CHANGING
+
+Auto меняет сервер незанятого канала / Auto is changing an idle channel server
+
+**RU:** Auto поставил новый сервер в канал без трафика (резервный или упавший основной, пока трафик на резерве) и ждёт (не дольше 60 с), пока он подключится и пройдёт проверку канала. В это время решений о переключении нет; работающий канал везёт трафик как прежде.
+
+**EN:** Auto put a new server into a channel without traffic (the reserve, or the failed primary while the traffic is on the reserve) and waits (at most 60 s) for it to connect and pass the channel check. Meanwhile it makes no switch decision; the working channel carries the traffic as before.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-OFF
+
+Подбор сервера выключен / Server pick is off
+
+**RU:** Выключатель «Подбирать лучший сервер» выключен или выключен Auto, поэтому сервер не меняется. Список серверов всё равно показан.
+
+**EN:** The switch "Pick the best server" is off or Auto is off, so no server is changed. The server list is still shown.
+
+**Что делать:** Если нужно, включите «Подбирать лучший сервер» на странице «Каналы».
+
+**Action:** Switch on "Pick the best server" on the Channels page if you want it.
 
 ## AUTO-RESUME-PENDING
 
@@ -1939,6 +2083,66 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **Action:** Wait until the switch finishes, then apply the level again.
 
+## SQM-OFF
+
+SQM на VPN выключен / SQM on the VPN is off
+
+**RU:** Управление очередью (cake) на выходе VPN-туннеля выключено, как по умолчанию. У туннелей обычная очередь ядра.
+
+**EN:** Queue management (cake) on the VPN tunnel egress is off, as by default. The tunnels keep the kernel default queue.
+
+**Что делать:** Делать ничего не нужно. Это опция для часто загруженной отдачи (задержка под нагрузкой); перед включением прочитайте описание.
+
+**Action:** Nothing to do. It is an option for an upload that is often saturated (latency under load); read the design note before switching it on.
+
+## SQM-BANDWIDTH-UNSET
+
+SQM включён, но скорость отдачи не задана / SQM is on but has no upload rate
+
+**RU:** SQM включён, но допустимая скорость отдачи (1000-1000000 кбит/с) не задана, поэтому ничего не ограничивается. Автоматической скорости нет: неверная либо замедляет VPN, либо ничего не даёт.
+
+**EN:** SQM is switched on, but no valid upload rate (1000-1000000 kbit/s) is set, so nothing is shaped. There is no automatic rate: a wrong one either slows the VPN or shapes nothing.
+
+**Что делать:** Измерьте отдачу через VPN (тест скорости) и задайте примерно 85-90 % от неё: uci set homensai_vpn.main.sqm_enabled='1'; uci set homensai_vpn.main.sqm_upload_kbit='<kbit>'; uci commit homensai_vpn.
+
+**Action:** Measure the VPN upload (speed test), then set about 85-90 % of it: uci set homensai_vpn.main.sqm_enabled='1'; uci set homensai_vpn.main.sqm_upload_kbit='<kbit>'; uci commit homensai_vpn.
+
+## SQM-ROOT-QDISC-BUSY
+
+У туннеля уже своя очередь / The tunnel already has its own queue
+
+**RU:** У устройства туннеля уже есть корневая дисциплина очереди: не обычная очередь ядра и не cake этого приложения (ваша или прошивки). Она никогда не заменяется.
+
+**EN:** The tunnel device already has a root queue discipline that is neither the kernel default nor a cake this application set (yours or the firmware one). It is never replaced.
+
+**Что делать:** Если нужен этот SQM, уберите свою очередь с туннеля, или выключите SQM здесь.
+
+**Action:** Remove your own queue on that tunnel if you want this SQM, or switch SQM off here.
+
+## SQM-APPLY-FAILED
+
+SQM не удалось применить / SQM could not be applied
+
+**RU:** Роутер не смог поставить cake на выход туннеля: нет tc или модуля cake (kmod-sched-cake), или tc отказал. Трафик идёт с обычной очередью ядра.
+
+**EN:** The router could not put cake on the tunnel egress: tc or the cake module (kmod-sched-cake) is missing, or tc refused. Traffic keeps the kernel default queue.
+
+**Что делать:** Установите tc и kmod-sched-cake (opkg) или выключите SQM. Монитор повторит на следующем проходе.
+
+**Action:** Install tc and kmod-sched-cake (opkg) or switch SQM off. The monitor retries on its next pass.
+
+## SQM-RESTORE-FAILED
+
+SQM не удалось снять / SQM could not be removed
+
+**RU:** Cake, поставленный приложением на туннель, не удалось снять; запись сохранена, монитор и остановка службы повторят попытку.
+
+**EN:** The cake this application put on a tunnel could not be removed; the record is kept and the monitor and the service stop retry it.
+
+**Что делать:** Проверьте по SSH: tc qdisc show dev <туннель> root; если cake остался, снимите вручную: tc qdisc del dev <туннель> root.
+
+**Action:** Check by SSH: tc qdisc show dev <tunnel> root; if cake stays, remove it by hand: tc qdisc del dev <tunnel> root.
+
 ## PROBE-POLICY-UNAVAILABLE
 
 Состояние уровня опроса недоступно / Probe level state unavailable
@@ -3007,6 +3211,18 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **Action:** Check that monitoring is running (Settings), wait a minute and look at the chart; press Reset again if needed.
 
+## PRIMARY-RECOVERED-BEFORE-SWITCH
+
+Основной восстановился до переключения / The primary recovered before the switch
+
+**RU:** Auto решил уйти с основного канала после нескольких неудачных проверок, но последняя проверка прямо перед переключением показала, что он снова работает (монитор уже увидел его исправным, или одна короткая живая проверка прошла DNS и две из трёх HTTPS). Auto не переключился и продолжает наблюдение; следующая неудачная проверка решает заново. Упавший основной этой проверкой не удерживается: переключение останавливает только положительный ответ.
+
+**EN:** Auto had decided to leave the primary after several failed checks, but a last check right before switching found it working again (the monitor already saw it healthy, or one short live probe passed DNS and two of three HTTPS checks). Auto did not switch and keeps watching; the next failed check decides again. A primary that stays down is never held by this check: only a positive answer stops the switch.
+
+**Что делать:** Делать ничего не нужно. Короткий сбой закончился до того, как Auto перенёс трафик. Если это часто повторяется, проверьте основной VPN-сервер по «Помощи».
+
+**Action:** Nothing to do. A short outage ended before Auto moved the traffic. If this repeats often, check the primary VPN server in Help.
+
 ## RESERVE-ALREADY-FIRST
 
 Резерв уже стоит первым у роутера / The reserve is already the router first choice
@@ -3767,6 +3983,126 @@ Auto выключен / Auto disabled
 
 **Action:** Nothing to do unless it repeats.
 
+## SUPERVISOR-FORWARD-RESUMED
+
+Переключение завершено после перезапуска / Switch finished after a restart
+
+**RU:** Контроллер перезапустился посреди переключения на резерв, когда основной канал ещё не работал. Он заново проверил маршрут, туннели и резерв и завершил переключение, а не вернулся на неработающий основной.
+
+**EN:** The controller restarted in the middle of a switch to the reserve while the primary was still down. It checked the route, the tunnels and the reserve again and finished the switch instead of returning to the failed primary.
+
+**Что делать:** Ничего делать не нужно; Auto продолжает на резерве и вернётся на основной по обычным правилам.
+
+**Action:** Nothing to do; Auto continues on the reserve and returns to the primary by the usual rules.
+
+## NOT-PAIR
+
+Перезапуск: не переключение пары / Restart: not a pair switch
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение сделано не двухканальным Auto с проверкой IPv4 роутером (например, старым режимом). В журнал не пишется.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch was not made by the two-channel Auto with router-checked IPv4 (for example an older mode). Not written to the log.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## NOT-AUTOMATIC
+
+Перезапуск: не автоматическое / Restart: not automatic
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение было ручным выбором, пробным или повторным применением, а не автоматическим уходом; вперёд завершается только автоматический уход.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch was a manual choice, a trial or a re-application, not an automatic failover; only automatic failovers are finished forward.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## NOT-FORWARD
+
+Перезапуск: не на резерв / Restart: not to the reserve
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение не переводило трафик с основного канала на резерв (например, это был возврат на основной).
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch did not move the traffic from the primary to the reserve (for example a return to the primary).
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## ROLLBACK-STARTED
+
+Перезапуск: откат начат / Restart: rollback begun
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение уже завершилось ошибкой или его откат начался до перезапуска, поэтому он только доводится до конца.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch had already failed or its rollback had already begun before the restart, so it is only completed backwards.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## ALREADY-RESUMED
+
+Перезапуск: уже возобновлялось / Restart: already resumed
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: это переключение уже возобновлялось после предыдущего перезапуска; вторая попытка вперёд не делается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: this switch was already resumed once after an earlier restart; a second forward attempt is never made.
+
+**Что делать:** Делать ничего не нужно. Если перезапуски посреди переключения повторяются, пришлите строки logread -e SUPERVISOR.
+
+**Action:** Nothing to do. If restarts in the middle of a switch repeat, send the lines of logread -e SUPERVISOR.
+
+## OTHER-BOOT
+
+Перезапуск: была перезагрузка / Restart: router rebooted
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: переключение начато до перезагрузки или отключения питания (или его время нельзя подтвердить), поэтому туннели и маршруты могли измениться; решает восстановление после загрузки.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the switch was started before a reboot or power cut (or its timing could not be proven), so the tunnels and routes may have changed; the boot recovery decides instead.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## OWNER-STOP
+
+Перезапуск: Стоп владельца / Restart: owner Stop
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: владелец нажал «Стоп» (или служба останавливается, или Auto не включён), поэтому вперёд ничего не завершается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the owner pressed Stop (or the service is stopping, or Auto is not wanted), so nothing is finished forward.
+
+**Что делать:** Делать ничего не нужно; нажмите «Старт», когда снова нужен Auto.
+
+**Action:** Nothing to do; press Start when you want Auto again.
+
+## SOURCE-NOT-FAILED
+
+Перезапуск: основной не упал / Restart: primary not down
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: свежая проверка не подтвердила, что основной канал всё ещё не работает (он снова работает или его состояние неизвестно), поэтому трафик возвращается на него.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: a fresh check could not prove that the primary channel is still down (it works again or its state is unknown), so the traffic goes back to it.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## RESERVE-NOT-HEALTHY
+
+Перезапуск: резерв не подтверждён / Restart: reserve not proven
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: свежая проверка не подтвердила, что резервный канал работает, поэтому переход на него не завершается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: a fresh check could not prove that the reserve channel works, so the switch to it is not finished.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
 ## TRANSACTION-FAILED
 
 Переключение не удалось / The switch failed
@@ -3982,6 +4318,18 @@ Auto выключен / Auto disabled
 **Что делать:** См. DNS-001.
 
 **Action:** See DNS-001.
+
+## LARGE-PACKETS-FAILED
+
+Большие пакеты теряются / Large packets are lost
+
+**RU:** VPN подключён и проходит малые проверки, но большие пакеты на нём теряются («чёрная дыра» MTU).
+
+**EN:** The VPN is connected and passes the small checks, but large packets are lost on it (an MTU black hole).
+
+**Что делать:** См. VPN-MTU.
+
+**Action:** See VPN-MTU.
 
 ## HTTPS-FAILED
 
@@ -6159,11 +6507,11 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 ## PAIR-RATE-LIMIT
 
-Слишком много переключений; Auto делает паузу / Too many switches; Auto is pausing
+Частые переключения; Auto дольше держит резерв / Many switches; Auto holds the reserve longer
 
-**RU:** Auto ограничивает частоту переключений, чтобы не раскачивать нестабильную связь. До конца паузы трафик остаётся на текущем канале.
+**RU:** Основной канал несколько раз подряд падал и восстанавливался. С упавшего основного Auto по-прежнему уходит сразу, но возвращается на него только после более долгой стабильной работы: ожидание удваивается с каждым новым сбоем в скользящем окне (до 10 минут) и снова сокращается после спокойного периода. Неудачная попытка повторяется не чаще настроенной паузы; ручной переход на резерв по-прежнему учитывает лимит попыток.
 
-**EN:** Auto limits how often it switches so an unstable line is not shaken further. Traffic stays on the current channel until the pause ends.
+**EN:** The primary failed and recovered several times in a row. Auto still leaves a failed primary at once, but returns to it only after it has been stable longer: the wait doubles with each further failure in the rolling window (up to 10 minutes) and shrinks again after a quiet period. A failed retry is repeated no sooner than the configured pause; a manual move to the reserve still counts against the attempt limit.
 
 **Что делать:** Делать ничего не нужно. Если переключений много, проверьте оба VPN-сервера по «Помощи».
 
@@ -7296,6 +7644,18 @@ Auto выключен на время обновления / Auto was switched o
 **Что делать:** Делать ничего не нужно.
 
 **Action:** Nothing to do.
+
+## FLOW-RESET-*
+
+Завершение старых соединений после переключения / Ending old connections after a switch
+
+**RU:** После подтверждённого переключения (или возврата на прежний канал) роутер удаляет соединения LAN, ещё привязанные к только что покинутому каналу (адрес NAT того туннеля), чтобы приложения сразу переподключились через новый канал, а не висели до собственного тайм-аута (около 40 с). Соединения самого роутера, входящие и соединения нового канала не затрагиваются. Одна строка системного журнала на переключение: «FLOW-RESET-<результат>: address <адрес старого туннеля> deleted <n>». Результаты: DONE — соединения удалены; NONE — таких нет; NO-TOOL — на роутере нет программы conntrack; NO-ADDRESS — адрес туннеля не прочитан, ничего не удалено; SAME-ADDRESS — у туннелей одинаковый адрес, ничего не удалено; TIMEOUT — остановлено через 1 с, часть могла удалиться; FAILED — команда не выполнилась; OFF — выключено. Само переключение в любом случае выполнено и действует: этот шаг его не проваливает и не отменяет.
+
+**EN:** After a confirmed switch (or a return to the previous channel) the router deletes the LAN connections still tied to the channel just left (NAT address of that tunnel), so applications reconnect through the new channel at once instead of hanging until their own timeout (about 40 s). The router's own, inbound and new-channel connections are not touched. One system log line per switch: "FLOW-RESET-<result>: address <old tunnel address> deleted <n>". Results: DONE - connections deleted; NONE - none found; NO-TOOL - no conntrack program on the router; NO-ADDRESS - a tunnel address could not be read, nothing deleted; SAME-ADDRESS - both tunnels have the same address, nothing deleted; TIMEOUT - stopped after 1 s, some may be deleted; FAILED - the command failed; OFF - turned off. The switch itself is complete and valid in every case: this step never fails or undoes it.
+
+**Что делать:** Делать ничего не нужно. NO-TOOL: проверьте command -v conntrack (в GL 4.x есть). Повторяющиеся TIMEOUT/FAILED: пришлите строки logread -e FLOW-RESET. Вкл./выкл.: option flow_reset '0' в /etc/config/homensai_vpn выключает, удаление опции включает.
+
+**Action:** Nothing to do. NO-TOOL: check command -v conntrack (GL 4.x includes it). Repeated TIMEOUT/FAILED: send the lines of logread -e FLOW-RESET. Off/on: option flow_reset '0' in /etc/config/homensai_vpn turns it off; removing it turns it on.
 
 ## AUTO-RESUME-*
 

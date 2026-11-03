@@ -396,6 +396,7 @@ function renderDecisionExplanation(status,inventory){
     'VPN-PROBE-HEALTHY':['green','The VPN in use works: the router opened a website and looked up a name through it.','VPN в использовании работает: роутер открыл сайт и нашёл адрес через него.'],
     'DNS-FAILED':['red','The VPN is connected, but name lookup (DNS) through it fails.','VPN подключён, но поиск адресов (DNS) через него не работает.'],
     'HTTPS-FAILED':['red','The VPN is connected, but websites do not open through it.','VPN подключён, но сайты через него не открываются.'],
+    'LARGE-PACKETS-FAILED':['red','The VPN is connected and small checks pass, but large packets are lost (an MTU black hole): big transfers hang.','VPN подключён и малые проверки проходят, но большие пакеты теряются («чёрная дыра» MTU): большие передачи зависают.'],
     'TUNNEL-DISCONNECTED':['red','The VPN tunnel is not connected.','VPN-туннель не подключён.'],
     'ROUTE-MISMATCH':['red','The check did not go through this VPN (the route does not match), so it proves nothing.','Проверка шла не через этот VPN (маршрут не совпал), поэтому она ничего не доказывает.'],
     'PATH-UNVERIFIED':['yellow','The router has not yet confirmed which way its check went.','Роутер ещё не подтвердил, каким путём прошла его проверка.'],
@@ -407,7 +408,7 @@ function renderDecisionExplanation(status,inventory){
   var selectedPath=channelPathSelection(status,now,native.source,native.target);
   if(selectedPath.authoritative){
     var selectedRow=(status.profiles||[]).find(function(profile){return profile.id===selectedPath.selected;}),health=selectedRow?profileHealth(selectedRow,now).state:'unknown';
-    row=!selectedPath.selected?['grey','The applied VPN traffic selection is not verified.','Действующий выбор VPN для трафика не подтверждён.']:health==='healthy'?seen['VPN-PROBE-HEALTHY']:health==='inactive'?seen['TUNNEL-DISCONNECTED']:health==='failed'?(selectedRow.code==='DNS-001'?seen['DNS-FAILED']:seen['HTTPS-FAILED']):seen['OBSERVATION-UNKNOWN'];
+    row=!selectedPath.selected?['grey','The applied VPN traffic selection is not verified.','Действующий выбор VPN для трафика не подтверждён.']:health==='healthy'?seen['VPN-PROBE-HEALTHY']:health==='inactive'?seen['TUNNEL-DISCONNECTED']:health==='failed'?(selectedRow.code==='DNS-001'?seen['DNS-FAILED']:selectedRow.code==='VPN-MTU'?seen['LARGE-PACKETS-FAILED']:seen['HTTPS-FAILED']):seen['OBSERVATION-UNKNOWN'];
   }
   var needFail=explanation.required_failures,needGood=explanation.required_successes;
   var failMet=fresh&&explanation.source_failure_streak_met===true,goodMet=fresh&&explanation.reserve_success_streak_met===true;

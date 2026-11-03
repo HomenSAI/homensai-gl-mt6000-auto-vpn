@@ -764,7 +764,29 @@ function M.new(sys)
   function B.dns_mark_follow()
     local chains=caches.attested_chains
     if chains==nil then return nil end
-    return B.dns_mark_sync(chains)
+    local result=B.dns_mark_sync(chains)
+    B.dns_dual=B.dns_dual_follow(chains,result)
+    return result
+  end
+  -- dns_dual_follow(chains, mark_result): LAN DNS through both tunnels (dns_dual.lua, owner option dns_dual, default
+  -- off). Each GL per-tunnel dnsmasq of the pair also asks the other tunnel (server=<ip>@<device>); option off: every
+  -- snippet removed. Never raises; DNS-DUAL-UNVERIFIED is logged and never touches the traffic route.
+  function B.dns_dual_follow(chains,mark)
+    local dd=require('dns_dual')
+    local active=type(mark)=='table' and type(mark.active)=='string' and mark.active or nil
+    local ok,result=pcall(dd.follow,chains,kernel.fields,{active=active})
+    if not ok or type(result)~='table' then result=dd.failed() end
+    if result.code==dd.UNVERIFIED or (tonumber(result.changed) or 0)>0 then require('durable').log(dd.summary(result)) end
+    return result
+  end
+  -- dns_dual_off(): Auto released the pair (unguard): GL's own per-tunnel dnsmasq configuration again
+  function B.dns_dual_off()
+    local dd=require('dns_dual')
+    local ok,result=pcall(dd.off)
+    if not ok or type(result)~='table' then result=dd.failed() end
+    if result.code==dd.UNVERIFIED or (tonumber(result.changed) or 0)>0 then require('durable').log(dd.summary(result)) end
+    B.dns_dual=result
+    return result
   end
 
   ------------------------------------------------------------------------------------------------------
@@ -826,6 +848,7 @@ function M.new(sys)
   function B.unguard()
     if B.guard_exists() then sys.exec({'nft','delete','table','inet',M.TABLE},{timeout=5}) end
     if B.guard_exists() then refuse('GUARD-RELEASE-UNCONFIRMED') end
+    B.dns_dual_off()  -- the pair is released: no DNS-through-both-tunnels snippet stays behind
   end
   function B.devices()
     local devices={}
@@ -837,6 +860,26 @@ function M.new(sys)
       end
     end
     return devices
+  end
+  -- flow_reset(old_id, new_id): drop the LAN flows still NATed to the channel left (flow_reset.lua); the
+  -- addresses are read from netifd now (in process), the command is bounded; never raises a switch failure.
+  function B.flow_reset(old_id,new_id)
+    local fr=require('flow_reset')
+    local function status(id)
+      for _,p in ipairs(B.inventory().profiles) do
+        if p.id==id and py.truthy(p.interface) then
+          local s=sys.ubus('network.interface.'..p.interface,'status')
+          if canon.is_object(s) then return s end
+          return nil
+        end
+      end
+      return nil
+    end
+    local config=sys.read(fr.CONFIG)
+    if not fr.enabled(config) then return {code='FLOW-RESET-OFF',deleted=0} end
+    return fr.run({config=config,old_status=status(old_id),new_status=status(new_id),
+      exec=function(argv) local rc,out=sys.exec(argv,{timeout=fr.TIMEOUT,max=16*1024*1024});return rc,out,false end,
+      log=function(line) require('durable').log(line) end})
   end
 
   ------------------------------------------------------------------------------------------------------
@@ -961,6 +1004,19 @@ function M.new(sys)
     if value==true then negative[identifier]=nil;positive[identifier]=sys.clock()
     else negative[identifier]={time=sys.clock(),value=value};positive[identifier]=nil end
     return value
+  end
+  -- recheck(identifier, seconds) -> true (the source passes DNS + 2 of 3 HTTPS now) | false | nil (no answer):
+  -- the late-switch recheck (pair.late_recheck), one native probe with a short wait. Never the Python bridge (its
+  -- start alone takes about 2 s) and never the negative health cache; only a true answer stops a failover.
+  function B.recheck(identifier,seconds)
+    if not B.native_probe_enabled() then return nil end
+    local profile=nil
+    for _,p in ipairs(B.inventory().profiles) do if p.id==identifier then profile=p;break end end
+    if not profile or not py.truthy(profile.interface) then return false end
+    local ok,result=native('probe',live_probe().probe,profile,false,seconds)
+    if not ok then return nil end
+    local hs=result.https_success;if hs==nil then hs=0 end
+    return isnone(result.code) and result.dns_ok==true and (canon.number(hs) or 0)>=2
   end
   function B.recovery_ready(identifier,settings)
     local pair=require('pair')

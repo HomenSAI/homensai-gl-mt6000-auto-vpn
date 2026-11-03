@@ -1,0 +1,942 @@
+{
+ "cases": [
+  {
+   "config": null,
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-OFF",
+    "deleted": 0,
+    "log": null
+   },
+   "name": "no package config (a host, the tests): nothing runs",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n\toption flow_reset '0'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-OFF",
+    "deleted": 0,
+    "log": null
+   },
+   "name": "owner turned it off",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n  option flow_reset 0\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-OFF",
+    "deleted": 0,
+    "log": null
+   },
+   "name": "owner turned it off without quotes",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-DONE",
+    "deleted": 2,
+    "log": "FLOW-RESET-DONE: address 10.5.0.2 deleted 2"
+   },
+   "name": "failover wg to ovpn: old wg flows deleted",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n\toption flow_reset '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-DONE",
+    "deleted": 2,
+    "log": "FLOW-RESET-DONE: address 10.5.0.2 deleted 2"
+   },
+   "name": "explicit flow_reset 1 is on",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp 6 x src=192.168.12.188 dst=1.1.1.1 src=1.1.1.1 dst=10.100.0.2\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.100.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.100.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-DONE",
+    "deleted": 1,
+    "log": "FLOW-RESET-DONE: address 10.100.0.2 deleted 1"
+   },
+   "name": "return ovpn to wg: old ovpn flows deleted",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "",
+    "rc": 1
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-NONE",
+    "deleted": 0,
+    "log": "FLOW-RESET-NONE: address 10.5.0.2 deleted 0"
+   },
+   "name": "nothing NATed to the old address (conntrack exits 1, no lines)",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "",
+    "rc": 127
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-NO-TOOL",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-TOOL: address 10.5.0.2 deleted 0"
+   },
+   "name": "conntrack missing (shell 127)",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "one\n",
+    "rc": 143
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-TIMEOUT",
+    "deleted": 1,
+    "log": "FLOW-RESET-TIMEOUT: address 10.5.0.2 deleted 1"
+   },
+   "name": "busybox timeout kills it after 1 s (143), partial",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "",
+    "rc": 124
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-TIMEOUT",
+    "deleted": 0,
+    "log": "FLOW-RESET-TIMEOUT: address 10.5.0.2 deleted 0"
+   },
+   "name": "coreutils timeout (124)",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "",
+    "rc": -9,
+    "timed_out": true
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-TIMEOUT",
+    "deleted": 0,
+    "log": "FLOW-RESET-TIMEOUT: address 10.5.0.2 deleted 0"
+   },
+   "name": "runner reports the timeout itself",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "",
+    "rc": 2
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-FAILED",
+    "deleted": 0,
+    "log": "FLOW-RESET-FAILED: address 10.5.0.2 deleted 0"
+   },
+   "name": "parameter problem (2)",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 1
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-FAILED",
+    "deleted": 2,
+    "log": "FLOW-RESET-FAILED: address 10.5.0.2 deleted 2"
+   },
+   "name": "failed midway after deleting some (1 with lines)",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "raise": true
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-FAILED",
+    "deleted": 0,
+    "log": "FLOW-RESET-FAILED: address 10.5.0.2 deleted 0"
+   },
+   "name": "runner raised",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "old interface down: netifd already dropped its masquerade flows",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": false
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "old status unknown",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": null
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "old interface without IPv4",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address 10.5.0.2 deleted 0"
+   },
+   "name": "new status unknown: the new tunnel cannot be told apart",
+   "new": null,
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": null,
+    "code": "FLOW-RESET-SAME-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-SAME-ADDRESS: address 10.5.0.2 deleted 0"
+   },
+   "name": "both tunnels have the same address: the new tunnel flows would match",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-DONE",
+    "deleted": 2,
+    "log": "FLOW-RESET-DONE: address 10.5.0.2 deleted 2"
+   },
+   "name": "invalid first address entries are skipped",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.05.0.2",
+      "mask": 32
+     },
+     {
+      "address": "256.1.1.1",
+      "mask": 32
+     },
+     {
+      "address": "10.5.0.2/32",
+      "mask": 32
+     },
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "loopback, zero and multicast are never used",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "127.0.0.1",
+      "mask": 32
+     },
+     {
+      "address": "0.0.0.0",
+      "mask": 32
+     },
+     {
+      "address": "224.0.0.1",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "non-string address",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": 167772162
+     }
+    ],
+    "up": true
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "tcp      6 299 ESTABLISHED src=192.168.12.188 dst=1.1.1.1 sport=41001 dport=443 src=1.1.1.1 dst=10.5.0.2 sport=443 dport=41001 [ASSURED] mark=0 use=1\nudp      17 29 src=192.168.12.188 dst=1.1.1.1 sport=53530 dport=53 src=1.1.1.1 dst=10.5.0.2 sport=53 dport=53530 mark=4096 use=1\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": null,
+    "argv": null,
+    "code": "FLOW-RESET-NO-ADDRESS",
+    "deleted": 0,
+    "log": "FLOW-RESET-NO-ADDRESS: address none deleted 0"
+   },
+   "name": "up must be exactly true",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2"
+     }
+    ],
+    "up": "1"
+   }
+  },
+  {
+   "config": "config main 'main'\n\toption fast_switch '1'\n",
+   "exec": {
+    "out": "a\n\n  \nb\n",
+    "rc": 0
+   },
+   "expect": {
+    "address": "10.5.0.2",
+    "argv": [
+     "conntrack",
+     "-D",
+     "-f",
+     "ipv4",
+     "--reply-dst",
+     "10.5.0.2",
+     "--src-nat"
+    ],
+    "code": "FLOW-RESET-DONE",
+    "deleted": 2,
+    "log": "FLOW-RESET-DONE: address 10.5.0.2 deleted 2"
+   },
+   "name": "blank lines are not counted",
+   "new": {
+    "ipv4-address": [
+     {
+      "address": "10.100.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "ovpnclient2",
+    "up": true
+   },
+   "old": {
+    "ipv4-address": [
+     {
+      "address": "10.5.0.2",
+      "mask": 32
+     }
+    ],
+    "l3_device": "wgclient1",
+    "up": true
+   }
+  }
+ ],
+ "note": "Shared cases of lua/flow_reset.lua and flow_reset.py: old/new are netifd interface status objects, exec is the fake command result (raise: the runner raised). argv null: no command runs; log null: no log line."
+}

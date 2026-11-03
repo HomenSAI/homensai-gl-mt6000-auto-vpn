@@ -19,7 +19,8 @@ local responses=require('response_history')
 local M={}
 local NULL=canon.null
 local N=canon.number
-M.SCOPES={latency=true,auto=true,traffic=true,quality=true,speed=true,ranking=true,all=true}
+-- 'samples' (the monitor's check samples) and 'faults' (the transition-test history): separate owner resets, not in 'all'
+M.SCOPES={latency=true,auto=true,traffic=true,quality=true,speed=true,ranking=true,all=true,samples=true,faults=true}
 M.ARCHIVE_KEEP=10;M.ARCHIVE_BYTES=12*1024*1024
 M.REQUEST='stats-reset-request.json';M.RESULT='stats-reset-result.json'
 local copy=reliability.copy
@@ -224,6 +225,29 @@ function M.reset_speed_history(runner,persist,now,days,before)
   return old
 end
 
+-- stats_reset.fault_rows: fault_control.history() of the file ([] without one)
+function M.fault_rows(runner,persist)
+  local text=runner.read_file(persist..'/fault-history.json')
+  if text==nil then return canon.array() end
+  local ok,envelope=pcall(canon.decode,text)
+  if not ok then error('FAULT-HISTORY-CORRUPT',0) end
+  -- Python's `if not envelope`: null, false, 0, "", [] and {} mean no history yet
+  if envelope==NULL or envelope==false or envelope==0 or envelope=='' or (type(envelope)=='table' and not canon.is_float(envelope) and next(envelope)==nil)
+     or (canon.is_float(envelope) and envelope.value==0) then return canon.array() end
+  local data=canon.is_object(envelope) and envelope.data or nil
+  if not canon.is_array(data) or #data>100 or envelope.sha256~=canon.digest(data) then error('FAULT-HISTORY-CORRUPT',0) end
+  return data
+end
+
+-- stats_reset.reset_fault_history (inside auto-control.lock taken by the caller, as fault_control.event writes)
+function M.reset_fault_history(runner,persist,before)
+  local old=M.fault_rows(runner,persist)
+  if before then before(copy(old)) end
+  local empty=canon.array()
+  runner.write_atomic(persist..'/fault-history.json',canon.encode(canon.object({data=empty,sha256=canon.digest(empty)})))
+  return old
+end
+
 ------------------------------------------------------------------------------------------------------
 -- stats_reset.apply
 ------------------------------------------------------------------------------------------------------
@@ -258,6 +282,8 @@ function M.apply(ctx,value,acc,state,now)
       payload.native_history=history.new(ctx.env,persist,10000,7):load()
     end
     if parts.speed then payload.speed=M.load_speed(runner,persist,now,ctx.days or 7) end
+    if parts.samples then payload.samples=copy(state.samples or canon.array()) end
+    if parts.faults then payload.faults=M.fault_rows(runner,persist) end
     name=M.archive(runner,persist,scope,payload,now)
     local saved=read_json(runner,persist..'/stats-archive/'..name)
     if not canon.is_object(saved) or saved.sha256~=canon.digest(saved.data) then error('STATS-RESET-ARCHIVE-UNVERIFIED',0) end
@@ -270,6 +296,7 @@ function M.apply(ctx,value,acc,state,now)
     end
     if parts.auto then M.reset_native_history(ctx.env,persist,now,extra('native_history')) end
     if parts.speed then M.reset_speed_history(runner,persist,now,ctx.days or 7,extra('speed')) end
+    if parts.faults then M.reset_fault_history(runner,persist,extra('faults')) end
   end)
   if not ok then
     local text=type(err)=='table' and tostring(err.code or err) or tostring(err)
@@ -292,6 +319,7 @@ function M.apply(ctx,value,acc,state,now)
     if acc.wan~=nil then acc.wan=require('accounting').new(nil,true) end
   end
   if parts.quality then acc.quality=canon.object();acc.activity=canon.object();acc.activity_previous={} end
+  if parts.samples then state.samples=canon.array() end
   return result({done=true,archive=name})
 end
 

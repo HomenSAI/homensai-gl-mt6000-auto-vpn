@@ -241,10 +241,12 @@ end
 local BINDING_KEYS={'device','mark','table','ifindex'}
 M.BINDING_KEYS=BINDING_KEYS
 
--- probe(runner, profile, cb[, endpoint]): cb(result) exactly once; the three HTTPS checks and the DNS check run in
--- parallel. endpoint(profile, now) -> server_endpoint row | nil (server_endpoint.lua Observer; agent.probe reads it
+-- probe(runner, profile, cb[, endpoint[, mtu]]): cb(result) exactly once; the three HTTPS checks and the DNS check run
+-- in parallel. endpoint(profile, now) -> server_endpoint row | nil (server_endpoint.lua Observer; agent.probe reads it
 -- after the route identity was confirmed again, whatever the health code); its own fault never fails the probe.
-function M.probe(runner,profile,cb,endpoint)
+-- mtu(profile_id, binding, cb): the monitor's large-packet check (mtu_check.run, cb(check|nil)), in parallel too;
+-- mtu_check.apply turns an otherwise healthy result with a black hole into VPN-MTU (agent.MTU_SCHEDULE in Python).
+function M.probe(runner,profile,cb,endpoint,mtu)
   local result={id=profile.id,time=runner.wall(),code='CHECK-001',scope='router-originated',lan_path_verified=false}
   local administrative_state=profile.administrative_state or 'unknown'
   if administrative_state=='enabled' or administrative_state=='disabled' or administrative_state=='unknown' then result.administrative_state=administrative_state end
@@ -262,7 +264,8 @@ function M.probe(runner,profile,cb,endpoint)
     for k,v in pairs(binding) do result[k]=v end
     if binding.code then done=true;cb(result);return end
     local exit_seen,details,times,dns_ok={},{},{},nil
-    local pending=#M.TARGETS+1
+    local mtu_value=nil
+    local pending=#M.TARGETS+1+(mtu and 1 or 0)
     local function settle()
       pending=pending-1
       if pending>0 or done then return end
@@ -273,11 +276,12 @@ function M.probe(runner,profile,cb,endpoint)
         result.https_success=#times;result.dns_ok=dns_ok==true;result.probe_checks=checks
         result.rtt_ms=#times>0 and round1(sum/#times) or canon.null
         result.code=#times<2 and 'VPN-003' or (dns_ok~=true and 'DNS-001' or nil)
+        if mtu_value then require('mtu_check').apply(result,mtu_value) end
         local after=M.route_binding(runner,interface)
         local changed=after.code~=nil
         for _,key in ipairs(BINDING_KEYS) do if after[key]~=binding[key] then changed=true end end
         if changed then
-          for _,key in ipairs({'https_success','dns_ok','rtt_ms','exit_ip','exit_country','probe_checks'}) do result[key]=nil end
+          for _,key in ipairs({'https_success','dns_ok','rtt_ms','exit_ip','exit_country','probe_checks','mtu_check'}) do result[key]=nil end
           result.code='VENDOR-IDENTITY-CHANGED';return
         end
         local exit=exit_seen[binding.device]
@@ -305,6 +309,11 @@ function M.probe(runner,profile,cb,endpoint)
     end
     local okd=pcall(M.dns_probe,runner,binding.device,function(value) dns_ok=value==true;settle() end)
     if not okd then dns_ok=false;settle() end
+    if mtu then
+      local settled=false
+      local okm=pcall(mtu,profile.id,binding,function(check) if settled then return end;settled=true;mtu_value=check;settle() end)
+      if not okm and not settled then settled=true;settle() end
+    end
   end)
   if not ok then fail(err) end
 end

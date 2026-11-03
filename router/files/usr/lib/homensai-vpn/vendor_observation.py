@@ -12,9 +12,9 @@ import uuid
 SAFE=re.compile(r'^[A-Za-z0-9_.:-]{1,96}$')
 TUNNEL=re.compile(r'^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$')
 PROFILE_GROUP=re.compile(r'^(openvpn|wireguard):[0-9]{1,20}$')
-HEALTH=('https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks')
+HEALTH=('https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks','mtu_check')
 MEASUREMENT_FIELDS=('id','time','code','scope','lan_path_verified','device','mark','table','ifindex',
-                    'https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks')
+                    'https_success','dns_ok','rtt_ms','exit_ip','server_endpoint','probe_checks','mtu_check')
 
 
 def probe_checks(value):
@@ -151,6 +151,10 @@ class VendorObserver:
             # copy arbitrary vendor metadata into the authenticated status.
             row={key:original[key] for key in MEASUREMENT_FIELDS if key in original}
             if 'probe_checks'in row:row['probe_checks']=probe_checks(row['probe_checks'])
+            if 'mtu_check'in row:
+                from mtu_check import sanitize as mtu_sanitize
+                row['mtu_check']=mtu_sanitize(row['mtu_check'])
+                if row['mtu_check'] is None:del row['mtu_check']
             identifier=row.get('id')
             if not isinstance(identifier,str) or not SAFE.fullmatch(identifier):row['id']=identifier=None
             profile=before_ids.get(identifier)

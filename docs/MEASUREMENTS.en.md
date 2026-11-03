@@ -14,6 +14,18 @@ Key numbers:
 
 These key numbers and sections 1–5 describe the Python line of 30 Oct 2026 and stay as a record. The current 2.0.0-alpha24 line (Lua services, C JSON module, fast detection) is in [section 7](#7-lua-line-after-alpha6-200-alpha13-to-alpha24-31-oct-to-1-nov-2026) and [section 8, runtime pyramid and switch times](#8-runtime-pyramid-and-switch-times): manual switch done about 0.7 s, automatic decision 26–28 s after an outage.
 
+## Charts: how switching got faster, version by version
+
+Measured values on the GL-MT3000 only: a gap means that version was not measured that way. The time axis is logarithmic. A marker is the median (the mean for the Python 1.0.0 measurements, one value for single runs); whiskers are P95 or a min–max range. The data and the source of every point are in [docs/test-history/results.json](test-history/results.json) (key `charts`); `scripts/build_test_history.py` builds these charts and the full test history page [TEST-HISTORY.html](TEST-HISTORY.html).
+
+![Manual switch per version](charts/manual-switch.svg)
+
+![Primary failure: fault start to traffic on the reserve](charts/primary-failure.svg)
+
+![Primary VPN server failure](charts/server-failure.svg)
+
+![Server change inside a channel: LAN client stall](charts/server-change-stall.svg)
+
 ## 1. Speed by version
 
 ### Auto: fault start to traffic on the reserve
@@ -251,3 +263,14 @@ Notes:
 - Fast detection (`option lua_fast_detect '0'` turns it off), the 3 s HTTPS wait and the 45 s vendor settle period are rules of both the Python and the Lua core, but only the Lua core with the C module has been measured with fast detection, and the 3 s and 45 s changes have not been measured at all.
 - Since 2.0.0-alpha24 the Lua services and fast detection are the installed default (owner decision: the fastest measured configuration); `option lua_monitor '0'` / `option lua_auto '0'` start the Python services. The fallback steps and their codes: `HV-CORE-FALLBACK`, `LUA-AUTO-FALLBACK`.
 - Not measured anywhere in the project documents: a physical power cut, a 24-hour soak of the current build, the hand-over time of `LUA-AUTO-FALLBACK`, MT6000.
+
+## 9. Old LAN connections after a switch (external LAN client, 3 Nov 2026)
+
+MT3000, 2.1.0-alpha6, external LAN client with one long-lived TLS connection and a UDP stream, fault `devdrop.sh wgclient1 150`, 3 runs (`private/lan-client-kit/phase5-run*.out`):
+
+| Event | Old TCP connection | New TCP connection after the switch | UDP | Old-flow packets to the WAN |
+|---|---|---|---|---|
+| Failover to the reserve | no error; hangs until the application's own timeout | ~40 s | continues on the new tunnel | 0 |
+| Return to the primary | reset at once | 1–2 s | continues | 0 |
+
+Cause (conntrack snapshots): the TCP flow has ctmark `0x0` and NAT address `10.5.0.2` (the old tunnel); GL marks packets one by one, so the existing `conntrack -D -m <old mark>` removes only the DNS flow. Change on branch `feat/conntrack-reset-20261103` (not measured on the router yet): after COMMITTED and after the final ROLLED-BACK, `conntrack -D -f ipv4 --reply-dst <old tunnel address> --src-nat` (bounded to 1 s; `option flow_reset '0'` turns it off). Design: `docs/architecture/FLOW-RESET-2026-11-03.ru.md`.

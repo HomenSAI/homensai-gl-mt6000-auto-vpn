@@ -115,6 +115,63 @@ class LuaControlRequest(unittest.TestCase):
         stale = dict(arguments, control_revision='b'*32)
         self.assertEqual(self.lua('start', stale, policy), {'accepted': False, 'blockers': ['CONTROL-REVISION-STALE']})
 
+    def test_held_by_an_outside_change_lua_hands_to_python_which_hands_over_prepares_and_starts(self):
+        """MT3000 03.11.2026: HELD + PAIR-EXTERNAL-POLICY-CHANGE + a new ovpnclient1 + failing preparation checks.
+        The Lua monitor answers FALLBACK without writing; agent.py on the same files hands the session over, prepares
+        (preparation_control.guard now passes) and queues the pair; Lua then reads the Python files as valid."""
+        import agent
+        import auto_control
+        import configuration_guard
+        import native_switch
+        import pair_auto
+        import preparation_control
+        import speed_pause
+        base = self.lua_dir
+        now = time.time()
+        policy = {'settings': {'pair_auto_mode': MODE, 'native_trial': TRIAL, 'terms_version': agent.TERMS_VERSION,
+                               'plan_source_tunnel': 'wireguard:wgclient1', 'plan_target_tunnel': 'openvpn:ovpnclient1'}, 'sections': {}}
+        write(base/'run/auto-control-revision.json', {'revision': REV})
+        write(base/'run/pair-auto-control.json', {'mode': 'off', 'revision': 'e'*32, 'time': now-600, 'request_source': 'manual'})
+        state = dict(id=PAIR, phase='HELD', owned=['wgclient1', 'ovpnclient2'], interfaces={'wgclient1': 'wgclient', 'ovpnclient2': 'ovpnclient'},
+                     before_flags={'wgclient1': '0', 'ovpnclient2': '0'}, network_identity='b'*64, protected={}, process_bindings=None,
+                     order=['a', 'b'], policy_hash='f'*64, revision='e'*32, recovery_error='PAIR-EXTERNAL-POLICY-CHANGE', started=1.0)
+        with patch.object(agent, 'PERSIST', base/'etc'):
+            pair_auto.save(state)
+        held = (base/'etc/pair-auto-state.json').read_bytes()
+        arguments = {'control_revision': REV, 'request_source': 'manual'}
+        self.assertEqual(self.lua('start', arguments, policy), 'FALLBACK')
+        self.assertEqual((base/'etc/pair-auto-state.json').read_bytes(), held)
+        self.assertEqual(read(base/'run/pair-auto-control.json')['mode'], 'off')
+        guarded = []
+        def prepare(settings, revision):
+            preparation_control.guard(settings)  # refused PREPARATION-RECOVERY-REQUIRED while the session was HELD
+            guarded.append(revision)
+            return {'repaired': ['PREP-TARGET-AUTOSTART', 'PREP-STOCK-VPN-BOOT'], 'code': None}
+        backend = MagicMock()
+        backend.policy.return_value = policy
+        patches = [patch.object(module, name, base/sub) for module in (agent, auto_control) for name, sub in (('RUNTIME', 'run'), ('PERSIST', 'etc'))]
+        patches += [patch.object(native_switch, 'Linux', return_value=backend), patch.object(native_switch, 'journal_read', return_value={}),
+                    patch.object(preparation_control, 'auto_blocker', return_value=None), patch.object(preparation_control, 'auto_prepare', side_effect=prepare),
+                    patch.object(configuration_guard, 'blocked', return_value=None), patch.object(speed_pause, 'public', return_value={'active': False})]
+        for item in patches:
+            item.start()
+        try:
+            reply = agent.control_reply('native_start', arguments)
+            released = pair_auto.read_state()
+        finally:
+            for item in reversed(patches):
+                item.stop()
+        self.assertEqual(reply, {'accepted': True, 'queued': True, 'mode': 'continuous-pair', 'proof_scope': MODE, 'external_lan_verified': False})
+        self.assertEqual(guarded, [REV])
+        self.assertEqual((released['phase'], released['owned']), ('STOPPED', []))
+        self.assertEqual(released['operator_resolution']['reason'], 'AUTOMATIC-EXTERNAL-CHANGE-READOPT')
+        self.assertEqual(len(list((base/'etc/session-recovery').glob('pair-'+PAIR+'-readopt-*.json'))), 1)
+        row = read(base/'run/pair-auto-control.json')
+        self.assertEqual((row['mode'], row['revision'], row['request_source']), ('on', REV, 'manual'))
+        self.assertTrue((base/'etc/auto-resume.json').exists(), 'the owner Start is remembered for a power cut')
+        # the Lua runtime accepts the files Python wrote: the same click is already requested
+        self.assertEqual(self.lua('start', arguments, policy), {'accepted': True, 'queued': True, 'already_requested': True})
+
     def stop_world(self, now):
         self.both('run/auto-control-revision.json', {'revision': REV})
         self.both('run/pair-auto-control.json', {'mode': 'on', 'revision': REV, 'time': now-100, 'id': PAIR, 'request_source': 'manual'})

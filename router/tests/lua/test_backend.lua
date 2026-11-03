@@ -238,6 +238,48 @@ t.test('apply: LAN DNS follows the first ROUTE_POLICY jump; follow() needs this 
   if not ok then error(err,0) end
 end)
 
+t.test('dns_dual: the verified pass follows dns_mark with its active mark; unguard removes; never raises',function()
+  local dd=require('dns_dual')
+  local saved_follow,saved_off=dd.follow,dd.off
+  local seen,offs={},0
+  local ok,err=pcall(function()
+    local w=world();local B,sys=backend(w)
+    dd.follow=function(chains,fields,opts) seen[#seen+1]={chains,opts.active};return canon.object({enabled=true,code=canon.null,changed=0,instances=canon.array({})}) end
+    dd.off=function() offs=offs+1;return canon.object({enabled=false,code=canon.null,changed=0,instances=canon.array({})}) end
+    local chains={ROUTE_POLICY={}}
+    B.dns_mark_sync=function(c) t.truthy(c==chains);return {active='0xb000'} end
+    t.eq(B.dns_mark_follow(),nil,'no verified attestation: nothing')
+    t.eq(#seen,0)
+    -- the verified graph of this pass (attest_policy keeps it in the backend's private caches)
+    local i=1
+    while true do
+      local name,value=debug.getupvalue(B.dns_mark_follow,i)
+      if name==nil then error('caches upvalue not found') end
+      if name=='caches' then value.attested_chains=chains;break end
+      i=i+1
+    end
+    t.eq(B.dns_mark_follow(),{active='0xb000'})
+    t.eq(seen[1][2],'0xb000');t.truthy(seen[1][1]==chains)
+    t.eq(B.dns_dual.enabled,true)
+    dd.follow=function() error('boom') end
+    t.eq(B.dns_dual_follow(chains,{active=canon.null}).code,'DNS-DUAL-UNVERIFIED','an error is reported, never raised')
+    local installed=true
+    w.handler=function(argv)
+      if argv[1]~='nft' then return nil end
+      if argv[2]=='list' then return installed and 0 or 1,installed and 'comment "homensai-owned-guard"' or '' end
+      if argv[2]=='delete' then installed=false;return 0,'' end
+    end
+    B.unguard()
+    t.eq(offs,1,'released pair: snippets removed')
+    installed=true
+    w.handler=function(argv) if argv[1]=='nft' and argv[2]=='list' then return 0,'comment "homensai-owned-guard"' end;return 0,'' end
+    t.eq(t.raises(B.unguard).code,'GUARD-RELEASE-UNCONFIRMED')
+    t.eq(offs,1,'guard still there: the snippets stay')
+  end)
+  dd.follow,dd.off=saved_follow,saved_off
+  if not ok then error(err,0) end
+end)
+
 t.test('fast_switch option and instant_request follow the Python readers',function()
   local w=world();local B=backend(w)
   t.eq(B.fast_switch_enabled(),false,'no config file')

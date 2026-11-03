@@ -139,7 +139,7 @@ function M.unsafe_directory(path) local st=lstat(path);return st~=nil and st.typ
 function M.exists(path) return M.file_size(path)~=nil end
 
 local SYSFS={ifindex=true,['statistics/rx_bytes']=true,['statistics/tx_bytes']=true,operstate=true,
-  ['statistics/rx_packets']=true,['statistics/tx_packets']=true}
+  ['statistics/rx_packets']=true,['statistics/tx_packets']=true,mtu=true}  -- mtu: the large-packet check (mtu_check.lua)
 function M.sysfs(device,name)
   if not safe_word(device,15) or not SYSFS[name] then return nil end
   local f=io.open('/sys/class/net/'..device..'/'..name,'r')

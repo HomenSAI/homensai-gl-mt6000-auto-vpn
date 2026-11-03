@@ -35,8 +35,9 @@ ACL = ROOT / 'usr/share/rpcd/acl.d/luci-app-homensai-vpn.json'
 APPLICATION = {path.stem for path in LIB.glob('*.py')}
 # sha256 of `agent.py list` at f493528 (before the status server); the rpcd signature must not move.
 # Moved deliberately since: setup_response gained the optional owner ping_interval; setup_stats gained the optional
-# retention/days/mb of the statistics storage choice (methods/ACL unchanged).
-LIST_SHA256 = 'c02e09ee48a66adcc83ddf60127019fdb293109ccad1d2a8b738363883362e92'
+# retention/days/mb of the statistics storage choice; setup_response gained the optional owner server_pick (2.1.0)
+# (methods/ACL unchanged).
+LIST_SHA256 = '53b4f827a0fadc425cbbb836f189d43e805e8cc14e5c09b34b0fa895743c5d7d'
 
 
 def plugin_text():

@@ -83,6 +83,122 @@ t.test('second pass: counters accumulate, verdict changes become events, unchang
   t.eq(status.events[5].code,'OK');t.eq(#status.events,6)
 end)
 
+t.test('server pick (2.1.0): one child round at a time, every 10 min or on a new failure; the RAM file is projected; events once',function()
+  local R,m=fresh()
+  local spawned={}
+  function R.spawn(argv,seconds,cb) spawned[#spawned+1]={argv=argv,seconds=seconds,cb=cb} end
+  R.files['/run/hv/server-pick.json']=canon.encode(canon.object({time=R.now-700,enabled=false,tunnels=canon.array({canon.object({tunnel_id=5841,protocol='wireguard',
+    interface='wgclient',current='1_7',best=canon.null,ordered=false,code='SERVER-PICKED',last_change=canon.null,
+    candidates=canon.array({canon.object({profile='1_7',location='Vienna',latency_ms=canon.null,alive=canon.null})})})})}))
+  local status=m:pass()
+  t.eq(status.server_pick.tunnels[1].current,'1_7','the file of the last round is published')
+  t.eq(#spawned,1);t.eq(spawned[1].argv,{'/usr/bin/lua','/usr/lib/homensai-vpn/lua/server_pick.lua','job','/run/hv/server-pick-request.json'})
+  local request=canon.decode(R.files['/run/hv/server-pick-request.json'])
+  t.eq(request.enabled,false,'off by default');t.eq(request.auto_on,false);t.eq(#request.failed,0)
+  for _,e in ipairs(status.events) do t.truthy(e.code~='SERVER-PICKED','a round finished before this monitor started is not an event') end
+  R.advance(10);status=m:pass()
+  t.eq(#spawned,1,'one round at a time')
+  spawned[1].cb(0);R.advance(10);status=m:pass()
+  t.eq(#spawned,1,'not due: less than 10 min, no new failure')
+  R.files['/run/hv/server-pick.json']=string.gsub(R.files['/run/hv/server-pick.json'],'"time":'..(R.now-720)..'','"time":'..R.now)
+  R.advance(10);R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout'
+  status=m:pass()
+  t.eq(#spawned,2,'a channel newly failed: a round now')
+  t.eq(canon.decode(R.files['/run/hv/server-pick-request.json']).failed,{'wgclient','wgclient2'})
+  local picked=0;for _,e in ipairs(status.events) do if e.code=='SERVER-PICKED' then picked=picked+1;t.eq(e.tunnel_id,5841) end end
+  t.eq(picked,1,'a newer round with a change is one event')
+  spawned[2].cb(0);R.advance(10);status=m:pass()
+  picked=0;for _,e in ipairs(status.events) do if e.code=='SERVER-PICKED' then picked=picked+1 end end
+  t.eq(picked,1,'the same round is not reported twice');t.eq(#spawned,2)
+  R.inventory_data.settings.server_pick=true;R.advance(10);status=m:pass()
+  t.eq(#spawned,3,'the owner switch changed: a round now');t.eq(canon.decode(R.files['/run/hv/server-pick-request.json']).enabled,true)
+  R.files['/run/hv/server-pick.json']='{"broken"';spawned[3].cb(0);R.advance(10);status=m:pass()
+  t.eq(status.server_pick,canon.null,'a damaged file publishes nothing')
+  -- stage 2: the supervisor's own outcome file is a history event once
+  R.files['/run/hv/server-pick-event.json']=canon.encode(canon.object({time=R.now,request=R.now-5,tunnels=canon.array({canon.object({tunnel_id=4192,code='SERVER-PICK-FAILED'})})}))
+  R.advance(10);status=m:pass()
+  local failed=0;for _,e in ipairs(status.events) do if e.code=='SERVER-PICK-FAILED' then failed=failed+1;t.eq(e.tunnel_id,4192) end end
+  t.eq(failed,1,'the supervisor outcome is one event')
+  R.advance(10);status=m:pass()
+  failed=0;for _,e in ipairs(status.events) do if e.code=='SERVER-PICK-FAILED' then failed=failed+1 end end
+  t.eq(failed,1,'the same outcome is not reported twice')
+end)
+
+t.test('server pick: a channel that recovered and fails again within 10 min starts a new round (MT3000 02.11.2026)',function()
+  local R,m=fresh()
+  local spawned={}
+  function R.spawn(argv,seconds,cb) spawned[#spawned+1]={argv=argv,seconds=seconds,cb=cb} end
+  m:pass();t.eq(#spawned,1,'the first round');spawned[1].cb(0)
+  R.advance(10);R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout'
+  m:pass();t.eq(#spawned,2,'a channel failed: a round now');spawned[2].cb(0)
+  local failed=canon.decode(R.files['/run/hv/server-pick-request.json']).failed;t.truthy(#failed>0)
+  R.advance(10);m:pass();t.eq(#spawned,2,'still failed: no new round')
+  R.https_fail={};R.advance(10);m:pass();t.eq(#spawned,2,'recovered: no round')
+  R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout';R.advance(10)
+  m:pass();t.eq(#spawned,3,'failed again within 10 min: a new round')
+  t.eq(canon.decode(R.files['/run/hv/server-pick-request.json']).failed,failed)
+end)
+
+-- MT3000 02.11.2026: the round a failure starts runs before Auto moved the traffic (SERVER-PICK-CARRYING), so the failed
+-- channel gets another round once RETRY_CARRYING (20 s) passed; another code is not retried (agent.py twin:
+-- test_agent_server_pick_rounds.py)
+local function carrying_case(code)
+  local R,m=fresh()
+  local spawned={}
+  function R.spawn(argv,seconds,cb) spawned[#spawned+1]={argv=argv,seconds=seconds,cb=cb} end
+  m:pass();spawned[1].cb(0)
+  R.advance(10);R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout'
+  m:pass();t.eq(#spawned,2,'a channel failed: a round now')
+  local failed=canon.decode(R.files['/run/hv/server-pick-request.json']).failed;t.truthy(#failed>0)
+  R.files['/run/hv/server-pick.json']=canon.encode(canon.object({time=R.now,enabled=true,tunnels=canon.array({canon.object({protocol='wireguard',
+    interface='wgclient2',code=code,candidates=canon.array({})})})}))
+  spawned[2].cb(0)
+  R.advance(19);m:pass();t.eq(#spawned,2,'19 s after the failure round: no round')
+  R.advance(1);m:pass()
+  return R,m,spawned,failed
+end
+
+t.test('server pick: a failed channel that still carried the traffic gets another round after 20 s (MT3000 02.11.2026)',function()
+  local R,_,spawned,failed=carrying_case('SERVER-PICK-CARRYING')
+  t.eq(#spawned,3,'20 s: another round');t.eq(canon.decode(R.files['/run/hv/server-pick-request.json']).failed,failed)
+end)
+
+t.test('server pick: a round with another code is not retried',function()
+  local R,m,spawned=carrying_case('SERVER-PICK-LIMIT')
+  t.eq(#spawned,2,'SERVER-PICK-LIMIT at 20 s: no round');R.advance(30);m:pass();t.eq(#spawned,2,'nor at 50 s')
+end)
+
+-- review 02.11.2026: a channel that keeps carrying (reserve down, hold) got a round every 20 s; one retry per failure.
+-- Every round finishes at once and says CARRYING for wgclient2.
+local function carrying_rounds()
+  local R,m=fresh()
+  local spawned={}
+  function R.spawn(argv,seconds,cb)
+    spawned[#spawned+1]={argv=argv,seconds=seconds,cb=cb}
+    R.files['/run/hv/server-pick.json']=canon.encode(canon.object({time=R.now,enabled=true,tunnels=canon.array({canon.object({protocol='wireguard',
+      interface='wgclient2',code='SERVER-PICK-CARRYING',candidates=canon.array({})})})}))
+    cb(0)
+  end
+  local function fail(on) if on then R.https_fail['1.1.1.1']='timeout';R.https_fail['8.8.8.8']='timeout' else R.https_fail={} end end
+  m:pass();t.eq(#spawned,1,'the first round')
+  R.advance(10);fail(true);m:pass();t.eq(#spawned,2,'a channel failed: a round now')
+  R.advance(20);m:pass();t.eq(#spawned,3,'20 s, still carrying: the retry')
+  return R,m,spawned,fail
+end
+
+t.test('server pick: the carrying retry happens once per failure',function()
+  local R,m,spawned=carrying_rounds()
+  for i=1,4 do R.advance(20);m:pass();t.eq(#spawned,3,'the retry said CARRYING again: no round '..(20*i)..' s later') end
+end)
+
+t.test('server pick: a channel that recovered and fails again gets a fresh carrying retry',function()
+  local R,m,spawned,fail=carrying_rounds()
+  R.advance(10);fail(false);m:pass();t.eq(#spawned,3,'recovered: no round')
+  R.advance(10);fail(true);m:pass();t.eq(#spawned,4,'failed again: a round now')
+  R.advance(20);m:pass();t.eq(#spawned,5,'its own retry')
+  R.advance(20);m:pass();t.eq(#spawned,5,'and only one')
+end)
+
 t.test('events after a restart are measured against the previous status.json, not an empty memory',function()
   local R=t.fake_runner()
   R.files['/run/hv/status.json']=canon.encode(canon.object({profiles=canon.array({canon.object({id='wireguard:peer_7',code=canon.null}),canon.object({id='wireguard:peer_8',code='VPN-003'})})}))

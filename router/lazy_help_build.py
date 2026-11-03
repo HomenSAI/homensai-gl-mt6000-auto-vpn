@@ -34,7 +34,13 @@ def split(source,ui_module):
     result=subprocess.run(['node',str(root/'qa/export_lazy_titles.js')],cwd=root,capture_output=True,text=True,encoding='utf8',timeout=45)
     if result.returncode:raise ValueError('LAZY-TITLE-EXPORT: '+result.stderr[-800:])
     eager=json.loads(result.stdout)
-    manifest='var ERROR_ROWS='+json.dumps(eager['rows'],ensure_ascii=False,separators=(',',':'))+';\nvar HELP_TOPICS=['+json.dumps(eager['telegram'],ensure_ascii=False,separators=(',',':'))+'];\n'
+    # Size (2.1.0): each eager row names its group by index into one list, restored at load; ~5 KB less in the first screen.
+    groups=[]
+    for row in eager['rows']:
+        if row[1] not in groups:groups.append(row[1])
+    rows=[[row[0],groups.index(row[1])]+row[2:] for row in eager['rows']]
+    manifest=('var ERROR_ROWS=(function(g){return '+json.dumps(rows,ensure_ascii=False,separators=(',',':'))+'.map(function(r){r[1]=g[r[1]];return r;});})('
+              +json.dumps(groups,ensure_ascii=False,separators=(',',':'))+');\nvar HELP_TOPICS=['+json.dumps(eager['telegram'],ensure_ascii=False,separators=(',',':'))+'];\n')
     # Root code keeps its title registry and state; long details are adopted atomically on load.
     core=(root/'router/lazy_help.inc.js').read_text(encoding='utf8')
     core=once(core,'__LAZY_HELP_MODULE__','homensai-vpn.help'+ui_module.removeprefix('dashboard'))

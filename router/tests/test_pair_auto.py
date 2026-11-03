@@ -59,11 +59,15 @@ class Tests(unittest.TestCase):
         agent.atomic_json(self.persist/'pair-auto-budget.json',{'events':[9800,9900]})
         settings={'pair_auto_mode':pair.MODE,'recovery_attempt_limit':'2','recovery_attempt_window':'5'}
         with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt',side_effect=lambda *args,**kwargs:kwargs['on_dispatch']())as attempt,patch.object(pair,'configure_lease',return_value=20000):
-            with patch.object(pair.time,'time',return_value=10000):pair.tick(backend,settings,self.revision)
+            # The cooldown spacing still applies; the attempt count no longer blocks leaving a failed primary
+            # (flap damping, test_flap_damping.py): it lengthens the hold before the return instead.
+            with patch.object(pair.time,'time',return_value=9950):pair.tick(backend,settings,self.revision)
             attempt.assert_not_called()
-            with patch.object(pair.time,'time',return_value=10201):pair.tick(backend,settings,self.revision)
+            with patch.object(pair.time,'time',return_value=10000):pair.tick(backend,settings,self.revision)
             attempt.assert_called_once()
-        self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[9800,9900,10201])
+        self.assertEqual(agent.read_json(self.persist/'pair-auto-budget.json')['events'],[9800,9900,10000])
+        self.assertEqual(pair.ledger_hold(settings,10000),120,'3 failovers in the 5-minute window, limit 2: 30 s doubled twice')
+        self.assertEqual(pair.ledger_hold(settings,10101),60,'9800 aged out of the custom window')
 
     def test_duplicate_start_is_idempotent_and_stop_revision_fences_it(self):
         first=pair.request(self.revision);saved=pair.intent()
@@ -201,7 +205,7 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(native.Refused,'CLIENT-STOP'):pair.begin(backend,{},request)
         self.assertEqual(write.call_count,1);self.assertEqual(pair.read_state()['owned'],['wgclient1'])
 
-    def test_attempt_limit_recovers_with_time_without_reset_or_new_start(self):
+    def test_attempt_limit_never_blocks_failover_and_ledger_rolls_without_reset(self):
         request=pair.request(self.revision);self.state['id']=pair.intent()['id'];pair.save(self.state)
         selection={'source':{'id':'a'},'target':{'id':'b'},'vendor_identity':'d'*64}
         backend=Mock();backend.diagnostic.return_value=([],selection)
@@ -209,8 +213,8 @@ class Tests(unittest.TestCase):
         with patch.object(native,'journal_read',return_value={}),patch.object(pair,'network',return_value=[]),patch.object(pair,'normalized_network',return_value=self.state['network_identity']),patch.object(pair,'configs',return_value={}),patch('failover_plan.streak',return_value=True),patch('failure_diagnosis.diagnose',return_value={'suppress_switch':False}),patch.object(native,'publish'),patch.object(native,'attempt',side_effect=lambda *args,**kwargs:kwargs['on_dispatch']())as attempt,patch.object(pair,'configure_lease',return_value=20000):
             for stamp in (10000,10300,10600,10900,10901):
                 with patch.object(pair.time,'time',return_value=stamp):pair.tick(backend,{'pair_auto_mode':pair.MODE},self.revision)
-        # At the exact window boundary the oldest attempt expires. A new
-        # Start does not grant a fresh budget; minimum dwell still applies.
+        # Every failover is made (the count no longer blocks it); the cooldown spacing still refuses 10901.
+        # At the exact window boundary the oldest attempt expires from the ledger.
         self.assertEqual(attempt.call_count,4)
         ledger=json.loads((self.persist/'pair-auto-budget.json').read_text())
         self.assertEqual(ledger['events'],[10300,10600,10900])

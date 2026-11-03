@@ -28,6 +28,13 @@ assert.equal(buttons[0].textContent,'Reset statistics');
  card.insertBefore=(n,ref)=>{card.children.splice(card.children.indexOf(ref),0,n);n.parentNode=card;return n;};
  c.attachStatsResets(new N('div',{},[card]));assert.equal(card.children[1].attrs['class'],'hv-stats-reset-row','reset row right after the heading');}
 console.log('PASS: one Reset statistics button per chart and statistics card, right under its heading');
+// Owner 02.11.2026: the monitor check samples (Monitoring page) and the transition-test history (Tests page) reset too.
+assert.deepEqual(c.STATS_RESET_NAMES.samples,['monitor check samples','выборки проверок мониторинга']);
+assert.deepEqual(c.STATS_RESET_NAMES.faults,['transition test history','историю тестов перехода']);
+assert(fs.readFileSync('router/monitor_panel.inc.js','utf8').includes("'data-monitor-page':'1','data-stats-reset':'samples'"),'Monitoring page card carries the samples reset');
+assert(fs.readFileSync('router/fault_panel.inc.js','utf8').includes("E('div',{'data-stats-reset':'faults'},[E('h4',{},bi('Test history','История тестов')),table])"),'test history table carries the faults reset');
+for(const scope of ['samples','faults']){const b=c.statsResetButton(scope);assert.equal(b.attrs['data-stats-reset-button'],scope);}
+console.log('PASS: samples and transition-test history resets next to their tables');
 
 // Pressing asks first; nothing is sent until the owner confirms.
 buttons[1].attrs.click({currentTarget:buttons[1]});assert.equal(calls.length,0,'confirmation comes first');

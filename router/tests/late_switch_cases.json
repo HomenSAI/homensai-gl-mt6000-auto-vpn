@@ -1,0 +1,52 @@
+{
+  "_comment": "Shared by test_late_switch.py and lua/test_late_switch.lua: pair_auto.monitor_recovered/same_evidence == pair.monitor_recovered/same_evidence, and one tick simulation of the MT3000 phase-2 blackouts (02.11.2026, 2.1.0-alpha5). Sample rows: t=time, code, dns_ok, https=https_success; gen=a foreign vendor_generation (a rebuilt tunnel). The profile is the primary of the simulation.",
+  "profile": {"id": "wireguard:peer_1", "protocol": "wireguard", "interface": "wgclient1", "vendor_tunnel_id": "wireguard:wgclient1",
+              "vendor_generation": "01010101010101010101010101010101", "vendor_changed_at": 1000},
+  "recovered": [
+    {"name": "a healthy sample after the evidence: recovered", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1003.5, "code": "VPN-003", "dns_ok": false, "https": 0}, {"t": 1011.5, "code": "VPN-003", "dns_ok": false, "https": 0}, {"t": 1015.5, "code": null, "dns_ok": true, "https": 3}], "result": true},
+    {"name": "two of three HTTPS is healthy", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1011.5, "code": "VPN-003", "dns_ok": false, "https": 0}, {"t": 1015.5, "code": null, "dns_ok": true, "https": 2}], "result": true},
+    {"name": "the newest sample is the evidence itself", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1007.5, "code": null, "dns_ok": true, "https": 3}, {"t": 1011.5, "code": "VPN-003", "dns_ok": false, "https": 0}], "result": false},
+    {"name": "a healthy sample at the evidence stamp is not newer", "evidence": 1015.5, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 3}], "result": false},
+    {"name": "a newer failure after a healthy one: not recovered", "evidence": 1011.5, "now": 1022.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 3}, {"t": 1019.5, "code": "DNS-001", "dns_ok": false, "https": 3}], "result": false},
+    {"name": "a sample from the future does not count", "evidence": 1011.5, "now": 1014.0,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 3}], "result": false},
+    {"name": "one HTTPS answer is not healthy", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 1}], "result": false},
+    {"name": "DNS failed is not healthy", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": false, "https": 3}], "result": false},
+    {"name": "a code is not healthy", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": "VENDOR-IDENTITY-CHANGED", "dns_ok": true, "https": 3}], "result": false},
+    {"name": "a rebuilt tunnel's healthy sample is not the primary's", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1011.5, "code": "VPN-003", "dns_ok": false, "https": 0}, {"t": 1015.5, "code": null, "dns_ok": true, "https": 3, "gen": "02020202020202020202020202020202"}], "result": false},
+    {"name": "a sample before the profile changed is not the primary's", "evidence": 990, "now": 1018.2,
+     "rows": [{"t": 995, "code": null, "dns_ok": true, "https": 3}], "result": false},
+    {"name": "two disagreeing samples of one stamp: no verdict", "evidence": 1011.5, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 3}, {"t": 1015.5, "code": "VPN-003", "dns_ok": false, "https": 0}], "result": false},
+    {"name": "no samples", "evidence": 1011.5, "now": 1018.2, "rows": [], "result": false},
+    {"name": "no evidence", "evidence": null, "now": 1018.2,
+     "rows": [{"t": 1015.5, "code": null, "dns_ok": true, "https": 3}], "result": false}
+  ],
+  "same_evidence": [
+    {"name": "nothing aborted", "aborted": null, "evidence": 1011.5, "result": false},
+    {"name": "the very evidence a recheck contradicted", "aborted": 1011.5, "evidence": 1011.5, "result": true},
+    {"name": "older evidence", "aborted": 1011.5, "evidence": 1007.5, "result": true},
+    {"name": "a newer monitor sample decides again", "aborted": 1011.5, "evidence": 1015.5, "result": false},
+    {"name": "no evidence", "aborted": 1011.5, "evidence": null, "result": false}
+  ],
+  "simulation": {
+    "_comment": "Seconds after the fault starts. The monitor (fast detection on): normal passes every 10 s before the fault, dense passes from 3.5 s every 4 s (start = sample time), each published 2.5 s after it started. Auto ticks every 2 s (or at once when a tick ran over); every backend.diagnostic costs 0.75 s; the recheck probe answers a working primary in 0.3 s and waits RECHECK_SECONDS on a dead one. Measured on the MT3000: VPN-003 published at 6.6 s, APPLYING at 18.7-21 s.",
+    "normal_passes": [-26.5, -16.5, -6.5], "dense_first": 3.5, "dense_every": 4, "publish_after": 2.5,
+    "tick_every": 2, "diagnostic_seconds": 0.75, "probe_up_seconds": 0.3, "end": 60,
+    "blackouts": [
+      {"seconds": 15, "switch": false, "baseline_switch": true},
+      {"seconds": 20, "switch": true, "baseline_switch": true},
+      {"seconds": 40, "switch": true, "baseline_switch": true}
+    ],
+    "max_added_seconds": 1.0
+  }
+}

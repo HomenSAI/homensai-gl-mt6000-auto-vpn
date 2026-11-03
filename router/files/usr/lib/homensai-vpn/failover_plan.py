@@ -3,7 +3,7 @@ Read-only planning. This module contains no route/VPN/firewall write commands.
 """
 import math
 
-FAILURES = {'VPN-001', 'VPN-003', 'DNS-001'}
+FAILURES = {'VPN-001', 'VPN-003', 'DNS-001', 'VPN-MTU'}  # VPN-MTU: mtu_check.py (large packets lost)
 BLOCKERS = ['GL-ADAPTER-UNVERIFIED', 'WORKER-COORDINATION-UNVERIFIED',
             'LAN-PATH-UNVERIFIED', 'DNS-POLICY-UNVERIFIED', 'KILLSWITCH-UNVERIFIED',
             'IPV6-POLICY-UNVERIFIED', 'WATCHDOG-UNVERIFIED', 'SCOPED-CONNTRACK-UNVERIFIED']

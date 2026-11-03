@@ -10,9 +10,9 @@ local canon=require('canon')
 
 local M={}
 local NULL=canon.null
-M.HEALTH={'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks'}
+M.HEALTH={'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks','mtu_check'}
 M.MEASUREMENT_FIELDS={'id','time','code','scope','lan_path_verified','device','mark','table','ifindex',
-  'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks'}
+  'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks','mtu_check'}
 local TARGETS={['one.one.one.one']=true,['dns.google']=true,['dns.quad9.net']=true}
 local OUTCOMES={ok=true,['http-unsupported']=true,['http-error']=true,timeout=true,['tls-error']=true,['transport-error']=true,
   ['invalid-response']=true,unknown=true}
@@ -194,6 +194,7 @@ function Observer:observe(before,after,measured,now)
     local row={}
     for _,key in ipairs(M.MEASUREMENT_FIELDS) do if original[key]~=nil then row[key]=original[key] end end
     if row.probe_checks~=nil then row.probe_checks=M.probe_checks(row.probe_checks) end
+    if row.mtu_check~=nil then row.mtu_check=require('mtu_check').sanitize(row.mtu_check) end
     local identifier=row.id
     if not safe(identifier) then identifier=nil;row.id=NULL end
     local profile=identifier and before_ids[identifier] or nil

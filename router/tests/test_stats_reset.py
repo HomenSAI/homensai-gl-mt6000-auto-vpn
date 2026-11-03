@@ -55,6 +55,47 @@ class StatsReset(unittest.TestCase):
         accounting,latency,result=stats_reset.apply(value,accounting,latency,1000,broken,persist=self.root/'persist')
         self.assertFalse(result['done']);self.assertEqual(result['code'],'STATS-RESET-FAILED');self.assertIn('a',accounting.quality)
 
+    def test_samples_reset_archives_then_empties_the_monitor_list(self):
+        samples=[{'id':'wireguard:peer_1','time':990.0,'code':None,'rtt_ms':40.0},{'id':'openvpn:1_1','time':995.0,'code':'VPN-001','rtt_ms':None}]
+        accounting=agent.Accounting({'quality':{'a':{'buckets':{},'last':None}}})
+        self.queue('samples');value=stats_reset.pending(self.root/'run')
+        accounting,latency,result=stats_reset.apply(value,accounting,LatencyHistory(),1000,agent.atomic_json,persist=self.root/'persist',samples=samples)
+        self.assertTrue(result['done'],result);self.assertEqual(samples,[],'the monitor list itself is emptied')
+        self.assertIn('a',accounting.quality,'other statistics are untouched')
+        saved=json.loads((self.root/'persist'/'stats-archive'/result['archive']).read_text(encoding='utf8'))
+        self.assertEqual(result['archive'],'1000-samples.json');self.assertEqual(saved['data'],{'samples':[{'id':'wireguard:peer_1','time':990.0,'code':None,'rtt_ms':40.0},{'id':'openvpn:1_1','time':995.0,'code':'VPN-001','rtt_ms':None}]})
+        self.assertEqual(saved['sha256'],stats_reset.checksum(saved['data']))
+
+    def test_fault_history_reset_archives_then_empties_it_under_the_control_lock(self):
+        rows=[{'time':900.5,'code':'FAULT-CLEANED','profiles':['wireguard:peer_1'],'scope':'channel','duration':150}]
+        path=self.root/'persist'/'fault-history.json';agent.atomic_json(path,{'data':rows,'sha256':stats_reset.checksum(rows)})
+        self.queue('faults');value=stats_reset.pending(self.root/'run')
+        accounting,latency,result=stats_reset.apply(value,agent.Accounting(),LatencyHistory(),1000,agent.atomic_json,persist=self.root/'persist',runtime=self.root/'run')
+        self.assertTrue(result['done'],result)
+        self.assertEqual(json.loads(path.read_text(encoding='utf8')),{'data':[],'sha256':stats_reset.checksum([])})
+        self.assertTrue((self.root/'run'/'auto-control.lock').exists(),'taken under the lock fault_control.event writes under')
+        saved=json.loads((self.root/'persist'/'stats-archive'/result['archive']).read_text(encoding='utf8'))
+        self.assertEqual(saved['data'],{'faults':rows})
+        # no history yet: nothing to lose, an empty archive and an empty file
+        path.unlink();self.queue('faults',1001)
+        accounting,latency,result=stats_reset.apply(stats_reset.pending(self.root/'run'),accounting,latency,1001,agent.atomic_json,persist=self.root/'persist',runtime=self.root/'run')
+        self.assertTrue(result['done'],result);self.assertEqual(json.loads(path.read_text(encoding='utf8'))['data'],[])
+        # a damaged history is refused with its code and kept as evidence
+        path.write_text('{"data":[1],"sha256":"x"}',encoding='utf8');self.queue('faults',1002)
+        accounting,latency,result=stats_reset.apply(stats_reset.pending(self.root/'run'),accounting,latency,1002,agent.atomic_json,persist=self.root/'persist',runtime=self.root/'run')
+        self.assertEqual((result['done'],result['code']),(False,'FAULT-HISTORY-CORRUPT'))
+        self.assertEqual(path.read_text(encoding='utf8'),'{"data":[1],"sha256":"x"}')
+
+    def test_all_keeps_samples_and_fault_history(self):
+        self.assertEqual(set(stats_reset.SCOPES)-{'samples','faults'},{'latency','auto','traffic','quality','speed','ranking','all'})
+        samples=[{'id':'x','time':999.0}]
+        path=self.root/'persist'/'fault-history.json';rows=[{'time':1.0,'code':'FAULT-CLEANED'}];agent.atomic_json(path,{'data':rows,'sha256':stats_reset.checksum(rows)})
+        with patch('retention_settings.configured_days',return_value=7),patch('speed_test.load_history',return_value={'results':[]}),\
+             patch.object(stats_reset,'reset_speed_history',return_value={}),patch.object(stats_reset,'reset_native_history',return_value={}),\
+             patch('native_history.History.load',return_value={}):
+            accounting,latency,result=stats_reset.apply({'scope':'all','nonce':'a'*32},agent.Accounting(),LatencyHistory(),1000,agent.atomic_json,persist=self.root/'persist',samples=samples)
+        self.assertTrue(result['done'],result);self.assertEqual(len(samples),1);self.assertEqual(json.loads(path.read_text(encoding='utf8'))['data'],rows)
+
     def test_auto_reset_keeps_running_attempt_metadata(self):
         from native_history import History
         history=History(self.root/'persist',detail_days=7)

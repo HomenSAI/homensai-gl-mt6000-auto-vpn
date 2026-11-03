@@ -22,7 +22,7 @@ M.DAY=86400;M.WEEK=7*86400
 M.MAX_EVENTS=10000;M.DETAIL_BYTES=1024*1024
 M.METRICS={'checks','failed_checks','outages','recoveries','observed_up_seconds','observed_down_seconds','unknown_intervals','auto_observed_seconds'}
 local METRIC_SET={};for _,m in ipairs(M.METRICS) do METRIC_SET[m]=true end
-local BAD={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true}
+local BAD={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['VPN-MTU']=true}
 M.BAD=BAD
 local ROUTE_KINDS={source=true,target=true,switching=true,unknown=true,off=true,blocked=true,down=true}
 M.ROUTE_KINDS=ROUTE_KINDS

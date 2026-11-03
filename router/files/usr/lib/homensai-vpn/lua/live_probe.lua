@@ -161,8 +161,12 @@ function M.new(io_)
   local L={}
   local kept={}
 
-  -- measure(profile) -> result, trace_body (the valid trace body of this very probe, never published)
-  local function measure(profile)
+  -- measure(profile[, seconds]) -> result, trace_body (the valid trace body of this very probe, never published).
+  -- seconds: a shorter wait for every HTTPS and the DNS check (pair.late_recheck: RECHECK_SECONDS); default the
+  -- usual HTTP_SECONDS / DNS_SECONDS.
+  local function measure(profile,seconds)
+    local http_seconds,dns_seconds=M.HTTP_SECONDS,M.DNS_SECONDS
+    if type(seconds)=='number' and seconds%1==0 and seconds>=1 and seconds<M.HTTP_SECONDS then http_seconds=seconds;dns_seconds=math.min(seconds,M.DNS_SECONDS) end
     local result=canon.object({id=profile.id,time=canon.float(io_.wall()),code='CHECK-001',scope='router-originated',lan_path_verified=false})
     local administrative_state=profile.administrative_state
     if administrative_state==nil then administrative_state='unknown' end
@@ -180,10 +184,10 @@ function M.new(io_)
           local token,packet=probe.dns_question(io_)
           tokens[i]=token;path=path..'?dns='..probe.urlsafe_b64(packet)
         end
-        requests[i]={address=target[1],hostname=target[2],path=path,seconds=M.HTTP_SECONDS}
+        requests[i]={address=target[1],hostname=target[2],path=path,seconds=http_seconds}
       end
       local token,packet,question=probe.dns_question(io_)
-      local answers,dns_data=io_.probe_io(binding.device,requests,{host='9.9.9.9',port=53,packet=packet,seconds=M.DNS_SECONDS,
+      local answers,dns_data=io_.probe_io(binding.device,requests,{host='9.9.9.9',port=53,packet=packet,seconds=dns_seconds,
         accept=function(data) return type(data)=='string' and string.sub(data,1,2)==token end})
       local times,checks,sum=0,canon.array({}),0
       for i,target in ipairs(TARGETS) do
@@ -218,9 +222,10 @@ function M.new(io_)
     return result,trace_body
   end
 
-  -- probe(profile, keep): keep=true remembers a passing result for one following trace() of the same profile
-  function L.probe(profile,keep)
-    local result,trace_body=measure(profile)
+  -- probe(profile, keep[, seconds]): keep=true remembers a passing result for one following trace() of the same
+  -- profile; seconds: the shorter wait of measure()
+  function L.probe(profile,keep,seconds)
+    local result,trace_body=measure(profile,seconds)
     kept[profile.id]=nil
     if keep and isnone(result.code) and result.dns_ok==true and (result.https_success or 0)>=2 and trace_body then
       kept[profile.id]={clock=io_.clock(),interface=profile.interface,trace_body=trace_body}

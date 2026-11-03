@@ -104,6 +104,7 @@ uci:foreach('homensai_vpn','main',function(s)
   main.response_metric=(metric=='icmp-1.1.1.1' or metric=='icmp-8.8.8.8' or metric=='icmp-9.9.9.9' or metric=='websites') and metric or 'icmp-1.1.1.1'
   main.response_compare=s.response_compare=='1'
   main.fast_switch=s.fast_switch~='0'
+  main.server_pick=s.server_pick=='1'  -- best server inside a channel (2.1.0): off unless the owner switched it on
   main.stats_mode=s.stats_mode=='diagnostic' and 'diagnostic' or 'work'
   main.stats_until=math.max(0,math.floor(tonumber(s.stats_until) or 0))
   main.lua_core=s.lua_core=='1'
@@ -112,6 +113,11 @@ uci:foreach('homensai_vpn','main',function(s)
   -- Owner ping cadence (probe_policy.ping_interval): 10..300 s in steps of 10, otherwise once a minute.
   local ping=tonumber(s.ping_interval)
   main.ping_interval=(ping and ping>=10 and ping<=300 and ping%10==0) and math.floor(ping) or 60
+  -- SQM (sqm.py / lua/sqm.lua): cake on the tunnel egress; off unless the owner switched it on AND set an upload
+  -- rate (1000..1000000 kbit/s); anything else reads as 0 = not set, and nothing is shaped.
+  main.sqm_enabled=s.sqm_enabled=='1'
+  local sqm_kbit=type(s.sqm_upload_kbit)=='string' and s.sqm_upload_kbit:match('^%d%d?%d?%d?%d?%d?%d?$') and tonumber(s.sqm_upload_kbit)
+  main.sqm_upload_kbit=(sqm_kbit and sqm_kbit>=1000 and sqm_kbit<=1000000) and sqm_kbit or 0
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
   main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))

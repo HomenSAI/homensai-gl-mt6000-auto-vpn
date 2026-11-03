@@ -18,6 +18,7 @@ class AgentIntegrationTests(unittest.TestCase):
                 'servers':[],'wan_interfaces':['wan'],'settings':{'interval':30,'checkpoint':900,'probe_limit':16,'plan_enabled':False}}
             for name,value in [('RUNTIME',path),('PERSIST',path),('STOP',False)]:stack.enter_context(patch.object(agent,name,value))
             stack.enter_context(patch('auto_control.RUNTIME',path))
+            stack.enter_context(patch('server_pick.job'))  # the round thread writes into RUNTIME: never races the cleanup
             stack.enter_context(patch('auto_control.PERSIST',path))
             stack.enter_context(patch.object(agent,'inventory',return_value=data))
             stack.enter_context(patch('website_response.WebsiteSampler'))

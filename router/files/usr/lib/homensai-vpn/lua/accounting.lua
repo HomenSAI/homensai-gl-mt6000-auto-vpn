@@ -161,7 +161,7 @@ function Accounting:note_gap(start,finish)
   for i=1,#days-400 do self.days[days[i]]=nil end
 end
 
-local DOWN_CODES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true}
+local DOWN_CODES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['VPN-MTU']=true}
 local function empty_activity_day() return obj({up=0,down=0,idle=0,unknown=0,connections=0,failures=0}) end
 local function truthy_text(v) return v~=nil and v~=NULL and v~=false and v~='' end
 
