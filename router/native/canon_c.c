@@ -58,6 +58,7 @@ static void buf_need(Buf *b, size_t more)
 
 static void buf_add(Buf *b, const char *s, size_t n)
 {
+    if (!n) return; /* F5: b->p may still be NULL, and memcpy(NULL, s, 0) is undefined */
     buf_need(b, n);
     memcpy(b->p + b->n, s, n);
     b->n += n;
@@ -767,44 +768,98 @@ static size_t parse_value(Dec *d, size_t i, int depth)
     return parse_number(d, i);
 }
 
-/* skip_value(s,i): the index after one JSON value, scanned structurally without building it */
-static size_t skip_value(Dec *d, size_t i)
+/* skip_value(s,i,depth): the index after one JSON value, validated exactly as parse_value() does (the same errors at
+ * the same bytes) but without building it; decode_keys() accepts what decode() accepts (canon.lua skip_value) */
+static size_t skip_string(Dec *d, size_t i) /* s[i]=='"'; parse_string() without the text */
 {
+    const unsigned char *s = d->s;
+    i++;
+    for (;;) {
+        int c, e;
+        size_t j = i;
+        while (j <= d->n && !STOP[s[j - 1]]) j++;
+        if (j > d->n) fail(d, i, "unterminated string");
+        c = s[j - 1];
+        if (c == '"') return j + 1;
+        if (c != '\\') fail(d, j, "invalid control character");
+        e = AT(d, j + 1);
+        if (e != 'u') {
+            if (e != '"' && e != '\\' && e != '/' && e != 'b' && e != 'f' && e != 'n' && e != 'r' && e != 't')
+                fail(d, j, "invalid escape");
+            i = j + 2;
+        } else {
+            long cp = hex4(d, j + 2);
+            if (cp < 0) fail(d, j, "invalid \\uXXXX escape");
+            i = j + 6;
+            if (cp >= 0xD800 && cp <= 0xDBFF && AT(d, i) == '\\' && AT(d, i + 1) == 'u') {
+                long low = hex4(d, i + 2);
+                if (low < 0) fail(d, i, "invalid \\uXXXX escape");
+                if (low >= 0xDC00 && low <= 0xDFFF) i += 6;
+            }
+        }
+    }
+}
+
+static size_t skip_value(Dec *d, size_t i, int depth)
+{
+    lua_State *L = d->L;
     int c;
+    if (depth > 64) fail(d, i, "nesting limit");
     i = skip(d, i);
     c = AT(d, i);
-    if (c == '"') {
-        size_t j = i + 1;
-        for (;;) {
-            while (j <= d->n && d->s[j - 1] != '"' && d->s[j - 1] != '\\') j++;
-            if (j > d->n) fail(d, i, "unterminated string");
-            if (d->s[j - 1] == '"') return j + 1;
-            j += 2;
-        }
-    }
-    if (c == '{' || c == '[') {
-        long depth = 0;
-        size_t j = i;
-        for (;;) {
-            int e;
-            while (j <= d->n) {
-                e = d->s[j - 1];
-                if (e == '[' || e == ']' || e == '{' || e == '}' || e == '"') break;
-                j++;
-            }
-            if (j > d->n) fail(d, i, "unterminated container");
-            e = d->s[j - 1];
-            if (e == '"') j = skip_value(d, j);
-            else {
-                if (e == '{' || e == '[') depth++; else depth--;
-                if (depth > 64) fail(d, j, "nesting limit");
-                j = j + 1;
-                if (depth == 0) return j;
+    if (c == '{') {
+        int t;
+        luaL_checkstack(L, 4, "canon: nesting limit");
+        lua_newtable(L); /* the names seen, for "duplicate field" */
+        t = lua_gettop(L);
+        i = skip(d, i + 1);
+        if (AT(d, i) != '}') {
+            for (;;) {
+                int e;
+                if (AT(d, i) != '"') fail(d, i, "expected property name");
+                i = parse_string(d, i);
+                i = skip(d, i);
+                if (AT(d, i) != ':') fail(d, i, "expected colon");
+                lua_pushvalue(L, -1);
+                lua_rawget(L, t);
+                if (!lua_isnil(L, -1)) fail(d, i, "duplicate field");
+                lua_pop(L, 1);
+                lua_pushboolean(L, 1);
+                lua_rawset(L, t);
+                i = skip_value(d, i + 1, depth + 1);
+                i = skip(d, i);
+                e = AT(d, i);
+                if (e == '}') break;
+                if (e != ',') fail(d, i, "expected , or }");
+                i = skip(d, i + 1);
             }
         }
+        lua_pop(L, 1);
+        return i + 1;
     }
-    i = parse_value(d, i, 0);
-    lua_pop(d->L, 1);
+    if (c == '[') {
+        i = skip(d, i + 1);
+        if (AT(d, i) != ']') {
+            for (;;) {
+                int e;
+                i = skip_value(d, i, depth + 1);
+                i = skip(d, i);
+                e = AT(d, i);
+                if (e == ']') break;
+                if (e != ',') fail(d, i, "expected , or ]");
+                i = i + 1;
+            }
+        }
+        return i + 1;
+    }
+    if (c == '"') return skip_string(d, i);
+    if (i + 3 <= d->n) {
+        const char *p = (const char *)d->s + i - 1;
+        if (!memcmp(p, "null", 4) || !memcmp(p, "true", 4)) return i + 4;
+        if (i + 4 <= d->n && !memcmp(p, "false", 5)) return i + 5;
+    }
+    i = parse_number(d, i);
+    lua_pop(L, 1);
     return i;
 }
 
@@ -882,7 +937,7 @@ static int l_decode_keys(lua_State *L)
                 lua_rawset(L, obj);
             } else {
                 lua_pop(L, 1);
-                i = skip_value(&d, i + 1);
+                i = skip_value(&d, i + 1, 1);
             }
             i = skip(&d, i);
             e = AT(&d, i);

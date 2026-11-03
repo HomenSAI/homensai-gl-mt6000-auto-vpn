@@ -125,7 +125,11 @@ def main(argv):
     lazy_name='help'+ui_module.removeprefix('dashboard')+'.js'
     if not (ROOT/'router/files/www/luci-static/resources/homensai-vpn'/lazy_name).is_file():
         raise SystemExit('UI-LAZY-MODULE-MISSING')
-    data['application']['ui_lazy_modules']=['homensai-vpn/'+lazy_name]
+    # The server-pick panel (2.1.0) is the second optional module, named after the same number.
+    pick_name='pick'+ui_module.removeprefix('dashboard')+'.js'
+    if not (ROOT/'router/files/www/luci-static/resources/homensai-vpn'/pick_name).is_file():
+        raise SystemExit('UI-LAZY-MODULE-MISSING')
+    data['application']['ui_lazy_modules']=['homensai-vpn/'+lazy_name,'homensai-vpn/'+pick_name]
     data['application']['source_fingerprint'] = fingerprint(new_version, new_package)
     MANIFEST.write_text(json.dumps(data, indent=2, ensure_ascii=False)+'\n', encoding='utf-8')
     print('VERSION-BUMPED %s -> %s (package %s); sha256 is recorded after the package build' % (old_version, new_version, new_package))

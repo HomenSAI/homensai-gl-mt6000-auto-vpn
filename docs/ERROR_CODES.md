@@ -451,6 +451,114 @@ DNS-канал LAN не подтверждён / LAN DNS channel not confirmed
 
 **Action:** Nothing to do on firmware without the module. On GL 4.11 the module is expected: compare with lsmod and the firmware version.
 
+## SERVER-PICKED
+
+Сервер канала сменён / Channel server changed
+
+**RU:** Резервный канал не работал и не вёз трафик, поэтому сам Auto поставил в него самый быстрый живой сервер из списка серверов GL этого канала (uci и ifdown/ifup только этого интерфейса), внутри своей блокировки: работающий канал не трогается, Auto не перезапускается. Новый сервер прошёл обычную проверку канала (DNS и HTTPS через туннель). В строке журнала названы оба сервера и их пинг.
+
+**EN:** The reserve channel was down and carried no traffic, so Auto itself put the fastest live server of its GL server list into it (uci and ifdown/ifup of that interface only), inside its own lock: the working channel is not touched and Auto is not restarted. The new server passed the usual channel check (DNS and HTTPS through the tunnel). The log line names both servers and their ping.
+
+**Что делать:** Ничего делать не нужно. Чтобы отключить, снимите «Подбирать лучший сервер» на странице «Каналы».
+
+**Action:** Nothing to do. To stop it, switch off "Pick the best server" on the Channels page.
+
+## SERVER-PICK-FAILED
+
+Сервер канала не сменён / Channel server not changed
+
+**RU:** Команда смены сервера (uci или ifdown/ifup) не выполнилась или новый сервер не прошёл проверку канала (DNS и HTTPS через туннель) за 60 с. Auto тем же способом вернул прежний сервер; в строке журнала написано «rolled back» (или «rollback failed», если вернуть не удалось).
+
+**EN:** A command of the server change (uci or ifdown/ifup) did not succeed, or the new server did not pass the channel check (DNS and HTTPS through the tunnel) within 60 s. Auto put the previous server back the same way; the log line says "rolled back" (or "rollback failed").
+
+**Что делать:** Откройте VPN > VPN Client в GL.iNet и проверьте этот канал. Если повторяется, сохраните системный журнал (logread | grep homensai).
+
+**Action:** Open VPN > VPN Client in GL.iNet and check this channel. Save the system log (logread | grep homensai) if it repeats.
+
+## SERVER-PICK-WAITING-VENDOR
+
+GL сам меняет сервер / GL is switching the server itself
+
+**RU:** Прошивка GL сама меняет сервер этого канала (занята её блокировка tunnel-switch). Программа не вмешивается и посмотрит позже.
+
+**EN:** The GL firmware is switching the server of this channel itself (its tunnel-switch lock is held). The program does not interfere and looks again later.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-LIMIT
+
+Достигнут предел смены серверов / Server change limit reached
+
+**RU:** Сервер этого канала уже меняли 4 раза за последний час. Следующие смены ждут, чтобы канал с проблемой на всех серверах не перебирался по кругу.
+
+**EN:** The server of this channel was changed 4 times within the last hour. Further changes wait, so a channel with a problem on every server is not switched around in a loop.
+
+**Что делать:** Проверьте канал в GL.iNet: если не работает ни один сервер, причина, скорее всего, в подписке или у провайдера.
+
+**Action:** Check the channel in GL.iNet: if every server fails, the cause is likely the account or the provider.
+
+## SERVER-PICK-CARRYING
+
+Канал везёт трафик: сервер не меняется / Channel carries traffic: server kept
+
+**RU:** Программа никогда не меняет сервер канала, который сейчас везёт трафик (или когда не удаётся подтвердить, какой именно).
+
+**EN:** The program never changes the server of the channel that carries the traffic right now (or when it cannot confirm which one does).
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-REQUESTED
+
+Смена сервера передана Auto / Server change handed to Auto
+
+**RU:** Проверка серверов нашла более быстрый живой сервер для канала, который не работает и не везёт трафик. Сервер меняет только Auto: у незанятого резерва, пока трафик на основном канале, или у упавшего основного, пока трафик на резерве после автоматического переключения.
+
+**EN:** The server check found a faster live server for a channel that is down and carries no traffic. Only Auto changes servers: for the idle reserve while the traffic is on the primary, or for the failed primary while the traffic is on the reserve after an automatic switch.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-DEFERRED
+
+Смена сервера ждёт Auto / Server change waits for Auto
+
+**RU:** Auto сейчас не готов менять этот сервер: идёт переключение или возврат, резерв удерживается, включено ручное переключение или удержание, ещё не закончена другая смена или канал выбран по серверу, а не по туннелю. Заявка действует 15 минут.
+
+**EN:** Auto is not ready to change this server now: a switch or a return is in progress, the reserve is held, a manual switch or hold is set, another change is pending, or the channel is chosen by its server rather than by its tunnel. The request stays valid for 15 minutes.
+
+**Что делать:** Ничего делать не нужно. Если повторяется, выберите оба канала по туннелю на странице Auto.
+
+**Action:** Nothing to do. If it repeats, choose both channels by their tunnels on the Auto page.
+
+## SERVER-CHANGING
+
+Auto меняет сервер незанятого канала / Auto is changing an idle channel server
+
+**RU:** Auto поставил новый сервер в канал без трафика (резервный или упавший основной, пока трафик на резерве) и ждёт (не дольше 60 с), пока он подключится и пройдёт проверку канала. В это время решений о переключении нет; работающий канал везёт трафик как прежде.
+
+**EN:** Auto put a new server into a channel without traffic (the reserve, or the failed primary while the traffic is on the reserve) and waits (at most 60 s) for it to connect and pass the channel check. Meanwhile it makes no switch decision; the working channel carries the traffic as before.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-OFF
+
+Подбор сервера выключен / Server pick is off
+
+**RU:** Выключатель «Подбирать лучший сервер» выключен или выключен Auto, поэтому сервер не меняется. Список серверов всё равно показан.
+
+**EN:** The switch "Pick the best server" is off or Auto is off, so no server is changed. The server list is still shown.
+
+**Что делать:** Если нужно, включите «Подбирать лучший сервер» на странице «Каналы».
+
+**Action:** Switch on "Pick the best server" on the Channels page if you want it.
+
 ## AUTO-RESUME-PENDING
 
 Auto возвращается после перезапуска / Auto is coming back after a restart
@@ -6159,11 +6267,11 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 ## PAIR-RATE-LIMIT
 
-Слишком много переключений; Auto делает паузу / Too many switches; Auto is pausing
+Частые переключения; Auto дольше держит резерв / Many switches; Auto holds the reserve longer
 
-**RU:** Auto ограничивает частоту переключений, чтобы не раскачивать нестабильную связь. До конца паузы трафик остаётся на текущем канале.
+**RU:** Основной канал несколько раз подряд падал и восстанавливался. С упавшего основного Auto по-прежнему уходит сразу, но возвращается на него только после более долгой стабильной работы: ожидание удваивается с каждым новым сбоем в скользящем окне (до 10 минут) и снова сокращается после спокойного периода. Неудачная попытка повторяется не чаще настроенной паузы; ручной переход на резерв по-прежнему учитывает лимит попыток.
 
-**EN:** Auto limits how often it switches so an unstable line is not shaken further. Traffic stays on the current channel until the pause ends.
+**EN:** The primary failed and recovered several times in a row. Auto still leaves a failed primary at once, but returns to it only after it has been stable longer: the wait doubles with each further failure in the rolling window (up to 10 minutes) and shrinks again after a quiet period. A failed retry is repeated no sooner than the configured pause; a manual move to the reserve still counts against the attempt limit.
 
 **Что делать:** Делать ничего не нужно. Если переключений много, проверьте оба VPN-сервера по «Помощи».
 

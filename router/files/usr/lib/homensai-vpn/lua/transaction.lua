@@ -777,8 +777,11 @@ function M.finish_committed(env,value,reason,restore_order)
   return true
 end
 
--- committed_recovery_decision(backend,journal,settings,samples,now,status)
-function M.committed_recovery_decision(env,value,settings,samples,now,status)
+-- committed_recovery_decision(backend,journal,settings,samples,now,status,hold)
+-- hold (continuous pair, pair.return_hold): seconds of primary stability required while the reserve is healthy;
+-- the planned return then also waits max(cooldown, min_dwell), so the next failover is never inside the cooldown.
+-- A failing reserve is left without the damped hold.
+function M.committed_recovery_decision(env,value,settings,samples,now,status,hold)
   local pair=require('pair')
   local recovery=pair.recovery_normalized(settings)
   local age=pair.valid_for(settings)
@@ -797,9 +800,12 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status)
   end
   local failed=pair.streak(samples,target.id,recovery.failures,now,age,false,target)
   local fault_test=failed and env.deps.testing_profile and env.deps.testing_profile(value.target) or false
+  local damped=hold~=nil and not failed and hold>recovery.primary_stable
   if recovery.return_policy=='healthy_primary' or fault_test then
     local dwell=now-(num(value.confirmed) or num(value.started) or now)
-    if (failed or dwell>=recovery.min_dwell) and env.backend.recovery_ready(value.source,settings)==true then
+    local need=hold==nil and recovery.min_dwell or math.max(recovery.cooldown,recovery.min_dwell)
+    local ready_settings=damped and merge(settings,{recovery_primary_stable=hold}) or settings
+    if (failed or dwell>=need) and env.backend.recovery_ready(value.source,ready_settings)==true then
       return {action='RESTORE-PRIMARY',reason=failed and 'RESERVE-FAILED-PRIMARY-VERIFIED' or 'PRIMARY-STABLY-RECOVERED'}
     end
   end
@@ -808,7 +814,7 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status)
     if health==false then return {action='HOLD',reason='RESERVE-FAILED',reserve_healthy=false} end
     if health==nil then return {action='HOLD',reason='RESERVE-HEALTH-UNKNOWN',reserve_healthy=NULL} end
   end
-  return {action='OBSERVE',reason='CLIENT-CONFIRMED'}
+  return {action='OBSERVE',reason=(damped and recovery.return_policy=='healthy_primary') and 'PAIR-RATE-LIMIT' or 'CLIENT-CONFIRMED'}
 end
 
 return M

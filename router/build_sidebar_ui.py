@@ -1,6 +1,6 @@
 """HomenS.AI sidebar adapter over the pinned Style core and real LuCI monitor."""
 from pathlib import Path
-UI_MODULE='dashboard201'
+UI_MODULE='dashboard207'
 from lazy_help_build import marked as lazy_marked
 
 root=Path(__file__).parent/'files/www/luci-static/resources/view/homensai-vpn'
@@ -365,7 +365,7 @@ from ui_copy import EN_VALUES
 for _old,_new in EN_VALUES:
     assert ': "'+_old+'"' in source,_old[:70]
     must_replace(': "'+_old+'"',': "'+_new+'"')
-must_replace('ui15.css','ui167.css',expected=3)
+must_replace('ui15.css','ui173.css',expected=3)
 
 controller=Path(__file__).parent/'files/usr/lib/lua/luci/controller/homensai_vpn.lua'
 import re
@@ -526,7 +526,7 @@ source=apply_simple_home(source)
 from hybrid_release_patch import apply as apply_hybrid_release
 source=apply_hybrid_release(source)
 must_replace('return view.extend({',(Path(__file__).parent/'preparation_control.inc.js').read_text(encoding='utf8')+'\nreturn view.extend({')
-(root/'ui167.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
+(root/'ui173.css').write_text((root/'ui39.css').read_text(encoding='utf8').rstrip('\n')+'\n'+(Path(__file__).parent/'design_layer.css').read_text(encoding='utf8')+fool_css+'\n'+(Path(__file__).parent/'simple_home.css').read_text(encoding='utf8')+'\n'+(Path(__file__).parent/'hybrid_ui.css').read_text(encoding='utf8'),encoding='utf8',newline='')
 from lazy_help_build import split as split_lazy_help
 source=split_lazy_help(source,UI_MODULE)
 # All headline delay/quality surfaces use the same complete three-site metric.
@@ -598,5 +598,13 @@ def _prune_translations():
     kept={k:v for k,v in table.items() if any(q+k+q in rest for q in ('"',"'"))}
     source=source[:match.start()]+'var translations = '+_json.dumps(kept,ensure_ascii=False)+';'+source[match.end():]
 _prune_translations()
+# Best server inside a channel (2.1.0): its panel is an optional module named after this page (a new name per
+# release, like help<N>.js); the main module carries only the loader serverPickBox (server_pick_loader.inc.js).
+PICK_NAME='pick'+UI_MODULE.removeprefix('dashboard')
+must_replace('return view.extend({',(Path(__file__).parent/'server_pick_loader.inc.js').read_text(encoding='utf8').replace('__LAZY_PICK_MODULE__','homensai-vpn.'+PICK_NAME)+'return view.extend({')
+must_replace("put('channels',renderLatencyPanel(status,inventory));","put('channels',renderLatencyPanel(status,inventory));put('channels',serverPickBox(status,inventory));")
+_pick=(Path(__file__).parent/'server_pick_panel.inc.js').read_text(encoding='utf8')
+(Path(__file__).parent/'files/www/luci-static/resources/homensai-vpn'/(PICK_NAME+'.js')).write_text(
+    "'use strict';\n'require baseclass';\nreturn baseclass.extend({render:function(ctx){\n"+_pick+"return serverPickPanel(ctx);\n}});\n",encoding='utf8',newline='')
 (root/(UI_MODULE+'.js')).write_text(re.sub(r'(?m)^[ \t]+$','',source),encoding='utf8')
 print('Generated '+UI_MODULE+'.js with sidebar, language persistence and sortable tables')

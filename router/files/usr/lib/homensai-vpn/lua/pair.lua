@@ -401,10 +401,39 @@ function M.budget(events,now,window,limit)
   local out={};for i,x in ipairs(kept) do out[i]=canon.float(x) end
   return canon.array(out),count<limit and #kept<16
 end
+
+-- Flap damping (MT3000 flap test 02.11.2026, primary 60 s down / 120 s up): the rolling attempt limit used to
+-- block the FAILOVER, so after three switches traffic stayed on a dead primary while every recovery still
+-- returned after ~70 s. Like RFC 2439/7196 route-flap damping and BFD/VRRP hold-down, leaving a failed
+-- primary is never limited (only the cooldown spacing bounds retries of a failed attempt); the RETURN is
+-- damped instead. HOLD_CAP is the longest primary stability the settings allow (RANGES.primary_stable).
+M.HOLD_CAP=600
+-- Seconds the primary must be stably healthy before Auto returns to it: primary_stable below the attempt
+-- limit; the failover that reaches the limit within the rolling window, and every further one, doubles it
+-- (capped); failovers ageing out of the window decay it. Twin: pair_auto.return_hold (flap_damping_cases.json).
+function M.return_hold(events,now,recovery)
+  local window=recovery.attempt_window*60
+  local count=0
+  for _,x in ipairs(events) do local v=num(x);if v and now-v>=0 and now-v<window then count=count+1 end end
+  local excess=count-recovery.attempt_limit+1
+  if excess<=0 then return recovery.primary_stable end
+  return math.floor(math.min(M.HOLD_CAP,recovery.primary_stable*2^math.min(excess,6)))
+end
 local function ledger_events(env)
   local _,_,path=M.paths(env)
   local ledger=ctl.read_json(env.run,path,canon.object({events=canon.array({})}))
   return canon.is_object(ledger) and ledger.events or NULL
+end
+-- return_hold from the persistent failover ledger; an unreadable ledger holds the longest.
+function M.ledger_hold(env,settings,now)
+  local recovery=M.recovery_normalized(settings)
+  local ok,events=pcall(function()
+    local _,_,path=M.paths(env)
+    local ledger=ctl.read_json(env.run,path,canon.object({events=canon.array({})}))
+    return (M.budget(canon.is_object(ledger) and ledger.events or NULL,now,recovery.attempt_window*60,recovery.attempt_limit))
+  end)
+  if not ok then return M.HOLD_CAP end
+  return M.return_hold(events,now,recovery)
 end
 local function save_ledger(env,events,stamp)
   local _,_,path=M.paths(env)
@@ -461,11 +490,13 @@ function M.remember_selected(env,state,kernel)
   M.save(env,state);return true
 end
 
-function M.charge_attempt(env,settings,revision)
+-- Record a dispatched automatic switch. limited=false (leaving a failed path) ignores the attempt count:
+-- only the cooldown spacing applies; it bounds retries of a failed attempt (<=15 per 15 min, the ledger size).
+function M.charge_attempt(env,settings,revision,limited)
   M.require_running(env,revision)
   local now=env.run.wall();local policy=M.recovery_normalized(settings)
   local events,allowed=M.budget(ledger_events(env),now,policy.attempt_window*60,policy.attempt_limit)
-  if not allowed or (#events>0 and now-num(events[#events])<math.max(policy.cooldown,policy.min_dwell)) then refuse('PAIR-RATE-LIMIT') end
+  if (limited~=false and not allowed) or (#events>0 and now-num(events[#events])<math.max(policy.cooldown,policy.min_dwell)) then refuse('PAIR-RATE-LIMIT') end
   save_ledger(env,events,now)
 end
 
@@ -781,6 +812,7 @@ function M.cleanup(env,state,stop_revision)
   local n=net(env)
   local managed=M.state_interfaces(state)
   T.bind_policy_context(env,state)
+  if state.server_change~=nil then M.server_resume(env,state) end  -- a server change cut short: adopt this supervisor's own write
   local value=T.journal_read(env)
   local context=P.metadata(value)
   if context~=nil and (not same_list(context.session_order,state.order) or value.hash~=state.policy_hash) then value_error('PAIR-EXTERNAL-POLICY-CHANGE') end
@@ -1062,14 +1094,24 @@ function M.tick(env,settings,revision)
     local n=net(env)
     local managed=M.state_interfaces(state)
     local rows=n.network()
+    local pending=state.server_change
+    if canon.is_object(pending) and (pending.phase=='APPLYING' or n.identity(rows,managed)~=state.network_identity or n.changed(state,n.configs(managed))) then
+      -- a change cut short in any phase (a crash, a rollback that raised after its uci writes): resolved before the checks
+      M.server_resume(env,state,revision);managed=M.state_interfaces(state);rows=n.network()
+    end
     if n.identity(rows,managed)~=state.network_identity then value_error('PAIR-EXTERNAL-NETWORK-CHANGE') end
     if n.changed(state,n.configs(managed)) then value_error('PAIR-EXTERNAL-CONFIG-CHANGE') end
     local value=T.journal_read(env)
     local status=ctl.read_json(env.run,T.paths(env).status,canon.object({}))
     local manual=require('manual')
+    if state.server_change~=nil then
+      if M.server_pending(env,state,settings,revision) then return true end  -- this session's own server change (stages 2, 3)
+      value=T.journal_read(env)  -- a finished change may have re-bound or completed the journal
+    end
     if manual.consume(env,state,settings,revision) then return true end
     if M.revive(env,state,revision,value,rows) then return true end
     if manual.held_reserve(env,state,value,settings,status) then return true end
+    if M.server_start(env,state,settings,revision,value) then return true end
     local observed={}
     if M.reapply_missing_policy(env,state,settings,revision,value,observed) then return true end
     local kernel=observed.kernel
@@ -1077,7 +1119,7 @@ function M.tick(env,settings,revision)
       or (value.activation_reapply==true and value.phase=='ROLLED-BACK' and value.trial_nonce==state.id and value.control_revision==state.revision and state.revision==revision)
     if applied_target and P.current_role(value)~='source' then
       local now=env.run.wall()
-      local decision=T.committed_recovery_decision(env,value,settings,getd(status,'samples',canon.array({})),now,status)
+      local decision=T.committed_recovery_decision(env,value,settings,getd(status,'samples',canon.array({})),now,status,M.ledger_hold(env,settings,now))
       if decision.action=='RESTORE-PRIMARY' then
         local context=P.metadata(value)
         local progress=value
@@ -1132,16 +1174,18 @@ function M.tick(env,settings,revision)
     local healthy=M.streak(samples,selection.target.id,recovery.successes,now,age,true,selection.target,env)
     local diagnosis=env.deps and env.deps.diagnose and env.deps.diagnose(status,selection.source.id,now,settings) or {}
     if unstable and diagnosis.suppress_switch then diagnosis=merge(diagnosis,{suppress_switch=false}) end
-    local events,permitted=M.budget(ledger_events(env),now,recovery.attempt_window*60,recovery.attempt_limit)
+    local events=M.budget(ledger_events(env),now,recovery.attempt_window*60,recovery.attempt_limit)
     local dwell=#events==0 or now-num(events[#events])>=math.max(recovery.cooldown,recovery.min_dwell)
     local since=num(getd(getd(state,'selected_policy',canon.object({})),'since',nil)) or now
+    -- A healthy reserve is left only after the damped stable window; a failing one as soon as the primary is ready.
+    local damped=healthy and merge(settings,{recovery_primary_stable=M.return_hold(events,now,recovery)}) or settings
     if kernel and kernel.role=='target' and isnone(state.manual_hold) and recovery.return_policy=='healthy_primary'
-       and now-since>=recovery.min_dwell and permitted and dwell and env.backend.recovery_ready(selection.source.id,settings)==true then
+       and now-since>=recovery.min_dwell and dwell and env.backend.recovery_ready(selection.source.id,damped)==true then
       local until_=M.configure_lease(env,state)
       local b2,fresh=env.backend.diagnostic()
       if #b2>0 then value_error('PAIR-READINESS-CHANGED') end
       T.attempt(env,fresh,until_,false,{control_revision=revision,pair_destination='source',pair_return=true,pair_session_order=state.order,
-        on_dispatch=function() M.charge_attempt(env,settings,revision) end})
+        on_dispatch=function() M.charge_attempt(env,settings,revision,false) end})
       return true
     end
     local order=getd(selection,'order',canon.array({}))
@@ -1153,17 +1197,18 @@ function M.tick(env,settings,revision)
         source=selection.source.id,target=selection.target.id,reason='RESERVE-ALREADY-FIRST',blockers=canon.array({}),kernel_proof=kernel or NULL,kernel_policy_verified=verified})
       return true
     end
-    if failed and healthy and permitted and dwell and not diagnosis.suppress_switch then
+    -- Leaving a failed primary is never blocked by the attempt limit (flap damping slows the return instead).
+    if failed and healthy and dwell and not diagnosis.suppress_switch then
       if not isnone(state.manual_hold) then state.manual_hold=nil;M.save(env,state) end
       local until_=M.configure_lease(env,state)
       local b2,fresh=env.backend.diagnostic()
       if #b2>0 then value_error('PAIR-READINESS-CHANGED') end
       T.attempt(env,fresh,until_,false,{probe_evidence=canon.object({source_streak_met=true,reserve_streak_met=true,required_failures=recovery.failures,required_successes=recovery.successes}),
-        control_revision=revision,pair_session_order=state.order,on_dispatch=function() M.charge_attempt(env,settings,revision) end})
+        control_revision=revision,pair_session_order=state.order,on_dispatch=function() M.charge_attempt(env,settings,revision,false) end})
     else
       local reason
-      if not permitted then reason='PAIR-RATE-LIMIT'
-      elseif diagnosis.suppress_switch then reason=diagnosis.code
+      if diagnosis.suppress_switch then reason=diagnosis.code
+      elseif failed and healthy and not dwell then reason='PAIR-RATE-LIMIT'
       elseif state.manual_hold=='source' then reason='PAIR-MANUAL-HOLD-PRIMARY'
       else reason='PAIR-WATCHING' end
       T.publish(env,{state='OBSERVING',mode='continuous-pair',readiness_verified=true,certified=false,proof_scope=M.MODE,external_lan_verified=false,
@@ -1199,6 +1244,309 @@ function M.tick(env,settings,revision)
   end
   if (settled or (pending.phase=='HELD' and pending.ran~=true)) and request_row.mode=='on' then M.fail_request(env,request_row,revision,err) end
   M.publish_failure(env,err)
+  return true
+end
+
+------------------------------------------------------------------------------------------------------
+-- best server inside a channel, stages 2 and 3 (server_pick.lua; SERVER-PICK-DESIGN-2026-11-02.ru.md). Python: pair_auto.server_*
+------------------------------------------------------------------------------------------------------
+-- MT3000 02.11.2026: a server change of the idle reserve made outside the pair (uci route_policy + network,
+-- ifdown/ifup) was an external change for this session - PAIR-READOPTED, a 7.1 s LAN stall on the WORKING channel,
+-- HELD after three in 15 min. Now this supervisor makes the change itself, inside its control lock, and re-binds its
+-- own session to it (network_identity, protected route_policy digest, order, policy_hash, policy_roles,
+-- selected_policy and the journal): no external code, no readopt. The monitor job only measures and writes the
+-- hand-off (server_pick.CHANGE). The record state.server_change (phase APPLYING -> CONNECTING -> SETTLING, role) keeps
+-- the pair waiting (reason SERVER-CHANGING, no switch decision) at most CONNECT_WAIT s for the tunnel to pass the
+-- pair's own health check (DNS + HTTPS through it), else the previous server comes back the same way; then at most
+-- SETTLE_WAIT s for the monitor to observe the new profile.
+-- Stage 2 (role 'target'): the idle reserve while the traffic is on the primary and the pair rests.
+-- Stage 3 (role 'source'): the failed primary while the traffic is on the reserve after a completed automatic switch
+-- (journal COMMITTED). The open journal is re-bound too, so the normal return rules bring the traffic back to the
+-- primary on its new server (the return reads the journal's source id: streaks and the fresh check follow the new id).
+-- The carrying reserve is never touched. Both tunnels are bound by tunnel id (plan_source_tunnel/plan_target_tunnel).
+-- A crash or power cut inside a change (any phase): M.server_resume adopts the live from, or to once verified; an
+-- unverified to is restored to from unless its tunnel carries (before auto.recover compares a COMMITTED journal with
+-- the live order, in the cleanup and in tick before the external-change checks). env.server_io: tests.
+local function server_io(env) return env.server_io or require('server_pick').router_io(env.runtime) end
+local function server_enabled(settings) return canon.is_object(settings) and (settings.server_pick=='1' or settings.server_pick==true) end
+
+-- source interface, reserve interface, the set of interfaces bound by their tunnel id (plan_source_tunnel and
+-- plan_target_tunnel, alpha27): a tunnel chosen by its profile id would lose its binding with the new server's id
+function M.server_interfaces(state,settings)
+  local managed=M.state_interfaces(state)
+  local anchored={}
+  for _,role in ipairs({'source','target'}) do
+    local anchor=canon.is_object(settings) and settings['plan_'..role..'_tunnel'] or nil
+    local kind,name=nil,nil
+    if type(anchor)=='string' then kind,name=string.match(anchor,'^([^:]*):([^:]*)$') end
+    local protocol=({wgclient='wireguard',ovpnclient='openvpn'})[name and managed[name] or '']
+    if protocol~=nil and kind==protocol then anchored[role]=name end
+  end
+  local names={};for name in pairs(managed) do names[#names+1]=name end;table.sort(names)
+  local function other(x) for _,name in ipairs(names) do if name~=x then return name end end end
+  local source,target=anchored.source,anchored.target
+  if source==nil and target~=nil then source=other(target) end
+  if target==nil and source~=nil then target=other(source) end
+  if source==nil or source==target then return nil,nil,{} end
+  local set={};for _,name in pairs(anchored) do set[name]=true end
+  return source,target,set
+end
+
+local function server_tunnel(pending)
+  return {tunnel_id=pending.tunnel_id,protocol=pending.protocol,section=pending.section,interface=pending.interface}
+end
+
+-- this supervisor's own server change adopted by the session (server_pick.rebind); error when the live change is
+-- not only the changed tunnel's (the normal checks then see an external change). The journal is written first.
+function M.server_rebind(env,state,interface,protocol,role)
+  local S=require('server_pick')
+  local n=net(env)
+  local managed=M.state_interfaces(state)
+  if n.forget then n.forget() end
+  if env.backend.invalidate then env.backend.invalidate() end
+  local rows=n.network()
+  local config=nil
+  for _,row in ipairs(rows) do if row['.name']==interface then config=row.config end end
+  local profile=type(config)=='string' and ((protocol=='openvpn' and 'openvpn:' or 'wireguard:')..config) or nil
+  local order,hash=env.backend.order()
+  local updated,journal=S.rebind(state,T.journal_read(env),order,hash,profile,role or 'target')
+  updated.network_identity=n.identity(rows,managed)
+  if canon.is_object(updated.protected) then
+    -- route_policy always; wireguard after GL's update_provider_config step (server_pick.PROVIDER_SCRIPT)
+    local current=nil
+    for _,name in ipairs({'route_policy','wireguard'}) do
+      if updated.protected[name]~=nil and (name=='route_policy' or protocol=='wireguard') then
+        current=current or n.configs(managed);updated.protected[name]=current[name]
+      end
+    end
+  end
+  if journal~=nil then T.journal_write(env,journal) end
+  for k in pairs(state) do state[k]=nil end
+  for k,v in pairs(updated) do state[k]=v end
+  M.save(env,state)
+end
+
+-- one server change of an idle tunnel (stage 1's steps) under the control lock, the session re-bound before the lock
+-- is released -> server_pick.PICKED, or FAILED (a failed step, or a change the session cannot explain).
+-- revision nil: a resume outside a running Auto (boot, cleanup) - refused while any Auto intent is on
+-- outcome (a table, optional) gets server_pick.run_plan's changed/committed/touched and rebound (the session re-bound)
+function M.server_apply(env,state,revision,tunnel,target,io_,role,outcome)
+  local S=require('server_pick')
+  local plan=S.switch_plan(tunnel,target,true,true,false,false,1)
+  local report=type(outcome)=='table' and outcome or {}
+  report.changed=false;report.committed=false;report.touched=false;report.rebound=false
+  if plan.code~=nil then return S.FAILED end
+  return env.run.lock(function()
+    local current=M.intent(env)
+    if revision==nil then
+      if current.mode=='on' then refuse('CLIENT-STOP') end
+    elseif ctl.revision_locked(env)~=revision or current.mode~='on' or current.revision~=revision or current.id~=state.id then refuse('CLIENT-STOP') end
+    local done=S.run_plan(plan,io_,true)
+    report.changed=done.changed;report.committed=done.committed;report.touched=done.touched
+    local ok,err=pcall(M.server_rebind,env,state,tunnel.interface,tunnel.protocol,role)
+    if not ok then
+      if type(err)=='string' or (is_refused(err) and err.value_error) then return S.FAILED end
+      error(err,0)
+    end
+    report.rebound=true
+    return done.code
+  end,env.runtime)
+end
+
+local function server_publish(env,state,kernel)
+  local S=require('server_pick')
+  local roles=canon.is_object(state.policy_roles) and state.policy_roles or canon.object({})
+  local verified=canon.is_object(kernel) and kernel.verified==true
+  T.publish(env,{state='OBSERVING',mode='continuous-pair',proof_scope=M.MODE,reason=S.CHANGING,source=getd(roles,'source_id',NULL),
+    target=getd(roles,'target_id',NULL),readiness_verified=verified,kernel_policy_verified=verified,kernel_proof=kernel or NULL,blockers=canon.array({})})
+end
+
+-- a valid hand-off of the monitor job taken when the gate allows it; true: this pass changed a server
+function M.server_start(env,state,settings,revision,value)
+  local S=require('server_pick')
+  if not server_enabled(settings) then return false end
+  local io_=server_io(env)
+  local okr,row=pcall(function() return canon.decode(io_.read(io_.runtime..'/'..S.CHANGE) or 'null') end)
+  if not okr then row=nil end
+  local now=env.run.wall()
+  local okh,record=pcall(function() return canon.decode(io_.read(io_.runtime..'/'..S.STATE) or '{}') end)
+  if not okh or not canon.is_object(record) then record=canon.object({}) end
+  local history=canon.is_object(record.changes) and record.changes or canon.object({})
+  local taken=type(record.taken)~='boolean' and num(record.taken) or nil
+  local stamp=canon.is_object(row) and type(row.time)~='boolean' and num(row.time) or nil
+  if taken and finite(taken) and stamp and stamp<=taken then return false end  -- taken once
+  local claimed=S.claim(io_,row,now)
+  if claimed==nil then return false end
+  local tunnel=claimed.tunnel
+  local source,reserve,anchors=M.server_interfaces(state,settings)
+  local kernel=env.backend.attest_policy()
+  local left=S.changes_left(history,tunnel.tunnel_id,now)
+  local gate={enabled=true,phase=state.phase,journal_phase=value.phase,journal_manual=not isnone(value.manual_request_id),
+    kernel_verified=canon.is_object(kernel) and kernel.verified==true,kernel_role=canon.is_object(kernel) and kernel.role or nil,interface=tunnel.interface,
+    source_interface=source,target_interface=reserve,manual_hold=state.manual_hold,pending=state.server_change~=nil,anchored=anchors[tunnel.interface]==true,
+    busy=S.vendor_busy(tunnel.tunnel_id,io_),left=left}
+  local code=S.gate(gate)
+  local role=S.role_of(gate)
+  if code==nil then
+    -- stage 2: the live order is the session's; stage 3: the COMMITTED journal's, with the session's context
+    local lo,lh=env.backend.order()
+    if role=='target' and not (same_list(lo,state.order) and lh==state.policy_hash) then code=S.DEFERRED end
+    if role=='source' and not P.state_order_matches(state,value,lo,lh) then code=S.DEFERRED end
+  end
+  if code~=nil then
+    if S.EVENT_CODES[code] then S.event(io_,code,tunnel,now,nil,row.time) end
+    return false
+  end
+  local change=S.project_change(canon.object({time=now,from=row.from,to=row.to,from_ms=getd(row,'from_ms',NULL),to_ms=getd(row,'to_ms',NULL),
+    from_location=getd(row,'from_location',NULL),to_location=getd(row,'to_location',NULL)}))
+  if change==false then change=canon.object({time=now,from=row.from,to=row.to,from_ms=NULL,to_ms=NULL,from_location=NULL,to_location=NULL}) end
+  local goal=claimed.target
+  local target=canon.object({group_id=goal.group_id,profile_id=goal.profile_id,id=S.profile_id(tunnel.protocol,goal.group_id,goal.profile_id)})
+  local previous=canon.object({group_id=claimed.previous.group_id,profile_id=claimed.previous.profile_id})
+  local pending=canon.object({tunnel_id=tunnel.tunnel_id,protocol=tunnel.protocol,section=tunnel.section,interface=tunnel.interface,phase='APPLYING',role=role,
+    from=previous,to=target,started=canon.float(now),deadline=canon.float(now+S.CONNECT_WAIT),request=row.time,change=change})
+  state.server_change=pending;M.save(env,state)  -- before the first write: a crash in between is seen by M.server_resume
+  S.record(io_,tunnel.tunnel_id,now,nil,true,row.time)  -- every attempt counts for the hourly limit; taken once
+  local function with(fields) local out=canon.decode(canon.encode(pending));for k,v in pairs(fields) do out[k]=v end;return out end
+  local first={}
+  if M.server_apply(env,state,revision,tunnel,target,io_,role,first)==S.PICKED then
+    state.server_change=with({phase='CONNECTING'})
+  elseif first.changed==false then
+    -- nothing was written (the first uci step failed): nothing to roll back, no change to wait for
+    S.event(io_,S.FAILED,tunnel,now,change,row.time,S.NOT_CHANGED)
+    state.server_change=nil;M.save(env,state)
+    return false
+  else
+    local back={}
+    local undone=M.server_apply(env,state,revision,tunnel,previous,io_,role,back)==S.PICKED
+    S.event(io_,S.FAILED,tunnel,now,change,row.time,S.rollback_note(undone,first,back))
+    state.server_change=with({phase='SETTLING',deadline=canon.float(now+S.SETTLE_WAIT),rolled_back=true})
+  end
+  M.save(env,state)
+  server_publish(env,state,kernel)
+  return true
+end
+
+-- stage 3: once the monitor observes the new primary profile, the open COMMITTED journal records its vendor identity
+-- (vendor_profiles.source, vendor_identity) the way the switch records it (pair_auto.server_settled); true: updated
+function M.server_settled(env,selection)
+  local identity=require('identity')
+  local ok,value=pcall(T.journal_read,env)
+  if not ok then return false end
+  local proofs=value.vendor_profiles
+  if value.phase~='COMMITTED' or not canon.is_object(proofs) or not canon.is_object(selection) then return false end
+  local source=identity.profile_identity(selection.source)
+  local target=identity.profile_identity(selection.target)
+  if source==nil or source.id~=value.source or target==nil or canon.encode(target)~=canon.encode(getd(proofs,'target',NULL)) then return false end
+  local vid=selection.vendor_identity
+  if not ctl.hex(vid,64) then vid=getd(value,'vendor_identity',nil) end
+  if canon.encode(getd(proofs,'source',NULL))==canon.encode(source) and getd(value,'vendor_identity',nil)==vid then return false end
+  local updated=canon.decode(canon.encode(value))
+  updated.vendor_profiles.source=source
+  if vid~=nil then updated.vendor_identity=vid end
+  T.journal_write(env,updated)
+  return true
+end
+
+-- at a resume: true unless the kernel proves the traffic on the other tunnel (an unknown route is carrying)
+local function server_carrying(env,pending)
+  local ok,kernel=pcall(env.backend.attest_policy)
+  local role=getd(pending,'role','target')
+  return not (ok and canon.is_object(kernel) and kernel.verified==true and (kernel.role=='source' or kernel.role=='target') and kernel.role~=role)
+end
+
+-- a server change record a crash, a power cut or a rollback that raised left behind (any phase): the live server of
+-- the tunnel (route_policy and network both) is adopted (M.server_rebind) when it is the recorded from, or to after its
+-- CONNECTING check passed (verified). An unverified to is restored to from (M.server_apply, as a timeout rollback;
+-- revision nil outside a running Auto) unless its tunnel now carries the traffic (then adopted and logged); a failed
+-- restore adopts what is live. Anything else is left to the normal checks (an external change). The record is
+-- removed either way. Never raises; true when re-bound.
+function M.server_resume(env,state,revision)
+  local S=require('server_pick')
+  local pending=canon.is_object(state) and state.server_change or nil
+  if pending==nil then return false end
+  local adopted,note=nil,''
+  pcall(function()
+    local io_=server_io(env);local tunnel=server_tunnel(pending);local role=getd(pending,'role','target')
+    local function live_side()
+      local group,profile=S.live_server(io_,tunnel)
+      local config=nil
+      for _,row in ipairs(net(env).network()) do if row['.name']==tunnel.interface then config=row.config end end
+      for _,side in ipairs({'to','from'}) do
+        local server=pending[side]
+        if canon.is_object(server) and group~=nil and group==server.group_id and profile==server.profile_id
+           and config==S.network_config(tunnel.protocol,server.group_id,server.profile_id) then return side end
+      end
+      return nil
+    end
+    local side=live_side()
+    if side=='to' and pending.verified~=true then
+      if not canon.is_object(pending.from) or server_carrying(env,pending) then note=' (not verified; its tunnel carries the traffic)'
+      else
+        local ok,code=pcall(M.server_apply,env,state,revision,tunnel,pending.from,io_,role)
+        if ok and code==S.PICKED then adopted,side,note='from',nil,' (the new one was not verified: restored)'
+        else side,note=live_side(),' (the unverified new one could not be restored)' end
+      end
+    end
+    if side~=nil then
+      M.server_rebind(env,state,tunnel.interface,tunnel.protocol,role)
+      adopted=side
+    end
+  end)
+  pcall(function() state.server_change=nil;M.save(env,state) end)
+  pcall(function() require('durable').log('SERVER-PICK-RESUMED: '..(adopted and ('adopted the recorded '..adopted..' server'..note) or ('not explainable; the normal checks decide'..note))) end)
+  return adopted~=nil
+end
+
+-- the supervisor start (auto.recover, before it compares a COMMITTED journal with the live order)
+function M.server_resume_boot(env)
+  local ok,state=pcall(M.read_state,env)
+  if not ok or not canon.is_object(state) or state.server_change==nil then return false end
+  boot_step(env,'server change resume')
+  return M.server_resume(env,state)
+end
+
+-- while this supervisor's own server change is pending: true = this pass waited (no other decision)
+function M.server_pending(env,state,settings,revision)
+  local S=require('server_pick')
+  local pending=state.server_change
+  if pending==nil then return false end
+  local now=env.run.wall()
+  if canon.is_object(pending) and pending.phase=='APPLYING' then
+    M.server_resume(env,state,revision)  -- a crash inside the change (the supervisor restarted mid-way)
+    return false
+  end
+  local started,deadline=canon.is_object(pending) and num(pending.started) or nil,canon.is_object(pending) and num(pending.deadline) or nil
+  local role=canon.is_object(pending) and getd(pending,'role','target') or nil
+  if not canon.is_object(pending) or (pending.phase~='CONNECTING' and pending.phase~='SETTLING') or type(pending.started)=='boolean' or type(pending.deadline)=='boolean'
+     or not started or not finite(started) or not deadline or not finite(deadline) or not canon.is_object(pending.to) or not canon.is_object(pending.from)
+     or (role~='source' and role~='target') then
+    state.server_change=nil;M.save(env,state)  -- a damaged record: the normal checks decide
+    return false
+  end
+  local io_=server_io(env);local tunnel=server_tunnel(pending)
+  local within=started<=now and now<deadline
+  local function with(fields) local out=canon.decode(canon.encode(pending));for k,v in pairs(fields) do out[k]=v end;return out end
+  if pending.phase=='CONNECTING' then
+    if env.backend.health(pending.to.id)==true then
+      S.record(io_,pending.tunnel_id,now,getd(pending,'change',nil),false)
+      S.event(io_,S.PICKED,tunnel,now,getd(pending,'change',nil),getd(pending,'request',nil))
+      state.server_change=with({phase='SETTLING',deadline=canon.float(now+S.SETTLE_WAIT),verified=true});M.save(env,state)  -- a resume keeps to
+    elseif not within then
+      local undone=M.server_apply(env,state,revision,tunnel,pending.from,io_,role)==S.PICKED
+      S.event(io_,S.FAILED,tunnel,now,getd(pending,'change',nil),getd(pending,'request',nil),undone and 'rolled back' or 'rollback failed')
+      state.server_change=with({phase='SETTLING',deadline=canon.float(now+S.SETTLE_WAIT),rolled_back=true});M.save(env,state)
+    end
+    server_publish(env,state)
+    return true
+  end
+  local blockers,selection=env.backend.diagnostic()
+  if #blockers==0 or not within then
+    if #blockers==0 and role=='source' then pcall(M.server_settled,env,selection) end  -- observation-grade
+    state.server_change=nil;M.save(env,state)
+    return false
+  end
+  server_publish(env,state)
   return true
 end
 

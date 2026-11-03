@@ -1281,12 +1281,17 @@ def finish_committed(backend,journal,reason,restore_order=None):
     return True
 
 
-def committed_recovery_decision(backend,journal,settings,samples,now,status=None):
+def committed_recovery_decision(backend,journal,settings,samples,now,status=None,hold=None):
     """Observe a confirmed reserve without inventing permission for another hop.
 
     Returning to the certified original route requires stable primary samples
     plus recovery_ready's fresh bound DNS/HTTPS check. A reserve failure is
     never hidden behind the historical COMMITTED status.
+
+    hold (continuous pair, pair_auto.return_hold): seconds of primary stability
+    required while the reserve is healthy; the planned return then also waits
+    max(cooldown, min_dwell), so the next failover is never inside the cooldown.
+    A failing reserve is left without the damped hold.
     """
     from recovery_settings import normalized
     from failure_diagnosis import resolve_pair,profile_identity,flap_window
@@ -1306,16 +1311,19 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     failed=streak(samples,target['id'],recovery['failures'],now,age,False,target)
     from fault_control import testing_profile
     fault_test=failed and testing_profile(journal['target'])
+    damped=hold is not None and not failed and hold>recovery['primary_stable']
     if recovery['return_policy']=='healthy_primary' or fault_test:
         dwell=now-journal.get('confirmed',journal.get('started',now))
-        if (failed or dwell>=recovery['min_dwell']) and backend.recovery_ready(journal['source'],settings) is True:
+        need=recovery['min_dwell'] if hold is None else max(recovery['cooldown'],recovery['min_dwell'])
+        ready_settings=dict(settings,recovery_primary_stable=hold) if damped else settings
+        if (failed or dwell>=need) and backend.recovery_ready(journal['source'],ready_settings) is True:
             return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}
     if failed:
         # A fresh negative check avoids acting on stale monitor failure history.
         health=backend.health(journal['target'])
         if health is False:return {'action':'HOLD','reason':'RESERVE-FAILED','reserve_healthy':False}
         if health is None:return {'action':'HOLD','reason':'RESERVE-HEALTH-UNKNOWN','reserve_healthy':None}
-    return {'action':'OBSERVE','reason':'CLIENT-CONFIRMED'}
+    return {'action':'OBSERVE','reason':'PAIR-RATE-LIMIT' if damped and recovery['return_policy']=='healthy_primary' else 'CLIENT-CONFIRMED'}
 
 
 def disable_acceleration(backend,request):
@@ -2017,6 +2025,14 @@ def serve():
         # independent supervisor restores owned work; it never resumes Auto.
         from pair_auto import fence_recovery
         fence_recovery()
+        # Server pick (stage 3): a server change cut short by a power cut or a crash (between its uci commits and the
+        # session write) is this supervisor's own write; re-bind the session and the journal to it before the COMMITTED
+        # journal is compared with the live order below (else abandon(EXTERNAL-POLICY-CHANGE)). The journal is read again
+        # whatever it returns: a re-bound journal whose session write failed must not be compared as the stale one.
+        from pair_auto import server_resume_boot
+        try:
+            server_resume_boot(backend);journal=journal_read()
+        except (Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):pass
         if journal.get('phase') not in (None,'ROLLED-BACK'):
             # A power cut removes the stock boot prefix (tmpfs); recovery may write the kernel through rtp2.sh.
             from rtp_boot import recovery_prefix

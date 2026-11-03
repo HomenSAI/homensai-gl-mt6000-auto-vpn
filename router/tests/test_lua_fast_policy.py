@@ -312,9 +312,18 @@ class LuaSuites(unittest.TestCase):
     def test_plain_lua_suites(self):
         scripts=sorted((HERE/'lua').glob('test_*.lua'))
         self.assertGreaterEqual(len(scripts),5)
+        # independent processes: run them side by side (the flap-damping loop alone takes minutes on a loaded host)
+        import concurrent.futures
+        def run(script):return subprocess.run([LUA,str(script)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=600)
+        # test_hv_core.lua measures real-time loop lag: alone, after the others
+        timed={'test_hv_core.lua'}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(2,os.cpu_count() or 2)) as pool:
+            done=dict(zip([x for x in scripts if x.name not in timed],pool.map(run,[x for x in scripts if x.name not in timed])))
         for script in scripts:
+            if script.name in timed:done[script]=run(script)
+        results=[done[script] for script in scripts]
+        for script,result in zip(scripts,results):
             with self.subTest(script.name):
-                result=subprocess.run([LUA,str(script)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=300)
                 self.assertEqual(result.returncode,0,(result.stdout+result.stderr).decode(errors='replace'))
                 self.assertIn(b'tests OK',result.stdout)
 
