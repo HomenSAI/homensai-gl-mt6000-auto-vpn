@@ -397,36 +397,74 @@ parse_value=function(s,i,depth)
   return parse_number(s,i)
 end
 
--- skip_value(s,i): the index after one JSON value, scanned structurally (strings with their escapes, nesting)
--- without building it. Used for the top-level fields a reader never looks at.
-local skip_value
-skip_value=function(s,i)
-  i=skip(s,i)
-  local c=string.sub(s,i,i)
-  if c=='"' then
-    local j=i+1
-    while true do
-      local k=string.find(s,'["\\]',j)
-      if not k then fail(i,'unterminated string') end
-      if string.sub(s,k,k)=='"' then return k+1 end
-      j=k+2
-    end
-  elseif c=='{' or c=='[' then
-    local depth,j=0,i
-    while true do
-      local k=string.find(s,'[%[%]{}"]',j)
-      if not k then fail(i,'unterminated container') end
-      local d=string.sub(s,k,k)
-      if d=='"' then j=skip_value(s,k)
-      else
-        if d=='{' or d=='[' then depth=depth+1 else depth=depth-1 end
-        if depth>64 then fail(k,'nesting limit') end
-        j=k+1
-        if depth==0 then return j end
+-- skip_value(s,i,depth): the index after one JSON value, validated exactly as parse_value() does (the same errors at
+-- the same bytes: escapes, control characters, numbers, literals, separators, duplicate fields, nesting) but without
+-- building it. Used for the top-level fields a reader never looks at: decode_keys() accepts what decode() accepts.
+local function skip_string(s,i)  -- s[i]=='"'; parse_string() without the text
+  i=i+1
+  while true do
+    local j=string.find(s,'[%z\1-\31"\\]',i)
+    if not j then fail(i,'unterminated string') end
+    local c=string.sub(s,j,j)
+    if c=='"' then return j+1 end
+    if c~='\\' then fail(j,'invalid control character') end
+    local e=string.sub(s,j+1,j+1)
+    if e~='u' then
+      if not ESCAPES[e] then fail(j,'invalid escape') end
+      i=j+2
+    else
+      local cp=hex4(s,j+2)
+      if not cp then fail(j,'invalid \\uXXXX escape') end
+      i=j+6
+      if cp>=0xD800 and cp<=0xDBFF and string.sub(s,i,i+1)=='\\u' then
+        local low=hex4(s,i+2)
+        if not low then fail(i,'invalid \\uXXXX escape') end
+        if low>=0xDC00 and low<=0xDFFF then i=i+6 end
       end
     end
   end
-  local _,j=parse_value(s,i,0)
+end
+
+local skip_value
+skip_value=function(s,i,depth)
+  if depth>64 then fail(i,'nesting limit') end
+  i=skip(s,i)
+  local c=string.sub(s,i,i)
+  if c=='{' then
+    local seen={}
+    i=skip(s,i+1)
+    if string.sub(s,i,i)=='}' then return i+1 end
+    while true do
+      if string.sub(s,i,i)~='"' then fail(i,'expected property name') end
+      local key;key,i=parse_string(s,i)
+      i=skip(s,i)
+      if string.sub(s,i,i)~=':' then fail(i,'expected colon') end
+      if seen[key] then fail(i,'duplicate field') end
+      seen[key]=true
+      i=skip_value(s,i+1,depth+1)
+      i=skip(s,i)
+      local d=string.sub(s,i,i)
+      if d=='}' then return i+1 end
+      if d~=',' then fail(i,'expected , or }') end
+      i=skip(s,i+1)
+    end
+  elseif c=='[' then
+    i=skip(s,i+1)
+    if string.sub(s,i,i)==']' then return i+1 end
+    while true do
+      i=skip_value(s,i,depth+1)
+      i=skip(s,i)
+      local d=string.sub(s,i,i)
+      if d==']' then return i+1 end
+      if d~=',' then fail(i,'expected , or ]') end
+      i=i+1
+    end
+  elseif c=='"' then return skip_string(s,i)
+  elseif string.sub(s,i,i+3)=='null' then return i+4
+  elseif string.sub(s,i,i+3)=='true' then return i+4
+  elseif string.sub(s,i,i+4)=='false' then return i+5
+  end
+  local _,j=parse_number(s,i)
   return j
 end
 
@@ -454,7 +492,7 @@ function M.decode_keys(text,keys)
         local value;value,i=parse_value(s,i+1,1)
         obj[key]=value
       else
-        i=skip_value(s,i+1)
+        i=skip_value(s,i+1,1)
       end
       i=skip(s,i)
       local d=string.sub(s,i,i)

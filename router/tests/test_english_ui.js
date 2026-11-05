@@ -1,4 +1,5 @@
 'use strict';
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // English interface audit. In English mode no visible text or accessible attribute may contain Cyrillic.
 //  1) Static: every bi(en,ru) pair in router/*.inc.js has a Cyrillic-free, non-empty EN side and a non-empty RU side,
 //     and every [en,ru] data pair that is detectable by shape is checked at runtime below.

@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};this.children=[].concat(children===undefined?[]:children).flat().filter(c=>c!=null);this.checked=false;this.textContent='';}
   setAttribute(k,v){this.attrs[k]=String(v);}getAttribute(k){return this.attrs[k];}

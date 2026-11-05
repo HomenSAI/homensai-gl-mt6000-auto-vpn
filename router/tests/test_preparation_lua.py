@@ -14,17 +14,24 @@ HELPER=Path(__file__).resolve().parents[1]/'files/usr/lib/homensai-vpn/preparati
 
 @unittest.skipUnless(LUA,'Lua 5.1 runtime absent; covered by Python 3.9/Lua CI')
 class PreparationLuaTests(unittest.TestCase):
-    def run_writer(self,patch_payload=None,failure='',second=False):
+    def run_writer(self,patch_payload=None,failure='',second=False,restore=False,after='1'):
         with tempfile.TemporaryDirectory(prefix='homensai-preparation-test-') as directory:
             root=Path(directory);(root/'stage').mkdir();(root/'network').write_text('original bytes\n')
             calls=root/'calls';calls.write_text('')
             payload={'action':'wg-autostart','expected':'original bytes\n','stage':str(root/'stage'),
                      'changes':[{'section':'wgclient1','type':'interface','option':'auto','before':'1','after':'0'}]}
             if second:payload['action']='target-autostart';payload['changes'][0]['section']='ovpnclient2'
+            if restore:
+                # restore-autostart: the app's '0' goes back to the saved value (None = the option is removed)
+                payload.update(action='restore-autostart',changes=[{'section':'ovpnclient2' if second else 'wgclient1','type':'interface',
+                                                                    'option':'auto','before':'0','after':after}])
             if patch_payload:patch_payload(payload)
             state={'sections':[{'.name':'wgclient1','.type':'interface','proto':'wgclient','auto':'1','config':'peer_9','private_fixture':'DO-NOT-EMIT'},
                                {'.name':'lan','.type':'interface','proto':'static','ipaddr':'192.0.2.1'}]}
             if second:state['sections'][0].update({'.name':'ovpnclient2','proto':'ovpnclient'})
+            if restore:
+                state['sections'][0]['auto']='1' if failure=='owner-one' else '0'
+                state['sections'][1]['auto']='0'  # a non-VPN interface whose autostart reads 0 too
             prefix="local j=require('cjson');local state=j.decode([==["+json.dumps(state)+"]==]);local failure="+json.dumps(failure)+"\n"
             prefix+="local output="+json.dumps(str(calls))+";local config="+json.dumps(str(root/'network'))+"\n"
             prefix+=r'''
@@ -40,7 +47,7 @@ package.preload['uci']=function()
   function c:get(package,name,key)
    if package=='homensai_vpn'and name=='main'and key=='plan_target_tunnel'then return 'openvpn:ovpnclient2'end
    if package~='network'then return nil end
-   for _,row in ipairs(state.sections)do if row['.name']==name then return key and row[key]or row['.type']end end
+   for _,row in ipairs(state.sections)do if row['.name']==name then if key then return row[key] end;return row['.type']end end
   end
   function c:foreach(package,kind,callback)
    assert(package=='network');for _,row in ipairs(state.sections)do
@@ -50,6 +57,11 @@ package.preload['uci']=function()
   function c:set(package,name,key,value)
    assert(package=='network');log('set:'..name..':'..key)
    for _,row in ipairs(state.sections)do if row['.name']==name then row[key]=value;return true end end
+   return false
+  end
+  function c:delete(package,name,key)
+   assert(package=='network');log('delete:'..name..':'..key)
+   for _,row in ipairs(state.sections)do if row['.name']==name then row[key]=nil;return true end end
    return false
   end
   function c:save(package)log('save');saved=true;return failure~='save-failed'end
@@ -91,6 +103,34 @@ end
         code,out,err,calls,raw=self.run_writer(second=True)
         self.assertEqual(code,0,err);self.assertEqual(out,b'OK');self.assertIn('set:ovpnclient2:auto',calls)
         code,out,err,calls,raw=self.run_writer(lambda q:q['changes'][0].update(section='ovpnclient1'),second=True)
+        self.assertNotEqual(code,0);self.assertEqual(calls,'')
+
+    def test_restore_autostart_puts_back_the_saved_value_only_over_the_apps_zero(self):
+        code,out,err,calls,raw=self.run_writer(restore=True)
+        self.assertEqual(code,0,err);self.assertEqual(out,b'OK');self.assertIn('set:wgclient1:auto',calls);self.assertIn('commit',calls)
+        code,out,err,calls,raw=self.run_writer(restore=True,after=None)
+        self.assertEqual(code,0,err);self.assertEqual(out,b'OK');self.assertIn('delete:wgclient1:auto',calls)
+        code,out,err,calls,raw=self.run_writer(restore=True,second=True)
+        self.assertEqual(code,0,err);self.assertIn('set:ovpnclient2:auto',calls)
+        refused=[lambda p:p['changes'][0].update(before='1'),             # the flag must still read the app's 0
+                 lambda p:p['changes'][0].update(before=None),
+                 lambda p:p['changes'][0].update(after='0'),
+                 lambda p:p['changes'][0].update(after='yes'),
+                 lambda p:p['changes'][0].update(section='lan'),          # not a VPN client
+                 lambda p:p['changes'][0].update(option='disabled'),
+                 lambda p:p['changes'][0].update(section='ovpnclient1'),  # no such section in the fixture
+                 lambda p:p['changes'].append(copy.deepcopy(p['changes'][0]))]
+        for change in refused:
+            with self.subTest(change=change):
+                code,out,err,calls,raw=self.run_writer(change,restore=True)
+                self.assertNotEqual(code,0);self.assertEqual(calls,'');self.assertEqual(raw,'original bytes\n')
+
+    def test_restore_refuses_when_the_owner_changed_the_flag(self):
+        # the fixture flag reads '1' (the owner switched it on in GL meanwhile): nothing is written
+        code,out,err,calls,raw=self.run_writer(restore=True,after='1',failure='owner-one')
+        self.assertNotEqual(code,0);self.assertEqual(calls,'')
+        # even a request that claims the owner's value as "before" is refused: a restore only replaces the app's 0
+        code,out,err,calls,raw=self.run_writer(lambda p:p['changes'][0].update(before='1'),restore=True,after='1',failure='owner-one')
         self.assertNotEqual(code,0);self.assertEqual(calls,'')
 
     def test_failed_stage_or_readback_is_never_a_success_ack(self):

@@ -1,0 +1,295 @@
+{
+  "_comment": "Shared by test_dns_dual.py and lua/test_dns_dual.lua: dns_dual.py == lua/dns_dual.lua. '@H@' is dns_dual.HEADER. Files are the GL 4.11 layout of setup_instance (wgclient1 mark 0x1000, ovpnclient2 mark 0xb000). run: 'argv joined by one space' -> [rc, stdout]; anything else answers [0, ''].",
+  "gl_files": {
+    "/var/etc/dnsmasq.conf.wgclient1": "domain-needed\nport=2153\nresolv-file=/tmp/resolv.conf.d/resolv.conf.wgclient1\nconf-dir=/tmp/dnsmasq.d.wgclient1\nuser=dnsmasq_vpn\ngroup=dnsmasq\n",
+    "/tmp/dnsmasq.d.wgclient1/mark": "mark=0x1000\n",
+    "/tmp/dnsmasq.d.wgclient1/no-dhcp": "no-dhcp-interface=*\n",
+    "/tmp/resolv.conf.d/resolv.conf.wgclient1": "nameserver 103.86.96.100\n",
+    "/var/etc/dnsmasq.conf.ovpnclient2": "domain-needed\nport=4253\nresolv-file=/tmp/resolv.conf.d/resolv.conf.ovpnclient2\nconf-dir=/tmp/dnsmasq.d.ovpnclient2\nuser=dnsmasq_vpn\ngroup=dnsmasq\n",
+    "/tmp/dnsmasq.d.ovpnclient2/mark": "mark=0xb000\n",
+    "/tmp/dnsmasq.d.ovpnclient2/no-dhcp": "no-dhcp-interface=*\n",
+    "/tmp/resolv.conf.d/resolv.conf.ovpnclient2": "nameserver 103.86.99.100\nnameserver 103.86.96.100\n"
+  },
+  "run_default": {
+    "ubus call service list {\"name\":\"dnsmasq\"}": [0, "{\"dnsmasq\":{\"instances\":{\"wgclient1\":{\"running\":true,\"pid\":2001},\"ovpnclient2\":{\"running\":true,\"pid\":2002},\"cfg01411c\":{\"running\":true}}}}"]
+  },
+  "enabled": [
+    ["config main 'main'\n    option enabled '1'\n    option dns_dual '1'\n", true],
+    ["option dns_dual 1", true],
+    ["\toption\tdns_dual\t'1'\r", true],
+    ["option dns_dual '0'", false],
+    ["option dns_dual ''", false],
+    ["", false],
+    ["# option dns_dual '1'", false],
+    ["option dns_dual '1' # on", false],
+    ["option dns_dual_test '1'", false],
+    ["option dns_dual \"1\"", false],
+    [null, false]
+  ],
+  "instance_of": [
+    ["0x1000", "wgclient1"], ["0x5000", "wgclient5"], ["0x6000", null], ["0xa000", "ovpnclient1"],
+    ["0xb000", "ovpnclient2"], ["0xe000", "ovpnclient5"], ["0xf000", null], ["0x1001", null], ["0x0", null],
+    ["0x11000", null], ["0xB000", null], ["4096", null], ["0x", null], ["0x01000", "wgclient1"],
+    ["0x000001000", null], [null, null]
+  ],
+  "valid_server": [
+    ["103.86.99.100", true], ["10.8.0.1#5353", true], ["1.1.1.1#53", true], ["100.64.0.1", true], ["192.168.8.1", true],
+    ["127.0.0.1#5453", false], ["0.0.0.0", false], ["169.254.1.1", false], ["224.0.0.1", false],
+    ["255.255.255.255", false], ["1.2.3", false], ["1.2.3.4.5", false], ["01.2.3.4", false], ["1.2.3.256", false],
+    ["1.2.3.4#0", false], ["1.2.3.4#65536", false], ["1.2.3.4#053", false], ["1.2.3.4#", false], ["::1", false],
+    ["dns.google", false], ["1.2.3.4@eth0", false], ["", false], [null, false]
+  ],
+  "servers_of": [
+    {"name": "resolv-file: valid IPv4 nameservers in order, each once",
+     "config": "resolv-file=/tmp/resolv.conf.d/resolv.conf.ovpnclient2\n",
+     "files": {"/tmp/resolv.conf.d/resolv.conf.ovpnclient2": "# pushed\nnameserver 103.86.99.100\nnameserver   103.86.96.100  \nnameserver fe80::1\nnameserver 103.86.99.100\nsearch lan\n"},
+     "expected": ["103.86.99.100", "103.86.96.100"]},
+    {"name": "at most four",
+     "config": "resolv-file=/tmp/r\n",
+     "files": {"/tmp/r": "nameserver 1.0.0.1\nnameserver 1.0.0.2\nnameserver 1.0.0.3\nnameserver 1.0.0.4\nnameserver 1.0.0.5\n"},
+     "expected": ["1.0.0.1", "1.0.0.2", "1.0.0.3", "1.0.0.4"]},
+    {"name": "server lines first, then the resolv-file; CRLF",
+     "config": "server=8.8.8.8\r\nresolv-file=/tmp/r\r\n",
+     "files": {"/tmp/r": "nameserver 9.9.9.9\r\n"},
+     "expected": ["8.8.8.8", "9.9.9.9"]},
+    {"name": "no-resolv (GL override_vpn): only plain server lines, never a domain rule or a local proxy",
+     "config": "no-resolv\nserver=1.1.1.1\nserver=/lan/127.0.0.1\nserver=127.0.0.1#5453\nserver=9.9.9.9#9953\nserver=8.8.8.8@wan\nresolv-file=/tmp/r\n",
+     "files": {"/tmp/r": "nameserver 7.7.7.7\n"},
+     "expected": ["1.1.1.1", "9.9.9.9#9953"]},
+    {"name": "a resolv-file outside /tmp or with .. is not read",
+     "config": "resolv-file=/etc/resolv.conf\n",
+     "files": {"/etc/resolv.conf": "nameserver 9.9.9.9\n"},
+     "expected": []},
+    {"name": "dot-dot path",
+     "config": "resolv-file=/tmp/../etc/r\n",
+     "files": {"/tmp/../etc/r": "nameserver 9.9.9.9\n"},
+     "expected": []},
+    {"name": "missing resolv-file",
+     "config": "resolv-file=/tmp/none\n", "files": {}, "expected": []},
+    {"name": "no config", "config": null, "files": {}, "expected": []}
+  ],
+  "snippet": [
+    {"peers": [], "expected": null},
+    {"peers": [{"device": "ovpnclient2", "servers": []}], "expected": null},
+    {"peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "10.8.0.1#5353"]}, {"device": "wgclient2", "servers": ["1.1.1.1"]}],
+     "expected": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=10.8.0.1#5353@ovpnclient2\nserver=1.1.1.1@wgclient2\n"}
+  ],
+  "sync": [
+    {"name": "first install: the reserve's instance first, the active one last",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000", "files": {}, "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 2, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {
+         "/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=103.86.96.100@ovpnclient2\n",
+         "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n",
+         "/tmp/dnsmasq.d.wgclient1/mark": "mark=0x1000\n"},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {}}},
+    {"name": "reserve active: the wgclient1 instance first",
+     "marks": ["0xb000", "0x1000"], "active": "0xb000", "files": {}, "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 2, "instances": [
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]},
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]}]},
+       "files": {},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {}}},
+    {"name": "already installed: nothing written, nothing restarted",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {
+       "/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=103.86.96.100@ovpnclient2\n",
+       "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+     "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 0, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {}, "calls": [], "memo": {}}},
+    {"name": "reserve down (empty resolv file): its last installed servers stay, no restart",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {
+       "/tmp/resolv.conf.d/resolv.conf.ovpnclient2": "",
+       "/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=103.86.96.100@ovpnclient2\n",
+       "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+     "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 0, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {}, "calls": [], "memo": {}}},
+    {"name": "reserve down at the first install: only the reserve's instance gets the primary's servers",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {"/tmp/resolv.conf.d/resolv.conf.ovpnclient2": null},
+     "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": false, "peers": []},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": null,
+                 "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {}}},
+    {"name": "the other tunnel's DNS changed: only that instance is rewritten",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {
+       "/tmp/resolv.conf.d/resolv.conf.ovpnclient2": "nameserver 10.8.0.1\n",
+       "/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=103.86.96.100@ovpnclient2\n",
+       "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+     "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["10.8.0.1"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=10.8.0.1@ovpnclient2\n"},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {}}},
+    {"name": "GL override_vpn (no-resolv, custom servers) and a conf-dir with a filter",
+     "marks": ["0x1000", "0xb000"], "active": "0xb000",
+     "files": {"/var/etc/dnsmasq.conf.ovpnclient2": "no-resolv\nserver=1.1.1.1\nserver=/lan/127.0.0.1\nserver=127.0.0.1#5453\nserver=9.9.9.9#9953\nconf-dir=/tmp/dnsmasq.d.ovpnclient2,*.conf\n"},
+     "run": {},
+     "expected": {
+       "result": {"enabled": true, "code": null, "changed": 2, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["1.1.1.1", "9.9.9.9#9953"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=1.1.1.1@ovpnclient2\nserver=9.9.9.9#9953@ovpnclient2\n"},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {}}},
+    {"name": "dnsmasq --test refuses: the snippet is removed again, no restart, not retried",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000", "files": {},
+     "run": {"/usr/sbin/dnsmasq --test -C /var/etc/dnsmasq.conf.ovpnclient2": [1, ""]},
+     "expected": {
+       "result": {"enabled": true, "code": "DNS-DUAL-UNVERIFIED", "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": false, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": null},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {"ovpnclient2": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"}}},
+    {"name": "a text that failed before is not tried again in this process",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000", "files": {}, "run": {},
+     "memo": {"ovpnclient2": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+     "expected": {
+       "result": {"enabled": true, "code": "DNS-DUAL-UNVERIFIED", "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": false, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": null},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {"ovpnclient2": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"}}},
+    {"name": "the restart fails: previous snippet back, restarted again",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {"/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.99@wgclient1\n"},
+     "run": {"/etc/init.d/dnsmasq restart ovpnclient2": [1, ""]},
+     "expected": {
+       "result": {"enabled": true, "code": "DNS-DUAL-UNVERIFIED", "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.99@wgclient1\n"},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {"ovpnclient2": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"}}},
+    {"name": "procd does not report the instance running: GL's own config back",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000", "files": {},
+     "run": {"ubus call service list {\"name\":\"dnsmasq\"}": [0, "{\"dnsmasq\":{\"instances\":{\"wgclient1\":{\"running\":true},\"ovpnclient2\":{\"running\":false}}}}"]},
+     "expected": {
+       "result": {"enabled": true, "code": "DNS-DUAL-UNVERIFIED", "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": true, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": false, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": null},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.wgclient1"], ["/etc/init.d/dnsmasq", "restart", "wgclient1"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {"ovpnclient2": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"}}},
+    {"name": "the write fails: nothing restarted",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000", "files": {}, "run": {},
+     "fail_write": ["/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf"],
+     "expected": {
+       "result": {"enabled": true, "code": "DNS-DUAL-UNVERIFIED", "changed": 1, "instances": [
+         {"instance": "wgclient1", "mark": "0x1000", "installed": false, "peers": [{"device": "ovpnclient2", "servers": ["103.86.99.100", "103.86.96.100"]}]},
+         {"instance": "ovpnclient2", "mark": "0xb000", "installed": true, "peers": [{"device": "wgclient1", "servers": ["103.86.96.100"]}]}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": null},
+       "calls": [
+         ["/usr/sbin/dnsmasq", "--test", "-C", "/var/etc/dnsmasq.conf.ovpnclient2"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"],
+         ["ubus", "call", "service", "list", "{\"name\":\"dnsmasq\"}"]],
+       "memo": {"wgclient1": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\nserver=103.86.96.100@ovpnclient2\n"}}},
+    {"name": "a mark file that is not this mark: not a GL instance of the pair, nothing changes",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {"/tmp/dnsmasq.d.ovpnclient2/mark": "mark=0xa000\n"}, "run": {},
+     "expected": {"result": {"enabled": true, "code": "DNS-DUAL-UNAVAILABLE", "changed": 0, "instances": []},
+                  "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": null}, "calls": [], "memo": {}}},
+    {"name": "a conf-dir that is not GL's: nothing changes",
+     "marks": ["0x1000", "0xb000"], "active": "0x1000",
+     "files": {"/var/etc/dnsmasq.conf.wgclient1": "resolv-file=/tmp/resolv.conf.d/resolv.conf.wgclient1\nconf-dir=/etc/dnsmasq.d\n"}, "run": {},
+     "expected": {"result": {"enabled": true, "code": "DNS-DUAL-UNAVAILABLE", "changed": 0, "instances": []},
+                  "files": {}, "calls": [], "memo": {}}},
+    {"name": "a mark GL never gives an instance (0x8000 = no VPN): nothing changes",
+     "marks": ["0x1000", "0x8000"], "active": "0x1000", "files": {}, "run": {},
+     "expected": {"result": {"enabled": true, "code": "DNS-DUAL-UNAVAILABLE", "changed": 0, "instances": []},
+                  "files": {}, "calls": [], "memo": {}}},
+    {"name": "no instance config at all (other firmware)",
+     "marks": ["0x1000", "0xb000"], "active": null,
+     "files": {"/var/etc/dnsmasq.conf.wgclient1": null, "/var/etc/dnsmasq.conf.ovpnclient2": null}, "run": {},
+     "expected": {"result": {"enabled": true, "code": "DNS-DUAL-UNAVAILABLE", "changed": 0, "instances": []},
+                  "files": {}, "calls": [], "memo": {}}}
+  ],
+  "off": [
+    {"name": "both snippets removed and both instances restarted; GL's own files untouched",
+     "files": {
+       "/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\n",
+       "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.96.100@wgclient1\n"},
+     "run": {}, "memo": {"wgclient1": "old"},
+     "expected": {
+       "result": {"enabled": false, "code": null, "changed": 2, "instances": [
+         {"instance": "wgclient1", "mark": null, "installed": false, "peers": []},
+         {"instance": "ovpnclient2", "mark": null, "installed": false, "peers": []}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": null, "/tmp/dnsmasq.d.ovpnclient2/homensai-dns-dual.conf": null,
+                 "/tmp/dnsmasq.d.wgclient1/mark": "mark=0x1000\n", "/tmp/dnsmasq.d.ovpnclient2/no-dhcp": "no-dhcp-interface=*\n"},
+       "calls": [["/etc/init.d/dnsmasq", "restart", "wgclient1"], ["/etc/init.d/dnsmasq", "restart", "ovpnclient2"]],
+       "memo": {}}},
+    {"name": "nothing installed: no restart; a failed text of the last run may be tried at the next start",
+     "files": {}, "run": {}, "memo": {"ovpnclient2": "old"},
+     "expected": {"result": {"enabled": false, "code": null, "changed": 0, "instances": []}, "files": {}, "calls": [], "memo": {}}},
+    {"name": "a leftover of another instance number (pair changed) is removed too",
+     "files": {"/tmp/dnsmasq.d.ovpnclient5/homensai-dns-dual.conf": "@H@\nall-servers\nserver=1.1.1.1@wgclient1\n"},
+     "run": {},
+     "expected": {"result": {"enabled": false, "code": null, "changed": 1, "instances": [
+         {"instance": "ovpnclient5", "mark": null, "installed": false, "peers": []}]},
+       "files": {"/tmp/dnsmasq.d.ovpnclient5/homensai-dns-dual.conf": null},
+       "calls": [["/etc/init.d/dnsmasq", "restart", "ovpnclient5"]],
+       "memo": {}}},
+    {"name": "the restart after the removal fails: removed anyway, reported",
+     "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": "@H@\nall-servers\nserver=103.86.99.100@ovpnclient2\n"},
+     "run": {"/etc/init.d/dnsmasq restart wgclient1": [1, ""]},
+     "expected": {"result": {"enabled": false, "code": "DNS-DUAL-UNVERIFIED", "changed": 0, "instances": [
+         {"instance": "wgclient1", "mark": null, "installed": false, "peers": []}]},
+       "files": {"/tmp/dnsmasq.d.wgclient1/homensai-dns-dual.conf": null},
+       "calls": [["/etc/init.d/dnsmasq", "restart", "wgclient1"]],
+       "memo": {}}}
+  ]
+}

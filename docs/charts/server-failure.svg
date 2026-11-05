@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" class="ch-server-failure" role="img" aria-labelledby="ch-server-failure-t ch-server-failure-d" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<title id="ch-server-failure-t">Отказ VPN-сервера основного канала (туннель «жив», трафика нет) / Primary VPN server failure (tunnel up, no traffic)</title>
+<desc id="ch-server-failure-d">До 2.0.0-alpha21 такой отказ не переводил трафик (пробел на графике). Сейчас ~20 с. Before 2.0.0-alpha21 this fault did not move traffic (gap in the chart). Now about 20 s. Log scale, seconds. HomenS.AI Auto VPN</desc>
+<style>.ch-server-failure{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--ink:#0b0b0b;--ink2:#52514e;--mut:#6f6d68;--grid:#e1e0d9;--axis:#c3c2b7;--surf:#fcfcfb;--era:#f1f0ec}@media (prefers-color-scheme:dark){.ch-server-failure{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--ink:#f0efec;--ink2:#c3c2b7;--mut:#a3a19a;--grid:#2c2c2a;--axis:#383835;--surf:#1a1a19;--era:#222220}}.ch-server-failure .bg{fill:var(--surf)}.ch-server-failure .era{fill:var(--era)}.ch-server-failure .gr{stroke:var(--grid);stroke-width:1}.ch-server-failure .ax{stroke:var(--axis);stroke-width:1}.ch-server-failure text{fill:var(--ink2);font-size:11.5px}.ch-server-failure .h1{fill:var(--ink);font-size:16px;font-weight:600}.ch-server-failure .h2{fill:var(--ink2);font-size:13px}.ch-server-failure .nt{fill:var(--mut);font-size:12px}.ch-server-failure .lg{fill:var(--ink);font-size:12.5px}.ch-server-failure .tk{fill:var(--mut);font-size:11px}.ch-server-failure .dl{fill:var(--ink);font-size:12px;font-weight:600}.ch-server-failure .s1{stroke:var(--s1)}.ch-server-failure .s2{stroke:var(--s2)}.ch-server-failure .s3{stroke:var(--s3)}.ch-server-failure .f1{fill:var(--s1)}.ch-server-failure .f2{fill:var(--s2)}.ch-server-failure .f3{fill:var(--s3)}.ch-server-failure .srf{fill:var(--surf)}.ch-server-failure .ring{stroke:var(--surf);stroke-width:2}.ch-server-failure .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.ch-server-failure .gap{fill:none;stroke-width:1;opacity:.35}.ch-server-failure .wh{stroke-width:1.5;stroke-linecap:round}.ch-server-failure .wh.weak{stroke-dasharray:3 3;opacity:.45}.ch-server-failure .hit{fill:transparent}.ch-server-failure .pt:focus{outline:none}.ch-server-failure .pt:focus .hit,.ch-server-failure .pt:hover .hit{fill:var(--grid)}</style>
+<rect class="bg" x="0" y="0" width="760" height="440" rx="10"/>
+<text class="h1" x="16" y="26">Отказ VPN-сервера основного канала (туннель «жив», трафика нет)</text>
+<text class="h2" x="16" y="45">Primary VPN server failure (tunnel up, no traffic)</text>
+<text class="nt" x="16" y="64">До 2.0.0-alpha21 такой отказ не переводил трафик (пробел на графике). Сейчас ~20 с.</text>
+<text class="nt" x="16" y="80">Before 2.0.0-alpha21 this fault did not move traffic (gap in the chart). Now about 20 s.</text>
+<line x1="18" y1="98" x2="40" y2="98" class="ln s1"/>
+<circle cx="29.0" cy="98.0" r="4.5" class="f1 ring"/>
+<text class="lg" x="48" y="102">Трафик на резерве / Traffic on the reserve</text>
+<line x1="18" y1="117" x2="40" y2="117" class="ln s2"/>
+<rect x="24.5" y="112.5" width="9" height="9" rx="1.5" class="f2 ring"/>
+<text class="lg" x="48" y="121">Сбой обнаружен / Failure detected</text>
+<line x1="18" y1="136" x2="40" y2="136" class="ln s3"/>
+<path d="M29.0 130.5l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+<text class="lg" x="48" y="140">Интернет снова есть у клиента LAN / Internet back for a LAN client</text>
+<text class="tk" x="64.0" y="342">Lua (+C)</text>
+<line class="gr" x1="58" y1="348.0" x2="668" y2="348.0"/>
+<text class="tk" x="52" y="352.0" text-anchor="end">2 s</text>
+<line class="gr" x1="58" y1="301.4" x2="668" y2="301.4"/>
+<text class="tk" x="52" y="305.4" text-anchor="end">5 s</text>
+<line class="gr" x1="58" y1="266.1" x2="668" y2="266.1"/>
+<text class="tk" x="52" y="270.1" text-anchor="end">10 s</text>
+<line class="gr" x1="58" y1="230.9" x2="668" y2="230.9"/>
+<text class="tk" x="52" y="234.9" text-anchor="end">20 s</text>
+<line class="gr" x1="58" y1="184.3" x2="668" y2="184.3"/>
+<text class="tk" x="52" y="188.3" text-anchor="end">50 s</text>
+<line class="gr" x1="58" y1="149.0" x2="668" y2="149.0"/>
+<text class="tk" x="52" y="153.0" text-anchor="end">100 s</text>
+<line class="ax" x1="58" y1="348" x2="668" y2="348"/>
+<text class="tk" text-anchor="end" transform="translate(88.7 362) rotate(-40)">2.0.0-alpha16</text>
+<text class="tk" text-anchor="end" transform="translate(144.2 362) rotate(-40)">2.0.0-alpha20</text>
+<text class="tk" text-anchor="end" transform="translate(199.6 362) rotate(-40)">2.0.0-alpha21</text>
+<text class="tk" text-anchor="end" transform="translate(255.1 362) rotate(-40)">2.0.0-alpha24</text>
+<text class="tk" text-anchor="end" transform="translate(310.5 362) rotate(-40)">2.0.0-alpha26</text>
+<text class="tk" text-anchor="end" transform="translate(366.0 362) rotate(-40)">2.0.0-beta4</text>
+<text class="tk" text-anchor="end" transform="translate(421.5 362) rotate(-40)">2.1.0-alpha1</text>
+<text class="tk" text-anchor="end" transform="translate(476.9 362) rotate(-40)">2.1.0-alpha2</text>
+<text class="tk" text-anchor="end" transform="translate(532.4 362) rotate(-40)">2.1.0-alpha3</text>
+<text class="tk" text-anchor="end" transform="translate(587.8 362) rotate(-40)">2.1.0-alpha4</text>
+<text class="tk" text-anchor="end" transform="translate(643.3 362) rotate(-40)">2.1.0-alpha5</text>
+<text class="tk" x="58" y="430">Версия (старые слева) / Version (oldest left) · логарифмическая шкала / log scale · GL-MT3000</text>
+<line class="ln s1" x1="196.6" y1="194.6" x2="252.1" y2="228.1"/>
+<line class="ln s1" x1="252.1" y1="228.1" x2="307.5" y2="232.7"/>
+<line class="ln s1" x1="307.5" y1="232.7" x2="363.0" y2="230.4"/>
+<line class="ln s1" x1="363.0" y1="230.4" x2="418.5" y2="225.3"/>
+<line class="ln s1" x1="418.5" y1="225.3" x2="473.9" y2="230.6"/>
+<line class="gap s1" x1="473.9" y1="230.6" x2="640.3" y2="229.1"/>
+<line class="ln s2" x1="85.7" y1="219.1" x2="141.2" y2="196.6"/>
+<line class="ln s2" x1="141.2" y1="196.6" x2="196.6" y2="210.2"/>
+<line class="ln s2" x1="196.6" y1="210.2" x2="252.1" y2="283.6"/>
+<line class="ln s2" x1="252.1" y1="283.6" x2="307.5" y2="284.3"/>
+<line class="ln s2" x1="307.5" y1="284.3" x2="363.0" y2="282.8"/>
+<line class="ln s2" x1="363.0" y1="282.8" x2="418.5" y2="269.3"/>
+<line class="ln s2" x1="418.5" y1="269.3" x2="473.9" y2="282.1"/>
+<line class="gap s2" x1="473.9" y1="282.1" x2="640.3" y2="278.8"/>
+<line class="ln s3" x1="529.4" y1="222.9" x2="584.8" y2="229.9"/>
+<line class="ln s3" x1="584.8" y1="229.9" x2="640.3" y2="226.5"/>
+<g class="pt" tabindex="0"><title>2.0.0-alpha21 — Traffic on the reserve: 40.8 s (one run); n=1; GL-MT3000 router; source: soak: Lua + C 3 h soak; 1 of 2 cycles switched</title>
+<circle class="hit" cx="196.6" cy="194.6" r="12"/>
+<circle cx="196.6" cy="194.6" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha24 — Traffic on the reserve: 21.1 s (one run); n=1; GL-MT3000 router; source: soak: 3 h soak (stopped early)</title>
+<circle class="hit" cx="252.1" cy="228.1" r="12"/>
+<circle cx="252.1" cy="228.1" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha26 — Traffic on the reserve: 19.3 s (median), P95≈19.9 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 19.9; n=2; GL-MT3000 router; source: soak: 3 h soak</title>
+<line class="wh s1 weak" x1="307.5" y1="232.7" x2="307.5" y2="231.1"/>
+<line class="wh s1 weak" x1="303.5" y1="232.7" x2="311.5" y2="232.7"/>
+<line class="wh s1 weak" x1="303.5" y1="231.1" x2="311.5" y2="231.1"/>
+<circle class="hit" cx="307.5" cy="232.7" r="12"/>
+<circle cx="307.5" cy="232.7" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-beta4 — Traffic on the reserve: 20.2 s (median), P95≈21.4 (n=7, too few: needs ≥59; with 95 % confidence ≥ 65 % of cases are no slower than the max), max 21.4; n=7; GL-MT3000 router; source: soak: Long soak (~10 h, stopped by owner)</title>
+<line class="wh s1 weak" x1="363.0" y1="230.4" x2="363.0" y2="227.4"/>
+<line class="wh s1 weak" x1="359.0" y1="230.4" x2="367.0" y2="230.4"/>
+<line class="wh s1 weak" x1="359.0" y1="227.4" x2="367.0" y2="227.4"/>
+<circle class="hit" cx="363.0" cy="230.4" r="12"/>
+<circle cx="363.0" cy="230.4" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha1 — Traffic on the reserve: 22.3 s (one run); n=1; GL-MT3000 router; source: soak: 1.5 h soak</title>
+<circle class="hit" cx="418.5" cy="225.3" r="12"/>
+<circle cx="418.5" cy="225.3" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha2 — Traffic on the reserve: 20.1 s (one run); n=1; GL-MT3000 router; source: soak: 2 h soak, server pick on</title>
+<circle class="hit" cx="473.9" cy="230.6" r="12"/>
+<circle cx="473.9" cy="230.6" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha5 — Traffic on the reserve: 20.7 s (one run); n=1; GL-MT3000 router; source: soak: Matrix phase 4: WAN, reserve under load, server</title>
+<circle class="hit" cx="640.3" cy="229.1" r="12"/>
+<circle cx="640.3" cy="229.1" r="4.5" class="f1 ring"/>
+</g>
+<text class="dl" x="196.6" y="183.6" text-anchor="middle">40.8 s</text>
+<text class="dl" x="649.3" y="233.1">20.7 s</text>
+<g class="pt" tabindex="0"><title>2.0.0-alpha16 — Failure detected: 25.2 s (one run); n=1; GL-MT3000 router; source: soak: Soak run 1; no switch in this version</title>
+<circle class="hit" cx="85.7" cy="219.1" r="12"/>
+<rect x="81.2" y="214.6" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha20 — Failure detected: 39.2 s (median), P95≈43.7 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 43.7; n=2; GL-MT3000 router; source: soak: Lua 3 h soak; no switch in this version</title>
+<line class="wh s2 weak" x1="141.2" y1="196.6" x2="141.2" y2="191.1"/>
+<line class="wh s2 weak" x1="137.2" y1="196.6" x2="145.2" y2="196.6"/>
+<line class="wh s2 weak" x1="137.2" y1="191.1" x2="145.2" y2="191.1"/>
+<circle class="hit" cx="141.2" cy="196.6" r="12"/>
+<rect x="136.7" y="192.1" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha21 — Failure detected: 30 s (median), P95≈44 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 44; n=2; GL-MT3000 router; source: soak: Lua + C 3 h soak</title>
+<line class="wh s2 weak" x1="196.6" y1="210.2" x2="196.6" y2="190.8"/>
+<line class="wh s2 weak" x1="192.6" y1="210.2" x2="200.6" y2="210.2"/>
+<line class="wh s2 weak" x1="192.6" y1="190.8" x2="200.6" y2="190.8"/>
+<circle class="hit" cx="196.6" cy="210.2" r="12"/>
+<rect x="192.1" y="205.7" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha24 — Failure detected: 7.1 s (one run); n=1; GL-MT3000 router; source: soak: 3 h soak (stopped early)</title>
+<circle class="hit" cx="252.1" cy="283.6" r="12"/>
+<rect x="247.6" y="279.1" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha26 — Failure detected: 7 s (median), P95≈7 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 7; n=2; GL-MT3000 router; source: soak: 3 h soak</title>
+<circle class="hit" cx="307.5" cy="284.3" r="12"/>
+<rect x="303.0" y="279.8" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-beta4 — Failure detected: 7.2 s (median), P95≈8.3 (n=7, too few: needs ≥59; with 95 % confidence ≥ 65 % of cases are no slower than the max), max 8.3; n=7; GL-MT3000 router; source: soak: Long soak (~10 h, stopped by owner)</title>
+<line class="wh s2 weak" x1="363.0" y1="282.8" x2="363.0" y2="275.6"/>
+<line class="wh s2 weak" x1="359.0" y1="282.8" x2="367.0" y2="282.8"/>
+<line class="wh s2 weak" x1="359.0" y1="275.6" x2="367.0" y2="275.6"/>
+<circle class="hit" cx="363.0" cy="282.8" r="12"/>
+<rect x="358.5" y="278.3" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha1 — Failure detected: 9.4 s (one run); n=1; GL-MT3000 router; source: soak: 1.5 h soak</title>
+<circle class="hit" cx="418.5" cy="269.3" r="12"/>
+<rect x="414.0" y="264.8" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha2 — Failure detected: 7.3 s (one run); n=1; GL-MT3000 router; source: soak: 2 h soak, server pick on</title>
+<circle class="hit" cx="473.9" cy="282.1" r="12"/>
+<rect x="469.4" y="277.6" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha5 — Failure detected: 7.8 s (one run); n=1; GL-MT3000 router; source: soak: Matrix phase 4: WAN, reserve under load, server</title>
+<circle class="hit" cx="640.3" cy="278.8" r="12"/>
+<rect x="635.8" y="274.3" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<text class="dl" x="85.7" y="240.1" text-anchor="middle">25.2 s</text>
+<text class="dl" x="649.3" y="294.8">7.8 s</text>
+<g class="pt" tabindex="0"><title>2.1.0-alpha3 — Internet back for a LAN client: 23.4 s (one run); n=1; GL-MT3000 router; source: LAN client kit: VPN server unreachable, 300 s</title>
+<circle class="hit" cx="529.4" cy="222.9" r="12"/>
+<path d="M529.4 217.4l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha4 — Internet back for a LAN client: 20.4 s (one run); n=1; GL-MT3000 router; source: LAN client kit: VPN server unreachable, 360 s</title>
+<circle class="hit" cx="584.8" cy="229.9" r="12"/>
+<path d="M584.8 224.4l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha5 — Internet back for a LAN client: 21.8 s (one run); n=1; GL-MT3000 router; source: LAN client kit: VPN server unreachable, 360 s</title>
+<circle class="hit" cx="640.3" cy="226.5" r="12"/>
+<path d="M640.3 221.0l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<text class="dl" x="529.4" y="211.9" text-anchor="middle">23.4 s</text>
+<text class="dl" x="649.3" y="218.5">21.8 s</text>
+</svg>

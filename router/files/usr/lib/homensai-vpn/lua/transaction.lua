@@ -636,9 +636,16 @@ function M.attempt(env,selection,until_,trial,opts)
         M.assert_selection(env,selection)
         M.require_control_revision(env,control_revision)
         if not order_is(env,after,selection.hash) then refuse('EXTERNAL-POLICY-CHANGE') end
-        M.require_control_revision(env,control_revision)
-        value.phase='COMMITTED';value.confirmed=fwall(env);M.journal_write(env,value)
+        -- K5 (formal model 03.11.2026): the revision check and the COMMITTED write under the control lock, as the
+        -- manual hold below: a Stop (which rotates the revision under this lock) is either before (CLIENT-STOP,
+        -- rollback) or after the commit, never between the check and the write
+        env.run.lock(function()
+          M.require_control_revision(env,control_revision)
+          value.phase='COMMITTED';value.confirmed=fwall(env);M.journal_write(env,value)
+        end,env.runtime)
         if env.deps and env.deps.record_switch_time then pcall(env.deps.record_switch_time,env,num(value.confirmed)-num(value.started)) end
+        -- The move is confirmed: end the LAN flows still NATed to the channel just left (a code, never a failure).
+        M.reset_old_flows(env,value,destination)
         if manual_request_id~=nil then
           env.run.lock(function()
             M.require_control_revision(env,control_revision)
@@ -688,8 +695,31 @@ end
 ------------------------------------------------------------------------------------------------------
 -- committed / return handling
 ------------------------------------------------------------------------------------------------------
+-- reset_old_flows(env, value, new_role): after a verified move to value[new_role] (COMMITTED here, ROLLED-BACK
+-- after a restore in rollback.lua) drop the LAN flows still NATed to the other channel (flow_reset.lua through
+-- backend.flow_reset). A backend without it (test fakes) or any failure only returns a code: the switch is already
+-- complete and is never failed or undone by this step. Twin: native_switch.reset_old_flows.
+function M.reset_old_flows(env,value,new_role)
+  local ok,code=pcall(function()
+    local backend=env.backend
+    if type(backend)~='table' or type(backend.flow_reset)~='function' then return nil end
+    if new_role~='source' and new_role~='target' then return nil end
+    local old_role=new_role=='source' and 'target' or 'source'
+    local result=backend.flow_reset(value[old_role],value[new_role])
+    return type(result)=='table' and result.code or nil
+  end)
+  if ok then return code end
+  return 'FLOW-RESET-FAILED'
+end
+
+-- The return of a reserve that failed while carrying (pair.RESCUE_REASON) is proven with rescue_stable, exactly as
+-- committed_recovery_decision decided it (else finish_committed would hold on the failed reserve).
 function M.source_ready(env,value,settings,reason)
-  if reason~='TRIAL-PASSED' then return env.backend.recovery_ready(value.source,settings)==true end
+  if reason~='TRIAL-PASSED' then
+    local pair=require('pair')
+    if reason==pair.RESCUE_REASON then settings=pair.rescue_settings(settings) end
+    return env.backend.recovery_ready(value.source,settings)==true
+  end
   for index=1,M.RETURN_CHECKS do
     if env.backend.health(value.source)==true then return true end
     if index<M.RETURN_CHECKS then env.sleep(M.RETURN_PAUSE) end
@@ -735,7 +765,8 @@ function M.handle_return(env,value,request,last_time,control_revision)
   return true,stamp
 end
 
-function M.finish_committed(env,value,reason,restore_order)
+-- hold (K2, pair.cleanup_hold): seconds of primary stability required for the return instead of primary_stable
+function M.finish_committed(env,value,reason,restore_order,hold)
   local policy=require('pair').policy
   local rollback=require('rollback')
   M.bind_policy_context(env,value)
@@ -746,6 +777,7 @@ function M.finish_committed(env,value,reason,restore_order)
   end
   local settings=env.backend.policy().settings
   local recovery=require('pair').recovery_normalized(settings)
+  if hold~=nil then settings=merge(settings,{recovery_primary_stable=hold}) end
   local context=policy.metadata(value)
   if context~=nil then
     local desired=restore_order or context.primary_order
@@ -777,8 +809,12 @@ function M.finish_committed(env,value,reason,restore_order)
   return true
 end
 
--- committed_recovery_decision(backend,journal,settings,samples,now,status)
-function M.committed_recovery_decision(env,value,settings,samples,now,status)
+-- committed_recovery_decision(backend,journal,settings,samples,now,status,hold)
+-- hold (continuous pair, pair.return_hold): seconds of primary stability required while the reserve is healthy;
+-- the planned return then also waits max(cooldown, min_dwell), so the next failover is never inside the cooldown.
+-- A failing reserve is left without the damped hold, after rescue_stable seconds of primary stability
+-- (pair.rescue_settings; rescue_stable 0 = the full primary_stable, the rule before 03.11.2026).
+function M.committed_recovery_decision(env,value,settings,samples,now,status,hold)
   local pair=require('pair')
   local recovery=pair.recovery_normalized(settings)
   local age=pair.valid_for(settings)
@@ -795,11 +831,23 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status)
      or (expected~=nil and canon.encode(require('pair').profile_identity(env,target) or NULL)~=canon.encode(expected)) then
     return {action='HOLD',reason='RESERVE-IDENTITY-UNKNOWN',reserve_healthy=NULL}
   end
-  local failed=pair.streak(samples,target.id,recovery.failures,now,age,false,target)
+  -- The reserve carrying traffic failed: the owner's failure model (channel_model.lua, 'consecutive' = the streak).
+  local CM=require('channel_model')
+  local failed=CM.channel_failed(samples,target.id,recovery.failures,now,age,settings,target,env)
   local fault_test=failed and env.deps.testing_profile and env.deps.testing_profile(value.target) or false
+  local damped=hold~=nil and not failed and hold>recovery.primary_stable
   if recovery.return_policy=='healthy_primary' or fault_test then
     local dwell=now-(num(value.confirmed) or num(value.started) or now)
-    if (failed or dwell>=recovery.min_dwell) and env.backend.recovery_ready(value.source,settings)==true then
+    local need=hold==nil and recovery.min_dwell or math.max(recovery.cooldown,recovery.min_dwell)
+    -- The one return rule of both deciders (pair.return_rule; Python recovery_settings.return_rule): from a FAILED
+    -- reserve the rescue stability min(primary_stable, rescue_stable) and no model gate (the HMM return gate never
+    -- delays leaving a dead reserve); a planned return wants max(primary_stable, hold) AND, in the HMM modes,
+    -- channel_model.return_ready of the primary.
+    local ready_settings,model_gate=pair.return_rule(settings,failed and 'failed' or 'planned',hold)
+    local source_row=resolved.source;if isnone(source_row) then source_row=nil end
+    if (failed or dwell>=need)
+       and (not model_gate or CM.return_ready(samples,value.source,recovery.primary_successes,now,age,settings,source_row,env))
+       and env.backend.recovery_ready(value.source,ready_settings)==true then
       return {action='RESTORE-PRIMARY',reason=failed and 'RESERVE-FAILED-PRIMARY-VERIFIED' or 'PRIMARY-STABLY-RECOVERED'}
     end
   end
@@ -808,7 +856,7 @@ function M.committed_recovery_decision(env,value,settings,samples,now,status)
     if health==false then return {action='HOLD',reason='RESERVE-FAILED',reserve_healthy=false} end
     if health==nil then return {action='HOLD',reason='RESERVE-HEALTH-UNKNOWN',reserve_healthy=NULL} end
   end
-  return {action='OBSERVE',reason='CLIENT-CONFIRMED'}
+  return {action='OBSERVE',reason=(damped and recovery.return_policy=='healthy_primary') and 'PAIR-RATE-LIMIT' or 'CLIENT-CONFIRMED'}
 end
 
 return M

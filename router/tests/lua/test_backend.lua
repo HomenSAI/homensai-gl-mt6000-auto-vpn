@@ -238,6 +238,48 @@ t.test('apply: LAN DNS follows the first ROUTE_POLICY jump; follow() needs this 
   if not ok then error(err,0) end
 end)
 
+t.test('dns_dual: the verified pass follows dns_mark with its active mark; unguard removes; never raises',function()
+  local dd=require('dns_dual')
+  local saved_follow,saved_off=dd.follow,dd.off
+  local seen,offs={},0
+  local ok,err=pcall(function()
+    local w=world();local B,sys=backend(w)
+    dd.follow=function(chains,fields,opts) seen[#seen+1]={chains,opts.active};return canon.object({enabled=true,code=canon.null,changed=0,instances=canon.array({})}) end
+    dd.off=function() offs=offs+1;return canon.object({enabled=false,code=canon.null,changed=0,instances=canon.array({})}) end
+    local chains={ROUTE_POLICY={}}
+    B.dns_mark_sync=function(c) t.truthy(c==chains);return {active='0xb000'} end
+    t.eq(B.dns_mark_follow(),nil,'no verified attestation: nothing')
+    t.eq(#seen,0)
+    -- the verified graph of this pass (attest_policy keeps it in the backend's private caches)
+    local i=1
+    while true do
+      local name,value=debug.getupvalue(B.dns_mark_follow,i)
+      if name==nil then error('caches upvalue not found') end
+      if name=='caches' then value.attested_chains=chains;break end
+      i=i+1
+    end
+    t.eq(B.dns_mark_follow(),{active='0xb000'})
+    t.eq(seen[1][2],'0xb000');t.truthy(seen[1][1]==chains)
+    t.eq(B.dns_dual.enabled,true)
+    dd.follow=function() error('boom') end
+    t.eq(B.dns_dual_follow(chains,{active=canon.null}).code,'DNS-DUAL-UNVERIFIED','an error is reported, never raised')
+    local installed=true
+    w.handler=function(argv)
+      if argv[1]~='nft' then return nil end
+      if argv[2]=='list' then return installed and 0 or 1,installed and 'comment "homensai-owned-guard"' or '' end
+      if argv[2]=='delete' then installed=false;return 0,'' end
+    end
+    B.unguard()
+    t.eq(offs,1,'released pair: snippets removed')
+    installed=true
+    w.handler=function(argv) if argv[1]=='nft' and argv[2]=='list' then return 0,'comment "homensai-owned-guard"' end;return 0,'' end
+    t.eq(t.raises(B.unguard).code,'GUARD-RELEASE-UNCONFIRMED')
+    t.eq(offs,1,'guard still there: the snippets stay')
+  end)
+  dd.follow,dd.off=saved_follow,saved_off
+  if not ok then error(err,0) end
+end)
+
 t.test('fast_switch option and instant_request follow the Python readers',function()
   local w=world();local B=backend(w)
   t.eq(B.fast_switch_enabled(),false,'no config file')
@@ -325,6 +367,42 @@ t.test('platform workers: kernel threads and zombies are skipped, a worker proce
   w.files['/proc/locks']='1: FLOCK  ADVISORY  WRITE 1234 00:0e:5678 0 EOF\n'
   w.files['/tmp/run/fw3.lock']='';w.devs={['/tmp/run/fw3.lock']=14};w.inodes={['/tmp/run/fw3.lock']=5678}
   t.eq(platform.workers(sys).busy,1,'a held fw3 lock')
+end)
+
+t.test('recovery_ready: the primary stability asked is pair.stable_seconds (rescue_stable after a failed reserve, 03.11.2026)',function()
+  local w=world();local B=backend(w)
+  local diagnosis=require('diagnosis')
+  local samples=A({O({id='primary',time=NOW-15,code=canon.null,dns_ok=true,https_success=2}),O({id='primary',time=NOW-5,code=canon.null,dns_ok=true,https_success=2})})
+  local real_resolve,real_scoped=diagnosis.resolve_pair,diagnosis.scoped_samples
+  diagnosis.resolve_pair=function() return {coordination={state='READY'},source=O({id='primary'}),target=canon.null} end
+  diagnosis.scoped_samples=function(rows) return rows end
+  B.status=function() return O({samples=samples}) end
+  B.health=function() return true end
+  local pair=require('pair')
+  local ok,err=pcall(function()
+    t.eq(B.recovery_ready('primary',O({interval='10'})),false,'10 s of health is not primary_stable (120 s)')
+    t.eq(B.recovery_ready('primary',pair.rescue_settings(O({interval='10'}))),true,'enough for rescue_stable (10 s)')
+    t.eq(B.recovery_ready('primary',pair.rescue_settings(O({interval='10',recovery_rescue_stable='0'}))),false,'0 = the full primary_stable')
+    t.eq(B.recovery_ready('primary',pair.rescue_settings(O({interval='10',recovery_rescue_stable='11'}))),false)
+  end)
+  diagnosis.resolve_pair,diagnosis.scoped_samples=real_resolve,real_scoped
+  if not ok then error(err,0) end
+end)
+
+t.test('autostart_after_stop: one python child per change of the deciding files, none while Auto runs or without records',function()
+  local w=world();local B,sys,env=backend(w)
+  local runs=0
+  w.commands['python3 /usr/lib/homensai-vpn/preparation_control.py restore-autostart']=function()
+    runs=runs+1;return 0,'{"code": null, "kept": [], "restored": ["wgclient1"]}'..string.char(10) end
+  t.eq(B.autostart_after_stop(),nil,'no preparation records: nothing to look at');t.eq(runs,0)
+  w.dirs['/etc/hv/preparation-changes']={'0123456789abcdef0123456789abcdef.json'}
+  w.files['/etc/hv/native-stop.json']='{"requested": 2000.0, "request_source": "manual"}'
+  local result=B.autostart_after_stop();t.eq(runs,1);t.eq(result.restored[1],'wgclient1')
+  t.eq(B.autostart_after_stop(),nil,'idle tick: same files, no child');t.eq(runs,1)
+  w.files['/etc/hv/native-stop.json']='{"requested": 3000.0, "request_source": "manual"}';w.mtimes['/etc/hv/native-stop.json']=2
+  B.autostart_after_stop();t.eq(runs,2,'a new Stop is looked at')
+  w.files['/run/hv/pair-auto-control.json']='{"mode": "on", "revision": "r"}'
+  t.eq(B.autostart_after_stop(),nil);t.eq(runs,2,'Auto runs: no child')
 end)
 
 t.run()

@@ -26,6 +26,8 @@ t.test('https_get: constant curl argv bound to the device, certificate for the h
   t.eq(argument(argv,'--interface'),'wgclient1');t.eq(argument(argv,'--resolve'),'one.one.one.one:443:1.1.1.1')
   t.eq(argument(argv,'-m'),'6');t.eq(argument(argv,'--proto'),'=https');t.eq(argument(argv,'--max-redirs'),'0')
   t.eq(argv[#argv],'https://one.one.one.one/cdn-cgi/trace')
+  t.eq(argument(argv,'--cacert'),nil,'no anchor file installed here: the curl default CA store (alpha7 check)')
+  t.eq(argument(argv,'-A'),nil,'no agent given: curl\'s own User-Agent')
   for _,v in ipairs(argv) do t.truthy(not string.find(v,'[;|&`$<>]') or v=='https://one.one.one.one/cdn-cgi/trace','no shell syntax: '..v) end
   t.eq(seen.seconds,7)
   t.eq(io_.file_size(argument(argv,'-D')),nil);t.eq(io_.file_size(argument(argv,'-o')),nil)
@@ -40,7 +42,9 @@ t.test('https_get: curl exit codes and status lines map to the Python detail res
     end
     return t.await({},function(cb) io_.https_get('wgclient1','8.8.8.8','dns.google','/resolve?name=example.com&type=A',6,cb) end)
   end
-  t.eq({run(28)},{nil,'timeout'});t.eq({run(60)},{nil,'tls-error'});t.eq({run(35)},{nil,'tls-error'})
+  t.eq({run(28)},{nil,'timeout'});t.eq({run(60)},{nil,'tls-untrusted'});t.eq({run(35)},{nil,'tls-error'})
+  t.eq({run(90)},{nil,'tls-untrusted'});t.eq({run(83)},{nil,'tls-untrusted'});t.eq({run(51)},{nil,'tls-untrusted'})
+  t.eq({run(77)},{nil,'tls-error'},'an unreadable CA file is a local fault, not an untrusted peer')
   t.eq({run(63)},{nil,'invalid-response'});t.eq({run(7)},{nil,'transport-error'});t.eq({run(0)},{nil,'transport-error'},'no header file')
   t.eq(run(0,'HTTP/1.1 426 Upgrade Required\r\n\r\n',''),{status=426,body=''})
   t.eq({run(0,'garbage\r\n\r\n','x')},{nil,'invalid-response'})
@@ -52,6 +56,30 @@ t.test('https_get: curl exit codes and status lines map to the Python detail res
   t.eq({t.await({},function(cb) io_.https_get('wgclient1','8.8.8.8;id','dns.google','/x',6,cb) end)},{nil,'transport-error'})
   t.eq({t.await({},function(cb) io_.https_get('wgclient1','8.8.8.8','dns.google','/x y',6,cb) end)},{nil,'transport-error'})
   t.eq(called,false,'unsafe arguments never reach a child')
+end)
+
+t.test('https_get: the host pinned roots (--cacert) and the request nonce (-A) from probe_trust',function()
+  local trust=require('probe_trust')
+  local saved=trust.ANCHORS
+  trust.ANCHORS=(arg[0]:match('^(.*)/[^/]*$') or '.')..'/../../files/usr/lib/homensai-vpn/probe-anchors';trust.reset()
+  local seen
+  io_.spawn=function(argv,seconds,cb) seen=argv;cb(28) end
+  local agent=trust.agent(function(n) return string.rep('\171',n) end)
+  t.eq(agent,'HomenSAI-probe/'..string.rep('ab',16))
+  t.await({},function(cb) io_.https_get('wgclient1','1.1.1.1','one.one.one.one','/cdn-cgi/trace',6,cb,agent) end)
+  t.truthy(string.find(argument(seen,'--cacert'),'/probe%-anchors/one%.one%.one%.one%.pem$'),'own roots of the host')
+  t.eq(argument(seen,'-A'),agent);t.eq(seen[#seen],'https://one.one.one.one/cdn-cgi/trace','the URL stays last')
+  t.await({},function(cb) io_.https_get('wgclient1','8.8.8.8','dns.google','/x',6,cb) end)
+  t.truthy(string.find(argument(seen,'--cacert'),'/dns%.google%.pem$'))
+  t.await({},function(cb) io_.https_get('wgclient1','8.8.8.8','example.org','/x',6,cb) end)
+  t.eq(argument(seen,'--cacert'),nil,'a host without anchors keeps the system store')
+  local called=false
+  io_.spawn=function() called=true end
+  for _,bad in ipairs({'a b','x;id','$(id)',string.rep('a',65),"o'k"}) do
+    t.eq({t.await({},function(cb) io_.https_get('wgclient1','1.1.1.1','one.one.one.one','/x',6,cb,bad) end)},{nil,'transport-error'},bad)
+  end
+  t.eq(called,false,'an unsafe agent never reaches a child')
+  trust.ANCHORS=saved;trust.reset()
 end)
 
 t.test('without an event loop the socket and child primitives refuse instead of blocking',function()

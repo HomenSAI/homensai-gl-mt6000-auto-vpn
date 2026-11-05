@@ -12,7 +12,7 @@ import time
 
 WEEK=7*86400
 PROFILE=re.compile(r'^(?:openvpn:[0-9]+_[0-9]+|wireguard:peer_[0-9]+)$')
-BAD={'VPN-001','VPN-003','DNS-001'}
+BAD={'VPN-001','VPN-003','DNS-001','VPN-MTU'}
 METRICS=('checks','failed_checks','outages','recoveries','observed_up_seconds',
          'observed_down_seconds','unknown_intervals','auto_observed_seconds')
 

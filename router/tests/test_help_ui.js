@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Node{constructor(tag,attrs,children){this.tag=tag;this.attrs=attrs||{};this.children=[].concat(children===undefined?[]:children).flat();}
   text(){return this.children.map(c=>typeof c==='string'?c:c.text()).join(' ');}
@@ -49,10 +50,10 @@ context.URL=URL;context.window={location:{href:'http://router/?setup_help=1#help
 for(const lang of ['en','ru']){
  context.bi=(en,ru)=>lang==='ru'?ru:en;
  const guide=context.renderHelp(),steps=guide.all().filter(n=>n.attrs['data-setup-guide-step']);
- assert.equal(steps.length,8);assert.equal(guide.all().filter(n=>n.tag==='details').length,1);assert(guide.all().find(n=>n.tag==='details').attrs.open);
+ assert.equal(steps.length,4);  // first-run wizard of the approved page: Роутер → Каналы → Поведение → Условия и запускassert.equal(guide.all().filter(n=>n.tag==='details').length,1);assert(guide.all().find(n=>n.tag==='details').attrs.open);
  assert.equal(guide.all().filter(n=>n.tag==='button').length,1,'focused guide offers only a diagnostic copy action, not a control operation');
  assert.equal(guide.all().find(n=>n.tag==='button').attrs['data-diagnostic-copy'],'setup-guide');
  assert(guide.text().includes(lang==='ru'?'значения можно оставить':'existing values'));
  for(const step of steps){assert(step.text().length>150);assert.equal(/[А-Яа-я]/.test(step.text()),lang==='ru');}
 }
-console.log('PASS: focused eight-step setup guide EN/RU, concrete examples, no action RPCs');
+console.log('PASS: focused four-step setup guide EN/RU, concrete examples, no action RPCs');

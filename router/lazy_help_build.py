@@ -16,7 +16,8 @@ def once(text,old,new):
     return text.replace(old,new,1)
 
 
-def split(source,ui_module):
+def split(source,ui_module,outputs=None):
+    """outputs: when given (the in-memory legacy pipeline), the module text is stored there instead of written."""
     root=Path(__file__).resolve().parents[1]
     parts={}
     for name in MODULES:
@@ -34,7 +35,13 @@ def split(source,ui_module):
     result=subprocess.run(['node',str(root/'qa/export_lazy_titles.js')],cwd=root,capture_output=True,text=True,encoding='utf8',timeout=45)
     if result.returncode:raise ValueError('LAZY-TITLE-EXPORT: '+result.stderr[-800:])
     eager=json.loads(result.stdout)
-    manifest='var ERROR_ROWS='+json.dumps(eager['rows'],ensure_ascii=False,separators=(',',':'))+';\nvar HELP_TOPICS=['+json.dumps(eager['telegram'],ensure_ascii=False,separators=(',',':'))+'];\n'
+    # Size (2.1.0): each eager row names its group by index into one list, restored at load; ~5 KB less in the first screen.
+    groups=[]
+    for row in eager['rows']:
+        if row[1] not in groups:groups.append(row[1])
+    rows=[[row[0],groups.index(row[1])]+row[2:] for row in eager['rows']]
+    manifest=('var ERROR_ROWS=(function(g){return '+json.dumps(rows,ensure_ascii=False,separators=(',',':'))+'.map(function(r){r[1]=g[r[1]];return r;});})('
+              +json.dumps(groups,ensure_ascii=False,separators=(',',':'))+');\nvar HELP_TOPICS=['+json.dumps(eager['telegram'],ensure_ascii=False,separators=(',',':'))+'];\n')
     # Root code keeps its title registry and state; long details are adopted atomically on load.
     core=(root/'router/lazy_help.inc.js').read_text(encoding='utf8')
     core=once(core,'__LAZY_HELP_MODULE__','homensai-vpn.help'+ui_module.removeprefix('dashboard'))
@@ -54,9 +61,10 @@ def split(source,ui_module):
     payload="'use strict';\n'require baseclass';\nreturn baseclass.extend({create:function(ctx){\n"+imports+'\n'
     payload+='\n'.join(parts[name] for name in MODULES)+'\n'
     payload+="ctx.extraHelpTopics.forEach(function(topic){if(topic.id!=='telegram'&&!HELP_TOPICS.some(function(t){return t.id===topic.id;}))HELP_TOPICS.push(topic);});\n"
-    payload+="ctx.installCatalogue({rows:ERROR_ROWS,groups:ERROR_GROUPS,groupOf:ERROR_GROUP_OF,state:ERROR_TABLE_STATE,persist:persistErrorTableState});\nensureJournalDictionary();\nreturn {renderHelp:renderHelp,renderLearn:renderLearn,renderErrorTable:renderErrorTable,renderSwitchPage:renderSwitchPage,renderCollectionPage:renderCollectionPage};\n}});\n"
+    payload+="ctx.installCatalogue({rows:ERROR_ROWS,groups:ERROR_GROUPS,groupOf:ERROR_GROUP_OF,state:ERROR_TABLE_STATE,persist:persistErrorTableState});\nensureJournalDictionary();\nreturn {renderHelp:renderHelp,renderLearn:renderLearn,renderErrorTable:renderErrorTable,renderSwitchPage:renderSwitchPage,renderCollectionPage:renderCollectionPage,helpTopics:function(){return HELP_TOPICS;},topicNode:function(id){var topic=HELP_TOPICS.filter(function(x){return x.id===id;})[0];if(!topic)return null;var steps=topic.custom?topic.custom():E('ol',{'class':'hv-help-steps'},topic.steps.map(function(step){return E('li',{},[E('p',{},richText(bi(step.t[0],step.t[1]))),step.c?helpCommand(step.c):null].filter(Boolean));}));return E('div',{'class':'hv-help-topic','id':'help-'+topic.id},[E('p',{'class':'hv-help-when'},bi(topic.when[0],topic.when[1])),steps,topic.id!=='diagnose-all'?renderDiagnosticPrompt(topic,false):renderDiagnosticPrompt(topic,true)].filter(Boolean));},topicPrompt:function(id){var topic=HELP_TOPICS.filter(function(x){return x.id===id;})[0];return topic?helpDiagnosticPrompt(topic):null;},generalPrompt:function(){return generalDiagnosticPrompt();},catalogue:function(){return {rows:ERROR_ROWS,groups:ERROR_GROUPS,groupOf:ERROR_GROUP_OF};}};\n}});\n"
     lazy_dir=root/'router/files/www/luci-static/resources/homensai-vpn';lazy_dir.mkdir(parents=True,exist_ok=True)
-    (lazy_dir/('help'+ui_module.removeprefix('dashboard')+'.js')).write_text(payload,encoding='utf8',newline='')
+    if outputs is not None:outputs['help']=payload
+    else:(lazy_dir/('help'+ui_module.removeprefix('dashboard')+'.js')).write_text(payload,encoding='utf8',newline='')
     if len(source.encode('utf8'))>int((len(source.encode('utf8'))+sum(len(text.encode('utf8')) for text in parts.values()))*.70):
         raise ValueError('LAZY-MAIN-SIZE: less than 30 percent reduction')
     return source

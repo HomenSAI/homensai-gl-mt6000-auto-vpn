@@ -61,5 +61,15 @@ class CompareTests(unittest.TestCase):
         for bad in ({'metric':'icmp-1.1.1.1','compare':1},{'metric':'icmp-1.1.1.1','compare':True,'x':1}):
             with self.assertRaises(ValueError):setup_config.response_payload(bad)
 
+    def test_server_pick_model_is_optional_and_strict(self):
+        # integration alpha8: the expert setting of the approved page; absent = the option is left as it is
+        self.assertEqual(setup_config.response_payload({'metric':'icmp-1.1.1.1','server_pick_model':'bayes'})['main'],
+                         {'response_metric':'icmp-1.1.1.1','server_pick_model':'bayes'})
+        self.assertEqual(setup_config.response_payload({'metric':'icmp-1.1.1.1','server_pick_model':'simple'})['main']['server_pick_model'],'simple')
+        self.assertNotIn('server_pick_model',setup_config.response_payload({'metric':'icmp-1.1.1.1','server_pick':True})['main'])
+        for bad in ('Bayes','',None,1,'hmm'):
+            with self.subTest(bad=bad),self.assertRaisesRegex(ValueError,'RESPONSE-METRIC-INVALID'):
+                setup_config.response_payload({'metric':'icmp-1.1.1.1','server_pick_model':bad})
+
 
 if __name__=='__main__':unittest.main()

@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // One shared state/operation model: live transitions, deadlines, recovery-needed and connection wording on every surface.
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class N {

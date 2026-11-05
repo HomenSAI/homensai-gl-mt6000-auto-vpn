@@ -13,6 +13,12 @@ DENSE_INTERVAL seconds for both Auto channels until the suspect channel passes
 again, fails CONFIRM_FAILURES times while the reserve is proven, Auto switches,
 or DENSE_MAX passes. A suspicion is never a failure: Auto still switches only on
 its own unchanged streak of full checks.
+
+Failure model (channel_model.py, option failure_model 'hmm'/'hmm-fast'; the monitor passes its per-channel view
+as `models`): the model's suspicion (P(bad) >= 0.2 while it has not decided) of the channel carrying traffic also
+starts an episode (reason 'model', same rest and doubling); an episode then runs until the model decided
+('failure-confirmed'), until DENSE_GOOD good checks with the suspicion gone ('false-alarm'), a switch or DENSE_MAX
+(study REPORT.ru.md 6.5). Without `models` (or with 'consecutive') the rules above are unchanged.
 """
 import json
 import math
@@ -187,8 +193,9 @@ class Booster:
         except (OSError,ValueError):pass
         return row
 
-    def observe(self,settings,rows,pair,native_state,now=None):
-        """One decision per monitor pass; returns the history rows it recorded."""
+    def observe(self,settings,rows,pair,native_state,now=None,models=None):
+        """One decision per monitor pass; returns the history rows it recorded.
+        models: {profile id: channel_model.public view} of the pair channels (HMM modes), or None."""
         now=time.time() if now is None else now
         recorded=[]
         chosen=level(settings);enabled=boost_enabled(settings)
@@ -228,7 +235,9 @@ class Booster:
             recorded.append(self.record({'kind':'boost-start','level':chosen,'interval':interval,'measure_interval':measure,
                 'boost_enabled':True,'profile':trigger['profile'],'role':trigger['role'],'code':code,'result':'started',
                 'boost_interval':BOOST_INTERVAL},now))
-        recorded.extend(self._dense_observe(settings,rows,pair,native_state,now))
+        models=models if isinstance(models,dict) else None
+        recorded.extend(self._dense_observe(settings,rows,pair,native_state,now,models))
+        recorded.extend(self._model_suspect(settings,pair,native_state,now,models))
         try:self.atomic_json(self.runtime/STATE_NAME,self.state)
         except (OSError,ValueError):pass
         return recorded
@@ -269,7 +278,22 @@ class Booster:
             return True
         return False
 
-    def _dense_observe(self,settings,rows,pair,native_state,now):
+    def _model_suspect(self,settings,pair,native_state,now,models):
+        """The failure model's suspicion of the channel carrying traffic starts a dense episode (reason 'model')."""
+        if models is None or self.dense(now) or native_state not in WATCHING or not isinstance(pair,dict):return []
+        role='source' if native_state=='OBSERVING' else 'target'
+        profile=pair.get(role);view=models.get(profile)
+        if profile is None or not isinstance(view,dict) or view.get('suspect') is not True or view.get('failed') is True:return []
+        rest=self.state.get('suspicion_rest') if isinstance(self.state.get('suspicion_rest'),dict) else {}
+        held=rest.get(profile) if isinstance(rest.get(profile),dict) else {}
+        if now<held.get('until',0):return []
+        evidence={'p_bad':view.get('p_bad'),'persist':view.get('persist')}
+        episode={'profile':profile,'role':role,'reason':'model','evidence':evidence,'started':now,'until':now+DENSE_MAX,
+                 'native_state':native_state,'checks':0,'failures':0,'good':0,'reserve_good':0,'last_code':None}
+        self.state['dense']=episode
+        return [self._row(settings,'suspicion-start',episode,now,evidence=evidence,code=None,result='started')]
+
+    def _dense_observe(self,settings,rows,pair,native_state,now,models=None):
         recorded=[]
         streaks=self.state.get('streaks') if isinstance(self.state.get('streaks'),dict) else {}
         ids=[pair.get('source'),pair.get('target')] if isinstance(pair,dict) else []
@@ -296,7 +320,16 @@ class Booster:
         switched=native_state in TRANSITIONS or (native_state!=episode.get('native_state')
                                                  and native_state in ('COMMITTED','DEGRADED-ON-RESERVE'))
         result=None
-        if switched:result='switched'
+        view=models.get(suspect) if models is not None else None
+        if isinstance(view,dict):
+            # the failure model decides the episode (it decides the switch too)
+            decided=view.get('failed') is True
+            if switched:result='switched'
+            elif episode['good']>=DENSE_GOOD and view.get('suspect') is not True:result='false-alarm'
+            elif decided and (reserve is None or episode['reserve_good']>=DENSE_GOOD):result='failure-confirmed'
+            elif native_state not in WATCHING:result='cancelled'
+            elif now>=episode.get('until',0):result='failure-confirmed' if decided else 'expired'
+        elif switched:result='switched'
         elif episode['good']>=DENSE_GOOD:result='false-alarm'
         elif episode['failures']>=CONFIRM_FAILURES and (reserve is None or episode['reserve_good']>=DENSE_GOOD):result='failure-confirmed'
         elif native_state not in WATCHING:result='cancelled'

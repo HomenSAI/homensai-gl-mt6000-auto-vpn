@@ -53,9 +53,9 @@ local function network(R)
     return sysfs(device,name)
   end
   local https,datagram=R.https_get,R.datagram
-  function R.https_get(device,address,hostname,path,seconds,cb)
+  function R.https_get(device,address,hostname,path,seconds,cb,agent)
     if R.down[device] then R.https_calls=(R.https_calls or 0)+1;cb(nil,'timeout');return end
-    return https(device,address,hostname,path,seconds,cb)
+    return https(device,address,hostname,path,seconds,cb,agent)
   end
   function R.datagram(kind,device,host,port,packet,seconds,accept,cb)
     if kind=='udp' and R.down[device] then cb(nil,'timeout');return end
@@ -106,23 +106,24 @@ t.test('healthy channels: one echo per channel per beat, alternating targets, pe
   t.truthy(canon.encode(public),'encodable')
 end)
 
-t.test('black hole: the third unanswered echo in a row makes a suspect; two do not',function()
+t.test('black hole: the second unanswered echo in a row makes a suspect; one does not (LOSSES 2 since 03.11.2026)',function()
+  t.eq(fast.LOSSES,2)
   local R=network(t.fake_runner())
   local p=pulse(R)
   beats(p,R,3)
   R.down.wgclient='blackhole'
-  t.eq(beats(p,R,2),nil,'the first beat reads the answer of the echo sent before the outage')
-  t.eq(p.channels[SOURCE].lost,1)
+  t.eq(beats(p,R,1),nil,'the first beat reads the answer of the echo sent before the outage')
+  t.eq(p.channels[SOURCE].lost,0)
   R.down.wgclient=nil
-  t.eq(beats(p,R,1),nil,'the echo sent into the black hole is the second loss');t.eq(p.channels[SOURCE].lost,2)
+  t.eq(beats(p,R,1),nil,'the echo sent into the black hole is one loss: no suspect');t.eq(p.channels[SOURCE].lost,1)
   t.eq(beats(p,R,1),nil,'an answer clears the count');t.eq(p.channels[SOURCE].lost,0)
   R.down.wgclient='blackhole'
-  t.eq(beats(p,R,3),nil)
+  t.eq(beats(p,R,2),nil)
   local found=beats(p,R,1)
-  t.eq(#found,1);t.eq(found[1].id,SOURCE);t.eq(found[1].lost,3);t.eq(found[1].reason,'timeout')
+  t.eq(#found,1);t.eq(found[1].id,SOURCE);t.eq(found[1].lost,2);t.eq(found[1].reason,'timeout')
   t.eq(p.channels[TARGET].lost,0,'the reserve keeps answering')
   local ev=p:evidence(found[1],R.clock())
-  t.eq(ev.losses,3);t.eq(ev.cause,'timeout');t.eq(ev.stalled_s,2,'nothing received since the first loss')
+  t.eq(ev.losses,2);t.eq(ev.cause,'timeout');t.eq(ev.stalled_s,1,'nothing received since the first loss')
 end)
 
 t.test('a refused send (nft drop) counts at once and keeps the socket; disarm holds until an answer',function()
@@ -130,17 +131,17 @@ t.test('a refused send (nft drop) counts at once and keeps the socket; disarm ho
   local p=pulse(R)
   beats(p,R,2)
   R.down.wgclient='refused'
-  t.eq(beats(p,R,2),nil)
+  t.eq(beats(p,R,1),nil,'one refused send is not a suspect')
   local found=beats(p,R,1)
   t.eq(found[1].id,SOURCE);t.eq(found[1].reason,'send-refused');t.eq(R.opened,2,'socket kept on EPERM')
   p:disarm(SOURCE)
   t.eq(beats(p,R,20),nil,'disarmed: one episode per outage')
-  t.eq(p.channels[SOURCE].lost,23)
+  t.eq(p.channels[SOURCE].lost,22)
   R.down.wgclient=nil
   beats(p,R,2)
   t.eq(p.channels[SOURCE].armed,true,'an answer re-arms')
   R.down.wgclient='refused'
-  t.eq(#beats(p,R,3),1,'a new outage is a new suspect')
+  t.eq(#beats(p,R,2),1,'a new outage is a new suspect')
   p:hold(SOURCE,R.clock()+5)
   t.eq(beats(p,R,4),nil,'held');t.eq(#beats(p,R,1),1,'offered again after the hold')
 end)
@@ -150,7 +151,8 @@ t.test('link signals: a missing device is a loss, a re-created device and a sock
   local p=pulse(R)
   beats(p,R,2)
   R.down.wgclient='missing'
-  t.eq(#beats(p,R,3),1);t.eq(p.channels[SOURCE].reason,'link-missing')
+  t.eq(beats(p,R,1),nil,'one missing beat is not a suspect')
+  t.eq(#beats(p,R,1),1);t.eq(p.channels[SOURCE].reason,'link-missing')
   R.down.wgclient=nil;R.counters.wgclient.ifindex=99
   local before=p.channels[SOURCE].lost
   beats(p,R,3)
@@ -229,12 +231,13 @@ end)
 ------------------------------------------------------------------------------------------------------
 local function settings(extra)
   local s={enabled=true,interval=60,probe_level=1,checkpoint=900,probe_limit=16,live_log_limit=2000,history_days=7,
-    plan_source=SOURCE,plan_target=TARGET,plan_source_tunnel='wireguard:wgclient',plan_target_tunnel='wireguard:wgclient2'}
+    plan_source=SOURCE,plan_target=TARGET,plan_source_tunnel='wireguard:wgclient',plan_target_tunnel='wireguard:wgclient2',
+    failure_model='consecutive'}  -- the pulse acceptance below is measured against the previous rule; the model variant passes its own
   for k,v in pairs(extra or {}) do s[k]=v end
   return s
 end
-local function fresh(config)
-  local R=network(t.fake_runner({config=config,inventory=t.inventory({settings=settings()})}))
+local function fresh(config,extra)
+  local R=network(t.fake_runner({config=config,inventory=t.inventory({settings=settings(extra)})}))
   R.files['/run/hv/native-status.json']=canon.encode(canon.object({state='OBSERVING',mode='continuous-pair',time=R.now-1}))
   return R,monitor.new(R)
 end
@@ -255,9 +258,9 @@ t.test('monitor, switch on: beats after a pass, a lost primary starts the dense 
   R.down.wgclient='refused'
   local started
   for i=1,3 do R.advance(1);started=m:fast_tick();if started then started=i;break end end
-  t.eq(started,3,'the third refused beat')
+  t.eq(started,2,'the second refused beat')
   local dense=m.booster:dense(R.wall())
-  t.eq(dense.reason,'heartbeat-lost');t.eq(dense.profile,SOURCE);t.eq(dense.role,'source');t.eq(dense.evidence.losses,3)
+  t.eq(dense.reason,'heartbeat-lost');t.eq(dense.profile,SOURCE);t.eq(dense.role,'source');t.eq(dense.evidence.losses,2)
   t.eq(dense.evidence.cause,'send-refused')
   t.eq(m:next_delay()<=4,true,'dense cadence')
   local history=canon.decode(R.files['/etc/hv/probe-history.json'])
@@ -291,8 +294,10 @@ end)
 -- evaluates pair.streak (the unchanged rule: 3 failures of the source, 2 successes of the reserve) every 2 s.
 ------------------------------------------------------------------------------------------------------
 local FAIL_PASS,OK_PASS=7,2
-local function simulate(config,faults,mode,total)
-  local R,m=fresh(config)
+local function simulate(config,faults,mode,total,model)
+  local extra=model and {failure_model=model} or nil
+  local R,m=fresh(config,extra)
+  local CM=require('channel_model')
   local start=R.clock()
   local function fault_at(x) for _,f in ipairs(faults) do if x>=f[1] and x<f[1]+f[2] then return true end end;return false end
   local next_pass,busy_until,visible=0,-1,nil
@@ -313,7 +318,9 @@ local function simulate(config,faults,mode,total)
     if m:fast_tick() then flagged[#flagged+1]=second;if second>=busy_until then next_pass=second+1 else next_pass=busy_until end end
     if visible and second%2==0 then
       local valid=monitor.observation_valid_for(settings())
-      local failed=pair.streak(visible.samples,SOURCE,3,R.wall(),valid,false)
+      local failed
+      if model then failed=CM.channel_failed(visible.samples,SOURCE,3,R.wall(),valid,canon.object(settings(extra)),nil,nil)
+      else failed=pair.streak(visible.samples,SOURCE,3,R.wall(),valid,false) end
       local healthy=pair.streak(visible.samples,TARGET,2,R.wall(),valid,true)
       if failed and healthy then decided[#decided+1]=second end
     end
@@ -342,6 +349,17 @@ t.test('acceptance: four 150 s outages (firewall drop and black hole) are confir
       t.truthy(with[i]<without[i],mode..' outage '..i..': faster with the pulse ('..with[i]..' vs '..without[i]..')')
     end
     print(string.format('  %s: Auto streak met after %s s with the pulse, %s s without (level 1)',mode,table.concat(with,'/'),table.concat(without,'/')))
+  end
+end)
+
+t.test('acceptance with the failure model (hmm): the pulse and the model episodes confirm every outage in time',function()
+  for _,mode in ipairs({'refused','blackhole'}) do
+    local with=simulate(ON,OUTAGES,mode,1700,'hmm')
+    for i=1,4 do
+      t.truthy(with[i],mode..' outage '..i..' decided by the model')
+      t.truthy(with[i]<=40,mode..' outage '..i..' decided within 40 s, got '..tostring(with[i]))
+    end
+    print(string.format('  %s: the model decided after %s s with the pulse (level 1)',mode,table.concat(with,'/')))
   end
 end)
 

@@ -63,19 +63,19 @@
 
 ## Атрибуты владельца на каждой странице (постоянное правило, 18.10.2026)
 
-На каждой странице приложения и в каждом варианте оформления (A, B, C и любых будущих) всегда видны: название «HomenS.AI Auto VPN», устройство «GL.iNet GL-MT6000 · Flint 2», «Разработчик · Serhii Khomenko» со ссылкой на homensai.com, версия программы, версия пакета и сборка страницы, «HomenS.AI Style» с версией, значок версии в шапке и подвал с копирайтом и ссылками автора. Новое оформление может перенести эти атрибуты, но не может их скрыть. Проверка: router/tests/test_attribution_ui.js (сборка падает, если правило CSS прячет полосу атрибутов, подвал или значок версии).
+На каждой странице приложения, в каждом виде («Простой», «Пульт», мастер первой настройки) и в любом будущем оформлении всегда видны: название «HomenS.AI Auto VPN», устройство (модель, определённая роутером, например «GL.iNet GL-MT3000 · Beryl AX» или «GL.iNet GL-MT6000 · Flint 2»), «Разработчик · Serhii Khomenko» со ссылкой на homensai.com, версия программы, версия пакета и сборка страницы, «HomenS.AI Style» с версией, значок версии в шапке и подвал с копирайтом и ссылками автора. Новое оформление может перенести эти атрибуты, но не может их скрыть. Проверка: router/tests/test_attribution_ui.js (сборка падает, если правило CSS прячет полосу атрибутов, подвал или значок версии).
 
 ## Лампы состояния мигают (постоянное правило, 18.10.2026)
 
-Все лампы состояния на всех страницах и во всех вариантах оформления слегка мигают, чтобы состояние сразу бросалось в глаза: зелёная медленно, жёлтая быстро, красная средне. Серая лампа (выключено или нет данных) не мигает. Если пользователь включил в системе «уменьшить движение», лампы не мигают. Новые элементы состояния делаются с такой же небольшой анимацией по умолчанию.
+Все лампы состояния на всех страницах и во всех видах слегка мигают, чтобы состояние сразу бросалось в глаза: зелёная медленно, жёлтая быстро, красная средне. Серая лампа (выключено или нет данных) не мигает. Если пользователь включил в системе «уменьшить движение», лампы не мигают. Новые элементы состояния делаются с такой же небольшой анимацией по умолчанию.
 
-## First-run wizard (owner request, 20 October 2026)
+## First-run wizard (owner request, 20 October 2026; approved mockup C, 03 November 2026)
 
-After the explicit terms screen, offer one complete initial configuration wizard. Save the supported application preferences and a separate completion marker on the router. Later entries use the saved state; edits belong in Settings. Include monitoring, existing profile metadata and selection, recovery, optional speed tests and Telegram, and interface defaults. Permit deferred profile selection when profiles are not yet installed. See [First-run setup](FIRST-RUN-SETUP.md) for the persistence and failure contract.
+Since 03 Nov 2026 the wizard has four steps: Router (detected model and readiness, no manual model choice) → Channels → Behaviour → Terms and start; the terms are shown at the last step, "Save without starting" never starts Auto and only the owner accepts the terms. The original requirement follows. After the explicit terms screen, offer one complete initial configuration wizard. Save the supported application preferences and a separate completion marker on the router. Later entries use the saved state; edits belong in Settings. Include monitoring, existing profile metadata and selection, recovery, optional speed tests and Telegram, and interface defaults. Permit deferred profile selection when profiles are not yet installed. See [First-run setup](FIRST-RUN-SETUP.md) for the persistence and failure contract.
 
-## Default page design (owner decision, 20 October 2026)
+## Default page design (owner decision, 20 October 2026; superseded 03 November 2026)
 
-B · Calm («Спокойный») is the default for new installations, first-entry/terms screens and missing or invalid design preferences. Preserve explicit A/C choices. The existing precedence stays: current page choice, then a valid browser choice, then the router's saved default, then B. Users can still change the design in Settings. Every design retains the required product, version and author attribution.
+Superseded by the owner-approved mockups: the page has one design with two views, «Простой» / Simple (mockup A) and «Пульт» / Console (mockup D), switched by ☰ / ▦ next to the language button and kept per browser; only language, theme and view change, and the A/B/C picker is removed. Historical text: B · Calm («Спокойный») is the default for new installations, first-entry/terms screens and missing or invalid design preferences. Preserve explicit A/C choices. The existing precedence stays: current page choice, then a valid browser choice, then the router's saved default, then B. Users can still change the design in Settings. Every design retains the required product, version and author attribution.
 
 ## Firmware-owned server failover (owner decision, 20 October 2026)
 

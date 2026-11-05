@@ -72,7 +72,7 @@ function renderMonitorPage(status,inventory){
       E('td',{},mine.length?Math.round(100*(mine.length-bad)/mine.length)+'%':'—'),E('td',{},last?new Date(last.time*1000).toLocaleTimeString():'—'),E('td',{},last&&last.code?last.code:bi('OK','OK'))]);
   });
   var p=status.probe_policy||{};
-  return E('section',{'class':'hv-chart-card hv-monitor-page','data-monitor-page':'1'},[
+  return E('section',{'class':'hv-chart-card hv-monitor-page','data-monitor-page':'1','data-stats-reset':'samples'},[
     E('h3',{},bi('Monitoring','Мониторинг')),head,
     E('p',{'class':'hv-step-note'},bi('Probe level ','Уровень опроса ')+(p.level||'—')+' · '+bi('channel check every ','проверка каналов раз в ')+(p.effective_interval||'—')+bi(' s',' с')+' · '+bi('ping every ','пинг раз в ')+(p.effective_ping_interval||p.ping_interval||'—')+bi(' s',' с')+' · '+bi('websites every ','сайты раз в ')+(p.measure_interval||'—')+bi(' s',' с')+(p.boost_active?' · '+bi('boost active','идёт ускорение'):'')),
     E('table',{'class':'table hv-monitor-table','data-hv-no-sort':'1'},[E('tr',{},[bi('Channel','Канал'),bi('Checks in the last hour','Проверок за час'),bi('Failed','Не прошло'),bi('Passed','Прошло'),bi('Last check','Последняя проверка'),bi('Last result','Последний результат')].map(function(c){return E('th',{'scope':'col'},c);}))].concat(rows))]);

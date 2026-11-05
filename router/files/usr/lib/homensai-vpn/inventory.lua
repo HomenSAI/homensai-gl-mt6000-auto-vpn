@@ -60,7 +60,8 @@ uci:foreach('homensai_vpn','main',function(s)
   main.recovery_cooldown=math.max(60,math.min(1800,tonumber(s.recovery_cooldown) or 60))
   main.recovery_min_dwell=math.max(60,math.min(3600,tonumber(s.recovery_min_dwell) or 60))
   main.recovery_primary_successes=math.max(2,math.min(10,tonumber(s.recovery_primary_successes) or 2))
-  main.recovery_primary_stable=math.max(30,math.min(600,tonumber(s.recovery_primary_stable) or 30))
+  main.recovery_primary_stable=math.max(30,math.min(600,tonumber(s.recovery_primary_stable) or 120))
+  main.recovery_rescue_stable=math.max(0,math.min(60,tonumber(s.recovery_rescue_stable) or 10))
   local function attempt_number(raw,default,maximum)
     if type(raw)~='string' or not raw:match('^%d%d?%d?$') then return default end
     local n=tonumber(raw);if not n or n<1 or n>maximum then return default end
@@ -68,6 +69,9 @@ uci:foreach('homensai_vpn','main',function(s)
   end
   main.recovery_attempt_limit=attempt_number(s.recovery_attempt_limit,3,10)
   main.recovery_attempt_window=attempt_number(s.recovery_attempt_window,15,15)
+  -- Channel-failure model (channel_model.py/.lua, owner decision 03.11.2026): 'hmm' (default, standard),
+  -- 'hmm-fast' (fast) or 'consecutive' (the previous rule: recovery_failures failed checks in a row).
+  main.failure_model=(s.failure_model=='hmm-fast' or s.failure_model=='consecutive') and s.failure_model or 'hmm'
 
   main.speed_enabled=s.speed_enabled=='1'
   main.speed_auto_new=s.speed_auto_new=='1'
@@ -104,6 +108,10 @@ uci:foreach('homensai_vpn','main',function(s)
   main.response_metric=(metric=='icmp-1.1.1.1' or metric=='icmp-8.8.8.8' or metric=='icmp-9.9.9.9' or metric=='websites') and metric or 'icmp-1.1.1.1'
   main.response_compare=s.response_compare=='1'
   main.fast_switch=s.fast_switch~='0'
+  main.server_pick=s.server_pick=='1'  -- best server inside a channel (2.1.0): off unless the owner switched it on
+  -- how it picks (server_pick.py MODELS): 'simple' (the 20 % rule) unless the owner set option server_pick_model 'bayes'
+  -- (private/math/bayes-pick: far fewer useless changes and probes, but slower to find a better server)
+  main.server_pick_model=s.server_pick_model=='bayes' and 'bayes' or 'simple'
   main.stats_mode=s.stats_mode=='diagnostic' and 'diagnostic' or 'work'
   main.stats_until=math.max(0,math.floor(tonumber(s.stats_until) or 0))
   main.lua_core=s.lua_core=='1'
@@ -112,6 +120,11 @@ uci:foreach('homensai_vpn','main',function(s)
   -- Owner ping cadence (probe_policy.ping_interval): 10..300 s in steps of 10, otherwise once a minute.
   local ping=tonumber(s.ping_interval)
   main.ping_interval=(ping and ping>=10 and ping<=300 and ping%10==0) and math.floor(ping) or 60
+  -- SQM (sqm.py / lua/sqm.lua): cake on the tunnel egress; off unless the owner switched it on AND set an upload
+  -- rate (1000..1000000 kbit/s); anything else reads as 0 = not set, and nothing is shaped.
+  main.sqm_enabled=s.sqm_enabled=='1'
+  local sqm_kbit=type(s.sqm_upload_kbit)=='string' and s.sqm_upload_kbit:match('^%d%d?%d?%d?%d?%d?%d?$') and tonumber(s.sqm_upload_kbit)
+  main.sqm_upload_kbit=(sqm_kbit and sqm_kbit>=1000 and sqm_kbit<=1000000) and sqm_kbit or 0
   main.checkpoint=math.max(300,math.min(3600,tonumber(s.checkpoint) or 900))
   main.probe_limit=math.max(1,math.min(32,tonumber(s.probe_limit) or 16))
   main.live_log_limit=math.max(1,math.min(2000,math.floor(tonumber(s.live_log_limit) or 2000)))

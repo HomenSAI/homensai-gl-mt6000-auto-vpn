@@ -25,7 +25,7 @@ from threading import Thread, local
 from probe_deadline import DeadlineSocket, HTTP_SECONDS, DENSE_HTTP_SECONDS, remaining
 MONITOR_HTTP_SECONDS = HTTP_SECONDS  # DENSE_HTTP_SECONDS during a dense confirmation (set per pass)
 
-VERSION = '2.0.0-beta5'
+VERSION = '2.1.0-alpha8'
 RUNTIME = Path('/var/run/homensai-vpn')
 PERSIST = Path('/etc/homensai-vpn')
 INVENTORY = '/usr/lib/homensai-vpn/inventory.lua'
@@ -234,7 +234,7 @@ class Accounting:
             profile.update(name=item.get('name', key), protocol=item.get('protocol', 'unknown'))
             code = item.get('code')
             state = ('idle' if not item.get('interface') else 'up' if not code else
-                     'down' if code in ('VPN-001', 'VPN-003', 'DNS-001') else 'unknown')
+                     'down' if code in ('VPN-001', 'VPN-003', 'DNS-001', 'VPN-MTU') else 'unknown')
             previous = self.activity_previous.get(key)
             if previous and now<=previous[0]:
                 if now<previous[0]:self.gaps+=1
@@ -435,21 +435,30 @@ def valid_dns(data, token):
     return received == token and bool(flags & 0x8000) and not flags & 0x020F and questions == 1 and answers > 0
 
 
-def dns_probe(device, mark):
+def dns_probe(device, mark, seconds=None):
+    import probe_trust
+    if probe_trust.current_dns_mode() == 'doh':
+        # option probe_dns 'doh': the same random question as an RFC 8484 query over pinned TLS (probe_trust.py)
+        try:return https_probe(device, mark, probe_trust.DOH_TARGET, seconds) is not None
+        except http.client.HTTPException:return False  # a garbled reply is no DNS answer (UDP raises OSError only)
     token, packet, question = dns_question()
     with bound_socket(device, mark, udp=True) as sock:
+        if seconds is not None:sock.settimeout(min(seconds,3))  # pair_auto.late_recheck: a shorter wait
         sock.connect(('9.9.9.9', 53))
         sock.send(packet)
         data = sock.recv(4096)
     return valid_dns(data, token) and data[12:12+len(question)] == question
 
 
-def https_probe(device, mark, target):
+def https_probe(device, mark, target, seconds=None):
     address, hostname, path, kind = target
     ipaddress.IPv4Address(address)
+    import probe_trust
     started = time.monotonic()
-    end = started + MONITOR_HTTP_SECONDS
+    wall_started = time.time()
+    end = started + (MONITOR_HTTP_SECONDS if seconds is None else seconds)
     token = None
+    user_agent = probe_trust.agent()
     if kind == 'dns-wire':
         token, packet, _ = dns_question()
         path += '?dns=' + base64.urlsafe_b64encode(packet).decode().rstrip('=')
@@ -458,15 +467,17 @@ def https_probe(device, mark, target):
         raw.settimeout(remaining(end))
         raw.connect((address, 443))
         raw.settimeout(remaining(end))
-        with ssl.create_default_context().wrap_socket(raw, server_hostname=hostname) as sock:
+        # probe_trust.context: the chain must end in this host's own pinned roots, hostname checked
+        with probe_trust.context(hostname).wrap_socket(raw, server_hostname=hostname) as sock:
             sock.settimeout(remaining(end))
-            sock.sendall(('GET %s HTTP/1.1\r\nHost: %s\r\nAccept: application/dns-json, application/dns-message, text/plain\r\nConnection: close\r\n\r\n' % (path, hostname)).encode('ascii'))
+            sock.sendall(('GET %s HTTP/1.1\r\nHost: %s\r\nUser-Agent: %s\r\nAccept: application/dns-json, application/dns-message, text/plain\r\nConnection: close\r\n\r\n' % (path, hostname, user_agent)).encode('ascii'))
             response = http.client.HTTPResponse(DeadlineSocket(sock,end))
             response.begin()
             detail=getattr(EXIT_CONTEXT,'probe_detail',None)
             if detail is not None:
                 detail['http_status']=response.status
                 if response.status!=200:detail['result']='http-unsupported'if response.status in(426,505)else'http-error'
+                if probe_trust.redirect(response.status):detail['trust']=probe_trust.REDIRECT
             if response.status!=200:return None
             body = response.read(32769)
             remaining(end)
@@ -474,6 +485,9 @@ def https_probe(device, mark, target):
                 return None
             if kind == 'trace':
                 valid = b'\nip=' in b'\n'+body and b'\nhttp=' in b'\n'+body
+                if valid and probe_trust.fresh(body, user_agent, wall_started, time.time(), time.monotonic()-started):
+                    valid = False  # a replayed or foreign page: not this request's answer
+                    if detail is not None:detail['trust']=probe_trust.STALE
                 if valid:remember_exit(device, body)
             elif kind == 'dns-json':
                 payload = json.loads(body)
@@ -520,18 +534,21 @@ def route_binding(logical):
     return {'code': None, 'device': device, 'mark': mark, 'table': table,'ifindex':ifindex}
 
 
-def https_for_probe(device,mark,target,sink,checks=None):
+def https_for_probe(device,mark,target,sink,checks=None,seconds=None):
     # The trace belongs to this one probe, even when two logical tunnels share
     # a device or a late worker finishes after another measurement started.
     EXIT_CONTEXT.sink=sink
     detail={'target':target[1],'result':'unknown'};EXIT_CONTEXT.probe_detail=detail;started=time.monotonic()
     try:
-        value=https_probe(device,mark,target)
+        value=https_probe(device,mark,target) if seconds is None else https_probe(device,mark,target,seconds)
         if value is not None:detail['result']='ok'
         elif detail['result']=='unknown':detail['result']='invalid-response'
         return value
     except socket.timeout:
         detail['result']='timeout';raise
+    except ssl.SSLCertVerificationError:
+        # a certificate outside the host's pinned roots or for another name: a portal, DPI or a foreign CA
+        detail['result']='tls-error';detail['trust']='untrusted-certificate';raise
     except ssl.SSLError:
         detail['result']='tls-error';raise
     except ValueError:
@@ -544,7 +561,15 @@ def https_for_probe(device,mark,target,sink,checks=None):
         del EXIT_CONTEXT.sink;del EXIT_CONTEXT.probe_detail
 
 
-def probe(profile):
+# The monitor's large-packet check schedule (mtu_check.Schedule, set by serve). Auto's live probes run in other
+# processes (native_switch, lua_bridge) where it stays None: only the monitor measures it (one shared reading).
+MTU_SCHEDULE=None
+
+
+def probe(profile, seconds=None):
+    """seconds: a shorter wait for every HTTPS and the DNS check (pair_auto.late_recheck); None = the usual.
+    A short recheck never runs the large-packet check (it stays the monitor's own reading)."""
+    if seconds is not None and not (type(seconds) is int and 1<=seconds<HTTP_SECONDS):seconds=None
     result = {'id': profile['id'], 'time': time.time(), 'code': 'CHECK-001',
               'scope': 'router-originated', 'lan_path_verified': False}
     administrative_state=profile.get('administrative_state','unknown')
@@ -557,10 +582,14 @@ def probe(profile):
         result.update(binding)
         if binding['code']:
             return result
-        exit_seen={};checks={}
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            futures = [pool.submit(https_for_probe, binding['device'], binding['mark'], t,exit_seen,checks) for t in TARGETS]
-            dns = pool.submit(dns_probe, binding['device'], binding['mark'])
+        exit_seen={};checks={};schedule=MTU_SCHEDULE if seconds is None else None;mtu=mtu_value=None
+        with ThreadPoolExecutor(max_workers=5) as pool:
+            extra=() if seconds is None else (seconds,)
+            futures = [pool.submit(https_for_probe, binding['device'], binding['mark'], t,exit_seen,checks,*extra) for t in TARGETS]
+            dns = pool.submit(dns_probe, binding['device'], binding['mark'],*extra)
+            if schedule is not None:
+                from mtu_check import run as mtu_run
+                mtu = pool.submit(mtu_run, schedule, profile['id'], binding)
             times = []
             for future in futures:
                 try:
@@ -573,14 +602,23 @@ def probe(profile):
                 dns_ok = dns.result()
             except (OSError, ValueError):
                 dns_ok = False
+            if mtu is not None:
+                try:mtu_value=mtu.result()
+                except (OSError,ValueError,TypeError,KeyError):mtu_value=None
         result.update({'https_success': len(times), 'dns_ok': dns_ok,'probe_checks':[checks[t[1]]for t in TARGETS if t[1]in checks],
                        'rtt_ms': round(sum(times)/len(times), 1) if times else None,
                        'code': 'VPN-003' if len(times) < 2 else 'DNS-001' if not dns_ok else None})
+        from probe_trust import untrusted
+        # VPN-003 stays the verdict; probe_trust says the missing answers were not authentic (probe_trust.py)
+        if result['code'] == 'VPN-003' and untrusted(result['probe_checks']):result['probe_trust'] = 'untrusted'
+        if mtu_value is not None:
+            from mtu_check import apply as mtu_apply
+            mtu_apply(result,mtu_value)
         # A successful socket quorum cannot survive a kernel route/device epoch
         # change during the measurement. Configuration is checked by the scan too.
         after=route_binding(profile['interface'])
         if after.get('code') or any(after.get(key)!=binding.get(key) for key in ('device','mark','table','ifindex')):
-            for key in ('https_success','dns_ok','rtt_ms','exit_ip','probe_checks'):result.pop(key,None)
+            for key in ('https_success','dns_ok','rtt_ms','exit_ip','probe_checks','mtu_check','probe_trust'):result.pop(key,None)
             result['code']='VENDOR-IDENTITY-CHANGED'
             return result
         exit_ip = exit_seen.pop(binding['device'], None)
@@ -872,6 +910,7 @@ def monitor_loop():
     from telegram_state import load as load_telegram_state, save as save_telegram_state
     telegram_saved,telegram_notice=load_telegram_state(PERSIST)
     telegram_job=None;telegram_public=None
+    pick_job=None;pick_started=None;pick_failed=[];pick_retried=[];pick_seen=None;pick_enabled=None;pick_event_seen=None  # server_pick.py rounds (2.1.0)
     def telegram_collect(job):
         # Applies a finished delivery: its saved state and its public answer. Runs only in the monitor thread.
         nonlocal telegram_saved,telegram_notice,telegram_public
@@ -890,6 +929,13 @@ def monitor_loop():
     from icmp_ping import PingSampler, public as ping_public
     sampler_inventory=shared_inventory(3)
     ping_sampler=PingSampler(sampler_inventory,route_binding,paused=lambda:STOP or (RUNTIME/'speed-pause.json').exists())
+    # The large-packet check of each probed channel (mtu_check.py): low rate, every probe while a black hole is suspected.
+    global MTU_SCHEDULE
+    from mtu_check import Schedule as MtuSchedule
+    MTU_SCHEDULE=MtuSchedule()
+    # Optional SQM (sqm.py): cake on the tunnel egress, off by default; its records live in RAM for the init script.
+    import sqm
+    sqm_state=read_json(RUNTIME/sqm.STATE_NAME,{})
     compare_samplers={}  # owner option "measure all methods": one extra sampler per other ping target
     from response_compare import enabled as compare_enabled,TARGETS as COMPARE_TARGETS
     from website_response import WebsiteSampler,public as website_public
@@ -914,7 +960,7 @@ def monitor_loop():
             reset_histories=(latency,website_history,ping_history,compare_history) if diagnosing else load_histories(True)
             try:
                 reset_latency,reset_result=None,None
-                accounting,reset_latency,reset_result=reset_apply(reset_request,accounting,reset_histories[0],time.time(),atomic_json,website_response=reset_histories[1],ping_response=reset_histories[2],compare_response=reset_histories[3])
+                accounting,reset_latency,reset_result=reset_apply(reset_request,accounting,reset_histories[0],time.time(),atomic_json,website_response=reset_histories[1],ping_response=reset_histories[2],compare_response=reset_histories[3],samples=samples)
                 reset_histories=(reset_latency,)+tuple(reset_histories[1:])
                 if diagnosing:latency=reset_latency
             except Exception:
@@ -950,7 +996,8 @@ def monitor_loop():
             observed = monitoring_profiles(data)[0]
             bound = probe_profiles(observed, settings)
             global MONITOR_HTTP_SECONDS
-            MONITOR_HTTP_SECONDS = DENSE_HTTP_SECONDS if booster.dense() else HTTP_SECONDS
+            pass_dense = bool(booster.dense())  # published with each sample: the failure model's cadence (channel_model)
+            MONITOR_HTTP_SECONDS = DENSE_HTTP_SECONDS if pass_dense else HTTP_SECONDS
             with ThreadPoolExecutor(max_workers=2) as pool:
                 measured = list(pool.map(probe, bound))
             # Read metadata again after the network observations. Never attach a
@@ -1013,14 +1060,25 @@ def monitor_loop():
             failure_context=read_json(RUNTIME/'native-status.json', {})
             for row in measured:
                 accounting.observe(row,max_gap=settings['interval']*3,native=failure_context,pair=failure_pair)
-                samples.append({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
-                    'interface','vendor_tunnel_id','vendor_generation')})
+                samples.append(dict({k: row.get(k) for k in ('id','time','code','rtt_ms','https_success','dns_ok',
+                    'interface','vendor_tunnel_id','vendor_generation')},dense=pass_dense))
             kept=86400*retention_days(settings) if diagnosing else WORK_SAMPLE_SECONDS  # work mode: decisions need minutes
             samples = [s for s in samples if (s.get('time') or 0) >= time.time()-kept][-10000:]
+            # The failure model's view of the pair channels (channel_model; one source for the page, the history and
+            # the dense confirmation below). Auto decides with the same function over the same samples.
+            failure_models={}
+            try:
+                from channel_model import row_view
+                from observation_freshness import valid_for as observation_valid_for
+                for row in rows:
+                    if row.get('id') is not None and row['id'] in (failure_pair.get('source'),failure_pair.get('target')):
+                        view=row_view(samples,row,time.time(),observation_valid_for(settings),settings)
+                        if view is not None:row['failure_model']=failure_models[row['id']]=view
+            except (ValueError,TypeError,KeyError,AttributeError):failure_models={}
             try:
                 from speed_test import observe_traffic, automatic_new, active_job, cancel as cancel_speed, SpeedError
                 observe_traffic(wan_devices or measured,scope='wan' if wan_devices else 'vpn')
-                if active_job() and any(p.get('code') in ('VPN-001','VPN-003','DNS-001') for p in measured):cancel_speed()
+                if active_job() and any(p.get('code') in ('VPN-001','VPN-003','DNS-001','VPN-MTU') for p in measured):cancel_speed()
                 speed_previous=automatic_new(rows,speed_previous)
                 if time.monotonic()-speed_retention_check>=60:
                     from speed_test import prune_history
@@ -1048,6 +1106,12 @@ def monitor_loop():
             status['uplink_observation']=data.get('uplink_observation',{'state':'UNKNOWN'})
             status['vendor_observation']=vendor_observation
             status['package']=package_version()
+            if sqm.active(settings,sqm_state):
+                try:
+                    new_state,status['sqm']=sqm.sync(settings,measured,sqm_state,sqm.execute,time.monotonic())
+                    if new_state!=sqm_state:atomic_json(RUNTIME/sqm.STATE_NAME,new_state);sqm_state=new_state
+                except (OSError,ValueError,TypeError,KeyError):
+                    status['sqm']={'enabled':settings.get('sqm_enabled') is True,'kbit':None,'code':'SQM-APPLY-FAILED','devices':{}}
             from failure_diagnosis import explain
             status['decision_explanation']=explain(status,settings,time.time())
             status['failover_plan']=plan(status,settings,time.time())
@@ -1056,7 +1120,7 @@ def monitor_loop():
             status['native_failover']=read_json(RUNTIME/'native-status.json', {'state':'SERVICE-STOPPED'})
             try:
                 booster.note_wait(settings,status.get('vendor_observation'),failure_pair,status['native_failover'],time.time())
-                booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time())
+                booster.observe(settings,measured,failure_pair,status['native_failover'].get('state'),time.time(),models=failure_models or None)
                 status['probe_policy']=booster.public(settings,time.time())
                 from probe_policy import response_metric
                 status['response_metric']=response_metric(settings)
@@ -1127,6 +1191,37 @@ def monitor_loop():
                     except Exception:
                         telegram_job=None;telegram_public={'enabled':bool(settings.get('telegram_enabled')),'code':'TELEGRAM-REPORT-UNAVAILABLE'}
                 status['telegram']=dict(telegram_public) if telegram_public else {'enabled':bool(settings.get('telegram_enabled'))}
+            # Best server inside a channel (server_pick.py, 2.1.0, off by default): one round at a time in its own thread,
+            # at most every 10 min and right after a channel newly failed; the published block is its RAM file.
+            try:
+                import server_pick
+                picked=server_pick.project(read_json(RUNTIME/server_pick.RESULT,None))
+                if pick_seen is None:pick_seen=picked['time'] if picked else False
+                elif picked:
+                    fresh=server_pick.events(picked,pick_seen if pick_seen is not False else None)
+                    events.extend(fresh);status['events']=(status['events']+fresh)[-300:];pick_seen=picked['time']
+                # stage 2: the Auto supervisor's own server changes (SERVER-PICKED / SERVER-PICK-FAILED ...) are history events too
+                outcome=read_json(RUNTIME/server_pick.EVENT,None)
+                if pick_event_seen is None:pick_event_seen=outcome.get('time') if isinstance(outcome,dict) else False
+                elif isinstance(outcome,dict):
+                    fresh=server_pick.events(outcome,pick_event_seen if pick_event_seen is not False else None)
+                    events.extend(fresh);status['events']=(status['events']+fresh)[-300:]
+                    if fresh:pick_event_seen=outcome['time']
+                failed=server_pick.failed_interfaces(rows)
+                # a channel that recovered and fails again is a new failure (MT3000 02.11.2026: the second failure of the
+                # reserve within 10 min started no round)
+                pick_failed=[iface for iface in pick_failed if iface in failed]
+                pick_retried=[iface for iface in pick_retried if iface in failed]
+                if pick_job is None or not pick_job.is_alive():
+                    retry=server_pick.carrying_retry(picked,pick_failed,pick_retried,pick_started,time.monotonic());pick_failed,pick_retried=retry['failed'],retry['retried']
+                if pick_enabled is not (settings.get('server_pick') is True):pick_started=None  # the owner switch changed: a round now
+                if (pick_job is None or not pick_job.is_alive()) and server_pick.due(pick_started,pick_failed,failed,time.monotonic()):
+                    request={'enabled':settings.get('server_pick') is True,'auto_on':(status.get('auto_control') or {}).get('requested')=='on','failed':failed,
+                             'model':server_pick.model_name(settings.get('server_pick_model'))}
+                    pick_job=Thread(target=server_pick.job,args=(server_pick.router_io(str(RUNTIME)),request,time.time()),name='server-pick',daemon=True)
+                    pick_started=time.monotonic();pick_failed=failed;pick_enabled=request['enabled'];pick_job.start()
+                status['server_pick']=picked
+            except Exception:status['server_pick']=None
             status['measurement_request_id']=scan_id
             atomic_json(RUNTIME/'status.json', status)
             published_status=status
@@ -1182,6 +1277,11 @@ def monitor_loop():
         pass
     ping_sampler.close();website_sampler.close()
     for sampler in compare_samplers.values():sampler.close()
+    # SQM back to the kernel default with the monitor (the init script's sqm_release does the same from the file).
+    if sqm.records(sqm_state):
+        try:
+            sqm_state,_=sqm.release(sqm_state,sqm.execute);atomic_json(RUNTIME/sqm.STATE_NAME,sqm_state)
+        except (OSError,ValueError):pass
     try:
         from speed_test import cancel as cancel_speed
         cancel_speed()
@@ -1308,10 +1408,10 @@ def rpc(method):
                           'fault_start':{'profile':'','scope':'','duration':0},'fault_cancel':{},'stats_reset':{'scope':''},'priority_preview':{'ordered':[]},'priority_apply':{'ordered':[],'revision':''},
                           'setup_monitor':{'interval':0,'checkpoint':0,'probe_limit':0,'planning_enabled':False,'live_log_limit':0,'history_days':0},
                           'setup_probe':{'level':0,'boost':False},
-                          'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0},
+                          'setup_response':{'metric':'','compare':False,'fast_switch':False,'ping_interval':0,'server_pick':False,'server_pick_model':''},
                           'setup_stats':{'mode':'','hours':0,'retention':'','days':0,'mb':0},
                           'setup_onboarding':{'system':{},'monitor':{},'recovery':{},'speed':{},'telegram':{},'appearance':{}},
-                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'interval':0},
+                          'setup_recovery':{'failures':0,'successes':0,'cooldown':0,'min_dwell':0,'return_policy':'','primary_successes':0,'primary_stable':0,'attempt_limit':0,'attempt_window':0,'rescue_stable':0,'interval':0,'failure_model':''},
                           'preparation_preview':{'action':''},'preparation_apply':{'action':'','revision':'','control_revision':''},
                           'monitor_control': {'enabled':False}, 'manual_switch': {'direction':'','control_revision':'','request_source':''}, 'native_stop': {'request_source':''}, 'native_start': {'control_revision':'','request_source':''}, 'native_return': {}, 'telegram_forget': {}, 'terms_accept': {'version':''}, 'telegram_test': {}, 'telegram_retry': {}, 'setup_check': {}, 'speed_cancel': {},
                           'speed_start':{'profiles':[],'budget_mib':0,'duration':0,'streams':0},

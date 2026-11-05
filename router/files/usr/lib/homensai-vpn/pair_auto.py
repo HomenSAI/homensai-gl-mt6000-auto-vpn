@@ -79,10 +79,13 @@ def read_state():
     if 'protected_static' in data and (not isinstance(data['protected_static'],dict) or set(data['protected_static'])!={'firewall'}
             or not isinstance(data['protected_static']['firewall'],str) or not re.fullmatch('[a-f0-9]{64}',data['protected_static']['firewall'])):
         raise ValueError('PAIR-STATE-UNVERIFIED')
-    if any(key in data for key in ('kept','kept_flags','kept_at')):
-        # the boot handover (boot_keep): only on a STOPPED session, owned clients with their flags before the session
+    if any(key in data for key in ('kept','kept_flags','kept_at','kept_tx')):
+        # the boot handover (boot_keep): only on a STOPPED session, owned clients with their flags before the session;
+        # kept_tx: kept for the restart Start after this supervisor's forward resume of that transaction (no boot)
         kept,flags,at=data.get('kept'),data.get('kept_flags'),data.get('kept_at')
+        tx=data.get('kept_tx')
         if (data['phase']!='STOPPED' or not isinstance(kept,list) or not kept or len(kept)!=len(set(map(str,kept)))
+                or ('kept_tx' in data and (not isinstance(tx,str) or not re.fullmatch('[a-f0-9]{32}',tx)))
                 or any(not isinstance(x,str) or x not in managed for x in kept) or not isinstance(flags,dict)
                 or set(flags)!=set(kept) or any(v not in ('0','1') for v in flags.values())
                 or type(at) not in (int,float) or not math.isfinite(at) or at<0):
@@ -207,6 +210,48 @@ def readopt_running(state, request_row, revision, code):
     return True
 
 
+def release_for_start(revision, settings, arrived):
+    """The owner's Start on a session HELD only by a change made outside the app (03.11.2026, MT3000 alpha6).
+
+    Preparation refuses any write while a session is HELD (preparation_control.guard), and the hand-over in
+    request() is reached only after every preparation check passes - with a new GL client (auto unset) and the
+    stock boot link back, Start refused PREPARATION-RECOVERY-REQUIRED for good. Here the same release_session
+    runs first, under the control lock: the old record is archived, its interfaces are retired (flags are not
+    restored over the new configuration), the journal must be absent or ROLLED-BACK and the readopt ledger
+    must allow it. Nothing is started; preparation and request() follow with every check of a first Start.
+    Returns None (nothing to hand over, or handed over) or a refusal code.
+    """
+    import native_switch as n
+    from agent import PERSIST, RUNTIME, read_json, TERMS_VERSION
+    from auto_control import control_lock, revision_locked
+    if not isinstance(settings, dict) or settings.get('pair_auto_mode') != MODE or settings.get('terms_version') != TERMS_VERSION:
+        return None
+    with control_lock():
+        # Stop rotates the revision under this lock: a Stop received since the Start arrived wins.
+        if revision != revision_locked(RUNTIME):
+            return 'CONTROL-REVISION-STALE'
+        try:
+            state = read_state()
+            old = intent()
+            stopped = read_json(PERSIST / 'native-stop.json', {})
+        except (OSError, ValueError):
+            return None  # the ordinary checks name it
+        if not state or state.get('phase') != 'HELD' or state.get('recovery_error') not in READOPT_CODES:
+            return None
+        if old.get('mode') == 'on':
+            return None
+        epoch = stopped.get('requested') if isinstance(stopped, dict) else None
+        if not isinstance(stopped, dict) or stopped.get('control_revision_failed') is True:
+            return 'CONTROL-REVISION-STALE'
+        if type(epoch) in (int, float) and math.isfinite(epoch) and epoch >= arrived:
+            return 'STOP-SUPERSEDED-START'
+        try:
+            handed = release_session(state, state['recovery_error'])
+        except (OSError, ValueError, KeyError, TypeError, n.Refused):
+            handed = False
+    return None if handed else 'PAIR-RECOVERY-REQUIRED'
+
+
 def request(revision,request_source=None):
     from auto_control import control_lock, revision_locked
     from agent import RUNTIME, atomic_json
@@ -302,6 +347,163 @@ def budget(events, now, window=900, limit=3):
     kept = sorted(x for x in events if now - x < 900)
     count=sum(now-x<window for x in kept)
     return kept, count < limit and len(kept)<16
+
+
+# Flap damping (MT3000 flap test 02.11.2026, primary 60 s down / 120 s up): the rolling attempt limit used to
+# block the FAILOVER, so after three switches traffic stayed on a dead primary while every recovery still
+# returned after ~70 s. Like RFC 2439/7196 route-flap damping and BFD/VRRP hold-down, leaving a failed
+# primary is never limited (only the cooldown spacing bounds retries of a failed attempt); the RETURN is
+# damped instead. HOLD_CAP is the longest primary stability the settings allow (recovery_settings.RANGES).
+HOLD_CAP = 600
+
+
+def return_hold(events, now, recovery):
+    """Seconds the primary must be stably healthy before Auto returns to it.
+
+    Below the attempt limit it is primary_stable. The failover that reaches the limit within the rolling
+    window, and every further one, doubles it (capped at HOLD_CAP); as failovers age out of the window
+    the hold decays back. Twin: pair.lua M.return_hold (tests/flap_damping_cases.json)."""
+    window=recovery['attempt_window']*60
+    count=sum(1 for x in events if 0<=now-x<window)
+    excess=count-recovery['attempt_limit']+1
+    if excess<=0:return recovery['primary_stable']
+    return min(HOLD_CAP,recovery['primary_stable']*2**min(excess,6))
+
+
+# Aborted failover retry (MT3000 59-cycle primary-drop soak 03-04.11.2026, 2.1.0-alpha7, cycle 28): the failover was
+# dispatched (APPLYING, ledger charged), the apply step's first diagnostic saw VENDOR-WORKER-QUIET-UNVERIFIED and the
+# transaction rolled back before any switch; the charge stayed, so the next failover waited the whole cooldown spacing
+# (PAIR-RATE-LIMIT, ~60 s) while the primary was dead: traffic moved after 84 s instead of 20-35 s. A failover refused
+# by a transient vendor state (ABORT_REFUND_CODES) whose journal is verifiably ROLLED-BACK and never COMMITTED is not a
+# switch: its charge is refunded (neither the cooldown spacing nor the flap damping counts it) and the abort is kept
+# under 'aborted'. While the primary stays failed the retry waits RETRY_BASE*2^(n-1) s after the n-th consecutive abort,
+# capped at max(cooldown, min_dwell): 5, 10, 20, 40, 60 s - prompt, never hot. Every vendor gate stays as it was (the
+# diagnostic before the decision, assert_selection, the apply step's diagnostic and wait_quiet): a busy vendor worker
+# still refuses the switch itself. Lua twin: pair.lua M.retry_wait / M.refund_abort (tests/vendor_retry_cases.json).
+ABORT_REFUND_CODES = frozenset({'VENDOR-WORKER-BUSY', 'VENDOR-SETTLING', 'VENDOR-WORKER-QUIET-UNVERIFIED'})
+RETRY_BASE = 5
+ABORT_KEEP = 16
+
+
+def abort_stamps(raw, now):
+    """The ledger's 'aborted' stamps inside the 900 s ledger window, oldest first, at most ABORT_KEEP. Lenient: a
+    damaged entry is dropped (the next refund writes a clean list); a missing key is no abort."""
+    if not isinstance(raw, list):return []
+    kept = sorted(min(x, now) for x in raw if type(x) in (int, float) and math.isfinite(x) and x >= 0 and now - x < 900)
+    return kept[-ABORT_KEEP:]
+
+
+def retry_wait(aborted, events, now, recovery):
+    """Seconds before a failover aborted by the vendor may be dispatched again (0: now). Only the aborts after the last
+    charged switch count (a completed switch ends the series)."""
+    last = max(events) if events else None
+    recent = [x for x in abort_stamps(aborted, now) if last is None or x > last]
+    if not recent:return 0
+    wait = min(max(recovery['cooldown'], recovery['min_dwell']), RETRY_BASE*2**min(len(recent)-1, 8))
+    return max(0, recent[-1]+wait-now)
+
+
+def refund_abort(stamp, code):
+    """The failover charged at `stamp` was refused by `code` and rolled back before COMMITTED: drop its charge and
+    remember the abort. Anything unproven (other code, journal not ROLLED-BACK by this very failure, charge not found)
+    keeps the charge: the cooldown spacing then applies as before. True when refunded."""
+    from agent import PERSIST, read_json, atomic_json
+    import native_switch as n
+    if code not in ABORT_REFUND_CODES or type(stamp) not in (int, float):return False
+    journal = n.journal_read()
+    started = journal.get('started')
+    if (journal.get('phase') != 'ROLLED-BACK' or journal.get('failure_code') != code or journal.get('confirmed') is not None
+            or journal.get('pair_transition') is None or type(started) not in (int, float) or started > stamp):
+        return False
+    ledger = read_json(PERSIST/'pair-auto-budget.json', {'events': []})
+    events = ledger.get('events') if isinstance(ledger, dict) else None
+    if not isinstance(events, list) or stamp not in events:return False
+    now = time.time()
+    events = list(events);events.remove(stamp)
+    atomic_json(PERSIST/'pair-auto-budget.json', {'events': events, 'aborted': (abort_stamps(ledger.get('aborted'), now)+[now])[-ABORT_KEEP:]})
+    return True
+
+
+# Late-switch recheck (MT3000 phase 2, 02.11.2026, 2.1.0-alpha5): a 15 s blackout of the primary was left at
+# about 20 s, after the primary had already recovered at 15 s. The streak was met by three dense samples whose
+# checks all ran inside the blackout (started at about 3.5/7.5/11.5 s, published about 2.5 s later), and the tick
+# that read them needed a few more seconds (diagnostics, lease, kernel proof) before APPLYING; the monitor's first
+# healthy sample (started at 15.5 s) arrived only while the switch was already running. Right before the failover
+# commits the source is therefore looked at once more: a healthy source sample the monitor published after the
+# decision's evidence, else one bounded live probe (RECHECK_SECONDS per check). Only positive health evidence
+# aborts (a dead primary can never pass DNS + 2 of 3 HTTPS); a timeout, an error or an unavailable probe goes on
+# with the switch exactly as before. Lua twin: pair.lua M.late_recheck (tests/late_switch_cases.json).
+LATE_RECHECK_CODE = 'PRIMARY-RECOVERED-BEFORE-SWITCH'
+RECHECK_SECONDS = 1
+# Failures the short live probe cannot see: VPN-MTU (mtu_check.py, large packets lost) passes DNS + HTTPS with small
+# packets, and Auto's live probes never run the large-packet check. With such evidence only a newer healthy monitor
+# sample (the monitor re-runs that check on every probe after a black hole) may stop the failover.
+PROBE_BLIND_CODES = frozenset({'VPN-MTU'})
+# source id -> the newest source sample stamp a recheck contradicted (memory only): the same evidence never
+# starts a second decision; the monitor's next sample of the source decides again.
+LATE_ABORTS = {}
+
+
+def good_point(point):
+    return (point.get('code') is None and point.get('dns_ok') is True
+            and type(point.get('https_success')) is int and point['https_success']>=2)
+
+
+def newest_sample(samples, identifier, profile=None):
+    """The newest sample of identifier inside its profile generation; None without one or when two samples of one
+    stamp disagree (failure_diagnosis.scoped_samples)."""
+    from failure_diagnosis import finite,scoped_samples
+    if profile is not None:samples=scoped_samples(samples,profile)
+    if not isinstance(samples,list):return None
+    best=None;seen={}
+    for point in samples:
+        if not isinstance(point,dict) or point.get('id')!=identifier or not finite(point.get('time')):continue
+        health=tuple(point.get(key) for key in ('code','dns_ok','https_success'));stamp=point['time']
+        if stamp in seen and seen[stamp]!=health:return None
+        seen[stamp]=health
+        if best is None or stamp>best['time']:best=point
+    return best
+
+
+def monitor_recovered(samples, identifier, evidence, now, profile=None):
+    """The monitor published a healthy sample of the source newer than the decision's evidence (not from the future)."""
+    from failure_diagnosis import finite
+    if not finite(evidence) or not finite(now):return False
+    point=newest_sample(samples,identifier,profile)
+    return point is not None and evidence<point['time']<=now and good_point(point)
+
+
+def same_evidence(aborted, evidence):
+    """A recheck already contradicted this very evidence (no newer source sample since)."""
+    from failure_diagnosis import finite
+    return finite(aborted) and finite(evidence) and evidence<=aborted
+
+
+def late_recheck(backend, selection, evidence, evidence_code=None):
+    """The last look at the source before a failover commits: (code, how) or None. evidence_code: the code of the
+    decision's newest source sample; a PROBE_BLIND_CODES failure is never contradicted by the live probe."""
+    from agent import RUNTIME, read_json
+    identifier=selection['source']['id']
+    try:status=read_json(RUNTIME/'status.json',{})
+    except (OSError,ValueError,TypeError):status={}
+    if isinstance(status,dict) and monitor_recovered(status.get('samples',[]),identifier,evidence,time.time(),selection['source']):
+        return LATE_RECHECK_CODE,'monitor'
+    check=None if evidence_code in PROBE_BLIND_CODES else getattr(backend,'recheck',None)
+    if check is not None:
+        try:healthy=check(identifier,RECHECK_SECONDS)
+        except Exception:healthy=None  # any failure of the last look goes on with the switch
+        if healthy is True:return LATE_RECHECK_CODE,'probe'
+    return None
+
+
+def ledger_hold(settings, now):
+    """return_hold from the persistent failover ledger; an unreadable ledger holds the longest."""
+    from agent import PERSIST,read_json
+    from recovery_settings import normalized
+    recovery=normalized(settings)
+    try:events,_=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),now,recovery['attempt_window']*60,recovery['attempt_limit'])
+    except (ValueError,TypeError,AttributeError,OSError):return HOLD_CAP
+    return return_hold(events,now,recovery)
 
 
 NETWORK_READ = r"""
@@ -676,7 +878,9 @@ def boot_devices(backend):
     """ensure_devices() for the pair session a boot recovery finds (none or a terminal one: None)."""
     try:state=read_state()
     except (OSError,ValueError,KeyError,TypeError):return None
-    if not state or state.get('phase') in TERMINAL:return None
+    # K3 (formal model 03.11.2026): a session handed over on the reserve (STOPPED with handover) still owns its clients
+    # until the Start adopts them: after a power cut they are started for the VPN-only guard of the held reserve
+    if not state or state.get('phase') in TERMINAL and not has_handover(state):return None
     return ensure_devices(backend,state)
 
 
@@ -724,27 +928,47 @@ def begin(backend, settings, request):
     from pair_policy import proof
     state['policy_roles']=proof(selection)
     save(state)  # Durable ownership precedes any network write.
-    backend.guard()
-    for role in ('source', 'target'):
+    # K4 (formal model 03.11.2026): the full block releases itself after GUARD_RELEASE_SECONDS (90 s), but bringing
+    # both clients up takes up to ~170 s (quiet 20 + ifup -w + quiet 45 per role). The guard is therefore re-armed
+    # before every bounded step (each well below 90 s): never a moment without a guard while the clients start, and
+    # the kernel still releases the block 90 s after a lost process. A VPN-only guard already standing - the boot
+    # handover's held reserve (proven up), or the outside-change hold this Start ends (K9) - is kept VPN-only on the
+    # tunnels that are up, never downgraded to the self-releasing full block.
+    keep_vpn=bool(handover) or (_outside_guard.get('mode')=='vpn' and backend.guard_exists())
+    outside_guard_reset()
+    def hold_guard():
+        if keep_vpn:
+            try:devices=backend.devices()
+            except (n.Refused,OSError,ValueError,subprocess.SubprocessError):devices=None
+            if devices:
+                backend.guard(devices);return
+        backend.guard()
+    hold_guard()
+    for index,role in enumerate(('source', 'target')):
         interface = selection[role]['interface']
         require_running(request['revision'])
+        if index:hold_guard()
         quiet(20,request['revision'])
         if selected[interface]['disabled'] == '1':
             state['owned'].append(interface)
             save(state)
+            hold_guard()
             set_disabled(state, interface, '0', request['revision'])
             # Stock -w suppresses unrelated Wi-Fi setup; it is not a wait flag.
             n.forward_dispatch(['ifup', '-w', interface], request['revision'], timeout=20)
+            hold_guard()
             quiet(45,request['revision'])
         elif client_down(interface):
             # Enabled by the operator but stopped: Auto starts it and restores it on Stop.
             if interface not in state['owned']:
                 state['owned'].append(interface)
                 save(state)
+            hold_guard()
             try:
                 n.forward_dispatch(['ifup', '-w', interface], request['revision'], timeout=20)
             except subprocess.SubprocessError:
                 pass  # The running supervisor retries within its bounded budget.
+            hold_guard()
             quiet(45,request['revision'])
     state['phase'] = 'RUNNING'
     state['ran'] = True
@@ -780,30 +1004,52 @@ def has_kept(state):
     return isinstance(state,dict) and state.get('phase')=='STOPPED' and isinstance(state.get('kept'),list) and bool(state['kept'])
 
 
-def _resume_pending():
-    """-> (pending, uptime, the reason when not pending: the handover refusal log)."""
+def _resume_pending(tx=None):
+    """-> (pending, uptime, the reason when not pending: the handover refusal log).
+
+    tx (03.11.2026, forward_resume.py): this supervisor's recovery finished the switch tx on the reserve after a restart
+    without a boot; the monitor's restart resume (boot_resume token) presses Start for it, so neither the boot window
+    nor this boot's resume state applies - only the owner's marker and Stop latch, and the marker's KEEP_SECONDS.
+    """
     try:now=_uptime()
     except (OSError,ValueError):return False,None,'UPTIME'
-    if type(now) not in (int,float) or not math.isfinite(now) or not 0<=now<BOOT_KEEP_UPTIME:return False,now,'UPTIME'
+    # (2.1.0-alpha7 fix, 03.11.2026: also a refused resume of tx - the restart Start comes all the same; the handover
+    # itself still needs a finished one, see boot_handover)
+    forward=False
+    if tx is not None and type(now) in (int,float):
+        from forward_resume import restarted
+        forward=restarted(tx)
+    if not forward and (type(now) not in (int,float) or not math.isfinite(now) or not 0<=now<BOOT_KEEP_UPTIME):return False,now,'UPTIME'
     import boot_resume
     from agent import RUNTIME,PERSIST,read_json
     try:wanted,why=boot_resume.wanted(PERSIST)
     except (OSError,ValueError):return False,now,'RESUME-MARKER-UNREADABLE'
     if not wanted:return False,now,str(why or 'AUTO-RESUME-NOT-REQUESTED')
+    if forward:
+        # the restart resume of this supervisor start (its token) that failed or skipped ends the wait
+        try:row=read_json(RUNTIME/boot_resume.STATE,{})
+        except (OSError,ValueError):row={}
+        try:token=boot_resume.token(RUNTIME)
+        except (OSError,ValueError):token=None
+        if token is not None and isinstance(row,dict) and row.get('supervisor')==token and row.get('state') in ('FAILED','SKIPPED'):
+            return False,now,'RESUME-'+row['state']
+        return True,now,None
     try:row=read_json(RUNTIME/boot_resume.STATE,{})
     except (OSError,ValueError):row={}
     if isinstance(row,dict) and row.get('state') in ('FAILED','SKIPPED'):return False,now,'RESUME-'+row['state']
     return True,now,None
 
 
-def boot_keep(state,stop_revision=None):
-    if stop_revision is not None or not state.get('owned') or not _resume_pending()[0]:return False
+def boot_keep(state,stop_revision=None,tx=None):
+    """tx: the journal's transaction; when this supervisor start ran its forward resume (forward_resume.restarted), the
+    restart Start replaces the boot window (MT3000 2.1.0-alpha7: a refused resume tore the healthy reserve down)."""
+    if stop_revision is not None or not state.get('owned') or not _resume_pending(tx)[0]:return False
     try:return all(interface_up(interface) for interface in state['owned'])
     except (OSError,ValueError,subprocess.SubprocessError):return False
 
 
-def kept_valid(state):
-    pending,now,_=_resume_pending()
+def kept_valid(state,tx=None):
+    pending,now,_=_resume_pending(tx)
     at=state.get('kept_at')
     return pending and type(at) in (int,float) and at<=now and now-at<KEEP_SECONDS
 
@@ -821,7 +1067,7 @@ def release_kept(backend,state):
         set_disabled(state, interface, state['kept_flags'][interface])
         if Path('/sys/class/net', interface).exists():raise ValueError('PAIR-PROFILE-STOP-UNVERIFIED')
     backend.unguard()
-    for key in ('kept','kept_flags','kept_at'):state.pop(key,None)
+    for key in ('kept','kept_flags','kept_at','kept_tx'):state.pop(key,None)
     save(state)
     boot_step('pair kept clients released')
 
@@ -837,7 +1083,9 @@ def release_kept(backend,state):
 # BOOT-RESERVE-ADOPTED, boot_adopted={session,time,from_phase,from_reason}, confirmed=now so min_dwell counts from
 # here, no manual request). The normal committed return policy brings it back to the primary. Any failed check, an
 # owner Stop, no Start within KEEP_SECONDS, a failed boot resume: release_handover() and today's path. Interrupted
-# switches never get here: they roll back as before. One handover per boot (RAM marker). Lua: pair.boot_handover.
+# switches never get here: they roll back as before (03.11.2026: unless forward_resume.py finished one after a restart
+# without a boot; that COMMITTED journal gets its own handover, see _resume_pending). One handover per boot (RAM marker).
+# Lua: pair.boot_handover.
 HANDOVER_FILE='pair-handover.json'
 
 
@@ -882,8 +1130,14 @@ def handover_check(backend,state,journal,context):
     current=current_role(journal)
     if current!='target':return 'ROLE %s'%current,None
     if context['session_order']!=state['order']:return 'SESSION-ORDER',None
-    # a primary already proven returns at once on today's path; the handover only replaces the wait for the proof
-    if backend.recovery_ready(journal['source'],backend.policy()['settings']) is True:return 'PRIMARY-PROVEN',None
+    # a primary already proven returns at once on today's path; the handover only replaces the wait for the proof.
+    # K2 (formal model 03.11.2026): "proven" with the flap-damping hold of the failover ledger, as the running tick
+    # (ledger_hold): a restart must not turn a flapping primary into a proven one
+    from recovery_settings import normalized
+    settings=backend.policy()['settings']
+    hold=ledger_hold(settings,time.time())
+    if hold>normalized(settings)['primary_stable']:settings=dict(settings,recovery_primary_stable=hold)
+    if backend.recovery_ready(journal['source'],settings) is True:return 'PRIMARY-PROVEN',None
     if not state_order_matches(state,journal,backend.order()):return 'ORDER',None
     kernel=backend.attest_policy()
     if not isinstance(kernel,dict) or kernel.get('verified') is not True:
@@ -902,14 +1156,19 @@ def boot_handover(backend,state,journal,context,stop_revision=None):
     try:marker=read_json(path,{})
     except (OSError,ValueError):marker={}
     if not isinstance(marker,dict):marker={}
+    # one handover per boot; a switch this supervisor finished after a restart (forward_resume) gets its own one
+    from forward_resume import marked
+    forward=marked(journal.get('tx'))
+    if forward and marker.get('tx')!=journal.get('tx'):marker={}
     if marker.get('state') in ('handed','refused'):return False
-    pending,now,why=_resume_pending()
+    pending,now,why=_resume_pending(journal.get('tx') if forward else None)
     if not pending:return _handover_refused(why)
+    tx=journal.get('tx') if forward else None
     first=marker.get('first')
     if type(first) not in (int,float) or first>now:
-        first=now;atomic_json(path,{'state':'waiting','first':float(now)})
+        first=now;atomic_json(path,{'state':'waiting','first':float(now),'tx':tx})
     if now-first>=HANDOVER_WAIT:
-        atomic_json(path,{'state':'refused','first':float(first),'reason':_handover_logged[0]})
+        atomic_json(path,{'state':'refused','first':float(first),'reason':_handover_logged[0],'tx':tx})
         return _handover_refused('WAIT-OVER after %s'%_handover_logged[0])
     try:reason,_=handover_check(backend,state,journal,context)
     except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:reason='ERROR %s'%(error.args[0] if error.args else type(error).__name__)
@@ -926,7 +1185,7 @@ def boot_handover(backend,state,journal,context,stop_revision=None):
 
 def release_handover(state):
     """Back to today's path: the old session is HELD again and the next cleanup waits for the primary proof."""
-    for key in ('handover','kept','kept_flags','kept_at'):state.pop(key,None)
+    for key in ('handover','kept','kept_flags','kept_at','kept_tx'):state.pop(key,None)
     state['phase']='HELD';save(state)
     boot_step('pair handover released')
 
@@ -958,17 +1217,109 @@ def adopt_journal(state,journal,kernel,revision):
     boot_step('pair session adopted the reserve '+journal['tx'])
 
 
+def owner_stopped(state=None):
+    """A Stop (or a give-up) is newer than the last Start of this session: the stop latch native-stop.json against the
+    later of the owner's resume marker auto-resume.json (boot_resume.wanted's decision) and the session's own start
+    (state['started']: a programmatic Start leaves no marker, an older latch is not its Stop). A damaged latch is not a
+    Stop (the guard of the outside-change hold is never dropped on a damaged file). Lua: pair.owner_stopped."""
+    import boot_resume
+    from agent import PERSIST,read_json
+    try:latch=read_json(PERSIST/'native-stop.json',None)
+    except (OSError,ValueError):return False
+    stopped=latch.get('requested') if isinstance(latch,dict) else None
+    if type(stopped) not in (int,float) or not math.isfinite(stopped):return False
+    try:marker=read_json(PERSIST/boot_resume.MARKER,None)
+    except (OSError,ValueError):marker=None
+    at=marker.get('time') if isinstance(marker,dict) and marker.get('enabled') is True else None
+    if type(at) not in (int,float) or not math.isfinite(at):at=None
+    started=state.get('started') if isinstance(state,dict) else None
+    if type(started) in (int,float) and math.isfinite(started) and (at is None or started>at):at=started
+    return at is None or stopped>=at
+
+
+def cleanup_hold(backend,state,journal,stop_revision=None):
+    """K2 (formal model 03.11.2026): the cleanup of a committed/held reserve that no owner Stop asked for (a recovery
+    after a crash or a power cut, a released handover) returns to the primary only after the flap-damping hold of the
+    failover ledger, exactly as the running tick (ledger_hold, committed_recovery_decision): the restart must not
+    reset a hold that was doubled by a flapping primary. A failing reserve is left without the damped hold (as the
+    tick), and an owner Stop returns as before. None = no damping. Lua: pair.cleanup_hold."""
+    from recovery_settings import normalized
+    if stop_revision is not None or owner_stopped(state):return None
+    settings=backend.policy().get('settings',{})
+    hold=ledger_hold(settings,time.time())
+    if hold<=normalized(settings)['primary_stable']:return None
+    if backend.health(journal['target']) is not True:return None
+    return hold
+
+
+# K9, owner decision 03.11.2026 (formal model): a session HELD by a change made outside the app (a readopt code; the
+# cleanup stops before its guard step) keeps the LAN behind the VPN-only guard until the owner presses Start
+# (release_for_start hands it over) or Stop. Before, a power cut dropped the guard (RAM) and the recovery never put it
+# back: the LAN went out through the GL configuration without the VPN. Only with a settled journal (none or
+# ROLLED-BACK; a held journal keeps its own guard rules). VPN-only on the tunnels that are up; with no tunnel up the
+# full block, re-armed every OUTSIDE_REARM s (it still releases itself 90 s after a lost process). The owner's Stop
+# (owner_stopped) releases the guard. Called after a failed recovery or cleanup of a session that is not running;
+# returns True when the session is such a hold. Lua: pair.outside_hold.
+OUTSIDE_REARM=45
+_outside_guard={}
+
+
+def outside_guard_reset():_outside_guard.clear()
+
+
+def outside_hold(backend):
+    import native_switch as n
+    state=read_state()
+    if not state or state.get('phase')!='HELD' or state.get('recovery_error') not in READOPT_CODES:return False
+    if n.journal_read().get('phase') not in (None,'ROLLED-BACK'):return False
+    if owner_stopped(state):
+        _outside_guard.clear()
+        if backend.guard_exists():
+            backend.unguard()
+            _log('PAIR-OUTSIDE-CHANGE-GUARD: released by the owner Stop')
+        return True
+    try:devices=backend.devices()
+    except (n.Refused,OSError,ValueError,subprocess.SubprocessError):devices=None
+    devices=sorted(devices) if devices else None
+    now=time.monotonic()
+    exists=backend.guard_exists()
+    if devices:
+        key=' '.join(devices)
+        if not exists or _outside_guard.get('mode')!='vpn' or _outside_guard.get('key')!=key:
+            backend.guard(devices);_outside_guard.clear();_outside_guard.update(mode='vpn',key=key,at=now)
+            _log('PAIR-OUTSIDE-CHANGE-GUARD: VPN-only %s until Start or Stop'%key)
+    elif not exists or _outside_guard.get('mode')!='full' or now-_outside_guard['at']>=OUTSIDE_REARM:
+        first=_outside_guard.get('mode')!='full'
+        backend.guard();_outside_guard.clear();_outside_guard.update(mode='full',at=now)
+        if first:_log('PAIR-OUTSIDE-CHANGE-GUARD: no VPN tunnel up, LAN blocked until Start or Stop')
+    return True
+
+
 def cleanup(backend, state, stop_revision=None):
     import native_switch as n
     from pair_interfaces import state as state_interfaces
     managed=state_interfaces(state)
     backend.use_process_bindings(state.get('process_bindings'))
+    if 'server_change' in state:server_resume(backend,state)  # a server change cut short: adopt this supervisor's own write
     journal = n.journal_read()
     from pair_policy import metadata,role,state_order_matches
     context=metadata(journal)
     if context is not None and (context['session_order']!=state['order'] or journal.get('hash')!=state['policy_hash']):
         raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
-    state['phase']='STOPPING';save(state)  # Route restoration does not complete interface ownership cleanup.
+    # K11 (formal model 03.11.2026): the owner's Start hands a session HELD by an outside change over under the control
+    # lock (release_for_start / request -> release_session: archived, STOPPED). A cleanup pass that read the record
+    # before must not write its STOPPING over that hand-over (Start then refused PAIR-RECOVERY-REQUIRED and the session
+    # stayed HELD). The record is read again under the same lock: another session or a finished one (the hand-over's
+    # STOPPED) - this pass ends without a write.
+    from auto_control import control_lock
+    with control_lock():
+        current=read_state()
+        ours=not current or current.get('id')==state.get('id') and (current.get('phase') not in TERMINAL or state.get('phase') in TERMINAL)
+        if ours:
+            state['phase']='STOPPING';save(state)  # Route restoration does not complete interface ownership cleanup.
+    if not ours:
+        boot_step('pair cleanup superseded by a hand-over')
+        return False
     boot_step('pair cleanup %s'%journal.get('phase'))
     if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
         if journal.get('activation_reapply') is True and journal.get('before')==journal.get('after'):
@@ -978,8 +1329,9 @@ def cleanup(backend, state, stop_revision=None):
     if journal.get('phase') in ('COMMITTED', 'HELD-ON-RESERVE'):
         ensure_devices(backend,state)  # finish_committed/rollback end with guard(devices()): the pair's own tunnels first
         if boot_handover(backend,state,journal,context,stop_revision):return True
-        finished=(n.finish_committed(backend,journal,'PAIR-STOPPED',restore_order=state['order']) if context is not None
-                  else n.finish_committed(backend,journal,'PAIR-STOPPED'))
+        hold=cleanup_hold(backend,state,journal,stop_revision)
+        finished=(n.finish_committed(backend,journal,'PAIR-STOPPED',restore_order=state['order'],hold=hold) if context is not None
+                  else n.finish_committed(backend,journal,'PAIR-STOPPED',hold=hold))
         if not finished:
             state['phase'] = 'HELD'
             save(state)
@@ -990,11 +1342,13 @@ def cleanup(backend, state, stop_revision=None):
         n.rollback(backend,journal,'PAIR-STOPPED',restore_order=state['order'])
     if backend.order() != (state['order'], state['policy_hash']):
         raise ValueError('PAIR-EXTERNAL-POLICY-CHANGE')
-    if boot_keep(state,stop_revision):
+    if boot_keep(state,stop_revision,journal.get('tx')):
         if normalized_network(network(),managed) != state['network_identity']:raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
         if changed(state, configs(managed), skip=('firewall',)):raise ValueError('PAIR-EXTERNAL-CONFIG-CHANGE')
         # the guard stays: the next session's begin() guards again, release_kept() removes it
         state.update(kept=list(state['owned']),kept_flags={x:state['before_flags'][x] for x in state['owned']},kept_at=float(_uptime()),phase='STOPPED')
+        from forward_resume import restarted
+        if isinstance(journal.get('tx'),str) and restarted(journal['tx']):state['kept_tx']=journal['tx']
         save(state)
         boot_step('pair cleanup kept '+' '.join(state['kept']))
         return True
@@ -1049,11 +1403,19 @@ def recover(backend):
         if state and state['phase'] not in TERMINAL:
             if not cleanup(backend, state):
                 publish_failure('PAIR-RECOVERY-REQUIRED')
+                _outside_hold_safe(backend)
                 return False
     except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         publish_failure(error)
+        _outside_hold_safe(backend)  # K9: a session held by an outside change keeps its guard
         return False
     return True
+
+
+def _outside_hold_safe(backend):
+    import native_switch as n
+    try:return outside_hold(backend)
+    except (n.Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):return False
 
 
 def resume_running(state):
@@ -1076,14 +1438,21 @@ def remember_selected(state,kernel):
     save(state);return True
 
 
-def charge_attempt(settings,revision):
+def charge_attempt(settings,revision,limited=True):
+    """Record a dispatched automatic switch. limited=False (leaving a failed path) ignores the attempt count:
+    only the cooldown spacing applies; it bounds retries of a failed attempt (<=15 per 15 min, the ledger size)."""
     from agent import PERSIST,read_json,atomic_json
     from recovery_settings import normalized
     import native_switch as n
     require_running(revision);now=time.time();policy=normalized(settings)
-    events,allowed=budget(read_json(PERSIST/'pair-auto-budget.json',{'events':[]}).get('events'),now,policy['attempt_window']*60,policy['attempt_limit'])
-    if not allowed or events and now-events[-1]<max(policy['cooldown'],policy['min_dwell']):raise n.Refused('PAIR-RATE-LIMIT')
-    atomic_json(PERSIST/'pair-auto-budget.json',{'events':events+[now]})
+    ledger=read_json(PERSIST/'pair-auto-budget.json',{'events':[]})
+    events,allowed=budget(ledger.get('events'),now,policy['attempt_window']*60,policy['attempt_limit'])
+    aborted=abort_stamps(ledger.get('aborted'),now)
+    if (limited and not allowed or events and now-events[-1]<max(policy['cooldown'],policy['min_dwell'])
+            or retry_wait(aborted,events,now,policy)>0):raise n.Refused('PAIR-RATE-LIMIT')
+    # 'aborted' is kept: a refund of this charge must still see the earlier aborts of the series (retry_wait)
+    atomic_json(PERSIST/'pair-auto-budget.json',dict({'events':events+[now]},**({'aborted':aborted} if aborted else {})))
+    return now
 
 
 def source_unstable(selection):
@@ -1155,10 +1524,15 @@ def publish_failure(error):
     import native_switch as n
     code = str(error) if isinstance(error, (str, n.Refused, ValueError)) and n.re.fullmatch('[A-Z][A-Z0-9_-]{0,95}', str(error)) else 'PAIR-SYSTEM-001'
     try:
-        pending = read_state()
-        if pending and pending['phase'] not in TERMINAL:
-            pending.update(phase='HELD', recovery_error=code)
-            save(pending)
+        # K11 (formal model 03.11.2026): read and write under the control lock. The owner's Start hands a session HELD
+        # by an outside change over under this lock (release_session: STOPPED); a HELD written from an older read
+        # would undo that hand-over (the Start then refused PAIR-RECOVERY-REQUIRED). Lua: pair.publish_failure.
+        from auto_control import control_lock
+        with control_lock():
+            pending = read_state()
+            if pending and pending['phase'] not in TERMINAL:
+                pending.update(phase='HELD', recovery_error=code)
+                save(pending)
     except (OSError, ValueError, KeyError, TypeError):
         pass  # Never overwrite an unreadable ownership record.
     value = {'state': 'BLOCKED', 'mode': 'continuous-pair', 'proof_scope': MODE,
@@ -1193,8 +1567,9 @@ def configure_lease(state):
 def tick(backend, settings, revision):
     import native_switch as n
     from agent import RUNTIME, PERSIST, read_json, atomic_json
-    from recovery_settings import normalized
+    from recovery_settings import normalized, return_rule
     from failover_plan import streak
+    from channel_model import channel_failed, return_ready, name as failure_model
     from failure_diagnosis import diagnose
     request_row={}
     try:
@@ -1203,11 +1578,11 @@ def tick(backend, settings, revision):
         running = request_row.get('mode') == 'on' and request_row.get('revision') == revision
         if not running and has_handover(state):
             # the journal stays as the old session left it until the Start: nothing else may finish it meanwhile
-            if kept_valid({'kept_at':state['handover']['at']}):return True
+            if kept_valid({'kept_at':state['handover']['at']},state['handover'].get('tx')):return True
             release_handover(state)
             return True
         if not running and has_kept(state):
-            if kept_valid(state):return False  # the boot resume's Start is still coming
+            if kept_valid(state,state.get('kept_tx')):return False  # the boot (or restart) resume's Start is still coming
             release_kept(backend,state)
             n.publish({'state': 'STOPPED', 'mode': 'continuous-pair', 'proof_scope': MODE, 'original_restored': True, 'blockers': []})
             return True
@@ -1232,6 +1607,11 @@ def tick(backend, settings, revision):
             raise ValueError('PAIR-MODE-NOT-CONFIGURED')
         from pair_interfaces import state as state_interfaces
         rows=network()
+        pending=state.get('server_change')
+        if isinstance(pending,dict) and (pending.get('phase')=='APPLYING' or normalized_network(rows,state_interfaces(state))!=state['network_identity']
+                                         or changed(state,configs(state_interfaces(state)))):
+            # a change cut short in any phase (a crash, a rollback that raised after its uci writes): resolved before the checks
+            server_resume(backend,state,revision);rows=network()
         if normalized_network(rows,state_interfaces(state))!=state['network_identity']:
             raise ValueError('PAIR-EXTERNAL-NETWORK-CHANGE')
         current_configs=configs(state_interfaces(state))
@@ -1240,9 +1620,13 @@ def tick(backend, settings, revision):
         journal = n.journal_read()
         status = read_json(RUNTIME / 'status.json', {})
         from pair_manual import consume as consume_manual,held_reserve
+        if 'server_change' in state:
+            if server_pending(backend,state,settings,revision):return True  # this session's own server change (stages 2, 3)
+            journal=n.journal_read()  # a finished change may have re-bound or completed the journal
         if consume_manual(backend,state,settings,revision):return True
         if revive(backend,state,revision,journal,rows):return True
         if held_reserve(backend,state,journal,settings,status):return True
+        if server_start(backend,state,settings,revision,journal):return True
         observed={}
         if reapply_missing_policy(backend,state,settings,revision,journal,observed):return True
         kernel=observed.get('kernel')
@@ -1252,7 +1636,8 @@ def tick(backend, settings, revision):
                         and journal.get('trial_nonce')==state['id']
                         and journal.get('control_revision')==state['revision']==revision)
         if applied_target and current_role(journal)!='source':
-            decision = n.committed_recovery_decision(backend, journal, settings, status.get('samples', []), time.time(), status)
+            now=time.time()
+            decision = n.committed_recovery_decision(backend, journal, settings, status.get('samples', []), now, status, hold=ledger_hold(settings,now))
             if decision['action'] == 'RESTORE-PRIMARY':
                 from pair_policy import metadata
                 context=metadata(journal)
@@ -1301,21 +1686,34 @@ def tick(backend, settings, revision):
         # An unstable source (no healthy observation for the whole bounded window, across its vendor rebuilds)
         # is the failure evidence itself: its generation-scoped streak restarts on every rebuild.
         unstable = source_unstable(selection)
-        failed = unstable or streak(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, False, selection['source'])
+        # The owner's failure model (channel_model: 'hmm' default, 'hmm-fast', or 'consecutive' = the streak).
+        failed = unstable or channel_failed(status.get('samples', []), selection['source']['id'], recovery['failures'], now, age, settings, selection['source'])
         healthy = streak(status.get('samples', []), selection['target']['id'], recovery['successes'], now, age, True, selection['target'])
         diagnosis = diagnose(status, selection['source']['id'], now, settings)
         if unstable and diagnosis.get('suppress_switch'):diagnosis = dict(diagnosis, suppress_switch=False)
         ledger = read_json(PERSIST / 'pair-auto-budget.json', {'events': []})
-        events, permitted = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
+        events, _ = budget(ledger.get('events'), now, recovery['attempt_window']*60, recovery['attempt_limit'])
         dwell = not events or now - events[-1] >= max(recovery['cooldown'], recovery['min_dwell'])
-        if (kernel and kernel.get('role')=='target' and not state.get('manual_hold') and recovery['return_policy']=='healthy_primary'
-                and now-state.get('selected_policy',{}).get('since',now)>=recovery['min_dwell']
-                and permitted and dwell and backend.recovery_ready(selection['source']['id'],settings) is True):
+        # a failover the vendor aborted is retried after its short backoff (retry_wait), not after the cooldown
+        retry_ready = retry_wait(ledger.get('aborted'), events, now, recovery) <= 0
+        # The one return rule (recovery_settings.return_rule, Lua pair.return_rule): a healthy reserve is left only
+        # after the damped stable window AND, in the HMM modes, channel_model.return_ready; a reserve that failed itself
+        # after the rescue stability min(primary_stable, rescue_stable) without the model gate; otherwise primary_stable.
+        returning = (kernel and kernel.get('role')=='target' and not state.get('manual_hold') and recovery['return_policy']=='healthy_primary'
+                     and now-state.get('selected_policy',{}).get('since',now)>=recovery['min_dwell'] and dwell)
+        ready_settings, model_gate = settings, False
+        if returning:
+            reserve = ('planned' if healthy else 'failed' if channel_failed(status.get('samples', []), selection['target']['id'], recovery['failures'], now, age, settings, selection['target'])
+                       else 'unknown')
+            ready_settings, model_gate = return_rule(settings, reserve, return_hold(events, now, recovery) if healthy else None)
+        if (returning
+                and (not model_gate or return_ready(status.get('samples', []), selection['source']['id'], recovery['primary_successes'], now, age, settings, selection['source']))
+                and backend.recovery_ready(selection['source']['id'],ready_settings) is True):
             until=configure_lease(state)
             blockers,fresh=backend.diagnostic()
             if blockers:raise ValueError('PAIR-READINESS-CHANGED')
             n.attempt(backend,fresh,until,False,control_revision=revision,pair_destination='source',pair_return=True,
-                      pair_session_order=state['order'],on_dispatch=lambda:charge_attempt(settings,revision))
+                      pair_session_order=state['order'],on_dispatch=lambda:charge_attempt(settings,revision,limited=False))
             return True
         order = selection.get('order') or []
         reserve_first = (selection.get('direction', 'first') == 'first' and selection.get('source_rule') in order
@@ -1329,17 +1727,49 @@ def tick(backend, settings, revision):
                        'source': selection['source']['id'], 'target': selection['target']['id'],
                        'reason':'RESERVE-ALREADY-FIRST','blockers':[],'kernel_proof':kernel,'kernel_policy_verified':bool(kernel and kernel.get('verified') is True)})
             return True
-        if failed and healthy and permitted and dwell and not diagnosis.get('suppress_switch'):
+        # Leaving a failed primary is never blocked by the attempt limit (flap damping slows the return instead).
+        if failed and healthy and dwell and retry_ready and not diagnosis.get('suppress_switch'):
+            # late-switch recheck (see late_recheck); an unstable source is left on its instability as before
+            evidence=evidence_code=None
+            if not unstable:
+                newest=newest_sample(status.get('samples',[]),selection['source']['id'],selection['source'])
+                evidence=newest['time'] if newest is not None else None
+                evidence_code=newest.get('code') if newest is not None else None
+            decided=selection
+            def late_abort(how):
+                n.publish({'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True,
+                           'certified': False, 'proof_scope': MODE, 'external_lan_verified': False,
+                           'source': decided['source']['id'], 'target': decided['target']['id'],
+                           'vendor_identity':decided.get('vendor_identity'),'kernel_proof':kernel,
+                           'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),
+                           'source_failures': failed, 'reserve_healthy': healthy,
+                           'reason': LATE_RECHECK_CODE, 'late_recheck': how, 'blockers': []})
+                return True
+            if evidence is not None and same_evidence(LATE_ABORTS.get(selection['source']['id']),evidence):return late_abort('same-evidence')
             if state.get('manual_hold'):
                 state.pop('manual_hold',None);save(state)
             until = configure_lease(state)
             blockers, selection = backend.diagnostic()
             if blockers:
                 raise ValueError('PAIR-READINESS-CHANGED')
-            n.attempt(backend, selection, until, False,
-                      probe_evidence={'source_streak_met': True, 'reserve_streak_met': True,
-                                      'required_failures': recovery['failures'], 'required_successes': recovery['successes']},
-                      control_revision=revision,pair_session_order=state['order'],on_dispatch=lambda:charge_attempt(settings,revision))
+            if evidence is not None:
+                late=late_recheck(backend,decided,evidence,evidence_code)
+                if late:
+                    LATE_ABORTS[decided['source']['id']]=evidence
+                    return late_abort(late[1])
+            LATE_ABORTS.pop(decided['source']['id'],None)
+            charged=[]
+            try:
+                n.attempt(backend, selection, until, False,
+                          probe_evidence={'source_streak_met': True, 'reserve_streak_met': True, 'failure_model': failure_model(settings),
+                                          'required_failures': recovery['failures'], 'required_successes': recovery['successes']},
+                          control_revision=revision,pair_session_order=state['order'],on_dispatch=lambda:charged.append(charge_attempt(settings,revision,limited=False)))
+            except n.Refused as error:
+                # a vendor-aborted, rolled-back failover is not a switch (refund_abort); the error is still published
+                if charged:
+                    try:refund_abort(charged[0],str(error))
+                    except (OSError,ValueError,KeyError,TypeError,AttributeError):pass  # unproven: the charge stays
+                raise
         else:
             n.publish({'state': 'OBSERVING', 'mode': 'continuous-pair', 'readiness_verified': True,
                        'certified': False, 'proof_scope': MODE, 'external_lan_verified': False,
@@ -1347,7 +1777,7 @@ def tick(backend, settings, revision):
                        'vendor_identity':selection.get('vendor_identity'),'kernel_proof':kernel,
                        'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),
                        'source_failures': failed, 'reserve_healthy': healthy,
-                       'reason': 'PAIR-RATE-LIMIT' if not permitted else diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-MANUAL-HOLD-PRIMARY' if state.get('manual_hold')=='source' else 'PAIR-WATCHING',
+                       'reason': diagnosis.get('code') if diagnosis.get('suppress_switch') else 'PAIR-RATE-LIMIT' if failed and healthy and not (dwell and retry_ready) else 'PAIR-MANUAL-HOLD-PRIMARY' if state.get('manual_hold')=='source' else 'PAIR-WATCHING',
                        'blockers': []})
     except (n.Refused, OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         try:pending = read_state()
@@ -1383,4 +1813,304 @@ def tick(backend, settings, revision):
             fail_request(request_row,revision,error)
         # Leave unverified ownership intact. Stop is independent of this code.
         publish_failure(error)
+        # K9: not running (after a recovery, or the owner's Stop): the outside-change hold keeps or releases its guard
+        if not (request_row.get('mode')=='on' and request_row.get('revision')==revision):_outside_hold_safe(backend)
+    return True
+
+
+# ---- best server inside a channel, stages 2 and 3 (server_pick.py; SERVER-PICK-DESIGN-2026-11-02.ru.md) ----------
+# MT3000 02.11.2026: a server change of the idle reserve made outside the pair (uci route_policy + network,
+# ifdown/ifup) was an external change for this session - PAIR-READOPTED, a 7.1 s LAN stall on the WORKING channel,
+# HELD after three in 15 min. Now this supervisor makes the change itself, inside its control lock, and re-binds its
+# own session to it (network_identity, protected route_policy digest, order, policy_hash, policy_roles,
+# selected_policy and the journal): no external code, no readopt. The monitor job only measures and writes the
+# hand-off (server_pick.CHANGE). The record state['server_change'] (phase APPLYING -> CONNECTING -> SETTLING, role)
+# keeps the pair waiting (reason SERVER-CHANGING, no switch decision) at most CONNECT_WAIT s for the tunnel to pass the
+# pair's own health check (DNS + HTTPS through it), else the previous server comes back the same way; then at most
+# SETTLE_WAIT s for the monitor to observe the new profile.
+# Stage 2 (role 'target'): the idle reserve while the traffic is on the primary and the pair rests.
+# Stage 3 (role 'source', the owner's main scenario): the failed primary while the traffic is on the reserve after a
+# completed automatic switch (journal COMMITTED). The open journal is re-bound too (server_pick.rebind): the normal
+# return rules (committed_recovery_decision -> finish_committed -> rollback to the context's primary_order) then bring
+# the traffic back to the primary on its new server - the return reads the journal's source id, so the recovery
+# streaks and the fresh return check follow the new profile id. The carrying reserve is never touched. Both tunnels
+# are bound by tunnel id (plan_source_tunnel / plan_target_tunnel), never by a profile id.
+# A crash or power cut inside a change (any phase, or a rollback that raised after its uci writes) leaves the record:
+# server_resume() adopts the live `from`, or `to` once its check passed (`verified`); an unverified `to` is restored
+# to `from` unless its tunnel carries the traffic. It runs before the boot recovery compares the journal with the
+# live order (native_switch.serve / auto.recover), in the cleanup and in tick before the external-change checks;
+# anything else stays an external change. The Lua twin is lua/pair.lua (same names).
+SERVER_IO=None  # tests: a fake server_pick io
+
+
+def _server_io():
+    if SERVER_IO is not None:return SERVER_IO
+    import server_pick
+    from agent import RUNTIME
+    return server_pick.router_io(str(RUNTIME))
+
+
+def _server_enabled(settings):return isinstance(settings,dict) and settings.get('server_pick') in ('1',True)
+
+
+def server_interfaces(state,settings):
+    """(source interface, reserve interface, the interfaces bound by their tunnel id: plan_source_tunnel and
+    plan_target_tunnel, alpha27). A tunnel chosen by its profile id would lose its binding with the new server's id."""
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    anchored={}
+    for role in ('source','target'):
+        anchor=settings.get('plan_'+role+'_tunnel') if isinstance(settings,dict) else None
+        kind,_,name=anchor.partition(':') if isinstance(anchor,str) else ('','','')
+        protocol={'wgclient':'wireguard','ovpnclient':'openvpn'}.get(managed.get(name))
+        if protocol is not None and kind==protocol:anchored[role]=name
+    names=sorted(managed);source,target=anchored.get('source'),anchored.get('target')
+    if source is None and target is not None:source=next(x for x in names if x!=target)
+    if target is None and source is not None:target=next(x for x in names if x!=source)
+    if source is None or source==target:return None,None,()
+    return source,target,tuple(sorted(set(anchored.values())))
+
+
+def _server_tunnel(pending):
+    return {key:pending.get(key) for key in ('tunnel_id','protocol','section','interface')}
+
+
+def server_rebind(backend,state,interface,protocol,role='target'):
+    """This supervisor's own server change adopted by the session (server_pick.rebind); ValueError when the live
+    change is not only the changed tunnel's (the normal checks then see an external change). The journal is written
+    before the session (rebind accepts a journal already re-bound)."""
+    import native_switch as n
+    import server_pick
+    from pair_interfaces import state as state_interfaces
+    managed=state_interfaces(state)
+    rows=network()
+    config=next((row.get('config') for row in rows if row.get('.name')==interface),None)
+    profile=(('openvpn:' if protocol=='openvpn' else 'wireguard:')+config) if isinstance(config,str) else None
+    order,hash_=backend.order()
+    updated,journal=server_pick.rebind(state,n.journal_read(),order,hash_,profile,role)
+    updated['network_identity']=normalized_network(rows,managed)
+    protected=updated.get('protected')
+    if isinstance(protected,dict):
+        # route_policy always; wireguard after GL's update_provider_config step (server_pick.PROVIDER_SCRIPT)
+        names=[name for name in ('route_policy','wireguard') if name in protected and (name=='route_policy' or protocol=='wireguard')]
+        if names:
+            current=configs(managed)
+            for name in names:protected[name]=current[name]
+    if journal is not None:n.journal_write(journal)
+    state.clear();state.update(updated);save(state)
+
+
+def server_apply(backend,state,revision,tunnel,target,io,role='target',outcome=None):
+    """One server change of an idle tunnel (stage 1's steps) under the control lock, the session re-bound before the
+    lock is released. -> server_pick.PICKED, or FAILED (a failed step, or a change the session cannot explain).
+    revision None: a resume outside a running Auto (boot, cleanup) - refused while any Auto intent is on.
+    outcome (a dict, optional) gets server_pick.run_plan's changed/committed/touched and rebound (the session re-bound)."""
+    import native_switch as n
+    import server_pick
+    from agent import RUNTIME
+    from auto_control import control_lock,revision_locked
+    plan=server_pick.switch_plan(tunnel,target,True,True,False,False,1)
+    report=outcome if isinstance(outcome,dict) else {}
+    report.update(changed=False,committed=False,touched=False,rebound=False)
+    if plan['code'] is not None:return server_pick.FAILED
+    with control_lock():
+        current=intent()
+        if revision is None:
+            if current.get('mode')=='on':raise n.Refused('CLIENT-STOP')
+        elif (revision_locked(RUNTIME)!=revision or current.get('mode')!='on' or current.get('revision')!=revision
+                or current.get('id')!=state.get('id')):raise n.Refused('CLIENT-STOP')
+        done=server_pick.run_plan(plan,io,True)
+        report.update(changed=done['changed'],committed=done['committed'],touched=done['touched'])
+        try:server_rebind(backend,state,tunnel['interface'],tunnel['protocol'],role)
+        except (ValueError,TypeError,KeyError):return server_pick.FAILED
+        report['rebound']=True
+    return done['code']
+
+
+def _server_publish(state,kernel=None):
+    import native_switch as n
+    import server_pick
+    roles=state.get('policy_roles') or {}
+    n.publish({'state':'OBSERVING','mode':'continuous-pair','proof_scope':MODE,'reason':server_pick.CHANGING,
+               'source':roles.get('source_id'),'target':roles.get('target_id'),'readiness_verified':bool(kernel and kernel.get('verified') is True),
+               'kernel_policy_verified':bool(kernel and kernel.get('verified') is True),'kernel_proof':kernel,'blockers':[]})
+
+
+def server_start(backend,state,settings,revision,journal):
+    """Takes a valid hand-off of the monitor job when the gate allows it. True: this pass changed a server."""
+    import server_pick as S
+    from pair_policy import state_order_matches
+    if not _server_enabled(settings):return False
+    io=_server_io()
+    try:row=json.loads(io['read'](io['runtime']+'/'+S.CHANGE) or 'null')
+    except (ValueError,TypeError):row=None
+    now=time.time()
+    try:taken=json.loads(io['read'](io['runtime']+'/'+S.STATE) or '{}')
+    except (ValueError,TypeError):taken=None
+    history=taken.get('changes') if isinstance(taken,dict) else None
+    taken=taken.get('taken') if isinstance(taken,dict) else None
+    if isinstance(row,dict) and S._stamp(taken) and S._stamp(row.get('time')) and row['time']<=taken:return False  # taken once
+    claimed=S.claim(io,row,now)
+    if claimed is None:return False
+    tunnel=claimed['tunnel']
+    source,reserve,anchors=server_interfaces(state,settings)
+    kernel=backend.attest_policy()
+    left,_=S.changes_left(history if isinstance(history,dict) else {},tunnel['tunnel_id'],now)
+    gate={'enabled':True,'phase':state.get('phase'),'journal_phase':journal.get('phase'),'journal_manual':journal.get('manual_request_id') is not None,
+          'kernel_verified':isinstance(kernel,dict) and kernel.get('verified') is True,
+          'kernel_role':kernel.get('role') if isinstance(kernel,dict) else None,'interface':tunnel['interface'],
+          'source_interface':source,'target_interface':reserve,'manual_hold':state.get('manual_hold'),
+          'pending':'server_change' in state,'anchored':tunnel['interface'] in anchors,'busy':S.vendor_busy(tunnel['tunnel_id'],io),'left':left}
+    code=S.gate(gate);role=S.role_of(gate)
+    if code is None:
+        live=backend.order()
+        # stage 2: the live order is the session's; stage 3: the COMMITTED journal's, with the session's context
+        if role=='target' and live!=(state.get('order'),state.get('policy_hash')):code=S.DEFERRED
+        if role=='source' and not state_order_matches(state,journal,live):code=S.DEFERRED
+    if code is not None:
+        if code in S.EVENT_CODES:S.event(io,code,tunnel,now,request=row['time'])
+        return False
+    change=S.project_change({'time':now,'from':row['from'],'to':row['to'],'from_ms':row.get('from_ms'),'to_ms':row.get('to_ms'),
+                             'from_location':row.get('from_location'),'to_location':row.get('to_location')})
+    if change is False:change={'time':now,'from':row['from'],'to':row['to'],'from_ms':None,'to_ms':None,'from_location':None,'to_location':None}
+    target=dict(claimed['target'],id=S.profile_id(tunnel['protocol'],claimed['target']['group_id'],claimed['target']['profile_id']))
+    pending=dict(_server_tunnel(tunnel),phase='APPLYING',role=role,**{'from':claimed['previous'],'to':target,'started':now,
+                 'deadline':now+S.CONNECT_WAIT,'request':row['time'],'change':change})
+    state['server_change']=pending;save(state)  # before the first write: a crash in between is seen by server_resume()
+    S.record(io,tunnel['tunnel_id'],now,taken=row['time'])  # every attempt counts for the hourly limit; taken once
+    first={}
+    if server_apply(backend,state,revision,tunnel,target,io,role,first)==S.PICKED:
+        state['server_change']=dict(pending,phase='CONNECTING')
+    elif first['changed'] is False:
+        # nothing was written (the first uci step failed): nothing to roll back, no change to wait for
+        S.event(io,S.FAILED,tunnel,now,change,row['time'],S.NOT_CHANGED)
+        state.pop('server_change',None);save(state)
+        return False
+    else:
+        back={}
+        undone=server_apply(backend,state,revision,tunnel,claimed['previous'],io,role,back)==S.PICKED
+        S.event(io,S.FAILED,tunnel,now,change,row['time'],S.rollback_note(undone,first,back))
+        state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,rolled_back=True)
+    save(state)
+    _server_publish(state,kernel)
+    return True
+
+
+def server_settled(selection):
+    """Stage 3: once the monitor observes the new primary profile (a clear diagnostic), the open COMMITTED journal
+    records its vendor identity (vendor_profiles.source, vendor_identity) the way attempt() records it at a switch,
+    so a later interrupted return compares the live profile, not the old server's. The reserve's recorded identity
+    must be unchanged. True when the journal was updated."""
+    import native_switch as n
+    from failure_diagnosis import profile_identity
+    try:journal=n.journal_read()
+    except n.Refused:return False
+    proofs=journal.get('vendor_profiles')
+    if journal.get('phase')!='COMMITTED' or not isinstance(proofs,dict) or not isinstance(selection,dict):return False
+    source=profile_identity(selection.get('source'));target=profile_identity(selection.get('target'))
+    if source is None or source.get('id')!=journal.get('source') or target is None or target!=proofs.get('target'):return False
+    identity=selection.get('vendor_identity')
+    identity=identity if isinstance(identity,str) and re.fullmatch('[a-f0-9]{64}',identity) else journal.get('vendor_identity')
+    if proofs.get('source')==source and journal.get('vendor_identity')==identity:return False
+    updated=dict(journal,vendor_profiles=dict(proofs,source=source))
+    if identity is not None:updated['vendor_identity']=identity
+    n.journal_write(updated)
+    return True
+
+
+def _server_carrying(backend,pending):
+    """At a resume: True unless the kernel proves the traffic on the other tunnel (an unknown route is carrying)."""
+    try:kernel=backend.attest_policy()
+    except Exception:return True  # noqa: BLE001 - any failure is an unknown route
+    role=pending.get('role') or 'target'
+    return not (isinstance(kernel,dict) and kernel.get('verified') is True and kernel.get('role') in ('source','target') and kernel['role']!=role)
+
+
+def server_resume(backend,state,revision=None):
+    """A server change record a crash, a power cut or a rollback that raised left behind (any phase). The live server
+    of the tunnel (route_policy and network both - this supervisor's own writes) is adopted (server_rebind) when it is
+    the recorded `from`, or `to` after its CONNECTING check passed (`verified`). An unverified `to` is restored to
+    `from` (server_apply, as a timeout rollback; revision None outside a running Auto) unless its tunnel now carries
+    the traffic (then adopted and logged); a failed restore adopts what is live. Anything else (a mixed state between
+    the two uci commits, an unreadable rule) is left to the normal checks, which see an external change. The record is
+    removed either way. Never raises. -> True when the session (and its journal) were re-bound."""
+    import native_switch as n
+    import server_pick as S
+    pending=state.get('server_change') if isinstance(state,dict) else None
+    if pending is None:return False
+    adopted=None;note=''
+    errors=(n.Refused,OSError,ValueError,KeyError,TypeError,AttributeError,subprocess.SubprocessError)
+    def live_side(io,tunnel):
+        live=S.live_server(io,tunnel)
+        config=next((row.get('config') for row in network() if row.get('.name')==tunnel['interface']),None)
+        return next((side for side in ('to','from') if isinstance(pending.get(side),dict) and live is not None
+                     and live==(pending[side].get('group_id'),pending[side].get('profile_id'))
+                     and config==S.network_config(tunnel['protocol'],pending[side].get('group_id'),pending[side].get('profile_id'))),None)
+    try:
+        io=_server_io();tunnel=_server_tunnel(pending);role=pending.get('role') or 'target'
+        side=live_side(io,tunnel)
+        if side=='to' and pending.get('verified') is not True:
+            if not isinstance(pending.get('from'),dict) or _server_carrying(backend,pending):note=' (not verified; its tunnel carries the traffic)'
+            else:
+                try:code=server_apply(backend,state,revision,tunnel,pending['from'],io,role)
+                except errors:code=None
+                if code==S.PICKED:adopted,side,note='from',None,' (the new one was not verified: restored)'
+                else:side,note=live_side(io,tunnel),' (the unverified new one could not be restored)'
+        if side is not None:
+            server_rebind(backend,state,tunnel['interface'],tunnel['protocol'],role)
+            adopted=side
+    except errors:adopted=None
+    try:
+        state.pop('server_change',None);save(state)
+    except (OSError,ValueError,TypeError):pass
+    _log('SERVER-PICK-RESUMED: %s'%('adopted the recorded '+adopted+' server'+note if adopted else 'not explainable; the normal checks decide'+note))
+    return adopted is not None
+
+
+def server_resume_boot(backend):
+    """The supervisor start (native_switch.serve, before it compares a COMMITTED journal with the live order)."""
+    try:state=read_state()
+    except (OSError,ValueError):return False
+    if not isinstance(state,dict) or 'server_change' not in state:return False
+    boot_step('server change resume')
+    return server_resume(backend,state)
+
+
+def server_pending(backend,state,settings,revision):
+    """While this supervisor's own server change is pending: True = this pass waited (no other decision)."""
+    import server_pick as S
+    pending=state.get('server_change')
+    if pending is None:return False
+    now=time.time()
+    stamps=[pending.get(key) for key in ('started','deadline')] if isinstance(pending,dict) else []
+    if isinstance(pending,dict) and pending.get('phase')=='APPLYING':
+        server_resume(backend,state,revision)  # a crash inside the change (the supervisor restarted mid-way)
+        return False
+    if (not isinstance(pending,dict) or pending.get('phase') not in ('CONNECTING','SETTLING') or len(stamps)!=2
+            or any(isinstance(x,bool) or not isinstance(x,(int,float)) or not math.isfinite(x) for x in stamps)
+            or not isinstance(pending.get('to'),dict) or not isinstance(pending.get('from'),dict)
+            or pending.get('role','target') not in ('source','target')):
+        state.pop('server_change',None);save(state)  # a damaged record: the normal checks decide
+        return False
+    io=_server_io();tunnel=_server_tunnel(pending);role=pending.get('role','target')
+    within=pending['started']<=now<pending['deadline']
+    if pending['phase']=='CONNECTING':
+        if backend.health(pending['to'].get('id')) is True:
+            S.record(io,pending['tunnel_id'],now,pending.get('change'),count=False)
+            S.event(io,S.PICKED,tunnel,now,pending.get('change'),pending.get('request'))
+            state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,verified=True);save(state)  # a resume keeps `to`
+        elif not within:
+            undone=server_apply(backend,state,revision,tunnel,pending['from'],io,role)==S.PICKED
+            S.event(io,S.FAILED,tunnel,now,pending.get('change'),pending.get('request'),'rolled back' if undone else 'rollback failed')
+            state['server_change']=dict(pending,phase='SETTLING',deadline=now+S.SETTLE_WAIT,rolled_back=True);save(state)
+        _server_publish(state)
+        return True
+    blockers,selection=backend.diagnostic()
+    if not blockers or not within:
+        if not blockers and role=='source':
+            try:server_settled(selection)
+            except (ValueError,TypeError,KeyError,OSError):pass  # observation-grade: the return compares ids and orders
+        state.pop('server_change',None);save(state)
+        return False
+    _server_publish(state)
     return True

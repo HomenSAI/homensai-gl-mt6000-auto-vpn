@@ -9,7 +9,9 @@ from pathlib import Path
 
 RUNTIME=Path('/var/run/homensai-vpn')
 PERSIST=Path('/etc/homensai-vpn')
-SCOPES=('latency','auto','traffic','quality','speed','ranking','all')
+# 'samples' (the monitor's per-channel check samples) and 'faults' (the transition-test history) are separate owner
+# resets (02.11.2026); 'all' keeps its meaning (charts and statistics) and does not include them.
+SCOPES=('latency','auto','traffic','quality','speed','ranking','all','samples','faults')
 ARCHIVE_KEEP=10
 ARCHIVE_BYTES=12*1024*1024
 REQUEST='stats-reset-request.json'
@@ -89,8 +91,31 @@ def reset_speed_history(writer,before=None):
     return old
 
 
-def apply(value,accounting,latency,now,writer,persist=None,website_response=None,ping_response=None,compare_response=None):
-    """Runs inside the agent. Returns (accounting, latency, result); the caller saves a checkpoint."""
+def fault_rows(path):
+    """fault_control.history() of a file: [] without one; FAULT-HISTORY-CORRUPT for a damaged one."""
+    try:envelope=json.loads(Path(path).read_text(encoding='utf8'))
+    except FileNotFoundError:return []
+    except ValueError:raise ValueError('FAULT-HISTORY-CORRUPT') from None
+    if not envelope:return []
+    data=envelope.get('data') if isinstance(envelope,dict) else None
+    if not isinstance(data,list) or len(data)>100 or envelope.get('sha256')!=checksum(data):raise ValueError('FAULT-HISTORY-CORRUPT')
+    return data
+
+
+def reset_fault_history(persist,writer,runtime=None,before=None):
+    """The transition-test history starts again, under the control lock its writer (fault_control.event) holds."""
+    from auto_control import control_lock
+    path=Path(persist)/'fault-history.json'
+    with control_lock(None if runtime is None else Path(runtime)):
+        old=fault_rows(path)
+        if before is not None:before(old)
+        writer(path,{'data':[],'sha256':checksum([])})
+    return old
+
+
+def apply(value,accounting,latency,now,writer,persist=None,website_response=None,ping_response=None,compare_response=None,samples=None,runtime=None):
+    """Runs inside the agent. Returns (accounting, latency, result); the caller saves a checkpoint.
+    samples: the monitor's in-memory check samples, emptied in place by the 'samples' scope."""
     from agent import Accounting
     from latency_history import LatencyHistory
     from reliability import Reliability
@@ -115,6 +140,8 @@ def apply(value,accounting,latency,now,writer,persist=None,website_response=None
             history=History(persist)
             with history.locked():payload['native_history']=history.load()
         if 'speed' in parts:payload['speed']=load_history()
+        if 'samples' in parts:payload['samples']=copy.deepcopy(list(samples or []))
+        if 'faults' in parts:payload['faults']=fault_rows(Path(persist)/'fault-history.json')
         name=archive(persist,scope,payload,now,writer)
         saved=json.loads((Path(persist)/'stats-archive'/name).read_text(encoding='utf8'))
         if saved.get('sha256')!=checksum(saved.get('data')):raise ValueError('STATS-RESET-ARCHIVE-UNVERIFIED')
@@ -126,6 +153,7 @@ def apply(value,accounting,latency,now,writer,persist=None,website_response=None
             return keep
         if 'auto' in parts:reset_native_history(persist,writer,now,before=extra('native_history'))
         if 'speed' in parts:reset_speed_history(writer,before=extra('speed'))
+        if 'faults' in parts:reset_fault_history(persist,writer,runtime,before=extra('faults'))
     except Exception as error:
         code=str(error) if re.fullmatch(r'[A-Z][A-Z0-9_-]{0,95}',str(error)) else 'STATS-RESET-FAILED'
         return accounting,latency,{'nonce':value['nonce'],'scope':scope,'time':now,'done':False,'code':code}
@@ -143,4 +171,5 @@ def apply(value,accounting,latency,now,writer,persist=None,website_response=None
         accounting.months={};accounting.days={};accounting.previous={};accounting.gaps=0
         if accounting.wan is not None:accounting.wan=Accounting(None,_nested=True)
     if 'quality' in parts:accounting.quality={};accounting.activity={};accounting.activity_previous={}
+    if 'samples' in parts and samples is not None:del samples[:]
     return accounting,latency,{'nonce':value['nonce'],'scope':scope,'time':now,'done':True,'archive':name}

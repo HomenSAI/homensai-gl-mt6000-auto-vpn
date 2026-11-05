@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const moduleName=menu['admin/services/homensai-vpn'].action.path.split('/').pop();

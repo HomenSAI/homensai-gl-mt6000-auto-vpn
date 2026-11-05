@@ -54,4 +54,25 @@ t.test('errors: not an object, broken skipped value, extra data, duplicate field
   t.eq(canon.encode(canon.decode_keys('{}',{a=true})),'{}')
 end)
 
+-- F2 (docs/qa/EXTERNAL-TOOLS-2026-11-01.md): a skipped field is validated as strictly as a kept one, so a torn or
+-- corrupt status.json is refused whole; decode_keys() raises the same error at the same byte as decode().
+t.test('skipped fields: malformed JSON anywhere is refused with the error decode() gives',function()
+  local bad={'[garbage}','[1}','{"k":1]','"\\q"','"a\1b"','"\\u12zz"','"\\ud800\\uzzzz"','[1,]','[1 2]','{"k" 1}',
+    '{"k":1,}','{1:2}','{"k":1,"k":2}','{"n":{"k":[],"k":0}}','01','-','1.e5','1e400','90071992547409930','nul','tru',
+    'falsey','NaN','[nul]',string.rep('[',65)..string.rep(']',65),string.rep('{"k":',64)..'1'..string.rep('}',64)}
+  for _,v in ipairs(bad) do
+    for _,text in ipairs({'{"x":'..v..',"a":1}','{"a":1,"x":'..v..'}','{"x":[0,'..v..'],"a":3}'}) do
+      local ok1,e1=pcall(canon.decode,text)
+      local ok2,e2=pcall(canon.decode_keys,text,{a=true})
+      t.eq(ok1,false,'decode refuses '..text)
+      t.eq(ok2,false,'decode_keys refuses '..text)
+      t.eq(e2,e1,'same error for '..text)
+    end
+  end
+  -- the deepest nesting decode() accepts is still accepted when skipped
+  local deep=string.rep('[',64)..string.rep(']',64)
+  t.eq(canon.encode(canon.decode_keys('{"x":'..deep..',"a":1}',{a=true})),'{"a":1}')
+  t.eq(canon.encode(canon.decode_keys('{"x":"\\ud83d\\ude00\\u00e9\\/","y":-0.5e-3,"a":1}',{a=true})),'{"a":1}')
+end)
+
 t.run()

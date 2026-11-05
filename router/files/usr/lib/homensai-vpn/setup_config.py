@@ -124,9 +124,11 @@ def probe_payload(arguments):
 def response_payload(arguments):
     from probe_policy import RESPONSE_METRICS
     from probe_policy import PING_INTERVAL_MIN,PING_INTERVAL_MAX,PING_INTERVAL_STEP
-    if (not isinstance(arguments,dict) or 'metric' not in arguments or not set(arguments)<={'metric','compare','fast_switch','ping_interval'}
+    from server_pick import MODELS as PICK_MODELS
+    if (not isinstance(arguments,dict) or 'metric' not in arguments or not set(arguments)<={'metric','compare','fast_switch','ping_interval','server_pick','server_pick_model'}
             or arguments['metric'] not in RESPONSE_METRICS
-            or any(key in arguments and type(arguments[key]) is not bool for key in ('compare','fast_switch'))):
+            or any(key in arguments and type(arguments[key]) is not bool for key in ('compare','fast_switch','server_pick'))
+            or 'server_pick_model' in arguments and arguments['server_pick_model'] not in PICK_MODELS):
         raise ValueError('RESPONSE-METRIC-INVALID')
     # Owner ping cadence: whole seconds 10..300 in steps of 10 (probe_policy.ping_interval reads it back).
     if 'ping_interval' in arguments and (type(arguments['ping_interval']) is not int
@@ -137,6 +139,10 @@ def response_payload(arguments):
     # Owner switch for the fast channel change (fast_policy); default on, off means every switch uses the GL rebuild.
     if 'fast_switch' in arguments:main['fast_switch']='1' if arguments['fast_switch'] else '0'
     if 'ping_interval' in arguments:main['ping_interval']=str(arguments['ping_interval'])
+    # Owner switch of the best-server pick inside a channel (server_pick.py, 2.1.0); absent or '0' = off.
+    if 'server_pick' in arguments:main['server_pick']='1' if arguments['server_pick'] else '0'
+    # How the pick decides (server_pick.MODELS, option server_pick_model): 'simple' (default) or 'bayes' (expert setting).
+    if 'server_pick_model' in arguments:main['server_pick_model']=arguments['server_pick_model']
     return {'main':main,'servers':[]}
 
 

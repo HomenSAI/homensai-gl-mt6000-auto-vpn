@@ -7,6 +7,8 @@ Canonical Gitea history is preserved. A public snapshot can parent the existing 
 
 For a release, use one immutable tag, matching canonical IPK/checksum/verification and same-tag kit. Privacy-scan the complete public tree and archives, publish draft/prerelease/stable flags deliberately, independently download every attachment and verify SHA256. A manifest tag or branch push alone is not a server Release. Stable/main remain unchanged unless the owner actually included them.
 
+For every release, add the new measurements to `docs/test-history/results.json`, rebuild `docs/TEST-HISTORY.html` with `python3 scripts/build_test_history.py` (it refuses to write when its privacy scan finds an address, host name, key or e-mail) and attach that HTML file to the GitHub release as an asset.
+
 Keep credentials, raw configuration, private transaction data and unencrypted backups out of Git/releases. A reviewed source save does not prove physical installation, browser rendering, external-model execution or LAN connectivity. Device work follows its own current identity/backup/lifecycle verification; never resume old observers automatically.
 
 [Versioning](VERSIONING.md) · [CI](CI-PRIMARY.md) · [Actual current delivery](CURRENT-STATUS.md).

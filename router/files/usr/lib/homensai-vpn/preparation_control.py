@@ -398,3 +398,216 @@ def verify(action,plan):
     if any(after_hashes[name]!=value for name,value in plan['hashes'].items() if name!=changed):
         raise Refused('PREPARATION-EXTERNAL-CHANGE')
     return {'restart_required':restart}
+
+
+# 03.11.2026 (MT3000, owner): after Start, preparation sets network.<tunnel>.auto=0 so that only Auto brings the pair
+# up. Once the owner STOPS Auto, the GL VPN dashboard must manage those tunnels again (its toggle did nothing while
+# auto stayed 0). restore_autostart() puts back the value each before-record saved, under the control lock, only:
+#   * after the owner's own Stop: pair intent not 'on'; the durable stop latch (native-stop.json) is valid, comes from
+#     the page (request_source 'manual') and is newer than both the session start and the owner's resume marker;
+#   * with a settled route: journal absent or ROLLED-BACK; the session STOPPED (no boot keep/handover), FAILED with
+#     nothing owned, absent, or HELD only by a change made outside the app (the K9 hold: its guard is released by the
+#     same Stop; nothing else of that session is touched here);
+#   * for flags the app changed: a VERIFIED autostart record exists and the flag still reads the app's '0' with the
+#     client's own protocol - a flag the owner changed meanwhile is left as it is.
+# Nothing is started or stopped (no ifup/ifdown/reload); the next Start prepares again with a new before-record.
+# The records of a restored flag are removed (the change is undone), so Start/Stop cycles never fill the history.
+# Owner decision 03.11.2026 (integration alpha8): the same Stop also puts back the stock GL vpn-client boot link
+# (/etc/rc.d/S??vpn-client) that the 'vpn-boot' preparation (PREP-STOCK-VPN-BOOT) removed - its before-record keeps every
+# link it saw (name, target). Restored only while the app's state still holds: no start link of the service exists (one the
+# owner made, e.g. `/etc/init.d/vpn-client enable`, wins), the remaining links are exactly the recorded non-start links,
+# and the init script is the regular file the links point to. Only the symlink is created - the service is neither started
+# nor stopped and no init script runs; the next boot starts the stock VPN client as before Auto.
+AUTOSTART_ACTIONS=('wg-autostart','ovpn-autostart','source-autostart','target-autostart')
+BOOT_RESTORE_ACTIONS=('vpn-boot',)
+CLIENT_NAME=re.compile(r'(wgclient|ovpnclient)[1-9][0-9]{0,8}')
+
+
+def _owner_stop_latched(state):
+    from boot_resume import MARKER
+    latch=read_json(PERSIST/'native-stop.json',None)
+    if not isinstance(latch,dict) or latch.get('control_revision_failed') is True or latch.get('request_source')!='manual':return False
+    stopped=latch.get('requested')
+    if type(stopped) not in (int,float) or not stopped==stopped or stopped in (float('inf'),float('-inf')):return False
+    marker=read_json(PERSIST/MARKER,None)
+    if isinstance(marker,dict) and marker.get('enabled') is True:
+        at=marker.get('time')
+        if type(at) not in (int,float) or stopped<at:return False
+    started=state.get('started') if isinstance(state,dict) else None
+    return not (type(started) in (int,float) and stopped<started)
+
+
+def _restore_allowed():
+    from pair_auto import read_state,intent,READOPT_CODES
+    from native_switch import journal_read
+    if intent().get('mode')=='on':return 'auto-on'
+    state=read_state()
+    phase=state.get('phase') if state else None
+    if any(key in state for key in ('kept','handover')):return 'session-kept'
+    if not (phase is None or phase=='STOPPED' or phase=='FAILED' and not state.get('owned')
+            or phase=='HELD' and state.get('recovery_error') in READOPT_CODES):return 'session-not-stopped'
+    if journal_read().get('phase') not in (None,'ROLLED-BACK'):return 'route-not-settled'
+    if not _owner_stop_latched(state):return 'no-owner-stop'
+    for name in ('manual-control.json','pair-manual-control.json'):
+        pending=read_json(RUNTIME/name,{})
+        if pending and (not isinstance(pending,dict) or pending.get('state') not in TERMINAL_MANUAL):return 'manual-pending'
+    return None
+
+
+def _autostart_records():
+    """{section: [(record path, data)]} of the VERIFIED autostart records, oldest first."""
+    found={}
+    directory=PERSIST/'preparation-changes'
+    if not directory.is_dir() or directory.is_symlink():return found
+    records()  # the whole history must verify before any of it is used
+    for path in sorted(directory.iterdir()):
+        data=read_json(path,{}).get('data',{})
+        if data.get('action') not in AUTOSTART_ACTIONS:continue
+        options_=data.get('before',{}).get('options',[])
+        if (len(options_)!=1 or not isinstance(options_[0],dict) or options_[0].get('option')!='auto'
+                or options_[0].get('after')!='0' or options_[0].get('before') not in (None,'0','1')
+                or not isinstance(options_[0].get('section'),str) or not CLIENT_NAME.fullmatch(options_[0]['section'])):continue
+        found.setdefault(options_[0]['section'],[]).append((path,data))
+    for rows in found.values():rows.sort(key=lambda row:row[1]['time'])
+    return found
+
+
+def _boot_records():
+    """{action: [(record path, data)]} of the VERIFIED vpn-boot records that removed at least one start link, oldest first."""
+    found={}
+    directory=PERSIST/'preparation-changes'
+    if not directory.is_dir() or directory.is_symlink():return found
+    for path in sorted(directory.iterdir()):
+        data=read_json(path,{}).get('data',{})
+        action=data.get('action')
+        if action not in BOOT_RESTORE_ACTIONS:continue
+        service=ACTIONS[action]['service'];links=data.get('before',{}).get('links')
+        if (not isinstance(links,list) or not 1<=len(links)<=16
+                or any(not isinstance(row,dict) or not isinstance(row.get('name'),str) or not isinstance(row.get('target'),str)
+                       or not re.fullmatch('[SK][0-9]{2}'+re.escape(service),row['name'])
+                       or row['target'] not in ('../init.d/'+service,'/etc/init.d/'+service) for row in links)
+                or not any(row['name'].startswith('S') for row in links)):continue
+        found.setdefault(action,[]).append((path,data))
+    for rows in found.values():rows.sort(key=lambda row:row[1]['time'])
+    return found
+
+
+def _restore_boot(by_action):
+    """Recreate the start links the app removed. -> (restored actions, kept actions). Raises Refused on an unconfirmed write."""
+    restored=[];kept=[]
+    for action,rows in sorted(by_action.items()):
+        service=ACTIONS[action]['service'];links=rows[-1][1]['before']['links']
+        script=ROOT/'etc/init.d'/service
+        try:current=boot_links(service)
+        except Refused:kept.append(action);continue
+        start=[row for row in links if row['name'].startswith('S')]
+        stay=sorted((row['name'],row['target']) for row in links if not row['name'].startswith('S'))
+        # the app's state still holds: no start link now (the owner's own wins), the kill links as recorded, a real script
+        if (any(row['name'].startswith('S') for row in current)
+                or sorted((row['name'],row['target']) for row in current if not row['name'].startswith('S'))!=stay
+                or script.is_symlink() or not script.is_file()):
+            kept.append(action);continue
+        parent=ROOT/'etc/rc.d'
+        for row in start:os.symlink(row['target'],str(parent/row['name']))
+        sync_directory(parent)
+        after={row['name']:row['target'] for row in boot_links(service)}
+        if any(after.get(row['name'])!=row['target'] for row in start):raise Refused('PREPARATION-WRITE-UNCONFIRMED')
+        for path,_ in rows:path.unlink()
+        restored.append(action)
+    return restored,kept
+
+
+def restore_autostart():
+    """-> {'restored': [sections], 'kept': [sections], 'boot_restored': [actions], 'boot_kept': [actions],
+    'code': None | refusal code[, 'skipped': reason]}. Never raises."""
+    restored=[];kept=[];boot_restored=[];boot_kept=[]
+    def answer(code=None,**extra):
+        return dict({'restored':restored,'kept':kept,'boot_restored':boot_restored,'boot_kept':boot_kept,'code':code},**extra)
+    try:
+        with control_lock():
+            # a condition that is not met is not an error: nothing to do now (lower-case reason, never a page code)
+            skipped=_restore_allowed()
+            if skipped:return answer(skipped=skipped)
+            records()  # the whole history must verify before any of it is used
+            by_section=_autostart_records();by_boot=_boot_records();changes=[]
+            if not by_section and not by_boot:return answer()
+            values=options() if by_section else {}
+            for section,rows in sorted(by_section.items()):
+                row=values.get(section)
+                # the value right before the app's latest write; '0' then means nothing was changed by that record
+                before=rows[-1][1]['before']['options'][0]['before']
+                if (not isinstance(row,dict) or row.get('auto')!='0' or row.get('proto')!=CLIENT_NAME.fullmatch(section).group(1)
+                        or before=='0'):
+                    kept.append(section);continue
+                changes.append({'section':section,'type':'interface','option':'auto','before':'0','after':before})
+            if changes:
+                package='network';original=regular(ROOT/'etc/config'/package).decode('utf-8')
+                with tempfile.TemporaryDirectory(prefix='preparation-stage-',dir=str(RUNTIME)) as stage:
+                    request={'action':'restore-autostart','expected':original,'changes':changes,'stage':stage}
+                    reply=subprocess.run(['/usr/bin/lua','/usr/lib/homensai-vpn/preparation_write.lua'],input=json.dumps(request).encode(),
+                                         stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,timeout=10)
+                if reply.returncode or reply.stdout.strip()!=b'OK':raise Refused('PREPARATION-WRITE-UNCONFIRMED')
+                after=options()
+                for change in changes:
+                    if after.get(change['section'],{}).get('auto')!=change['after']:raise Refused('PREPARATION-WRITE-UNCONFIRMED')
+                for change in changes:
+                    for path,_ in by_section[change['section']]:path.unlink()
+                    restored.append(change['section'])
+                sync_directory(PERSIST/'preparation-changes')
+            if by_boot:
+                done,left=_restore_boot(by_boot);boot_restored.extend(done);boot_kept.extend(left)
+                if done:sync_directory(PERSIST/'preparation-changes')
+        for change in changes:
+            _log('PREP-AUTOSTART-RESTORED: network.%s.auto %s after the owner Stop (GL manages the tunnel again)'
+                 %(change['section'],change['after'] if change['after'] is not None else 'unset'))
+        for action in boot_restored:
+            _log('PREP-BOOT-RESTORED: /etc/rc.d start link of %s after the owner Stop (the stock client starts at boot again)'
+                 %ACTIONS[action]['service'])
+        return answer()
+    except (OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError) as error:
+        return answer(safe_code(error))
+
+
+def _log(line):
+    try:subprocess.run(['logger','-t','homensai-vpn',str(line)[:400]],timeout=5,check=False,
+                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    except (OSError,subprocess.SubprocessError):pass
+
+
+# The supervisors call autostart_after_stop() after every pair tick; it runs restore_autostart() only when one of the
+# files that decide it changed since the last run (no Lua/uci child on an idle tick). Lua: backend.autostart_after_stop
+# (same key files) runs `python3 preparation_control.py restore-autostart`.
+_after_stop={}
+
+
+def after_stop_key():
+    from pair_auto import paths
+    from native_switch import JOURNAL
+    directory=PERSIST/'preparation-changes'
+    try:
+        if not directory.is_dir() or not any(directory.iterdir()):return None
+    except OSError:return None
+    intent_path,state_path=paths()
+    try:
+        if read_json(intent_path,{}).get('mode')=='on':return None  # Auto runs: nothing to restore, no lock taken
+    except (OSError,ValueError,AttributeError):pass
+    key=[]
+    for path in (directory,ROOT/'etc/config/network',ROOT/'etc/rc.d',PERSIST/'native-stop.json',intent_path,state_path,JOURNAL):
+        try:st=path.lstat();key.append((st.st_ino,st.st_size,st.st_mtime_ns,st.st_ctime_ns))
+        except OSError:key.append(None)
+    return tuple(key)
+
+
+def autostart_after_stop():
+    key=after_stop_key()
+    if key is None or key==_after_stop.get('key'):return None
+    result=restore_autostart()
+    _after_stop['key']=after_stop_key()
+    return result
+
+
+if __name__=='__main__':
+    import sys
+    if sys.argv[1:]!=['restore-autostart']:
+        print(json.dumps({'code':'PREPARATION-FIELDS'}));raise SystemExit(2)
+    print(json.dumps(restore_autostart(),sort_keys=True))

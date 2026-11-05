@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const c={bi:(en)=>en,locale:'en'};vm.createContext(c);vm.runInContext(fs.readFileSync('router/ui_logic.inc.js','utf8'),c);
 const row=(id,code=null,time=990)=>({id,interface:'vpn'+id,time,code,dns_ok:true,https_success:2});

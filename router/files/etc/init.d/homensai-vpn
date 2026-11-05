@@ -121,6 +121,22 @@ start_service() {
     procd_close_instance
 }
 
+# Optional SQM (sqm.py / lua/sqm.lua): every cake root qdisc this app recorded on a tunnel device goes back to the
+# kernel default (only where the root is still cake; any other qdisc is not ours). Runs after the monitor's own stop
+# hook; opkg removal/upgrade reach it through prerm's `stop`. A missing file or tc is nothing to restore.
+sqm_release() {
+    local state=/var/run/homensai-vpn/sqm-state.json dev
+    [ -f "$state" ] || return 0
+    if command -v tc >/dev/null 2>&1 && command -v jsonfilter >/dev/null 2>&1; then
+        for dev in $(jsonfilter -i "$state" -e '@.devices[*].device' 2>/dev/null); do
+            case "$dev" in ''|*[!A-Za-z0-9_.-]*) continue ;; esac
+            [ "${#dev}" -le 15 ] || continue
+            tc qdisc show dev "$dev" root 2>/dev/null | grep -q '^qdisc cake ' && tc qdisc del dev "$dev" root 2>/dev/null
+        done
+    fi
+    rm -f "$state"
+}
+
 # The Lua monitor saves its accounting (and the Diagnostics ping history) before procd's SIGTERM: Lua's uloop
 # has no signal handler on OpenWrt 21.02. Harmless when the Python monitor runs (no such object).
 stop_service() {
@@ -136,6 +152,7 @@ stop_service() {
             mv -f /etc/homensai-vpn/.service-run.json.stop.pending /etc/homensai-vpn/service-run.json 2>/dev/null || true
     fi
     ubus -t 10 call homensai-vpn-lua shutdown >/dev/null 2>&1 || true
+    sqm_release
     rm -f /var/run/homensai-vpn/lua-monitor.ready
     # hv-core: a fallback to separate processes lasts until the service stops; a stop is clean, not a crash
     rm -f /var/run/homensai-vpn/hv-core-fallback.json /var/run/homensai-vpn/hv-core.json /var/run/homensai-vpn/hv-core-watchdog.json

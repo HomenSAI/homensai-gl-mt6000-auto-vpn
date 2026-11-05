@@ -28,7 +28,7 @@ local function b64url_decode(text)
   return table.concat(out)
 end
 
-local TRACE_BODY='fl=1\nh=one.one.one.one\nip=93.184.216.34\nts=1761830400.1\nvisit_scheme=https\nuag=curl\ncolo=FRA\nhttp=http/1.1\nloc=DE\ntls=TLSv1.3\n'
+local TRACE_BODY='fl=1\nh=one.one.one.one\nip=93.184.216.34\nts=1761830400.1\nvisit_scheme=https\nuag=@UAG\ncolo=FRA\nhttp=http/1.1\nloc=DE\ntls=TLSv1.3\n'
 local DNS_JSON='{"Status":0,"TC":false,"Question":[{"name":"example.com.","type":1}],"Answer":[{"name":"example.com.","type":1,"TTL":60,"data":"93.184.216.34"}]}'
 local BINDING={code=NULL,device='wgclient1',mark=4096,table='1001',ifindex=12}
 local function ok_https() return {['one.one.one.one']={{kind='http',status=200,body=TRACE_BODY}},['dns.google']={{kind='http',status=200,body=DNS_JSON}},
@@ -55,15 +55,23 @@ local function scenario_io(sc)
     for k,v in pairs(b) do out[k]=v end
     return out
   end
+  -- option probe_dns: sc.config is the configuration text (probe_trust.dns_mode)
+  function io_.config_key() return sc.config end
+  function io_.config_text() return sc.config end
   function io_.probe_io(device,requests,dns)
     io_.calls.probe_io=io_.calls.probe_io+1
     io_.last={device=device,requests=requests,dns=dns}
     local answers={}
     for i,r in ipairs(requests) do
       local spec=pop(queues[r.hostname] or {{kind='transport'}})
-      local kinds={timeout='timeout',tls='tls-error',transport='transport-error'}
+      local kinds={timeout='timeout',tls='tls-error',transport='transport-error',untrusted='tls-untrusted'}
+      -- the DoH DNS check (option probe_dns 'doh'): an RFC 8484 answer to dns.google, sc.doh = ok | bad
+      if r.hostname=='dns.google' and string.sub(r.path,1,15)=='/dns-query?dns=' then
+        spec={kind='http',status=200,body=sc.doh=='bad' and '@DNSWIRE-BAD' or '@DNSWIRE'}
+      end
       if spec.kind=='http' then
-        local body=spec.body
+        -- @UAG: the server echoes the request's User-Agent (Cloudflare uag=); @NOW: the router's clock
+        local body=string.gsub(string.gsub(spec.body,'@UAG',r.agent or ''),'@NOW',string.format('%.3f',io_.wall()))
         if body=='@DNSWIRE' or body=='@DNSWIRE-BAD' then
           body=dns_answer(b64url_decode(string.match(r.path,'%?dns=(.*)$')),body=='@DNSWIRE' and 'ok' or 'bad-rcode')
         end
@@ -132,7 +140,10 @@ t.test('a passing probe: agent.probe fields, three checks side by side in one pr
   t.eq(r.exit_country,nil,'agent.probe has no exit_country');t.eq(r.server_endpoint,nil)
   t.eq(io_.calls.probe_io,1);t.eq(io_.calls.binding,2,'route binding before and after')
   t.eq(io_.last.device,'wgclient1');t.eq(io_.last.dns.host,'9.9.9.9');t.eq(io_.last.dns.port,53);t.eq(io_.last.dns.seconds,3)
-  t.eq(io_.last.requests[1],{address='1.1.1.1',hostname='one.one.one.one',path='/cdn-cgi/trace',seconds=6})
+  local agent=io_.last.requests[1].agent
+  t.truthy(string.find(agent,'^HomenSAI%-probe/%x+$') and #agent==15+32,'a 128-bit nonce in the User-Agent')
+  t.eq(io_.last.requests[1],{address='1.1.1.1',hostname='one.one.one.one',path='/cdn-cgi/trace',seconds=6,agent=agent})
+  t.truthy(io_.last.requests[2].agent~=agent and io_.last.requests[3].agent~=agent,'one nonce per request')
   t.eq(io_.last.requests[2].path,'/resolve?name=example.com&type=A')
   t.truthy(string.find(io_.last.requests[3].path,'^/dns%-query%?dns=[A-Za-z0-9_-]+$'),'dns-wire question in the URL, no padding')
   t.eq(canon.encode(r.probe_checks[1]),canon.encode(canon.object({elapsed_ms=canon.float(250),http_status=200,result='ok',target='one.one.one.one'})))
@@ -204,6 +215,46 @@ t.test('a Lua fault is not hidden as SYSTEM-001: it reaches the caller (backend 
   t.truthy(type(err)=='string' and string.find(err,'lua fault',1,true))
 end)
 
+t.test('authenticity: untrusted certificate, portal redirect and a replayed trace never count (probe_trust.lua)',function()
+  local h=ok_https();h['one.one.one.one']={{kind='untrusted'}}
+  local r=live.new(scenario_io({https=h})).probe(profile())
+  t.eq(r.code,NULL,'two authentic answers remain');t.eq(r.https_success,2);t.eq(r.exit_ip,nil)
+  t.eq(r.probe_checks[1].result,'tls-error');t.eq(r.probe_checks[1].trust,'untrusted-certificate');t.eq(r.probe_trust,nil)
+  h=ok_https();h['dns.google']={{kind='untrusted'}};h['dns.quad9.net']={{kind='http',status=302,body='<a href=portal>'}}
+  r=live.new(scenario_io({https=h})).probe(profile())
+  t.eq(r.code,'VPN-003');t.eq(r.probe_trust,'untrusted');t.eq(r.probe_checks[3].result,'http-error')
+  t.eq(r.probe_checks[3].trust,'portal-redirect');t.eq(r.probe_checks[3].http_status,302)
+  h=ok_https();h['dns.google']={{kind='timeout'}};h['dns.quad9.net']={{kind='tls'}}
+  r=live.new(scenario_io({https=h})).probe(profile())
+  t.eq(r.code,'VPN-003');t.eq(r.probe_trust,nil,'a plain outage is not an authenticity failure');t.eq(r.probe_checks[3].trust,nil)
+  for _,body in ipairs({'ip=93.184.216.34\nhttp=x\nuag=curl/7.83.1\n','ip=93.184.216.34\nhttp=x\nuag=@UAG\nuag=x\n',
+                        'ip=93.184.216.34\nhttp=x\nts=1000\n','ip=93.184.216.34\nhttp=x\n','ip=93.184.216.34\nhttp=x\nts=@NOW\nts=@NOW\n'}) do
+    h=ok_https();h['one.one.one.one']={{kind='http',status=200,body=body}}
+    r=live.new(scenario_io({https=h})).probe(profile())
+    t.eq(r.probe_checks[1].result,'invalid-response',body);t.eq(r.probe_checks[1].trust,'stale-response',body);t.eq(r.exit_ip,nil)
+    t.code('EXIT-TRACE-FAILED',live.new(scenario_io({https=h})).trace,profile())
+  end
+  h=ok_https();h['one.one.one.one']={{kind='http',status=200,body='ip=93.184.216.34\nhttp=x\nts=@NOW\n'}}
+  r=live.new(scenario_io({https=h})).probe(profile())
+  t.eq(r.probe_checks[1].result,'ok','no uag echo: a ts within 60 s of the router clock is fresh');t.eq(r.exit_ip,'93.184.216.34')
+  -- the separate trace fetch: untrusted peer -> NATIVE-SYSTEM-001 (Python: ssl.SSLCertVerificationError, an OSError)
+  h=ok_https();h['one.one.one.one']={{kind='untrusted'}}
+  t.code('NATIVE-SYSTEM-001',live.new(scenario_io({https=h})).trace,profile())
+end)
+
+t.test('option probe_dns doh: the DNS check is an RFC 8484 query to dns.google instead of UDP 9.9.9.9:53',function()
+  local config="config main 'main'\n\toption probe_dns 'doh'\n"
+  local io_=scenario_io({https=ok_https(),config=config,dns='timeout'})
+  local r=live.new(io_).probe(profile())
+  t.eq(r.code,NULL);t.eq(r.dns_ok,true,'the UDP answer is not asked');t.eq(io_.last.dns,nil);t.eq(#io_.last.requests,4)
+  t.eq(io_.last.requests[4].hostname,'dns.google');t.truthy(string.find(io_.last.requests[4].path,'^/dns%-query%?dns='))
+  t.eq(#r.probe_checks,3,'the DoH check is the DNS check, not a fourth HTTPS target')
+  r=live.new(scenario_io({https=ok_https(),config=config,doh='bad'})).probe(profile())
+  t.eq(r.code,'DNS-001');t.eq(r.dns_ok,false)
+  io_=scenario_io({https=ok_https(),config="config main 'main'\n\toption probe_dns 'udp'\n"})
+  r=live.new(io_).probe(profile());t.eq(#io_.last.requests,3);t.eq(io_.last.dns.port,53)
+end)
+
 ------------------------------------------------------------------------------------------------------
 -- trace
 ------------------------------------------------------------------------------------------------------
@@ -232,7 +283,7 @@ t.test('trace refusals follow native_switch.trace and lua_bridge.py',function()
   h=ok_https();h['one.one.one.one']={{kind='http',status=200,body='h=x\nip=93.184.216.34\n'},{kind='oversize'}}
   t.code('EXIT-TRACE-FAILED',live.new(scenario_io({https=h})).trace,profile())
   -- a valid trace body (ip= and http=) whose address is not global
-  h=ok_https();h['one.one.one.one']={{kind='http',status=200,body='ip=10.1.2.3\nhttp=http/1.1\n'}}
+  h=ok_https();h['one.one.one.one']={{kind='http',status=200,body='ip=10.1.2.3\nhttp=http/1.1\nuag=@UAG\n'}}
   t.code('EXIT-IP-NOT-GLOBAL',live.new(scenario_io({https=h})).trace,profile())
 end)
 
@@ -315,16 +366,16 @@ local CURL=RUN..'/curl'
 local f=assert(io.open(CURL,'wb'))
 f:write([[#!/bin/sh
 # fake curl: -D head -o body -w fmt URL; behaviour by host; sleeps to prove the checks run side by side
-head=;body=;url=;iface=
+head=;body=;url=;iface=;ca=;ua=
 while [ $# -gt 0 ]; do
   case "$1" in
-    -D) head=$2; shift;; -o) body=$2; shift;; --interface) iface=$2; shift;;
+    -D) head=$2; shift;; -o) body=$2; shift;; --interface) iface=$2; shift;; --cacert) ca=$2; shift;; -A) ua=$2; shift;;
     -m|--proto|--max-redirs|--resolve|-H|--max-filesize|-w) shift;;
     https://*) url=$1;;
   esac
   shift
 done
-echo "$iface $url" >>"$(dirname "$head")/curl.log"
+echo "$iface $url ${ca##*/} $ua" >>"$(dirname "$head")/curl.log"
 sleep 1
 case "$url" in
   https://one.one.one.one/*) printf 'HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\n' >"$head"; printf 'ip=1.2.3.4\nhttp=x\n' >"$body"; printf 0.210; exit 0;;
@@ -338,8 +389,11 @@ os.execute('chmod 755 '..CURL)
 t.test('sys.probe_io: curl children side by side, statuses and files mapped, nothing left in RAM',function()
   if not EXEC then print('  skipped: noexec temporary directory');return end
   sys.CURL=CURL
+  local trust=require('probe_trust')
+  local saved_anchors=trust.ANCHORS
+  trust.ANCHORS=t.here..'/../../files/usr/lib/homensai-vpn/probe-anchors';trust.reset()
   local requests={}
-  for i,target in ipairs(require('probe').TARGETS) do requests[i]={address=target[1],hostname=target[2],path=target[3],seconds=6} end
+  for i,target in ipairs(require('probe').TARGETS) do requests[i]={address=target[1],hostname=target[2],path=target[3],seconds=6,agent='HomenSAI-probe/'..i} end
   dns_script={'wait','junk','ok'}
   local accepted={}
   local started=os.time()
@@ -348,12 +402,16 @@ t.test('sys.probe_io: curl children side by side, statuses and files mapped, not
   t.truthy(os.time()-started<=2,'three 1 s checks finished together')
   t.eq(answers[1].response.status,200);t.eq(answers[1].response.body,'ip=1.2.3.4\nhttp=x\n');t.eq(answers[1].elapsed,0.21)
   t.eq(answers[2].response.status,503);t.eq(answers[2].elapsed,0.3)
-  t.eq(answers[3].response,nil);t.eq(answers[3].kind,'tls-error')
+  t.eq(answers[3].response,nil)
   t.truthy(type(data)=='string' and string.sub(data,1,2)=='TK','the DNS answer');t.eq(kind,nil)
   t.eq(#accepted,2,'a foreign datagram is ignored');t.eq(fake_nixio.bound,'wgclient1');t.eq(fake_nixio.peer,{'9.9.9.9',53})
   t.truthy((fake_nixio.polls or 0)>=1,'waits on poll, no busy loop')
   local log=assert(io.open(RUN..'/curl.log','rb'));local text=log:read('*a');log:close();os.remove(RUN..'/curl.log')
   t.truthy(string.find(text,'wgclient1 https://dns.quad9.net/dns-query',1,true),'--interface <device>')
+  t.truthy(string.find(text,'wgclient1 https://one.one.one.one/cdn-cgi/trace one.one.one.one.pem HomenSAI-probe/1',1,true),'--cacert <host roots> -A <nonce>')
+  t.truthy(string.find(text,'dns.google.pem HomenSAI-probe/2',1,true) and string.find(text,'dns.quad9.net.pem HomenSAI-probe/3',1,true))
+  t.eq(answers[3].kind,'tls-untrusted','curl 60: the peer certificate was refused')
+  trust.ANCHORS=saved_anchors;trust.reset()
   local p=io.popen('ls -A '..RUN);local left=p:read('*a');p:close()
   t.eq(left,'curl\n','no probe files left')
 end)

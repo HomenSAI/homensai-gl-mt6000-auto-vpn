@@ -1,5 +1,6 @@
 // Owner 01.11.2026: "Server uptime and failures" shows only the Auto pair plus servers with hours or failures in the
 // selected period; the rest are hidden behind "Show all (N)". The built page wires it into the Statistics page.
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Node{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs||{};this.children=[];
   (Array.isArray(children)?children:[children]).forEach(c=>{if(c!=null)this.children.push(c);});}

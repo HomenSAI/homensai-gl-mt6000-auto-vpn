@@ -88,6 +88,47 @@ t.test('a busy native-history lock keeps an auto reset queued; the next pass app
   t.eq(R.files['/etc/hv/native-history.backup.json'],R.files['/etc/hv/native-history.json'])
 end)
 
+t.test('owner reset of the check samples: archived, then the monitor keeps counting from an empty list',function()
+  local R,m=fresh()
+  m:pass();R.advance(10);m:pass()
+  local before=#m.samples
+  t.truthy(before>0,'the passes recorded samples')
+  request(R,'samples')
+  R.advance(10);m:pass()
+  local result=canon.decode(R.files['/run/hv/stats-reset-result.json'])
+  t.eq(result.done,true);t.eq(result.scope,'samples')
+  local archive=canon.decode(R.files['/etc/hv/stats-archive/'..result.archive])
+  t.eq(archive.sha256,canon.digest(archive.data));t.eq(#archive.data.samples,before,'every sample is archived')
+  t.eq(archive.data.traffic,nil,'only the samples are archived')
+  t.truthy(#m.samples<=2,'only this pass is counted after the reset')
+  t.truthy(next(m.accounting.months)~=nil,'traffic is untouched')
+end)
+
+t.test('owner reset of the transition-test history: archived, emptied under the control lock',function()
+  local R,m=fresh()
+  m:pass()
+  local rows=canon.array({canon.object({time=canon.float(R.now-50),code='FAULT-CLEANED',profiles=canon.array({'wireguard:peer_1'}),scope='channel',duration=150})})
+  R.files['/etc/hv/fault-history.json']=canon.encode(canon.object({data=rows,sha256=canon.digest(rows)}))
+  request(R,'faults')
+  R.locked['auto-control.lock']=true
+  R.advance(10);m:pass()
+  t.truthy(R.files['/run/hv/stats-reset-request.json']~=nil,'a busy control lock keeps the request queued')
+  R.locked['auto-control.lock']=nil
+  R.advance(10);m:pass()
+  local result=canon.decode(R.files['/run/hv/stats-reset-result.json'])
+  t.eq(result.done,true);t.eq(result.scope,'faults')
+  local archive=canon.decode(R.files['/etc/hv/stats-archive/'..result.archive])
+  t.eq(archive.data.faults[1].code,'FAULT-CLEANED')
+  local saved=canon.decode(R.files['/etc/hv/fault-history.json'])
+  t.eq(#saved.data,0);t.eq(saved.sha256,canon.digest(canon.array()))
+  -- a damaged history is refused with its code and left as it is (evidence)
+  R.files['/etc/hv/fault-history.json']='{"data":[1],"sha256":"x"}'
+  request(R,'faults',string.rep('c',32));R.advance(10);m:pass()
+  result=canon.decode(R.files['/run/hv/stats-reset-result.json'])
+  t.eq(result.done,false);t.eq(result.code,'FAULT-HISTORY-CORRUPT')
+  t.eq(R.files['/etc/hv/fault-history.json'],'{"data":[1],"sha256":"x"}')
+end)
+
 t.test('a malformed request is dropped without a result; archives are bounded to ten',function()
   local R,m=fresh()
   R.files['/run/hv/stats-reset-request.json']='{"scope":"nothing"}'

@@ -5,7 +5,8 @@
 --   runner.wall() / runner.clock() / runner.hires() / runner.random(n)
 --   runner.command(name,...)                 -> text | nil,err      (constant allow-listed command lines)
 --   runner.datagram(kind,dev,host,port,packet,seconds,accept,cb)    -> cb(data|nil,kind,sent_at,received_at)
---   runner.https_get(dev,address,host,path,seconds,cb)               -> cb({status,body}|nil,kind)
+--   runner.https_get(dev,address,host,path,seconds,cb,agent)         -> cb({status,body}|nil,kind)
+--   runner.config_mtime() / runner.config_text()  (optional: option probe_dns, probe_trust.dns_mode)
 --   runner.sysfs(dev,name)                   -> text | nil
 -- All network checks are asynchronous (callbacks): under uloop nothing blocks the loop; the PC fakes may call
 -- back at once. Router facts: nixio has no SO_MARK and no TLS, SO_BINDTODEVICE alone routes through the tunnel;
@@ -15,6 +16,7 @@
 -- Elapsed times of HTTPS checks include the curl process start (about 10-40 ms on the MT3000); Python measured
 -- inside its own TLS socket. Health verdicts do not use the elapsed time.
 local canon=require('canon')
+local trust=require('probe_trust')
 
 local M={}
 M.HTTP_SECONDS=6
@@ -85,8 +87,13 @@ local function hires(runner) return runner.hires and runner.hires() or runner.cl
 M.hires=hires
 
 -- dns_probe: one A question for example.com to 9.9.9.9:53 over UDP, bound to the tunnel device. cb(ok, kind)
+-- With option probe_dns 'doh' the same random question goes as an RFC 8484 query to dns.google over pinned TLS.
 function M.dns_probe(runner,device,cb)
   if not M.safe(device,15) then error('invalid socket binding') end
+  if trust.current_dns_mode(runner.config_mtime,runner.config_text)=='doh' then
+    M.https_probe(runner,device,trust.DOH_TARGET,{},nil,function(value) cb(value~=nil) end)
+    return
+  end
   local token,packet,question=M.dns_question(runner)
   runner.datagram('udp',device,'9.9.9.9',53,packet,3,function(data) return type(data)=='string' and string.sub(data,1,2)==token end,
     function(data,kind)
@@ -163,21 +170,28 @@ function M.https_probe(runner,device,target,detail,sink,cb)
   local function elapsed() local v=(hires(runner)-started)*1000;return round1(v<0 and 0 or v) end
   local function finish(value) detail.elapsed_ms=elapsed();cb(value) end
   if not M.safe(device,15) then detail.result='transport-error';finish(nil);return end
+  local wall_started,agent=runner.wall(),trust.agent(runner.random)
   local token
   if kind=='dns-wire' then
     local packet;token,packet=M.dns_question(runner)
     path=path..'?dns='..urlsafe_b64(packet)
   end
   runner.https_get(device,address,hostname,path,M.http_seconds,function(response,err)
+    if err=='tls-untrusted' then detail.result='tls-error';detail.trust=trust.UNTRUSTED;finish(nil);return end
     if not response then detail.result=err or 'transport-error';finish(nil);return end
     detail.http_status=response.status
     if response.status~=200 then
-      detail.result=(response.status==426 or response.status==505) and 'http-unsupported' or 'http-error';finish(nil);return
+      detail.result=(response.status==426 or response.status==505) and 'http-unsupported' or 'http-error'
+      if trust.redirect(response.status) then detail.trust=trust.REDIRECT end
+      finish(nil);return
     end
     if type(response.body)~='string' or #response.body>32768 then detail.result='invalid-response';finish(nil);return end
     local body,valid=response.body,false
     if kind=='trace' then
       valid=string.find('\n'..body,'\nip=',1,true)~=nil and string.find('\n'..body,'\nhttp=',1,true)~=nil
+      if valid and trust.fresh(body,agent,wall_started,runner.wall(),hires(runner)-started) then
+        valid=false;detail.trust=trust.STALE  -- a replayed or foreign page: not this request's answer
+      end
       if valid then remember_exit(body,device,sink) end
     elseif kind=='dns-json' then
       local ok,payload=pcall(canon.decode,body)
@@ -188,7 +202,7 @@ function M.https_probe(runner,device,target,detail,sink,cb)
     detail.result=valid and 'ok' or 'invalid-response'
     local value=valid and elapsed() or nil
     finish(value)
-  end)
+  end,agent)
 end
 
 ------------------------------------------------------------------------------------------------------
@@ -241,10 +255,12 @@ end
 local BINDING_KEYS={'device','mark','table','ifindex'}
 M.BINDING_KEYS=BINDING_KEYS
 
--- probe(runner, profile, cb[, endpoint]): cb(result) exactly once; the three HTTPS checks and the DNS check run in
--- parallel. endpoint(profile, now) -> server_endpoint row | nil (server_endpoint.lua Observer; agent.probe reads it
+-- probe(runner, profile, cb[, endpoint[, mtu]]): cb(result) exactly once; the three HTTPS checks and the DNS check run
+-- in parallel. endpoint(profile, now) -> server_endpoint row | nil (server_endpoint.lua Observer; agent.probe reads it
 -- after the route identity was confirmed again, whatever the health code); its own fault never fails the probe.
-function M.probe(runner,profile,cb,endpoint)
+-- mtu(profile_id, binding, cb): the monitor's large-packet check (mtu_check.run, cb(check|nil)), in parallel too;
+-- mtu_check.apply turns an otherwise healthy result with a black hole into VPN-MTU (agent.MTU_SCHEDULE in Python).
+function M.probe(runner,profile,cb,endpoint,mtu)
   local result={id=profile.id,time=runner.wall(),code='CHECK-001',scope='router-originated',lan_path_verified=false}
   local administrative_state=profile.administrative_state or 'unknown'
   if administrative_state=='enabled' or administrative_state=='disabled' or administrative_state=='unknown' then result.administrative_state=administrative_state end
@@ -262,7 +278,8 @@ function M.probe(runner,profile,cb,endpoint)
     for k,v in pairs(binding) do result[k]=v end
     if binding.code then done=true;cb(result);return end
     local exit_seen,details,times,dns_ok={},{},{},nil
-    local pending=#M.TARGETS+1
+    local mtu_value=nil
+    local pending=#M.TARGETS+1+(mtu and 1 or 0)
     local function settle()
       pending=pending-1
       if pending>0 or done then return end
@@ -273,11 +290,14 @@ function M.probe(runner,profile,cb,endpoint)
         result.https_success=#times;result.dns_ok=dns_ok==true;result.probe_checks=checks
         result.rtt_ms=#times>0 and round1(sum/#times) or canon.null
         result.code=#times<2 and 'VPN-003' or (dns_ok~=true and 'DNS-001' or nil)
+        -- VPN-003 stays the verdict; probe_trust says the missing answers were not authentic (probe_trust.lua)
+        if result.code=='VPN-003' and trust.untrusted(checks) then result.probe_trust='untrusted' end
+        if mtu_value then require('mtu_check').apply(result,mtu_value) end
         local after=M.route_binding(runner,interface)
         local changed=after.code~=nil
         for _,key in ipairs(BINDING_KEYS) do if after[key]~=binding[key] then changed=true end end
         if changed then
-          for _,key in ipairs({'https_success','dns_ok','rtt_ms','exit_ip','exit_country','probe_checks'}) do result[key]=nil end
+          for _,key in ipairs({'https_success','dns_ok','rtt_ms','exit_ip','exit_country','probe_checks','mtu_check','probe_trust'}) do result[key]=nil end
           result.code='VENDOR-IDENTITY-CHANGED';return
         end
         local exit=exit_seen[binding.device]
@@ -305,6 +325,11 @@ function M.probe(runner,profile,cb,endpoint)
     end
     local okd=pcall(M.dns_probe,runner,binding.device,function(value) dns_ok=value==true;settle() end)
     if not okd then dns_ok=false;settle() end
+    if mtu then
+      local settled=false
+      local okm=pcall(mtu,profile.id,binding,function(check) if settled then return end;settled=true;mtu_value=check;settle() end)
+      if not okm and not settled then settled=true;settle() end
+    end
   end)
   if not ok then fail(err) end
 end

@@ -55,7 +55,7 @@ function onboardingDraft(inventory){
   var s=inventory.settings||{},profiles=Array.isArray(inventory.profiles)?inventory.profiles:[],servers=Array.isArray(inventory.servers)?inventory.servers:[];
   function value(key,fallback){return s[key]==null?fallback:s[key];}
   var recovery={},speed={enabled:!!s.speed_enabled,auto_new:!!s.speed_auto_new};
-  var recoveryDefaults={failures:3,successes:2,cooldown:60,min_dwell:60,return_policy:'healthy_primary',primary_successes:2,primary_stable:30,attempt_limit:3,attempt_window:15};
+  var recoveryDefaults={failures:3,successes:2,cooldown:60,min_dwell:60,return_policy:'healthy_primary',primary_successes:2,primary_stable:120,attempt_limit:3,attempt_window:15};
   Object.keys(recoveryDefaults).forEach(function(k){recovery[k]=value('recovery_'+k,recoveryDefaults[k]);});
   var speedDefaults={budget_mib:8,duration:5,streams:2,daily_mib:128,busy_mbps:2};
   Object.keys(speedDefaults).forEach(function(k){speed[k]=value('speed_'+k,speedDefaults[k]);});

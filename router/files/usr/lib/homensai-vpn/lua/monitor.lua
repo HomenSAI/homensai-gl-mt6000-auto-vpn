@@ -23,6 +23,8 @@ local page=require('monitor_status')
 local vendor=require('vendor')
 local fast=require('fast_detect')
 local endpoints=require('server_endpoint')
+local mtu_check=require('mtu_check')
+local sqm=require('sqm')
 
 local M={}
 M.VERSION=require('version')
@@ -133,6 +135,7 @@ function M.probe_level(settings) return policy.level(settings) end
 -- the daemon state
 ------------------------------------------------------------------------------------------------------
 local Monitor={};Monitor.__index=Monitor
+M.Monitor=Monitor  -- the methods, for unit tests of one pass part (tests/lua/test_sqm.lua)
 
 function M.new(runner,options)
   options=options or {}
@@ -172,6 +175,8 @@ function M.new(runner,options)
   self.bridge=page.Bridge(runner,self.runtime)
   -- server_endpoint.lua: the peer address of every probed channel (agent.probe), cached per tunnel epoch
   self.endpoints=endpoints.Observer(options.endpoint_fs or (runner.endpoint_fs and runner.endpoint_fs()) or nil)
+  -- mtu_check.lua: the large-packet check of each probed channel (low rate; every probe while a black hole is suspected)
+  self.mtu=mtu_check.Schedule()
   -- Lua plan item 5: the 1 s pulse of the two Auto channels (off unless option lua_fast_detect '1')
   self.fast=fast.Pulse(runner,function() return runner.exists(self.runtime..'/speed-pause.json') end)
   self.fast_on=false;self.fast_key=nil
@@ -535,6 +540,7 @@ function Monitor:stats_reset()
     if not request then return end
     -- Work mode holds empty histories: a reset works on the real flash copies and saves exactly those.
     local state=resets.histories(runner,self.persist,self.diagnosing and {latency=self.latency,ping=self.ping_history} or nil)
+    state.samples=self.samples
     local ctx={runner=runner,persist=self.persist,env=self.env,days=M.retention_days(self.settings)}
     local ok,result=pcall(resets.apply,ctx,request,self.accounting,state,runner.wall())
     if not ok then result=canon.object({nonce=request.nonce,scope=request.scope,time=canon.float(runner.wall()),done=false,code='STATS-RESET-FAILED'}) end
@@ -542,13 +548,14 @@ function Monitor:stats_reset()
       local saved=pcall(resets.save,ctx,self.accounting,state)
       if saved then self.last_save=runner.clock();self.accounting.reliability.critical=false
       else result.done=false;result.code='STORAGE-001' end
+      if result.done and request.scope=='samples' then self.samples=state.samples end
       if self.diagnosing then self.latency=state.latency;self.ping_history=state.ping
       elseif result.done then pcall(responses.work_reset,self.ping_history,request.scope,runner.wall()) end
     end
     pcall(function() (runner.write_ram or runner.write_atomic)(self.runtime..'/'..resets.RESULT,canon.encode(result)) end)
   end
   local function with_speed_lock()
-    if not parts.speed or not runner.try_lock then return work() end
+    if not (parts.speed or parts.faults) or not runner.try_lock then return work() end
     local taken=runner.try_lock(self.runtime,work)
     if not taken then error('busy',0) end
   end
@@ -605,10 +612,12 @@ function Monitor:start_pass(done)
     self.accounting:apply_detail_retention(M.retention_days(settings),now)
     local observed,selected=M.monitoring_profiles(data)
     local bound=probe.probe_profiles(observed,settings)
-    do local okd,dense=pcall(function() return self.booster:dense(now) end);probe.set_dense(okd and dense~=nil) end
+    local pass_dense=false  -- published with each sample: the failure model's cadence (channel_model.lua)
+    do local okd,dense=pcall(function() return self.booster:dense(now) end);pass_dense=okd and dense~=nil;probe.set_dense(pass_dense) end
     do local ids={};for _,p in ipairs(bound) do ids[p.id]=true end;self.endpoints:retain(ids) end
     local function endpoint(profile,now) return self.endpoints:observe(profile,now) end
-    local ctx={data=data,settings=settings,observed=observed,selected=selected,bound=bound,results={}}
+    local function mtu(profile_id,binding,cb) mtu_check.run(runner,self.mtu,profile_id,binding,cb) end
+    local ctx={data=data,settings=settings,observed=observed,selected=selected,bound=bound,results={},dense=pass_dense}
     local next_index,running,completed=1,0,0
     local function launch()
       while running<M.PROBE_WORKERS and next_index<=#bound do
@@ -617,7 +626,7 @@ function Monitor:start_pass(done)
           if ctx.results[index] then return end
           ctx.results[index]=result;running=running-1;completed=completed+1
           if completed==#bound then finish(ctx) else launch() end
-        end,endpoint)
+        end,endpoint,mtu)
         if not okp and not ctx.results[index] then
           ctx.results[index]={id=bound[index].id,time=runner.wall(),code='SYSTEM-001'};running=running-1;completed=completed+1
         end
@@ -704,6 +713,7 @@ function Monitor:finish_pass(ctx)
     for _,k in ipairs({'id','time','code','rtt_ms','https_success','dns_ok','interface','vendor_tunnel_id','vendor_generation'}) do
       sample[k]=row[k]==nil and NULL or row[k]
     end
+    sample.dense=ctx.dense==true
     self.samples[#self.samples+1]=sample
   end
   local kept=self.diagnosing and 86400*M.retention_days(settings) or accounting.WORK_SAMPLE_SECONDS
@@ -713,6 +723,18 @@ function Monitor:finish_pass(ctx)
     if t>=now-kept then samples[#samples+1]=s end
   end
   self.samples=tail(samples,10000)
+  -- The failure model's view of the pair channels (channel_model.lua; one source for the page, the history and the
+  -- dense confirmation). Auto decides with the same function over the same samples.
+  local failure_models=nil
+  pcall(function()
+    local CM=require('channel_model')
+    for _,row in ipairs(rows) do
+      if row.id~=nil and (row.id==pair.source or row.id==pair.target) then
+        local view=CM.row_view(self.samples,row,runner.wall(),M.observation_valid_for(settings),settings)
+        if view~=nil then row.failure_model=view;failure_models=failure_models or {};failure_models[row.id]=view end
+      end
+    end
+  end)
   -- agent.monitor_loop's speed part: traffic sample, cancel on a failed channel, automatic tests, history age
   local okspeed=pcall(function() self:speed_pass(data,rows,measured,wan_devices) end)
   if not okspeed then self.events[#self.events+1]=canon.object({time=runner.wall(),code='SPEED-MONITOR-UNAVAILABLE'}) end
@@ -752,10 +774,11 @@ function Monitor:finish_pass(ctx)
   status.vendor_observation=observation
   status.package=runner.package_version and runner.package_version() or NULL
   if status.package==nil then status.package=NULL end
+  self:sqm_pass(settings,measured,status)
   status.native_failover=native
   if native.state==nil then status.native_failover=canon.object({state='SERVICE-STOPPED'}) end
   pcall(function() return self.booster:note_wait(settings,status.vendor_observation,pair,status.native_failover,runner.wall()) end)
-  local okb=pcall(function() return self.booster:observe(settings,measured,pair,status.native_failover.state,runner.wall()) end)
+  local okb=pcall(function() return self.booster:observe(settings,measured,pair,status.native_failover.state,runner.wall(),failure_models) end)
   local okf=pcall(function() self.fast:configure(self:fast_option(),rows,pair,status.native_failover.state) end)
   if not okf then pcall(function() self.fast:close() end) end
   if self.fast_on then status.fast_detect=self.fast:public(runner.clock(),true) end
@@ -805,6 +828,8 @@ function Monitor:finish_pass(ctx)
   status.wan_devices=wan_devices
   status.speed_tests=self:speed_tests()
   status.telegram=self:telegram_field(settings,status)
+  local okpick,picked=pcall(self.server_pick_field,self,settings,rows,status)
+  status.server_pick=okpick and picked or NULL
   local status_text=canon.encode(status)
   runner.write_atomic(self.runtime..'/status.json',status_text)
   self.status=status;self.published_at=runner.clock()
@@ -929,7 +954,7 @@ function Monitor:speed_pass(data,rows,measured,wan_devices)
   speed.observe_traffic(d,wan and wan_devices or measured,wan and 'wan' or 'vpn')
   if speed.active_job(d) then
     for _,p in ipairs(measured) do
-      if p.code=='VPN-001' or p.code=='VPN-003' or p.code=='DNS-001' then speed.cancel(d);break end
+      if p.code=='VPN-001' or p.code=='VPN-003' or p.code=='DNS-001' or p.code=='VPN-MTU' then speed.cancel(d);break end
     end
   end
   self.speed_previous=speed.automatic_new(d,rows,self.speed_previous,data)
@@ -1015,6 +1040,46 @@ function Monitor:telegram_collect(job)
   elseif result.stored==false then public.storage_error='TELEGRAM-STATE-WRITE-FAILED' end
   if is_dict(result.saved) then self.telegram_saved=result.saved end
   self.telegram_public=public
+end
+
+-- Best server inside a channel (server_pick.lua, 2.1.0, off by default): one round at a time in a child, at most
+-- every 10 min and right after a channel newly failed; the published block is its RAM file (agent.py: a thread).
+function Monitor:server_pick_field(settings,rows,status)
+  local sp=require('server_pick')
+  local runner=self.runner
+  local picked=sp.project(self:read_json(self.runtime..'/'..sp.RESULT,NULL))
+  if self.pick_seen==nil then self.pick_seen=picked and picked.time or false
+  elseif picked then
+    for _,e in ipairs(sp.events(picked,self.pick_seen or nil)) do self.events[#self.events+1]=e;status.events[#status.events+1]=e end
+    self.pick_seen=picked.time
+  end
+  -- stage 2: the Auto supervisor's own server changes (SERVER-PICKED / SERVER-PICK-FAILED ...) are history events too
+  local outcome=self:read_json(self.runtime..'/'..sp.EVENT,NULL)
+  if self.pick_event_seen==nil then self.pick_event_seen=is_dict(outcome) and outcome.time or false
+  elseif is_dict(outcome) then
+    local fresh=sp.events(outcome,self.pick_event_seen or nil)
+    for _,e in ipairs(fresh) do self.events[#self.events+1]=e;status.events[#status.events+1]=e end
+    if #fresh>0 then self.pick_event_seen=outcome.time end
+  end
+  local failed=sp.failed_interfaces(rows)
+  -- a channel that recovered and fails again is a new failure (MT3000 02.11.2026: the second failure of the reserve
+  -- within 10 min started no round)
+  local still={};for _,iface in ipairs(self.pick_failed or {}) do for _,now_failed in ipairs(failed) do if iface==now_failed then still[#still+1]=iface end end end
+  self.pick_failed=still
+  local clock=runner.clock()
+  local kept={};for _,iface in ipairs(self.pick_retried or {}) do for _,now_failed in ipairs(failed) do if iface==now_failed then kept[#kept+1]=iface end end end
+  self.pick_retried=kept
+  if not self.pick_running then local retry=sp.carrying_retry(picked,self.pick_failed,self.pick_retried,self.pick_started,clock);self.pick_failed,self.pick_retried=retry.failed,retry.retried end
+  local enabled=settings.server_pick==true
+  if self.pick_enabled~=enabled then self.pick_started=nil end  -- the owner switch changed: a round now
+  if not self.pick_running and runner.spawn and sp.due(self.pick_started,self.pick_failed,failed,clock) then
+    local request=self.runtime..'/'..sp.REQUEST
+    local auto=is_dict(status.auto_control) and status.auto_control.requested=='on'
+    ;(runner.write_ram or runner.write_atomic)(request,canon.encode(canon.object({enabled=enabled,auto_on=auto,failed=failed,model=sp.model_name(settings.server_pick_model)})))
+    self.pick_running=true;self.pick_started=clock;self.pick_failed=failed;self.pick_enabled=enabled
+    runner.spawn({'/usr/bin/lua','/usr/lib/homensai-vpn/lua/server_pick.lua','job',request},150,function() self.pick_running=false end)
+  end
+  return picked or NULL
 end
 
 function Monitor:page_fields(status)
@@ -1138,9 +1203,41 @@ function Monitor:next_delay()
   return math.max(1,interval-(self.pass_seconds or 0))
 end
 
+-- Optional SQM (sqm.lua): cake on the tunnel egress, off by default (no process, no file while off). The records
+-- live in RAM (RUNTIME/sqm-state.json) for the init script's sqm_release at service stop.
+function Monitor:sqm_execute()
+  local runner=self.runner
+  return function(argv) return runner.exec(argv,{timeout=5}) end
+end
+function Monitor:sqm_pass(settings,measured,status)
+  local path=self.runtime..'/'..sqm.STATE_NAME
+  if self.sqm_state==nil then
+    local ok,value=pcall(function() return self:read_json(path,canon.object()) end)
+    self.sqm_state=ok and value or canon.object()
+  end
+  -- after the stop hook (shutdown) the process still serves until SIGTERM: it never shapes again
+  if self.sqm_stopped or not sqm.active(settings,self.sqm_state) or not self.runner.exec then return end
+  local ok,new_state,report=pcall(sqm.sync,settings,measured,self.sqm_state,self:sqm_execute(),self.runner.clock())
+  if not ok then
+    status.sqm=canon.object({enabled=settings.sqm_enabled==true,kbit=NULL,code='SQM-APPLY-FAILED',devices=canon.object()})
+    return
+  end
+  status.sqm=report
+  if canon.encode(new_state)~=canon.encode(self.sqm_state) then
+    pcall(function() self.io.write_ram(path,new_state) end);self.sqm_state=new_state
+  end
+end
+function Monitor:sqm_release()
+  self.sqm_stopped=true
+  if self.sqm_state==nil or next(sqm.records(self.sqm_state))==nil or not self.runner.exec then return end
+  local state=sqm.release(self.sqm_state,self:sqm_execute())
+  pcall(function() self.io.write_ram(self.runtime..'/'..sqm.STATE_NAME,state) end);self.sqm_state=state
+end
+
 -- Final save (work mode: the only save besides the daily one). Called from the ubus 'shutdown' hook/stop path.
 function Monitor:shutdown()
   pcall(function() self:checkpoint() end)
+  pcall(function() self:sqm_release() end)
   self.ping:close()
   pcall(function() self.fast:close() end)
   pcall(require('speed').cancel,self.speed_deps)  -- agent.monitor_loop: a running speed test ends with the monitor

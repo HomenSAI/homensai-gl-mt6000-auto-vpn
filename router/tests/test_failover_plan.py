@@ -14,7 +14,7 @@ class PlanTests(unittest.TestCase):
         status={'profiles':[{'id':'openvpn:1_1','protocol':'openvpn','interface':'ovpnclient1','code':'VPN-003'},
                             {'id':'wireguard:peer_2','protocol':'wireguard','interface':'wgclient1'}],'samples':samples}
         attach(status,now)
-        settings={'plan_enabled':True,'plan_source':'openvpn:1_1','plan_target':'wireguard:peer_2','interval':30}
+        settings={'plan_enabled':True,'plan_source':'openvpn:1_1','plan_target':'wireguard:peer_2','interval':30,'failure_model':'consecutive'}
         return status,settings,now
 
     def test_recommendation_never_claims_native_readiness(self):
@@ -35,6 +35,22 @@ class PlanTests(unittest.TestCase):
                 if mode=='dns':status['samples'][-1]['dns_ok']=False
                 if mode=='quorum':status['samples'][-1]['https_success']=1
                 self.assertIsNone(plan(status,settings,now)['recommendation'])
+
+    def test_failure_model_on_the_same_observations(self):
+        # The default model (channel_model 'hmm'): two VPN-003 30 s apart already mean a lasting failure, so a future or
+        # a duplicate stamp of the third leaves the decision; a stale, unknown newest sample or an unready target do not.
+        for mode,expect in (('none',True),('stale',False),('future',True),('duplicate',True),('unknown',False),('dns',False),('quorum',False)):
+            with self.subTest(mode=mode):
+                status,settings,now=self.setup_status();settings['failure_model']='hmm'
+                if mode=='stale':now+=500
+                if mode=='future':status['samples'][0]['time']=now+1
+                if mode=='duplicate':status['samples'][0]['time']=status['samples'][1]['time']
+                if mode=='unknown':status['samples'][0]['code']='CHECK-001'
+                if mode=='dns':status['samples'][-1]['dns_ok']=False
+                if mode=='quorum':status['samples'][-1]['https_success']=1
+                result=plan(status,settings,now)
+                self.assertEqual(result['recommendation'] is not None,expect,result['state'])
+                if expect:self.assertEqual(result['recommendation']['failure_model'],'hmm')
 
     def test_disabled_and_inactive_target(self):
         status,settings,now=self.setup_status();settings['plan_enabled']=False

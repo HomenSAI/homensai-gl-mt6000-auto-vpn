@@ -3,7 +3,7 @@ Read-only planning. This module contains no route/VPN/firewall write commands.
 """
 import math
 
-FAILURES = {'VPN-001', 'VPN-003', 'DNS-001'}
+FAILURES = {'VPN-001', 'VPN-003', 'DNS-001', 'VPN-MTU'}  # VPN-MTU: mtu_check.py (large packets lost)
 BLOCKERS = ['GL-ADAPTER-UNVERIFIED', 'WORKER-COORDINATION-UNVERIFIED',
             'LAN-PATH-UNVERIFIED', 'DNS-POLICY-UNVERIFIED', 'KILLSWITCH-UNVERIFIED',
             'IPV6-POLICY-UNVERIFIED', 'WATCHDOG-UNVERIFIED', 'SCOPED-CONNTRACK-UNVERIFIED']
@@ -64,10 +64,12 @@ def plan(status, settings, now):
     recovery=normalized(settings)
     if not streak(samples,target,recovery['successes'],now,age,True,target_row):
         return dict(result,state='TARGET-NOT-READY')
-    if not streak(samples,source,recovery['failures'],now,age,False,source_row):
+    # The owner's failure model (channel_model: 'hmm' default, 'hmm-fast', or the previous 'consecutive' streak).
+    from channel_model import channel_failed,name as failure_model
+    if not channel_failed(samples,source,recovery['failures'],now,age,settings,source_row):
         return dict(result,state='OBSERVE')
     result.update(state='SWITCH-RECOMMENDED',recommendation={'target':target,
-                  'reason':'CURRENT-PROFILE-FAILURE-STREAK', 'required_failures':recovery['failures'],'required_successes':recovery['successes'],'cross_protocol':source_row.get('protocol')!=target_row.get('protocol'),
+                  'reason':'CURRENT-PROFILE-FAILURE-STREAK', 'failure_model':failure_model(settings),'required_failures':recovery['failures'],'required_successes':recovery['successes'],'cross_protocol':source_row.get('protocol')!=target_row.get('protocol'),
                   'transition':pair['coordination']['transition'],'scope':'current profile probes; vendor retry exhaustion unobserved'},
                   steps=['capture-scoped-state','coordinate-workers','arm-independent-rollback-watchdog',
                          'persist-intent','protect-scoped-traffic-keep-management',

@@ -1,4 +1,7 @@
 -- Only fixed preparation options; no reload, service command or shell.
+-- restore-autostart (03.11.2026, preparation_control.restore_autostart): after the owner's Stop, the autostart flag
+-- network.<wgclientN|ovpnclientN>.auto that preparation set to '0' goes back to the value its before-record saved
+-- ('1' or unset); only while it still reads '0'.
 local j=require('cjson');local u=require('uci')
 local root=os.getenv('HOMENSAI_PREPARATION_TEST_ROOT')
 if root and not root:match('^/tmp/homensai%-preparation%-test%-[A-Za-z0-9_-]+$')then os.exit(1)end
@@ -7,7 +10,8 @@ local raw=io.read(2097153)
 if not raw or #raw>2097152 then os.exit(1)end
 local ok=pcall(function()
  local q=j.decode(raw)
- local map={['wg-autostart']='network',['ovpn-autostart']='network',['source-autostart']='network',['target-autostart']='network',hnat='mtkhnat',['flow-offload']='firewall'}
+ local map={['wg-autostart']='network',['ovpn-autostart']='network',['source-autostart']='network',['target-autostart']='network',hnat='mtkhnat',['flow-offload']='firewall',['restore-autostart']='network'}
+ local restore=q.action=='restore-autostart'
  local package=map[q.action];assert(package)
  assert(type(q.expected)=='string'and #q.expected<=1048576)
  assert(type(q.stage)=='string'and q.stage:match('^/var/run/homensai%-vpn/preparation%-stage%-[A-Za-z0-9_-]+$')or root and type(q.stage)=='string'and q.stage:match('^/tmp/homensai%-preparation%-test%-[A-Za-z0-9_-]+/stage$'))
@@ -31,9 +35,13 @@ local ok=pcall(function()
  local before=rows(c);local allowed={}
  for _,row in ipairs(q.changes)do
   assert(type(row)=='table'and type(row.section)=='string'and row.section:match('^[A-Za-z0-9_]+$')and #row.section<=64)
-  assert(row.after=='0'and(row.before==j.null or row.before=='0'or row.before=='1'))
+  if restore then assert(row.before=='0'and(row.after==j.null or row.after=='1'))
+  else assert(row.after=='0'and(row.before==j.null or row.before=='0'or row.before=='1'))end
   assert(c:get(package,row.section)==row.type)
-  if q.action=='wg-autostart'or q.action=='ovpn-autostart'or q.action=='source-autostart'or q.action=='target-autostart'then
+  if restore then
+   local kind=row.section:match('^(wgclient)[1-9]%d*$')or row.section:match('^(ovpnclient)[1-9]%d*$')
+   assert(kind and #row.section<=14 and #q.changes<=8 and row.type=='interface'and row.option=='auto'and c:get(package,row.section,'proto')==kind)
+  elseif q.action=='wg-autostart'or q.action=='ovpn-autostart'or q.action=='source-autostart'or q.action=='target-autostart'then
    local name=q.action=='wg-autostart'and'wgclient1'or'ovpnclient1'
    local proto=q.action=='wg-autostart'and'wgclient'or'ovpnclient'
    if q.action=='source-autostart'or q.action=='target-autostart'then
@@ -49,11 +57,14 @@ local ok=pcall(function()
   local key=row.section..'.'..row.option;assert(not allowed[key]);allowed[key]=true
   assert(value(c:get(package,row.section,row.option))==row.before)
  end
- for _,row in ipairs(q.changes)do assert(c:set(package,row.section,row.option,'0'))end
+ for _,row in ipairs(q.changes)do
+  if restore and row.after==j.null then assert(c:delete(package,row.section,row.option))
+  else assert(c:set(package,row.section,row.option,restore and row.after or'0'))end
+ end
  assert(c:save(package));pending();assert(disk()==q.expected)
  assert(c:commit(package))
  pending();local fresh=u.cursor(base,q.stage)
- for _,row in ipairs(q.changes)do assert(fresh:get(package,row.section,row.option)=='0')end
+ for _,row in ipairs(q.changes)do assert(value(fresh:get(package,row.section,row.option))==(restore and row.after or'0'))end
  local after=rows(fresh)
  local function strip(data)
   for _,section in ipairs(data)do for key in pairs(allowed)do

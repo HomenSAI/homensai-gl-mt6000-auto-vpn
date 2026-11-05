@@ -44,8 +44,8 @@ def scoped_samples(samples,profile):
 # stayed BLOCKED with a healthy reserve. Short windows keep that safety meaning; a source observed only
 # unhealthy for a whole bounded window is unstable and no longer blocks a verified reserve.
 SOURCE_UNSTABLE='PAIR-SOURCE-UNSTABLE'
-UNSTABLE_CODES=frozenset({'VPN-001','VPN-003','DNS-001','ROUTE-001','CHECK-001','VENDOR-IDENTITY-CHANGED','VENDOR-IDENTITY-UNKNOWN'})
-PROBE_FAILURES=frozenset({'VPN-001','VPN-003','DNS-001'})
+UNSTABLE_CODES=frozenset({'VPN-001','VPN-003','DNS-001','VPN-MTU','ROUTE-001','CHECK-001','VENDOR-IDENTITY-CHANGED','VENDOR-IDENTITY-UNKNOWN'})
+PROBE_FAILURES=frozenset({'VPN-001','VPN-003','DNS-001','VPN-MTU'})
 
 def flap_window(settle_seconds):
     """Three vendor settle periods, never shorter than 120 s nor longer than 900 s."""
@@ -195,6 +195,7 @@ def diagnose(status,source,now,settings=None):
     if code=='VPN-001':return dict(result,code='TUNNEL-DISCONNECTED',suppress_switch=False)
     if code=='DNS-001':return dict(result,code='DNS-FAILED',suppress_switch=False)
     if code=='VPN-003':return dict(result,code='HTTPS-FAILED',suppress_switch=False)
+    if code=='VPN-MTU':return dict(result,code='LARGE-PACKETS-FAILED',suppress_switch=False)  # mtu_check.py: a black hole
     successes=row.get('https_success')
     if code is None and row.get('dns_ok') is True and type(successes) is int and successes>=2:return dict(result,code='VPN-PROBE-HEALTHY',suppress_switch=False)
     return result

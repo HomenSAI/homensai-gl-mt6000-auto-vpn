@@ -1,4 +1,5 @@
 'use strict';
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Owner review 01.11.2026 on the built page: the forecast checkbox is explained, the WAN traffic option says it is the
 // provider uplink including the encrypted VPN, the sidebar has no "Real IPv4 router measurements" caption (version and
 // developer stay), and the statistics blocks with a reset backend carry a reset marker.

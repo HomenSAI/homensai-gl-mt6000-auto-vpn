@@ -28,7 +28,10 @@ local probe=require('probe')
 local M={}
 M.OPTION='lua_fast_detect'
 M.INTERVAL=1           -- seconds between beats (the monitor's 1 s loop timer)
-M.LOSSES=3             -- lost beats in a row that make a suspect
+-- lost beats in a row that make a suspect. 2 since 03.11.2026 (was 3): the offline GA/annealing study chose 2 in 8 of
+-- 8 re-optimisations (detection ~1 s earlier, same false-switch rate: a suspect only starts the dense DNS/HTTPS
+-- confirmation, never a switch). Two in a row still means one lost echo to each of 1.1.1.1 and 8.8.8.8.
+M.LOSSES=2
 M.TARGETS={'1.1.1.1','8.8.8.8'}
 M.REASON='heartbeat-lost'
 M.RETRY=5              -- seconds before a suspect the Booster declined (episode running, resting) is offered again

@@ -1,0 +1,3 @@
+/* Servers of the channels (2.1.0): an optional module (server_pick_panel.inc.js), fetched only when the owner opens it. */
+var LAZY_PICK_NAME='__LAZY_PICK_MODULE__';
+function serverPickBox(status,inventory){var box=rememberDisclosure(E('details',{'class':'hv-chart-card'},[E('summary',{},bi('Servers of the channels','Серверы каналов'))]),'server-pick'),done=0;box.addEventListener('toggle',function(){if(box.open&&!done){done=1;L.require(LAZY_PICK_NAME).then(function(m){box.appendChild(m.render({E:E,bi:bi,rpc:rpc,ui:ui,status:status,inventory:inventory,errorCodeLink:errorCodeLink}));},function(){done=0;});}});return box;}

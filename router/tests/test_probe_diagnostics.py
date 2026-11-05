@@ -15,10 +15,11 @@ class Tests(unittest.TestCase):
         def response(*args):
             row=MagicMock();target=agent.EXIT_CONTEXT.probe_detail['target']
             row.status=505 if target=='dns.quad9.net'else 200
-            row.read.return_value=(b'ip=93.184.216.34\nhttp=http/1.1\n'if target=='one.one.one.one'else b'{"Status":0,"Answer":[{}]}')
+            row.read.return_value=(b'ip=93.184.216.34\nhttp=http/1.1\nuag=HomenSAI-probe/fixed\n'if target=='one.one.one.one'else b'{"Status":0,"Answer":[{}]}')
             if row.status==505:row.read.side_effect=AssertionError('do not download unsupported protocol error pages')
             return row
-        with patch.object(agent,'route_binding',return_value=binding),patch.object(agent,'bound_socket'),patch.object(agent.ssl,'create_default_context'),patch.object(agent.http.client,'HTTPResponse',side_effect=response),patch.object(agent,'dns_probe',return_value=True):
+        import probe_trust
+        with patch.object(agent,'route_binding',return_value=binding),patch.object(agent,'bound_socket'),patch.object(agent.ssl,'create_default_context'),patch.object(agent.http.client,'HTTPResponse',side_effect=response),patch.object(agent,'dns_probe',return_value=True),patch.object(probe_trust,'agent',return_value='HomenSAI-probe/fixed'):
             row=agent.probe({'id':'wireguard:peer_1','interface':'wgclient1'})
         self.assertIsNone(row['code']);self.assertEqual(row['https_success'],2)
         details={r['target']:r for r in row['probe_checks']}

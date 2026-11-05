@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Advanced > Statistics collection: Work by default, Diagnostics only after consent (1/3/7/14 days), measured consequences,
 // the catalogue of tracked data, and the Work-mode note on statistics surfaces.
 const assert=require('assert'),fs=require('fs'),vm=require('vm');

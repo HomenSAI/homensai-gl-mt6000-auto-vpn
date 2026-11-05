@@ -23,7 +23,7 @@ var TERMS_CHECKS=[
 ];
 function renderTermsReference(){
   return E('section',{'class':'hv-terms-reference'},[
-    E('p',{'class':'hv-terms-note'},bi('The current versioned operational terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by System readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.','Ниже приведены актуальные эксплуатационные условия этой версии. Описание первоначальных испытаний в них — исторический контекст; текущий допуск модели/режима определяют «Готовность системы» и актуальное руководство. Удаление пакета по-прежнему требует штатных проверок восстановления.')),
+    E('p',{'class':'hv-terms-note'},bi('The current versioned operational terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by Router readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.','Ниже приведены актуальные эксплуатационные условия этой версии. Описание первоначальных испытаний в них — исторический контекст; текущий допуск модели/режима определяют «Готовность роутера» и актуальное руководство. Удаление пакета по-прежнему требует штатных проверок восстановления.')),
     E('div',{'class':'hv-terms-fulltext','style':'white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6'},locale==='ru'?TERMS_FULL_RU:TERMS_FULL_EN)
   ]);
 }

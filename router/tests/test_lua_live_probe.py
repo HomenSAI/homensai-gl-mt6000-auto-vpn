@@ -18,6 +18,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import unittest
 
 HERE = Path(__file__).resolve().parent
@@ -27,7 +28,7 @@ LUA = shutil.which('lua5.1') or shutil.which('lua')
 SUITE = HERE/'lua/test_live_probe.lua'
 
 ADDRESS = {'1.1.1.1': 'one.one.one.one', '8.8.8.8': 'dns.google', '9.9.9.9': 'dns.quad9.net'}
-TRACE = 'fl=1\nh=one.one.one.one\nip=93.184.216.34\nts=1761830400.1\nvisit_scheme=https\nuag=curl\ncolo=FRA\nhttp=http/1.1\nloc=DE\n'
+TRACE = 'fl=1\nh=one.one.one.one\nip=93.184.216.34\nts=1761830400.1\nvisit_scheme=https\nuag=@UAG\ncolo=FRA\nhttp=http/1.1\nloc=DE\n'
 DNS_JSON = '{"Status":0,"Answer":[{"name":"example.com.","type":1,"TTL":60,"data":"93.184.216.34"}]}'
 BINDING = {'code': None, 'device': 'wgclient1', 'mark': 4096, 'table': '1001', 'ifindex': 12}
 PROFILE = {'id': 'wireguard:peer_2002', 'interface': 'wgclient1', 'administrative_state': 'enabled', 'protocol': 'wireguard'}
@@ -112,15 +113,20 @@ class FakeSocket:
 
 
 class FakeContext:
+    def __init__(self, world=None):
+        self.world = world
+
     def wrap_socket(self, raw, server_hostname=None):
         if raw.spec['kind'] == 'tls':
             raise ssl.SSLError('fake tls')
-        return FakeTLS(raw.spec)
+        if raw.spec['kind'] == 'untrusted':
+            raise ssl.SSLCertVerificationError('fake certificate outside the pinned roots')
+        return FakeTLS(raw.spec, self.world)
 
 
 class FakeTLS:
-    def __init__(self, spec):
-        self.spec, self.data = spec, b''
+    def __init__(self, spec, world=None):
+        self.spec, self.data, self.world = spec, b'', world
 
     def __enter__(self):
         return self
@@ -133,10 +139,17 @@ class FakeTLS:
 
     def sendall(self, request):
         path = request.split(b' ')[1].decode()
+        agent = re.search(rb'\r\nUser-Agent: ([^\r]*)\r\n', request)
         if self.spec['kind'] == 'oversize':
             self.data = http(200, b'x'*40000)
             return
         body = self.spec['body']
+        if b'\r\nHost: dns.google\r\n' in request and path.startswith('/dns-query?dns='):
+            # the DoH DNS check (option probe_dns 'doh'): scenario 'doh' = ok | bad
+            body = '@DNSWIRE-BAD' if (self.world and self.world.scenario.get('doh')) == 'bad' else '@DNSWIRE'
+            self.spec = {'kind': 'http', 'status': 200, 'body': body}
+        # @UAG: the server echoes the request's User-Agent (Cloudflare uag=); @NOW: the router's clock
+        body = body.replace('@UAG', agent.group(1).decode() if agent else '').replace('@NOW', '%.3f' % time.time())
         if body in ('@DNSWIRE', '@DNSWIRE-BAD'):
             wire = re.search(r'\?dns=(.*)$', path).group(1)
             packet = base64.urlsafe_b64decode(wire + '='*(-len(wire) % 4))
@@ -156,16 +169,22 @@ def python_bridge(action, scenario):
     import agent
     import lua_bridge
     import native_switch
+    import probe_trust
     world = World(scenario)
     with tempfile.TemporaryDirectory() as directory:
         path = Path(directory)/'request.json'
         path.write_text(json.dumps(scenario['profile']))
+        config = Path(directory)/'homensai_vpn'
+        if 'config' in scenario:
+            config.write_text(scenario['config'])
         output = io.StringIO()
         with mock.patch.object(lua_bridge, 'RUNTIME_FILE', re.compile(r'.*')), \
                 mock.patch.object(agent, 'route_binding', world.route_binding), \
                 mock.patch.object(agent, 'bound_socket', world.bound_socket), \
                 mock.patch.object(native_switch, 'bound_socket', world.bound_socket), \
-                mock.patch('ssl.create_default_context', lambda: FakeContext()), \
+                mock.patch.object(probe_trust, 'CONFIG', config), \
+                mock.patch.dict(probe_trust._MODE, {'key': None, 'value': 'udp'}), \
+                mock.patch('ssl.create_default_context', lambda *_, **__: FakeContext(world)), \
                 mock.patch('server_endpoint.observe', lambda *_: None), \
                 contextlib.redirect_stdout(output):
             lua_bridge.main(['lua_bridge.py', action, str(path)])
@@ -229,8 +248,37 @@ def scenarios():
                  'h=x\nip= 93.184.216.34 \r\nhttp=x\n', 'ip=10.0.0.1\nip=93.184.216.34\nhttp=x\n',
                  'ip=93.184.216.34\nhttp=x\nip=10.0.0.1\n', 'ip=224.0.0.9\nhttp=x\n'):
         https = ok_https()
-        https['one.one.one.one'] = [{'kind': 'http', 'status': 200, 'body': body}]
+        https['one.one.one.one'] = [{'kind': 'http', 'status': 200, 'body': body + 'uag=@UAG\n'}]
         rows.append(make('trace-body ' + repr(body), https))
+    # probe authenticity (probe_trust): untrusted certificates, portal redirects and replayed traces never count
+    for kind in ('untrusted',):
+        https = ok_https()
+        https['one.one.one.one'] = [{'kind': kind}]
+        rows.append(make('trace-' + kind, https))
+        https = ok_https()
+        https['dns.google'] = [{'kind': kind}]
+        https['dns.quad9.net'] = [{'kind': kind}]
+        rows.append(make('vpn003-' + kind, https))
+    for status in (301, 302, 307):
+        https = ok_https()
+        https['one.one.one.one'] = [{'kind': 'http', 'status': status, 'body': '<a href="http://portal/">'}]
+        https['dns.google'] = [{'kind': 'http', 'status': status, 'body': ''}]
+        rows.append(make('portal-redirect-%d' % status, https))
+    for body in ('ip=93.184.216.34\nhttp=x\nuag=curl/7.83.1\n', 'ip=93.184.216.34\nhttp=x\nuag=@UAG\nuag=x\n',
+                 'ip=93.184.216.34\nhttp=x\nts=1000\n', 'ip=93.184.216.34\nhttp=x\n', 'ip=93.184.216.34\nhttp=x\nts=@NOW\n',
+                 'ip=93.184.216.34\nhttp=x\nts=@NOW\nts=@NOW\n', 'ip=93.184.216.34\nhttp=x\nts=@NOW.5\n',
+                 'ip=93.184.216.34\r\nhttp=x\r\nuag=@UAG\r\n'):
+        https = ok_https()
+        https['one.one.one.one'] = [{'kind': 'http', 'status': 200, 'body': body}]
+        rows.append(make('trace-freshness ' + repr(body), https))
+    https = ok_https()
+    https['one.one.one.one'] = [{'kind': 'http', 'status': 200, 'body': 'ip=93.184.216.34\nhttp=x\nuag=curl\n'}]
+    https['dns.quad9.net'] = [{'kind': 'untrusted'}]
+    rows.append(make('replayed-trace-and-untrusted', https))
+    doh = "config main 'main'\n\toption probe_dns 'doh'\n"
+    rows.append(make('dns-doh', config=doh, dns='timeout'))
+    rows.append(make('dns-doh-bad', config=doh, doh='bad'))
+    rows.append(make('dns-udp-option', config="config main 'main'\n\toption probe_dns 'udp'\n", dns='bad-rcode'))
     https = ok_https()
     https['dns.google'] = [{'kind': 'http', 'status': 200, 'body': '{"Status":2,"Answer":[]}'}]
     https['dns.quad9.net'] = [{'kind': 'http', 'status': 200, 'body': '@DNSWIRE-BAD'}]
@@ -267,7 +315,7 @@ class LuaLiveProbe(unittest.TestCase):
                 lua = lua_scenario(scenario)
                 self.assertEqual(comparable(lua['probe']), comparable(python_bridge('probe', scenario)))
                 self.assertEqual(lua['trace'], python_bridge('trace', scenario))
-        self.assertGreaterEqual(len(rows), 40)
+        self.assertGreaterEqual(len(rows), 57)
 
     def test_ipv4_rules_match_python_ipaddress(self):
         import ipaddress

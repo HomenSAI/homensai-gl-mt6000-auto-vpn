@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const c={URL};vm.createContext(c);
 for(const file of ['minimum_navigation','navigation_context'])vm.runInContext(fs.readFileSync('router/'+file+'.inc.js','utf8'),c);

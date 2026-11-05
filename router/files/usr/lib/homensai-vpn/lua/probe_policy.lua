@@ -7,6 +7,9 @@
 -- (fast_detect.lua, reason 'heartbeat-lost', only with option lua_fast_detect '1'); a dense episode carried over
 -- from the Python monitor still ends by the same rules.
 -- io: {read_json(path,default), write_json(path,value)} (the monitor's runner adapters).
+-- Failure model (channel_model.lua, option failure_model 'hmm'/'hmm-fast'): observe(..., models) with the monitor's
+-- per-channel views; the model's suspicion of the channel carrying traffic starts an episode (reason 'model') and
+-- the model decides when an episode ends (probe_policy.py, the same rules).
 local canon=require('canon')
 
 local M={}
@@ -178,7 +181,8 @@ function Booster:base(settings,kind)
 end
 
 -- One decision per monitor pass; returns the history rows it recorded.
-function Booster:observe(settings,rows,pair,native_state,now)
+-- models: {profile id = channel_model.public view} of the pair channels (HMM modes), or nil.
+function Booster:observe(settings,rows,pair,native_state,now,models)
   local recorded=canon.array()
   local state=self.state
   local chosen,enabled=M.level(settings),M.boost_enabled(settings)
@@ -231,7 +235,9 @@ function Booster:observe(settings,rows,pair,native_state,now)
     rec.boost_enabled=true;rec.profile=trigger.profile;rec.role=trigger.role;rec.code=code;rec.result='started';rec.boost_interval=M.BOOST_INTERVAL
     recorded[#recorded+1]=self:record(rec,now)
   end
-  for _,row in ipairs(self:dense_observe(settings,rows,pair,native_state,now)) do recorded[#recorded+1]=row end
+  if type(models)~='table' then models=nil end
+  for _,row in ipairs(self:dense_observe(settings,rows,pair,native_state,now,models)) do recorded[#recorded+1]=row end
+  for _,row in ipairs(self:model_suspect(settings,pair,native_state,now,models)) do recorded[#recorded+1]=row end
   pcall(self.io.write_json,self.runtime..'/'..M.STATE_NAME,self.state)
   return recorded
 end
@@ -271,7 +277,24 @@ function Booster:suspect(settings,suspicions,pair,native_state,now)
   return false
 end
 
-function Booster:dense_observe(settings,rows,pair,native_state,now)
+-- The failure model's suspicion of the channel carrying traffic starts a dense episode (reason 'model').
+function Booster:model_suspect(settings,pair,native_state,now,models)
+  if models==nil or self:dense(now) or not WATCHING[native_state] or not is_dict(pair) then return {} end
+  local role=native_state=='OBSERVING' and 'source' or 'target'
+  local profile=get(pair,role)
+  local view=profile~=nil and models[profile] or nil
+  if type(view)~='table' or view.suspect~=true or view.failed==true then return {} end
+  local rest=is_dict(get(self.state,'suspicion_rest')) and self.state.suspicion_rest or canon.object()
+  local held=is_dict(get(rest,profile)) and rest[profile] or {}
+  if now<(num(get(held,'until')) or 0) then return {} end
+  local evidence=canon.object({p_bad=n0(view.p_bad),persist=n0(view.persist)})
+  local episode=canon.object({profile=profile,role=role,reason='model',evidence=evidence,started=canon.float(now),
+    ['until']=canon.float(now+M.DENSE_MAX),native_state=native_state,checks=0,failures=0,good=0,reserve_good=0,last_code=NULL})
+  self.state.dense=episode
+  return {self:episode_row(settings,'suspicion-start',episode,now,{evidence=evidence,code=NULL,result='started'})}
+end
+
+function Booster:dense_observe(settings,rows,pair,native_state,now,models)
   local recorded={}
   local state=self.state
   local streaks=is_dict(get(state,'streaks')) and state.streaks or canon.object()
@@ -306,7 +329,16 @@ function Booster:dense_observe(settings,rows,pair,native_state,now)
   if other then episode.reserve_good=M.failing(other) and 0 or episode.reserve_good+1 end
   local switched=TRANSITIONS[native_state] or (native_state~=get(episode,'native_state') and (native_state=='COMMITTED' or native_state=='DEGRADED-ON-RESERVE'))
   local result
-  if switched then result='switched'
+  local view=models~=nil and models[suspect] or nil
+  if type(view)=='table' then
+    -- the failure model decides the episode (it decides the switch too)
+    local decided=view.failed==true
+    if switched then result='switched'
+    elseif episode.good>=M.DENSE_GOOD and view.suspect~=true then result='false-alarm'
+    elseif decided and (reserve==nil or episode.reserve_good>=M.DENSE_GOOD) then result='failure-confirmed'
+    elseif not WATCHING[native_state] then result='cancelled'
+    elseif now>=(num(get(episode,'until')) or 0) then result=decided and 'failure-confirmed' or 'expired' end
+  elseif switched then result='switched'
   elseif episode.good>=M.DENSE_GOOD then result='false-alarm'
   elseif episode.failures>=M.CONFIRM_FAILURES and (reserve==nil or episode.reserve_good>=M.DENSE_GOOD) then result='failure-confirmed'
   elseif not WATCHING[native_state] then result='cancelled'

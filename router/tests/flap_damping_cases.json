@@ -1,0 +1,25 @@
+{
+  "_comment": "Shared by test_flap_damping.py and lua/test_flap_damping.lua: pair_auto.return_hold == pair.return_hold. Defaults: attempt_limit 3, attempt_window 15 min, cap 600 s; primary_stable 120 s since 03.11.2026 (the older cases name their 30 s base explicitly).",
+  "cases": [
+    {"name": "no failovers: the configured stability", "settings": {"recovery_primary_stable": "30"}, "events": [], "now": 5000, "hold": 30},
+    {"name": "one failover", "settings": {"recovery_primary_stable": "30"}, "events": [4900], "now": 5000, "hold": 30},
+    {"name": "two failovers stay below the limit", "settings": {"recovery_primary_stable": "30"}, "events": [4600, 4900], "now": 5000, "hold": 30},
+    {"name": "the failover reaching the limit doubles", "settings": {"recovery_primary_stable": "30"}, "events": [4400, 4600, 4900], "now": 5000, "hold": 60},
+    {"name": "each further failover doubles again", "settings": {"recovery_primary_stable": "30"}, "events": [4300, 4400, 4600, 4900], "now": 5000, "hold": 120},
+    {"name": "five in the window", "settings": {"recovery_primary_stable": "30"}, "events": [4200, 4300, 4400, 4600, 4900], "now": 5000, "hold": 240},
+    {"name": "six in the window", "settings": {"recovery_primary_stable": "30"}, "events": [4150, 4200, 4300, 4400, 4600, 4900], "now": 5000, "hold": 480},
+    {"name": "capped at the longest allowed stability", "settings": {"recovery_primary_stable": "30"}, "events": [4110, 4150, 4200, 4300, 4400, 4600, 4900], "now": 5000, "hold": 600},
+    {"name": "the oldest ages out exactly at the window end", "settings": {"recovery_primary_stable": "30"}, "events": [4100, 4600, 4900], "now": 5000, "hold": 30},
+    {"name": "decays fully after a quiet window", "settings": {"recovery_primary_stable": "30"}, "events": [4110, 4150, 4200, 4300, 4400, 4600, 4900], "now": 5800, "hold": 30},
+    {"name": "a future stamp is not counted here", "settings": {"recovery_primary_stable": "30"}, "events": [4600, 4900, 5100], "now": 5000, "hold": 30},
+    {"name": "limit 1: the first failover already doubles", "settings": {"recovery_primary_stable": "30", "recovery_attempt_limit": "1", "recovery_attempt_window": "5"}, "events": [4900], "now": 5000, "hold": 60},
+    {"name": "limit 1, 5-minute window: aged out", "settings": {"recovery_primary_stable": "30", "recovery_attempt_limit": "1", "recovery_attempt_window": "5"}, "events": [4700], "now": 5000, "hold": 30},
+    {"name": "longer configured stability is capped too", "settings": {"recovery_primary_stable": "400"}, "events": [4400, 4600, 4900], "now": 5000, "hold": 600},
+    {"name": "limit 10 never damps nine", "settings": {"recovery_primary_stable": "30", "recovery_attempt_limit": "10"}, "events": [4200, 4300, 4400, 4500, 4600, 4700, 4800, 4900, 4950], "now": 5000, "hold": 30},
+    {"name": "custom stability doubles", "settings": {"recovery_primary_stable": "45", "recovery_attempt_limit": "2"}, "events": [4600, 4900], "now": 5000, "hold": 90},
+    {"name": "default 120 s (03.11.2026): no failovers", "settings": {}, "events": [], "now": 5000, "hold": 120},
+    {"name": "default 120 s: the failover reaching the limit doubles", "settings": {}, "events": [4400, 4600, 4900], "now": 5000, "hold": 240},
+    {"name": "default 120 s: one more doubles", "settings": {}, "events": [4300, 4400, 4600, 4900], "now": 5000, "hold": 480},
+    {"name": "default 120 s: capped", "settings": {}, "events": [4200, 4300, 4400, 4600, 4900], "now": 5000, "hold": 600}
+  ]
+}

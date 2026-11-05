@@ -79,6 +79,18 @@ VPN отклонил вход / VPN login rejected
 
 **Action:** Read the saved HTTPS success count, DNS result and endpoint details. Retry the check; investigate repeated failures before reconnecting a working VPN.
 
+## VPN-MTU
+
+Большие пакеты теряются / Large packets are lost
+
+**RU:** Малые проверки (HTTPS, DNS, малый ping) через этот VPN проходят, но ни один большой эхо-пакет размером с туннель не вернулся ни от одного адреса проверки: «чёрная дыра» MTU. Страницы могут открываться, а загрузки, видеозвонки и другие большие передачи зависают. Проверка больших пакетов идёт раз в 5 минут и на каждой проверке, пока дыра видна; Auto считает каждую такую проверку сбоем и предпочитает другой туннель, если он её проходит.
+
+**EN:** Small checks (HTTPS, DNS, a small ping) pass through this VPN, but no large echo of tunnel size came back from either check address: a path MTU black hole. Pages may open while uploads, video calls and other large transfers hang. The large-packet check runs every 5 minutes and on every check while the hole is seen; Auto counts each such check as a failure and prefers the other tunnel when it passes the check.
+
+**Что делать:** Уменьшите MTU этого VPN-профиля в GL.iNet (для WireGuard попробуйте 1280-1380) или выберите другой сервер провайдера. Если это видно на обоих туннелях, проверьте подключение к интернету (PPPoE, мобильная связь или модем с малым MTU). TCP MSS на туннелях роутер уже ограничивает сам (зоны брандмауэра GL, mtu_fix).
+
+**Action:** Lower the MTU of this VPN profile in GL.iNet (for WireGuard try 1280-1380) or try another server of the provider. If both tunnels show it, check the uplink (PPPoE, mobile or a modem with a small MTU). The router itself already clamps TCP MSS on the tunnels (GL firewall zones, mtu_fix).
+
 ## VPN-004
 
 Имя VPN-сервера не находится / VPN server name does not resolve
@@ -123,9 +135,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** There is not enough evidence yet; the state stays “unknown”. It is shown while a VPN is still being checked.
 
-**Что делать:** Подождите один-два интервала проверки. Если не проходит, нажмите «Проверить VPN сейчас» на «Обзоре».
+**Что делать:** Подождите один-два интервала проверки. Если не проходит, нажмите «Проверить сейчас» на «Главной» (в «Пульте» — вкладка «Каналы»).
 
-**Action:** Wait one or two check intervals. If it stays, press “Check the VPNs now” on the Overview.
+**Action:** Wait one or two check intervals. If it stays, press “Check now” on Home (Console: Channels tab).
 
 ## SWITCH-001
 
@@ -135,9 +147,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** There is no reserve VPN that passed its checks, so there is nowhere to switch.
 
-**Что делать:** Подключите ещё один VPN-профиль в GL.iNet и выберите его резервным в «Настройки → Все настройки приложения → 3 · Существующие VPN».
+**Что делать:** Подключите ещё один VPN-профиль в GL.iNet и выберите его резервным в «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).
 
-**Action:** Connect another VPN profile in GL.iNet and select it as the reserve in Settings → All application settings → 3 · Existing VPNs.
+**Action:** Connect another VPN profile in GL.iNet and select it as the reserve in Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).
 
 ## AUTO-CONTROL-UNVERIFIED
 
@@ -147,9 +159,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The router answered, but not with a clear “accepted”. Nothing is assumed.
 
-**Что делать:** Посмотрите на лампу и «Техническое состояние» в блоке Auto; повторите нажатие, только если за минуту ничего не изменилось.
+**Что делать:** Посмотрите на переключатель Auto и строку состояния рядом с ним; нажмите снова, только если за минуту ничего не изменилось.
 
-**Action:** Look at the lamp and the Technical state in the Auto card; repeat the press only if nothing changed after a minute.
+**Action:** Look at the Auto switch and the status line next to it; press it again only if nothing changed after a minute.
 
 ## AUTO-CONTROL-FAILED
 
@@ -159,9 +171,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The router did not answer the Start or Stop request at all.
 
-**Что делать:** Обновите страницу и проверьте лампу мониторинга. Если роутер недоступен, используйте аварийный возврат из «Помощи».
+**Что делать:** Обновите страницу и проверьте лампу «Службы мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»). Если роутер недоступен, используйте аварийный возврат из «Помощи» (тема «У меня пропал интернет»).
 
-**Action:** Reload the page and check the monitor lamp. If the router is unreachable, use the emergency return in Help.
+**Action:** Reload the page and check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab). If the router is unreachable, use the emergency return in Help (topic “I have no internet”).
 
 ## AUTO-START-REFUSED
 
@@ -183,9 +195,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The return to the primary failed twice. The program stopped trying, keeps only VPN traffic allowed and turned Auto off.
 
-**Что делать:** Проверьте порядок VPN-правил на роутере («Помощь» → аварийный возврат), восстановите его вручную и закройте журнал аварийной командой.
+**Что делать:** Проверьте порядок VPN-правил на роутере («Помощь» → «У меня пропал интернет» (аварийный возврат)), восстановите его вручную и закройте журнал аварийной командой.
 
-**Action:** Check the VPN rule order in the router (Help → emergency return), restore it by hand, then close the journal with the emergency command.
+**Action:** Check the VPN rule order in the router (Help → “I have no internet” (emergency return)), restore it by hand, then close the journal with the emergency command.
 
 ## EXIT-TRACE-FAILED
 
@@ -207,9 +219,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The Stop request could not be saved on the router. A running failure test was still cleaned up.
 
-**Что делать:** Нажмите «Стоп» ещё раз. Если повторяется, используйте аварийный возврат из «Помощи» или остановите службу в «Система» → «Автозапуск».
+**Что делать:** Ещё раз выключите Auto переключателем. Если повторяется, используйте аварийный возврат из «Помощи» (тема «У меня пропал интернет») или остановите службу в LuCI → «Система» → «Автозапуск».
 
-**Action:** Press Stop again. If it repeats, use the emergency return in Help, or stop the service in System → Startup.
+**Action:** Turn Auto off with the Auto switch again. If it repeats, use the emergency return in Help (topic “I have no internet”), or stop the service in LuCI → System → Startup.
 
 ## SWITCH-002
 
@@ -255,9 +267,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The firmware version or a required tool is not supported.
 
-**Что делать:** Сравните с проверенной прошивкой (GL.iNet 4.11.0) на странице «Готовность системы». Мониторинг работает, а для Auto нужна поддерживаемая прошивка.
+**Что делать:** Сравните с проверенной прошивкой (GL.iNet 4.11.0) в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»). Мониторинг работает, а для Auto нужна поддерживаемая прошивка.
 
-**Action:** Compare with the tested firmware (GL.iNet 4.11.0) on the Readiness page. Monitoring still works; Auto needs the supported firmware.
+**Action:** Compare with the tested firmware (GL.iNet 4.11.0) in Router readiness (Settings → System and diagnostics; Console: System tab). Monitoring still works; Auto needs the supported firmware.
 
 ## MONITOR-START-REQUESTED
 
@@ -291,9 +303,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** Auto or a retained reserve prevents stopping the monitor.
 
-**Что делать:** Нажмите «Стоп» у Auto, дождитесь возврата на основной, затем остановите мониторинг.
+**Что делать:** Выключите Auto переключателем, дождитесь возврата на основной, затем остановите мониторинг.
 
-**Action:** Press Stop on Auto, wait until it returns to the primary, then stop the monitor.
+**Action:** Turn Auto off with the Auto switch, wait until it returns to the primary, then stop the monitor.
 
 ## MONITOR-JOURNAL-UNVERIFIED
 
@@ -327,9 +339,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The setting may be saved but the service did not confirm the start or stop.
 
-**Что делать:** Через минуту посмотрите блок «Мониторинг» на «Обзоре»; если лампа не зелёная, нажмите там «Запустить мониторинг».
+**Что делать:** Через минуту посмотрите «Службу мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»); если лампа не зелёная, нажмите там «Восстановить мониторинг».
 
-**Action:** After a minute check the Monitoring block on the Overview; if its lamp is not green, press “Start monitoring” there.
+**Action:** After a minute check Monitoring service (Settings → System and diagnostics; Console: System tab); if its lamp is not green, press “Restore monitoring” there.
 
 ## MONITOR-INVALID
 
@@ -339,9 +351,9 @@ VPN отклонил вход / VPN login rejected
 
 **EN:** The request had wrong fields. Nothing was written.
 
-**Что делать:** Обновите страницу (Ctrl+F5). Если повторяется, версии страницы и программы различаются: см. сообщение на «Обзоре».
+**Что делать:** Обновите страницу (Ctrl+F5). Если повторяется, версии страницы и программы различаются: см. сообщение вверху страницы.
 
-**Action:** Reload the page (Ctrl+F5). If it repeats, the page and the program versions differ: see the notice on the Overview.
+**Action:** Reload the page (Ctrl+F5). If it repeats, the page and the program versions differ: see the notice at the top of the page.
 
 ## MONITOR-RPC-UNCONFIRMED
 
@@ -451,6 +463,138 @@ DNS-канал LAN не подтверждён / LAN DNS channel not confirmed
 
 **Action:** Nothing to do on firmware without the module. On GL 4.11 the module is expected: compare with lsmod and the firmware version.
 
+## DNS-DUAL-UNVERIFIED
+
+DNS через оба туннеля не подтверждён / DNS through both tunnels not confirmed
+
+**RU:** При включённой опции dns_dual Auto даёт dnsmasq каждого туннеля (отдельный экземпляр GL на туннель) ещё и DNS-серверы другого туннеля, чтобы запрос клиента LAN получил ответ через тот туннель, который ответит первым. Запись этого небольшого файла (/tmp/dnsmasq.d.<туннель>/homensai-dns-dual.conf), проверка dnsmasq --test, перезапуск этого dnsmasq или его рабочее состояние не подтвердились. Прежний файл возвращён (если его не было — конфигурация GL), поэтому DNS клиентов LAN работает как раньше, только через активный туннель; тот же файл не пробуется снова до перезапуска Auto. Трафик и его маршрут не затронуты; DNS не уходит в WAN.
+
+**EN:** With option dns_dual on, Auto gives the dnsmasq of each tunnel (GL per-tunnel instance) the DNS servers of the other tunnel as well, so a LAN lookup is answered through whichever tunnel replies first. Writing that small file (/tmp/dnsmasq.d.<tunnel>/homensai-dns-dual.conf), the dnsmasq --test check, the restart of that dnsmasq or its running state was not confirmed. The previous file was put back (none: the GL configuration), so LAN DNS keeps working as before through the active tunnel only; the same file is not tried again until Auto restarts. Traffic and its route are not affected; no DNS goes to the WAN.
+
+**Что делать:** Посмотрите logread -e DNS-DUAL-SYNC и logread -e dnsmasq (например failed to bind server socket). Проверьте, что /var/etc/dnsmasq.conf.<туннель> существует и ubus call service list показывает экземпляр запущенным. Выключить функцию: uci set homensai_vpn.main.dns_dual=0; uci commit homensai_vpn.
+
+**Action:** Look at logread -e DNS-DUAL-SYNC and at logread -e dnsmasq (for example failed to bind server socket). Check that /var/etc/dnsmasq.conf.<tunnel> exists and ubus call service list shows the instance running. To switch the feature off: uci set homensai_vpn.main.dns_dual=0; uci commit homensai_vpn.
+
+## DNS-DUAL-UNAVAILABLE
+
+DNS через оба туннеля здесь невозможен / DNS through both tunnels not possible here
+
+**RU:** Опция dns_dual включена, но найдено меньше двух экземпляров dnsmasq GL для туннелей пары Auto (/var/etc/dnsmasq.conf.<туннель> с conf-dir /tmp/dnsmasq.d.<туннель> и его меткой). Ничего не меняется: DNS клиентов LAN идёт через активный туннель так, как его настроил GL.
+
+**EN:** Option dns_dual is on, but fewer than two per-tunnel GL dnsmasq instances of the Auto pair were found (/var/etc/dnsmasq.conf.<tunnel> with conf-dir /tmp/dnsmasq.d.<tunnel> and its mark). Nothing is changed: LAN DNS goes through the active tunnel as GL configures it.
+
+**Что делать:** Ожидаемо на прошивке, отличной от GL 4.x с экземплярами VPN, или пока экземпляр туннеля ещё не запущен. На GL 4.11 сравните ls /tmp/dnsmasq.d.* и /var/etc/dnsmasq.conf.*; Auto проверяет снова на каждом проходе.
+
+**Action:** Expected on firmware other than GL 4.x with VPN instances, or while a tunnel instance is not running yet. On GL 4.11 compare ls /tmp/dnsmasq.d.* and /var/etc/dnsmasq.conf.*; Auto checks again on every pass.
+
+## SERVER-PICKED
+
+Сервер канала сменён / Channel server changed
+
+**RU:** Резервный канал не работал и не вёз трафик, поэтому сам Auto поставил в него самый быстрый живой сервер из списка серверов GL этого канала (uci и ifdown/ifup только этого интерфейса), внутри своей блокировки: работающий канал не трогается, Auto не перезапускается. Новый сервер прошёл обычную проверку канала (DNS и HTTPS через туннель). В строке журнала названы оба сервера и их пинг.
+
+**EN:** The reserve channel was down and carried no traffic, so Auto itself put the fastest live server of its GL server list into it (uci and ifdown/ifup of that interface only), inside its own lock: the working channel is not touched and Auto is not restarted. The new server passed the usual channel check (DNS and HTTPS through the tunnel). The log line names both servers and their ping.
+
+**Что делать:** Ничего делать не нужно. Чтобы отключить, снимите «Подбирать лучший сервер» в «Настройки → Каналы: основной и резерв» (в «Пульте» — вкладка «Серверы»).
+
+**Action:** Nothing to do. To stop it, switch off "Pick the best server" in Settings → Channels: primary and reserve (Console: Servers tab).
+
+## SERVER-PICK-FAILED
+
+Сервер канала не сменён / Channel server not changed
+
+**RU:** Команда смены сервера (uci или ifdown/ifup) не выполнилась или новый сервер не прошёл проверку канала (DNS и HTTPS через туннель) за 60 с. Auto тем же способом вернул прежний сервер; в строке журнала написано «rolled back» (или «rollback failed», если вернуть не удалось).
+
+**EN:** A command of the server change (uci or ifdown/ifup) did not succeed, or the new server did not pass the channel check (DNS and HTTPS through the tunnel) within 60 s. Auto put the previous server back the same way; the log line says "rolled back" (or "rollback failed").
+
+**Что делать:** Откройте VPN > VPN Client в GL.iNet и проверьте этот канал. Если повторяется, сохраните системный журнал (logread | grep homensai).
+
+**Action:** Open VPN > VPN Client in GL.iNet and check this channel. Save the system log (logread | grep homensai) if it repeats.
+
+## SERVER-PICK-WAITING-VENDOR
+
+GL сам меняет сервер / GL is switching the server itself
+
+**RU:** Прошивка GL сама меняет сервер этого канала (занята её блокировка tunnel-switch). Программа не вмешивается и посмотрит позже.
+
+**EN:** The GL firmware is switching the server of this channel itself (its tunnel-switch lock is held). The program does not interfere and looks again later.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-LIMIT
+
+Достигнут предел смены серверов / Server change limit reached
+
+**RU:** Сервер этого канала уже меняли 4 раза за последний час. Следующие смены ждут, чтобы канал с проблемой на всех серверах не перебирался по кругу.
+
+**EN:** The server of this channel was changed 4 times within the last hour. Further changes wait, so a channel with a problem on every server is not switched around in a loop.
+
+**Что делать:** Проверьте канал в GL.iNet: если не работает ни один сервер, причина, скорее всего, в подписке или у провайдера.
+
+**Action:** Check the channel in GL.iNet: if every server fails, the cause is likely the account or the provider.
+
+## SERVER-PICK-CARRYING
+
+Канал везёт трафик: сервер не меняется / Channel carries traffic: server kept
+
+**RU:** Программа никогда не меняет сервер канала, который сейчас везёт трафик (или когда не удаётся подтвердить, какой именно).
+
+**EN:** The program never changes the server of the channel that carries the traffic right now (or when it cannot confirm which one does).
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-REQUESTED
+
+Смена сервера передана Auto / Server change handed to Auto
+
+**RU:** Проверка серверов нашла более быстрый живой сервер для канала, который не работает и не везёт трафик. Сервер меняет только Auto: у незанятого резерва, пока трафик на основном канале, или у упавшего основного, пока трафик на резерве после автоматического переключения.
+
+**EN:** The server check found a faster live server for a channel that is down and carries no traffic. Only Auto changes servers: for the idle reserve while the traffic is on the primary, or for the failed primary while the traffic is on the reserve after an automatic switch.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-DEFERRED
+
+Смена сервера ждёт Auto / Server change waits for Auto
+
+**RU:** Auto сейчас не готов менять этот сервер: идёт переключение или возврат, резерв удерживается, включено ручное переключение или удержание, ещё не закончена другая смена или канал выбран по серверу, а не по туннелю. Заявка действует 15 минут.
+
+**EN:** Auto is not ready to change this server now: a switch or a return is in progress, the reserve is held, a manual switch or hold is set, another change is pending, or the channel is chosen by its server rather than by its tunnel. The request stays valid for 15 minutes.
+
+**Что делать:** Ничего делать не нужно. Если повторяется, выберите оба канала по туннелю на странице Auto.
+
+**Action:** Nothing to do. If it repeats, choose both channels by their tunnels on the Auto page.
+
+## SERVER-CHANGING
+
+Auto меняет сервер незанятого канала / Auto is changing an idle channel server
+
+**RU:** Auto поставил новый сервер в канал без трафика (резервный или упавший основной, пока трафик на резерве) и ждёт (не дольше 60 с), пока он подключится и пройдёт проверку канала. В это время решений о переключении нет; работающий канал везёт трафик как прежде.
+
+**EN:** Auto put a new server into a channel without traffic (the reserve, or the failed primary while the traffic is on the reserve) and waits (at most 60 s) for it to connect and pass the channel check. Meanwhile it makes no switch decision; the working channel carries the traffic as before.
+
+**Что делать:** Ничего делать не нужно.
+
+**Action:** Nothing to do.
+
+## SERVER-PICK-OFF
+
+Подбор сервера выключен / Server pick is off
+
+**RU:** Выключатель «Подбирать лучший сервер» выключен или выключен Auto, поэтому сервер не меняется. Список серверов всё равно показан.
+
+**EN:** The switch "Pick the best server" is off or Auto is off, so no server is changed. The server list is still shown.
+
+**Что делать:** Если нужно, включите «Подбирать лучший сервер» в «Настройки → Каналы: основной и резерв» (в «Пульте» — вкладка «Серверы»).
+
+**Action:** Switch on "Pick the best server" in Settings → Channels: primary and reserve (Console: Servers tab) if you want it.
+
 ## AUTO-RESUME-PENDING
 
 Auto возвращается после перезапуска / Auto is coming back after a restart
@@ -459,9 +603,9 @@ Auto возвращается после перезапуска / Auto is coming
 
 **EN:** The router was restarted with Auto on. Auto finishes an interrupted switch, waits for the VPN channels and turns itself back on.
 
-**Что делать:** Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания. Если через 10 минут Auto всё ещё выключен, нажмите «Старт».
+**Что делать:** Нажимать ничего не нужно; обычно это 3–4 минуты после включения питания. Если через 10 минут Auto всё ещё выключен, включите его переключателем Auto.
 
-**Action:** Nothing needs to be pressed; it usually takes 3–4 minutes after power-on. If Auto is still off after 10 minutes, press Start.
+**Action:** Nothing needs to be pressed; it usually takes 3–4 minutes after power-on. If Auto is still off after 10 minutes, turn it on with the Auto switch.
 
 ## RESTART-CLEAN
 
@@ -507,9 +651,9 @@ Auto возвращается после перезапуска / Auto is coming
 
 **EN:** Power was lost or the router hung while it was starting: the previous start never finished its recovery.
 
-**Что делать:** Проверьте блок питания и кабель. Если повторяется после каждого включения, оставьте роутер включённым на 10 минут и посмотрите в «Событиях» код после этого.
+**Что делать:** Проверьте блок питания и кабель. Если повторяется после каждого включения, оставьте роутер включённым на 10 минут и посмотрите в «Событиях и причинах» на «Главной» (в «Пульте» — вкладка «Журнал») код после этого.
 
-**Action:** Check the power supply and cable. If it repeats after every power-on, leave the router on for 10 minutes and check Events for a code after this one.
+**Action:** Check the power supply and cable. If it repeats after every power-on, leave the router on for 10 minutes and check Events and reasons on Home (Console: Log tab) for a code after this one.
 
 ## RESTART-INTERRUPTED-SWITCH
 
@@ -567,9 +711,9 @@ Auto возвращается после перезапуска / Auto is coming
 
 **EN:** The monitor is switched on but its data is older than 90 seconds.
 
-**Что делать:** Подождите минуту и обновите страницу; если лампа красная, нажмите «Запустить мониторинг» в блоке «Мониторинг». Если не помогло, см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».
+**Что делать:** Подождите минуту и обновите страницу; если лампа красная, нажмите «Восстановить мониторинг» в «Службе мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»). Если не помогло, см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает».
 
-**Action:** Wait a minute and reload the page; if the lamp is red press “Start monitoring” in the Monitoring block. If it stays, see Help → “The page is old, empty or says the monitor is not running”.
+**Action:** Wait a minute and reload the page; if the lamp is red press “Restore monitoring” in Monitoring service (Settings → System and diagnostics; Console: System tab). If it stays, see Help → “The page is old, empty or says the monitor is not running”.
 
 ## RPC-PLUGIN
 
@@ -735,9 +879,9 @@ Auto возвращается после перезапуска / Auto is coming
 
 **EN:** The computer did not see the reserve VPN exit.
 
-**Что делать:** Проверьте, что резервный VPN действительно работает («Обзор»), и повторите.
+**Что делать:** Проверьте, что резервный VPN действительно работает (карточка «Резерв» на «Главной»; в «Пульте» — вкладка «Каналы»), и повторите.
 
-**Action:** Check that the reserve VPN really works (Overview) and try again.
+**Action:** Check that the reserve VPN really works (the Reserve card on Home; Console: Channels tab) and try again.
 
 ## POWERSHELL-7-REQUIRED
 
@@ -771,9 +915,9 @@ Auto возвращается после перезапуска / Auto is coming
 
 **EN:** No bot token is stored.
 
-**Что делать:** Введите токен в «Настройки» → «2 · Telegram» (см. «Помощь» → «Отчёты в Telegram не приходят»).
+**Что делать:** Введите токен в «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система») (см. «Помощь» → «Отчёты в Telegram не приходят»).
 
-**Action:** Enter the token in Settings → 2 · Telegram (see Help → “Telegram reports do not arrive”).
+**Action:** Enter the token in Settings → Telegram notifications (Console: System tab) (see Help → “Telegram reports do not arrive”).
 
 ## TELEGRAM-TOKEN-FORMAT
 
@@ -903,9 +1047,9 @@ ID чата выглядит неверно / Chat ID looks wrong
 
 **EN:** The Telegram settings are incomplete or invalid.
 
-**Что делать:** Откройте «Настройки» → «2 · Telegram» и заполните токен и ID чата заново.
+**Что делать:** Откройте «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система») и заполните токен и ID чата заново.
 
-**Action:** Open Settings → 2 · Telegram and fill in the token and the chat ID again.
+**Action:** Open Settings → Telegram notifications (Console: System tab) and fill in the token and the chat ID again.
 
 ## TELEGRAM-CLOCK-BACKWARD
 
@@ -1011,9 +1155,9 @@ ID чата выглядит неверно / Chat ID looks wrong
 
 **EN:** The chosen primary or reserve profile is not enabled for monitoring.
 
-**Что делать:** Включите оба профиля в мастере «Система».
+**Что делать:** Выберите оба канала заново в «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).
 
-**Action:** Enable both profiles in the System wizard.
+**Action:** Choose both channels again in Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).
 
 ## SETUP-PROFILES
 
@@ -1023,9 +1167,9 @@ ID чата выглядит неверно / Chat ID looks wrong
 
 **EN:** A selected profile no longer exists on the router.
 
-**Что делать:** Выберите существующие профили заново в мастере «Система».
+**Что делать:** Выберите существующие профили заново в «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).
 
-**Action:** Choose existing profiles again in the System wizard.
+**Action:** Choose existing profiles again in Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).
 
 ## SPEED-DISABLED
 
@@ -1035,9 +1179,9 @@ ID чата выглядит неверно / Chat ID looks wrong
 
 **EN:** Speed tests are switched off.
 
-**Что делать:** Включите их в «Расширенные настройки» → «Тесты» → «Настройки тестов скорости».
+**Что делать:** Включите их в «Настройки» → «Тест скорости: параметры» → «Разрешить тесты скорости» (в «Пульте» — «Серверы» → «Параметры теста скорости»).
 
-**Action:** Turn them on in Advanced settings → Tests → Speed test settings.
+**Action:** Turn them on in Settings → Speed test: parameters → “Allow speed tests” (Console: Servers → Speed test parameters).
 
 ## SPEED-DAILY-LIMIT
 
@@ -1139,9 +1283,9 @@ VPN не подключён / VPN not connected
 
 Проверка заняла слишком много времени / Check took too long
 
-**RU:** Запрос «Проверить VPN сейчас» не завершился вовремя.
+**RU:** Запрос «Проверить сейчас» не завершился вовремя.
 
-**EN:** The “Check the VPNs now” request did not finish in time.
+**EN:** The “Check now” request did not finish in time.
 
 **Что делать:** Нажмите кнопку ещё раз через минуту. Проверьте, что мониторинг работает.
 
@@ -1155,9 +1299,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The saved state of the check is damaged.
 
-**Что делать:** Нажмите «Проверить VPN сейчас» ещё раз; создастся новое состояние.
+**Что делать:** Нажмите «Проверить сейчас» ещё раз; создастся новое состояние.
 
-**Action:** Press “Check the VPNs now” again; it creates a new state.
+**Action:** Press “Check now” again; it creates a new state.
 
 ## CLOCK-001
 
@@ -1191,9 +1335,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The test needs fresh confirmation of the current channel and a healthy alternative. Prepared continuous pair Auto uses its own private state; the legacy bounded mode still needs its LAN certificate.
 
-**Что делать:** Проверьте оба VPN и включите Auto на «Обзоре». Вернитесь к тесту перехода после свежих наблюдений.
+**Что делать:** Проверьте оба VPN и включите Auto переключателем (на «Главной»; в «Пульте» — вверху). Вернитесь к тесту перехода после свежих наблюдений.
 
-**Action:** Check both VPN channels and start Auto on Overview. Reopen the transition test after fresh observations arrive.
+**Action:** Check both VPN channels and turn Auto on with the Auto switch (Home; Console: top strip). Reopen the transition test after fresh observations arrive.
 
 ## FAULT-UNVERIFIED
 
@@ -1203,9 +1347,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The router did not confirm that the simulated failure was applied or removed.
 
-**Что делать:** Нажмите «Отменить сбой сейчас», проверьте на «Обзоре», что трафик идёт, и повторите.
+**Что делать:** Нажмите «Остановить и снять сбой» в «Тесте сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto»), проверьте на «Главной», что трафик идёт, и повторите.
 
-**Action:** Press “Cancel fault now”, check the Overview that traffic works, then try again.
+**Action:** Press “Stop and remove fault” in Failure test (Home → Tests; Console: Auto tab), check on Home that traffic works, then try again.
 
 ## FAULT-UNKNOWN
 
@@ -1215,9 +1359,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The result of the failure request is unknown.
 
-**Что делать:** Обновите страницу. Если через VPN нет трафика, нажмите «Отменить сбой сейчас».
+**Что делать:** Обновите страницу. Если через VPN нет трафика, нажмите «Остановить и снять сбой».
 
-**Action:** Reload the page. If the VPN has no traffic, press “Cancel fault now”.
+**Action:** Reload the page. If the VPN has no traffic, press “Stop and remove fault”.
 
 ## FAULT-CANCEL-UNKNOWN
 
@@ -1227,9 +1371,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The cancel request was sent but not confirmed.
 
-**Что делать:** Проверьте страницу «Тесты» через минуту. Сбой также заканчивается сам по истечении времени (таймаут в роутере).
+**Что делать:** Проверьте «Тест сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto») через минуту. Сбой также заканчивается сам по истечении времени (таймаут в роутере).
 
-**Action:** Check the Tests page after a minute. The failure also ends by itself when its time is over (a timeout in the router).
+**Action:** Check Failure test (Home → Tests; Console: Auto tab) after a minute. The failure also ends by itself when its time is over (a timeout in the router).
 
 ## FAULT-RPC-UNCONFIRMED
 
@@ -1275,9 +1419,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The saved state of a failure test is damaged.
 
-**Что делать:** Нажмите «Отменить сбой сейчас»; программа уберёт собственное правило трафика.
+**Что делать:** Нажмите «Остановить и снять сбой»; программа уберёт собственное правило трафика.
 
-**Action:** Press “Cancel fault now”; the program cleans up its own traffic rule.
+**Action:** Press “Stop and remove fault”; the program cleans up its own traffic rule.
 
 ## FAULT-NFT-QUERY-FAILED
 
@@ -1299,9 +1443,9 @@ VPN не подключён / VPN not connected
 
 **EN:** The program’s own temporary rule from a previous test still exists.
 
-**Что делать:** Нажмите «Отменить сбой сейчас» или дождитесь таймаута.
+**Что делать:** Нажмите «Остановить и снять сбой» или дождитесь таймаута.
 
-**Action:** Press “Cancel fault now” or wait for its timeout.
+**Action:** Press “Stop and remove fault” or wait for its timeout.
 
 ## HISTORY-PARTIAL
 
@@ -1647,9 +1791,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** The measured VPN generation or tunnel no longer matches the displayed channel. No old value is substituted.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-DNS-FAILED
 
@@ -1659,9 +1803,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** A selected ordinary website name could not be resolved through this VPN. This is separate from the technical health probes.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-HTTP-FAILED
 
@@ -1671,9 +1815,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** The website did not return its expected HTTP status and complete headers. There is no complete three-site mean.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-TIMEOUT
 
@@ -1683,9 +1827,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** A fresh website check exceeded its bounded deadline. Missing time is not a zero-millisecond response.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-TLS-FAILED
 
@@ -1695,9 +1839,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** The fresh HTTPS connection could not establish verified TLS to the selected website.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-RESPONSE-FAILED
 
@@ -1707,9 +1851,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** The independent three-site check failed. It supplies no delay value and does not change Auto health or routing.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-UNAVAILABLE
 
@@ -1719,9 +1863,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** No fresh complete identity-bound three-site result is available. ICMP and technical HTTPS times cannot replace it.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-PARTIAL
 
@@ -1731,9 +1875,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** Fewer than three selected websites answered successfully. Coverage is shown; an average requires all three.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-CHECK-PENDING
 
@@ -1743,9 +1887,9 @@ C-модуль повреждён, работает чистый Lua / C module 
 
 **EN:** The background three-site measurement is still being collected. Opening this page starts no extra request.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-NOT-SELECTED
 
@@ -1755,9 +1899,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** Only the two selected VPN channels receive the bounded three-site measurement. No other profile is connected by this page.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-DATA-STALE
 
@@ -1767,9 +1911,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The original completion time exceeds its freshness window. Publication of cached data does not renew a measurement.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-HISTORY-WRITE-FAILED
 
@@ -1779,9 +1923,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The separate website-response archive could not be safely written. Current checks can continue; missing history stays empty.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-HISTORY-UNAVAILABLE
 
@@ -1791,9 +1935,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The website-response archive or its checksum could not be verified. Old technical HTTPS history is not substituted.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## WEBSITE-HISTORY-PAIR-LIMIT
 
@@ -1803,9 +1947,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The bounded archive cannot add another channel pair while preserving its limits. No profile or historical value is silently relabelled.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## PING-HISTORY-WRITE-FAILED
 
@@ -1815,9 +1959,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The separate ping-response archive could not be safely written. Current checks can continue; missing history stays empty.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## PING-HISTORY-UNAVAILABLE
 
@@ -1827,9 +1971,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The ping-response archive or its checksum could not be verified. Old technical HTTPS history is not substituted.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## PING-HISTORY-PAIR-LIMIT
 
@@ -1839,9 +1983,9 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 
 **EN:** The bounded archive cannot add another channel pair while preserving its limits. No profile or historical value is silently relabelled.
 
-**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь → Ответ трёх сайтов».
+**Что делать:** Дождитесь новой фоновой проверки. Метод и полнота описаны в «Помощь» → «Ответ трёх сайтов: метод и история».
 
-**Action:** Wait for a fresh background check. Read Help → Three-site response for method and coverage.
+**Action:** Wait for a fresh background check. Read Help → “Three-site response: method and history” for method and coverage.
 
 ## KNOWN-STOCK-DERIVED-RECOVERY
 
@@ -1938,6 +2082,66 @@ VPN вне измеряемой пары / VPN is outside the measured pair
 **Что делать:** Дождитесь окончания переключения и примените уровень ещё раз.
 
 **Action:** Wait until the switch finishes, then apply the level again.
+
+## SQM-OFF
+
+SQM на VPN выключен / SQM on the VPN is off
+
+**RU:** Управление очередью (cake) на выходе VPN-туннеля выключено, как по умолчанию. У туннелей обычная очередь ядра.
+
+**EN:** Queue management (cake) on the VPN tunnel egress is off, as by default. The tunnels keep the kernel default queue.
+
+**Что делать:** Делать ничего не нужно. Это опция для часто загруженной отдачи (задержка под нагрузкой); перед включением прочитайте описание.
+
+**Action:** Nothing to do. It is an option for an upload that is often saturated (latency under load); read the design note before switching it on.
+
+## SQM-BANDWIDTH-UNSET
+
+SQM включён, но скорость отдачи не задана / SQM is on but has no upload rate
+
+**RU:** SQM включён, но допустимая скорость отдачи (1000-1000000 кбит/с) не задана, поэтому ничего не ограничивается. Автоматической скорости нет: неверная либо замедляет VPN, либо ничего не даёт.
+
+**EN:** SQM is switched on, but no valid upload rate (1000-1000000 kbit/s) is set, so nothing is shaped. There is no automatic rate: a wrong one either slows the VPN or shapes nothing.
+
+**Что делать:** Измерьте отдачу через VPN (тест скорости) и задайте примерно 85-90 % от неё: uci set homensai_vpn.main.sqm_enabled='1'; uci set homensai_vpn.main.sqm_upload_kbit='<kbit>'; uci commit homensai_vpn.
+
+**Action:** Measure the VPN upload (speed test), then set about 85-90 % of it: uci set homensai_vpn.main.sqm_enabled='1'; uci set homensai_vpn.main.sqm_upload_kbit='<kbit>'; uci commit homensai_vpn.
+
+## SQM-ROOT-QDISC-BUSY
+
+У туннеля уже своя очередь / The tunnel already has its own queue
+
+**RU:** У устройства туннеля уже есть корневая дисциплина очереди: не обычная очередь ядра и не cake этого приложения (ваша или прошивки). Она никогда не заменяется.
+
+**EN:** The tunnel device already has a root queue discipline that is neither the kernel default nor a cake this application set (yours or the firmware one). It is never replaced.
+
+**Что делать:** Если нужен этот SQM, уберите свою очередь с туннеля, или выключите SQM здесь.
+
+**Action:** Remove your own queue on that tunnel if you want this SQM, or switch SQM off here.
+
+## SQM-APPLY-FAILED
+
+SQM не удалось применить / SQM could not be applied
+
+**RU:** Роутер не смог поставить cake на выход туннеля: нет tc или модуля cake (kmod-sched-cake), или tc отказал. Трафик идёт с обычной очередью ядра.
+
+**EN:** The router could not put cake on the tunnel egress: tc or the cake module (kmod-sched-cake) is missing, or tc refused. Traffic keeps the kernel default queue.
+
+**Что делать:** Установите tc и kmod-sched-cake (opkg) или выключите SQM. Монитор повторит на следующем проходе.
+
+**Action:** Install tc and kmod-sched-cake (opkg) or switch SQM off. The monitor retries on its next pass.
+
+## SQM-RESTORE-FAILED
+
+SQM не удалось снять / SQM could not be removed
+
+**RU:** Cake, поставленный приложением на туннель, не удалось снять; запись сохранена, монитор и остановка службы повторят попытку.
+
+**EN:** The cake this application put on a tunnel could not be removed; the record is kept and the monitor and the service stop retry it.
+
+**Что делать:** Проверьте по SSH: tc qdisc show dev <туннель> root; если cake остался, снимите вручную: tc qdisc del dev <туннель> root.
+
+**Action:** Check by SSH: tc qdisc show dev <tunnel> root; if cake stays, remove it by hand: tc qdisc del dev <tunnel> root.
 
 ## PROBE-POLICY-UNAVAILABLE
 
@@ -2211,9 +2415,9 @@ VPN не входит в измеряемую пару / VPN is outside the meas
 
 **EN:** The saved or requested model is not Automatic, MT6000 or MT3000.
 
-**Что делать:** Откройте настройки и проверьте модель роутера на первом шаге мастера.
+**Что делать:** Откройте «Настройки» → «Язык и вид» → «Пройти мастер заново» и проверьте модель роутера на шаге 1 «Роутер» (она определяется автоматически).
 
-**Action:** Open Settings and review the router model on the first setup step.
+**Action:** Open Settings → Language and look → “Run the wizard again” and review the router model on step 1 “Router” (it is detected automatically).
 
 ## DEVICE-MODEL-MISMATCH
 
@@ -2775,9 +2979,9 @@ VPN-профиль изменился / VPN profile changed
 
 **EN:** The order or content of the VPN route rules no longer matches the saved Auto session. Who or what changed them is not established: an edit in the stock VPN page and the stock router services can both change them. Renaming a tunnel alone does not count.
 
-**Что делать:** Нажмите Start: Auto сам архивирует старую сессию и примет текущие правила. Если в течение 15 минут отказ повторяется, правила ещё меняются: подождите и повторите.
+**Что делать:** Включите Auto переключателем: Auto сам архивирует старую сессию и примет текущие правила. Если в течение 15 минут отказ повторяется, правила ещё меняются: подождите и повторите.
 
-**Action:** Press Start: Auto archives the old session and adopts the current rules by itself. If it refuses again within 15 minutes, the rules are still changing: wait and try again.
+**Action:** Turn Auto on with the Auto switch: Auto archives the old session and adopts the current rules by itself. If it refuses again within 15 minutes, the rules are still changing: wait and try again.
 
 ## PAIR-EXTERNAL-NETWORK-CHANGE
 
@@ -2787,9 +2991,9 @@ VPN-профиль изменился / VPN profile changed
 
 **EN:** A network interface of the selected pair, or another interface, changed after Auto started (not a stopped leftover client). The comparison does not show who or what changed it.
 
-**Что делать:** Нажмите Start: Auto сам примет текущие настройки. Повторные отказы значат, что настройки ещё меняются.
+**Что делать:** Включите Auto переключателем: Auto сам примет текущие настройки. Повторные отказы значат, что настройки ещё меняются.
 
-**Action:** Press Start: Auto adopts the current settings by itself. Repeated refusals mean the settings are still changing.
+**Action:** Turn Auto on with the Auto switch: Auto adopts the current settings by itself. Repeated refusals mean the settings are still changing.
 
 ## PAIR-EXTERNAL-CONFIG-CHANGE
 
@@ -2799,9 +3003,9 @@ VPN-профиль изменился / VPN profile changed
 
 **EN:** A protected configuration (firewall, DNS, Wi-Fi or the VPN profiles) differs from the one Auto saw when it started. The comparison does not show who or what changed it: the stock router services can change it too.
 
-**Что делать:** Нажмите Start: Auto архивирует старую сессию и сам примет текущую конфигурацию.
+**Что делать:** Включите Auto переключателем: Auto архивирует старую сессию и сам примет текущую конфигурацию.
 
-**Action:** Press Start: Auto archives the old session and adopts the current configuration by itself.
+**Action:** Turn Auto on with the Auto switch: Auto archives the old session and adopts the current configuration by itself.
 
 ## PAIR-RECOVERY-REQUIRED
 
@@ -2847,9 +3051,9 @@ Auto заново прочитал изменённые настройки / Aut
 
 **EN:** The stock firmware chooses the server inside a channel and does not report why or how many times it tried. The app checks only whether the channel works now.
 
-**Что делать:** Делать ничего не нужно. Чтобы выбрать другой сервер, откройте «Каналы и серверы».
+**Что делать:** Делать ничего не нужно. Чтобы выбрать другой сервер, откройте вкладку «Серверы» вида «Пульт».
 
-**Action:** Nothing to do. To pick a different server use Channels and servers.
+**Action:** Nothing to do. To pick a different server use the Servers tab of the Console view.
 
 ## AUTOMATIC-EXTERNAL-CHANGE-READOPT
 
@@ -2871,9 +3075,9 @@ Auto заново прочитал изменённые настройки / Aut
 
 **EN:** The page asked the router for the current state and got no answer (timeout, a busy router or a page error). Nothing is shown as working until it answers.
 
-**Что делать:** Подождите несколько секунд и обновите страницу (Ctrl+F5). Если повторяется, откройте «Настройки» и проверьте, что мониторинг запущен.
+**Что делать:** Подождите несколько секунд и обновите страницу (Ctrl+F5). Если повторяется, откройте «Службу мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») и проверьте, что мониторинг запущен.
 
-**Action:** Wait a few seconds; reload the page with Ctrl+F5. If it repeats, open Settings and check that monitoring is running.
+**Action:** Wait a few seconds; reload the page with Ctrl+F5. If it repeats, open Monitoring service (Settings → System and diagnostics; Console: System tab) and check that monitoring is running.
 
 ## MONITOR-DATA-STALE
 
@@ -2883,9 +3087,9 @@ Auto заново прочитал изменённые настройки / Aut
 
 **EN:** The router program answered, but its last measurement is older than 90 seconds, so it cannot describe the channels now.
 
-**Что делать:** Проверьте, что мониторинг запущен («Настройки»). Тест скорости приостанавливает измерения до минуты.
+**Что делать:** Проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)). Тест скорости приостанавливает измерения до минуты.
 
-**Action:** Check that monitoring is running (Settings). A speed test pauses measurements for up to a minute.
+**Action:** Check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)). A speed test pauses measurements for up to a minute.
 
 ## VENDOR-OBSERVATION-PENDING
 
@@ -2903,13 +3107,13 @@ Auto заново прочитал изменённые настройки / Aut
 
 Auto не подтвердил команду / Auto did not confirm the command
 
-**RU:** Страница отправила «Старт» или «Стоп», но роутер не сообщил результат за две минуты. Кнопка снова доступна, можно повторить.
+**RU:** Страница отправила включение или выключение Auto, но роутер не сообщил результат за две минуты. Кнопка снова доступна, можно повторить.
 
-**EN:** The page sent Start or Stop, but the router did not report the result within two minutes. The button is released so you can try again.
+**EN:** The page sent Auto on or off, but the router did not report the result within two minutes. The button is released so you can try again.
 
-**Что делать:** Посмотрите на лампу Auto и состояние через минуту. Если ничего не изменилось, нажмите кнопку ещё раз; если повторяется, проверьте, что мониторинг запущен («Настройки»).
+**Что делать:** Посмотрите на переключатель Auto и состояние через минуту. Если ничего не изменилось, нажмите его ещё раз; если повторяется, проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)).
 
-**Action:** Check the Auto lamp and the status in a minute. If nothing changed, press the button again; if it repeats, check that monitoring is running (Settings).
+**Action:** Check the Auto switch and its status in a minute. If nothing changed, press it again; if it repeats, check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)).
 
 ## UI-ACTION-FAILED
 
@@ -2955,9 +3159,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The router wrote the archive of the old data, but reading it back did not match, so it reset nothing.
 
-**Что делать:** Проверьте свободное место на роутере и снова нажмите «Сброс статистики».
+**Что делать:** Проверьте свободное место на роутере и снова нажмите «Сбросить статистику…» в «Настройки → История и память» (в «Пульте» — вкладка «Система»).
 
-**Action:** Check free space on the router and press Reset statistics again.
+**Action:** Check free space on the router and press “Reset statistics…” in Settings → History and memory (Console: System tab) again.
 
 ## STATS-RESET-FIELDS
 
@@ -2967,9 +3171,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The page asked to reset a chart the router does not know. Nothing was reset.
 
-**Что делать:** Обновите страницу (Ctrl+F5) и снова нажмите «Сброс статистики».
+**Что делать:** Обновите страницу (Ctrl+F5) и снова нажмите «Сбросить статистику…» в «Настройки → История и память» (в «Пульте» — вкладка «Система»).
 
-**Action:** Reload the page (Ctrl+F5) and press Reset statistics again.
+**Action:** Reload the page (Ctrl+F5) and press “Reset statistics…” in Settings → History and memory (Console: System tab) again.
 
 ## STATS-RESET-FAILED
 
@@ -3003,9 +3207,21 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The router accepted the request but its monitoring did not report the result within 45 seconds (it may be stopped or paused by a speed test).
 
-**Что делать:** Проверьте, что мониторинг запущен («Настройки»), подождите минуту и посмотрите на график; при необходимости нажмите «Сброс» ещё раз.
+**Что делать:** Проверьте, что мониторинг запущен («Служба мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)), подождите минуту и посмотрите на график; при необходимости нажмите «Сбросить статистику…» ещё раз.
 
-**Action:** Check that monitoring is running (Settings), wait a minute and look at the chart; press Reset again if needed.
+**Action:** Check that monitoring is running (Monitoring service (Settings → System and diagnostics; Console: System tab)), wait a minute and look at the chart; press “Reset statistics…” again if needed.
+
+## PRIMARY-RECOVERED-BEFORE-SWITCH
+
+Основной восстановился до переключения / The primary recovered before the switch
+
+**RU:** Auto решил уйти с основного канала после нескольких неудачных проверок, но последняя проверка прямо перед переключением показала, что он снова работает (монитор уже увидел его исправным, или одна короткая живая проверка прошла DNS и две из трёх HTTPS). Auto не переключился и продолжает наблюдение; следующая неудачная проверка решает заново. Упавший основной этой проверкой не удерживается: переключение останавливает только положительный ответ.
+
+**EN:** Auto had decided to leave the primary after several failed checks, but a last check right before switching found it working again (the monitor already saw it healthy, or one short live probe passed DNS and two of three HTTPS checks). Auto did not switch and keeps watching; the next failed check decides again. A primary that stays down is never held by this check: only a positive answer stops the switch.
+
+**Что делать:** Делать ничего не нужно. Короткий сбой закончился до того, как Auto перенёс трафик. Если это часто повторяется, проверьте основной VPN-сервер по «Помощи».
+
+**Action:** Nothing to do. A short outage ended before Auto moved the traffic. If this repeats often, check the primary VPN server in Help.
 
 ## RESERVE-ALREADY-FIRST
 
@@ -3027,9 +3243,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** Over the last 5 minutes the router's own checks through this channel failed in at least 20% of the cycles (a cycle fails when DNS fails or fewer than two of three HTTPS checks pass). The tunnel can still show as connected. This is a measured share of failed checks, not an ICMP packet-loss figure, and it changes no setting.
 
-**Что делать:** Следуйте рекомендации: держите трафик на канале с меньшими потерями и замените сервер ненадёжного в «Каналы и серверы»; если теряют оба, сначала проверьте подключение роутера. Запустите тест скорости, чтобы измерить другие серверы.
+**Что делать:** Следуйте рекомендации: держите трафик на канале с меньшими потерями и замените сервер ненадёжного в панели GL.iNet → VPN (см. вкладку «Серверы» вида «Пульт»); если теряют оба, сначала проверьте подключение роутера. Запустите тест скорости, чтобы измерить другие серверы.
 
-**Action:** Follow the recommendation: keep traffic on the channel with the lower loss and replace the server of the unreliable one in Channels and servers; if both lose checks, test the router uplink first. Run a speed test to measure other servers.
+**Action:** Follow the recommendation: keep traffic on the channel with the lower loss and replace the server of the unreliable one in the GL.iNet panel → VPN (see the Servers tab of the Console view); if both lose checks, test the router uplink first. Run a speed test to measure other servers.
 
 ## RESERVE-NOT-CONNECTED
 
@@ -3039,9 +3255,9 @@ Auto не подтвердил команду / Auto did not confirm the command
 
 **EN:** The reserve client is enabled but the router reports no running tunnel. Auto cannot switch to it, and the primary keeps carrying traffic.
 
-**Что делать:** Auto сам запускает остановленный включённый резерв: не чаще раза в две минуты и четырёх раз за 15 минут. Если он не подключается, проверьте сервер резерва на странице VPN роутера или выберите другой сервер резерва в «Каналы и серверы».
+**Что делать:** Auto сам запускает остановленный включённый резерв: не чаще раза в две минуты и четырёх раз за 15 минут. Если он не подключается, проверьте сервер резерва на странице VPN роутера или выберите другой сервер резерва в «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).
 
-**Action:** Auto starts a stopped enabled reserve itself, at most once per two minutes and four times per 15 minutes. If it still does not connect, check the reserve server in the router VPN page or choose another reserve server in Channels and servers.
+**Action:** Auto starts a stopped enabled reserve itself, at most once per two minutes and four times per 15 minutes. If it still does not connect, check the reserve server in the router VPN page or choose another reserve server in Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).
 
 ## VENDOR-SAME-TUNNEL
 
@@ -3327,9 +3543,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** Removal of the traffic block is unverified; recovery remains pending.
 
-**Что делать:** См. «Помощь» → аварийный возврат; остановка ещё не подтверждена.
+**Что делать:** См. «Помощь» → «У меня пропал интернет» (аварийный возврат); остановка ещё не подтверждена.
 
-**Action:** See Help → emergency return; do not assume Stop completed.
+**Action:** See Help → “I have no internet” (emergency return); do not assume Stop completed.
 
 ## RELEASE-PENDING
 
@@ -3375,9 +3591,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** The journal phase is missing or unknown. Auto refuses to proceed.
 
-**Что делать:** Используйте «Помощь» → аварийный возврат; проверьте восстановление до перезапуска.
+**Что делать:** Используйте «Помощь» → «У меня пропал интернет» (аварийный возврат); проверьте восстановление до перезапуска.
 
-**Action:** Use Help → emergency return; inspect recovery before restarting.
+**Action:** Use Help → “I have no internet” (emergency return); inspect recovery before restarting.
 
 ## OBSERVING
 
@@ -3415,9 +3631,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** The controller is changing the order of the VPN rules on the router right now.
 
-**Что делать:** Подождите. Если состояние держится больше минуты, нажмите «Стоп» в блоке Auto.
+**Что делать:** Подождите. Если состояние держится больше минуты, выключите Auto переключателем.
 
-**Action:** Wait. If it stays here for more than a minute, press Stop in the Auto card.
+**Action:** Wait. If it stays here for more than a minute, turn Auto off with the Auto switch.
 
 **Пример / Example:** Видите APPLYING, затем ROLLED-BACK с VENDOR-APPLY-FAILED: GL.iNet не принял изменение, роутер вернулся назад. / You see APPLYING, then ROLLED-BACK with VENDOR-APPLY-FAILED: GL.iNet did not accept the change and the router went back.
 
@@ -3443,11 +3659,11 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** The switch worked and your computer confirmed it: traffic goes through the reserve VPN.
 
-**Что делать:** Делать ничего не нужно. Auto вернётся на основной сам, когда он восстановится, либо нажмите «Вернуться на основной».
+**Что делать:** Делать ничего не нужно. Auto вернётся на основной сам, когда он восстановится, либо нажмите «Переключить сюда» на карточке «Основной».
 
-**Action:** Nothing to do. Auto returns to the primary by itself when it has recovered, or press “Return to primary”.
+**Action:** Nothing to do. Auto returns to the primary by itself when it has recovered, or press “Switch here” on the Primary card.
 
-**Пример / Example:** На «Обзоре» «Работаю на резерве», состояние COMMITTED — норма после отказа основного. / The overview says “Working on the reserve” and the state is COMMITTED: normal after a failure of the primary.
+**Пример / Example:** На «Главной» «Работает резерв», состояние COMMITTED — норма после отказа основного. / Home says “Reserve in use” and the state is COMMITTED: normal after a failure of the primary.
 
 ## ROLLED-BACK
 
@@ -3483,9 +3699,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** Same as returning: the original route is being restored and verified.
 
-**Что делать:** Подождите минуту; если не заканчивается, см. «Помощь» → «Нет интернета».
+**Что делать:** Подождите минуту; если не заканчивается, см. «Помощь» → «У меня пропал интернет».
 
-**Action:** Wait a minute; if it does not end, see Help → “No internet”.
+**Action:** Wait a minute; if it does not end, see Help → “I have no internet”.
 
 ## TRIAL-REQUIRED
 
@@ -3535,9 +3751,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** Auto was stopped while traffic was on the reserve. The original route is not restored yet.
 
-**Что делать:** Когда основной снова работает, нажмите «Вернуться на основной» в блоке Auto.
+**Что делать:** Когда основной снова работает, нажмите «Переключить сюда» на карточке «Основной».
 
-**Action:** When the primary works again press “Return to primary” in the Auto card.
+**Action:** When the primary works again press “Switch here” on the Primary card.
 
 ## DEGRADED-ON-RESERVE
 
@@ -3559,9 +3775,9 @@ VPN-профиль изменён или удалён на роутере / VPN 
 
 **EN:** Traffic stays on the reserve on purpose (your return rule or your manual choice) while the reserve works. Auto is still on: if the reserve fails, it moves traffic to the other channel by itself.
 
-**Что делать:** Делать ничего не нужно. Если хотите вернуть трафик на основной, нажмите «Вернуться на основной».
+**Что делать:** Делать ничего не нужно. Если хотите вернуть трафик на основной, нажмите «Переключить сюда» на карточке «Основной».
 
-**Action:** Nothing to do. If you want traffic back on the primary, press “Return to primary”.
+**Action:** Nothing to do. If you want traffic back on the primary, press “Switch here” on the Primary card.
 
 ## DISABLED
 
@@ -3595,9 +3811,9 @@ Auto выключен / Auto disabled
 
 **EN:** The page cannot find a running monitor on the router.
 
-**Что делать:** Нажмите «Запустить мониторинг» в блоке «Мониторинг» или выполните homensai-vpn-emergency start по SSH.
+**Что делать:** Нажмите «Восстановить мониторинг» в «Службе мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») или выполните homensai-vpn-emergency start по SSH.
 
-**Action:** Press “Start monitoring” in the Monitoring block, or run homensai-vpn-emergency start over SSH.
+**Action:** Press “Restore monitoring” in Monitoring service (Settings → System and diagnostics; Console: System tab), or run homensai-vpn-emergency start over SSH.
 
 ## WAIT-CONFIRM
 
@@ -3667,9 +3883,9 @@ Auto выключен / Auto disabled
 
 **EN:** There was not enough fresh data about the primary.
 
-**Что делать:** Дождитесь следующих проверок; посмотрите на лампу мониторинга.
+**Что делать:** Дождитесь следующих проверок; посмотрите на лампу «Службы мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Wait for the next checks; check the monitor lamp.
+**Action:** Wait for the next checks; check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab).
 
 ## OPERATOR-TRIAL
 
@@ -3691,9 +3907,9 @@ Auto выключен / Auto disabled
 
 **EN:** Your recovery rule says to stay on the reserve until you return manually.
 
-**Что делать:** Нажмите «Вернуться на основной», когда захотите вернуться.
+**Что делать:** Нажмите «Переключить сюда» на карточке «Основной», когда захотите вернуться.
 
-**Action:** Press “Return to primary” when you want to go back.
+**Action:** Press “Switch here” on the Primary card when you want to go back.
 
 ## PRIMARY-STABLY-RECOVERED
 
@@ -3739,9 +3955,9 @@ Auto выключен / Auto disabled
 
 **EN:** The live check of the reserve gave no clear answer.
 
-**Что делать:** Подождите; посмотрите резерв в «Каналах и серверах».
+**Что делать:** Подождите; посмотрите карточку «Резерв» на «Главной» (в «Пульте» — вкладка «Каналы»).
 
-**Action:** Wait; check the reserve in Channels and servers.
+**Action:** Wait; check the Reserve card on Home (Console: Channels tab).
 
 ## SOURCE-NOT-VERIFIED
 
@@ -3751,9 +3967,9 @@ Auto выключен / Auto disabled
 
 **EN:** The router stays on the reserve because the primary has not passed a fresh check.
 
-**Что делать:** Проверьте основной VPN; затем нажмите «Вернуться на основной».
+**Что делать:** Проверьте основной VPN; затем нажмите «Переключить сюда» на карточке «Основной».
 
-**Action:** Check the primary VPN; then press “Return to primary”.
+**Action:** Check the primary VPN; then press “Switch here” on the Primary card.
 
 ## SUPERVISOR-RECOVERY
 
@@ -3766,6 +3982,126 @@ Auto выключен / Auto disabled
 **Что делать:** Делать ничего не нужно, если не повторяется.
 
 **Action:** Nothing to do unless it repeats.
+
+## SUPERVISOR-FORWARD-RESUMED
+
+Переключение завершено после перезапуска / Switch finished after a restart
+
+**RU:** Контроллер перезапустился посреди переключения на резерв, когда основной канал ещё не работал. Он заново проверил маршрут, туннели и резерв и завершил переключение, а не вернулся на неработающий основной.
+
+**EN:** The controller restarted in the middle of a switch to the reserve while the primary was still down. It checked the route, the tunnels and the reserve again and finished the switch instead of returning to the failed primary.
+
+**Что делать:** Ничего делать не нужно; Auto продолжает на резерве и вернётся на основной по обычным правилам.
+
+**Action:** Nothing to do; Auto continues on the reserve and returns to the primary by the usual rules.
+
+## NOT-PAIR
+
+Перезапуск: не переключение пары / Restart: not a pair switch
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение сделано не двухканальным Auto с проверкой IPv4 роутером (например, старым режимом). В журнал не пишется.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch was not made by the two-channel Auto with router-checked IPv4 (for example an older mode). Not written to the log.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## NOT-AUTOMATIC
+
+Перезапуск: не автоматическое / Restart: not automatic
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение было ручным выбором, пробным или повторным применением, а не автоматическим уходом; вперёд завершается только автоматический уход.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch was a manual choice, a trial or a re-application, not an automatic failover; only automatic failovers are finished forward.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## NOT-FORWARD
+
+Перезапуск: не на резерв / Restart: not to the reserve
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение не переводило трафик с основного канала на резерв (например, это был возврат на основной).
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch did not move the traffic from the primary to the reserve (for example a return to the primary).
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## ROLLBACK-STARTED
+
+Перезапуск: откат начат / Restart: rollback begun
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: прерванное переключение уже завершилось ошибкой или его откат начался до перезапуска, поэтому он только доводится до конца.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the interrupted switch had already failed or its rollback had already begun before the restart, so it is only completed backwards.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## ALREADY-RESUMED
+
+Перезапуск: уже возобновлялось / Restart: already resumed
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: это переключение уже возобновлялось после предыдущего перезапуска; вторая попытка вперёд не делается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: this switch was already resumed once after an earlier restart; a second forward attempt is never made.
+
+**Что делать:** Делать ничего не нужно. Если перезапуски посреди переключения повторяются, пришлите строки logread -e SUPERVISOR.
+
+**Action:** Nothing to do. If restarts in the middle of a switch repeat, send the lines of logread -e SUPERVISOR.
+
+## OTHER-BOOT
+
+Перезапуск: была перезагрузка / Restart: router rebooted
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: переключение начато до перезагрузки или отключения питания (или его время нельзя подтвердить), поэтому туннели и маршруты могли измениться; решает восстановление после загрузки.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the switch was started before a reboot or power cut (or its timing could not be proven), so the tunnels and routes may have changed; the boot recovery decides instead.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## OWNER-STOP
+
+Перезапуск: Стоп владельца / Restart: owner Stop
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: владелец выключил Auto (или служба останавливается, или Auto не включён), поэтому вперёд ничего не завершается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: the owner turned Auto off (or the service is stopping, or Auto is not wanted), so nothing is finished forward.
+
+**Что делать:** Делать ничего не нужно; включите Auto переключателем, когда он снова нужен.
+
+**Action:** Nothing to do; turn Auto on with the Auto switch when you want it again.
+
+## SOURCE-NOT-FAILED
+
+Перезапуск: основной не упал / Restart: primary not down
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: свежая проверка не подтвердила, что основной канал всё ещё не работает (он снова работает или его состояние неизвестно), поэтому трафик возвращается на него.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: a fresh check could not prove that the primary channel is still down (it works again or its state is unknown), so the traffic goes back to it.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
+
+## RESERVE-NOT-HEALTHY
+
+Перезапуск: резерв не подтверждён / Restart: reserve not proven
+
+**RU:** Контроллер перезапустился посреди переключения, и переключение не было завершено вперёд: оно откатано, как до этого изменения (строка журнала «SUPERVISOR-FORWARD: rollback (<код>)»). Причина: свежая проверка не подтвердила, что резервный канал работает, поэтому переход на него не завершается.
+
+**EN:** The controller restarted in the middle of a switch, and the switch was not finished forward: it was rolled back as before the change (log line "SUPERVISOR-FORWARD: rollback (<code>)"). Reason: a fresh check could not prove that the reserve channel works, so the switch to it is not finished.
+
+**Что делать:** Делать ничего не нужно; Auto продолжает работу по обычным правилам.
+
+**Action:** Nothing to do; Auto continues by its usual rules.
 
 ## TRANSACTION-FAILED
 
@@ -3895,9 +4231,9 @@ Auto выключен / Auto disabled
 
 **EN:** The reserve has not passed enough checks in a row yet.
 
-**Что делать:** Подождите; посмотрите резерв в «Каналах и серверах».
+**Что делать:** Подождите; посмотрите карточку «Резерв» на «Главной» (в «Пульте» — вкладка «Каналы»).
 
-**Action:** Wait; check the reserve in Channels and servers.
+**Action:** Wait; check the Reserve card on Home (Console: Channels tab).
 
 ## PLAN-CONFIG
 
@@ -3907,9 +4243,9 @@ Auto выключен / Auto disabled
 
 **EN:** The forecast needs a primary and a different reserve.
 
-**Что делать:** «Настройки → Все настройки приложения → 3 · Существующие VPN».
+**Что делать:** «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).
 
-**Action:** Settings → All application settings → 3 · Existing VPNs.
+**Action:** Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).
 
 ## UPLINK-DOWN
 
@@ -3943,9 +4279,9 @@ Auto выключен / Auto disabled
 
 **EN:** The program kept its safety block (only VPN traffic allowed) because the return was not verified.
 
-**Что делать:** См. «Помощь» → аварийный возврат.
+**Что делать:** См. «Помощь» → «У меня пропал интернет» (аварийный возврат).
 
-**Action:** See Help → emergency return.
+**Action:** See Help → “I have no internet” (emergency return).
 
 ## WATCHDOG-DID-NOT-ARM
 
@@ -3982,6 +4318,18 @@ Auto выключен / Auto disabled
 **Что делать:** См. DNS-001.
 
 **Action:** See DNS-001.
+
+## LARGE-PACKETS-FAILED
+
+Большие пакеты теряются / Large packets are lost
+
+**RU:** VPN подключён и проходит малые проверки, но большие пакеты на нём теряются («чёрная дыра» MTU).
+
+**EN:** The VPN is connected and passes the small checks, but large packets are lost on it (an MTU black hole).
+
+**Что делать:** См. VPN-MTU.
+
+**Action:** See VPN-MTU.
 
 ## HTTPS-FAILED
 
@@ -4087,7 +4435,7 @@ VPN работает / VPN works
 
 **EN:** To stay light the monitor checks only a limited number of VPNs per round; this one waits for its turn.
 
-**Что делать:** Дождитесь следующего круга или увеличьте лимит профилей в «Параметрах мониторинга».
+**Что делать:** Дождитесь следующего круга или увеличьте «Лимит профилей за раунд» в «Службе мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») → «Параметры службы и функции роутера».
 
 **Action:** Wait for the next round or raise the profile limit in Monitoring preferences.
 
@@ -4111,9 +4459,9 @@ VPN работает / VPN works
 
 **EN:** The firewall refused the program’s safety block when it was tested; nothing was applied.
 
-**Что делать:** Проверьте, что nft работает на роутере; «Помощь» → аварийный возврат.
+**Что делать:** Проверьте, что nft работает на роутере; «Помощь» → «У меня пропал интернет» (аварийный возврат).
 
-**Action:** Check that nft works on the router; Help → emergency return.
+**Action:** Check that nft works on the router; Help → “I have no internet” (emergency return).
 
 ## GUARD-INSTALL-FAILED
 
@@ -4135,9 +4483,9 @@ VPN работает / VPN works
 
 **EN:** The program could not read the state of its own safety block.
 
-**Что делать:** Проверьте nft; см. «Помощь» → аварийный возврат.
+**Что делать:** Проверьте nft; см. «Помощь» → «У меня пропал интернет» (аварийный возврат).
 
-**Action:** Check nft; see Help → emergency return.
+**Action:** Check nft; see Help → “I have no internet” (emergency return).
 
 ## POLICY-DUPLICATE-IDENTITY
 
@@ -4195,9 +4543,9 @@ VPN работает / VPN works
 
 **EN:** The primary and reserve rules are not in the order the program expects.
 
-**Что делать:** «Настройки» → «Настройка» → проверьте основной и резерв.
+**Что делать:** «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»): проверьте основной и резерв.
 
-**Action:** Settings → Setup → check the primary and reserve.
+**Action:** Settings → Channels: primary and reserve (Console: Channels → Change the channel pair): check the primary and reserve.
 
 ## EXIT-CHANGED
 
@@ -4387,9 +4735,9 @@ VPN работает / VPN works
 
 **EN:** The deliberate traffic block of the failure test is on.
 
-**Что делать:** Дождитесь окончания или нажмите «Отменить сбой сейчас».
+**Что делать:** Дождитесь окончания или нажмите «Остановить и снять сбой».
 
-**Action:** Wait for its end or press “Cancel fault now”.
+**Action:** Wait for its end or press “Stop and remove fault”.
 
 ## FAULT-ALREADY-ACTIVE
 
@@ -4467,13 +4815,13 @@ VPN работает / VPN works
 
 Проверки роутера не пройдены / Router checks not passed
 
-**RU:** Часть проверок роутера, перечисленных на «Обзоре», не пройдена.
+**RU:** Часть проверок роутера, перечисленных в «Готовности роутера», не пройдена.
 
-**EN:** Some of the router checks listed on the Overview are not passed.
+**EN:** Some of the router checks listed in Router readiness are not passed.
 
-**Что делать:** Исправьте перечисленное («Обзор» → «Что нужно перед запуском Auto»).
+**Что делать:** Исправьте перечисленное («Готовность роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»)).
 
-**Action:** Fix the listed items (Overview → Before you can start Auto).
+**Action:** Fix the listed items (Router readiness (Settings → System and diagnostics; Console: System tab)).
 
 ## FAULT-SESSION-CONSENT-REQUIRED
 
@@ -4483,9 +4831,9 @@ VPN работает / VPN works
 
 **EN:** You have not allowed a short reconnection of calls and sessions.
 
-**Что делать:** «Настройки → Все настройки приложения → 3 · Существующие VPN»: поставьте разрешение.
+**Что делать:** «Настройки → Как быстро переключать» (в «Пульте» — вкладка «Auto»): отметьте «Разрешить короткий обрыв звонков и загрузок».
 
-**Action:** Settings → All application settings → 3 · Existing VPNs: tick the permission.
+**Action:** Settings → How fast to switch (Console: Auto tab): tick “Allow a brief drop of calls and downloads”.
 
 ## FAULT-WINDOW-TOO-SHORT
 
@@ -4519,9 +4867,9 @@ VPN работает / VPN works
 
 **EN:** The test needs both the primary and the reserve to work right now.
 
-**Что делать:** Проверьте оба в «Каналах и серверах».
+**Что делать:** Проверьте оба на карточках каналов на «Главной» (в «Пульте» — вкладка «Каналы»).
 
-**Action:** Check both in Channels and servers.
+**Action:** Check both on the channel cards on Home (Console: Channels tab).
 
 ## FAULT-WOULD-REMOVE-RESERVE
 
@@ -4531,9 +4879,9 @@ VPN работает / VPN works
 
 **EN:** The chosen scope (the whole channel group) contains the reserve too.
 
-**Что делать:** Выберите «Текущий основной сервер».
+**Что делать:** Запустите «Тест сбоя» заново (Главная → «Проверки»; в «Пульте» — вкладка «Auto»): он ломает только канал, который везёт трафик.
 
-**Action:** Choose “Current primary server”.
+**Action:** Run the Failure test again (Home → Tests; Console: Auto tab): it breaks only the channel that carries traffic.
 
 ## FAULT-PATH-UNVERIFIED
 
@@ -4615,9 +4963,9 @@ VPN работает / VPN works
 
 **EN:** It is not confirmed that the test block was removed. It still ends by its own kernel timer.
 
-**Что делать:** Подождите до 3 минут; затем проверьте интернет; «Помощь» → аварийный возврат.
+**Что делать:** Подождите до 3 минут; затем проверьте интернет; «Помощь» → «У меня пропал интернет» (аварийный возврат).
 
-**Action:** Wait up to 3 minutes; then check the internet; Help → emergency return.
+**Action:** Wait up to 3 minutes; then check the internet; Help → “I have no internet” (emergency return).
 
 ## FAULT-STATE-UNVERIFIED
 
@@ -4627,9 +4975,9 @@ VPN работает / VPN works
 
 **EN:** The saved state of the failure test cannot be trusted.
 
-**Что делать:** Нажмите «Отменить сбой сейчас».
+**Что делать:** Нажмите «Остановить и снять сбой».
 
-**Action:** Press “Cancel fault now”.
+**Action:** Press “Stop and remove fault”.
 
 ## FAULT-HISTORY-CORRUPT
 
@@ -4699,9 +5047,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** Telegram answered that it will not take the message (wrong token, wrong chat or the bot is blocked).
 
-**Что делать:** Проверьте токен и Chat ID в мастере Telegram; нажмите Start в боте.
+**Что делать:** Проверьте токен и Chat ID в «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система»); нажмите Start в боте.
 
-**Action:** Check the token and the chat ID in the Telegram wizard; press Start in the bot.
+**Action:** Check the token and the chat ID in Settings → Telegram notifications (Console: System tab); press Start in the bot.
 
 **Пример / Example:** 401 или «Unauthorized» → токен неверный. 400 или «chat not found» → неверный Chat ID либо вы не нажали Start. / 401 or “Unauthorized” → the token is wrong. 400 or “chat not found” → the chat ID is wrong or you did not press Start.
 
@@ -4725,9 +5073,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** The report schedule has a wrong value.
 
-**Что делать:** Откройте мастер Telegram и выберите расписание заново.
+**Что делать:** Откройте «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система») и выберите расписание заново.
 
-**Action:** Open the Telegram wizard and choose the schedule again.
+**Action:** Open Settings → Telegram notifications (Console: System tab) and choose the schedule again.
 
 ## TELEGRAM-SETUP-FIELDS
 
@@ -4761,9 +5109,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** The program could not save the time of the last report; reports may repeat.
 
-**Что делать:** Проверьте свободное место (см. «Хранилище»).
+**Что делать:** Проверьте свободное место (см. «Помощь» → «Размер журнала и срок истории»).
 
-**Action:** Check the free space (see “Storage”).
+**Action:** Check the free space (see Help → “Journal size and retained history”).
 
 ## TELEGRAM-TEST-RATE-LIMIT
 
@@ -4989,9 +5337,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** The recovery rules were never saved.
 
-**Что делать:** «Настройки» → «Расширенные» → «Правила восстановления».
+**Что делать:** «Настройки → Как быстро переключать» (в «Пульте» — вкладка «Auto»).
 
-**Action:** Settings → Advanced settings → Recovery rules.
+**Action:** Settings → How fast to switch (Console: Auto tab).
 
 ## RECOVERY-RETURN-POLICY
 
@@ -5013,9 +5361,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** This setting cannot change while Auto works.
 
-**Что делать:** Остановите Auto на «Обзоре», дождитесь возврата, затем меняйте.
+**Что делать:** Выключите Auto переключателем, дождитесь возврата, затем меняйте.
 
-**Action:** Stop Auto on the Overview, wait for the return, then change it.
+**Action:** Turn Auto off with the Auto switch, wait for the return, then change it.
 
 ## CONFIG-RECOVERY-UNVERIFIED
 
@@ -5037,9 +5385,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** The router has too little free space to save settings safely.
 
-**Что делать:** Освободите место; см. «Помощь» → «Хранилище».
+**Что делать:** Освободите место; см. «Помощь» → «Размер журнала и срок истории».
 
-**Action:** Free some space; see Help → Storage.
+**Action:** Free some space; see Help → “Journal size and retained history”.
 
 ## LIFECYCLE-STOP-AUTO-FIRST
 
@@ -5049,9 +5397,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** An upgrade or stop of the service needs Auto to be off and the original route restored.
 
-**Что делать:** Нажмите «Стоп» в блоке Auto и дождитесь подтверждения.
+**Что делать:** Выключите Auto переключателем и дождитесь подтверждения.
 
-**Action:** Press Stop in the Auto card and wait for the confirmation.
+**Action:** Turn Auto off with the Auto switch and wait for the confirmation.
 
 ## STORAGE-001
 
@@ -5061,9 +5409,9 @@ Telegram отклонил запрос / Telegram rejected the request
 
 **EN:** The program could not save its data (no space or the storage is read-only).
 
-**Что делать:** Освободите место на роутере; см. «Помощь» → «Хранилище».
+**Что делать:** Освободите место на роутере; см. «Помощь» → «Размер журнала и срок истории».
 
-**Action:** Free space on the router; see Help → Storage.
+**Action:** Free space on the router; see Help → “Journal size and retained history”.
 
 ## STORAGE-RECOVERED
 
@@ -5081,13 +5429,13 @@ Telegram отклонил запрос / Telegram rejected the request
 
 Запрос проверки не удался / Check request failed
 
-**RU:** Запрос «Проверить VPN сейчас» не получил измерения.
+**RU:** Запрос «Проверить сейчас» не получил измерения.
 
-**EN:** The “Check the VPNs now” request got no measurement.
+**EN:** The “Check now” request got no measurement.
 
-**Что делать:** Посмотрите на лампу мониторинга и повторите.
+**Что делать:** Посмотрите на лампу «Службы мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») и повторите.
 
-**Action:** Check the Monitoring lamp and repeat.
+**Action:** Check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab) and repeat.
 
 ## SCAN-SNAPSHOT-MISMATCH
 
@@ -5313,9 +5661,9 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 
 **EN:** A state file of Auto on the router flash could not be read, usually after a sudden power cut. A copy was put aside in the quarantine folder; Auto does not switch on this file and keeps running.
 
-**Что делать:** Нажмите Stop, затем Start. Если повторяется, отправьте код и папку quarantine (/etc/homensai-vpn/quarantine) разработчику.
+**Что делать:** Выключите и снова включите Auto переключателем. Если повторяется, отправьте код и папку quarantine (/etc/homensai-vpn/quarantine) разработчику.
 
-**Action:** Press Stop and then Start. If it repeats, send the code and the quarantine folder (/etc/homensai-vpn/quarantine) to the developer.
+**Action:** Turn Auto off and on again with the Auto switch. If it repeats, send the code and the quarantine folder (/etc/homensai-vpn/quarantine) to the developer.
 
 ## RPC-NONFINITE-NUMBER
 
@@ -5357,13 +5705,13 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 
 Возврат отклонён / Return refused
 
-**RU:** Роутер отклонил запрос «Вернуться на основной» (обычно потому, что основной ещё не исправен).
+**RU:** Роутер отклонил запрос на возврат на основной (обычно потому, что основной ещё не исправен).
 
-**EN:** The router refused the “Return to primary” request (usually because the primary is not healthy yet).
+**EN:** The router refused the request to return to the primary (usually because the primary is not healthy yet).
 
-**Что делать:** Проверьте основной в «Каналах и серверах» и нажмите снова.
+**Что делать:** Проверьте карточку «Основной» на «Главной» (в «Пульте» — вкладка «Каналы») и снова нажмите «Переключить сюда».
 
-**Action:** Check the primary in Channels and servers and press again.
+**Action:** Check the Primary card on Home (Console: Channels tab) and press “Switch here” again.
 
 ## RECOVERY-SAVED
 
@@ -5529,9 +5877,9 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 
 **EN:** The monitor service answered without a clear code.
 
-**Что делать:** Обновите и посмотрите на лампу мониторинга.
+**Что делать:** Обновите и посмотрите на лампу «Службы мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Reload and look at the Monitoring lamp.
+**Action:** Reload and look at the Monitoring service lamp (Settings → System and diagnostics; Console: System tab).
 
 ## PRIORITY-PREVIEW-FAILED
 
@@ -5685,9 +6033,9 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 
 **EN:** A record has a time later than now (the clock of the router was wrong at that moment).
 
-**Что делать:** Проверьте часы роутера («Помощь» → «Неверные даты»).
+**Что делать:** Проверьте часы роутера («Помощь» → «Неверные даты, история или статистика заблокированы»).
 
-**Action:** Check the router clock (Help → Dates are wrong).
+**Action:** Check the router clock (Help → “Dates are wrong, history or statistics are blocked”).
 
 ## EXPORT-KIND
 
@@ -5865,9 +6213,9 @@ Auto на Lua передал работу Python / Lua Auto handed over to Pytho
 
 **EN:** The program stopped Auto but could not clear its own test-window settings because other unsaved router changes exist.
 
-**Что делать:** Откройте несохранённые изменения роутера и примените либо отмените их; затем ещё раз нажмите «Стоп» в блоке Auto. Auto сам не запустится: остановка зафиксирована.
+**Что делать:** Откройте несохранённые изменения роутера и примените либо отмените их; затем ещё раз выключите Auto переключателем. Auto сам не запустится: остановка зафиксирована.
 
-**Action:** Open the router’s unsaved changes and apply or revert them; then press Stop in the Auto card once more. Auto does not restart by itself: the stop is latched.
+**Action:** Open the router’s unsaved changes and apply or revert them; then turn Auto off with the Auto switch once more. Auto does not restart by itself: the stop is latched.
 
 ## BOARD-OVERSIZE
 
@@ -5973,9 +6321,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** Auto is stopping or restoring the VPN channels and checking that the original route is back. Short step, yellow lamp.
 
-**Что делать:** Подождите минуту; не нажимайте Start и Stop повторно.
+**Что делать:** Подождите минуту; не включайте и не выключайте Auto повторно.
 
-**Action:** Wait a minute; do not press Start or Stop again.
+**Action:** Wait a minute; do not switch Auto on or off again.
 
 ## PAIR-WAITING-VENDOR
 
@@ -6021,9 +6369,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** Auto could not prove that the channel you chose manually is still the one carrying traffic, so it dropped the manual choice and works normally again.
 
-**Что делать:** Посмотрите в блоке Auto текущий канал и при необходимости выберите заново.
+**Что делать:** Посмотрите текущий канал на карточках каналов на «Главной» (в «Пульте» — вкладка «Каналы») (отметка «Трафик здесь») и при необходимости выберите заново.
 
-**Action:** Check the Auto card for the current channel and choose again if needed.
+**Action:** Check the channel cards on Home (Console: Channels tab) (the one marked “Traffic here”) and choose again if needed.
 
 ## PAIR-MANUAL-RECOVERED
 
@@ -6033,9 +6381,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** A manual switch request was interrupted (for example by a restart). It was not repeated, so the channel may be different from what you asked for.
 
-**Что делать:** Посмотрите текущий канал в блоке Auto и повторите ручной выбор, если он ещё нужен.
+**Что делать:** Посмотрите текущий канал на карточках каналов на «Главной» (в «Пульте» — вкладка «Каналы») и повторите ручной выбор, если он ещё нужен.
 
-**Action:** Look at the current channel in the Auto card and repeat the manual choice if you still want it.
+**Action:** Look at the current channel on the channel cards on Home (Console: Channels tab) and repeat the manual choice if you still want it.
 
 ## PAIR-MANUAL-BUSY
 
@@ -6093,9 +6441,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** The router cannot do this manual switch at the moment (for example the current channel is already the chosen one, or Auto is not ready).
 
-**Что делать:** Откройте блок Auto: там указано, чего не хватает. Повторите, когда он будет готов.
+**Что делать:** Прочитайте причину, которую показывает страница, и проверьте «Готовность роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»). Повторите, когда канал будет готов.
 
-**Action:** Open the Auto card: it lists what is missing. Try again when it is ready.
+**Action:** Read the reason the page shows and check Router readiness (Settings → System and diagnostics; Console: System tab). Try again when it is ready.
 
 ## PAIR-MANUAL-REQUEST-UNCONFIRMED
 
@@ -6105,9 +6453,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** The router did not confirm that it accepted the manual request. Do not assume it was done.
 
-**Что делать:** Подождите минуту, посмотрите текущий канал в блоке Auto и при необходимости повторите.
+**Что делать:** Подождите минуту, посмотрите текущий канал на карточках каналов на «Главной» (в «Пульте» — вкладка «Каналы») и при необходимости повторите.
 
-**Action:** Wait a minute, look at the current channel in the Auto card, then repeat if needed.
+**Action:** Wait a minute, look at the current channel on the channel cards on Home (Console: Channels tab), then repeat if needed.
 
 ## PAIR-MANUAL-STALE
 
@@ -6159,11 +6507,11 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 ## PAIR-RATE-LIMIT
 
-Слишком много переключений; Auto делает паузу / Too many switches; Auto is pausing
+Частые переключения; Auto дольше держит резерв / Many switches; Auto holds the reserve longer
 
-**RU:** Auto ограничивает частоту переключений, чтобы не раскачивать нестабильную связь. До конца паузы трафик остаётся на текущем канале.
+**RU:** Основной канал несколько раз подряд падал и восстанавливался. С упавшего основного Auto по-прежнему уходит сразу, но возвращается на него только после более долгой стабильной работы: ожидание удваивается с каждым новым сбоем в скользящем окне (до 10 минут) и снова сокращается после спокойного периода. Неудачная попытка повторяется не чаще настроенной паузы; ручной переход на резерв по-прежнему учитывает лимит попыток.
 
-**EN:** Auto limits how often it switches so an unstable line is not shaken further. Traffic stays on the current channel until the pause ends.
+**EN:** The primary failed and recovered several times in a row. Auto still leaves a failed primary at once, but returns to it only after it has been stable longer: the wait doubles with each further failure in the rolling window (up to 10 minutes) and shrinks again after a quiet period. A failed retry is repeated no sooner than the configured pause; a manual move to the reserve still counts against the attempt limit.
 
 **Что делать:** Делать ничего не нужно. Если переключений много, проверьте оба VPN-сервера по «Помощи».
 
@@ -6189,9 +6537,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** Auto could not confirm that this router model and firmware are supported for continuous switching, so it does not run.
 
-**Что делать:** Посмотрите в «Готовности системы» точный недостающий пункт.
+**Что делать:** Посмотрите в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») точный недостающий пункт.
 
-**Action:** Check System readiness for the exact missing item.
+**Action:** Check Router readiness (Settings → System and diagnostics; Console: System tab) for the exact missing item.
 
 ## PAIR-READINESS-CHANGED
 
@@ -6201,9 +6549,9 @@ Auto собирает первые проверки / Auto is collecting the fir
 
 **EN:** Something Auto relies on (router state or preparation) changed, so it stopped and will re-check before continuing.
 
-**Что делать:** Подождите минуту; если Auto не перезапустился, нажмите Start.
+**Что делать:** Подождите минуту; если Auto не перезапустился, включите Auto переключателем.
 
-**Action:** Wait a minute; if Auto does not restart, press Start.
+**Action:** Wait a minute; if Auto does not restart, turn Auto on with the Auto switch.
 
 ## PAIR-STOPPED
 
@@ -6213,9 +6561,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** Auto was switched off and the original route was put back. This is the normal result of pressing Stop.
 
-**Что делать:** Делать ничего не нужно. Нажмите Start, когда Auto снова понадобится.
+**Что делать:** Делать ничего не нужно. Включите Auto переключателем, когда он снова понадобится.
 
-**Action:** Nothing to do. Press Start when you want Auto again.
+**Action:** Nothing to do. Turn Auto on with the Auto switch when you want it again.
 
 ## PAIR-SYSTEM-001
 
@@ -6225,9 +6573,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** Auto met an error that has no specific code. It stopped safely; the route is not changed by this error alone.
 
-**Что делать:** Нажмите Start ещё раз. Если повторяется, сохраните журнал и время события для разработчика.
+**Что делать:** Включите Auto переключателем ещё раз. Если повторяется, сохраните журнал и время события для разработчика.
 
-**Action:** Press Start again. If it repeats, keep the journal and the time of the event for the maintainer.
+**Action:** Turn Auto on with the Auto switch again. If it repeats, keep the journal and the time of the event for the maintainer.
 
 ## PAIR-BUDGET-UNVERIFIED
 
@@ -6237,9 +6585,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** Auto cannot read its saved count of recent switches, so it does not switch until it can prove the limit is respected.
 
-**Что делать:** Подождите: запись восстановится сама. Если не проходит, нажмите Stop и Start.
+**Что делать:** Подождите: запись восстановится сама. Если не проходит, выключите и снова включите Auto переключателем.
 
-**Action:** Wait; the record rebuilds itself. If it stays, press Stop and Start.
+**Action:** Wait; the record rebuilds itself. If it stays, turn Auto off and on again with the Auto switch.
 
 ## PAIR-CONFIG-UNVERIFIED
 
@@ -6273,9 +6621,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** Auto could not read the network settings of the two channels, so it does not act.
 
-**Что делать:** Подождите минуту и нажмите Start снова.
+**Что делать:** Подождите минуту и снова включите Auto переключателем.
 
-**Action:** Wait a minute and press Start again.
+**Action:** Wait a minute and turn Auto on with the Auto switch again.
 
 ## PAIR-NETWORK-WRITE-FAILED
 
@@ -6285,9 +6633,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** The router refused to save the network settings Auto needs. The previous settings stay.
 
-**Что делать:** Нажмите Start снова через минуту. Если повторяется, проверьте свободное место и страницу роутера.
+**Что делать:** Через минуту снова включите Auto переключателем. Если повторяется, проверьте свободное место и страницу роутера.
 
-**Action:** Press Start again after a minute. If it repeats, check free space and the router page.
+**Action:** Turn Auto on with the Auto switch again after a minute. If it repeats, check free space and the router page.
 
 ## PAIR-NETWORK-WRITE-UNVERIFIED
 
@@ -6297,9 +6645,9 @@ Auto остановлен, маршрут восстановлен / Auto was st
 
 **EN:** Auto wrote network settings but could not read them back to prove them, so it does not rely on them.
 
-**Что делать:** Нажмите Start снова. Если повторяется, сохраните код для разработчика.
+**Что делать:** Включите Auto переключателем снова. Если повторяется, сохраните код для разработчика.
 
-**Action:** Press Start again. If it repeats, keep the code for the maintainer.
+**Action:** Turn Auto on with the Auto switch again. If it repeats, keep the code for the maintainer.
 
 ## PAIR-PROFILE-STOP-UNVERIFIED
 
@@ -6441,9 +6789,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Before the upgrade the program switched Auto off and checked the route.
 
-**Что делать:** После обновления нажмите Start, когда Auto снова понадобится.
+**Что делать:** После обновления включите Auto переключателем, когда он снова понадобится.
 
-**Action:** After the upgrade press Start when you want Auto again.
+**Action:** After the upgrade turn Auto on with the Auto switch when you want it again.
 
 ## LIFECYCLE-AUTO-DISABLE-FAILED
 
@@ -6453,9 +6801,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The program could not prove that Auto is off, so the upgrade step stopped.
 
-**Что делать:** Нажмите Stop в блоке Auto, дождитесь исходного маршрута и повторите.
+**Что делать:** Выключите Auto переключателем, дождитесь исходного маршрута и повторите.
 
-**Action:** Press Stop in the Auto card, wait for the original route, and repeat.
+**Action:** Turn Auto off with the Auto switch, wait for the original route, and repeat.
 
 ## LIFECYCLE-ACTION
 
@@ -6573,9 +6921,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** At least one prerequisite of the router preparation could not be proven.
 
-**Что делать:** Откройте «Готовность системы» → «Подготовка роутера» и посмотрите, какого пункта не хватает.
+**Что делать:** Откройте строку «Подготовка роутера (ускорение)» в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») и посмотрите, какого пункта не хватает.
 
-**Action:** Open System readiness → Router preparation and read which item is missing.
+**Action:** Open the row “Router preparation (acceleration)” in Router readiness (Settings → System and diagnostics; Console: System tab) and read which item is missing.
 
 ## PREPARATION-STOP-AUTO-FIRST
 
@@ -6585,9 +6933,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The preparation can be changed only while Auto is off, so a running Auto is not disturbed.
 
-**Что делать:** Нажмите Stop в блоке Auto, дождитесь исходного маршрута и повторите.
+**Что делать:** Выключите Auto переключателем, дождитесь исходного маршрута и повторите.
 
-**Action:** Press Stop in the Auto card, wait for the original route, then repeat.
+**Action:** Turn Auto off with the Auto switch, wait for the original route, then repeat.
 
 ## PREPARATION-STALE-REVIEW
 
@@ -6645,9 +6993,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** It was not proven that the needed module is loaded at router start.
 
-**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+**Что делать:** Посмотрите строку «Подготовка роутера (ускорение)» в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Review System readiness → Router preparation.
+**Action:** Review the row “Router preparation (acceleration)” in Router readiness (Settings → System and diagnostics; Console: System tab).
 
 ## PREPARATION-BACKUP-UNVERIFIED
 
@@ -6681,9 +7029,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** It was not proven that the program starts when the router boots.
 
-**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+**Что делать:** Посмотрите строку «Подготовка роутера (ускорение)» в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Review System readiness → Router preparation.
+**Action:** Review the row “Router preparation (acceleration)” in Router readiness (Settings → System and diagnostics; Console: System tab).
 
 ## PREPARATION-FIELDS
 
@@ -6717,9 +7065,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The firewall state needed for safe work could not be proven.
 
-**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+**Что делать:** Посмотрите строку «Подготовка роутера (ускорение)» в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Review System readiness → Router preparation.
+**Action:** Review the row “Router preparation (acceleration)” in Router readiness (Settings → System and diagnostics; Console: System tab).
 
 ## PREPARATION-HISTORY-LIMIT
 
@@ -6741,9 +7089,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** It was not proven that the router hardware acceleration is off, which Auto needs for safe switching.
 
-**Что делать:** Посмотрите «Готовность системы» → «Подготовка роутера».
+**Что делать:** Посмотрите строку «Подготовка роутера (ускорение)» в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система»).
 
-**Action:** Review System readiness → Router preparation.
+**Action:** Review the row “Router preparation (acceleration)” in Router readiness (Settings → System and diagnostics; Console: System tab).
 
 ## PREPARATION-PLATFORM-UNVERIFIED
 
@@ -6753,9 +7101,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** This router model or firmware was not confirmed for the preparation.
 
-**Что делать:** Посмотрите «Готовность системы» для точного пункта.
+**Что делать:** Посмотрите в «Готовности роутера» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») точный пункт.
 
-**Action:** Check System readiness for the exact item.
+**Action:** Check Router readiness (Settings → System and diagnostics; Console: System tab) for the exact item.
 
 ## PREPARATION-VALUE-UNVERIFIED
 
@@ -6777,9 +7125,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The approval for the failure test is old or does not match the current state, so the test did not start.
 
-**Что делать:** Подготовьте тест заново на странице «Тесты».
+**Что делать:** Подготовьте тест заново в «Тесте сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto»).
 
-**Action:** Prepare the test again from the Tests page.
+**Action:** Prepare the test again from Failure test (Home → Tests; Console: Auto tab).
 
 ## FAULT-CLAIM-STALE
 
@@ -6801,9 +7149,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The router did not confirm the failure test command. Do not assume the test is running.
 
-**Что делать:** Проверьте на странице «Тесты», что сбой выключен и маршрут обычный.
+**Что делать:** Проверьте в «Тесте сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto»), что сбой выключен и маршрут обычный.
 
-**Action:** Check that the fault is off in the Tests page and the route is normal.
+**Action:** Check in Failure test (Home → Tests; Console: Auto tab) that the fault is off and the route is normal.
 
 ## FAULT-CONTROL-CHANGED
 
@@ -6849,9 +7197,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The router did not confirm that the failure test started.
 
-**Что делать:** Проверьте страницу «Тесты»; остановите тест, если он показан как идущий.
+**Что делать:** Проверьте «Тест сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto»); остановите тест, если он показан как идущий.
 
-**Action:** Check the Tests page; stop the test if it shows as running.
+**Action:** Check Failure test (Home → Tests; Console: Auto tab); stop the test if it shows as running.
 
 ## RPC-RATE-LIMIT
 
@@ -7113,9 +7461,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The speed test needs the running monitor, which does not answer.
 
-**Что делать:** Запустите мониторинг и повторите.
+**Что делать:** Нажмите «Восстановить мониторинг» в «Службе мониторинга» (Настройки → Система и диагностика; в «Пульте» — вкладка «Система») и повторите.
 
-**Action:** Start monitoring and repeat.
+**Action:** Press “Restore monitoring” in Monitoring service (Settings → System and diagnostics; Console: System tab) and repeat.
 
 ## SPEED-QUOTA-CORRUPT
 
@@ -7245,9 +7593,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The list of items chosen for the Telegram report is not valid.
 
-**Что делать:** Откройте мастер Telegram и выберите пункты заново.
+**Что делать:** Откройте «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система») и выберите пункты заново.
 
-**Action:** Open the Telegram wizard and choose the items again.
+**Action:** Open Settings → Telegram notifications (Console: System tab) and choose the items again.
 
 ## ENDPOINT-ADDRESS
 
@@ -7297,6 +7645,18 @@ Auto выключен на время обновления / Auto was switched o
 
 **Action:** Nothing to do.
 
+## FLOW-RESET-*
+
+Завершение старых соединений после переключения / Ending old connections after a switch
+
+**RU:** После подтверждённого переключения (или возврата на прежний канал) роутер удаляет соединения LAN, ещё привязанные к только что покинутому каналу (адрес NAT того туннеля), чтобы приложения сразу переподключились через новый канал, а не висели до собственного тайм-аута (около 40 с). Соединения самого роутера, входящие и соединения нового канала не затрагиваются. Одна строка системного журнала на переключение: «FLOW-RESET-<результат>: address <адрес старого туннеля> deleted <n>». Результаты: DONE — соединения удалены; NONE — таких нет; NO-TOOL — на роутере нет программы conntrack; NO-ADDRESS — адрес туннеля не прочитан, ничего не удалено; SAME-ADDRESS — у туннелей одинаковый адрес, ничего не удалено; TIMEOUT — остановлено через 1 с, часть могла удалиться; FAILED — команда не выполнилась; OFF — выключено. Само переключение в любом случае выполнено и действует: этот шаг его не проваливает и не отменяет.
+
+**EN:** After a confirmed switch (or a return to the previous channel) the router deletes the LAN connections still tied to the channel just left (NAT address of that tunnel), so applications reconnect through the new channel at once instead of hanging until their own timeout (about 40 s). The router's own, inbound and new-channel connections are not touched. One system log line per switch: "FLOW-RESET-<result>: address <old tunnel address> deleted <n>". Results: DONE - connections deleted; NONE - none found; NO-TOOL - no conntrack program on the router; NO-ADDRESS - a tunnel address could not be read, nothing deleted; SAME-ADDRESS - both tunnels have the same address, nothing deleted; TIMEOUT - stopped after 1 s, some may be deleted; FAILED - the command failed; OFF - turned off. The switch itself is complete and valid in every case: this step never fails or undoes it.
+
+**Что делать:** Делать ничего не нужно. NO-TOOL: проверьте command -v conntrack (в GL 4.x есть). Повторяющиеся TIMEOUT/FAILED: пришлите строки logread -e FLOW-RESET. Вкл./выкл.: option flow_reset '0' в /etc/config/homensai_vpn выключает, удаление опции включает.
+
+**Action:** Nothing to do. NO-TOOL: check command -v conntrack (GL 4.x includes it). Repeated TIMEOUT/FAILED: send the lines of logread -e FLOW-RESET. Off/on: option flow_reset '0' in /etc/config/homensai_vpn turns it off; removing it turns it on.
+
 ## AUTO-RESUME-*
 
 Возобновление Auto после перезагрузки / Auto resume after a reboot
@@ -7305,9 +7665,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** After a power cut or reboot the router restarts Auto by itself only if the owner had switched it on with Start; a later Stop cancels that. This code says why Auto was or was not resumed after this boot; every Start check still applies.
 
-**Что делать:** Если Auto должен работать, нажмите Start один раз.
+**Что делать:** Если Auto должен работать, один раз включите Auto переключателем.
 
-**Action:** If Auto should be on, press Start once.
+**Action:** If Auto should be on, turn Auto on with the Auto switch once.
 
 ## FAST-*
 
@@ -7467,9 +7827,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The saved statistics file failed a validation (wrong structure, number or date). It is not used and the previous good copy stays.
 
-**Что делать:** Делать ничего не нужно; если статистика пустая, см. «Помощь» → «Неверные даты или история заблокирована».
+**Что делать:** Делать ничего не нужно; если статистика пустая, см. «Помощь» → «Неверные даты, история или статистика заблокированы».
 
-**Action:** Nothing to do; if the statistics look empty, see Help → Dates are wrong or history is blocked.
+**Action:** Nothing to do; if the statistics look empty, see Help → “Dates are wrong, history or statistics are blocked”.
 
 **Пример / Example:** CHECKPOINT-DAY: в файле несуществующий день, поэтому файл отклонён. / CHECKPOINT-DAY: a day in the file does not exist, so the file was refused.
 
@@ -7495,9 +7855,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The record of switches failed a check (size, order or checksum). The controller then refuses to act, because it cannot prove what it did before.
 
-**Что делать:** Если повторяется, заархивируйте историю по SSH («Помощь» → аварийный возврат) и начните заново.
+**Что делать:** Если повторяется, заархивируйте историю по SSH («Помощь» → «У меня пропал интернет» (аварийный возврат)) и начните заново.
 
-**Action:** If it repeats, archive the history over SSH (Help → emergency return) and start again.
+**Action:** If it repeats, archive the history over SSH (Help → “I have no internet” (emergency return)) and start again.
 
 **Пример / Example:** HISTORY-CHECKSUM: файл изменён или повреждён. / HISTORY-CHECKSUM: the file was changed or damaged.
 
@@ -7509,9 +7869,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Before an upgrade or a stop, the program checks that Auto is off and the original route is restored. One of the checks did not pass.
 
-**Что делать:** Остановите Auto на «Обзоре», дождитесь возврата и повторите.
+**Что делать:** Выключите Auto переключателем, дождитесь возврата и повторите.
 
-**Action:** Stop Auto on the Overview, wait for the return, then repeat.
+**Action:** Turn Auto off with the Auto switch, wait for the return, then repeat.
 
 **Пример / Example:** LIFECYCLE-STOP-AUTO-FIRST: Auto всё ещё включён. / LIFECYCLE-STOP-AUTO-FIRST: Auto is still on.
 
@@ -7537,9 +7897,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The failure test reported this condition.
 
-**Что делать:** См. панель теста сбоя на странице «Тесты».
+**Что делать:** См. «Тест сбоя» (Главная → «Проверки»; в «Пульте» — вкладка «Auto»).
 
-**Action:** See the failure test panel on the Tests page.
+**Action:** See Failure test (Home → Tests; Console: Auto tab).
 
 ## TELEGRAM-*
 
@@ -7549,9 +7909,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** A Telegram step reported this condition.
 
-**Что делать:** Откройте мастер Telegram; «Помощь» → «Отчёты в Telegram не приходят».
+**Что делать:** Откройте «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система»); «Помощь» → «Отчёты в Telegram не приходят».
 
-**Action:** Open the Telegram wizard; Help → Telegram reports do not arrive.
+**Action:** Open Settings → Telegram notifications (Console: System tab); Help → “Telegram reports do not arrive”.
 
 ## SETUP-*
 
@@ -7605,9 +7965,9 @@ Auto выключен на время обновления / Auto was switched o
 
 Код запроса проверки (SCAN-…) / Check request code (SCAN-…)
 
-**RU:** Шаг запроса «Проверить VPN сейчас» сообщил это состояние.
+**RU:** Шаг запроса «Проверить сейчас» сообщил это состояние.
 
-**EN:** A step of the “Check the VPNs now” request reported this condition.
+**EN:** A step of the “Check now” request reported this condition.
 
 **Что делать:** Убедитесь, что мониторинг работает, и нажмите снова.
 
@@ -7633,9 +7993,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The program’s safety block reported this condition.
 
-**Что делать:** «Помощь» → аварийный возврат.
+**Что делать:** «Помощь» → «У меня пропал интернет» (аварийный возврат).
 
-**Action:** Help → emergency return.
+**Action:** Help → “I have no internet” (emergency return).
 
 ## POLICY-*
 
@@ -7657,9 +8017,9 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The saved record of the last switch failed a check.
 
-**Что делать:** «Помощь» → аварийный возврат (close-journal).
+**Что делать:** «Помощь» → «У меня пропал интернет» (аварийный возврат) (close-journal).
 
-**Action:** Help → emergency return (close-journal).
+**Action:** Help → “I have no internet” (emergency return) (close-journal).
 
 ## UNSAFE-*
 
@@ -7681,7 +8041,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded.
 
-**Что делать:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Не удалось прочитать рабочее состояние включённого VPN-интерфейса. Проверьте выбранные клиенты в «Сеть → Интерфейсы»; удалённые и отключённые профили исключаются. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** An enabled VPN interface has no readable live state. Check Network → Interfaces for the selected clients; deleted or disabled profiles are excluded. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7693,7 +8053,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** This selected client-confirmed mode requires its matching LAN trial. Prepared continuous router-probed mode does not use this certificate.
 
-**Что делать:** Выбранному клиентскому режиму нужен соответствующий LAN-тест. Подготовленный непрерывный router-probed режим этот сертификат не использует. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Выбранному клиентскому режиму нужен соответствующий LAN-тест. Подготовленный непрерывный router-probed режим этот сертификат не использует. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** This selected client-confirmed mode requires its matching LAN trial. Prepared continuous router-probed mode does not use this certificate. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7705,7 +8065,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** A bounded window is missing/expired for the selected trial. Verify actual recovery and time before a new authorized run.
 
-**Что делать:** Для выбранного теста нет действующего ограниченного окна. До нового разрешённого запуска проверьте фактическое восстановление и время. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Для выбранного теста нет действующего ограниченного окна. До нового разрешённого запуска проверьте фактическое восстановление и время. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** A bounded window is missing/expired for the selected trial. Verify actual recovery and time before a new authorized run. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7717,7 +8077,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Confirm in Settings that a short reconnection of calls and sessions is acceptable.
 
-**Что делать:** Подтвердите в настройках, что кратковременный разрыв звонков и сессий допустим. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Подтвердите в настройках, что кратковременный разрыв звонков и сессий допустим. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Confirm in Settings that a short reconnection of calls and sessions is acceptable. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7725,13 +8085,13 @@ Auto выключен на время обновления / Auto was switched o
 
 Переключение идёт / Switch in progress
 
-**RU:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или нажмите «Стоп»; без выполняющегося переключения нужно восстановление.
+**RU:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или выключите Auto переключателем; без выполняющегося переключения нужно восстановление.
 
-**EN:** An unfinished switch record is open on the router. If a switch is running, wait for it or press Stop; without a running switch, recovery is needed.
+**EN:** An unfinished switch record is open on the router. If a switch is running, wait for it or turn Auto off with its switch; without a running switch, recovery is needed.
 
-**Что делать:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или нажмите «Стоп»; без выполняющегося переключения нужно восстановление. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** На роутере открыта запись незавершённого переключения. Если переключение выполняется, дождитесь его или выключите Auto переключателем; без выполняющегося переключения нужно восстановление. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
-**Action:** An unfinished switch record is open on the router. If a switch is running, wait for it or press Stop; without a running switch, recovery is needed. If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** An unfinished switch record is open on the router. If a switch is running, wait for it or turn Auto off with its switch; without a running switch, recovery is needed. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## TRIAL-ATTEMPT-LIMIT
 
@@ -7741,7 +8101,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The trial attempt budget is exhausted. Preserve failures and respect the budget/cooldown; never reset a nonce or ledger to bypass it.
 
-**Что делать:** Бюджет попыток теста исчерпан. Сохраните отказы и соблюдайте бюджет/паузу; не сбрасывайте nonce или журнал ради обхода. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Бюджет попыток теста исчерпан. Сохраните отказы и соблюдайте бюджет/паузу; не сбрасывайте nonce или журнал ради обхода. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The trial attempt budget is exhausted. Preserve failures and respect the budget/cooldown; never reset a nonce or ledger to bypass it. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7753,7 +8113,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Native switching requires a verified GL-MT6000 or GL-MT3000 firmware profile. Choosing a model does not bypass these checks.
 
-**Что делать:** Нативное переключение требует проверенного профиля прошивки GL-MT6000 или GL-MT3000. Выбор модели не отменяет эти проверки. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нативное переключение требует проверенного профиля прошивки GL-MT6000 или GL-MT3000. Выбор модели не отменяет эти проверки. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Native switching requires a verified GL-MT6000 or GL-MT3000 firmware profile. Choosing a model does not bypass these checks. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7765,7 +8125,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Switching is verified only for GL.iNet firmware 4.11.0.
 
-**Что делать:** Переключение проверено только для прошивки GL.iNet 4.11.0. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Переключение проверено только для прошивки GL.iNet 4.11.0. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Switching is verified only for GL.iNet firmware 4.11.0. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7777,7 +8137,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The router model or firmware could not be read.
 
-**Что делать:** Не удалось определить модель или прошивку роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Не удалось определить модель или прошивку роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router model or firmware could not be read. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7789,7 +8149,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** GL.iNet system scripts differ from the audited ones. Switching stays blocked.
 
-**Что делать:** Системные скрипты GL.iNet отличаются от проверенных. Переключение заблокировано. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Системные скрипты GL.iNet отличаются от проверенных. Переключение заблокировано. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** GL.iNet system scripts differ from the audited ones. Switching stays blocked. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7801,7 +8161,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** GL.iNet system scripts could not be verified.
 
-**Что делать:** Не удалось проверить системные скрипты GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Не удалось проверить системные скрипты GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** GL.iNet system scripts could not be verified. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7813,7 +8173,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** The router is applying its own VPN change right now. Try again in a minute.
 
-**Что делать:** Роутер сейчас сам применяет изменение VPN. Повторите через минуту. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Роутер сейчас сам применяет изменение VPN. Повторите через минуту. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router is applying its own VPN change right now. Try again in a minute. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7825,7 +8185,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Hardware acceleration (HNAT) is not confirmed disabled. It must be off for the LAN check to be trustworthy.
 
-**Что делать:** Аппаратное ускорение (HNAT) не подтверждено как выключенное. Для достоверной проверки оно должно быть выключено. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Аппаратное ускорение (HNAT) не подтверждено как выключенное. Для достоверной проверки оно должно быть выключено. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Hardware acceleration (HNAT) is not confirmed disabled. It must be off for the LAN check to be trustworthy. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7837,7 +8197,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** A software acceleration module is loaded and not confirmed disabled.
 
-**Что делать:** Загружен модуль программного ускорения, его отключение не подтверждено. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Загружен модуль программного ускорения, его отключение не подтверждено. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** A software acceleration module is loaded and not confirmed disabled. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7849,7 +8209,7 @@ Auto выключен на время обновления / Auto was switched o
 
 **EN:** Firewall flow offloading is on. Turn it off in the router firewall settings.
 
-**Что делать:** Включён flow offloading в firewall. Выключите его в настройках firewall роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Включён flow offloading в firewall. Выключите его в настройках firewall роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Firewall flow offloading is on. Turn it off in the router firewall settings. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7861,7 +8221,7 @@ IPv6 не отключён / IPv6 not disabled
 
 **EN:** IPv6 must be explicitly turned off on the router (IPv6 leaks are not covered).
 
-**Что делать:** IPv6 на роутере должен быть явно выключен (утечки IPv6 не контролируются). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** IPv6 на роутере должен быть явно выключен (утечки IPv6 не контролируются). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** IPv6 must be explicitly turned off on the router (IPv6 leaks are not covered). If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7873,7 +8233,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Kill Switch must be on for every active VPN rule.
 
-**Что делать:** Kill Switch должен быть включён для каждого активного VPN-правила. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Kill Switch должен быть включён для каждого активного VPN-правила. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Kill Switch must be on for every active VPN rule. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7885,7 +8245,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The router is allowed to bypass the VPN. Disable the direct-internet fallback in GL.iNet VPN settings.
 
-**Что делать:** Роутеру разрешён выход мимо VPN. Отключите прямой выход в интернет в настройках VPN GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Роутеру разрешён выход мимо VPN. Отключите прямой выход в интернет в настройках VPN GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router is allowed to bypass the VPN. Disable the direct-internet fallback in GL.iNet VPN settings. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7897,7 +8257,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The global VPN policy is off in the router settings.
 
-**Что делать:** Глобальная VPN-политика выключена в настройках роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Глобальная VPN-политика выключена в настройках роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The global VPN policy is off in the router settings. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7909,7 +8269,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Two or more general (all-traffic) VPN rules are required.
 
-**Что делать:** Нужно два или больше общих VPN-правил (для всего трафика). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нужно два или больше общих VPN-правил (для всего трафика). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Two or more general (all-traffic) VPN rules are required. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7921,7 +8281,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The general VPN rules must follow one another without special rules between them.
 
-**Что делать:** Общие VPN-правила должны идти подряд, без специальных правил между ними. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Общие VPN-правила должны идти подряд, без специальных правил между ними. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The general VPN rules must follow one another without special rules between them. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7933,7 +8293,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Two general rules use the same VPN interface.
 
-**Что делать:** Два общих правила используют один и тот же VPN-интерфейс. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Два общих правила используют один и тот же VPN-интерфейс. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Two general rules use the same VPN interface. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7945,7 +8305,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Special rules (by device or destination) must be placed before the general rules.
 
-**Что делать:** Специальные правила (по устройствам или назначениям) должны стоять до общих. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Специальные правила (по устройствам или назначениям) должны стоять до общих. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Special rules (by device or destination) must be placed before the general rules. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7957,7 +8317,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Choose a primary and a different reserve profile in Settings.
 
-**Что делать:** Выберите в настройках основной и другой, резервный профиль. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Выберите в настройках основной и другой, резервный профиль. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Choose a primary and a different reserve profile in Settings. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7969,7 +8329,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The primary or the reserve tunnel is not connected. Connect both in GL.iNet VPN Dashboard.
 
-**Что делать:** Основной или резервный туннель не подключён. Подключите оба в VPN Dashboard GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Основной или резервный туннель не подключён. Подключите оба в VPN Dashboard GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The primary or the reserve tunnel is not connected. Connect both in GL.iNet VPN Dashboard. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7981,7 +8341,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The chosen profiles are not general VPN rules in the router policy.
 
-**Что делать:** Выбранные профили не являются общими VPN-правилами в политике роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Выбранные профили не являются общими VPN-правилами в политике роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The chosen profiles are not general VPN rules in the router policy. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -7993,7 +8353,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Primary and reserve use the same interface.
 
-**Что делать:** Основной и резервный профили используют один интерфейс. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Основной и резервный профили используют один интерфейс. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Primary and reserve use the same interface. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8005,7 +8365,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Policy-order direction has not been established for this mode. The client-confirmed helper and prepared continuous workflow have different setup evidence.
 
-**Что делать:** Направление политики для этого режима ещё не установлено. У клиентского помощника и подготовленного непрерывного режима разные данные настройки. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Направление политики для этого режима ещё не установлено. У клиентского помощника и подготовленного непрерывного режима разные данные настройки. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Policy-order direction has not been established for this mode. The client-confirmed helper and prepared continuous workflow have different setup evidence. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8017,7 +8377,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The LAN is not on the standard br-lan bridge.
 
-**Что делать:** Локальная сеть не на стандартном мосту br-lan. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Локальная сеть не на стандартном мосту br-lan. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The LAN is not on the standard br-lan bridge. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8029,7 +8389,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Enable monitoring for both chosen profiles in Settings.
 
-**Что делать:** Включите наблюдение для обоих выбранных профилей в настройках. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Включите наблюдение для обоих выбранных профилей в настройках. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Enable monitoring for both chosen profiles in Settings. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8041,7 +8401,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The router firewall tool (nft) is unavailable.
 
-**Что делать:** Недоступен инструмент firewall роутера (nft). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Недоступен инструмент firewall роутера (nft). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router firewall tool (nft) is unavailable. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8053,7 +8413,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The router VPN policy could not be read.
 
-**Что делать:** Не удалось прочитать VPN-политику роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Не удалось прочитать VPN-политику роутера. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router VPN policy could not be read. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8065,7 +8425,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The internet cable/uplink is down; changing VPN would not help.
 
-**Что делать:** Нет связи с интернет-провайдером; смена VPN не поможет. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нет связи с интернет-провайдером; смена VPN не поможет. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The internet cable/uplink is down; changing VPN would not help. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8077,7 +8437,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The bounded lease record failed integrity checks. Preserve it and inspect recovery/storage; do not delete it or create another lease as a bypass.
 
-**Что делать:** Запись ограниченного окна не прошла целостность. Сохраните её и проверьте восстановление/хранилище; не удаляйте и не создавайте другое окно как обход. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Запись ограниченного окна не прошла целостность. Сохраните её и проверьте восстановление/хранилище; не удаляйте и не создавайте другое окно как обход. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The bounded lease record failed integrity checks. Preserve it and inspect recovery/storage; do not delete it or create another lease as a bypass. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8089,7 +8449,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The test window could not be stored on the router.
 
-**Что делать:** Не удалось сохранить окно теста на роутере. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Не удалось сохранить окно теста на роутере. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The test window could not be stored on the router. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8097,13 +8457,13 @@ Kill Switch выключен / Kill Switch is off
 
 Восстановлена старая аренда / Old lease recovered
 
-**RU:** Старая транзакция требует восстановления; подождите или нажмите «Стоп».
+**RU:** Старая транзакция требует восстановления; подождите или выключите Auto переключателем.
 
-**EN:** An old transaction needs recovery; wait or press Stop.
+**EN:** An old transaction needs recovery; wait or turn Auto off with its switch.
 
-**Что делать:** Старая транзакция требует восстановления; подождите или нажмите «Стоп». Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Старая транзакция требует восстановления; подождите или выключите Auto переключателем. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
-**Action:** An old transaction needs recovery; wait or press Stop. If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** An old transaction needs recovery; wait or turn Auto off with its switch. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## EXTERNAL-POLICY-CHANGE-GUARD-RETAINED
 
@@ -8113,7 +8473,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The router VPN policy was changed by someone else during a switch; LAN traffic is held. Check the rule order and see router-test-kit/EMERGENCY.md.
 
-**Что делать:** Политику VPN роутера изменили во время переключения; трафик LAN удерживается. Проверьте порядок правил, см. router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Политику VPN роутера изменили во время переключения; трафик LAN удерживается. Проверьте порядок правил, см. router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router VPN policy was changed by someone else during a switch; LAN traffic is held. Check the rule order and see router-test-kit/EMERGENCY.md. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8125,7 +8485,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The rollback could not be verified; LAN traffic is held. See router-test-kit/EMERGENCY.md.
 
-**Что делать:** Откат не удалось подтвердить; трафик LAN удерживается. См. router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Откат не удалось подтвердить; трафик LAN удерживается. См. router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The rollback could not be verified; LAN traffic is held. See router-test-kit/EMERGENCY.md. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8137,7 +8497,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Required client confirmation did not arrive in time. Recovery was requested; verify whether the original route returned or reserve was retained.
 
-**Что делать:** Нужное подтверждение клиента не пришло вовремя. Восстановление запрошено; проверьте, вернулся ли исходный маршрут или сохранён резерв. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нужное подтверждение клиента не пришло вовремя. Восстановление запрошено; проверьте, вернулся ли исходный маршрут или сохранён резерв. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Required client confirmation did not arrive in time. Recovery was requested; verify whether the original route returned or reserve was retained. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8149,7 +8509,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Stopped by request.
 
-**Что делать:** Остановлено по запросу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Остановлено по запросу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Stopped by request. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8161,7 +8521,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The reserve did not pass the DNS/HTTPS check.
 
-**Что делать:** Резерв не прошёл проверку DNS/HTTPS. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Резерв не прошёл проверку DNS/HTTPS. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The reserve did not pass the DNS/HTTPS check. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8173,7 +8533,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** The LAN computer is not currently using the primary route.
 
-**Что делать:** Компьютер в LAN сейчас не использует основной маршрут. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Компьютер в LAN сейчас не использует основной маршрут. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The LAN computer is not currently using the primary route. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8185,7 +8545,7 @@ Kill Switch выключен / Kill Switch is off
 
 **EN:** Primary and reserve have the same external IP; the switch could not be proven.
 
-**Что делать:** У основного и резервного одинаковый внешний IP; переключение невозможно доказать. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** У основного и резервного одинаковый внешний IP; переключение невозможно доказать. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Primary and reserve have the same external IP; the switch could not be proven. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8197,7 +8557,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The router failed to apply the change; it was rolled back.
 
-**Что делать:** Роутер не смог применить изменение; выполнен откат. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Роутер не смог применить изменение; выполнен откат. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router failed to apply the change; it was rolled back. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8209,7 +8569,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The policy changed while switching; it was rolled back.
 
-**Что делать:** Политика изменилась во время переключения; выполнен откат. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Политика изменилась во время переключения; выполнен откат. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The policy changed while switching; it was rolled back. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8221,7 +8581,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Internal controller error. See the Service monitor.
 
-**Что делать:** Внутренняя ошибка контроллера. См. «Службу мониторинга». Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Внутренняя ошибка контроллера. См. «Службу мониторинга». Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Internal controller error. See the Service monitor. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8233,7 +8593,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The terms of use are not accepted yet. Open this page in LuCI and accept them on the first screen.
 
-**Что делать:** Условия использования ещё не приняты. Откройте эту страницу в LuCI и примите их на первом экране. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Условия использования ещё не приняты. Откройте эту страницу в LuCI и примите их на первом экране. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The terms of use are not accepted yet. Open this page in LuCI and accept them on the first screen. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8245,7 +8605,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** There is nothing to return from: Auto is not holding the reserve.
 
-**Что делать:** Возвращаться не откуда: Auto не удерживает резерв. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Возвращаться не откуда: Auto не удерживает резерв. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** There is nothing to return from: Auto is not holding the reserve. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8257,7 +8617,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The primary does not pass its check right now, so the router stays on the reserve. Try again when the primary works.
 
-**Что делать:** Основной VPN сейчас не проходит проверку, роутер остаётся на резерве. Повторите, когда основной заработает. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Основной VPN сейчас не проходит проверку, роутер остаётся на резерве. Повторите, когда основной заработает. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The primary does not pass its check right now, so the router stays on the reserve. Try again when the primary works. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8269,7 +8629,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The transaction journal could not be verified. Use the emergency steps in router-test-kit/EMERGENCY.md.
 
-**Что делать:** Журнал транзакций не удалось проверить. Используйте аварийные шаги из router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Журнал транзакций не удалось проверить. Используйте аварийные шаги из router-test-kit/EMERGENCY.md. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The transaction journal could not be verified. Use the emergency steps in router-test-kit/EMERGENCY.md. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8281,7 +8641,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The router VPN rules were changed by someone else. Auto stopped and released its traffic block; check the VPN rules in GL.iNet.
 
-**Что делать:** Правила VPN на роутере изменил кто-то другой. Auto остановлен и снял свою блокировку трафика; проверьте правила VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Правила VPN на роутере изменил кто-то другой. Auto остановлен и снял свою блокировку трафика; проверьте правила VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router VPN rules were changed by someone else. Auto stopped and released its traffic block; check the VPN rules in GL.iNet. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8293,7 +8653,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The router VPN rules were changed by someone else. Auto stopped and released its traffic block; check the VPN rules in GL.iNet.
 
-**Что делать:** Правила VPN на роутере изменил кто-то другой. Auto остановлен и снял свою блокировку трафика; проверьте правила VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Правила VPN на роутере изменил кто-то другой. Auto остановлен и снял свою блокировку трафика; проверьте правила VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router VPN rules were changed by someone else. Auto stopped and released its traffic block; check the VPN rules in GL.iNet. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8305,7 +8665,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The return to the previous route could not be verified. Traffic is allowed only through VPN tunnels; check the VPN rule order in GL.iNet.
 
-**Что делать:** Возврат на прежний маршрут не удалось подтвердить. Трафик разрешён только через VPN-туннели; проверьте порядок правил VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Возврат на прежний маршрут не удалось подтвердить. Трафик разрешён только через VPN-туннели; проверьте порядок правил VPN в GL.iNet. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The return to the previous route could not be verified. Traffic is allowed only through VPN tunnels; check the VPN rule order in GL.iNet. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8317,7 +8677,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The router has not yet reported what it is made of (model, firmware, installed tools). Monitoring starts by itself: wait a minute and reload the page.
 
-**Что делать:** Роутер ещё не сообщил, из чего он состоит (модель, прошивка, установленные программы). Мониторинг запускается сам: подождите минуту и обновите страницу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Роутер ещё не сообщил, из чего он состоит (модель, прошивка, установленные программы). Мониторинг запускается сам: подождите минуту и обновите страницу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The router has not yet reported what it is made of (model, firmware, installed tools). Monitoring starts by itself: wait a minute and reload the page. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8325,25 +8685,25 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 Данные мониторинга устарели / Monitor data is old
 
-**RU:** Нет свежих данных от мониторинга. Запустите его в блок «Мониторинг» на «Обзоре»; без него Auto использовать нельзя.
+**RU:** Нет свежих данных от мониторинга. Мониторинг запускается сам; подождите минуту и обновите страницу. Если не помогло, нажмите «Восстановить мониторинг» в «Служба мониторинга» («Настройки → Система и диагностика»; в «Пульте» — вкладка «Система») или см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает». Без мониторинга Auto использовать нельзя.
 
-**EN:** There is no fresh data from the monitor. Monitoring starts by itself; wait a minute and reload. If it stays, see Help → “The page is old, empty or says the monitor is not running”.
+**EN:** There is no fresh data from the monitor. Monitoring starts by itself; wait a minute and reload. If it stays, press Restore monitoring in Monitoring service (Settings → System and diagnostics; Console: System tab) or see Help → “The page is old, empty or says the monitor is not running”.
 
-**Что делать:** Нет свежих данных от мониторинга. Запустите его в блок «Мониторинг» на «Обзоре»; без него Auto использовать нельзя. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нет свежих данных от мониторинга. Мониторинг запускается сам; подождите минуту и обновите страницу. Если не помогло, нажмите «Восстановить мониторинг» в «Служба мониторинга» («Настройки → Система и диагностика»; в «Пульте» — вкладка «Система») или см. «Помощь» → «Страница старая, пустая или пишет, что мониторинг не работает». Без мониторинга Auto использовать нельзя. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
-**Action:** There is no fresh data from the monitor. Monitoring starts by itself; wait a minute and reload. If it stays, see Help → “The page is old, empty or says the monitor is not running”. If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** There is no fresh data from the monitor. Monitoring starts by itself; wait a minute and reload. If it stays, press Restore monitoring in Monitoring service (Settings → System and diagnostics; Console: System tab) or see Help → “The page is old, empty or says the monitor is not running”. If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## NATIVE-START-CERTIFICATION-REQUIRED
 
 Повторная проверка при запуске / Checked again at Start
 
-**RU:** Здесь ничто не мешает, но роутер всё равно перепроверит всё в момент нажатия «Старт» (текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат).
+**RU:** Здесь ничто не мешает, но роутер всё равно перепроверит всё в момент включения Auto (текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат).
 
-**EN:** Nothing blocks you here, but the router itself still checks everything again at the moment you press Start (current device, time window, your computer’s confirmation, safe return).
+**EN:** Nothing blocks you here, but the router itself still checks everything again at the moment you turn Auto on (current device, time window, your computer’s confirmation, safe return).
 
-**Что делать:** Здесь ничто не мешает, но роутер всё равно перепроверит всё в момент нажатия «Старт» (текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Здесь ничто не мешает, но роутер всё равно перепроверит всё в момент включения Auto (текущее устройство, окно времени, подтверждение вашего компьютера, безопасный возврат). Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
-**Action:** Nothing blocks you here, but the router itself still checks everything again at the moment you press Start (current device, time window, your computer’s confirmation, safe return). If it is still unclear, open Help → “The Auto button refuses to start”.
+**Action:** Nothing blocks you here, but the router itself still checks everything again at the moment you turn Auto on (current device, time window, your computer’s confirmation, safe return). If it is still unclear, open Help → “The Auto button refuses to start”.
 
 ## OPERATOR-RETURN
 
@@ -8353,7 +8713,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** This is the manual-control command family, not proof that a human clicked. The recorded initiator distinguishes operator, automation, test or programmatic access.
 
-**Что делать:** Возврат на основной выполнен по вашему запросу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Возврат на основной выполнен по вашему запросу. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Returned to the primary on your request. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8365,7 +8725,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** The primary recovered and Auto returned to it.
 
-**Что делать:** Основной восстановился, Auto вернулся на него. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Основной восстановился, Auto вернулся на него. Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** The primary recovered and Auto returned to it. If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8377,7 +8737,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Unfinished switch needs recovery
 
-**Что делать:** Незавершённое переключение требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Незавершённое переключение требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Unfinished switch needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8389,7 +8749,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Review the current VPN pair
 
-**Что делать:** Проверьте текущую пару VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Проверьте текущую пару VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Review the current VPN pair If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8401,7 +8761,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Complete router preparation
 
-**Что делать:** Завершите подготовку роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Завершите подготовку роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Complete router preparation If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8413,7 +8773,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable network acceleration
 
-**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8425,7 +8785,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Review wgclient1 startup
 
-**Что делать:** Проверьте автозапуск wgclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Проверьте автозапуск wgclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Review wgclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8437,7 +8797,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Review ovpnclient1 startup
 
-**Что делать:** Проверьте автозапуск ovpnclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Проверьте автозапуск ovpnclient1 Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Review ovpnclient1 startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8449,7 +8809,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable competing VPN startup
 
-**Что делать:** Отключите конкурирующий автозапуск VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите конкурирующий автозапуск VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable competing VPN startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8461,7 +8821,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable network acceleration
 
-**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8473,7 +8833,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable network acceleration
 
-**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8485,7 +8845,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable network acceleration
 
-**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите сетевое ускорение Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable network acceleration If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8497,7 +8857,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Router restart required
 
-**Что делать:** Нужна перезагрузка роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Нужна перезагрузка роутера Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Router restart required If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8509,7 +8869,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** A preparation change needs recovery
 
-**Что делать:** Изменение подготовки требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Изменение подготовки требует восстановления Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** A preparation change needs recovery If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8521,7 +8881,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable primary VPN boot startup
 
-**Что делать:** Отключите автозапуск основного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите автозапуск основного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable primary VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8533,7 +8893,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **EN:** Disable reserve VPN boot startup
 
-**Что делать:** Отключите автозапуск резервного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto отказывается запускаться».
+**Что делать:** Отключите автозапуск резервного VPN Если всё ещё непонятно, откройте «Помощь» → «Кнопка Auto не запускается».
 
 **Action:** Disable reserve VPN boot startup If it is still unclear, open Help → “The Auto button refuses to start”.
 
@@ -8547,7 +8907,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## WORKER-COORDINATION-UNVERIFIED
 
@@ -8559,7 +8919,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## LAN-PATH-UNVERIFIED
 
@@ -8571,7 +8931,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## DNS-POLICY-UNVERIFIED
 
@@ -8583,7 +8943,7 @@ GL.iNet не применил изменение / GL.iNet did not apply the cha
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## KILLSWITCH-UNVERIFIED
 
@@ -8595,7 +8955,7 @@ Kill Switch / Kill Switch
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## IPV6-POLICY-UNVERIFIED
 
@@ -8607,7 +8967,7 @@ Kill Switch / Kill Switch
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## WATCHDOG-UNVERIFIED
 
@@ -8619,7 +8979,7 @@ Kill Switch / Kill Switch
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## SCOPED-CONNTRACK-UNVERIFIED
 
@@ -8631,7 +8991,7 @@ Kill Switch / Kill Switch
 
 **Что делать:** Это диагностика прежней прогнозной модели, не действующий сертификат. Используйте готовность своего режима; независимые LAN/DNS/IPv6/KillSwitch проверяются отдельно.
 
-**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific System readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
+**Action:** This legacy planning diagnostic is not a live certification. Use actual mode-specific Router readiness; independent LAN/DNS/IPv6/KillSwitch proof remains separate.
 
 ## EVENT-CHECK-OK
 

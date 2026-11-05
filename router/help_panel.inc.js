@@ -1,6 +1,6 @@
 /* Built-in help: what to do when something is wrong. Data are [English, Russian] pairs; commands are never translated. */
 var HELP_TOPICS=[
-  {"id": "probe-boost", "open": false, "title": ["Probe level and automatic boost: how it works", "Уровень опроса и автоматическое ускорение: как это работает"], "when": ["You want to know exactly when the router checks more often and when it returns to the chosen level.", "Вы хотите точно знать, когда роутер начинает проверять чаще и когда возвращается к выбранному уровню."], "steps": [{"t": ["Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The ping has its own interval in Settings → How the response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.", "Уровень опроса 1–5 задаёт два интервала. Проверка канала (работает ли интернет через VPN): уровень 1 — раз в 60 с, 2 — раз в 30 с, 3 — раз в 20 с, 4 — раз в 15 с, 5 — раз в 10 с. Замер отклика по трём сайтам: 300, 120, 60, 45 и 30 с. У пинга свой интервал в «Настройки» → «Как измеряется отклик»: по умолчанию раз в минуту, от раза в 10 с до раза в 5 мин. Сбой подтверждается после 3 неудачных проверок подряд, поэтому на уровне 1 это около 3 минут, на уровне 5 — около 30 с."]}, {"t": ["Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.", "Автоматическое ускорение включается, когда Auto работает и наблюдает (OBSERVING, COMMITTED или работа на резерве), а основной или резервный канал не прошёл одну проверку. С этого момента роутер проверяет каналы раз в 10 с и замеряет отклик трёх сайтов раз в 30 с, независимо от выбранного уровня (пинг сохраняет свой интервал). Само ускорение ничего не переключает: оно только учащает проверки, чтобы настоящий сбой подтвердился примерно за 30 с."]}, {"t": ["An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.", "Эпизод длится 10 минут от последней неудачной проверки, но всего не дольше 20 минут. Как только задача выполнена — Auto переключил канал или сбой подтверждён (3 неудачные проверки), — новые неудачи его больше не продлевают."]}, {"t": ["When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.", "Когда эпизод закончился, роутер возвращается к вашему уровню и записывает итог в журнал решений: switched (Auto переключил канал), failure-confirmed (канал действительно отказал), false-alarm (одна проверка не прошла, потом канал работал) или disabled (вы выключили ускорение). Затем 10 минут отдыха: новый эпизод не начинается, а тот же канал не может начать его снова, пока не пройдёт проверку. Поэтому канал, который лежит долго, не держит роутер на частых проверках бесконечно."]}, {"t": ["The decision log on Overview lists every level change and every episode: time, level, what happened, which channel and its error code. The countdown under the traffic light shows the current cadence, with «· boost» while an episode runs.", "Журнал решений на «Обзоре» перечисляет каждую смену уровня и каждый эпизод: время, уровень, что произошло, какой канал и код ошибки. Отсчёт под светофором показывает текущий интервал, во время эпизода — с пометкой «· ускорение»."]}, {"t": ["If the router refuses a level change while a switch is running, the reason is shown under the Apply button and the change is retried automatically for 2 minutes. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.", "Если роутер отклоняет смену уровня во время переключения, причина показывается под кнопкой «Применить», а смена автоматически повторяется в течение 2 минут. Ручное переключение канала не выключает Auto: Auto продолжает следить за выбранным вами каналом, поэтому ускорение работает так же и после ручного переключения."]}]},
+  {"id": "probe-boost", "open": false, "title": ["Probe level and automatic boost: how it works", "Уровень опроса и автоматическое ускорение: как это работает"], "when": ["You want to know exactly when the router checks more often and when it returns to the chosen level.", "Вы хотите точно знать, когда роутер начинает проверять чаще и когда возвращается к выбранному уровню."], "steps": [{"t": ["Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The probe level is set in Settings → Router load (Console: Auto tab). The ping has its own interval in Router load → How response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.", "Уровень опроса 1–5 задаёт два интервала. Проверка канала (работает ли интернет через VPN): уровень 1 — раз в 60 с, 2 — раз в 30 с, 3 — раз в 20 с, 4 — раз в 15 с, 5 — раз в 10 с. Замер отклика по трём сайтам: 300, 120, 60, 45 и 30 с. Уровень опроса задаётся в «Настройки → Нагрузка на роутер» (в «Пульте» — вкладка «Auto»). У пинга свой интервал в «Нагрузка на роутер» → «Как измеряется отклик»: по умолчанию раз в минуту, от раза в 10 с до раза в 5 мин. Сбой подтверждается после 3 неудачных проверок подряд, поэтому на уровне 1 это около 3 минут, на уровне 5 — около 30 с."]}, {"t": ["Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.", "Автоматическое ускорение включается, когда Auto работает и наблюдает (OBSERVING, COMMITTED или работа на резерве), а основной или резервный канал не прошёл одну проверку. С этого момента роутер проверяет каналы раз в 10 с и замеряет отклик трёх сайтов раз в 30 с, независимо от выбранного уровня (пинг сохраняет свой интервал). Само ускорение ничего не переключает: оно только учащает проверки, чтобы настоящий сбой подтвердился примерно за 30 с."]}, {"t": ["An episode lasts 10 minutes from the last failed check, but never longer than 20 minutes in total. It ends earlier in effect when its job is done: after Auto switched the channel, or after the failure was confirmed (3 failed checks), further failures no longer extend it.", "Эпизод длится 10 минут от последней неудачной проверки, но всего не дольше 20 минут. Как только задача выполнена — Auto переключил канал или сбой подтверждён (3 неудачные проверки), — новые неудачи его больше не продлевают."]}, {"t": ["When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.", "Когда эпизод закончился, роутер возвращается к вашему уровню и записывает итог в журнал решений: switched (Auto переключил канал), failure-confirmed (канал действительно отказал), false-alarm (одна проверка не прошла, потом канал работал) или disabled (вы выключили ускорение). Затем 10 минут отдыха: новый эпизод не начинается, а тот же канал не может начать его снова, пока не пройдёт проверку. Поэтому канал, который лежит долго, не держит роутер на частых проверках бесконечно."]}, {"t": ["The decision log lists every level change and every episode: time, level, what happened, which channel and its error code. Open it with the link «Decision log: levels and boost» in Router load → How response is measured, or in the Console on the Log tab. The Router load summary shows the chosen level and «· boost on» when the boost is enabled.", "Журнал решений перечисляет каждую смену уровня и каждый эпизод: время, уровень, что произошло, какой канал и код ошибки. Он открывается ссылкой «Журнал решений: уровни и ускорение» в «Нагрузка на роутер» → «Как измеряется отклик», а в «Пульте» — на вкладке «Журнал». В заголовке «Нагрузки на роутер» видны выбранный уровень и пометка «· ускорение вкл.», когда ускорение включено."]}, {"t": ["If the router refuses a level change (for example while a switch is running), the settings are not saved and a window shows the code; press Save again after the switch. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.", "Если роутер отклоняет смену уровня (например, во время переключения), настройки не сохраняются и окно показывает код; нажмите «Сохранить» ещё раз после переключения. Ручное переключение канала не выключает Auto: Auto продолжает следить за выбранным вами каналом, поэтому ускорение работает так же и после ручного переключения."]}]},
   {
     "id": "response-measurement",
     "open": false,
@@ -15,8 +15,8 @@ var HELP_TOPICS=[
     "steps": [
       {
         "t": [
-          "Settings → How the response is measured chooses the method. Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.",
-          "Способ выбирается в «Настройки» → «Как измеряется отклик». По умолчанию — пинг (ICMP-запрос к 1.1.1.1, либо 8.8.8.8 / 9.9.9.9) через каждый туннель: небольшие числа, почти без нагрузки на роутер, лучше всего для сравнения каналов. Другой вариант — три сайта. Измеряет сам роутер через каждый VPN-туннель, а не ваш компьютер. Он заново открывает три сайта: Google, Cloudflare и Wikipedia. Каждое время включает поиск адреса (DNS), TCP-соединение, установку шифрования TLS и получение полных HTTP-заголовков."
+          "The method is chosen in Settings → Router load → How response is measured (Console: Auto tab → Router load). Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.",
+          "Способ выбирается в «Настройки → Нагрузка на роутер → Как измеряется отклик» (в «Пульте» — вкладка «Auto» → «Нагрузка на роутер»). По умолчанию — пинг (ICMP-запрос к 1.1.1.1, либо 8.8.8.8 / 9.9.9.9) через каждый туннель: небольшие числа, почти без нагрузки на роутер, лучше всего для сравнения каналов. Другой вариант — три сайта. Измеряет сам роутер через каждый VPN-туннель, а не ваш компьютер. Он заново открывает три сайта: Google, Cloudflare и Wikipedia. Каждое время включает поиск адреса (DNS), TCP-соединение, установку шифрования TLS и получение полных HTTP-заголовков."
         ]
       },
       {
@@ -33,14 +33,14 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "How often: the ping has its own setting in Settings → How the response is measured, Ping interval: from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Every table shows the last ping with its age, for example 42 ms (12 s ago); a dash means the router has not pinged that channel since it started. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.",
-          "Как часто: у пинга своя настройка в «Настройки» → «Как измеряется отклик» → «Интервал пинга»: от раза в 10 с до раза в 5 мин, по умолчанию раз в минуту. Чаще — свежее числа, но немного больше нагрузка на процессор роутера и трафик. Пинг отправляется во время проверки каналов, поэтому не бывает чаще проверок уровня опроса. Три сайта следуют уровню опроса на «Обзоре» (раз в 30 с на уровне 5, раз в 5 мин на уровне 1, раз в 30 с во время автоускорения). Каждая таблица показывает последний пинг и его возраст, например 42 мс (12 с назад); прочерк означает, что роутер ещё не пинговал этот канал после запуска. Старый пинг — просто старый: он не означает, что VPN не работает. Отклик — только информация: Auto решает по проверкам DNS и HTTPS, а не по времени отклика."
+          "How often: the ping has its own setting, Ping interval, in the same place (Router load → How response is measured): from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level in Router load (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Each channel card shows the last value in ms and how long ago the channel was checked, for example 42 ms, checked 12 s ago; a dash means the router has no value for that channel yet. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.",
+          "Как часто: у пинга своя настройка «Интервал пинга» там же («Нагрузка на роутер» → «Как измеряется отклик»): от раза в 10 с до раза в 5 мин, по умолчанию раз в минуту. Чаще — свежее числа, но немного больше нагрузка на процессор роутера и трафик. Пинг отправляется во время проверки каналов, поэтому не бывает чаще проверок уровня опроса. Три сайта следуют уровню опроса в «Нагрузке на роутер» (раз в 30 с на уровне 5, раз в 5 мин на уровне 1, раз в 30 с во время автоускорения). Каждая карточка канала показывает последнее значение в мс и сколько времени назад канал проверялся, например 42 мс, проверено 12 с назад; прочерк означает, что значения от роутера для этого канала ещё нет. Старый пинг — просто старый: он не означает, что VPN не работает. Отклик — только информация: Auto решает по проверкам DNS и HTTPS, а не по времени отклика."
         ]
       },
       {
         "t": [
-          "The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option \"Measure all methods (comparison)\" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.",
-          "График задержки и статистика следуют выбранному способу; история пинга хранится отдельно. Параметр «Мерить все способы (сравнение)» заставляет каждую проверку дополнительно пинговать остальные DNS-адреса и открывать три сайта; рейтинг серверов на странице «Тесты» показывает по одному столбцу на каждый способ. Переключение по-прежнему использует только выбранный способ."
+          "The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option \"Measure all methods (comparison)\" makes every check also ping the other DNS addresses and open the three websites; the router collects these extra values for comparison, while the page shows the chosen method. Switching still uses only the chosen method.",
+          "График задержки и статистика следуют выбранному способу; история пинга хранится отдельно. Параметр «Мерить все способы (сравнение)» заставляет каждую проверку дополнительно пинговать остальные DNS-адреса и открывать три сайта; роутер собирает эти дополнительные значения для сравнения, а страница показывает выбранный способ. Переключение по-прежнему использует только выбранный способ."
         ]
       }
     ]
@@ -53,32 +53,32 @@ var HELP_TOPICS=[
       "Как работает Auto двух каналов"
     ],
     "when": [
-      "You want to know what Auto does after you press its button and what the router checks.",
-      "Вы хотите знать, что делает Auto после нажатия кнопки и что проверяет роутер."
+      "You want to know what Auto does after you turn its switch on and what the router checks.",
+      "Вы хотите знать, что делает Auto после включения переключателя Auto и что проверяет роутер."
     ],
     "steps": [
       {
         "t": [
-          "Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.",
-          "Auto запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается после повторных отказов и возвращается после устойчивого восстановления по вашим настройкам. Stop доступен при запуске. После перезапуска нужен явный Start."
+          "Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. The Auto switch is on «Home» in the Simple view and in the top strip of the Console view; you can turn Auto off during startup too. Auto that you turned on comes back by itself after a reboot or power cut, with every start check; turning it off cancels that.",
+          "Auto запускает сохранённые основной и резервный VPN, проверяет IPv4 DNS/HTTPS, переключается после повторных отказов и возвращается после устойчивого восстановления по вашим настройкам. Переключатель Auto находится на «Главной» в виде «Простой» и в верхней полосе вида «Пульт»; выключить Auto можно и во время запуска. Auto, который вы включили сами, после перезагрузки или отключения питания включается снова сам, со всеми проверками запуска; выключение Auto это отменяет."
         ]
       },
       {
         "t": [
-          "About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level on Overview (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.",
-          "Об этих проверках: два выбранных VPN-канала; проверку делает сам роутер через каждый туннель. Как часто — задаёт уровень опроса на «Обзоре» (от раза в 60 с на уровне 1 до раза в 10 с на уровне 5); сбой подтверждается после 3 неудачных проверок."
+          "About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level in Settings → Router load, Console: Auto tab (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.",
+          "Об этих проверках: два выбранных VPN-канала; проверку делает сам роутер через каждый туннель. Как часто — задаёт уровень опроса в «Настройки → Нагрузка на роутер», в «Пульте» — вкладка «Auto» (от раза в 60 с на уровне 1 до раза в 10 с на уровне 5); сбой подтверждается после 3 неудачных проверок."
         ]
       },
       {
         "t": [
-          "Lamp colours are the same on every page: green means this channel carries your traffic; yellow means it is alive but not in use (only such a channel offers \"switch to it\") or is being checked for a moment; red means a proven failure; grey means we are waiting for the router. The Auto button, the traffic light, the sidebar Auto lamp and the live journal always show one colour: green while Auto runs, yellow only during a real switch, start or stop and in a short pulse around each scheduled check, red only for a proven failure (the selected channel failed, a controller alarm, or no router answer for 90 s), dark when you turned Auto off. During a manual switch the destination card blinks green.",
-          "Цвета ламп одинаковы на всех страницах: зелёный — этот канал несёт ваш трафик; жёлтый — канал жив, но не используется (только к такому каналу предлагается «переключиться») или идёт короткая проверка; красный — доказанный сбой; серый — ждём ответа роутера. Кнопка Auto, светофор, лампа Auto в боковом меню и живой журнал всегда показывают один цвет: зелёный, пока Auto работает; жёлтый только во время реального переключения, запуска или остановки и короткой вспышкой вокруг каждой плановой проверки; красный только при доказанном сбое (выбранный канал отказал, тревога контроллера или нет ответа роутера 90 с); погашен, когда вы выключили Auto. При ручном переключении карточка назначения мигает зелёным."
+          "Lamp colours are the same in both views (Simple and Console). A channel lamp: green — the channel works (the chip \"Traffic here\" marks the one carrying your traffic, \"Standing by\" the other); yellow — it is being checked or a switch is under way; red — it does not respond or its tunnel is off (with the code); grey — no fresh data from the router. The big lamp next to the status line shows the whole VPN: green — the VPN works on the primary; yellow — the reserve is in use, a switch or a check is under way; red — the current channel or both channels fail; grey — no fresh data. The Auto switch says its state in words: Auto is on, Turning Auto on…, Auto is off and so on. \"Switch here\" appears only on the card of the channel that does not carry traffic.",
+          "Цвета ламп одинаковы в обоих видах («Простой» и «Пульт»). Лампа канала: зелёный — канал работает (метка «Трафик здесь» отмечает канал, который несёт ваш трафик, «Ждёт в резерве» — другой); жёлтый — идёт проверка или переключение; красный — канал не отвечает или его туннель отключён (с кодом); серый — нет свежих данных от роутера. Большая лампа рядом со строкой состояния показывает VPN целиком: зелёный — VPN работает через основной; жёлтый — работает резерв, идёт переключение или проверка; красный — не отвечает текущий канал или оба канала; серый — нет свежих данных. Переключатель Auto пишет своё состояние словами: «Auto включён», «Включение Auto…», «Auto выключен» и т. д. Кнопка «Переключить сюда» есть только на карточке канала, который не несёт трафик."
         ]
       },
       {
         "t": [
-          "No internet? Open the topic \"No internet\" below in Help for the recovery steps.",
-          "Нет интернета? Откройте ниже в «Помощи» тему «Нет интернета» — там порядок восстановления."
+          "No internet? Open the Help topic \"I have no internet\" for the recovery steps (Simple view: \"? Help\" in the top menu; Console: System tab → Help, codes, training).",
+          "Нет интернета? Откройте в «Помощи» тему «У меня пропал интернет» — там порядок восстановления (вид «Простой»: «? Помощь» в верхнем меню; «Пульт»: вкладка «Система» → «Помощь, коды, обучение»)."
         ]
       }
     ]
@@ -115,8 +115,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "See Overview for the current Auto state and selected channel. Use Live log for the sequence of decisions and their reasons. If observations are stale, use Check VPN now; it refreshes checks without choosing a channel for you.",
-          "Текущее состояние Auto и выбранный канал смотрите на «Обзоре». Последовательность решений и их причины — в «Живом журнале». Если наблюдения устарели, нажмите «Проверить VPN сейчас»: это обновляет проверки без выбора канала за вас."
+          "The current Auto state and the channel carrying traffic are on Home (Simple view) or the Channels tab (Console). The sequence of decisions and their reasons is in Events and reasons on Home, the Log tab of the Console, and the live log (Settings → System and diagnostics → Live log; Console: Log → Live log). If observations are stale, press Check now; it refreshes checks without choosing a channel for you.",
+          "Текущее состояние Auto и канал, который несёт трафик, видны на «Главной» (вид «Простой») или на вкладке «Каналы» («Пульт»). Последовательность решений и их причины — в «Событиях и причинах» на «Главной», на вкладке «Журнал» в «Пульте» и в живом журнале («Настройки → Система и диагностика → Живой журнал»; в «Пульте» — «Журнал» → «Живой журнал»). Если наблюдения устарели, нажмите «Проверить сейчас»: это обновляет проверки без выбора канала за вас."
         ]
       }
     ]
@@ -141,8 +141,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "On Overview check the selected channel and fresh DNS/HTTPS results. A working reserve is a normal state. Select another channel only when its readiness is confirmed; do not return to a failed primary just because it is called primary.",
-          "На «Обзоре» проверьте выбранный канал и свежие DNS/HTTPS-результаты. Исправный резерв — нормальное состояние. Выбирайте другой канал только при подтверждённой готовности; не возвращайтесь на неисправный основной лишь из-за его названия."
+          "On Home (Console: Channels tab) check which channel carries traffic and whether both channel cards have fresh results. A working reserve is a normal state. Select another channel only when its readiness is confirmed; do not return to a failed primary just because it is called primary.",
+          "На «Главной» (в «Пульте» — вкладка «Каналы») проверьте, какой канал несёт трафик и свежие ли данные на обеих карточках каналов. Исправный резерв — нормальное состояние. Выбирайте другой канал только при подтверждённой готовности; не возвращайтесь на неисправный основной лишь из-за его названия."
         ]
       },
       {
@@ -174,8 +174,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "A router reboot is a last recovery step when you still control the device. It interrupts connectivity and does not repair a bad VPN configuration. Auto needs an explicit Start afterwards.",
-          "Перезагрузка — последний шаг восстановления, если управление устройством сохранено. Она прерывает связь и не исправляет неверную VPN-конфигурацию. После неё Auto требует явного запуска."
+          "A router reboot is a last recovery step when you still control the device. It interrupts connectivity and does not repair a bad VPN configuration. Auto that you turned on comes back by itself after the reboot, with every start check; if you turned Auto off, it stays off.",
+          "Перезагрузка — последний шаг восстановления, если управление устройством сохранено. Она прерывает связь и не исправляет неверную VPN-конфигурацию. После неё Auto, который вы включили сами, включается снова сам со всеми проверками запуска; если вы выключили Auto, он останется выключенным."
         ]
       },
       {
@@ -252,20 +252,20 @@ var HELP_TOPICS=[
       "Роутер остаётся на резервном VPN"
     ],
     "when": [
-      "The selected reserve is working, a return is requested, or Stop retained the reserve.",
-      "Выбран исправный резерв, нужен возврат либо после остановки остался резерв."
+      "The reserve carries traffic, you want to return, or turning Auto off left the router on the reserve.",
+      "Трафик идёт через исправный резерв, нужен возврат либо после выключения Auto остался резерв."
     ],
     "steps": [
       {
         "t": [
-          "Check both channel measurements and the selected route on Overview. Being on reserve does not by itself mean an error.",
-          "Проверьте измерения обоих каналов и выбранный маршрут на «Обзоре». Работа на резерве сама по себе не означает ошибку."
+          "Check both channel cards on Home (Console: Channels tab): which one shows \"Traffic here\" and whether both have fresh checks. Being on reserve does not by itself mean an error.",
+          "Проверьте обе карточки каналов на «Главной» (в «Пульте» — вкладка «Каналы»): на какой стоит «Трафик здесь» и свежие ли проверки у обеих. Работа на резерве сама по себе не означает ошибку."
         ]
       },
       {
         "t": [
-          "For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If Stop retained the reserve, use the offered Return to primary action and verify its actual result.",
-          "Для осознанного возврата используйте «Ручное переключение канала», когда основной готов и действие доступно. Ручное переключение никогда не выключает Auto: Auto продолжает следить за выбранным вами каналом и переносит трафик на другой, если этот откажет (отдельной кнопки «Возобновить Auto» нет). Если Stop сохранил резерв, используйте предлагаемое действие возврата и проверьте фактический итог."
+          "For an intentional return, press \"Switch here\" on the Primary card when the primary is confirmed working and the button is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If turning Auto off left the router on the reserve, use the same \"Switch here\" on the Primary card and verify its actual result.",
+          "Для осознанного возврата нажмите «Переключить сюда» на карточке «Основной», когда основной подтверждённо работает и кнопка доступна. Ручное переключение никогда не выключает Auto: Auto продолжает следить за выбранным вами каналом и переносит трафик на другой, если этот откажет (отдельной кнопки «Возобновить Auto» нет). Если после выключения Auto остался резерв, используйте ту же кнопку «Переключить сюда» на карточке «Основной» и проверьте фактический итог."
         ]
       },
       {
@@ -289,14 +289,14 @@ var HELP_TOPICS=[
       "Кнопка Auto не запускается"
     ],
     "when": [
-      "Pressing Start shows a message with a code.",
-      "После нажатия «Старт» появляется сообщение с кодом."
+      "Turning the Auto switch on shows a message with a code.",
+      "При включении переключателя Auto появляется сообщение с кодом."
     ],
     "steps": [
       {
         "t": [
-          "Open System readiness and the current Auto explanation on Overview. Use the exact refused condition; a green dry-run forecast is not a separate permission to start.",
-          "Откройте «Готовность системы» и текущее объяснение Auto на «Обзоре». Разбирайте конкретное условие отказа; зелёный прогноз не является отдельным разрешением запуска."
+          "Open Router readiness (Settings → System and diagnostics; Console: System tab) and read the Auto status line on Home or in the Console strip. Press the code in the message: its explanation names the exact refused condition. A green dry-run forecast is not a separate permission to start.",
+          "Откройте «Готовность роутера» («Настройки → Система и диагностика»; в «Пульте» — вкладка «Система») и прочитайте строку состояния Auto на «Главной» или в полосе «Пульта». Нажмите код в сообщении: его объяснение называет конкретное условие отказа. Зелёный прогноз не является отдельным разрешением запуска."
         ]
       },
       {
@@ -319,8 +319,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. The Auto power button remains available to stop or cancel startup.",
-          "После смены профилей дождитесь текущих наблюдений. Повторные нажатия Start не исправляют несовпадение идентичности, служб или политики. Кнопка Auto остаётся доступной для остановки или отмены запуска."
+          "Wait for current observations after changing profiles. Turning the switch on again and again does not repair an identity, worker or policy mismatch. The Auto switch remains available to turn Auto off or cancel startup.",
+          "После смены профилей дождитесь текущих наблюдений. Повторные включения переключателя не исправляют несовпадение идентичности, служб или политики. Переключатель Auto остаётся доступным, чтобы выключить Auto или отменить запуск."
         ]
       }
     ]
@@ -351,8 +351,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "In Settings, open the separate LAN-trial panel and download client-test.ps1 plus start-lan-helper.ps1 into one folder. The optional start-lan-helper.cmd shortcut needs both of those files.",
-          "В «Настройках» откройте отдельный LAN-тест и скачайте client-test.ps1 и start-lan-helper.ps1 в одну папку. Необязательный ярлык start-lan-helper.cmd требует наличия обоих файлов."
+          "Download client-test.ps1 and start-lan-helper.ps1 into one folder: Settings → System and diagnostics → \"Download LAN helper\" and the launcher link next to it (Console: System tab → Help, codes, training). The optional start-lan-helper.cmd shortcut needs both of those files.",
+          "Скачайте client-test.ps1 и start-lan-helper.ps1 в одну папку: «Настройки → Система и диагностика» → «Скачать LAN-помощник» и ссылка на скрипт запуска рядом (в «Пульте» — вкладка «Система» → «Помощь, коды, обучение»). Необязательный ярлык start-lan-helper.cmd требует наличия обоих файлов."
         ]
       },
       {
@@ -448,8 +448,8 @@ var HELP_TOPICS=[
       "Страница старая, пустая или пишет, что мониторинг не работает"
     ],
     "when": [
-      "After an update, the Overview looks old, shows errors, or the status is stale.",
-      "После обновления «Обзор» выглядит по-старому, показывает ошибки или статус устарел."
+      "After an update, the page looks old, shows errors, or the status is stale.",
+      "После обновления страница выглядит по-старому, показывает ошибки или статус устарел."
     ],
     "steps": [
       {
@@ -460,8 +460,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "Check the Monitoring indicator on Overview. If the monitor services are stopped, start those services over SSH and wait for a fresh timestamp; this is separate from Auto Start.",
-          "Проверьте индикатор мониторинга на «Обзоре». Если службы остановлены, запустите их по SSH и дождитесь свежей даты; это отдельно от запуска Auto."
+          "Check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab). If it offers \"Restore monitoring\", press it; if the monitor services stay stopped, start those services over SSH and wait for a fresh timestamp; this is separate from turning Auto on.",
+          "Проверьте лампу «Служба мониторинга» («Настройки → Система и диагностика»; в «Пульте» — вкладка «Система»). Если там есть кнопка «Восстановить мониторинг», нажмите её; если службы остаются остановленными, запустите их по SSH и дождитесь свежей даты; это отдельно от запуска Auto."
         ],
         "c": "homensai-vpn-emergency start"
       },
@@ -488,8 +488,8 @@ var HELP_TOPICS=[
       "Я изменил правила VPN в панели GL.iNet, и Auto остановился"
     ],
     "when": [
-      "The Overview says the VPN rules were changed by someone else.",
-      "На «Обзоре» написано, что правила VPN изменил кто-то другой."
+      "The page says the VPN rules were changed by someone else.",
+      "Страница пишет, что правила VPN изменил кто-то другой."
     ],
     "steps": [
       {
@@ -500,8 +500,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "Check the current selected pair and the stock VPN configuration. If you intend to edit stock profiles, finish managed Stop/recovery first.",
-          "Проверьте текущую пару и штатную VPN-конфигурацию. Если намерены менять штатные профили, сначала завершите управляемый Stop/восстановление."
+          "Check the current selected pair and the stock VPN configuration. If you intend to edit stock profiles, turn Auto off and wait for the managed recovery first.",
+          "Проверьте текущую пару и штатную VPN-конфигурацию. Если намерены менять штатные профили, сначала выключите Auto и дождитесь управляемого восстановления."
         ]
       },
       {
@@ -525,8 +525,8 @@ var HELP_TOPICS=[
       "Отчёты в Telegram не приходят"
     ],
     "when": [
-      "The Overview shows a Telegram error, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.",
-      "На «Обзоре» ошибка Telegram, тестовое сообщение не приходит или вы настраиваете Telegram впервые. Нужны три вещи: бот, его токен и ID чата."
+      "The page shows a Telegram error code, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.",
+      "Страница показывает код ошибки Telegram, тестовое сообщение не приходит или вы настраиваете Telegram впервые. Нужны три вещи: бот, его токен и ID чата."
     ],
     "steps": [
       {
@@ -563,14 +563,14 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "On the router open Settings → All application settings → step 7 · Telegram, or the Telegram setup shortcut. Enter the token privately and the verified chat ID or channel username, review and save. Configure off preserves the existing Telegram settings.",
-          "На роутере откройте «Настройки» → «Все настройки приложения» → шаг 7 · Telegram либо отдельную настройку Telegram. Введите токен приватно и проверенный ID чата/имя канала, проверьте и сохраните. Выключенный Configure сохраняет прежние настройки Telegram."
+          "On the router open Settings → Telegram notifications (Console: System tab → Telegram notifications; in the first-run wizard it is step 3, Behaviour). Tick Send reports, enter the token privately and the verified chat ID or channel username as Recipient, choose when and what to send and press Save. An empty token field keeps the stored token.",
+          "На роутере откройте «Настройки → Уведомления в Telegram» (в «Пульте» — вкладка «Система» → «Уведомления в Telegram»; в мастере первой настройки — шаг 3 «Поведение»). Включите «Присылать отчёты», приватно введите токен и проверенный ID чата или имя канала в поле «Получатель», выберите, когда и что присылать, и нажмите «Сохранить». Пустое поле токена оставляет сохранённый токен."
         ]
       },
       {
         "t": [
-          "Press “Test Telegram delivery”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.",
-          "Нажмите «Проверить доставку Telegram». Сообщение должно прийти за несколько секунд. Если показан код TELEGRAM-…: «401» или «Unauthorized» — неверный токен; «400», «chat not found» или «Forbidden» — неверный ID чата или вы не нажали Start; тайм-аут — у роутера нет интернета или неверные часы."
+          "Press “Send a test message”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.",
+          "Нажмите «Отправить тестовое сообщение». Сообщение должно прийти за несколько секунд. Если показан код TELEGRAM-…: «401» или «Unauthorized» — неверный токен; «400», «chat not found» или «Forbidden» — неверный ID чата или вы не нажали Start; тайм-аут — у роутера нет интернета или неверные часы."
         ]
       },
       {
@@ -659,8 +659,8 @@ var HELP_TOPICS=[
     "steps": [
       {
         "t": [
-          "Complete normal Stop and verify the actual managed recovery and guard state before removing the package. If Stop retained a reserve or recovery is unconfirmed, resolve the recorded condition first; do not force a return to an unhealthy primary. Then remove normally over SSH.",
-          "Перед удалением завершите штатный Stop и проверьте фактическое управляемое восстановление и блокировки. Если остался резерв либо итог не подтверждён, сначала разберите записанное условие; не форсируйте возврат на неисправный основной. Затем удаляйте штатно по SSH."
+          "Turn Auto off and verify the actual managed recovery and guard state before removing the package. If turning Auto off retained a reserve or recovery is unconfirmed, resolve the recorded condition first; do not force a return to an unhealthy primary. Then remove normally over SSH.",
+          "Перед удалением выключите Auto и проверьте фактическое управляемое восстановление и блокировки. Если остался резерв либо итог не подтверждён, сначала разберите записанное условие; не форсируйте возврат на неисправный основной. Затем удаляйте штатно по SSH."
         ],
         "c": "opkg remove homensai-auto-vpn"
       },
@@ -731,8 +731,8 @@ var HELP_TOPICS=[
     "steps": [
       {
         "t": [
-          "Settings → Monitoring and history retention: choose an integer live buffer from 1 to 2000 and detail retention from 1 to 7 days. Save and verify the values.",
-          "«Настройки» → «Мониторинг и хранение истории»: выберите целый лимит от 1 до 2000 наблюдений и срок от 1 до 7 дней. Сохраните и проверьте значения."
+          "Settings → History and memory (Console: System tab): set Live log entries from 1 to 2000 and Keep detailed history from 1 to 7 days. These two change with Auto off. Save and verify the values.",
+          "«Настройки → История и память» (в «Пульте» — вкладка «Система»): задайте «Записей в живом журнале» от 1 до 2000 и «Хранить подробную историю» от 1 до 7 дней. Эти два значения меняются при выключенном Auto. Сохраните и проверьте значения."
         ]
       },
       {
@@ -762,8 +762,8 @@ var HELP_TOPICS=[
     "steps": [
       {
         "t": [
-          "Open Advanced settings → Tests → Controlled VPN tunnel traffic fault. The current working channel is selected automatically; primary and reserve are both supported.",
-          "Откройте «Расширенные настройки» → «Тесты» → «Контролируемый сбой трафика VPN-туннеля». Текущий рабочий канал выбирается автоматически: поддержаны основной и резервный."
+          "Open the failure test: Home → Tests → Failure test, button \"Check that Auto rescues\" (Console: Auto tab → \"Run failure test\"). Auto must be on. The channel carrying traffic is selected automatically; primary and reserve are both supported.",
+          "Откройте тест сбоя: «Главная» → «Проверки» → «Тест сбоя», кнопка «Проверить, что Auto спасёт» (в «Пульте» — вкладка «Auto» → «Запустить тест сбоя»). Auto должен быть включён. Канал, который несёт трафик, выбирается автоматически: поддержаны основной и резервный."
         ]
       },
       {
@@ -774,8 +774,8 @@ var HELP_TOPICS=[
       },
       {
         "t": [
-          "The test temporarily drops IPv4 traffic on that tunnel device, not the VPN process or another server selected by name. It waits for failure thresholds and a fresh confirmed alternate route. Stop test and restore traffic removes the artificial fault early.",
-          "Тест временно блокирует IPv4-трафик устройства туннеля, а не VPN-процесс и не другой сервер по имени. Он ожидает пороги ошибок и свежий подтверждённый другой маршрут. «Остановить тест и снять сбой» досрочно снимает искусственную блокировку."
+          "The test temporarily drops IPv4 traffic on that tunnel device, not the VPN process or another server selected by name. It waits for failure thresholds and a fresh confirmed alternate route. \"Stop and remove fault\" removes the artificial fault early.",
+          "Тест временно блокирует IPv4-трафик устройства туннеля, а не VPN-процесс и не другой сервер по имени. Он ожидает пороги ошибок и свежий подтверждённый другой маршрут. «Остановить и снять сбой» досрочно снимает искусственную блокировку."
         ]
       },
       {
@@ -878,7 +878,7 @@ function renderAutoSchematic(inventory){
       box(bi('Switch to reserve','Переключение на резерв'),bi('The controller changes the route and verifies the result. Minimum reserve dwell: ','Контроллер меняет маршрут и проверяет результат. Минимальное время на резерве: ')+value('recovery_min_dwell')+sec,'reserve'),arrow(),
       box(bi('Return to primary','Возврат на основной'),!knownPolicy?bi('Return policy unavailable.','Правило возврата недоступно.'):hold?bi('Automatic return is disabled by the selected hold-reserve policy.','Автоматический возврат отключён выбранным правилом удержания резерва.'):bi('Primary successes: ','Успешных проверок основного: ')+value('recovery_primary_successes')+' · '+bi('stable for at least: ','стабильность не менее: ')+value('recovery_primary_stable')+sec,'return')
     ]),
-    E('p',{'class':'hv-schematic-note'},bi('When automatic return is enabled and the reserve fails, a verified primary may be restored earlier than the normal reserve dwell. Settings → Auto switching rules contains these values. A dash means the router did not provide a value.','Если автоматический возврат включён и резерв отказал, проверенный основной может быть возвращён раньше обычной паузы пребывания на резерве. Значения меняются в «Настройки → Правила переключения Auto». Прочерк означает, что роутер не передал значение.')),
+    E('p',{'class':'hv-schematic-note'},bi('When automatic return is enabled and the reserve fails, a verified primary may be restored earlier than the normal reserve dwell. These values are changed in Settings → How fast to switch → Custom values (Console: Auto tab). A dash means the router did not provide a value.','Если автоматический возврат включён и резерв отказал, проверенный основной может быть возвращён раньше обычной паузы пребывания на резерве. Значения меняются в «Настройки → Как быстро переключать → Свои значения» (в «Пульте» — вкладка «Auto»). Прочерк означает, что роутер не передал значение.')),
     E('p',{'class':'hv-schematic-note'},bi('Router DNS/HTTPS checks do not independently prove the path of every LAN device.','DNS/HTTPS-проверки роутера отдельно не подтверждают работу каждого устройства в локальной сети.'))
   ]);
 }
@@ -903,62 +903,50 @@ function renderHelp(inventory){
 var helpNode=null;
 function renderOnboardingGuide(){
   var steps=[
-    ['Language and appearance','Язык и оформление',
-     'Keep Automatic detection for the router model. Choose English or Russian; the page translates immediately. Pick a readable theme and layout. Example: automatic model, English, system theme, Calm layout.',
-     'Оставьте автоопределение модели роутера. Выберите русский или английский — страница переведётся сразу. Выберите удобную тему и оформление. Пример: автоопределение, русский, тема как в системе, спокойное оформление.'],
-    ['Monitoring','Мониторинг',
-     'The interval controls how often VPN Internet is checked. Example: 10 seconds, checkpoint 900 seconds, profile limit 2 for a selected pair. Checkpoints save statistics to flash. In Settings → Monitoring and history retention, choose 1–2000 live journal observations and 1–7 days of detailed history. Monthly and lifetime counters remain separate; increasing the period cannot restore deleted detail. Keep the current profile limit if you monitor more profiles. During Auto startup the monitor temporarily checks more frequently; saving this step does not start Auto.',
-     'Интервал задаёт частоту проверки Интернета через VPN. Пример: 10 секунд, checkpoint 900 секунд, лимит 2 профиля для выбранной пары. Checkpoint сохраняет статистику во flash-память. В «Настройки» → «Мониторинг и хранение истории» задайте 1–2000 наблюдений живого журнала и 1–7 дней подробной истории. Месячные и общие счётчики хранятся отдельно; увеличение срока не восстанавливает удалённые подробности. Если наблюдаете больше профилей, оставьте подходящий текущий лимит. При запуске Auto проверки временно учащаются; сохранение этого шага не включает Auto.'],
-    ['Existing VPN profiles and trial preferences','Существующие VPN и параметры теста',
-     'Create and connect VPN profiles in the router VPN panel first. Assign profiles to two distinct client tunnels in the stock VPN app first. The prepared MT3000 uses one WireGuard and one OpenVPN client; either can be primary. The selector lists these configured clients, not every saved server. Names and countries are examples; choose your own working profiles. If either is missing, defer pair setup and return later. Trial duration is in minutes; acknowledge that calls and sessions may reconnect before running a trial. A trial is separate from ordinary Auto startup.',
-     'Сначала создайте и подключите VPN-профили в VPN-панели роутера. Сначала назначьте профили двум разным клиентским туннелям в штатном VPN-приложении. На подготовленном MT3000 это один клиент WireGuard и один OpenVPN; любой может быть основным. Список показывает настроенные клиенты, а не весь каталог серверов. Названия и страны приведены для примера; выбирайте свои рабочие профили. Если профилей нет, отложите настройку пары и вернитесь позже. Длительность теста задаётся в минутах; перед тестом подтвердите, что звонки и сессии могут переподключиться. Тест выполняется отдельно от обычного запуска Auto.'],
-    ['Server names and priorities','Названия и приоритеты серверов',
-     'Use names you can recognize, for example Germany primary and Germany reserve. The channel field groups related profiles; default is suitable for one pair. Smaller priority numbers come first: for example 10 before 20. Priority does not replace the explicit primary/reserve choices in step 3. Enable monitoring only for profiles you want checked; saving names never connects an inactive VPN.',
-     'Задайте понятные названия, например Германия основной и Германия резерв. Поле канала объединяет связанные профили; для одной пары подходит default. Меньшее число приоритета идёт раньше: например 10 перед 20. Приоритет не заменяет явный выбор основного и резерва на шаге 3. Включайте наблюдение для нужных профилей; сохранение названия не подключает неактивный VPN.'],
-    ['Recovery rules','Правила восстановления',
-     'Avoid switching after a single failed check. Example: 3 primary failures, 2 successful reserve checks, cooldown 180 seconds and minimum dwell 180 seconds. For automatic primary return: 3 successful primary checks and 60 seconds of stable primary health. Keep a healthy reserve for operator review if you do not want automatic return. Counts are checks, while cooldown and stability are time intervals.',
-     'Не переключайте канал из-за одной неудачной проверки. Пример: 3 сбоя основного, 2 успешные проверки резерва, пауза 180 секунд и минимальное время работы 180 секунд. Для возврата на основной: 3 успешные проверки и 60 секунд устойчивой работы. Если автоматический возврат не нужен, выберите сохранение рабочего резерва до решения оператора. Счётчики означают проверки, а пауза и стабильность задаются временем.'],
-    ['Optional speed tests','Необязательные тесты скорости',
-     'Speed tests consume traffic and are not required for initial Auto setup. Below the table two live charts show primary/reserve download (green) and upload (blue), refreshed every second. Channels are tested in sequence and waiting is explicit. The horizontal axis is elapsed seconds; missing data/errors are not zero speed. Completed averages are separate collapsed history. You can leave them disabled at first. An example for later is 8 MiB per test, 5 seconds, 2 streams and a 128 MiB daily budget. Review your traffic allowance before enabling automatic tests for new profiles. Actual usage is limited by the configured budgets.',
-     'Тесты скорости расходуют трафик и не обязательны для первого запуска Auto. Сначала их можно оставить выключенными. Пример на будущее: 8 МиБ на тест, 5 секунд, 2 потока, суточный бюджет 128 МиБ. Перед автоматическими тестами новых профилей проверьте свой лимит трафика. Расход ограничивается настроенными бюджетами. После запуска под таблицей видны два графика: основной и резервный VPN. Они обновляются каждую секунду по реальным переданным данным; скачивание зелёное, отдача синяя. Каналы тестируются по очереди: второй ожидает. По горизонтали — секунды от начала теста канала. Пропуски и ошибки не рисуются нулевой скоростью. Старые итоговые результаты находятся отдельно в свёрнутой истории.'],
-    ['Optional Telegram reports','Необязательные отчёты Telegram',
-     'You can skip Telegram. Leaving Configure off preserves an existing Telegram configuration. To configure it, create your bot with BotFather, send /start to the bot, enter its token and your destination, then choose the report contents and schedule. Example: a daily report at 07:00 Europe/Berlin. Never share the bot token in screenshots or reports.',
-     'Telegram можно пропустить. Выключенная настройка Configure сохраняет уже существующую конфигурацию Telegram. Для подключения создайте своего бота через BotFather, отправьте боту /start, укажите токен и получателя, выберите содержание и расписание. Пример: ежедневный отчёт в 07:00 по Europe/Berlin. Не показывайте токен бота на снимках экрана и в отчётах.'],
-    ['Review all settings','Проверьте все настройки',
-     'Check the model, primary/reserve pair, intervals and optional features. Back lets you correct a value. Save all settings writes the reviewed configuration; Next alone only moves through the draft. If saving is refused while Auto is active, open the dashboard, turn Auto off and return to finish saving. Afterwards open Overview, check the two VPN channels and explicitly start Auto. To skip setup, use the green button below navigation: current router settings remain unchanged, the draft is not saved, and you can resume through Settings → All application settings.',
-     'Проверьте модель, основной и резервный профили, интервалы и необязательные функции. Кнопка «Назад» позволяет исправить значения. «Сохранить все настройки» записывает проверенную конфигурацию; «Далее» только перемещает по черновику. Если сохранение запрещено при работающем Auto, откройте панель, выключите Auto и вернитесь для сохранения. Затем откройте «Обзор», проверьте оба VPN и явно включите Auto. Для пропуска мастера используйте зелёную кнопку под навигацией: текущие настройки роутера останутся прежними, черновик не сохранится, а продолжить можно через «Настройки → Все настройки приложения».']
+    ['Router','Роутер',
+     'The router model, firmware and required parts are detected automatically and shown with lamps (Python, ubus · uci · ip · Lua · rpcd, certificates, settings storage, router preparation). A model cannot be chosen by hand: readiness checks are mandatory. A red row names its code; press it for the explanation. Nothing is changed in this step. Example: GL-MT3000, firmware 4.11.0, all rows green.',
+     'Модель роутера, прошивка и нужные части определяются автоматически и показываются лампами (Python, ubus · uci · ip · Lua · rpcd, сертификаты, хранилище настроек, подготовка роутера). Выбрать модель вручную нельзя: проверки готовности обязательны. Красная строка называет свой код; нажмите его, чтобы прочитать объяснение. На этом шаге ничего не меняется. Пример: GL-MT3000, прошивка 4.11.0, все строки зелёные.'],
+    ['Channels','Каналы',
+     'The wizard lists the VPN clients already configured in the GL.iNet panel → VPN, with protocol and response. Choose Primary (used always) and Reserve (used on a failure); they must be two different clients. The prepared MT3000 uses one WireGuard and one OpenVPN client; either can be primary. Missing one? Add a profile in GL.iNet → VPN first and open the wizard again. Example: primary WireGuard Germany, reserve OpenVPN Netherlands.',
+     'Мастер показывает VPN-клиенты, уже настроенные в панели GL.iNet → VPN, с протоколом и откликом. Выберите «Основной» (используется всегда) и «Резерв» (используется при сбое): это должны быть два разных клиента. На подготовленном MT3000 это один клиент WireGuard и один OpenVPN; любой может быть основным. Нужного нет? Сначала добавьте профиль в GL.iNet → VPN и откройте мастер снова. Пример: основной WireGuard Германия, резерв OpenVPN Нидерланды.'],
+    ['Behaviour','Поведение',
+     'You can keep the defaults: they were verified on a router. How fast to switch: Calm, Normal (default: 3 failures, 60 s pause, return after 2 checks over 30 s) or Fast; when the primary is healthy again, return automatically or stay on the working reserve; allow a brief drop of calls and downloads, otherwise Auto does not switch during an active session. Router load: probe level 1–5 (Balanced = a check every 20 s) and automatic boost. Telegram is optional: tick Send switch reports, enter the bot token and the recipient. Example: Normal, level 3, Telegram off.',
+     'Можно оставить как есть: значения по умолчанию проверены на роутере. «Как быстро переключать»: «Спокойно», «Обычно» (по умолчанию: 3 ошибки, пауза 60 с, возврат после 2 проверок за 30 с) или «Быстро»; когда основной снова здоров — вернуться на него автоматически или оставаться на работающем резерве; разрешить короткий обрыв звонков и загрузок, иначе Auto не переключит во время активной сессии. «Нагрузка на роутер»: уровень опроса 1–5 («Сбалансировано» — проверка раз в 20 с) и автоматическое ускорение. Telegram необязателен: включите «Присылать отчёты о переходах», укажите токен бота и получателя. Пример: «Обычно», уровень 3, Telegram выключен.'],
+    ['Terms and start','Условия и запуск',
+     'Review the summary: primary, reserve, switching, load and Telegram. If the terms are not accepted yet, read them and tick both boxes yourself; they are never pre-ticked. Save without starting writes the settings and leaves Auto off. Accept terms and turn Auto on (or Turn Auto on, when the terms are already accepted) saves and then starts Auto with its usual readiness checks. Back corrects a value; Next alone saves nothing. Later the same settings are in Settings, and Settings → Language and look → Run the wizard again opens this wizard again (Console: System tab).',
+     'Проверьте сводку: основной, резерв, переключение, нагрузка и Telegram. Если условия ещё не приняты, прочитайте их и сами отметьте обе галочки: они никогда не ставятся заранее. «Сохранить без запуска» записывает настройки и оставляет Auto выключенным. «Принять условия и включить Auto» (или «Включить Auto», если условия уже приняты) сохраняет настройки и затем включает Auto с обычными проверками готовности. «Назад» позволяет исправить значение; «Далее» само ничего не сохраняет. Позже те же настройки есть в «Настройках», а «Настройки → Язык и вид → Пройти мастер заново» открывает этот мастер снова (в «Пульте» — вкладка «Система»).']
   ];
   return E('div',{'class':'hv-setup-guide','data-setup-guide':'1'},[
-    E('p',{},bi('Before step 1, first-time setup shows the experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0). Read it, tick the confirmations and accept to continue. Previously accepted terms are remembered on this router. Next comes a short explanation with three diagrams; press OK to open the wizard.','Перед шагом 1 при первом запуске показывается соглашение об экспериментальном ПО и условий лицензии (HomenSAI Personal & Commercial Source License v1.0). Прочитайте его, отметьте подтверждения и примите условия. Ранее принятое соглашение сохраняется на этом роутере. Затем откроется краткое объяснение с тремя схемами; нажмите OK для перехода к мастеру.')),
+    E('p',{},bi('The wizard opens by itself on the first visit: Router → Channels → Behaviour → Terms and start, about 2 minutes. The experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0) are shown at the last step; previously accepted terms are remembered on this router and are not asked again. Close the wizard without changes (shown once setup is complete) keeps the router settings as they are. Saving never starts Auto by itself; only the start button of the last step or the Auto switch does.','Мастер открывается сам при первом входе: «Роутер → Каналы → Поведение → Условия и запуск», около 2 минут. Соглашение об экспериментальном ПО и условия лицензии (HomenSAI Personal & Commercial Source License v1.0) показываются на последнем шаге; ранее принятые условия сохраняются на этом роутере и повторно не запрашиваются. «Закрыть мастер без изменений» (появляется, когда настройка уже завершена) оставляет настройки роутера как есть. Сохранение само никогда не включает Auto: его включает только кнопка запуска на последнем шаге или переключатель Auto.')),
     E('ol',{'class':'hv-help-steps'},steps.map(function(row,index){return E('li',{'data-setup-guide-step':String(index+1)},[E('h3',{},bi(row[0],row[1])),E('p',{},bi(row[2],row[3]))]);}))
   ]);
 }
-HELP_TOPICS.push({id:'setup-guide',open:false,title:['First setup: eight steps with examples','Первая настройка: восемь шагов с примерами'],when:['Help for the complete setup wizard. Reading it saves nothing.','Помощь по общему мастеру настройки. Чтение ничего не сохраняет.'],steps:[],custom:renderOnboardingGuide});
+HELP_TOPICS.push({id:'setup-guide',open:false,title:['First setup: four steps with examples','Первая настройка: четыре шага с примерами'],when:['Help for the first-run wizard (Router → Channels → Behaviour → Terms and start). Reading it saves nothing.','Помощь по мастеру первой настройки («Роутер → Каналы → Поведение → Условия и запуск»). Чтение ничего не сохраняет.'],steps:[],custom:renderOnboardingGuide});
 // Specific readiness links land on their own explanation, never an unrelated generic topic.
 if(typeof READINESS_GUIDES!=='undefined'){
   Object.keys(READINESS_GUIDES).forEach(function(code){var label=READINESS_CHECKS[code];
     HELP_TOPICS.push({id:'dependency-'+code,title:[label[0]+': install or repair',label[1]+': установка или исправление'],when:['A required router check failed or is unknown.','Нужный компонент отсутствует или его состояние неизвестно.'],steps:[],custom:function(){return renderReadinessHelp(code);}});
   });
 }
-HELP_TOPICS.push({id:'router-preparation',title:['Persistent router preparation: inspect before changing','Постоянная подготовка роутера: проверка до изменений'],when:['A preparation row is red or unverified. This is separate from installing application dependencies.','Пункт подготовки красный или не проверен. Это отдельная задача от установки зависимостей приложения.'],steps:[
-  {t:['Read the actual model, firmware and fresh preparation table. The current profile is for prepared MT3000/4.11.0. Saved settings and loaded modules alone do not prove runtime readiness.','Проверьте реальную модель, прошивку и свежую таблицу подготовки. Текущая проверенная конфигурация относится к MT3000/4.11.0. Сохранённые флаги и загруженные модули сами по себе не доказывают готовность.']},
+HELP_TOPICS.push({id:'router-preparation',title:['Persistent router preparation: inspect before changing','Постоянная подготовка роутера: проверка до изменений'],when:['The row Router preparation (acceleration) in Router readiness is not done, or a PREP-… code is red or unverified. This is separate from installing application dependencies.','Строка «Подготовка роутера (ускорение)» в «Готовности роутера» не выполнена либо код PREP-… красный или не проверен. Это отдельная задача от установки зависимостей приложения.'],steps:[
+  {t:['Read the actual model, firmware and the row Router preparation (acceleration) in Router readiness (Settings → System and diagnostics; Console: System tab); open each PREP-… code shown. The current profile is for prepared MT3000/4.11.0. Saved settings and loaded modules alone do not prove runtime readiness.','Проверьте реальную модель, прошивку и строку «Подготовка роутера (ускорение)» в «Готовности роутера» («Настройки → Система и диагностика»; в «Пульте» — вкладка «Система»); откройте каждый показанный код PREP-…. Текущая проверенная конфигурация относится к MT3000/4.11.0. Сохранённые флаги и загруженные модули сами по себе не доказывают готовность.']},
   {t:['Before changing acceleration, stock VPN startup or DNS, preserve a verified private backup and the exact original values/files. Establish the specific preparation scope and undo procedure; do not copy another device\'s commands blindly.','Перед изменением ускорения, штатного запуска VPN или DNS сохраните проверенную приватную копию и исходные значения/файлы. Определите конкретный объём подготовки и отмену; не копируйте команды другого роутера вслепую.']},
-  {t:['Do not force-unload modules, remove drivers, disable a working DNS owner or alter computer networking. Recheck fresh status after the approved changes. A green preparation table does not start Auto or prove external LAN connectivity. The full operation/undo record is docs/ROUTER-PREPARATION.md in the project repository.','Не выгружайте модули принудительно, не удаляйте драйверы, не отключайте работающего DNS-владельца и не меняйте сеть компьютера. После разрешённых изменений перепроверьте свежие данные. Зелёная подготовка не запускает Auto и не доказывает связь LAN. Полная инструкция с отменой — docs/ROUTER-PREPARATION.md в репозитории проекта.']}
+  {t:['Do not force-unload modules, remove drivers, disable a working DNS owner or alter computer networking. Recheck fresh status after the approved changes. A green preparation row does not start Auto or prove external LAN connectivity. The full operation/undo record is docs/ROUTER-PREPARATION.md in the project repository.','Не выгружайте модули принудительно, не удаляйте драйверы, не отключайте работающего DNS-владельца и не меняйте сеть компьютера. После разрешённых изменений перепроверьте свежие данные. Зелёная подготовка не запускает Auto и не доказывает связь LAN. Полная инструкция с отменой — docs/ROUTER-PREPARATION.md в репозитории проекта.']}
 ]});
 HELP_TOPICS.push({id:'diagnose-all',title:['Cannot find the cause: complete AI diagnosis','Причина неизвестна: полная диагностика с ИИ'],when:['No Help topic explains your symptoms or several parts fail together.','Подходящий ответ не найден либо одновременно не работают несколько частей.'],steps:[],custom:function(){return renderDiagnosticPrompt(null,true);}});
 HELP_TOPICS.push({id:'network-acceleration',title:['Auto blocked: hardware and network acceleration','Auto заблокирован: аппаратное и сетевое ускорение'],when:['Start reports HNAT, hardware acceleration or PREP-HNAT-CONFIG.','Запуск сообщает об HNAT, аппаратном ускорении или PREP-HNAT-CONFIG.'],steps:[],custom:function(){return renderAutoRemedy('HARDWARE-ACCELERATOR-UNVERIFIED');}});
-// Statistics storage (owner, 31 Oct 2026): the setting itself is on Advanced > Statistics collection (stats_page.inc.js).
-HELP_TOPICS.push({id:'stats-retention',open:false,title:['How long statistics are kept: by time or by size','Сколько хранить статистику: по времени или по объёму'],
+// Statistics storage (owner, 31 Oct 2026; page 03 Nov 2026): Settings → History and memory (router/ui/settings.js).
+HELP_TOPICS.push({id:'stats-retention',open:false,title:['How long statistics are kept and how much memory they use','Сколько хранить статистику и сколько она занимает'],
   when:['You want charts and rankings to remember more or fewer days, or you worry about flash and memory.','Нужно, чтобы графики и рейтинги помнили больше или меньше дней, или беспокоят флеш и память.'],
-  steps:[{t:['Open Advanced → Statistics collection and find "How long statistics are kept".','Откройте «Расширенные → Сбор статистики» и найдите «Сколько хранить статистику».']},
-    {t:['By time: move the slider from 1 to 7 days, 2 weeks or 1 month. By size: set a limit from 1 to 32 MB; the page shows how many days it holds.','По времени: передвиньте ползунок от 1 до 7 дней, 2 недель или месяца. По объёму: задайте предел от 1 до 32 МБ; страница покажет, на сколько дней его хватит.']},
-    {t:['Read the estimate next to the slider: about how much flash and RAM the statistics take while Diagnostics records. A warning appears when flash or memory could run short.','Посмотрите оценку рядом с ползунком: сколько примерно займёт статистика на флеше и в ОЗУ, пока идёт «Диагностика». Если флеша или памяти может не хватить, появится предупреждение.']},
-    {t:['Press Save. The router applies the period from its next check and deletes statistics older than it. Switching and Auto do not depend on this setting.','Нажмите «Сохранить». Роутер применит срок со следующей проверки и удалит статистику старше него. Переключение и Auto от этой настройки не зависят.']}]});
-HELP_TOPICS.push({id:'preparation-buttons',title:['Disable a blocking router setting here','Отключить мешающую настройку прямо здесь'],when:['A preparation reason offers a Disable button next to the menu link.','Рядом с причиной подготовки и ссылкой на меню есть кнопка отключения.'],steps:[
- {t:['Press the button for that exact reason. The first request only reads the current router/model and prepares a review. Cancel leaves settings unchanged.','Нажмите кнопку у конкретной причины. Первый запрос только читает текущий роутер/модель и готовит обзор. «Отмена» сохраняет настройки без изменений.']},
- {t:['Apply only the displayed change. The app preserves its original values privately, checks that Auto is stopped and recovery is complete, rejects changed reviews, then reads the result again. No VPN reconnect, Auto Start or automatic reboot occurs.','Примените только показанное изменение. Приложение приватно сохраняет исходные значения, проверяет остановку Auto и завершение восстановления, отвергает изменившийся обзор и читает результат заново. VPN не переподключается, Auto не запускается, автоматической перезагрузки нет.']},
- {t:['Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto remains blocked until a separate deliberate router reboot and fresh checks.','Переключатели автозапуска не останавливают работающую службу. При отключении автозагрузки SFE точный исходный файл сохраняется; работающие модули принудительно не выгружаются. Flow offloading сохраняется без перезапуска firewall. Если нужна перезагрузка, Auto остаётся заблокирован до отдельной осознанной перезагрузки роутера и свежих проверок.']},
- {t:['An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed with this button.','Неопределённый ответ не означает успех. Сохраните /etc/homensai-vpn/preparation-changes для восстановления и проверьте реальное состояние до новой попытки. Неизвестную прошивку, привязки, сохранённые файлы или активное восстановление эта кнопка не обходит.']}
+  steps:[{t:['Open Settings → History and memory (in the Expert group; Console: System tab).','Откройте «Настройки → История и память» (группа «Для эксперта»; в «Пульте» — вкладка «Система»).']},
+    {t:['Statistics collection: Work keeps only what is needed and saves flash; Diagnostics records in detail for a chosen period (24 h, 72 h, 7 or 14 days) and returns to Work by itself. Keep detailed history: 1 to 7 days; Live log entries: 1 to 2000.','«Сбор статистики»: «Работа» хранит только нужное и бережёт флеш; «Диагностика» записывает подробно на выбранный срок (24 ч, 72 ч, 7 или 14 дней) и сама возвращается в «Работу». «Хранить подробную историю»: от 1 до 7 дней; «Записей в живом журнале»: от 1 до 2000.']},
+    {t:['Read the line below the fields: how much RAM and flash the statistics use now and how much flash is free.','Посмотрите строку под полями: сколько сейчас занимает статистика в ОЗУ и на флеше и сколько флеша свободно.']},
+    {t:['Press Save. The history period and the live log change only with Auto off; saving then offers to stop Auto and never starts it again by itself. The router deletes statistics older than the period. Switching and Auto do not depend on this setting. Reset statistics… in the same section clears the counters and charts; old data is archived on the router.','Нажмите «Сохранить». Срок истории и живой журнал меняются только при выключенном Auto: при сохранении программа предложит остановить Auto и сама его снова не включит. Роутер удалит статистику старше срока. Переключение и Auto от этой настройки не зависят. «Сбросить статистику…» в том же разделе обнуляет счётчики и графики; старые данные архивируются на роутере.']}]});
+HELP_TOPICS.push({id:'preparation-buttons',title:['Router preparation when Auto is turned on','Подготовка роутера при включении Auto'],when:['Router readiness shows «Router preparation (acceleration)» as needed, or turning Auto on reports a PREP-… or PREPARATION-… code.','«Готовность роутера» показывает, что нужна «Подготовка роутера (ускорение)», или при включении Auto появляется код PREP-… либо PREPARATION-….'],steps:[
+ {t:['Where: Settings → System and diagnostics → Router readiness (Console: System tab). The page has no separate Disable buttons: turning the Auto switch on is your consent to the preparation Auto needs, and the router performs it itself before starting.','Где: «Настройки → Система и диагностика → Готовность роутера» (в «Пульте» — вкладка «Система»). Отдельных кнопок отключения на странице нет: включение переключателя Auto — ваше согласие на нужную ему подготовку, и роутер выполняет её сам перед запуском.']},
+ {t:['Each failed check that can be repaired without a router restart is fixed with the same reviewed writer as before: the app first preserves the original value privately, then changes only that setting and reads the result again. No VPN reconnect or automatic reboot occurs.','Каждая непройденная проверка, которую можно исправить без перезагрузки роутера, исправляется тем же проверенным способом, что и раньше: приложение сначала приватно сохраняет исходное значение, затем меняет только эту настройку и читает результат заново. VPN не переподключается, автоматической перезагрузки нет.']},
+ {t:['Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto refuses with PREPARATION-RESTART-REQUIRED and remains blocked until a separate deliberate router reboot and fresh checks. Firewall flow offloading is not changed automatically: switch it off yourself as its code explains.','Переключатели автозапуска не останавливают работающую службу. При отключении автозагрузки SFE точный исходный файл сохраняется; работающие модули принудительно не выгружаются. Flow offloading сохраняется без перезапуска firewall. Если нужна перезагрузка, Auto отказывает с кодом PREPARATION-RESTART-REQUIRED и остаётся заблокирован до отдельной осознанной перезагрузки роутера и свежих проверок. Flow offloading межсетевого экрана автоматически не меняется: выключите его сами, как объясняет его код.']},
+ {t:['An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed by turning Auto on again.','Неопределённый ответ не означает успех. Сохраните /etc/homensai-vpn/preparation-changes для восстановления и проверьте реальное состояние до новой попытки. Неизвестную прошивку, привязки, сохранённые файлы или активное восстановление повторное включение Auto не обходит.']}
 ]});
 // The terms can be re-read at any time (same points as the first-run screen).
 

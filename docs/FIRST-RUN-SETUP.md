@@ -1,25 +1,21 @@
 <!-- doc-role: current -->
 # Первый запуск / First-run setup
 
-[Текущие версии](CURRENT-STATUS.md) · [RU guide](CURRENT-STATE.ru.md) · [EN guide](CURRENT-STATE.en.md)
+[Текущие версии](CURRENT-STATUS.md) · [RU guide](CURRENT-STATE.ru.md) · [EN guide](CURRENT-STATE.en.md) · [Где что находится / Where things are](CONTROL-AND-SETUP.md)
 
-Current terms are shown until first acceptance of that **terms version** on this router. The person accepts them; an AI agent must not write `terms_version` or call acceptance for the owner. The accepted state is router-owned, not a disposable browser checkbox. The same accepted version is skipped on later visits.
+Current terms are shown until first acceptance of that **terms version** on this router. The person accepts them; an AI agent must not write `terms_version` or call acceptance for the owner. The accepted state is router-owned, not a disposable browser checkbox. The same accepted version is skipped on later visits. In the page from 03 Nov 2026 the terms appear at the last wizard step (and when Auto is first turned on); both boxes are never pre-ticked.
 
-Затем — объяснение работы, обучение и общий мастер. Обучение можно открыть позже; тест знаний не сертифицирует Auto. Все учебные схемы локальны: запуск/пауза, назад/вперёд, сброс; никаких RPC или VPN-команд.
+Мастер первой настройки открывается сам, пока настройка на этом роутере не завершена (около 2 минут). Обучение можно открыть позже («Настройки → Справка → Помощь и обучение»; в «Пульте» — вкладка «Система»); тест знаний не сертифицирует Auto. Все учебные схемы локальны: никаких RPC или VPN-команд.
 
-| Шаг / Step | What is saved / Что сохраняется |
+| Шаг / Step | Что видно и что сохраняется / What is shown and saved |
 |---|---|
-|1 Language/appearance / Язык/оформление|Router defaults/model preference, browser preview distinct / Язык, тема, дизайн, предпочтение модели; это не обход фактической модели|
-|2 Monitoring / Мониторинг|Probe/checkpoint/profile limits, read-only planning, live count1–2000/detail days1–7 / Интервалы, лимиты, планирование и хранение|
-|3 Existing VPNs / Существующие VPN|Two different configured clients and trial preferences, or explicit deferral / Два разных уже назначенных клиента и параметры теста либо явное откладывание|
-|4 Names/priorities / Названия/приоритеты|Own display metadata; `default` is not the primary/reserve role / Имена и приоритеты, без импорта ключей|
-|5 Recovery / Восстановление|Repeated-failure/success thresholds, dwell/cooldown, return policy / Пороги, паузы, политика возврата|
-|6 Speed / Скорость|Optional bounded tests and quotas / Необязательные тесты и квоты|
-|7 Telegram|Optional private token/destination/schedule; Configure off preserves existing state / Необязательная приватная настройка|
-|8 Review / Проверка|Review all values and save atomically when lifecycle allows / Проверить всё и сохранить при допустимом состоянии|
+|1 Роутер / Router|Модель, прошивка и нужные части определяются роутером и показываются лампами; выбрать модель вручную нельзя, проверки готовности обязательны. Ничего не сохраняется. / Model, firmware and required parts are detected by the router and shown with lamps; a model cannot be chosen by hand, readiness checks are mandatory. Nothing is saved.|
+|2 Каналы / Channels|Два разных VPN-клиента, уже настроенных в GL.iNet → VPN: «Основной» и «Резерв» / Two different VPN clients already configured in GL.iNet → VPN: Primary and Reserve|
+|3 Поведение / Behaviour|«Как быстро переключать» (Спокойно / Обычно / Быстро, политика возврата, разрешение короткого обрыва), «Нагрузка на роутер» (уровень опроса 1–5, автоускорение), необязательный Telegram (токен, получатель) / How fast to switch (Calm / Normal / Fast, return policy, brief-drop permission), Router load (probe level 1–5, boost), optional Telegram (token, recipient)|
+|4 Условия и запуск / Terms and start|Сводка, условия (если ещё не приняты) и две кнопки: «Сохранить без запуска» или «Принять условия и включить Auto» («Включить Auto», если условия уже приняты) / Summary, the terms (if not yet accepted) and two buttons: Save without starting or Accept terms and turn Auto on (Turn Auto on when already accepted)|
 
-Next only navigates. Appearance language previews immediately; a final reviewed save persists router defaults. Cancel keeps a draft in this page only. Reload/closing discards that draft. The dashboard escape preserves current router settings; it is not Save, reset, terms acceptance or Auto Start. A refused/unconfirmed save is not completed setup.
+«Далее» и «Назад» только перемещают по черновику, который живёт в этой странице; обновление или закрытие страницы его отбрасывает. Сохранение — один вызов `setup_onboarding` (пара, мониторинг, правила, скорость, Telegram, язык и тема) плюс `setup_probe` для уровня опроса; прочие уже сохранённые значения (интервалы монитора, хранение, тесты скорости) переносятся без изменений. Отказ или неподтверждённое сохранение показывает код и не считается завершённой настройкой. «Закрыть мастер без изменений» (появляется, когда настройка уже завершена) оставляет настройки роутера как есть. Повторно мастер открывается через «Настройки → Язык и вид → Пройти мастер заново». / Next and Back only move through the in-page draft; reload or closing discards it. Saving is one `setup_onboarding` call (pair, monitoring, rules, speed, Telegram, language and theme) plus `setup_probe` for the probe level; other saved values are carried over unchanged. A refused or unconfirmed save shows its code and is not completed setup. "Close the wizard without changes" (shown once setup is complete) keeps the router settings. Rerun via Settings → Language and look → Run the wizard again.
 
-Роли основной/резервный назначаются существующим независимым клиентам. Два сервера одного клиента не являются двумя каналами. Для другого сервера/протокола используйте штатную VPN-панель, затем обновите Auto VPN и дождитесь свежих согласованных наблюдений. Сохранение пары — метаданные; явный подготовленный Start может включить управляемые интерфейсы и выбирать политику. Save не включает Auto.
+Роли основной/резервный назначаются существующим независимым клиентам. Два сервера одного клиента не являются двумя каналами. Для другого сервера/протокола используйте штатную панель GL.iNet → VPN, затем обновите страницу Auto VPN и дождитесь свежих согласованных наблюдений. Сохранение пары — метаданные; явное включение Auto может включить управляемые интерфейсы и выбирать политику. «Сохранить без запуска» не включает Auto; Auto включается только кнопкой запуска на шаге 4 или переключателем Auto после проверки готовности.
 
-Existing optional settings are preserved unless selected for change. A setup save does not send Telegram tests. Never expose tokens in review, browser persistence or logs. [Control semantics](CONTROL-AND-SETUP.md) · [Retention](HISTORY-RETENTION.md) · [Mode readiness](HOW-IT-WORKS.en.md).
+Existing optional settings are preserved unless changed. A setup save does not send Telegram tests. Never expose tokens in review, browser persistence or logs; an empty token field keeps the stored token. Later every value is edited in Settings (Simple view) or on the Console tabs. [Control semantics](CONTROL-AND-SETUP.md) · [Retention](HISTORY-RETENTION.md) · [Mode readiness](HOW-IT-WORKS.en.md).

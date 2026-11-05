@@ -8,7 +8,7 @@ var VENDOR_COORDINATION_TEXT={
   'OBSERVATION-STALE':['The latest checks are too old to rely on.','Последние проверки слишком старые, на них нельзя опираться.'],
   'PROFILE-IDENTITY-CHANGED':['The channel profile changed; new checks are needed.','Профиль канала изменился; нужны новые проверки.'],
   'UPLINK-LINK-DOWN':['The router has no internet cable or Wi-Fi uplink; switching VPN would not help, so it is paused.','У роутера нет интернета (кабель или Wi-Fi). Переключение VPN не поможет, поэтому оно приостановлено.'],
-  'PLAN-CONFIG':['The chosen pair of tunnels needs to be reviewed in Channels and servers.','Выбранную пару туннелей нужно проверить в «Каналы и серверы».']
+  'PLAN-CONFIG':['The chosen pair of tunnels needs to be reviewed in Settings → Channels: primary and reserve (Console: Channels → Change the channel pair).','Выбранную пару туннелей нужно проверить в «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»).']
 };
 function vendorTunnelId(value){return typeof value==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.-]{1,64}$/.test(value)?value:null;}
 function vendorProfileId(value){return typeof value==='string'&&/^[A-Za-z0-9_.:-]{1,96}$/.test(value)?value:null;}
@@ -41,7 +41,7 @@ function vendorDiagnosticsModel(status,inventory,now){
     var member=stable&&row&&!(metadataMap[current]&&metadataMap[current].enabled===false)&&row.protocol===raw.protocol&&row.interface===id.split(':')[1]&&row.vendor_state==='SETTLED'&&row.vendor_tunnel_id===id&&row.vendor_generation===generation&&vendorFresh(row.time,now,age)&&vendorFresh(raw.changed_at,now,now)&&row.vendor_changed_at===raw.changed_at&&raw.changed_at<=row.time&&raw.changed_at<=raw.time?row:null;
     if(member){
       if(row.code===null&&row.dns_ok===true&&Number.isInteger(row.https_success)&&row.https_success>=2)health='healthy';
-      else if(['VPN-001','VPN-003','DNS-001','ROUTE-001'].indexOf(row.code)>=0)health='failed';
+      else if(['VPN-001','VPN-003','DNS-001','VPN-MTU','ROUTE-001'].indexOf(row.code)>=0)health='failed';
     }
     var labels=[];ids.forEach(function(profile){var measured=profileMap[profile],saved=metadataMap[profile],label=vendorLabel(saved&&saved.channel)||vendorLabel(measured&&measured.channel);if(label&&labels.indexOf(label)<0)labels.push(label);});
     var profileGroup=typeof raw.profile_group_id==='string'&&/^(openvpn|wireguard):[0-9]{1,20}$/.test(raw.profile_group_id)&&raw.profile_group_id.split(':')[0]===raw.protocol?raw.profile_group_id:null;

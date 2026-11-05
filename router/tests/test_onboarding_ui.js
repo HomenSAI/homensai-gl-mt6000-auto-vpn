@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class Node {
   constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[];this.listeners={};this.value=attrs.value||'';this.checked=false;this.disabled=false;this.textContent='';this.classList={add(){},remove(){},toggle(){}};(Array.isArray(children)?children:[children]).forEach(c=>this.appendChild(c));}
@@ -135,7 +136,7 @@ function advance(f,target='review'){
   f.pending.resolve({saved:true,onboarding_complete:true,onboarding_version:1});await p;assert.equal(f.reloads,1);assert.equal(f.c.ONBOARDING_SESSION,null);
   const commit=f.calls.at(-1);assert.equal(commit.spec.method,'setup_onboarding');assert.deepEqual(commit.spec.params,['system','monitor','recovery','speed','telegram','appearance']);
   const [system,monitor,recovery,speed,telegram,appearance]=commit.args;
-  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,60);assert.equal(recovery.min_dwell,60);assert.equal(recovery.primary_successes,2);assert.equal(recovery.primary_stable,30);assert.equal(recovery.attempt_limit,3);assert.equal(recovery.attempt_window,15);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
+  assert.deepEqual(Object.keys(system).sort(),['defer_pair','duration','servers','session_loss','source','target']);assert.equal(system.servers[0].name,'Edited primary');assert.equal(monitor.probe_limit,32);assert.equal(monitor.interval,30);assert.equal(recovery.cooldown,60);assert.equal(recovery.min_dwell,60);assert.equal(recovery.primary_successes,2);assert.equal(recovery.primary_stable,120);assert.equal(recovery.attempt_limit,3);assert.equal(recovery.attempt_window,15);assert.equal(speed.budget_mib,32);assert.deepEqual(telegram,{configure:false});assert.equal(appearance.theme,'dark');
   assert(f.calls.every(call=>call.spec.method==='setup_onboarding'),'never accepts terms, toggles a service or starts Auto');
   // Zero/one-profile installations require a deliberate defer; outgoing pair is empty, planning off, metadata retained.
   for(const count of [0,1]){

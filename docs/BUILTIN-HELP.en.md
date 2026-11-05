@@ -74,7 +74,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want to know exactly when the router checks more often and when it returns to the chosen level.
 
-Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The ping has its own interval in Settings → How the response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
+Probe level 1-5 sets two cadences. Channel health check (is internet working through the VPN): level 1 every 60 s, 2 every 30 s, 3 every 20 s, 4 every 15 s, 5 every 10 s. Three-site response measurement: 300, 120, 60, 45 and 30 s. The probe level is set in Settings → Router load (Console: Auto tab). The ping has its own interval in Router load → How response is measured: once a minute by default, from every 10 s to every 5 min. A failure is confirmed after 3 failed health checks in a row, so level 1 confirms in about 3 minutes and level 5 in about 30 s.
 
 Automatic boost starts when Auto is running and watching (OBSERVING, COMMITTED or working on the reserve) and the primary or reserve channel fails one health check. From that moment the router checks every 10 s and measures the three-site response every 30 s, whatever level you chose (the ping keeps its own interval). Nothing is switched by the boost itself: it only makes the checks frequent so that a real failure is confirmed in about 30 s.
 
@@ -82,9 +82,9 @@ An episode lasts 10 minutes from the last failed check, but never longer than 20
 
 When the episode ends, the router returns to your level and writes the result to the decision log: switched (Auto changed the channel), failure-confirmed (the channel really failed), false-alarm (one check failed, then the channel worked) or disabled (you turned the boost off). Then there is a 10-minute rest: no new episode starts, and the same channel cannot start one again until it has passed a check. A channel that stays down therefore cannot keep the router at the fast cadence forever.
 
-The decision log on Overview lists every level change and every episode: time, level, what happened, which channel and its error code. The countdown under the traffic light shows the current cadence, with «· boost» while an episode runs.
+The decision log lists every level change and every episode: time, level, what happened, which channel and its error code. Open it with the link «Decision log: levels and boost» in Router load → How response is measured, or in the Console on the Log tab. The Router load summary shows the chosen level and «· boost on» when the boost is enabled.
 
-If the router refuses a level change while a switch is running, the reason is shown under the Apply button and the change is retried automatically for 2 minutes. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.
+If the router refuses a level change (for example while a switch is running), the settings are not saved and a window shows the code; press Save again after the switch. A manual channel switch does not turn Auto off: Auto keeps watching the channel you chose, so the boost works the same way after a manual switch.
 
 ### Diagnostic prompt
 
@@ -101,15 +101,15 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want to know what the response numbers mean and why the reserve is slower.
 
-Settings → How the response is measured chooses the method. Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.
+The method is chosen in Settings → Router load → How response is measured (Console: Auto tab → Router load). Default: ping (ICMP echo to 1.1.1.1, or 8.8.8.8 / 9.9.9.9) through each tunnel: small numbers, almost no router load, best for comparing the channels. Alternative: three websites. The router itself measures through each VPN tunnel, not your computer. Three websites are opened fresh: Google, Cloudflare and Wikipedia. Each time includes the DNS lookup, the TCP connection, the TLS encryption handshake and the complete HTTP headers.
 
 The response shown is the average of the three sites and appears only when all three answered (3/3). A partial result is shown as coverage without an average, so a slow site that timed out cannot make the number look better.
 
 Opening a site needs 5-7 round trips, so the response is several times the ping. Example from the MT3000: WireGuard ping 53 ms gives about 430 ms; OpenVPN over TCP ping 241 ms gives about 2.4 s, because TCP inside TCP waits and resends on any loss and OpenVPN costs more router CPU.
 
-How often: the ping has its own setting in Settings → How the response is measured, Ping interval: from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level on Overview (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Every table shows the last ping with its age, for example 42 ms (12 s ago); a dash means the router has not pinged that channel since it started. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
+How often: the ping has its own setting, Ping interval, in the same place (Router load → How response is measured): from every 10 s to every 5 min, once a minute by default. More frequent pings give fresher numbers but cost the router a little more CPU and traffic. The ping is sent during a channel check, so it is never more frequent than the checks of the probe level. The three websites follow the probe level in Router load (every 30 s at level 5, every 5 min at level 1, every 30 s during automatic boost). Each channel card shows the last value in ms and how long ago the channel was checked, for example 42 ms, checked 12 s ago; a dash means the router has no value for that channel yet. An old ping is only old: it never means the VPN is down. The response is information only: Auto decides on DNS and HTTPS health checks, not on the response time.
 
-The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option "Measure all methods (comparison)" makes every check also ping the other DNS addresses and open the three websites; the server ranking on Tests then shows one column per method. Switching still uses only the chosen method.
+The delay chart and the statistics follow the method you chose; the ping history is kept separately. The option "Measure all methods (comparison)" makes every check also ping the other DNS addresses and open the three websites; the router collects these extra values for comparison, while the page shows the chosen method. Switching still uses only the chosen method.
 
 ### Diagnostic prompt
 
@@ -124,21 +124,21 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="auto-two-channels"></a>
 ## How two-channel Auto works
 
-You want to know what Auto does after you press its button and what the router checks.
+You want to know what Auto does after you turn its switch on and what the router checks.
 
-Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. Stop remains available during startup. Auto needs an explicit Start after restart.
+Auto starts the saved primary and reserve, checks IPv4 DNS/HTTPS, switches after repeated failures and returns after stable recovery according to your settings. The Auto switch is on «Home» in the Simple view and in the top strip of the Console view; you can turn Auto off during startup too. Auto that you turned on comes back by itself after a reboot or power cut, with every start check; turning it off cancels that.
 
-About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level on Overview (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.
+About these checks: two selected VPN channels; the router checks them itself through each tunnel. How often is set by the probe level in Settings → Router load, Console: Auto tab (every 60 s at level 1 down to every 10 s at level 5); a failure is confirmed after 3 failed checks.
 
-Lamp colours are the same on every page: green means this channel carries your traffic; yellow means it is alive but not in use (only such a channel offers "switch to it") or is being checked for a moment; red means a proven failure; grey means we are waiting for the router. The Auto button, the traffic light, the sidebar Auto lamp and the live journal always show one colour: green while Auto runs, yellow only during a real switch, start or stop and in a short pulse around each scheduled check, red only for a proven failure (the selected channel failed, a controller alarm, or no router answer for 90 s), dark when you turned Auto off. During a manual switch the destination card blinks green.
+Lamp colours are the same in both views (Simple and Console). A channel lamp: green — the channel works (the chip "Traffic here" marks the one carrying your traffic, "Standing by" the other); yellow — it is being checked or a switch is under way; red — it does not respond or its tunnel is off (with the code); grey — no fresh data from the router. The big lamp next to the status line shows the whole VPN: green — the VPN works on the primary; yellow — the reserve is in use, a switch or a check is under way; red — the current channel or both channels fail; grey — no fresh data. The Auto switch says its state in words: Auto is on, Turning Auto on…, Auto is off and so on. "Switch here" appears only on the card of the channel that does not carry traffic.
 
-No internet? Open the topic "No internet" below in Help for the recovery steps.
+No internet? Open the Help topic "I have no internet" for the recovery steps (Simple view: "? Help" in the top menu; Console: System tab → Help, codes, training).
 
 ### Diagnostic prompt
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How two-channel Auto works.
-You want to know what Auto does after you press its button and what the router checks.
+You want to know what Auto does after you turn its switch on and what the router checks.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -155,7 +155,7 @@ A green observation describes a successful check or an unmet failure threshold. 
 
 Auto also considers fresh observations, the selected VPN pair, controller state and the configured return policy. A recommendation alone does not switch traffic.
 
-See Overview for the current Auto state and selected channel. Use Live log for the sequence of decisions and their reasons. If observations are stale, use Check VPN now; it refreshes checks without choosing a channel for you.
+The current Auto state and the channel carrying traffic are on Home (Simple view) or the Channels tab (Console). The sequence of decisions and their reasons is in Events and reasons on Home, the Log tab of the Console, and the live log (Settings → System and diagnostics → Live log; Console: Log → Live log). If observations are stale, press Check now; it refreshes checks without choosing a channel for you.
 
 ### Diagnostic prompt
 
@@ -174,7 +174,7 @@ Devices on your network cannot open sites after Auto ran or after you changed VP
 
 Keep a working way to reach the router, such as the LAN cable and a phone with mobile data. Confirm that the page belongs to the intended router.
 
-On Overview check the selected channel and fresh DNS/HTTPS results. A working reserve is a normal state. Select another channel only when its readiness is confirmed; do not return to a failed primary just because it is called primary.
+On Home (Console: Channels tab) check which channel carries traffic and whether both channel cards have fresh results. A working reserve is a normal state. Select another channel only when its readiness is confirmed; do not return to a failed primary just because it is called primary.
 
 Read the local emergency summary over SSH. Keep it private until you remove addresses, policy identifiers and private transaction data.
 
@@ -196,7 +196,7 @@ homensai-vpn-emergency remove-guard
 
 If needed, inspect the stock VPN Dashboard. Choose a known working configuration deliberately; do not reorder unrelated rules or import new keys as an emergency shortcut.
 
-A router reboot is a last recovery step when you still control the device. It interrupts connectivity and does not repair a bad VPN configuration. Auto needs an explicit Start afterwards.
+A router reboot is a last recovery step when you still control the device. It interrupts connectivity and does not repair a bad VPN configuration. Auto that you turned on comes back by itself after the reboot, with every start check; if you turned Auto off, it stays off.
 
 Once connectivity is restored, start the application services and confirm fresh monitoring. This command alone does not confirm Internet or start continuous Auto.
 
@@ -258,11 +258,11 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="reserve"></a>
 ## The router stays on the reserve VPN
 
-The selected reserve is working, a return is requested, or Stop retained the reserve.
+The reserve carries traffic, you want to return, or turning Auto off left the router on the reserve.
 
-Check both channel measurements and the selected route on Overview. Being on reserve does not by itself mean an error.
+Check both channel cards on Home (Console: Channels tab): which one shows "Traffic here" and whether both have fresh checks. Being on reserve does not by itself mean an error.
 
-For an intentional return, use Manual channel selection when Primary is confirmed ready and its command is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If Stop retained the reserve, use the offered Return to primary action and verify its actual result.
+For an intentional return, press "Switch here" on the Primary card when the primary is confirmed working and the button is available. A manual switch never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails (there is no separate Resume Auto button). If turning Auto off left the router on the reserve, use the same "Switch here" on the Primary card and verify its actual result.
 
 Automatic return depends on the saved return policy and fresh primary health. Hold-reserve preference does not promise automatic return merely because primary probes succeed. After an Auto restart or a package upgrade Auto returns to the primary when it is healthy.
 
@@ -272,7 +272,7 @@ If neither channel works or a recovery command is refused, read its code and use
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: The router stays on the reserve VPN.
-The selected reserve is working, a return is requested, or Stop retained the reserve.
+The reserve carries traffic, you want to return, or turning Auto off left the router on the reserve.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -281,9 +281,9 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="auto-refuses"></a>
 ## The Auto button refuses to start
 
-Pressing Start shows a message with a code.
+Turning the Auto switch on shows a message with a code.
 
-Open System readiness and the current Auto explanation on Overview. Use the exact refused condition; a green dry-run forecast is not a separate permission to start.
+Open Router readiness (Settings → System and diagnostics; Console: System tab) and read the Auto status line on Home or in the Console strip. Press the code in the message: its explanation names the exact refused condition. A green dry-run forecast is not a separate permission to start.
 
 Verify the actual model, firmware and saved pair. Model selection does not enable unsupported firmware or turn two profiles of one tunnel into two channels.
 
@@ -291,13 +291,13 @@ Use the persistent-preparation help for acceleration, IPv6, stock workers and ro
 
 Prepared MT3000 router-probed IPv4 Auto uses fresh router evidence without a LAN certificate. A separate client-confirmed trial requires its own LAN helper and certificate. Keep these modes distinct.
 
-Wait for current observations after changing profiles. Repeated Start clicks do not repair an identity, worker or policy mismatch. The Auto power button remains available to stop or cancel startup.
+Wait for current observations after changing profiles. Turning the switch on again and again does not repair an identity, worker or policy mismatch. The Auto switch remains available to turn Auto off or cancel startup.
 
 ### Diagnostic prompt
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: The Auto button refuses to start.
-Pressing Start shows a message with a code.
+Turning the Auto switch on shows a message with a code.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -316,7 +316,7 @@ PowerShell 7 is required. Install the stable Microsoft package if it is missing;
 winget install --id Microsoft.PowerShell --exact
 ```
 
-In Settings, open the separate LAN-trial panel and download client-test.ps1 plus start-lan-helper.ps1 into one folder. The optional start-lan-helper.cmd shortcut needs both of those files.
+Download client-test.ps1 and start-lan-helper.ps1 into one folder: Settings → System and diagnostics → "Download LAN helper" and the launcher link next to it (Console: System tab → Help, codes, training). The optional start-lan-helper.cmd shortcut needs both of those files.
 
 Run the launcher from that folder and enter the real private router address and the verified cable adapter number. A loopback browser gateway is not a LAN-witness target.
 
@@ -388,11 +388,11 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="stale"></a>
 ## The page is old, empty or says the monitor is not running
 
-After an update, the Overview looks old, shows errors, or the status is stale.
+After an update, the page looks old, shows errors, or the status is stale.
 
 Press Ctrl+F5 to reload without cache, then sign out of LuCI and sign in again (new permissions after an update).
 
-Check the Monitoring indicator on Overview. If the monitor services are stopped, start those services over SSH and wait for a fresh timestamp; this is separate from Auto Start.
+Check the Monitoring service lamp (Settings → System and diagnostics; Console: System tab). If it offers "Restore monitoring", press it; if the monitor services stay stopped, start those services over SSH and wait for a fresh timestamp; this is separate from turning Auto on.
 
 ```text
 homensai-vpn-emergency start
@@ -414,7 +414,7 @@ ps w | grep homensai-vpn
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: The page is old, empty or says the monitor is not running.
-After an update, the Overview looks old, shows errors, or the status is stale.
+After an update, the page looks old, shows errors, or the status is stale.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -423,11 +423,11 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="outside-change"></a>
 ## I changed VPN rules in the GL.iNet panel and Auto stopped
 
-The Overview says the VPN rules were changed by someone else.
+The page says the VPN rules were changed by someone else.
 
 Auto refuses to compete with an external policy/profile edit. Read the actual controller phase and cleanup result; do not assume that every refused operation already restored Internet.
 
-Check the current selected pair and the stock VPN configuration. If you intend to edit stock profiles, finish managed Stop/recovery first.
+Check the current selected pair and the stock VPN configuration. If you intend to edit stock profiles, turn Auto off and wait for the managed recovery first.
 
 Wait for fresh consistent identities and readiness. Prepared continuous-pair mode can then be started explicitly; a legacy client-confirmed mode needs a new matching trial/certificate after a relevant edit.
 
@@ -437,7 +437,7 @@ Keep failed attempts and unrelated edits. Do not forge a confirmation, erase the
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: I changed VPN rules in the GL.iNet panel and Auto stopped.
-The Overview says the VPN rules were changed by someone else.
+The page says the VPN rules were changed by someone else.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -446,7 +446,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="telegram"></a>
 ## Telegram reports do not arrive
 
-The Overview shows a Telegram error, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.
+The page shows a Telegram error code, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.
 
 Open the official https://t.me/BotFather in Telegram and send /newbot there, not in a terminal. Follow its current instructions.
 
@@ -477,9 +477,9 @@ try {
 finally { Remove-Variable privateKey,botKey,updates,ids -ErrorAction SilentlyContinue }
 ```
 
-On the router open Settings → All application settings → step 7 · Telegram, or the Telegram setup shortcut. Enter the token privately and the verified chat ID or channel username, review and save. Configure off preserves the existing Telegram settings.
+On the router open Settings → Telegram notifications (Console: System tab → Telegram notifications; in the first-run wizard it is step 3, Behaviour). Tick Send reports, enter the token privately and the verified chat ID or channel username as Recipient, choose when and what to send and press Save. An empty token field keeps the stored token.
 
-Press “Test Telegram delivery”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.
+Press “Send a test message”. A message should arrive within a few seconds. If a code is shown instead: TELEGRAM-… with “401” or “Unauthorized” means a wrong token; “400”, “chat not found” or “Forbidden” means a wrong Chat ID or you never pressed Start; a timeout means the router has no internet or a wrong clock.
 
 Still nothing? Create the token again in BotFather (/token or /revoke) and enter the new one. Never send the token to anyone, including in a support chat.
 
@@ -487,7 +487,7 @@ Still nothing? Create the token again in BotFather (/token or /revoke) and enter
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Telegram reports do not arrive.
-The Overview shows a Telegram error, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.
+The page shows a Telegram error code, the test message does not arrive, or you set Telegram up for the first time. You need three things: a bot, its token and the chat ID.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -552,7 +552,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want the router without this program, or you need an older version.
 
-Complete normal Stop and verify the actual managed recovery and guard state before removing the package. If Stop retained a reserve or recovery is unconfirmed, resolve the recorded condition first; do not force a return to an unhealthy primary. Then remove normally over SSH.
+Turn Auto off and verify the actual managed recovery and guard state before removing the package. If turning Auto off retained a reserve or recovery is unconfirmed, resolve the recorded condition first; do not force a return to an unhealthy primary. Then remove normally over SSH.
 
 ```text
 opkg remove homensai-auto-vpn
@@ -612,7 +612,7 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want less browser memory or fewer saved observation days.
 
-Settings → Monitoring and history retention: choose an integer live buffer from 1 to 2000 and detail retention from 1 to 7 days. Save and verify the values.
+Settings → History and memory (Console: System tab): set Live log entries from 1 to 2000 and Keep detailed history from 1 to 7 days. These two change with Auto off. Save and verify the values.
 
 The buffer limits browser observations; the period prunes stored details during processing/checkpoints. Monthly/lifetime counters remain separate. Increasing the period cannot restore removed detail.
 
@@ -633,11 +633,11 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 
 You want a deliberate bounded traffic fault and a verified alternate route.
 
-Open Advanced settings → Tests → Controlled VPN tunnel traffic fault. The current working channel is selected automatically; primary and reserve are both supported.
+Open the failure test: Home → Tests → Failure test, button "Check that Auto rescues" (Console: Auto tab → "Run failure test"). Auto must be on. The channel carrying traffic is selected automatically; primary and reserve are both supported.
 
 The router rechecks running Auto, private current-pair identity/policy, both healthy paths and session-loss consent. A preparation explanation means the destructive action has not started. Do not bypass a refusal.
 
-The test temporarily drops IPv4 traffic on that tunnel device, not the VPN process or another server selected by name. It waits for failure thresholds and a fresh confirmed alternate route. Stop test and restore traffic removes the artificial fault early.
+The test temporarily drops IPv4 traffic on that tunnel device, not the VPN process or another server selected by name. It waits for failure thresholds and a fresh confirmed alternate route. "Stop and remove fault" removes the artificial fault early.
 
 Only a confirmed route with fresh successful observations is success. A timeout removes the artificial block but is not a passed transition; inspect the reason, cooldown, budget and both channels. Kernel expiry is a safety limit, not proof of Internet.
 
@@ -677,67 +677,43 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 ```
 
 <a id="setup-guide"></a>
-## First setup: eight steps with examples
+## First setup: four steps with examples
 
-Help for the complete setup wizard. Reading it saves nothing.
-
-
-Before step 1, first-time setup shows the experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0). Read it, tick the confirmations and accept to continue. Previously accepted terms are remembered on this router. Next comes a short explanation with three diagrams; press OK to open the wizard.
+Help for the first-run wizard (Router → Channels → Behaviour → Terms and start). Reading it saves nothing.
 
 
-Language and appearance
-
-Keep Automatic detection for the router model. Choose English or Russian; the page translates immediately. Pick a readable theme and layout. Example: automatic model, English, system theme, Calm layout.
+The wizard opens by itself on the first visit: Router → Channels → Behaviour → Terms and start, about 2 minutes. The experimental-software agreement and the license terms (HomenSAI Personal & Commercial Source License v1.0) are shown at the last step; previously accepted terms are remembered on this router and are not asked again. Close the wizard without changes (shown once setup is complete) keeps the router settings as they are. Saving never starts Auto by itself; only the start button of the last step or the Auto switch does.
 
 
+Router
 
-Monitoring
-
-The interval controls how often VPN Internet is checked. Example: 10 seconds, checkpoint 900 seconds, profile limit 2 for a selected pair. Checkpoints save statistics to flash. In Settings → Monitoring and history retention, choose 1–2000 live journal observations and 1–7 days of detailed history. Monthly and lifetime counters remain separate; increasing the period cannot restore deleted detail. Keep the current profile limit if you monitor more profiles. During Auto startup the monitor temporarily checks more frequently; saving this step does not start Auto.
+The router model, firmware and required parts are detected automatically and shown with lamps (Python, ubus · uci · ip · Lua · rpcd, certificates, settings storage, router preparation). A model cannot be chosen by hand: readiness checks are mandatory. A red row names its code; press it for the explanation. Nothing is changed in this step. Example: GL-MT3000, firmware 4.11.0, all rows green.
 
 
 
-Existing VPN profiles and trial preferences
+Channels
 
-Create and connect VPN profiles in the router VPN panel first. Assign profiles to two distinct client tunnels in the stock VPN app first. The prepared MT3000 uses one WireGuard and one OpenVPN client; either can be primary. The selector lists these configured clients, not every saved server. Names and countries are examples; choose your own working profiles. If either is missing, defer pair setup and return later. Trial duration is in minutes; acknowledge that calls and sessions may reconnect before running a trial. A trial is separate from ordinary Auto startup.
-
-
-
-Server names and priorities
-
-Use names you can recognize, for example Germany primary and Germany reserve. The channel field groups related profiles; default is suitable for one pair. Smaller priority numbers come first: for example 10 before 20. Priority does not replace the explicit primary/reserve choices in step 3. Enable monitoring only for profiles you want checked; saving names never connects an inactive VPN.
+The wizard lists the VPN clients already configured in the GL.iNet panel → VPN, with protocol and response. Choose Primary (used always) and Reserve (used on a failure); they must be two different clients. The prepared MT3000 uses one WireGuard and one OpenVPN client; either can be primary. Missing one? Add a profile in GL.iNet → VPN first and open the wizard again. Example: primary WireGuard Germany, reserve OpenVPN Netherlands.
 
 
 
-Recovery rules
+Behaviour
 
-Avoid switching after a single failed check. Example: 3 primary failures, 2 successful reserve checks, cooldown 180 seconds and minimum dwell 180 seconds. For automatic primary return: 3 successful primary checks and 60 seconds of stable primary health. Keep a healthy reserve for operator review if you do not want automatic return. Counts are checks, while cooldown and stability are time intervals.
-
-
-
-Optional speed tests
-
-Speed tests consume traffic and are not required for initial Auto setup. Below the table two live charts show primary/reserve download (green) and upload (blue), refreshed every second. Channels are tested in sequence and waiting is explicit. The horizontal axis is elapsed seconds; missing data/errors are not zero speed. Completed averages are separate collapsed history. You can leave them disabled at first. An example for later is 8 MiB per test, 5 seconds, 2 streams and a 128 MiB daily budget. Review your traffic allowance before enabling automatic tests for new profiles. Actual usage is limited by the configured budgets.
+You can keep the defaults: they were verified on a router. How fast to switch: Calm, Normal (default: 3 failures, 60 s pause, return after 2 checks over 30 s) or Fast; when the primary is healthy again, return automatically or stay on the working reserve; allow a brief drop of calls and downloads, otherwise Auto does not switch during an active session. Router load: probe level 1–5 (Balanced = a check every 20 s) and automatic boost. Telegram is optional: tick Send switch reports, enter the bot token and the recipient. Example: Normal, level 3, Telegram off.
 
 
 
-Optional Telegram reports
+Terms and start
 
-You can skip Telegram. Leaving Configure off preserves an existing Telegram configuration. To configure it, create your bot with BotFather, send /start to the bot, enter its token and your destination, then choose the report contents and schedule. Example: a daily report at 07:00 Europe/Berlin. Never share the bot token in screenshots or reports.
-
-
-
-Review all settings
-
-Check the model, primary/reserve pair, intervals and optional features. Back lets you correct a value. Save all settings writes the reviewed configuration; Next alone only moves through the draft. If saving is refused while Auto is active, open the dashboard, turn Auto off and return to finish saving. Afterwards open Overview, check the two VPN channels and explicitly start Auto. To skip setup, use the green button below navigation: current router settings remain unchanged, the draft is not saved, and you can resume through Settings → All application settings.
+Review the summary: primary, reserve, switching, load and Telegram. If the terms are not accepted yet, read them and tick both boxes yourself; they are never pre-ticked. Save without starting writes the settings and leaves Auto off. Accept terms and turn Auto on (or Turn Auto on, when the terms are already accepted) saves and then starts Auto with its usual readiness checks. Back corrects a value; Next alone saves nothing. Later the same settings are in Settings, and Settings → Language and look → Run the wizard again opens this wizard again (Console: System tab).
 
 
 
 ### Diagnostic prompt
 
 ```text
-Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: First setup: eight steps with examples.
-Help for the complete setup wizard. Reading it saves nothing.
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: First setup: four steps with examples.
+Help for the first-run wizard (Router → Channels → Behaviour → Terms and start). Reading it saves nothing.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -767,7 +743,7 @@ Verify the result
 python3 --version
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -818,7 +794,7 @@ Verify the result
 ubus call system board
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -869,7 +845,7 @@ Verify the result
 command -v uci
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -920,7 +896,7 @@ Verify the result
 lua -e "require('cjson'); require('uci')"
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -971,7 +947,7 @@ Verify the result
 ip -Version
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -1020,7 +996,7 @@ Verify the result
 ubus -v list homensai-vpn
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -1070,7 +1046,7 @@ Verify the result
 test -s /etc/ssl/certs/ca-certificates.crt
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -1119,7 +1095,7 @@ Verify the result
 df -k /etc/config; cat /proc/mounts
 ```
 
-Refresh System readiness and require fresh evidence. A failed or stale check remains unverified even after a successful install command.
+Reload the page and reopen Router readiness (Settings → System and diagnostics; Console: System tab); require fresh evidence. A failed or stale check remains unverified even after a successful install command.
 
 Let ChatGPT/Codex or Claude do it
 
@@ -1148,19 +1124,19 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 <a id="router-preparation"></a>
 ## Persistent router preparation: inspect before changing
 
-A preparation row is red or unverified. This is separate from installing application dependencies.
+The row Router preparation (acceleration) in Router readiness is not done, or a PREP-… code is red or unverified. This is separate from installing application dependencies.
 
-Read the actual model, firmware and fresh preparation table. The current profile is for prepared MT3000/4.11.0. Saved settings and loaded modules alone do not prove runtime readiness.
+Read the actual model, firmware and the row Router preparation (acceleration) in Router readiness (Settings → System and diagnostics; Console: System tab); open each PREP-… code shown. The current profile is for prepared MT3000/4.11.0. Saved settings and loaded modules alone do not prove runtime readiness.
 
 Before changing acceleration, stock VPN startup or DNS, preserve a verified private backup and the exact original values/files. Establish the specific preparation scope and undo procedure; do not copy another device's commands blindly.
 
-Do not force-unload modules, remove drivers, disable a working DNS owner or alter computer networking. Recheck fresh status after the approved changes. A green preparation table does not start Auto or prove external LAN connectivity. The full operation/undo record is docs/ROUTER-PREPARATION.md in the project repository.
+Do not force-unload modules, remove drivers, disable a working DNS owner or alter computer networking. Recheck fresh status after the approved changes. A green preparation row does not start Auto or prove external LAN connectivity. The full operation/undo record is docs/ROUTER-PREPARATION.md in the project repository.
 
 ### Diagnostic prompt
 
 ```text
 Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Persistent router preparation: inspect before changing.
-A preparation row is red or unverified. This is separate from installing application dependencies.
+The row Router preparation (acceleration) in Router readiness is not done, or a PREP-… code is red or unverified. This is separate from installing application dependencies.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -1219,7 +1195,7 @@ Turn Enable off and click Apply. Selecting Auto, Hardware or Software mode does 
 Open settings
 GL.iNet instructions
 
-If it is already off but the check still fails, open System readiness → Persistent router preparation for the exact failed check. Saved configuration and loaded runtime acceleration are checked separately.
+If it is already off but the check still fails, open Router readiness (Settings → System and diagnostics; Console: System tab) and the code of the refusal for the exact failed check. Saved configuration and loaded runtime acceleration are checked separately.
 
 
 ### Diagnostic prompt
@@ -1233,22 +1209,22 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 ```
 
 <a id="stats-retention"></a>
-## How long statistics are kept: by time or by size
+## How long statistics are kept and how much memory they use
 
 You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
 
-Open Advanced → Statistics collection and find "How long statistics are kept".
+Open Settings → History and memory (in the Expert group; Console: System tab).
 
-By time: move the slider from 1 to 7 days, 2 weeks or 1 month. By size: set a limit from 1 to 32 MB; the page shows how many days it holds.
+Statistics collection: Work keeps only what is needed and saves flash; Diagnostics records in detail for a chosen period (24 h, 72 h, 7 or 14 days) and returns to Work by itself. Keep detailed history: 1 to 7 days; Live log entries: 1 to 2000.
 
-Read the estimate next to the slider: about how much flash and RAM the statistics take while Diagnostics records. A warning appears when flash or memory could run short.
+Read the line below the fields: how much RAM and flash the statistics use now and how much flash is free.
 
-Press Save. The router applies the period from its next check and deletes statistics older than it. Switching and Auto do not depend on this setting.
+Press Save. The history period and the live log change only with Auto off; saving then offers to stop Auto and never starts it again by itself. The router deletes statistics older than the period. Switching and Auto do not depend on this setting. Reset statistics… in the same section clears the counters and charts; old data is archived on the router.
 
 ### Diagnostic prompt
 
 ```text
-Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How long statistics are kept: by time or by size.
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: How long statistics are kept and how much memory they use.
 You want charts and rankings to remember more or fewer days, or you worry about flash and memory.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
@@ -1256,23 +1232,23 @@ https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-S
 ```
 
 <a id="preparation-buttons"></a>
-## Disable a blocking router setting here
+## Router preparation when Auto is turned on
 
-A preparation reason offers a Disable button next to the menu link.
+Router readiness shows «Router preparation (acceleration)» as needed, or turning Auto on reports a PREP-… or PREPARATION-… code.
 
-Press the button for that exact reason. The first request only reads the current router/model and prepares a review. Cancel leaves settings unchanged.
+Where: Settings → System and diagnostics → Router readiness (Console: System tab). The page has no separate Disable buttons: turning the Auto switch on is your consent to the preparation Auto needs, and the router performs it itself before starting.
 
-Apply only the displayed change. The app preserves its original values privately, checks that Auto is stopped and recovery is complete, rejects changed reviews, then reads the result again. No VPN reconnect, Auto Start or automatic reboot occurs.
+Each failed check that can be repaired without a router restart is fixed with the same reviewed writer as before: the app first preserves the original value privately, then changes only that setting and reads the result again. No VPN reconnect or automatic reboot occurs.
 
-Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto remains blocked until a separate deliberate router reboot and fresh checks.
+Startup switches do not stop a running service. SFE module autoload preserves the exact original file; live modules are not forcibly unloaded. Firewall offloading is saved without a firewall reload. When restart is required, Auto refuses with PREPARATION-RESTART-REQUIRED and remains blocked until a separate deliberate router reboot and fresh checks. Firewall flow offloading is not changed automatically: switch it off yourself as its code explains.
 
-An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed with this button.
+An uncertain reply is not success. Keep /etc/homensai-vpn/preparation-changes for recovery and inspect the actual state before another attempt. Unknown firmware, bindings, saved files or active recovery cannot be bypassed by turning Auto on again.
 
 ### Diagnostic prompt
 
 ```text
-Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Disable a blocking router setting here.
-A preparation reason offers a Disable button next to the menu link.
+Diagnose this HomenS.AI Auto VPN problem on the specific router I identify: Router preparation when Auto is turned on.
+Router readiness shows «Router preparation (acceleration)» as needed, or turning Auto on reports a PREP-… or PREPARATION-… code.
 Ask only for missing symptoms, target address, operating system and secure tool access. Start read-only: verify actual board/firmware, installed/running version, current monitor/Auto/pair state and fresh evidence relevant to this section. Compare expected behavior with observations and narrow the cause step by step. Use terminal/browser tools yourself when available; otherwise state what you cannot execute and ask for one useful observation at a time.
 Do not request secrets in chat or print full configs. This is diagnosis only: no network/firmware/package/settings changes, Auto Start/Stop, fault tests, messages or terms acceptance without a separate repair instruction. Do not bypass refusals. Report facts, hypotheses, exact error codes, checked/unchecked areas and the smallest supported fix; preserve the stopping point.
 https://github.com/HomenSAI/homensai-gl-mt6000-auto-vpn/blob/main/docs/CURRENT-STATUS.md
@@ -1310,7 +1286,7 @@ What you accepted on the first screen. The full text is DISCLAIMER.md in the pro
 
 
 
-The current versioned operational terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by System readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.
+The current versioned operational terms are reproduced below. Their early test description is historical; current hardware/mode qualification is determined by Router readiness and the current guide. Removing the package still requires normal lifecycle/recovery checks.
 # Experimental software: operational terms and licensing
 
 [Русский](../DISCLAIMER.ru.md)

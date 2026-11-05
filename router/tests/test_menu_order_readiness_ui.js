@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Owner request 31 Oct 2026: (1) the setup sections are on top of the menu, and the page opens on Getting started,
 // only while the system is being set up; once it is set up the Overview is first. (2) System readiness never shows
 // "waiting" for parts that the running system already proves, and an old router report is shown with its age.

@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const menu=JSON.parse(fs.readFileSync('router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json','utf8'));
 const selected=menu['admin/services/homensai-vpn'].action.path.split('/').pop();
@@ -37,7 +38,7 @@ const c={console,Date,Intl,Number,JSON,Object,Array,Promise,Math,URL,Blob,Node,
   hideErrorBack(){calls.hideErrorBack=(calls.hideErrorBack||0)+1;},
 };
 function spy(name){c[name]=function(status){calls[name]=(calls[name]||0)+1;lastStatus[name]=status;return new Node('section',{'data-spy':name});};}
-for(const name of ['renderServerSummary','renderVendorChannels','renderLatencyPanel','chart','histogram','serverPairHistogram','renderCascadePath','renderSummary','renderIdentityNotice','renderDesignOverview','fillSideStatus','fillMonitorBlock','renderStartPage','readinessIntro','renderReadiness','renderEventHistory','renderTransitionAnalytics','renderVendorEvents','renderLiveLog','speedPanel','faultPanel','trafficHistoryPanel','renderMonitorInfo','renderErrorTable','renderHelp','renderLearn','lanHelperExplain','metricInfo','metric','badge'])spy(name);
+for(const name of ['renderServerSummary','renderVendorChannels','renderLatencyPanel','serverPickBox','chart','histogram','serverPairHistogram','renderCascadePath','renderSummary','renderIdentityNotice','renderDesignOverview','fillSideStatus','fillMonitorBlock','renderStartPage','readinessIntro','renderReadiness','renderEventHistory','renderTransitionAnalytics','renderVendorEvents','renderLiveLog','speedPanel','faultPanel','trafficHistoryPanel','renderMonitorInfo','renderErrorTable','renderHelp','renderLearn','lanHelperExplain','metricInfo','metric','badge'])spy(name);
 c.currentDesign=()=> 'c';
 c.renderAutoControl=function(status){calls.renderAutoControl=(calls.renderAutoControl||0)+1;lastStatus.renderAutoControl=status;return new Node('section',{'class':'hv-auto-control'},[new Node('button',{'class':'hv-auto-power'}),new Node('strong',{'class':'hv-auto-action'})]);};
 c.renderSimpleHome=function(status,inventory,model,control){calls.renderSimpleHome=(calls.renderSimpleHome||0)+1;const power=control.querySelector('.hv-auto-power'),action=control.querySelector('.hv-auto-action');return new Node('section',{},[new Node('div',{'class':'hv-simple-power'},power),new Node('div',{'class':'hv-simple-power-unit'},action)]);};

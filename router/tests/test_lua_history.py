@@ -521,6 +521,8 @@ class StatsResetDifferential(unittest.TestCase):
         compare.save(persist/'response-compare.json', agent.atomic_json, now - 100.0)
         speed = {'results': [{'time': now - 3600.5, 'down': 10.5}, {'time': now - 30*86400.0, 'down': 1.0}], 'history_truncated': 2}
         agent.atomic_json(persist/'speed-history.json', {'schema': 1, 'data': speed, 'sha256': agent.checksum(speed)})
+        faults = [{'time': now - 900.5, 'code': 'FAULT-CLEANED', 'profiles': ['wireguard:peer_7'], 'scope': 'channel', 'duration': 150}]
+        agent.atomic_json(persist/'fault-history.json', {'data': faults, 'sha256': agent.checksum(faults)})
         ops, _ = scenario(5, now - 3000.0, 80)
         acc = agent.Accounting()
         for op in ops:
@@ -539,6 +541,7 @@ class StatsResetDifferential(unittest.TestCase):
         with patch('time.time', return_value=now), patch.object(agent, 'PERSIST', persist), \
                 patch.object(speed_test, 'HISTORY', persist/'speed-history.json'), \
                 patch.object(speed_test, 'control_lock', contextlib.nullcontext), \
+                patch('auto_control.control_lock', lambda directory=None: contextlib.nullcontext()), \
                 patch('retention_settings.configured_days', return_value=7):
             histories = (latency_history.LatencyHistory.load(persist/'latency-history.json'),
                          website_response_history.WebsiteResponseHistory.load(persist/'website-response-history.json'),
@@ -553,7 +556,7 @@ class StatsResetDifferential(unittest.TestCase):
 
     def test_every_scope_resets_the_same_files(self):
         now = 1761903000.75
-        for scope in ('latency', 'auto', 'traffic', 'quality', 'speed', 'ranking', 'all'):
+        for scope in ('latency', 'auto', 'traffic', 'quality', 'speed', 'ranking', 'all', 'samples', 'faults'):
             with self.subTest(scope=scope):
                 folder = Path(tempfile.mkdtemp())
                 self.addCleanup(shutil.rmtree, str(folder), True)

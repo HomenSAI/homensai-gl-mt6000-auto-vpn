@@ -24,7 +24,7 @@ class Tests(unittest.TestCase):
         self.state={'id':'a'*32,'phase':'RUNNING','owned':['wgclient1','ovpnclient1'],'before_flags':{'wgclient1':'1','ovpnclient1':'1'},
             'network_identity':'b'*64,'protected':{},'process_bindings':{},'order':['s','t'],'policy_hash':'c'*64,'revision':self.revision}
         pair.save(self.state);agent.atomic_json(pair.paths()[0],{'mode':'on','id':self.state['id'],'revision':self.revision,'time':NOW})
-        self.settings={'pair_auto_mode':pair.MODE,'recovery_cooldown':'60','recovery_min_dwell':'60'}
+        self.settings={'pair_auto_mode':pair.MODE,'recovery_cooldown':'60','recovery_min_dwell':'60','failure_model':'consecutive'}  # stubs streak
         self.selection={'hash':'c'*64,'settings_hash':'d'*64,'vendor_identity':'e'*64,'source':{'id':SOURCE},'target':{'id':TARGET}}
         self.backend=Mock();self.backend.policy.return_value={'settings':self.settings};self.backend.diagnostic.return_value=([],self.selection)
         self.backend.order.return_value=(['s','t'],'c'*64);self.backend.health.return_value=True

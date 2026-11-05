@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const c={};vm.createContext(c);vm.runInContext(fs.readFileSync('router/sidebar_layout.inc.js','utf8'),c);
 for(const [width,height,header,top] of [[978,808,78,90],[1280,720,40,60],[1024,600,50,100],[800,480,50,62],[1280,300,40,52]]){

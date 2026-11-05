@@ -1,4 +1,5 @@
 'use strict';
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Measured switch timing: episodes from saved controller/failure events, durations in the journal/live log, and the
 // Advanced > Switch statistics page (lazy renderer) in EN/RU with automatic, manual and incomplete episodes.
 const fs=require('fs'),vm=require('vm'),assert=require('assert');

@@ -2,7 +2,7 @@
 // [id, router file, where it lives, title en/ru, what it is en/ru, in work mode en/ru, in diagnostics en/ru, shown on en/ru]
 var COLLECTION_ROWS=[
   ['checks','status.json','ram',['Current channel checks','Текущие проверки каналов'],['DNS/HTTPS/ping result of every check of both VPNs; Auto decides on these.','Результат каждой проверки обоих VPN (DNS, HTTPS, пинг); по ним решает Auto.'],
-    ['Always; rewritten every check. Probe samples for decisions: last 6 hours.','Всегда; перезаписывается каждую проверку. Пробы для решений: последние 6 часов.'],['Always; probe samples for the retention period (1–7 days).','Всегда; пробы за срок хранения (1–7 дней).'],['Overview, channel cards, lamps','Обзор, карточки каналов, лампы']],
+    ['Always; rewritten every check. Probe samples for decisions: last 6 hours.','Всегда; перезаписывается каждую проверку. Пробы для решений: последние 6 часов.'],['Always; probe samples for the retention period (1–7 days).','Всегда; пробы за срок хранения (1–7 дней).'],['Home, channel cards, lamps','Главная, карточки каналов, лампы']],
   ['journal','native-transaction.json','flash',['Switch journal','Журнал переключения'],['The current switch transaction: what was changed, so a restart can finish or undo it safely.','Текущая транзакция переключения: что изменено, чтобы после перезапуска безопасно завершить или откатить.'],
     ['Always; written only during a switch.','Всегда; пишется только во время переключения.'],['The same.','То же.'],['Auto card, recovery','Карточка Auto, восстановление']],
   ['pair','pair-auto-state.json','flash',['Auto pair state and settings','Состояние пары Auto и настройки'],['The chosen primary/reserve, the started session and your settings.','Выбранные основной/резервный, запущенный сеанс и ваши настройки.'],
@@ -25,7 +25,7 @@ var COLLECTION_ROWS=[
     ['Always; a few bytes per switch.','Всегда; несколько байт на переключение.'],['The same.','То же.'],['Countdown during a switch','Обратный отсчёт при переключении']],
   ['speed','speed-history.json','flash',['Speed tests','Тесты скорости'],['Results of speed tests you start.','Результаты тестов скорости, которые запускаете вы.'],
     ['Only when you run a test.','Только когда вы запускаете тест.'],['The same.','То же.'],['Statistics: speed','Статистика: скорость']],
-  ['faults','fault-history.json','flash',['Failure tests','Тесты сбоя'],['Failure simulations you start on the Tests page.','Имитации сбоя, которые вы запускаете на странице «Тесты».'],
+  ['faults','fault-history.json','flash',['Failure tests','Тесты сбоя'],['Failure simulations you start with the failure test.','Имитации сбоя, которые вы запускаете тестом сбоя.'],
     ['Only when you run a test.','Только когда вы запускаете тест.'],['The same.','То же.'],['Tests','Тесты']]
 ];
 var COLLECTION_HOURS=[[24,'1 day','1 день'],[72,'3 days','3 дня'],[168,'7 days','7 дней'],[336,'2 weeks','2 недели']];

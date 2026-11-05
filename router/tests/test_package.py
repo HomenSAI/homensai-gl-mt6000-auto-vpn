@@ -36,7 +36,8 @@ class PackageTests(unittest.TestCase):
             script=archive.extractfile(base+target+'.js').read().decode()
             for css in set(re.findall(r'\bui[0-9]+\.css\b',script)):self.assertIsNotNone(archive.extractfile(base+'homensai-vpn/'+css))
             controller=archive.extractfile('./usr/lib/lua/luci/controller/homensai_vpn.lua').read().decode();self.assertIn("view('"+target+"')",controller)
-            self.assertIn('hv-server-lamp',script);self.assertIn('resolveRouterVpnUrl',script)
+            # The approved page (03.11.2026): its root and stylesheet name are in the packaged module.
+            self.assertIn("E('div',{'class':'hvx','id':'hvx'})",script);self.assertIn('resolveRouterVpnUrl',script);self.assertRegex(script,r"HV_STYLESHEET='ui[0-9]+\.css'")
     def test_ui_selection_refuses_missing_unsafe_and_mismatched_resources(self):
         import json
         with tempfile.TemporaryDirectory() as directory:

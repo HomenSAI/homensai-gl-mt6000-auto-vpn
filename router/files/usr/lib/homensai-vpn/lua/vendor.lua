@@ -10,12 +10,13 @@ local canon=require('canon')
 
 local M={}
 local NULL=canon.null
-M.HEALTH={'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks'}
+M.HEALTH={'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks','mtu_check','probe_trust'}
 M.MEASUREMENT_FIELDS={'id','time','code','scope','lan_path_verified','device','mark','table','ifindex',
-  'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks'}
+  'https_success','dns_ok','rtt_ms','exit_ip','exit_country','server_endpoint','probe_checks','mtu_check','probe_trust'}
 local TARGETS={['one.one.one.one']=true,['dns.google']=true,['dns.quad9.net']=true}
 local OUTCOMES={ok=true,['http-unsupported']=true,['http-error']=true,timeout=true,['tls-error']=true,['transport-error']=true,
   ['invalid-response']=true,unknown=true}
+local TRUST={['untrusted-certificate']=true,['portal-redirect']=true,['stale-response']=true}
 
 local function map(v) return type(v)=='table' and v~=NULL and not canon.is_array(v) and not canon.is_float(v) end
 local function safe(s) return type(s)=='string' and #s>=1 and #s<=96 and string.find(s,'^[A-Za-z0-9_.:-]+$')~=nil end
@@ -38,6 +39,8 @@ function M.probe_checks(value)
       local status,elapsed=row.http_status,num(row.elapsed_ms)
       if type(status)=='number' and status%1==0 and status>=100 and status<=599 then clean.http_status=status end
       if elapsed and elapsed==elapsed and elapsed>=0 and elapsed<=60000 then clean.elapsed_ms=row.elapsed_ms end
+      -- probe_trust.REASONS: why an answer was not authentic (never on a passing check)
+      if row.result~='ok' and TRUST[row.trust] then clean.trust=row.trust end
       result[#result+1]=clean
     end
   end
@@ -194,6 +197,8 @@ function Observer:observe(before,after,measured,now)
     local row={}
     for _,key in ipairs(M.MEASUREMENT_FIELDS) do if original[key]~=nil then row[key]=original[key] end end
     if row.probe_checks~=nil then row.probe_checks=M.probe_checks(row.probe_checks) end
+    if row.probe_trust~=nil and row.probe_trust~='untrusted' then row.probe_trust=nil end
+    if row.mtu_check~=nil then row.mtu_check=require('mtu_check').sanitize(row.mtu_check) end
     local identifier=row.id
     if not safe(identifier) then identifier=nil;row.id=NULL end
     local profile=identifier and before_ids[identifier] or nil

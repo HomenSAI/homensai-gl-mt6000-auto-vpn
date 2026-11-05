@@ -1,0 +1,152 @@
+{
+ "hosts": {
+  "dns.google": [
+   {
+    "name": "GTS_Root_R4",
+    "not_after": "2036-06-22",
+    "role": "current",
+    "spki_sha256": "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c="
+   },
+   {
+    "name": "GTS_Root_R1",
+    "not_after": "2036-06-22",
+    "role": "backup",
+    "spki_sha256": "hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc="
+   },
+   {
+    "name": "GTS_Root_R3",
+    "not_after": "2036-06-22",
+    "role": "backup",
+    "spki_sha256": "QXnt2YHvdHR3tJYmQIr0Paosp6t/nggsEGD4QJZ3Q0g="
+   },
+   {
+    "name": "GlobalSign_ECC_Root_CA_-_R4",
+    "not_after": "2038-01-19",
+    "role": "backup",
+    "spki_sha256": "CLOmM1/OXvSPjw5UOYbAf9GKOxImEp9hhku9W90fHMk="
+   }
+  ],
+  "dns.quad9.net": [
+   {
+    "name": "DigiCert_Global_Root_G3",
+    "not_after": "2038-01-15",
+    "role": "current",
+    "spki_sha256": "uUwZgwDOxcBXrQcntwu+kYFpkiVkOaezL0WYEZ3anJc="
+   },
+   {
+    "name": "DigiCert_Global_Root_G2",
+    "not_after": "2038-01-15",
+    "role": "backup",
+    "spki_sha256": "i7WTqTvh0OioIruIfFR4kMPnBqrS2rdiVPl/s2uC/CY="
+   },
+   {
+    "name": "DigiCert_TLS_ECC_P384_Root_G5",
+    "not_after": "2046-01-14",
+    "role": "backup",
+    "spki_sha256": "oC+voZLIy4HLE0FVT5wFtxzKKokLDRKY1oNkfJYe+98="
+   },
+   {
+    "name": "DigiCert_TLS_RSA4096_Root_G5",
+    "not_after": "2046-01-14",
+    "role": "backup",
+    "spki_sha256": "ape1HIIZ6T5d7GS61YBs3rD4NVvkfnVwELcCRW4Bqv0="
+   },
+   {
+    "name": "ISRG_Root_X1",
+    "not_after": "2035-06-04",
+    "role": "backup",
+    "spki_sha256": "C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M="
+   },
+   {
+    "name": "ISRG_Root_X2",
+    "not_after": "2040-09-17",
+    "role": "backup",
+    "spki_sha256": "diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI="
+   }
+  ],
+  "one.one.one.one": [
+   {
+    "name": "SSL.com_Root_Certification_Authority_ECC",
+    "not_after": "2041-02-12",
+    "role": "current",
+    "spki_sha256": "oyD01TTXvpfBro3QSZc1vIlcMjrdLTiL/M9mLCPX+Zo="
+   },
+   {
+    "name": "SSL.com_Root_Certification_Authority_RSA",
+    "not_after": "2041-02-12",
+    "role": "backup",
+    "spki_sha256": "0cRTd+vc1hjNFlHcLgLCHXUeWqn80bNDH/bs9qMTSPo="
+   },
+   {
+    "name": "SSL.com_TLS_ECC_Root_CA_2022",
+    "not_after": "2046-08-19",
+    "role": "backup",
+    "spki_sha256": "G/ANXI8TwJTdF+AFBM8IiIUPEv0Gf6H5LA/b9guG4yE="
+   },
+   {
+    "name": "SSL.com_TLS_RSA_Root_CA_2022",
+    "not_after": "2046-08-19",
+    "role": "backup",
+    "spki_sha256": "K89VOmb1cJAN3TK6bf4ezAbJGC1mLcG2Dh97dnwr3VQ="
+   },
+   {
+    "name": "DigiCert_Global_Root_G2",
+    "not_after": "2038-01-15",
+    "role": "backup",
+    "spki_sha256": "i7WTqTvh0OioIruIfFR4kMPnBqrS2rdiVPl/s2uC/CY="
+   },
+   {
+    "name": "DigiCert_Global_Root_G3",
+    "not_after": "2038-01-15",
+    "role": "backup",
+    "spki_sha256": "uUwZgwDOxcBXrQcntwu+kYFpkiVkOaezL0WYEZ3anJc="
+   },
+   {
+    "name": "DigiCert_TLS_ECC_P384_Root_G5",
+    "not_after": "2046-01-14",
+    "role": "backup",
+    "spki_sha256": "oC+voZLIy4HLE0FVT5wFtxzKKokLDRKY1oNkfJYe+98="
+   },
+   {
+    "name": "DigiCert_TLS_RSA4096_Root_G5",
+    "not_after": "2046-01-14",
+    "role": "backup",
+    "spki_sha256": "ape1HIIZ6T5d7GS61YBs3rD4NVvkfnVwELcCRW4Bqv0="
+   },
+   {
+    "name": "GTS_Root_R1",
+    "not_after": "2036-06-22",
+    "role": "backup",
+    "spki_sha256": "hxqRlPTu1bMS/0DITB1SSu0vd4u/8l8TjPgfaAp63Gc="
+   },
+   {
+    "name": "GTS_Root_R3",
+    "not_after": "2036-06-22",
+    "role": "backup",
+    "spki_sha256": "QXnt2YHvdHR3tJYmQIr0Paosp6t/nggsEGD4QJZ3Q0g="
+   },
+   {
+    "name": "GTS_Root_R4",
+    "not_after": "2036-06-22",
+    "role": "backup",
+    "spki_sha256": "mEflZT5enoR1FuXLgYYGqnVEoZvmf9c2bVBpiOjYQ0c="
+   },
+   {
+    "name": "ISRG_Root_X1",
+    "not_after": "2035-06-04",
+    "role": "backup",
+    "spki_sha256": "C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M="
+   },
+   {
+    "name": "ISRG_Root_X2",
+    "not_after": "2040-09-17",
+    "role": "backup",
+    "spki_sha256": "diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI="
+   }
+  ]
+ },
+ "observed": "2026-11-03",
+ "scope": "trust anchors of the three fixed probe hosts; a probe trusts only these roots",
+ "source": "ca-certificates 20260601-1 of the GL 4.11 firmware (/etc/ssl/certs)",
+ "version": 1
+}

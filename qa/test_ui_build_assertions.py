@@ -6,7 +6,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-BUILDERS = ('build_sidebar_ui.py', 'simple_home_patch.py', 'hybrid_release_patch.py')
+BUILDERS = ('legacy_page_build.py',  # the anchored patch pipeline (build_sidebar_ui.py runs it in memory)
+            'simple_home_patch.py', 'hybrid_release_patch.py')
 EXTRA_BUILDERS = {'visible_refresh_patch.py': {'replace', 'replace_fragment'},
                   'lazy_help_build.py': {'once'}}
 

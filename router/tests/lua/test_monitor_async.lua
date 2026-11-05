@@ -71,10 +71,11 @@ t.test('a probe that answers twice or late changes nothing after its verdict',fu
   local R=t.fake_runner()
   local results={}
   local saved
-  R.https_get=function(device,address,hostname,path,seconds,cb) saved=saved or {};saved[#saved+1]=cb end
+  local agents={}
+  R.https_get=function(device,address,hostname,path,seconds,cb,agent) saved=saved or {};saved[#saved+1]=cb;agents[#saved]=agent end
   probe.probe(R,R.inventory_data.profiles[1],function(result) results[#results+1]=result end)
   t.eq(#results,0)
-  for _,cb in ipairs(saved) do cb({status=200,body='fl=1\nip=93.184.216.34\nhttp=http/1.1\n'}) end
+  for i,cb in ipairs(saved) do cb({status=200,body='fl=1\nip=93.184.216.34\nhttp=http/1.1\nuag='..tostring(agents[i])..'\n'}) end
   t.eq(#results,1,'three HTTPS answers and the DNS answer complete the verdict once')
   t.eq(results[1].https_success,1,'trace valid; dns-json/dns-wire bodies invalid for their kinds')
   for _,cb in ipairs(saved) do pcall(cb,{status=200,body='x'}) end

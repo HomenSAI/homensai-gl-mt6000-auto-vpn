@@ -7,7 +7,8 @@
 --
 -- Start: rotate the control revision, read the journal (unreadable -> one timed LAN block, then give_up),
 -- fence pair intent, then recover: RELEASE-PENDING -> abandon; ARMED/APPLYING/WAIT-CLIENT/RESTORING ->
--- rollback_counted (ROLLBACK_FAILURE_LIMIT -> give_up); COMMITTED -> guard (manual + confirmed ->
+-- rollback_counted (ROLLBACK_FAILURE_LIMIT -> give_up; APPLYING/WAIT-CLIENT of an automatic switch to the reserve
+-- first try forward_resume.lua); COMMITTED -> guard (manual + confirmed ->
 -- HELD-ON-RESERVE); then manual.recover_pending and pair.recover. The loop body is iteration(): one Python
 -- loop pass that returns the pause until the next one (the Python sleep); the uloop timer reschedules it and a
 -- QUEUED owner click (ubus notify or the pair-manual-control.json poll) ends the pause at once (nap()).
@@ -153,6 +154,12 @@ function M.recover(env)
   T.PROOF_SCOPE=getd(value,'proof_scope','external-lan')
   if not T.SCOPES[T.PROOF_SCOPE] then ctl.refuse('JOURNAL-INTEGRITY-FAILED') end
   pair.fence_recovery(env)
+  -- server pick (stage 3): a server change cut short by a power cut or a crash (between its uci commits and the session
+  -- write) is this supervisor's own write; re-bind the session and the journal to it before the COMMITTED journal is
+  -- compared with the live order below (else abandon(EXTERNAL-POLICY-CHANGE)). The journal is read again whatever it
+  -- returns: a re-bound journal whose session write failed must not be compared as the stale one.
+  pcall(pair.server_resume_boot,env)
+  local jok2,again=pcall(T.journal_read,env);if jok2 then value=again end
   if value.phase=='RELEASE-PENDING' then R.abandon(env,value,getd(value,'reason','EXTERNAL-POLICY-CHANGE')) end
   local phase=value.phase
   -- every recovery below may write the kernel through rtp2.sh: recreate the stock boot prefix a power cut removed
@@ -172,11 +179,25 @@ function M.recover(env)
     M.boot_step(env,'recovery '..tostring(phase))
     M.tunnel_devices(env)  -- the rollback ends with guard(devices()): wait for a tunnel (bounded), never count its absence
     M.boot_step(env,'tunnel devices')
-    local ok,err=pcall(M.boot_rollback,env,value)
-    M.boot_step(env,ok and 'rollback done' or 'rollback failed')
-    if not ok then
-      if (num(getd(value,'rollback_failures',0)) or 0)>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
-      error(err,0)
+    -- 03.11.2026 (forward_resume.lua): an automatic switch to the reserve cut short in this boot, with the primary still
+    -- failing and the reserve healthy, is finished instead of rolled back; anything unproven rolls back as before
+    local resumed=false
+    if phase=='APPLYING' or phase=='WAIT-CLIENT' then
+      resumed=require('forward_resume').try(env,value)
+      M.boot_step(env,resumed and 'forward resumed' or 'forward refused')
+      if not resumed then
+        local rok,again=pcall(T.journal_read,env)
+        if not rok then error(again,0) end
+        value=again
+      end
+    end
+    if not resumed then
+      local ok,err=pcall(M.boot_rollback,env,value)
+      M.boot_step(env,ok and 'rollback done' or 'rollback failed')
+      if not ok then
+        if (num(getd(value,'rollback_failures',0)) or 0)>=T.ROLLBACK_FAILURE_LIMIT then R.give_up(env,value,'ROLLBACK-GIVEN-UP');return 'stopped' end
+        error(err,0)
+      end
     end
   elseif phase=='COMMITTED' then
     if not order_is(env,value.after,value.hash) then R.abandon(env,value,'EXTERNAL-POLICY-CHANGE')
@@ -191,6 +212,16 @@ function M.recover(env)
       if not isnone(value.manual_request_id) and not isnone(value.confirmed) then
         value.phase='HELD-ON-RESERVE';value.reason='OPERATOR-MANUAL';T.journal_write(env,value)
       end
+    end
+  elseif phase=='HELD-ON-RESERVE' and order_is(env,value.after,value.hash) then
+    -- K3 (formal model 03.11.2026): a power cut drops the nft guard (RAM) while the route stays on the reserve (a
+    -- session handed over, a Stop with a dead primary, an operator hold): the VPN-only guard the held journal had
+    -- comes back here, not only after the handover is released (up to KEEP_SECONDS). Python: native_switch.serve.
+    -- The pair's own clients are started (bounded, pair.boot_devices) without the extra wait: the cleanup below waits.
+    local devices=M.tunnel_devices(env,0)
+    if devices then env.backend.guard(devices)
+    else
+      pcall(function() require('durable').log('GUARD-DEVICE-UNAVAILABLE: HELD-ON-RESERVE journal recovered without the VPN-only guard') end)
     end
   end
   manual.recover_pending(env)
@@ -236,7 +267,10 @@ function M.iteration(env,ctx)
       ctx.last_trial=getd(attempts,'trial',nil);ctx.last_attempt=num(getd(attempts,'time',0)) or 0
     end
     local data=backend.policy();local settings=data.settings
-    if pair.tick(env,settings,decision_revision) then
+    local ticked=pair.tick(env,settings,decision_revision)
+    -- 03.11.2026: after the owner's Stop the GL VPN dashboard manages the pair's tunnels again (backend.lua)
+    if backend.autostart_after_stop then pcall(backend.autostart_after_stop) end
+    if ticked then
       local pending=T.journal_read(env)
       if T.RECOVERY_PHASES[pending.phase] then
         pair.fence_recovery(env)

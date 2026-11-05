@@ -56,7 +56,7 @@ class PriorityTests(unittest.TestCase):
 class RecoveryTests(unittest.TestCase):
     def test_owner_defaults_and_atomic_extended_settings(self):
         self.assertEqual(recovery.normalized({}),{'failures':3,'successes':2,'cooldown':60,'min_dwell':60,
-            'return_policy':'healthy_primary','primary_successes':2,'primary_stable':30,'attempt_limit':3,'attempt_window':15})
+            'return_policy':'healthy_primary','primary_successes':2,'primary_stable':120,'attempt_limit':3,'attempt_window':15,'rescue_stable':10})  # 03.11.2026
         values=dict(recovery.DEFAULTS,interval=10,attempt_limit=4,attempt_window=8)
         saved=recovery.payload(values)['main']
         self.assertEqual((saved['interval'],saved['recovery_attempt_limit'],saved['recovery_attempt_window']),('10','4','8'))

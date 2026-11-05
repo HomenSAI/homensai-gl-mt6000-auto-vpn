@@ -68,6 +68,7 @@ if arg[1]=='item2' then
     proof_scope='router-probed-ipv4',readiness_verified=true,time=R.now-1,source='wireguard:peer_7',target='wireguard:peer_8'}))) end
   native()
   R.inventory_data.settings.probe_level='2';R.inventory_data.settings.probe_boost='0'
+  R.inventory_data.settings.failure_model='consecutive'  -- the boost rows below are the previous rule's
   R.write_atomic('/etc/hv/switch-timing.json','{"avg_seconds":4.26,"count":3,"last_seconds":3.9,"updated":1761825000.5}')
   local m=monitor.new(R)
   m:pass()

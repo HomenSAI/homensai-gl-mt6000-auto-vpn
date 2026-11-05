@@ -5,6 +5,8 @@ __pycache__/
 .env.*
 !.env.example
 *.pem
+# public root certificates of the probe hosts (probe_trust, scripts/build_probe_anchors.py): no secrets
+!router/files/usr/lib/homensai-vpn/probe-anchors/*.pem
 *.key
 *.bin
 *.squashfs

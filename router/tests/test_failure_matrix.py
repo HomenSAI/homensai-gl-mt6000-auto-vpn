@@ -326,8 +326,9 @@ class Matrix(unittest.TestCase):
         ctx=MagicMock();ctx.wrap_socket.return_value=sock
         response=MagicMock(status=status)
         if error:response.read.side_effect=error
-        else:response.read.return_value=read
-        with patch.object(native,'probe',return_value={'dns_ok':True,'https_success':2,'device':'wg0','mark':1}),\
+        else:response.read.return_value=read+b'uag=HomenSAI-probe/fixed\n'  # the request nonce echo (probe_trust.fresh)
+        import probe_trust
+        with patch.object(native,'probe',return_value={'dns_ok':True,'https_success':2,'device':'wg0','mark':1}),             patch.object(probe_trust,'agent',return_value='HomenSAI-probe/fixed'),\
              patch.object(native,'bound_socket',return_value=MagicMock()),\
              patch.object(native.ssl,'create_default_context',return_value=ctx),\
              patch.object(native.http.client,'HTTPResponse',return_value=response):

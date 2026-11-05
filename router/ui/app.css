@@ -1,0 +1,45 @@
+/* HomenS.AI Auto VPN page: additions to the approved mockup styles (router/ui/mockup/*.css, copied verbatim and scoped
+   to .hvx by the build). Only what the mockups had no need for: LuCI host neutralisation, the view switch, help/codes
+   content from the catalogue module, the live-data states. */
+.hvx{position:relative;text-align:left;letter-spacing:normal;text-transform:none;min-height:auto}  /* inside LuCI the page is not the whole window */
+.hvx h1,.hvx h2,.hvx h3,.hvx h4{color:inherit;font-family:inherit;background:none;border:0;padding:0;text-transform:none;letter-spacing:normal;font-weight:700}
+.hvx button,.hvx input,.hvx select,.hvx textarea{box-shadow:none;text-shadow:none;height:auto;line-height:normal;width:auto;margin:0;vertical-align:middle}
+.hvx table{margin:0;background:transparent}
+.hvx ul,.hvx ol{margin-top:0}
+.hvx a:hover{text-decoration:underline}
+.hvx .btn:hover,.hvx .brand:hover{text-decoration:none}
+.hvx [hidden]{display:none!important}
+/* View switch: two icon buttons in the header, same style as the language button. */
+.hvx .viewsw{display:inline-flex;gap:0;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--card2);padding:0}
+.hvx .viewsw .iconbtn{border:0;border-radius:8px;background:transparent;min-width:34px;height:32px;padding:0 8px;font-size:1rem;line-height:1}
+.hvx .viewsw .iconbtn[aria-pressed="true"]{background:var(--acc-soft);color:var(--acc)}
+.hvx .viewsw .vlabel{font-size:.72rem;font-weight:600;color:var(--mute);padding:0 4px 0 8px;white-space:nowrap}
+@media (max-width:560px){.hvx .viewsw .vlabel{display:none}}
+/* Live data states */
+.hvx .code{cursor:pointer}
+.hvx .ch .why{font-size:.78rem;color:var(--mute);margin-top:4px}
+.hvx .btn[aria-busy="true"]{cursor:progress}
+.hvx .note+.note,.hvx .note+.card,.hvx .card+.note{margin-top:10px}
+.hvx .modal .mb pre,.hvx .modal .mb code,.hvx .hv-code,.hvx .hv-cmd{font-family:var(--mono);font-size:.82rem}
+.hvx .modal .mb pre,.hvx .hv-cmd{white-space:pre-wrap;word-break:break-word;background:var(--card2);border:1px solid var(--line);border-radius:8px;padding:8px;margin:6px 0}
+.hvx .modal .mb textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;background:var(--card2);padding:8px;font:12.5px/1.45 var(--mono);color:var(--ink)}
+.hvx .modal .mb ol,.hvx .modal .mb ul{padding-left:20px}
+.hvx .modal .mb li{margin:4px 0}
+.hvx .modal .mb h3,.hvx .modal .mb h4{margin:10px 0 4px}
+.hvx .modal .mb button{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--card2);border-radius:10px;padding:6px 12px;min-height:34px;cursor:pointer;font-weight:600;color:var(--ink)}
+.hvx .modal .mb button:hover{border-color:var(--acc)}
+.hvx .modal.wide{max-width:860px}
+.hvx .modal .mb svg{max-width:100%;height:auto}
+.hvx .modal .mb table{width:100%;border-collapse:collapse;font-size:.86rem}
+.hvx .modal .mb th,.hvx .modal .mb td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.hvx .modal .mb details{border:1px solid var(--line);border-radius:10px;padding:6px 10px;margin:6px 0;background:var(--card2)}
+.hvx .modal .mb summary{cursor:pointer;font-weight:600}
+.hvx .modal .mb [hidden]{display:none!important}
+.hvx .modal .mb label{cursor:pointer}
+.hvx .codes-tbl tr{cursor:pointer}
+.hvx .codes-tbl tr:hover td{background:var(--acc-soft)}
+.hvx .f input[type=search]{width:100%}
+.hvx .warnbar{margin:10px 0 0}
+.hvx .kv dd{overflow-wrap:anywhere}
+.hvx .ev-h .tx{overflow-wrap:anywhere}
+.hvx .tbl td.mono{overflow-wrap:anywhere}

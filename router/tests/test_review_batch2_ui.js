@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 // The Auto hint is a live region only when its text changed; a refresh with the same text is not read again.
 const c={};vm.createContext(c);
@@ -8,7 +9,7 @@ assert.equal(c.autoHintLive('Auto works')['aria-live'],'off','same text on the n
 assert.equal(c.autoHintLive('Auto stopped')['role'],'status');
 console.log('PASS: Auto hint is announced only when it changes');
 // The shipped module: hidden tab skips status calls, refreshes on return, focus capture covers links and summaries.
-const ui=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+/UI_MODULE='([^']+)'/.exec(fs.readFileSync('router/build_sidebar_ui.py','utf8'))[1]+'.js','utf8');
+const ui=fs.readFileSync('router/files/www/luci-static/resources/view/homensai-vpn/'+JSON.parse(fs.readFileSync('VERSION.json','utf8').replace(/^﻿/,'')).application.ui_module+'.js','utf8');
 assert(/var hvStatusTick=function\(\)\{if\(typeof document!=='undefined'&&document\.hidden\)return Promise\.resolve\(\);/.test(ui));
 assert(ui.includes("poll.add(hvStatusTick,10);")&&ui.includes("addEventListener('visibilitychange'"));
 assert(ui.includes('document.activeElement.matches(PAGE_FOCUS_SELECTOR)'));

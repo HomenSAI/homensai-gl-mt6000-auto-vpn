@@ -30,6 +30,7 @@ var FOOL_RANGES={
   'recovery.min_dwell':[60,3600,'seconds','секунд'],
   'recovery.primary_successes':[2,10,'','' ],
   'recovery.primary_stable':[30,600,'seconds','секунд'],
+  'recovery.rescue_stable':[0,60,'seconds','секунд'],
   'recovery.attempt_limit':[1,10,'attempts','попыток'],
   'recovery.attempt_window':[1,15,'minutes','минут'],
   'recovery.interval':[10,300,'seconds','секунд']

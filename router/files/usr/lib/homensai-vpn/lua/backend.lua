@@ -764,7 +764,29 @@ function M.new(sys)
   function B.dns_mark_follow()
     local chains=caches.attested_chains
     if chains==nil then return nil end
-    return B.dns_mark_sync(chains)
+    local result=B.dns_mark_sync(chains)
+    B.dns_dual=B.dns_dual_follow(chains,result)
+    return result
+  end
+  -- dns_dual_follow(chains, mark_result): LAN DNS through both tunnels (dns_dual.lua, owner option dns_dual, default
+  -- off). Each GL per-tunnel dnsmasq of the pair also asks the other tunnel (server=<ip>@<device>); option off: every
+  -- snippet removed. Never raises; DNS-DUAL-UNVERIFIED is logged and never touches the traffic route.
+  function B.dns_dual_follow(chains,mark)
+    local dd=require('dns_dual')
+    local active=type(mark)=='table' and type(mark.active)=='string' and mark.active or nil
+    local ok,result=pcall(dd.follow,chains,kernel.fields,{active=active})
+    if not ok or type(result)~='table' then result=dd.failed() end
+    if result.code==dd.UNVERIFIED or (tonumber(result.changed) or 0)>0 then require('durable').log(dd.summary(result)) end
+    return result
+  end
+  -- dns_dual_off(): Auto released the pair (unguard): GL's own per-tunnel dnsmasq configuration again
+  function B.dns_dual_off()
+    local dd=require('dns_dual')
+    local ok,result=pcall(dd.off)
+    if not ok or type(result)~='table' then result=dd.failed() end
+    if result.code==dd.UNVERIFIED or (tonumber(result.changed) or 0)>0 then require('durable').log(dd.summary(result)) end
+    B.dns_dual=result
+    return result
   end
 
   ------------------------------------------------------------------------------------------------------
@@ -826,6 +848,7 @@ function M.new(sys)
   function B.unguard()
     if B.guard_exists() then sys.exec({'nft','delete','table','inet',M.TABLE},{timeout=5}) end
     if B.guard_exists() then refuse('GUARD-RELEASE-UNCONFIRMED') end
+    B.dns_dual_off()  -- the pair is released: no DNS-through-both-tunnels snippet stays behind
   end
   function B.devices()
     local devices={}
@@ -837,6 +860,26 @@ function M.new(sys)
       end
     end
     return devices
+  end
+  -- flow_reset(old_id, new_id): drop the LAN flows still NATed to the channel left (flow_reset.lua); the
+  -- addresses are read from netifd now (in process), the command is bounded; never raises a switch failure.
+  function B.flow_reset(old_id,new_id)
+    local fr=require('flow_reset')
+    local function status(id)
+      for _,p in ipairs(B.inventory().profiles) do
+        if p.id==id and py.truthy(p.interface) then
+          local s=sys.ubus('network.interface.'..p.interface,'status')
+          if canon.is_object(s) then return s end
+          return nil
+        end
+      end
+      return nil
+    end
+    local config=sys.read(fr.CONFIG)
+    if not fr.enabled(config) then return {code='FLOW-RESET-OFF',deleted=0} end
+    return fr.run({config=config,old_status=status(old_id),new_status=status(new_id),
+      exec=function(argv) local rc,out=sys.exec(argv,{timeout=fr.TIMEOUT,max=16*1024*1024});return rc,out,false end,
+      log=function(line) require('durable').log(line) end})
   end
 
   ------------------------------------------------------------------------------------------------------
@@ -908,7 +951,10 @@ function M.new(sys)
   local function live_probe()
     if not live then
       live=require('live_probe').new({wall=sys.wall,clock=sys.clock,random=sys.random,probe_io=sys.probe_io,
-        route_binding=function(logical) return B.route_binding(logical) end})
+        route_binding=function(logical) return B.route_binding(logical) end,
+        -- option probe_dns (probe_trust.dns_mode): the configuration text keyed by its size and change time
+        config_key=function() local st=sys.stat and sys.stat('/etc/config/homensai_vpn');return st and (tostring(st.mtime)..':'..tostring(st.size)..':'..tostring(st.ino)) or nil end,
+        config_text=function() return sys.read('/etc/config/homensai_vpn') end})
     end
     return live
   end
@@ -962,6 +1008,19 @@ function M.new(sys)
     else negative[identifier]={time=sys.clock(),value=value};positive[identifier]=nil end
     return value
   end
+  -- recheck(identifier, seconds) -> true (the source passes DNS + 2 of 3 HTTPS now) | false | nil (no answer):
+  -- the late-switch recheck (pair.late_recheck), one native probe with a short wait. Never the Python bridge (its
+  -- start alone takes about 2 s) and never the negative health cache; only a true answer stops a failover.
+  function B.recheck(identifier,seconds)
+    if not B.native_probe_enabled() then return nil end
+    local profile=nil
+    for _,p in ipairs(B.inventory().profiles) do if p.id==identifier then profile=p;break end end
+    if not profile or not py.truthy(profile.interface) then return false end
+    local ok,result=native('probe',live_probe().probe,profile,false,seconds)
+    if not ok then return nil end
+    local hs=result.https_success;if hs==nil then hs=0 end
+    return isnone(result.code) and result.dns_ok==true and (canon.number(hs) or 0)>=2
+  end
   function B.recovery_ready(identifier,settings)
     local pair=require('pair')
     local policy=pair.recovery_normalized(settings)
@@ -976,7 +1035,7 @@ function M.new(sys)
     end
     if resolved.coordination.state~='READY' or row==nil then return false end
     local samples=status.samples;if samples==nil then samples=canon.array({}) end
-    if not pair.stable_success(diagnosis.scoped_samples(samples,row),identifier,policy.primary_successes,policy.primary_stable,sys.wall(),age) then return false end
+    if not pair.stable_success(diagnosis.scoped_samples(samples,row),identifier,policy.primary_successes,pair.stable_seconds(settings,policy),sys.wall(),age) then return false end
     return B.health(identifier)==true
   end
 
@@ -1046,6 +1105,39 @@ function M.new(sys)
     if command and string.find(kernel.decode(command),'native_switch.py\0apply\0'..tx,1,true) then
       sys.exec({'kill','-9','-'..string.format('%d',pid)},{timeout=5})
     end
+  end
+
+  ------------------------------------------------------------------------------------------------------
+  -- 03.11.2026: after the owner's Stop the GL VPN dashboard manages the pair's tunnels again. Called after every pair
+  -- tick (auto.lua); the deciding files are compared by identity first (preparation_control.after_stop_key), so an idle
+  -- tick starts no child. When one changed: `python3 preparation_control.py restore-autostart` (the one writer of the
+  -- preparation records; it re-checks every condition under the control lock). Returns the decoded answer or nil.
+  ------------------------------------------------------------------------------------------------------
+  M.PREPARATION_CONTROL='/usr/lib/homensai-vpn/preparation_control.py'
+  local after_stop_last=nil
+  local function after_stop_key()
+    local directory=env.persist..'/preparation-changes'
+    local names=sys.dir(directory)
+    if not names or #names==0 then return nil end
+    local ok,intent=pcall(function() return canon.decode(sys.read(env.runtime..'/pair-auto-control.json') or '{}') end)
+    if ok and canon.is_object(intent) and intent.mode=='on' then return nil end  -- Auto runs: nothing to restore
+    local parts={}
+    for i,path in ipairs({directory,'/etc/config/network','/etc/rc.d',env.persist..'/native-stop.json',env.runtime..'/pair-auto-control.json',
+                          env.persist..'/pair-auto-state.json',env.persist..'/native-transaction.json'}) do parts[i]=sys.key(path) end
+    return table.concat(parts,'|')
+  end
+  B.after_stop_key=after_stop_key
+  function B.autostart_after_stop()
+    local ok,key=pcall(after_stop_key)
+    if not ok or key==nil or key==after_stop_last then return nil end
+    local rc,out=sys.exec({'python3',M.PREPARATION_CONTROL,'restore-autostart'},{timeout=40})
+    local last=nil
+    for line in string.gmatch(out or '','[^\n]+') do last=line end
+    local dok,value=pcall(canon.decode,last or '')
+    local kok,next_key=pcall(after_stop_key)
+    after_stop_last=kok and next_key or nil
+    if rc~=0 or not dok or not canon.is_object(value) then return nil end
+    return value
   end
 
   ------------------------------------------------------------------------------------------------------

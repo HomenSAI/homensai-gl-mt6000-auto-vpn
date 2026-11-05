@@ -526,20 +526,24 @@ def trace(profile):
     result=probe(profile)
     if result.get('code') or not result.get('dns_ok') or result.get('https_success',0)<2:
         raise Refused('TARGET-HTTPS-DNS-FAILED')
+    import probe_trust
     raw=bound_socket(result['device'],result['mark'])
-    end=time.monotonic()+HTTP_SECONDS
+    started=time.monotonic();wall_started=time.time();user_agent=probe_trust.agent()
+    end=started+HTTP_SECONDS
     try:
         raw.settimeout(remaining(end))
         raw.connect(('1.1.1.1',443))
         raw.settimeout(remaining(end))
-        with ssl.create_default_context().wrap_socket(raw,server_hostname='one.one.one.one') as sock:
+        # pinned roots of one.one.one.one and a per-request nonce echoed as uag= (probe_trust.py)
+        with probe_trust.context('one.one.one.one').wrap_socket(raw,server_hostname='one.one.one.one') as sock:
             sock.settimeout(remaining(end))
-            sock.sendall(b'GET /cdn-cgi/trace HTTP/1.1\r\nHost: one.one.one.one\r\nConnection: close\r\n\r\n')
+            sock.sendall(('GET /cdn-cgi/trace HTTP/1.1\r\nHost: one.one.one.one\r\nUser-Agent: %s\r\nConnection: close\r\n\r\n'%user_agent).encode('ascii'))
             # A cut, garbled or non-IPv4 reply is a coded refusal, never an uncaught error that ends the supervisor.
             try:
                 response=http.client.HTTPResponse(DeadlineSocket(sock,end));response.begin();body=response.read(32769)
                 remaining(end)
                 if response.status!=200 or len(body)>32768:raise Refused('EXIT-TRACE-FAILED')
+                if probe_trust.fresh(body,user_agent,wall_started,time.time(),time.monotonic()-started):raise Refused('EXIT-TRACE-FAILED')
                 rows=dict(line.split('=',1) for line in body.decode('ascii').splitlines() if '=' in line)
                 value=str(ipaddress.IPv4Address(rows['ip'].strip()))
             except (http.client.HTTPException,KeyError,ValueError):raise Refused('EXIT-TRACE-FAILED') from None
@@ -809,7 +813,36 @@ class Linux:
     def dns_mark_follow(self):
         """The Auto supervisor's pass: only after a verified attestation of this very pass (its graph, no new read)."""
         mangle=getattr(self,'attested_mangle',None)
-        return None if mangle is None else self.dns_mark_sync(mangle)
+        if mangle is None:return None
+        result=self.dns_mark_sync(mangle)
+        self.dns_dual=self.dns_dual_follow(mangle,result)
+        return result
+    def dns_dual_follow(self,mangle,mark=None):
+        """LAN DNS through both tunnels (dns_dual.py, owner option dns_dual, default off). Each GL per-tunnel dnsmasq of
+        the pair also asks the other tunnel (server=<ip>@<device>); option off: every snippet removed. Never raises;
+        DNS-DUAL-UNVERIFIED is logged and never touches the traffic route."""
+        import dns_dual
+        try:
+            from kernel_policy import parse_mangle,fields
+            active=mark.get('active') if isinstance(mark,dict) and isinstance(mark.get('active'),str) else None
+            result=dns_dual.follow(parse_mangle(mangle),fields,active)
+        except Exception:result=dns_dual.failed()
+        self._dns_dual_log(result)
+        return result
+    def dns_dual_off(self):
+        """Auto released the pair (unguard): GL's own per-tunnel dnsmasq configuration again."""
+        import dns_dual
+        try:result=dns_dual.off()
+        except Exception:result=dns_dual.failed()
+        self._dns_dual_log(result)
+        self.dns_dual=result
+        return result
+    def _dns_dual_log(self,result):
+        import dns_dual
+        if result.get('code')==dns_dual.UNVERIFIED or result.get('changed'):
+            try:subprocess.run(['logger','-t','homensai-vpn',dns_dual.summary(result)],
+                               timeout=5,check=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+            except (OSError,subprocess.SubprocessError):pass
     def reorder(self,order,before_write=None,write_command=None):
         sections=self.policy()['sections']
         current=policy_order(sections,self.process_bindings)
@@ -943,6 +976,7 @@ class Linux:
     def unguard(self):
         if self.guard_exists():command(['nft','delete','table','inet',TABLE])
         if self.guard_exists():raise Refused('GUARD-RELEASE-UNCONFIRMED')
+        self.dns_dual_off()  # the pair is released: no DNS-through-both-tunnels snippet stays behind
     def devices(self):
         devices=[]
         for p in inventory()['profiles']:
@@ -954,8 +988,25 @@ class Linux:
                 raise Refused('GUARD-DEVICE-UNVERIFIED') from None
             if s.get('up') and s.get('l3_device'):devices.append(s['l3_device'])
         return devices
+    def flow_reset(self,old_id,new_id):
+        """Drop the LAN flows still NATed to the channel left (flow_reset.py); bounded, never a switch failure."""
+        import flow_reset
+        config=flow_reset.read_config()
+        if not flow_reset.enabled(config):return {'code':flow_reset.OFF,'deleted':0}
+        profiles=inventory()['profiles']
+        def status(identifier):
+            profile=next((p for p in profiles if p.get('id')==identifier and p.get('interface')),None)
+            if profile is None:return None
+            try:value=json.loads(command(['ubus','call','network.interface.'+profile['interface'],'status']))
+            except (OSError,ValueError,subprocess.SubprocessError):return None
+            return value if isinstance(value,dict) else None
+        def log(line):
+            subprocess.run(['logger','-t','homensai-vpn',line[:400]],timeout=5,check=False,
+                           stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        return flow_reset.run({'config':config,'old_status':status(old_id),'new_status':status(new_id),
+                               'exec':flow_reset.execute,'log':log})
     def recovery_ready(self,identifier,settings):
-        from recovery_settings import normalized,stable_success
+        from recovery_settings import normalized,stable_success,stable_seconds
         from failure_diagnosis import resolve_pair,scoped_samples
         from observation_freshness import valid_for,settle_for
         policy=normalized(settings)
@@ -964,8 +1015,15 @@ class Linux:
         pair=resolve_pair(status,settings,time.time(),age,settle_for(settings))
         row=next((pair[role] for role in ('source','target') if pair[role] and pair[role]['id']==identifier),None)
         return (pair['coordination']['state']=='READY' and row is not None
-                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],policy['primary_stable'],time.time(),age)
+                and stable_success(scoped_samples(status.get('samples',[]),row),identifier,policy['primary_successes'],stable_seconds(settings,policy),time.time(),age)
                 and self.health(identifier) is True)
+    def recheck(self,identifier,seconds):
+        """The late-switch recheck (pair_auto.late_recheck): one probe with a short wait. True only when the source
+        passes DNS + 2 of 3 HTTPS now; False otherwise (a timeout or error never stops a failover)."""
+        profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
+        if not profile or not profile.get('interface'):return False
+        result=probe(profile,seconds)
+        return result.get('code') is None and result.get('dns_ok') is True and type(result.get('https_success')) is int and result['https_success']>=2
     def health(self,identifier):
         profile=next((p for p in inventory()['profiles'] if p['id']==identifier),None)
         if not profile or not profile.get('interface'):return False
@@ -973,6 +1031,20 @@ class Linux:
         if result.get('code') is None and result.get('dns_ok') is True and result.get('https_success',0)>=2:return True
         if result.get('code') in ('VPN-001','VPN-003','DNS-001','PROFILE-INACTIVE'):return False
         return None
+
+
+def reset_old_flows(backend,journal,new_role):
+    """After a verified move to journal[new_role] (COMMITTED, or ROLLED-BACK after a restore): drop the LAN flows still
+    NATed to the other channel (flow_reset.py). A backend without flow_reset (tests) or any failure only returns a code;
+    the switch itself is already complete and is never failed or undone by this step. Twin: transaction.reset_old_flows."""
+    try:
+        reset=getattr(backend,'flow_reset',None)
+        if not callable(reset) or new_role not in ('source','target'):return None
+        old_role='target' if new_role=='source' else 'source'
+        result=reset(journal.get(old_role),journal.get(new_role))
+        return result.get('code') if isinstance(result,dict) else None
+    except Exception:  # noqa: BLE001 - a completed switch must never fail here
+        return 'FLOW-RESET-FAILED'
 
 
 def rollback(backend,journal,reason,restore_order=None):
@@ -1114,6 +1186,10 @@ def rollback(backend,journal,reason,restore_order=None):
         record_switch_time(PERSIST,journal['finished']-restore_started)
     # Retain the VPN-only guard during the experiment. INPUT/LAN management is unaffected.
     backend.guard(backend.devices())
+    # The traffic is back on the restored channel: end the LAN flows still NATed to the channel just left.
+    try:restored_role=role(pair_context,restore_order) if journal.get('pair_transition') is not None else 'source'
+    except Exception:restored_role=None  # noqa: BLE001 - verified above; no guess, no reset
+    reset_old_flows(backend,journal,restored_role)
     if journal.get('pair_transition') is not None:
         fields=pair_event_fields(journal,completed=True,outcome='restored',restoring=True)
         value=dict(fields,state='RESTORING' if reason in ('PAIR-STOPPED','SERVICE-STOPPED','SUPERVISOR-RECOVERY') else 'ROLLED-BACK',reason=reason,source=journal['source'],target=journal['target'],
@@ -1194,8 +1270,12 @@ def give_up(backend,journal,code):
 
 
 def source_ready(backend,journal,settings,reason):
-    """A passed trial returns on a fresh bound check (with retries); later returns need stable history."""
+    """A passed trial returns on a fresh bound check (with retries); later returns need stable history.
+    The return of a reserve that failed while carrying (RESCUE_REASON) is proven with rescue_stable, exactly as
+    committed_recovery_decision decided it (else finish_committed would hold on the failed reserve)."""
     if reason!='TRIAL-PASSED':
+        from recovery_settings import RESCUE_REASON,rescue_settings
+        if reason==RESCUE_REASON:settings=rescue_settings(settings)
         return backend.recovery_ready(journal['source'],settings) is True
     for index in range(RETURN_CHECKS):
         if backend.health(journal['source']) is True:return True
@@ -1242,9 +1322,11 @@ def handle_return(backend,journal,request,last_time,control_revision=None):
     return True,stamp
 
 
-def finish_committed(backend,journal,reason,restore_order=None):
+def finish_committed(backend,journal,reason,restore_order=None,hold=None):
     bind_policy_context(backend,journal)
-    """A completed, client-confirmed switch must not expire back onto a failed source."""
+    """A completed, client-confirmed switch must not expire back onto a failed source.
+
+    hold (K2, pair_auto.cleanup_hold): seconds of primary stability required for the return instead of primary_stable."""
     order,fingerprint=backend.order()
     if fingerprint!=journal['hash'] or order not in (journal['before'],journal['after'],journal.get('restore_target_order'),journal.get('restored_order')):
         abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
@@ -1252,6 +1334,7 @@ def finish_committed(backend,journal,reason,restore_order=None):
     from recovery_settings import normalized
     settings=backend.policy().get('settings',{})
     recovery=normalized(settings)
+    if hold is not None:settings=dict(settings,recovery_primary_stable=hold)
     from pair_policy import metadata,role
     context=metadata(journal)
     if context is not None:
@@ -1281,14 +1364,21 @@ def finish_committed(backend,journal,reason,restore_order=None):
     return True
 
 
-def committed_recovery_decision(backend,journal,settings,samples,now,status=None):
+def committed_recovery_decision(backend,journal,settings,samples,now,status=None,hold=None):
     """Observe a confirmed reserve without inventing permission for another hop.
 
     Returning to the certified original route requires stable primary samples
     plus recovery_ready's fresh bound DNS/HTTPS check. A reserve failure is
     never hidden behind the historical COMMITTED status.
+
+    hold (continuous pair, pair_auto.return_hold): seconds of primary stability
+    required while the reserve is healthy; the planned return then also waits
+    max(cooldown, min_dwell), so the next failover is never inside the cooldown.
+    A failing reserve is left without the damped hold, after rescue_stable seconds of primary stability
+    (recovery_settings.rescue_settings; rescue_stable 0 = the full primary_stable, the rule before 03.11.2026)
+    and without the failure model's return gate (recovery_settings.return_rule).
     """
-    from recovery_settings import normalized
+    from recovery_settings import normalized,return_rule
     from failure_diagnosis import resolve_pair,profile_identity,flap_window
     from observation_freshness import valid_for,settle_for
     recovery=normalized(settings)
@@ -1303,19 +1393,31 @@ def committed_recovery_decision(backend,journal,settings,samples,now,status=None
     if (pair['coordination']['state']!='READY' or target is None or target['id']!=journal['target']
             or expected is not None and profile_identity(target)!=expected):
         return {'action':'HOLD','reason':'RESERVE-IDENTITY-UNKNOWN','reserve_healthy':None}
-    failed=streak(samples,target['id'],recovery['failures'],now,age,False,target)
+    # The reserve carrying traffic failed: the owner's failure model (channel_model, 'consecutive' = the streak).
+    from channel_model import channel_failed,return_ready,name as failure_model
+    failed=(streak(samples,target['id'],recovery['failures'],now,age,False,target) if failure_model(settings)=='consecutive'
+            else channel_failed(samples,target['id'],recovery['failures'],now,age,settings,target))
     from fault_control import testing_profile
     fault_test=failed and testing_profile(journal['target'])
+    damped=hold is not None and not failed and hold>recovery['primary_stable']
     if recovery['return_policy']=='healthy_primary' or fault_test:
         dwell=now-journal.get('confirmed',journal.get('started',now))
-        if (failed or dwell>=recovery['min_dwell']) and backend.recovery_ready(journal['source'],settings) is True:
+        need=recovery['min_dwell'] if hold is None else max(recovery['cooldown'],recovery['min_dwell'])
+        # The one return rule of both deciders (recovery_settings.return_rule; Lua pair.return_rule): from a FAILED
+        # reserve the rescue stability min(primary_stable, rescue_stable) and no model gate (the HMM return gate never
+        # delays leaving a dead reserve); a planned return wants max(primary_stable, hold) AND, in the HMM modes,
+        # channel_model.return_ready of the primary.
+        ready_settings,model_gate=return_rule(settings,'failed' if failed else 'planned',hold)
+        if ((failed or dwell>=need)
+                and (not model_gate or return_ready(samples,journal['source'],recovery['primary_successes'],now,age,settings,pair['source']))
+                and backend.recovery_ready(journal['source'],ready_settings) is True):
             return {'action':'RESTORE-PRIMARY','reason':'RESERVE-FAILED-PRIMARY-VERIFIED' if failed else 'PRIMARY-STABLY-RECOVERED'}
     if failed:
         # A fresh negative check avoids acting on stale monitor failure history.
         health=backend.health(journal['target'])
         if health is False:return {'action':'HOLD','reason':'RESERVE-FAILED','reserve_healthy':False}
         if health is None:return {'action':'HOLD','reason':'RESERVE-HEALTH-UNKNOWN','reserve_healthy':None}
-    return {'action':'OBSERVE','reason':'CLIENT-CONFIRMED'}
+    return {'action':'OBSERVE','reason':'PAIR-RATE-LIMIT' if damped and recovery['return_policy']=='healthy_primary' else 'CLIENT-CONFIRMED'}
 
 
 def disable_acceleration(backend,request):
@@ -1762,10 +1864,15 @@ def attempt(backend,selection,until,trial,probe_evidence=None,control_revision=N
                 assert_selection(backend,selection)
                 require_control_revision(control_revision)
                 if backend.order()!=(after,selection['hash']):raise Refused('EXTERNAL-POLICY-CHANGE')
-                require_control_revision(control_revision)
-                journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
+                # K5 (formal model 03.11.2026): the revision check and the COMMITTED write under the control lock, as
+                # the manual hold below: a Stop (it rotates the revision under this lock) is before or after, never between
+                with control_lock(RUNTIME):
+                    require_control_revision(control_revision)
+                    journal.update(phase='COMMITTED',confirmed=time.time());journal_write(journal)
                 from switch_timing import record as record_switch_time
                 record_switch_time(PERSIST,journal['confirmed']-journal['started'])  # page countdown only
+                # The move is confirmed: end the LAN flows still NATed to the channel just left (a code, never a failure).
+                reset_old_flows(backend,journal,destination)
                 if manual_request_id is not None:
                     with control_lock(RUNTIME):
                         require_control_revision(control_revision)
@@ -2017,6 +2124,14 @@ def serve():
         # independent supervisor restores owned work; it never resumes Auto.
         from pair_auto import fence_recovery
         fence_recovery()
+        # Server pick (stage 3): a server change cut short by a power cut or a crash (between its uci commits and the
+        # session write) is this supervisor's own write; re-bind the session and the journal to it before the COMMITTED
+        # journal is compared with the live order below (else abandon(EXTERNAL-POLICY-CHANGE)). The journal is read again
+        # whatever it returns: a re-bound journal whose session write failed must not be compared as the stale one.
+        from pair_auto import server_resume_boot
+        try:
+            server_resume_boot(backend);journal=journal_read()
+        except (Refused,OSError,ValueError,KeyError,TypeError,subprocess.SubprocessError):pass
         if journal.get('phase') not in (None,'ROLLED-BACK'):
             # A power cut removes the stock boot prefix (tmpfs); recovery may write the kernel through rtp2.sh.
             from rtp_boot import recovery_prefix
@@ -2024,7 +2139,8 @@ def serve():
             except (OSError,ValueError):pass  # the rollback below then refuses with its own code
         if journal.get('phase')=='RELEASE-PENDING':
             abandon(backend,journal,journal.get('reason','EXTERNAL-POLICY-CHANGE'))
-        # Supervisor is independently respawned by procd. Reboot/pending work always rolls back.
+        # Supervisor is independently respawned by procd. Reboot/pending work rolls back, except an automatic switch to
+        # the reserve cut short in this boot that forward_resume proves and finishes (03.11.2026).
         if journal.get('phase') in ('ARMED','APPLYING','WAIT-CLIENT','RESTORING'):
             if journal.get('phase')=='APPLYING' and journal.get('pid'):
                 # Kill only a process group whose command line proves this exact child identity.
@@ -2043,13 +2159,22 @@ def serve():
             boot_step('recovery %s'%journal.get('phase'))
             boot_devices(backend)
             boot_step('tunnel devices')
-            try:boot_rollback(backend,journal)
-            except (Refused,OSError,ValueError,subprocess.SubprocessError):
-                boot_step('rollback failed')
-                if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
-                    give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
-                raise
-            boot_step('rollback done')
+            # 03.11.2026 (forward_resume.py): an automatic switch to the reserve cut short in this boot, with the primary
+            # still failing and the reserve healthy, is finished instead of rolled back; anything unproven rolls back
+            resumed=False
+            if journal.get('phase') in ('APPLYING','WAIT-CLIENT'):
+                from forward_resume import attempt as forward_attempt
+                resumed,_=forward_attempt(backend,journal)
+                boot_step('forward resumed' if resumed else 'forward refused')
+                if not resumed:journal=journal_read()
+            if not resumed:
+                try:boot_rollback(backend,journal)
+                except (Refused,OSError,ValueError,subprocess.SubprocessError):
+                    boot_step('rollback failed')
+                    if int(journal.get('rollback_failures',0) or 0)>=ROLLBACK_FAILURE_LIMIT:
+                        give_up(backend,journal,'ROLLBACK-GIVEN-UP');return
+                    raise
+                boot_step('rollback done')
         elif journal.get('phase')=='COMMITTED':
             if backend.order()!=(journal['after'],journal['hash']):abandon(backend,journal,'EXTERNAL-POLICY-CHANGE')
             else:
@@ -2058,6 +2183,16 @@ def serve():
                 backend.guard(backend.devices())
                 if journal.get('manual_request_id') and journal.get('confirmed'):
                     journal.update(phase='HELD-ON-RESERVE',reason='OPERATOR-MANUAL');journal_write(journal)
+        elif journal.get('phase')=='HELD-ON-RESERVE' and backend.order()==(journal['after'],journal['hash']):
+            # K3 (formal model 03.11.2026): a power cut drops the nft guard (RAM) while the route stays on the reserve
+            # (a session handed over, a Stop with a dead primary, an operator hold): the VPN-only guard the held journal
+            # had comes back here, not only after the handover is released (up to KEEP_SECONDS). Lua: auto.recover.
+            from pair_auto import boot_devices,_log
+            boot_devices(backend)
+            try:devices=backend.devices()
+            except (Refused,OSError,ValueError,subprocess.SubprocessError):devices=None
+            if devices:backend.guard(devices)
+            else:_log('GUARD-DEVICE-UNAVAILABLE: HELD-ON-RESERVE journal recovered without the VPN-only guard')
         from manual_dispatch import recover_pending
         recover_pending(backend,runtime=RUNTIME,persist=PERSIST)
         from pair_auto import recover as pair_recover,boot_step
@@ -2096,7 +2231,12 @@ def serve():
                     last_trial=consumed.get('trial');last_attempt=consumed.get('time',0)
                 data=backend.policy(); settings=data['settings']
                 from pair_auto import tick as pair_tick
-                if pair_tick(backend,settings,decision_revision):
+                ticked=pair_tick(backend,settings,decision_revision)
+                # 03.11.2026: after the owner's Stop the GL VPN dashboard manages the pair's tunnels again (the autostart
+                # flags preparation set to 0 go back to their before-records); a no-op unless a deciding file changed
+                from preparation_control import autostart_after_stop
+                autostart_after_stop()
+                if ticked:
                     # tick() is synchronous: a transaction still open after it
                     # returns has no active owner in this supervisor. Do not
                     # swallow it in the pair HELD loop. procd restarts this

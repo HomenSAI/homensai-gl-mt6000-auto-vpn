@@ -21,6 +21,7 @@ local M={}
 M.RUNTIME='/var/run/homensai-vpn'
 M.PERSIST='/etc/homensai-vpn'
 M.CONFIG='/etc/config/homensai_vpn'
+M.SYS_NET='/sys/class/net'  -- sysfs() reads <SYS_NET>/<device>/<name> (configure(): tests only)
 M.PACKAGE_CONTROL='/usr/lib/opkg/info/homensai-auto-vpn-lua.control'
 M.AGENT='/usr/bin/python3 /usr/lib/homensai-vpn/agent.py'
 M.INVENTORY='/usr/bin/lua /usr/lib/homensai-vpn/inventory.lua'
@@ -42,7 +43,7 @@ local function safe_word(s,limit) return type(s)=='string' and #s>=1 and #s<=lim
 local function dotted(s) return type(s)=='string' and string.find(s,'^%d+%.%d+%.%d+%.%d+$')~=nil end
 
 function M.configure(options)
-  for _,key in ipairs({'RUNTIME','PERSIST','CONFIG','PACKAGE_CONTROL'}) do
+  for _,key in ipairs({'RUNTIME','PERSIST','CONFIG','PACKAGE_CONTROL','SYS_NET'}) do
     if options[key] then
       if not canon.safe_directory(options[key]) then error('monitor_io: unsafe path '..key,2) end
       M[key]=options[key]
@@ -139,10 +140,10 @@ function M.unsafe_directory(path) local st=lstat(path);return st~=nil and st.typ
 function M.exists(path) return M.file_size(path)~=nil end
 
 local SYSFS={ifindex=true,['statistics/rx_bytes']=true,['statistics/tx_bytes']=true,operstate=true,
-  ['statistics/rx_packets']=true,['statistics/tx_packets']=true}
+  ['statistics/rx_packets']=true,['statistics/tx_packets']=true,mtu=true}  -- mtu: the large-packet check (mtu_check.lua)
 function M.sysfs(device,name)
   if not safe_word(device,15) or not SYSFS[name] then return nil end
-  local f=io.open('/sys/class/net/'..device..'/'..name,'r')
+  local f=io.open(M.SYS_NET..'/'..device..'/'..name,'r')
   if not f then return nil end
   local text=f:read('*l');f:close();return text
 end
@@ -469,6 +470,8 @@ end
 -- datagram(kind, device, host, port, packet, seconds, accept, cb(data|nil, kind_or_nil, sent_at, received_at))
 -- kind 'udp' (SOCK_DGRAM) or 'icmp' (SOCK_RAW/IPPROTO_ICMP). The socket is bound to the device only (no SO_MARK
 -- in nixio; see the router facts). accept(data, peer) -> true for the awaited answer; others are ignored.
+-- Failure kinds: 'unavailable' (no socket), 'timeout', 'refused' (the send was refused by the router's firewall,
+-- SEND_POLICY), 'transport' (any other send/receive error).
 function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
   cb=once(cb)
   if not nixio or not uloop then cb(nil,'unavailable');return end
@@ -510,11 +513,16 @@ function M.datagram(kind,device,host,port,packet,seconds,accept,cb)
   end,uloop.ULOOP_READ or 1)
   M.live[key]={sock=sock,ufd=ufd}
   guard=M.after(seconds*1000,function() finish(nil,'timeout') end)
-  local sent=pcall(function()
-    if kind=='icmp' then assert(sock:sendto(packet,host,0)) else assert(sock:send(packet)) end
+  -- nixio: bytes sent, or false/nil, errno. EPERM/EACCES: the router's own firewall refused the packet (an
+  -- nft/iptables OUTPUT drop answers the sender with EPERM; MT3000 03.11.2026, `meta length > 1300 drop` on the
+  -- tunnel): kind 'refused', which mtu_check.lua counts as a lost echo; every other failure stays 'transport'.
+  local okc,count,code=pcall(function()
+    if kind=='icmp' then return sock:sendto(packet,host,0) end
+    return sock:send(packet)
   end)
-  if not sent then finish(nil,'transport') end
+  if not okc or not count then finish(nil,(okc and M.SEND_POLICY[code]) and 'refused' or 'transport') end
 end
+M.SEND_POLICY={[1]=true,[13]=true}  -- EPERM EACCES: refused by the router's firewall (datagram kind 'refused')
 
 -- beat_socket(device) -> handle | nil, 'missing'|'unavailable'  (fast_detect.lua, Lua plan item 5)
 -- One persistent non-blocking raw ICMP socket bound to the tunnel device (no SO_MARK, as datagram()). It is
@@ -551,26 +559,36 @@ function M.beat_socket(device)
 end
 
 -- HTTPS GET through the tunnel device with curl (nixio has no TLS). The certificate is checked for the
--- hostname (curl default CA store), the connection goes to the fixed address (--resolve), HTTP/1.1, no
--- redirects, body capped. cb(response|nil, kind): response={status=<int>, body=<bytes>}.
+-- hostname against the host's pinned roots (probe_trust.anchor_file, --cacert; the curl default CA store when
+-- the file is absent), the connection goes to the fixed address (--resolve), HTTP/1.1, no redirects, body
+-- capped; agent: the User-Agent with the request nonce (probe_trust.agent). cb(response|nil, kind):
+-- response={status=<int>, body=<bytes>}; kind 'tls-untrusted' = the peer certificate was refused.
 M.CURL_TLS={[35]=true,[51]=true,[53]=true,[54]=true,[58]=true,[59]=true,[60]=true,[64]=true,[66]=true,[77]=true,
   [80]=true,[82]=true,[83]=true,[90]=true,[91]=true}
-function M.https_get(device,address,hostname,path,seconds,cb)
+function M.https_get(device,address,hostname,path,seconds,cb,agent)
   cb=once(cb)
   if not safe_word(device,15) or not dotted(address) or not string.find(hostname,'^[a-z0-9.-]+$')
-     or not string.find(path,'^/[A-Za-z0-9_./?=&%-]*$') then cb(nil,'transport-error');return end
+     or not string.find(path,'^/[A-Za-z0-9_./?=&%-]*$')
+     or (agent~=nil and not (type(agent)=='string' and string.find(agent,'^[A-Za-z0-9/_.-]+$') and #agent<=64)) then
+    cb(nil,'transport-error');return
+  end
+  local trust=require('probe_trust')
   local base=M.RUNTIME..'/probe-'..canon.unique()
   local head,body=base..'.h',base..'.b'
   local argv={M.CURL,'-q','-s','--http1.1','--proto','=https','--max-redirs','0','-m',tostring(seconds),
     '--interface',device,'--resolve',hostname..':443:'..address,
     '-H','Accept: application/dns-json, application/dns-message, text/plain',
     '--max-filesize','32769','-D',head,'-o',body,'https://'..hostname..path}
+  local anchors=trust.anchor_file(hostname)
+  if anchors then table.insert(argv,#argv,'--cacert');table.insert(argv,#argv,anchors) end
+  if agent then table.insert(argv,#argv,'-A');table.insert(argv,#argv,agent) end
   M.spawn(argv,seconds+1,function(code,kind)
     local function read(p) local f=io.open(p,'rb');if not f then return nil end;local t=f:read(40000);f:close();return t end
     local headers,content=read(head),read(body)
     os.remove(head);os.remove(body)
     if kind then cb(nil,kind=='timeout' and 'timeout' or 'transport-error');return end
     if code==28 then cb(nil,'timeout');return end
+    if trust.CURL_UNTRUSTED[code] then cb(nil,'tls-untrusted');return end
     if M.CURL_TLS[code] then cb(nil,'tls-error');return end
     if code==63 then cb(nil,'invalid-response');return end
     if code~=0 or not headers then cb(nil,'transport-error');return end

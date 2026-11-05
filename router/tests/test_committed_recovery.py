@@ -16,6 +16,7 @@ class CommittedRecoveryTests(unittest.TestCase):
                                       {'id':'wireguard:b','interface':'vpn2','protocol':'wireguard','code':'DNS-001'}],
                             'samples':self.samples})
     def decide(self,settings,samples,now):
+        settings=dict({'failure_model':'consecutive'},**settings)  # these cases model the previous rule
         status=copy.deepcopy(self.status);status['time']=now;status['vendor_observation']['time']=now
         for row in status['profiles']:row['time']=now
         for group in status['vendor_observation']['groups']:group['time']=now

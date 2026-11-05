@@ -1,4 +1,5 @@
 'use strict';
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Switch statistics truth after a power cut (MT3000 soak, 31.10.2026, 2.0.0-alpha12 Lua line): the router was held on a
 // manual switch (HELD-ON-RESERVE / OPERATOR-MANUAL), a sysrq-b power cut hit it, the supervisor recovery after the boot
 // published RESTORING (route toward the saved order, not a new switch), failed (RTP-BOOT-PRECONDITION-UNVERIFIED,

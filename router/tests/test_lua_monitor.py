@@ -77,7 +77,7 @@ class LuaMonitorFiles(unittest.TestCase):
         self.assertEqual(status['stats_mode']['hours'],[24,72,168,336])
         self.assertEqual(status['stats_mode']['mode'],'diagnostic')
         self.assertEqual(len(status['samples']),6)
-        self.assertEqual(set(status['samples'][0]),{'id','time','code','rtt_ms','https_success','dns_ok','interface','vendor_tunnel_id','vendor_generation'})
+        self.assertEqual(set(status['samples'][0]),{'id','time','code','rtt_ms','https_success','dns_ok','interface','vendor_tunnel_id','vendor_generation','dense'})
         public_model=status['accounting'].pop('reliability')  # the page view (Reliability.public), not the saved model
         self.assertTrue(public_model['checkpointed'])
         checkpoint_schema.accounting(status['accounting'])

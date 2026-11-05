@@ -1,0 +1,4338 @@
+{
+ "decide": [
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_1",
+   "name": "clearly faster and certain: change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     38501,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "equal servers: no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     3000,
+     38712,
+     1200,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     3000,
+     37136,
+     1200,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "15 % faster with little evidence: no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     60000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     60000,
+     37136,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_1",
+   "name": "15 % faster with much evidence: change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     2000,
+     3000,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "faster but flaky (availability < 80 %): no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "faster but not measured this round: no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": null,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "faster but not switchable: no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": false
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     3000,
+     42485,
+     1200,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     3000,
+     40943,
+     1200,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_2",
+   "name": "current dead: the lowest mu among live ones",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": false,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_2",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     3000,
+     42485,
+     1200,
+     1000,
+     4000,
+     1
+    ]
+   ],
+   "expect": "1_1",
+   "name": "current dead, availability ignored",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": false,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     3000,
+     42485,
+     1200,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "current dead, nothing live",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": false,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": false,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     44998,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     60000,
+     36889,
+     6000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     34012,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_2",
+   "name": "two pass: the lowest mu wins, not the highest z",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_2",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     36889,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     34012,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_2",
+   "name": "no current row: the best live one",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_2",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     40943,
+     0,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     40568,
+     0,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": null,
+   "name": "z 1.3 (P 0.90): no change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     40943,
+     0,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     40438,
+     0,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": "1_1",
+   "name": "z 1.75 (P 0.96): change",
+   "now": 100000,
+   "rows": [
+    {
+     "alive": true,
+     "current": true,
+     "profile": "1_0",
+     "switchable": true
+    },
+    {
+     "alive": true,
+     "current": false,
+     "profile": "1_1",
+     "switchable": true
+    }
+   ]
+  }
+ ],
+ "job": [
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 60,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,3000,40943,6,1000,0,1],\"4192:40354_2016\":[100000,2000,30900,41,1000,0,1],\"4192:40354_2020\":[100000,1000,38712,0,1000,0,1],\"5841:10004_2000\":[100000,1000,30910,0,1000,0,1],\"5841:10004_2002\":[100000,1000,34012,0,1000,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n"
+   },
+   "name": "bayes cold start: every server measured, model written, no change before the availability is known",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 120,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":22,\"tunnel_id\":4192}",
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,30910,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes warm, a clearly faster server: handed to Auto; the clearly worse one is not measured",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 47,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 120,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,38396,14525,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":47,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,38712,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes warm, equal servers, one lucky reading 38 % faster: no change",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     30.0,
+     31.0,
+     29.0
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 59,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":30,\"tunnel_id\":4192}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,38712,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "simple, the same lucky reading: handed to Auto (the 20 % rule)",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "simple"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     30.0,
+     31.0,
+     29.0
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": false,
+         "latency_ms": null,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 38,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 112,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":null,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":38,\"tunnel_id\":4192}",
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,29727,47175,23659,8127,0,1],\"4192:40354_2016\":[100000,28727,36472,17406,8127,0,1],\"4192:40354_2020\":[100000,26727,38712,10691,7127,1000,0],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":false,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":38,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":112,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,36889,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes, the current server does not answer: the skipped servers are measured too, the best live one is handed over",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": null,
+    "185.1.1.20:1232": null,
+    "185.1.1.20:1233": null,
+    "185.1.1.20:1234": null
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": false,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": null,
+       "candidates": [
+        {
+         "alive": null,
+         "latency_ms": null,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": null,
+         "latency_ms": null,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": null,
+         "latency_ms": null,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": null,
+       "candidates": [
+        {
+         "alive": null,
+         "latency_ms": null,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": null,
+         "latency_ms": null,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick.json": "{\"enabled\":false,\"time\":100000,\"tunnels\":[{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":null,\"candidates\":[{\"alive\":null,\"latency_ms\":null,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":null,\"latency_ms\":null,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,30910,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes requested but the pick is off: nothing measured, no model written",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": false,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 60,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,3000,40943,6,1000,0,1],\"4192:40354_2016\":[100000,2000,30900,41,1000,0,1],\"4192:40354_2020\":[100000,1000,38712,0,1000,0,1],\"5841:10004_2000\":[100000,1000,30910,0,1000,0,1],\"5841:10004_2002\":[100000,1000,34012,0,1000,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":60,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":"
+   },
+   "name": "bayes, a broken model file: a cold start",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 107,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":22,\"tunnel_id\":4192}",
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[100000,17714,46701,17867,4924,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":107,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[96300,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,30910,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes, a stale clearly worse server is measured again",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 120,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,1891,2673,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,30910,12000,1000,3000,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes, the faster server is flaky: no change",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 4096,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.11",
+      "1231",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 59,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": null,
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"40354_2020\",\"from_location\":\"Kyiv\",\"from_ms\":48,\"group_id\":\"40354\",\"interface\":\"ovpnclient2\",\"profile_id\":\"2016\",\"protocol\":\"openvpn\",\"section\":\"cfg0456cd\",\"time\":100000,\"to\":\"40354_2016\",\"to_location\":\"Berlin\",\"to_ms\":21,\"tunnel_id\":4192}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":59,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":null,\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n"
+   },
+   "name": "bayes, an unknown model name is the simple rule",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "ovpnclient2"
+    ],
+    "model": "thompson"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  },
+  {
+   "active_mark": 45056,
+   "expect": {
+    "exec": [
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "route_policy"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "ovpnclient"
+     ],
+     [
+      "uci",
+      "-q",
+      "-X",
+      "show",
+      "wireguard"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1233",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.20",
+      "1234",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1231",
+      "eth0"
+     ],
+     [
+      "tcp",
+      "185.1.1.16",
+      "1232",
+      "eth0"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "berlin.de.wg.nordhold.net"
+     ],
+     [
+      "ping",
+      "-c",
+      "3",
+      "-W",
+      "1",
+      "-w",
+      "5",
+      "-I",
+      "eth0",
+      "5.6.7.8"
+     ]
+    ],
+    "logs": [],
+    "result": {
+     "enabled": true,
+     "time": 100000,
+     "tunnels": [
+      {
+       "best": "40354_2016",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 48,
+         "location": "Kyiv",
+         "profile": "40354_2020"
+        },
+        {
+         "alive": true,
+         "latency_ms": 22,
+         "location": "Berlin",
+         "profile": "40354_2016"
+        },
+        {
+         "alive": true,
+         "latency_ms": 120,
+         "location": "Варшава",
+         "profile": "40354_2011"
+        }
+       ],
+       "code": null,
+       "current": "40354_2020",
+       "interface": "ovpnclient2",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "openvpn",
+       "tunnel_id": 4192
+      },
+      {
+       "best": "10004_2000",
+       "candidates": [
+        {
+         "alive": true,
+         "latency_ms": 30,
+         "location": "Berlin",
+         "profile": "10004_2002"
+        },
+        {
+         "alive": true,
+         "latency_ms": 21,
+         "location": "Frankfurt",
+         "profile": "10004_2000"
+        }
+       ],
+       "code": "SERVER-PICK-REQUESTED",
+       "current": "10004_2002",
+       "interface": "wgclient1",
+       "last_change": null,
+       "ordered": false,
+       "protocol": "wireguard",
+       "tunnel_id": 5841
+      }
+     ]
+    },
+    "writes": {
+     "/run/server-pick-change.json": "{\"from\":\"10004_2002\",\"from_location\":\"Berlin\",\"from_ms\":30,\"group_id\":\"10004\",\"interface\":\"wgclient1\",\"profile_id\":\"2000\",\"protocol\":\"wireguard\",\"section\":\"cfg0123ab\",\"time\":100000,\"to\":\"10004_2000\",\"to_location\":\"Frankfurt\",\"to_ms\":21,\"tunnel_id\":5841}",
+     "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[100000,28727,30909,10732,8127,0,1],\"4192:40354_2020\":[100000,27727,38712,10691,8127,0,1],\"5841:10004_2000\":[100000,27727,30462,21,8127,0,1],\"5841:10004_2002\":[100000,27727,34012,0,8127,0,1]},\"version\":1}",
+     "/run/server-pick.json": "{\"enabled\":true,\"time\":100000,\"tunnels\":[{\"best\":\"40354_2016\",\"candidates\":[{\"alive\":true,\"latency_ms\":48,\"location\":\"Kyiv\",\"profile\":\"40354_2020\"},{\"alive\":true,\"latency_ms\":22,\"location\":\"Berlin\",\"profile\":\"40354_2016\"},{\"alive\":true,\"latency_ms\":120,\"location\":\"\\u0412\\u0430\\u0440\\u0448\\u0430\\u0432\\u0430\",\"profile\":\"40354_2011\"}],\"code\":null,\"current\":\"40354_2020\",\"interface\":\"ovpnclient2\",\"last_change\":null,\"ordered\":false,\"protocol\":\"openvpn\",\"tunnel_id\":4192},{\"best\":\"10004_2000\",\"candidates\":[{\"alive\":true,\"latency_ms\":30,\"location\":\"Berlin\",\"profile\":\"10004_2002\"},{\"alive\":true,\"latency_ms\":21,\"location\":\"Frankfurt\",\"profile\":\"10004_2000\"}],\"code\":\"SERVER-PICK-REQUESTED\",\"current\":\"10004_2002\",\"interface\":\"wgclient1\",\"last_change\":null,\"ordered\":false,\"protocol\":\"wireguard\",\"tunnel_id\":5841}]}"
+    }
+   },
+   "files": {
+    "/etc/vpn_profiles.d/profile4192": "# NordVPN\n40354_2020\n40354_2016\n40354_2011\n",
+    "/etc/vpn_profiles.d/profile5841": "10004_2002\n10004_2000\n",
+    "/run/server-pick-model.json": "{\"servers\":{\"4192:40354_2011\":[99400,30000,47875,12000,8000,0,1],\"4192:40354_2016\":[99400,30000,30910,12000,8000,0,1],\"4192:40354_2020\":[99400,30000,38712,12000,8000,0,1],\"5841:10004_2000\":[99400,30000,30445,0,8000,0,1],\"5841:10004_2002\":[99400,30000,34012,0,8000,0,1]},\"version\":1}"
+   },
+   "name": "bayes wireguard failed and idle: the ping average is one sample; Frankfurt handed to Auto",
+   "now": 100000,
+   "ping": {
+    "5.6.7.8": "PING 5.6.7.8 (5.6.7.8): 56 data bytes\n64 bytes from 5.6.7.8: seq=0 ttl=55 time=21.5 ms\n\n--- 5.6.7.8 ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/21.5/99.000 ms\n",
+    "berlin.de.wg.nordhold.net": "PING berlin.de.wg.nordhold.net (9.9.9.1): 56 data bytes\n64 bytes from 9.9.9.1: seq=0 ttl=55 time=30.4 ms\n\n--- berlin.de.wg.nordhold.net ping statistics ---\n3 packets transmitted, 3 packets received, 0% packet loss\nround-trip min/avg/max = 1.000/30.4/99.000 ms\n"
+   },
+   "request": {
+    "auto_on": true,
+    "enabled": true,
+    "failed": [
+     "wgclient1"
+    ],
+    "model": "bayes"
+   },
+   "tcp": {
+    "185.1.1.11:1231": [
+     60.0,
+     61.3,
+     59.2
+    ],
+    "185.1.1.16:1231": [
+     21.4,
+     23.0,
+     22.2
+    ],
+    "185.1.1.20:1231": [
+     48.2,
+     50.1,
+     47.4
+    ]
+   },
+   "uci": {
+    "ovpnclient": "ovpnclient.40354_2020=clients\novpnclient.40354_2020.location='Kyiv'\novpnclient.40354_2020.remote='185.1.1.20:1231' '185.1.1.20:1232' '185.1.1.20:1233' '185.1.1.20:1234'\novpnclient.40354_2016=clients\novpnclient.40354_2016.location='Berlin'\novpnclient.40354_2016.remote='185.1.1.16:1231' '185.1.1.16:1232'\novpnclient.40354_2011=clients\novpnclient.40354_2011.location='Варшава'\novpnclient.40354_2011.remote='185.1.1.11:1231'\n",
+    "route_policy": "route_policy.gl_process_vpn=rule_process\nroute_policy.gl_process_vpn.tunnel_id='10100'\nroute_policy.cfg0123ab=rule\nroute_policy.cfg0123ab.tunnel_id='5841'\nroute_policy.cfg0123ab.via_type='wireguard'\nroute_policy.cfg0123ab.via='wgclient1'\nroute_policy.cfg0123ab.group_id='10004'\nroute_policy.cfg0123ab.peer_id='2002'\nroute_policy.cfg0123ab.mark='0x1000'\nroute_policy.cfg0123ab.profiles='/etc/vpn_profiles.d/profile5841'\nroute_policy.cfg0456cd=rule\nroute_policy.cfg0456cd.tunnel_id='4192'\nroute_policy.cfg0456cd.via_type='openvpn'\nroute_policy.cfg0456cd.via='ovpnclient2'\nroute_policy.cfg0456cd.group_id='40354'\nroute_policy.cfg0456cd.client_id='2020'\nroute_policy.cfg0456cd.mark='0xb000'\nroute_policy.cfg0456cd.profiles='/etc/vpn_profiles.d/profile4192'\nroute_policy.cfg0789ef=rule\nroute_policy.cfg0789ef.tunnel_id='777'\nroute_policy.cfg0789ef.via_type='openvpn'\nroute_policy.cfg0789ef.profiles='/tmp/evil'\n",
+    "wireguard": "wireguard.peer_2002=peers\nwireguard.peer_2002.group_id='10004'\nwireguard.peer_2002.location='Berlin'\nwireguard.peer_2002.end_point='berlin.de.wg.nordhold.net:51820'\nwireguard.peer_2002.public_key='PUB2002='\nwireguard.peer_2002.private_key='PRIV2002='\nwireguard.peer_2002.address_v4='10.5.0.2/16'\nwireguard.peer_2002.allowed_ips='0.0.0.0/0'\nwireguard.peer_2000=peers\nwireguard.peer_2000.group_id='10004'\nwireguard.peer_2000.location='Frankfurt'\nwireguard.peer_2000.end_point='5.6.7.8:51820'\nwireguard.peer_2000.public_key='PUB2000='\nwireguard.peer_2000.private_key='PRIV2000='\nwireguard.peer_2000.address_v4='10.5.0.2/16'\nwireguard.peer_2000.allowed_ips='0.0.0.0/0'\n"
+   },
+   "wan": "eth0"
+  }
+ ],
+ "model_read": [
+  {
+   "expect": {
+    "4192:40354_2016": [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "5841:wg:10004_2000": [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   },
+   "name": "valid entries",
+   "text": "{\"servers\": {\"4192:40354_2016\": [99400, 30000, 38712, 12000, 8000, 0, 1], \"5841:wg:10004_2000\": [99400, 30000, 38712, 12000, 8000, 0, 1]}, \"version\": 1}"
+  },
+  {
+   "expect": {
+    "4192:40354_2016": [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   },
+   "name": "broken entries are dropped",
+   "text": "{\"servers\": {\"4192:40354_2016\": [99400, 30000, 38712, 12000, 8000, 0, 1], \"x:1_2\": [99400, 30000, 38712, 12000, 8000, 0, 1], \"4192:../etc\": [99400, 30000, 38712, 12000, 8000, 0, 1], \"4192:1_3\": [99400, 30000, 38712, 12000, 8000, 0], \"4192:1_4\": [1.5, 30000, 38712, 12000, 8000, 0, 1], \"4192:1_5\": [true, 30000, 38712, 12000, 8000, 0, 1], \"4192:1_6\": [99400, 30000, 38712, 12000, 8000, 0, 2], \"4192:1_7\": [-1, 30000, 38712, 12000, 8000, 0, 1], \"4192:1_8\": [99400, 30000, 200001, 12000, 8000, 0, 1]}}"
+  },
+  {
+   "expect": {},
+   "name": "broken file",
+   "text": "{not json"
+  },
+  {
+   "expect": {},
+   "name": "no file",
+   "text": null
+  },
+  {
+   "expect": {},
+   "name": "servers not an object",
+   "text": "{\"servers\":[1,2]}"
+  }
+ ],
+ "model_text": [
+  {
+   "expect": "{\"servers\":{\"4192:1_0\":[100000,30000,38712,12000,8000,0,1],\"4192:1_1\":[99900,30000,38712,12000,8000,0,1],\"4192:1_10\":[99000,30000,38712,12000,8000,0,1],\"4192:1_11\":[98900,30000,38712,12000,8000,0,1],\"4192:1_12\":[98800,30000,38712,12000,8000,0,1],\"4192:1_13\":[98700,30000,38712,12000,8000,0,1],\"4192:1_14\":[98600,30000,38712,12000,8000,0,1],\"4192:1_15\":[98500,30000,38712,12000,8000,0,1],\"4192:1_16\":[98400,30000,38712,12000,8000,0,1],\"4192:1_17\":[98300,30000,38712,12000,8000,0,1],\"4192:1_18\":[98200,30000,38712,12000,8000,0,1],\"4192:1_19\":[98100,30000,38712,12000,8000,0,1],\"4192:1_2\":[99800,30000,38712,12000,8000,0,1],\"4192:1_20\":[98000,30000,38712,12000,8000,0,1],\"4192:1_21\":[97900,30000,38712,12000,8000,0,1],\"4192:1_22\":[97800,30000,38712,12000,8000,0,1],\"4192:1_23\":[97700,30000,38712,12000,8000,0,1],\"4192:1_24\":[97600,30000,38712,12000,8000,0,1],\"4192:1_25\":[97500,30000,38712,12000,8000,0,1],\"4192:1_26\":[97400,30000,38712,12000,8000,0,1],\"4192:1_27\":[97300,30000,38712,12000,8000,0,1],\"4192:1_28\":[97200,30000,38712,12000,8000,0,1],\"4192:1_29\":[97100,30000,38712,12000,8000,0,1],\"4192:1_3\":[99700,30000,38712,12000,8000,0,1],\"4192:1_30\":[97000,30000,38712,12000,8000,0,1],\"4192:1_31\":[96900,30000,38712,12000,8000,0,1],\"4192:1_32\":[96800,30000,38712,12000,8000,0,1],\"4192:1_33\":[96700,30000,38712,12000,8000,0,1],\"4192:1_34\":[96600,30000,38712,12000,8000,0,1],\"4192:1_35\":[96500,30000,38712,12000,8000,0,1],\"4192:1_36\":[96400,30000,38712,12000,8000,0,1],\"4192:1_37\":[96300,30000,38712,12000,8000,0,1],\"4192:1_38\":[96200,30000,38712,12000,8000,0,1],\"4192:1_39\":[96100,30000,38712,12000,8000,0,1],\"4192:1_4\":[99600,30000,38712,12000,8000,0,1],\"4192:1_40\":[96000,30000,38712,12000,8000,0,1],\"4192:1_41\":[95900,30000,38712,12000,8000,0,1],\"4192:1_42\":[95800,30000,38712,12000,8000,0,1],\"4192:1_43\":[95700,30000,38712,12000,8000,0,1],\"4192:1_44\":[95600,30000,38712,12000,8000,0,1],\"4192:1_45\":[95500,30000,38712,12000,8000,0,1],\"4192:1_46\":[95400,30000,38712,12000,8000,0,1],\"4192:1_47\":[95300,30000,38712,12000,8000,0,1],\"4192:1_48\":[95200,30000,38712,12000,8000,0,1],\"4192:1_49\":[95100,30000,38712,12000,8000,0,1],\"4192:1_5\":[99500,30000,38712,12000,8000,0,1],\"4192:1_50\":[95000,30000,38712,12000,8000,0,1],\"4192:1_51\":[94900,30000,38712,12000,8000,0,1],\"4192:1_52\":[94800,30000,38712,12000,8000,0,1],\"4192:1_53\":[94700,30000,38712,12000,8000,0,1],\"4192:1_54\":[94600,30000,38712,12000,8000,0,1],\"4192:1_55\":[94500,30000,38712,12000,8000,0,1],\"4192:1_56\":[94400,30000,38712,12000,8000,0,1],\"4192:1_57\":[94300,30000,38712,12000,8000,0,1],\"4192:1_58\":[94200,30000,38712,12000,8000,0,1],\"4192:1_59\":[94100,30000,38712,12000,8000,0,1],\"4192:1_6\":[99400,30000,38712,12000,8000,0,1],\"4192:1_60\":[94000,30000,38712,12000,8000,0,1],\"4192:1_61\":[93900,30000,38712,12000,8000,0,1],\"4192:1_62\":[93800,30000,38712,12000,8000,0,1],\"4192:1_7\":[99300,30000,38712,12000,8000,0,1],\"4192:1_8\":[99200,30000,38712,12000,8000,0,1],\"4192:1_9\":[99100,30000,38712,12000,8000,0,1],\"4192:2_1\":[100000,30000,38712,12000,8000,0,1]},\"version\":1}",
+   "model": {
+    "4192:1_0": [
+     100000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_1": [
+     99900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_10": [
+     99000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_11": [
+     98900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_12": [
+     98800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_13": [
+     98700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_14": [
+     98600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_15": [
+     98500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_16": [
+     98400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_17": [
+     98300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_18": [
+     98200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_19": [
+     98100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_2": [
+     99800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_20": [
+     98000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_21": [
+     97900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_22": [
+     97800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_23": [
+     97700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_24": [
+     97600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_25": [
+     97500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_26": [
+     97400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_27": [
+     97300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_28": [
+     97200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_29": [
+     97100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_3": [
+     99700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_30": [
+     97000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_31": [
+     96900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_32": [
+     96800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_33": [
+     96700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_34": [
+     96600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_35": [
+     96500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_36": [
+     96400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_37": [
+     96300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_38": [
+     96200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_39": [
+     96100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_4": [
+     99600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_40": [
+     96000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_41": [
+     95900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_42": [
+     95800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_43": [
+     95700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_44": [
+     95600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_45": [
+     95500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_46": [
+     95400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_47": [
+     95300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_48": [
+     95200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_49": [
+     95100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_5": [
+     99500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_50": [
+     95000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_51": [
+     94900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_52": [
+     94800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_53": [
+     94700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_54": [
+     94600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_55": [
+     94500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_56": [
+     94400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_57": [
+     94300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_58": [
+     94200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_59": [
+     94100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_6": [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_60": [
+     94000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_61": [
+     93900,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_62": [
+     93800,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_63": [
+     93700,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_64": [
+     93600,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_65": [
+     93500,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_66": [
+     93400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_67": [
+     93300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_68": [
+     93200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_69": [
+     93100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_7": [
+     99300,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_8": [
+     99200,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_9": [
+     99100,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:1_old": [
+     -504801,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    "4192:2_1": [
+     100000,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   },
+   "name": "newest MODEL_MAX, old ones dropped, ties by key",
+   "now": 100000
+  },
+  {
+   "expect": "{\"servers\":{},\"version\":1}",
+   "model": {},
+   "name": "empty",
+   "now": 100000
+  }
+ ],
+ "model_update": [
+  {
+   "entry": null,
+   "expect": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "name": "cold start, three equal samples",
+   "now": 1000,
+   "samples": [
+    60,
+    60,
+    60
+   ]
+  },
+  {
+   "entry": null,
+   "expect": [
+    1000,
+    3000,
+    40943,
+    665,
+    1000,
+    0,
+    1
+   ],
+   "name": "cold start, spread samples",
+   "now": 1000,
+   "samples": [
+    50,
+    60,
+    72
+   ]
+  },
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": [
+    4600,
+    4500,
+    36322,
+    4804,
+    1500,
+    0,
+    1
+   ],
+   "name": "one half-life later, faster samples",
+   "now": 4600,
+   "samples": [
+    30,
+    30,
+    30
+   ]
+  },
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": [
+    4600,
+    1500,
+    40943,
+    0,
+    500,
+    1000,
+    0
+   ],
+   "name": "one half-life later, no answer",
+   "now": 4600,
+   "samples": null
+  },
+  {
+   "entry": null,
+   "expect": [
+    1000,
+    1000,
+    0,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "name": "0 ms is read as 1 ms",
+   "now": 1000,
+   "samples": [
+    0
+   ]
+  },
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": [
+    865000,
+    1000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "name": "ten days later: the evidence is gone",
+   "now": 865000,
+   "samples": [
+    60
+   ]
+  },
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": [
+    500,
+    6000,
+    40943,
+    0,
+    2000,
+    0,
+    1
+   ],
+   "name": "the clock went back: no decay",
+   "now": 500,
+   "samples": [
+    60,
+    60,
+    60
+   ]
+  },
+  {
+   "entry": null,
+   "expect": [
+    1000,
+    1000,
+    30445,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "name": "one WireGuard ping average",
+   "now": 1000,
+   "samples": [
+    21
+   ]
+  },
+  {
+   "entry": null,
+   "expect": [
+    1000,
+    1000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "name": "a float clock is floored",
+   "now": 1000.75,
+   "samples": [
+    60
+   ]
+  }
+ ],
+ "note": "Shared cases of the Bayesian server pick (server_pick.py / lua/server_pick.lua); generated by private/math/bayes-pick/gen_cases.py from the Python module, expectations reviewed by hand.",
+ "posterior": [
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": {
+    "availability_e6": 66666667,
+    "mu_e6": 4094300,
+    "var_e9": 21333333
+   },
+   "name": "fresh three samples",
+   "now": 1000
+  },
+  {
+   "entry": [
+    1000,
+    3000,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": {
+    "availability_e6": 60000000,
+    "mu_e6": 4094300,
+    "var_e9": 60952381
+   },
+   "name": "one half-life old",
+   "now": 4600
+  },
+  {
+   "entry": [
+    1000,
+    900,
+    40943,
+    0,
+    1000,
+    0,
+    1
+   ],
+   "expect": {
+    "availability_e6": 66666667,
+    "mu_e6": null,
+    "var_e9": null
+   },
+   "name": "below one sample of evidence",
+   "now": 1000
+  },
+  {
+   "entry": [
+    1000,
+    30000,
+    38712,
+    12000,
+    8000,
+    0,
+    1
+   ],
+   "expect": {
+    "availability_e6": 89043725,
+    "mu_e6": 3871200,
+    "var_e9": 1809204
+   },
+   "name": "long evidence with spread",
+   "now": 1600
+  },
+  {
+   "entry": [
+    1000,
+    30000,
+    30910,
+    12000,
+    2000,
+    3000,
+    1
+   ],
+   "expect": {
+    "availability_e6": 42857143,
+    "mu_e6": 3091000,
+    "var_e9": 1583333
+   },
+   "name": "flaky server",
+   "now": 1000
+  },
+  {
+   "entry": null,
+   "expect": {
+    "availability_e6": null,
+    "mu_e6": null,
+    "var_e9": null
+   },
+   "name": "no entry",
+   "now": 1000
+  }
+ ],
+ "probe_plan": [
+  {
+   "entries": [
+    null,
+    null,
+    null
+   ],
+   "expect": [
+    true,
+    true,
+    true
+   ],
+   "name": "cold start: all",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     47875,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    true,
+    true,
+    false
+   ],
+   "name": "a clearly worse server is skipped",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     47875,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    false,
+    true,
+    true
+   ],
+   "name": "the current server is always measured, even when clearly worse",
+   "now": 100000,
+   "rows": [
+    {
+     "current": false,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": true,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     30910,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     96400,
+     30000,
+     47875,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    true,
+    true,
+    true
+   ],
+   "name": "a stale worse server is measured",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     39120,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     38286,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    true,
+    true,
+    true
+   ],
+   "name": "equal servers are all plausible",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    [
+     99400,
+     30000,
+     23026,
+     12000,
+     8000,
+     0,
+     0
+    ],
+    [
+     99400,
+     30000,
+     47875,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    true,
+    true,
+    false
+   ],
+   "name": "a server dead last time does not set the bar",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    [
+     99400,
+     30000,
+     38712,
+     12000,
+     8000,
+     0,
+     1
+    ],
+    null,
+    [
+     99400,
+     30000,
+     47875,
+     12000,
+     8000,
+     0,
+     1
+    ]
+   ],
+   "expect": [
+    true,
+    true,
+    false
+   ],
+   "name": "an unknown server is measured",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    }
+   ]
+  },
+  {
+   "entries": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "expect": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    false,
+    false
+   ],
+   "name": "at most MAX_MEASURED",
+   "now": 100000,
+   "rows": [
+    {
+     "current": true,
+     "profile": "1_0"
+    },
+    {
+     "current": false,
+     "profile": "1_1"
+    },
+    {
+     "current": false,
+     "profile": "1_2"
+    },
+    {
+     "current": false,
+     "profile": "1_3"
+    },
+    {
+     "current": false,
+     "profile": "1_4"
+    },
+    {
+     "current": false,
+     "profile": "1_5"
+    },
+    {
+     "current": false,
+     "profile": "1_6"
+    },
+    {
+     "current": false,
+     "profile": "1_7"
+    },
+    {
+     "current": false,
+     "profile": "1_8"
+    },
+    {
+     "current": false,
+     "profile": "1_9"
+    },
+    {
+     "current": false,
+     "profile": "1_10"
+    },
+    {
+     "current": false,
+     "profile": "1_11"
+    },
+    {
+     "current": false,
+     "profile": "1_12"
+    },
+    {
+     "current": false,
+     "profile": "1_13"
+    }
+   ]
+  }
+ ]
+}

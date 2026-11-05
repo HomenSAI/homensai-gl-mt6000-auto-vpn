@@ -51,9 +51,9 @@ local function boxed(x,like) if canon.is_float(like) then return canon.float(x) 
 -- stayed BLOCKED with a healthy reserve. Short windows keep that safety meaning; a source observed only
 -- unhealthy for a whole bounded window is unstable and no longer blocks a verified reserve. (failure_diagnosis.py)
 M.SOURCE_UNSTABLE='PAIR-SOURCE-UNSTABLE'
-M.UNSTABLE_CODES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['ROUTE-001']=true,['CHECK-001']=true,
+M.UNSTABLE_CODES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['VPN-MTU']=true,['ROUTE-001']=true,['CHECK-001']=true,
   ['VENDOR-IDENTITY-CHANGED']=true,['VENDOR-IDENTITY-UNKNOWN']=true}
-local PROBE_FAILURES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true}
+local PROBE_FAILURES={['VPN-001']=true,['VPN-003']=true,['DNS-001']=true,['VPN-MTU']=true}
 
 -- Three vendor settle periods, never shorter than 120 s nor longer than 900 s.
 function M.flap_window(settle_seconds)
@@ -255,6 +255,7 @@ function M.diagnose(status,source,now,settings)
   if code=='VPN-001' then return result('TUNNEL-DISCONNECTED',false) end
   if code=='DNS-001' then return result('DNS-FAILED',false) end
   if code=='VPN-003' then return result('HTTPS-FAILED',false) end
+  if code=='VPN-MTU' then return result('LARGE-PACKETS-FAILED',false) end  -- mtu_check.lua: a black hole
   local successes=row.https_success
   if code==nil and row.dns_ok==true and py.is_int(successes) and successes>=2 then return result('VPN-PROBE-HEALTHY',false) end
   return result('OBSERVATION-UNKNOWN',true)

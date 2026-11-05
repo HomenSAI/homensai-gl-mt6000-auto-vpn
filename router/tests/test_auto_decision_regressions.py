@@ -33,6 +33,8 @@ class Decisions(unittest.TestCase):
             case.settings['plan_'+role]=case.selection[role]['id']
             case.settings['plan_'+role+'_tunnel']=case.selection[role]['vendor_tunnel_id']
         case.settings['interval']=10
+        # the return timelines below are built on a 30 s primary stability (the default before 03.11.2026: 120 s)
+        case.settings['recovery_primary_stable']='30'
         # OS/vendor inputs are synthetic; decisions, scoped samples, recovery
         # readiness, child transaction, journal and control fencing are real.
         case.backend.recovery_ready.side_effect=lambda identifier,settings:RECOVERY_READY(case.backend,identifier,settings)

@@ -82,6 +82,26 @@ F6 — `router/ui_logic.inc.js:29` (`uiMergeHistory`): walks dotted paths from t
 `status`; a path through `__proto__` would write to `Object.prototype`. Data comes from the router's own RPC, so not
 exploitable from outside today; cheap hardening is to skip `__proto__`/`constructor`/`prototype` keys.
 
+### Fix status (2026-11-02)
+
+- F1, F3, F4, F6 — fixed in `e61dc351` (01.11.2026).
+- F2 — fixed. `skip_value` in `canon.lua` and `canon_c.c` now validates exactly as `parse_value` does, without building
+  the value: string escapes, `\uXXXX`, control characters, number grammar, `nonfinite number`, `integer beyond 2^53`,
+  literals, `,`/`:` separators, duplicate fields in nested objects and the nesting limit (skipped fields start at depth
+  1, like kept ones). `decode_keys` therefore accepts exactly what `decode` (and Python `json.loads` with the canon hooks)
+  accepts and, for an object document, raises the same error at the same byte. Tests: `router/tests/lua/test_canon_keys.lua`
+  (26 malformed values × 3 positions, same error as `decode`, both with and without the C module) and
+  `router/tests/lua/canon_c_differential.lua` (fixed cases plus, for every fuzzed object text, `decode_keys` vs `decode`
+  acceptance and error text, besides Lua vs C).
+- F5 — fixed: `buf_add` returns at once when `n == 0`, before `buf_need`/`memcpy`.
+- `router/files/usr/lib/lua/canon_c.so` rebuilt with `router/native/build.sh router` (OpenWrt 21.02.7 SDK toolchain,
+  same flags); the HEAD source rebuilt in the same container reproduced the previous record `503c2b9a…` byte for byte,
+  the new record is in `router/native/canon_c.so.sha256`. `router/native/test.sh` (stock Lua, LNUM x86_64, aarch64 package
+  file under qemu, router/tests with the module) was run on the PC.
+- Found on the way: the F4 line `router/files/** text eol=lf` came after `*.so binary` and the style `-text` rule and
+  overrode them (`canon_c.so` and the `.woff2` fonts were marked text with LF conversion, so a CR LF pair inside a new
+  binary would have been changed on `git add`). `.gitattributes` repeats the binary and style rules after it.
+
 Style-only (counts): luacheck 1111 long lines, 20 unused args, 13 unused vars, 10 empty `if` branches, 6 shadowed
 upvalues; ruff 609 local imports, 388 magic numbers, 203 complexity, 47 `%` formatting; bandit 94 LOW; eslint 29
 empty blocks, 2 disabled-by-`false&&`/`null&&` UI blocks (`auto_panel.inc.js:515`, `manual_panel.inc.js:226`), duplicate

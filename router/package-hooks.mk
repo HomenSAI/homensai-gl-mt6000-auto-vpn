@@ -662,5 +662,14 @@ if __name__=='__main__':main(sys.argv[1] if len(sys.argv)==2 else 'check')
 HOMENSAI_LIFECYCLE_GUARD
 /etc/init.d/homensai-vpn stop
 /etc/init.d/homensai-vpn disable
+if [ "$$action" = check ]; then
+    # Removal: no DNS-through-both-tunnels snippet (dns_dual) stays behind; each GL per-tunnel dnsmasq runs GL's own
+    # configuration again. Auto's Stop already removed them; this covers a stopped service with leftovers.
+    for snippet in /tmp/dnsmasq.d.*/homensai-dns-dual.conf; do
+        [ -f "$$snippet" ] || continue
+        instance=$${snippet#/tmp/dnsmasq.d.}; instance=$${instance%/homensai-dns-dual.conf}
+        rm -f "$$snippet" && /etc/init.d/dnsmasq restart "$$instance" >/dev/null 2>&1 || true
+    done
+fi
 exit 0
 endef

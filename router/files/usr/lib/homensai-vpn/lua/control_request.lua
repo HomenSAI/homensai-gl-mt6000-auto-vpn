@@ -21,8 +21,8 @@
 -- or without a part that is not ported, and always BEFORE it has written anything:
 --   a held control lock (never waited for in the event loop), a speed-test pause file, a failed router policy
 --   read, preparation repairs that Auto would run first (auto_prepare), the legacy (non-pair) trial mode,
---   a HELD session that may be re-adopted (release_session), Stop while a failure-test intent exists (Stop then
---   also cleans the test up), any unexpected read error. fault_cancel is idempotent: it may fall back between
+--   a HELD session that may be re-adopted (release_session; for the owner's Start already before preparation),
+--   Stop while a failure-test intent exists (Stop then also cleans the test up), any unexpected read error. fault_cancel is idempotent: it may fall back between
 --   its locked steps (agent.py's cancel repeats the same writes with the same nonce).
 local canon=require('canon')
 
@@ -146,6 +146,19 @@ function M.handover_matches(deps,journal)
   return canon.is_object(h) and h.tx==journal.tx and (journal.phase=='COMMITTED' or journal.phase=='HELD-ON-RESERVE')
 end
 
+-- pair_auto.release_for_start applies: a HELD session whose code is a readopt code and no 'on' intent
+function M.held_by_outside_change(deps)
+  local ok,state,old=pcall(function() return deps.read_state(),deps.intent() end)
+  return ok and canon.is_object(state) and state.phase=='HELD' and READOPT[state.recovery_error]==true
+    and canon.is_object(old) and old.mode~='on'
+end
+
+-- the owner's resume marker without a newer Stop latch (boot_resume.wanted)
+function M.owner_resume_wanted(deps)
+  local ok,wanted=pcall(require('boot_resume').wanted,deps.read,deps.persist)
+  return ok and wanted==true
+end
+
 function M.start(deps,arguments)
   if arguments.control_revision==nil or not only(arguments,{control_revision=true,request_source=true}) then
     return start_refused('CONTROL-REVISION-STALE')
@@ -176,6 +189,12 @@ function M.start(deps,arguments)
     if START_BUSY[journal.phase] and not M.handover_matches(deps,journal) then return start_refused('TRANSACTION-IN-PROGRESS') end
     local blocker=deps.auto_blocker()
     if blocker then return start_refused(blocker) end
+    -- 03.11.2026: the owner's Start on a session HELD only by a change made outside the app is handed over
+    -- before preparation (pair_auto.release_for_start, under the control lock), then prepared and requested:
+    -- that whole sequence stays with agent.py
+    -- K1 tail (formal model 03.11.2026): also the boot/restart resume's programmatic Start of the owner's Auto (the
+    -- owner's resume marker, no newer Stop latch: boot_resume.wanted); agent.py keeps every other check
+    if (source=='manual' or (source=='programmatic' and M.owner_resume_wanted(deps))) and M.held_by_outside_change(deps) then fallback() end
     -- auto_prepare: anything Start would repair first stays with agent.py
     local snapshot=deps.preparation(settings)
     for _,row in ipairs(snapshot and snapshot.checks or {}) do

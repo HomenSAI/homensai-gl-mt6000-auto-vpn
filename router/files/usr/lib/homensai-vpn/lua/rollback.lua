@@ -201,6 +201,9 @@ function M.rollback(env,value,reason,restore_order)
     pcall(env.deps.record_switch_time,env,num(value.finished)-restore_started)
   end
   env.backend.guard(env.backend.devices())
+  -- The traffic is back on the restored channel: end the LAN flows still NATed to the channel just left.
+  local rok,restored_role=pcall(function() if pair_context~=nil then return policy.role(pair_context,restore_order) end;return 'source' end)
+  T.reset_old_flows(env,value,rok and restored_role or nil)
   if pair_context~=nil then
     local fields=T.pair_event_fields(value,{completed=true,outcome='restored',restoring=true})
     local state=(reason=='PAIR-STOPPED' or reason=='SERVICE-STOPPED' or reason=='SUPERVISOR-RECOVERY') and 'RESTORING' or 'ROLLED-BACK'

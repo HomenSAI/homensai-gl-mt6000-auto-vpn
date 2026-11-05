@@ -242,7 +242,12 @@ class SetupPayloadsMatchSetupConfig(unittest.TestCase):
                            '{"metric":"icmp-8.8.8.8","ping_interval":"60"}', '{"metric":"icmp-8.8.8.8","ping_interval":true}',
                            '{"metric":"icmp-8.8.8.8","ping_interval":null}', '{"metric":"icmp-8.8.8.8","ping_interval":[60]}',
                            '{"metric":"bad","ping_interval":5}', '{"ping_interval":60}',
-                           '{"metric":"icmp-8.8.8.8","compare":1,"ping_interval":5}'],
+                           '{"metric":"icmp-8.8.8.8","compare":1,"ping_interval":5}',
+                           # integration alpha8: the pick's model (server_pick_model, expert setting of the approved page)
+                           '{"metric":"icmp-1.1.1.1","server_pick_model":"bayes"}', '{"metric":"icmp-1.1.1.1","server_pick_model":"simple"}',
+                           '{"metric":"websites","server_pick":true,"server_pick_model":"bayes"}', '{"metric":"icmp-1.1.1.1","server_pick_model":"Bayes"}',
+                           '{"metric":"icmp-1.1.1.1","server_pick_model":""}', '{"metric":"icmp-1.1.1.1","server_pick_model":null}',
+                           '{"metric":"icmp-1.1.1.1","server_pick_model":1}', '{"metric":"bad","server_pick_model":"bayes"}'],
         'setup_stats': ['{"mode":"work"}', '{"mode":"diagnostic","hours":24}', '{"mode":"diagnostic","hours":72}', '{"mode":"diagnostic","hours":168}',
                         '{"mode":"diagnostic","hours":336}', '{"mode":"diagnostic","hours":48}', '{"mode":"diagnostic","hours":24.0}',
                         '{"mode":"diagnostic"}', '{"mode":"work","hours":24}', '{"mode":"x"}', '{}'],

@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 440" class="ch-manual-switch" role="img" aria-labelledby="ch-manual-switch-t ch-manual-switch-d" font-family="system-ui,-apple-system,Segoe UI,Roboto,sans-serif">
+<title id="ch-manual-switch-t">Ручное переключение: время по версиям / Manual switch: time per version</title>
+<desc id="ch-manual-switch-d">Python (1.0.0) → Lua (2.0.0) → Lua + C. Готово: 42,2 с → 0,7 с. Python (1.0.0) → Lua (2.0.0) → Lua + C. Done: 42.2 s → 0.7 s. Log scale, seconds. HomenS.AI Auto VPN</desc>
+<style>.ch-manual-switch{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--ink:#0b0b0b;--ink2:#52514e;--mut:#6f6d68;--grid:#e1e0d9;--axis:#c3c2b7;--surf:#fcfcfb;--era:#f1f0ec}@media (prefers-color-scheme:dark){.ch-manual-switch{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--ink:#f0efec;--ink2:#c3c2b7;--mut:#a3a19a;--grid:#2c2c2a;--axis:#383835;--surf:#1a1a19;--era:#222220}}.ch-manual-switch .bg{fill:var(--surf)}.ch-manual-switch .era{fill:var(--era)}.ch-manual-switch .gr{stroke:var(--grid);stroke-width:1}.ch-manual-switch .ax{stroke:var(--axis);stroke-width:1}.ch-manual-switch text{fill:var(--ink2);font-size:11.5px}.ch-manual-switch .h1{fill:var(--ink);font-size:16px;font-weight:600}.ch-manual-switch .h2{fill:var(--ink2);font-size:13px}.ch-manual-switch .nt{fill:var(--mut);font-size:12px}.ch-manual-switch .lg{fill:var(--ink);font-size:12.5px}.ch-manual-switch .tk{fill:var(--mut);font-size:11px}.ch-manual-switch .dl{fill:var(--ink);font-size:12px;font-weight:600}.ch-manual-switch .s1{stroke:var(--s1)}.ch-manual-switch .s2{stroke:var(--s2)}.ch-manual-switch .s3{stroke:var(--s3)}.ch-manual-switch .f1{fill:var(--s1)}.ch-manual-switch .f2{fill:var(--s2)}.ch-manual-switch .f3{fill:var(--s3)}.ch-manual-switch .srf{fill:var(--surf)}.ch-manual-switch .ring{stroke:var(--surf);stroke-width:2}.ch-manual-switch .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.ch-manual-switch .gap{fill:none;stroke-width:1;opacity:.35}.ch-manual-switch .wh{stroke-width:1.5;stroke-linecap:round}.ch-manual-switch .wh.weak{stroke-dasharray:3 3;opacity:.45}.ch-manual-switch .hit{fill:transparent}.ch-manual-switch .pt:focus{outline:none}.ch-manual-switch .pt:focus .hit,.ch-manual-switch .pt:hover .hit{fill:var(--grid)}</style>
+<rect class="bg" x="0" y="0" width="760" height="440" rx="10"/>
+<text class="h1" x="16" y="26">Ручное переключение: время по версиям</text>
+<text class="h2" x="16" y="45">Manual switch: time per version</text>
+<text class="nt" x="16" y="64">Python (1.0.0) → Lua (2.0.0) → Lua + C. Готово: 42,2 с → 0,7 с.</text>
+<text class="nt" x="16" y="80">Python (1.0.0) → Lua (2.0.0) → Lua + C. Done: 42.2 s → 0.7 s.</text>
+<line x1="18" y1="98" x2="40" y2="98" class="ln s1"/>
+<circle cx="29.0" cy="98.0" r="4.5" class="f1 ring"/>
+<text class="lg" x="48" y="102">Готово (замер владельца) / Done (owner benchmark)</text>
+<line x1="18" y1="117" x2="40" y2="117" class="ln s2"/>
+<rect x="24.5" y="112.5" width="9" height="9" rx="1.5" class="f2 ring"/>
+<text class="lg" x="48" y="121">Трафик перешёл (замер владельца) / Traffic moved (owner benchmark)</text>
+<line x1="18" y1="136" x2="40" y2="136" class="ln s3"/>
+<path d="M29.0 130.5l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+<text class="lg" x="48" y="140">Трафик перешёл (soak-стенд, команда по SSH) / Traffic moved (soak bench, command over SSH)</text>
+<rect class="era" x="227.4" y="149" width="440.6" height="199"/>
+<text class="tk" x="64.0" y="342">Python</text>
+<text class="tk" x="233.4" y="342">Lua (+C)</text>
+<line class="gr" x1="58" y1="348.0" x2="668" y2="348.0"/>
+<text class="tk" x="52" y="352.0" text-anchor="end">0.2 s</text>
+<line class="gr" x1="58" y1="318.7" x2="668" y2="318.7"/>
+<text class="tk" x="52" y="322.7" text-anchor="end">0.5 s</text>
+<line class="gr" x1="58" y1="296.5" x2="668" y2="296.5"/>
+<text class="tk" x="52" y="300.5" text-anchor="end">1 s</text>
+<line class="gr" x1="58" y1="274.3" x2="668" y2="274.3"/>
+<text class="tk" x="52" y="278.3" text-anchor="end">2 s</text>
+<line class="gr" x1="58" y1="244.9" x2="668" y2="244.9"/>
+<text class="tk" x="52" y="248.9" text-anchor="end">5 s</text>
+<line class="gr" x1="58" y1="222.7" x2="668" y2="222.7"/>
+<text class="tk" x="52" y="226.7" text-anchor="end">10 s</text>
+<line class="gr" x1="58" y1="200.5" x2="668" y2="200.5"/>
+<text class="tk" x="52" y="204.5" text-anchor="end">20 s</text>
+<line class="gr" x1="58" y1="171.2" x2="668" y2="171.2"/>
+<text class="tk" x="52" y="175.2" text-anchor="end">50 s</text>
+<line class="gr" x1="58" y1="149.0" x2="668" y2="149.0"/>
+<text class="tk" x="52" y="153.0" text-anchor="end">100 s</text>
+<line class="ax" x1="58" y1="348" x2="668" y2="348"/>
+<text class="tk" text-anchor="end" transform="translate(77.9 362) rotate(-40)">1.0.0-beta7</text>
+<text class="tk" text-anchor="end" transform="translate(111.8 362) rotate(-40)">1.0.0-beta8</text>
+<text class="tk" text-anchor="end" transform="translate(145.7 362) rotate(-40)">1.0.0-beta9</text>
+<text class="tk" text-anchor="end" transform="translate(179.6 362) rotate(-40)">1.0.0-beta10</text>
+<text class="tk" text-anchor="end" transform="translate(213.5 362) rotate(-40)">1.0.0-beta13</text>
+<text class="tk" text-anchor="end" transform="translate(247.4 362) rotate(-40)">2.0.0-alpha3</text>
+<text class="tk" text-anchor="end" transform="translate(281.3 362) rotate(-40)">2.0.0-alpha13</text>
+<text class="tk" text-anchor="end" transform="translate(315.2 362) rotate(-40)">2.0.0-alpha14</text>
+<text class="tk" text-anchor="end" transform="translate(349.1 362) rotate(-40)">2.0.0-alpha16</text>
+<text class="tk" text-anchor="end" transform="translate(382.9 362) rotate(-40)">2.0.0-alpha19</text>
+<text class="tk" text-anchor="end" transform="translate(416.8 362) rotate(-40)">2.0.0-alpha20</text>
+<text class="tk" text-anchor="end" transform="translate(450.7 362) rotate(-40)">2.0.0-alpha21</text>
+<text class="tk" text-anchor="end" transform="translate(484.6 362) rotate(-40)">2.0.0-alpha22</text>
+<text class="tk" text-anchor="end" transform="translate(518.5 362) rotate(-40)">2.0.0-alpha24</text>
+<text class="tk" text-anchor="end" transform="translate(552.4 362) rotate(-40)">2.0.0-alpha26</text>
+<text class="tk" text-anchor="end" transform="translate(586.3 362) rotate(-40)">2.0.0-beta4</text>
+<text class="tk" text-anchor="end" transform="translate(620.2 362) rotate(-40)">2.1.0-alpha1</text>
+<text class="tk" text-anchor="end" transform="translate(654.1 362) rotate(-40)">2.1.0-alpha2</text>
+<text class="tk" x="58" y="430">Версия (старые слева) / Version (oldest left) · логарифмическая шкала / log scale · GL-MT3000</text>
+<line class="ln s1" x1="74.9" y1="176.6" x2="108.8" y2="206.5"/>
+<line class="ln s1" x1="108.8" y1="206.5" x2="142.7" y2="223.1"/>
+<line class="ln s1" x1="142.7" y1="223.1" x2="176.6" y2="242.5"/>
+<line class="ln s1" x1="176.6" y1="242.5" x2="210.5" y2="241.9"/>
+<line class="ln s1" x1="210.5" y1="241.9" x2="244.4" y2="252.1"/>
+<line class="gap s1" x1="244.4" y1="252.1" x2="447.7" y2="307.9"/>
+<line class="ln s2" x1="74.9" y1="193.4" x2="108.8" y2="220.3"/>
+<line class="ln s2" x1="108.8" y1="220.3" x2="142.7" y2="229.1"/>
+<line class="ln s2" x1="142.7" y1="229.1" x2="176.6" y2="250.5"/>
+<line class="ln s2" x1="176.6" y1="250.5" x2="210.5" y2="251.3"/>
+<line class="ln s2" x1="210.5" y1="251.3" x2="244.4" y2="265.9"/>
+<line class="gap s2" x1="244.4" y1="265.9" x2="346.1" y2="254.6"/>
+<line class="gap s2" x1="346.1" y1="254.6" x2="447.7" y2="318.7"/>
+<line class="ln s3" x1="278.3" y1="240.2" x2="312.2" y2="244.3"/>
+<line class="ln s3" x1="312.2" y1="244.3" x2="346.1" y2="243.7"/>
+<line class="gap s3" x1="346.1" y1="243.7" x2="413.8" y2="281.4"/>
+<line class="ln s3" x1="413.8" y1="281.4" x2="447.7" y2="285.7"/>
+<line class="gap s3" x1="447.7" y1="285.7" x2="515.5" y2="285.7"/>
+<line class="ln s3" x1="515.5" y1="285.7" x2="549.4" y2="288.1"/>
+<line class="ln s3" x1="549.4" y1="288.1" x2="583.3" y2="288.1"/>
+<line class="ln s3" x1="583.3" y1="288.1" x2="617.2" y2="285.7"/>
+<line class="ln s3" x1="617.2" y1="285.7" x2="651.1" y2="288.1"/>
+<g class="pt" tabindex="0"><title>1.0.0-beta7 — Done (owner benchmark): 42.2 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<circle class="hit" cx="74.9" cy="176.6" r="12"/>
+<circle cx="74.9" cy="176.6" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta8 — Done (owner benchmark): 16.6 s (mean), 14.5–20.2; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="108.8" y1="210.8" x2="108.8" y2="200.2"/>
+<line class="wh s1" x1="104.8" y1="210.8" x2="112.8" y2="210.8"/>
+<line class="wh s1" x1="104.8" y1="200.2" x2="112.8" y2="200.2"/>
+<circle class="hit" cx="108.8" cy="206.5" r="12"/>
+<circle cx="108.8" cy="206.5" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta9 — Done (owner benchmark): 9.9 s (mean), 8.2–12.6; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="142.7" y1="229.1" x2="142.7" y2="215.3"/>
+<line class="wh s1" x1="138.7" y1="229.1" x2="146.7" y2="229.1"/>
+<line class="wh s1" x1="138.7" y1="215.3" x2="146.7" y2="215.3"/>
+<circle class="hit" cx="142.7" cy="223.1" r="12"/>
+<circle cx="142.7" cy="223.1" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta10 — Done (owner benchmark): 5.4 s (mean), 4.2–6.6; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="176.6" y1="250.5" x2="176.6" y2="236.0"/>
+<line class="wh s1" x1="172.6" y1="250.5" x2="180.6" y2="250.5"/>
+<line class="wh s1" x1="172.6" y1="236.0" x2="180.6" y2="236.0"/>
+<circle class="hit" cx="176.6" cy="242.5" r="12"/>
+<circle cx="176.6" cy="242.5" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta13 — Done (owner benchmark): 5.5 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<circle class="hit" cx="210.5" cy="241.9" r="12"/>
+<circle cx="210.5" cy="241.9" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha3 — Done (owner benchmark): 4 s (median), 3.3–4.9; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="244.4" y1="258.2" x2="244.4" y2="245.6"/>
+<line class="wh s1" x1="240.4" y1="258.2" x2="248.4" y2="258.2"/>
+<line class="wh s1" x1="240.4" y1="245.6" x2="248.4" y2="245.6"/>
+<circle class="hit" cx="244.4" cy="252.1" r="12"/>
+<circle cx="244.4" cy="252.1" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha16 — Done (owner benchmark): 7.2–7.4 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="346.1" y1="233.3" x2="346.1" y2="232.4"/>
+<line class="wh s1" x1="342.1" y1="233.3" x2="350.1" y2="233.3"/>
+<line class="wh s1" x1="342.1" y1="232.4" x2="350.1" y2="232.4"/>
+<circle class="hit" cx="346.1" cy="232.8" r="12"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha19 — Done (owner benchmark): 2.5–2.9 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="379.9" y1="267.1" x2="379.9" y2="262.4"/>
+<line class="wh s1" x1="375.9" y1="267.1" x2="383.9" y2="267.1"/>
+<line class="wh s1" x1="375.9" y1="262.4" x2="383.9" y2="262.4"/>
+<circle class="hit" cx="379.9" cy="264.7" r="12"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha20 — Done (owner benchmark): 2.6–3.4 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="413.8" y1="265.9" x2="413.8" y2="257.3"/>
+<line class="wh s1" x1="409.8" y1="265.9" x2="417.8" y2="265.9"/>
+<line class="wh s1" x1="409.8" y1="257.3" x2="417.8" y2="257.3"/>
+<circle class="hit" cx="413.8" cy="261.6" r="12"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha21 — Done (owner benchmark): 0.7 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md; with the C JSON module</title>
+<circle class="hit" cx="447.7" cy="307.9" r="12"/>
+<circle cx="447.7" cy="307.9" r="4.5" class="f1 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha22 — Done (owner benchmark): 0.71–0.81 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s1" x1="481.6" y1="307.4" x2="481.6" y2="303.2"/>
+<line class="wh s1" x1="477.6" y1="307.4" x2="485.6" y2="307.4"/>
+<line class="wh s1" x1="477.6" y1="303.2" x2="485.6" y2="303.2"/>
+<circle class="hit" cx="481.6" cy="305.3" r="12"/>
+</g>
+<text class="dl" x="74.9" y="165.6" text-anchor="middle">42.2 s</text>
+<text class="dl" x="456.7" y="311.9">0.7 s</text>
+<g class="pt" tabindex="0"><title>1.0.0-beta7 — Traffic moved (owner benchmark): 25 s (approximate); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md; about 25 s</title>
+<circle class="hit" cx="74.9" cy="193.4" r="12"/>
+<rect x="70.4" y="188.9" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta8 — Traffic moved (owner benchmark): 10.8 s (mean), 10.1–12.6; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="108.8" y1="222.4" x2="108.8" y2="215.3"/>
+<line class="wh s2" x1="104.8" y1="222.4" x2="112.8" y2="222.4"/>
+<line class="wh s2" x1="104.8" y1="215.3" x2="112.8" y2="215.3"/>
+<circle class="hit" cx="108.8" cy="220.3" r="12"/>
+<rect x="104.3" y="215.8" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta9 — Traffic moved (owner benchmark): 8.2 s (mean), 6.3–11; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="142.7" y1="237.5" x2="142.7" y2="219.7"/>
+<line class="wh s2" x1="138.7" y1="237.5" x2="146.7" y2="237.5"/>
+<line class="wh s2" x1="138.7" y1="219.7" x2="146.7" y2="219.7"/>
+<circle class="hit" cx="142.7" cy="229.1" r="12"/>
+<rect x="138.2" y="224.6" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta10 — Traffic moved (owner benchmark): 4.2 s (mean), 3.2–5.3; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="176.6" y1="259.2" x2="176.6" y2="243.1"/>
+<line class="wh s2" x1="172.6" y1="259.2" x2="180.6" y2="259.2"/>
+<line class="wh s2" x1="172.6" y1="243.1" x2="180.6" y2="243.1"/>
+<circle class="hit" cx="176.6" cy="250.5" r="12"/>
+<rect x="172.1" y="246.0" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>1.0.0-beta13 — Traffic moved (owner benchmark): 4.1 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<circle class="hit" cx="210.5" cy="251.3" r="12"/>
+<rect x="206.0" y="246.8" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha3 — Traffic moved (owner benchmark): 2.6 s (median), 1.9–3.6; n=6; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="244.4" y1="275.9" x2="244.4" y2="255.4"/>
+<line class="wh s2" x1="240.4" y1="275.9" x2="248.4" y2="275.9"/>
+<line class="wh s2" x1="240.4" y1="255.4" x2="248.4" y2="255.4"/>
+<circle class="hit" cx="244.4" cy="265.9" r="12"/>
+<rect x="239.9" y="261.4" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha16 — Traffic moved (owner benchmark): 3.7 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<circle class="hit" cx="346.1" cy="254.6" r="12"/>
+<rect x="341.6" y="250.1" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha19 — Traffic moved (owner benchmark): 1.4–1.6 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="379.9" y1="285.7" x2="379.9" y2="281.4"/>
+<line class="wh s2" x1="375.9" y1="285.7" x2="383.9" y2="285.7"/>
+<line class="wh s2" x1="375.9" y1="281.4" x2="383.9" y2="281.4"/>
+<circle class="hit" cx="379.9" cy="283.6" r="12"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha20 — Traffic moved (owner benchmark): 1.4–1.7 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="413.8" y1="285.7" x2="413.8" y2="279.5"/>
+<line class="wh s2" x1="409.8" y1="285.7" x2="417.8" y2="285.7"/>
+<line class="wh s2" x1="409.8" y1="279.5" x2="417.8" y2="279.5"/>
+<circle class="hit" cx="413.8" cy="282.6" r="12"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha21 — Traffic moved (owner benchmark): 0.5 s (one run); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md; with the C JSON module</title>
+<circle class="hit" cx="447.7" cy="318.7" r="12"/>
+<rect x="443.2" y="314.2" width="9" height="9" rx="1.5" class="f2 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha22 — Traffic moved (owner benchmark): 0.49–0.59 s (range); n=1; GL-MT3000 router; source: docs/MEASUREMENTS.en.md</title>
+<line class="wh s2" x1="481.6" y1="319.3" x2="481.6" y2="313.4"/>
+<line class="wh s2" x1="477.6" y1="319.3" x2="485.6" y2="319.3"/>
+<line class="wh s2" x1="477.6" y1="313.4" x2="485.6" y2="313.4"/>
+<circle class="hit" cx="481.6" cy="316.3" r="12"/>
+</g>
+<text class="dl" x="74.9" y="214.4" text-anchor="middle">25 s</text>
+<text class="dl" x="456.7" y="334.7">0.5 s</text>
+<g class="pt" tabindex="0"><title>2.0.0-alpha13 — Traffic moved (soak bench, command over SSH): 5.8 s (one run); n=1; GL-MT3000 router; source: soak: Soak run 2</title>
+<circle class="hit" cx="278.3" cy="240.2" r="12"/>
+<path d="M278.3 234.7l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha14 — Traffic moved (soak bench, command over SSH): 5.1 s (one run); n=1; GL-MT3000 router; source: soak: Soak run 2</title>
+<circle class="hit" cx="312.2" cy="244.3" r="12"/>
+<path d="M312.2 238.8l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha16 — Traffic moved (soak bench, command over SSH): 5.2 s (one run); n=1; GL-MT3000 router; source: soak: Soak run 1</title>
+<circle class="hit" cx="346.1" cy="243.7" r="12"/>
+<path d="M346.1 238.2l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha20 — Traffic moved (soak bench, command over SSH): 1.6 s (median), P95≈1.9 (n=4, too few: needs ≥59; with 95 % confidence ≥ 47 % of cases are no slower than the max), max 1.9; n=4; GL-MT3000 router; source: soak: Lua 3 h soak</title>
+<line class="wh s3 weak" x1="413.8" y1="281.4" x2="413.8" y2="275.9"/>
+<line class="wh s3 weak" x1="409.8" y1="281.4" x2="417.8" y2="281.4"/>
+<line class="wh s3 weak" x1="409.8" y1="275.9" x2="417.8" y2="275.9"/>
+<circle class="hit" cx="413.8" cy="281.4" r="12"/>
+<path d="M413.8 275.9l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha21 — Traffic moved (soak bench, command over SSH): 1.4 s (median), P95≈1.5 (n=3, too few: needs ≥59; with 95 % confidence ≥ 36 % of cases are no slower than the max), max 1.5; n=3; GL-MT3000 router; source: soak: Lua + C 3 h soak</title>
+<line class="wh s3 weak" x1="447.7" y1="285.7" x2="447.7" y2="283.5"/>
+<line class="wh s3 weak" x1="443.7" y1="285.7" x2="451.7" y2="285.7"/>
+<line class="wh s3 weak" x1="443.7" y1="283.5" x2="451.7" y2="283.5"/>
+<circle class="hit" cx="447.7" cy="285.7" r="12"/>
+<path d="M447.7 280.2l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha24 — Traffic moved (soak bench, command over SSH): 1.4 s (median), P95≈1.4 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 1.4; n=2; GL-MT3000 router; source: soak: 3 h soak (stopped early)</title>
+<circle class="hit" cx="515.5" cy="285.7" r="12"/>
+<path d="M515.5 280.2l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-alpha26 — Traffic moved (soak bench, command over SSH): 1.3 s (median), P95≈1.3 (n=4, too few: needs ≥59; with 95 % confidence ≥ 47 % of cases are no slower than the max), max 1.3; n=4; GL-MT3000 router; source: soak: 3 h soak</title>
+<circle class="hit" cx="549.4" cy="288.1" r="12"/>
+<path d="M549.4 282.6l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.0.0-beta4 — Traffic moved (soak bench, command over SSH): 1.3 s (median), P95≈1.5 (n=14, too few: needs ≥59; with 95 % confidence ≥ 80 % of cases are no slower than the max), max 1.5; n=14; GL-MT3000 router; source: soak: Long soak (~10 h, stopped by owner)</title>
+<line class="wh s3 weak" x1="583.3" y1="288.1" x2="583.3" y2="283.5"/>
+<line class="wh s3 weak" x1="579.3" y1="288.1" x2="587.3" y2="288.1"/>
+<line class="wh s3 weak" x1="579.3" y1="283.5" x2="587.3" y2="283.5"/>
+<circle class="hit" cx="583.3" cy="288.1" r="12"/>
+<path d="M583.3 282.6l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha1 — Traffic moved (soak bench, command over SSH): 1.4 s (median), P95≈1.4 (n=2, too few: needs ≥59; with 95 % confidence ≥ 22 % of cases are no slower than the max), max 1.4; n=2; GL-MT3000 router; source: soak: 1.5 h soak</title>
+<circle class="hit" cx="617.2" cy="285.7" r="12"/>
+<path d="M617.2 280.2l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<g class="pt" tabindex="0"><title>2.1.0-alpha2 — Traffic moved (soak bench, command over SSH): 1.3 s (median), P95≈1.4 (n=3, too few: needs ≥59; with 95 % confidence ≥ 36 % of cases are no slower than the max), max 1.4; n=3; GL-MT3000 router; source: soak: 2 h soak, server pick on</title>
+<line class="wh s3 weak" x1="651.1" y1="288.1" x2="651.1" y2="285.7"/>
+<line class="wh s3 weak" x1="647.1" y1="288.1" x2="655.1" y2="288.1"/>
+<line class="wh s3 weak" x1="647.1" y1="285.7" x2="655.1" y2="285.7"/>
+<circle class="hit" cx="651.1" cy="288.1" r="12"/>
+<path d="M651.1 282.6l5.5 5.5-5.5 5.5-5.5-5.5z" class="f3 ring"/>
+</g>
+<text class="dl" x="278.3" y="229.2" text-anchor="middle">5.8 s</text>
+<text class="dl" x="660.1" y="280.1">1.3 s</text>
+</svg>

@@ -10,7 +10,7 @@ async function click(label){const button=walk(modal).find(n=>n.tag==='button'&&n
 (async()=>{
  context.recoveryWizard({settings:{}});field('Recovery preset').value='stability';field('Recovery preset').attrs.change();assert.equal(field('Recovery preset').value,'stability');assert.equal(field('Consecutive failures before switching (3–10)').value,5);field('Consecutive failures before switching (3–10)').attrs.input();assert.equal(field('Recovery preset').value,'');assert.equal(calls.length,0);await click('Cancel');assert.equal(calls.length,0);
  context.recoveryWizard({settings:{}});field('Consecutive failures before switching (3–10)').value='2';await click('Next');assert.equal(calls.length,0);assert(field('Return policy'));
- field('Consecutive failures before switching (3–10)').value='4';await click('Next');await click('Save recovery settings');assert.equal(calls[0].spec.method,'setup_recovery');assert.equal(calls[0].args[0],4);assert.equal(calls[0].args[4],'healthy_primary');
+ field('Consecutive failures before switching (3–10)').value='4';await click('Next');await click('Save recovery settings');assert.equal(calls[0].spec.method,'setup_recovery');assert.equal(calls[0].args[0],4);assert.equal(calls[0].args[4],'healthy_primary');assert.deepEqual(calls[0].spec.params.slice(-3),['rescue_stable','interval','failure_model']);assert.equal(calls[0].args[9],10,'rescue_stable default 10 s');assert.equal(calls[0].args[11],'hmm','failure_model default hmm');assert.equal(calls[0].args[6],120,'primary_stable default 120 s');
  await context.reviewPriorities(['b','a']);assert.equal(calls[1].spec.method,'priority_preview');await click('Apply priorities');assert.equal(calls[2].spec.method,'priority_apply');assert.equal(calls[2].args[1],'a'.repeat(64));assert.equal(reloads,2);
  const now=Date.now()/1000;let selected;context.reviewPriorities=ids=>selected=ids;context.prioritySelections={a:true,b:true};
  const result=id=>({id,time:now,name:id,protocol:'openvpn',download:{mbps:id==='a'?100:50},upload:{mbps:20}});
@@ -21,7 +21,7 @@ async function click(label){const button=walk(modal).find(n=>n.tag==='button'&&n
 
 // A25/A35: saved values equal to a reviewed preset reopen as that preset; edited values reopen as Custom.
 {
-  const saved={recovery_failures:5,recovery_successes:3,recovery_cooldown:300,recovery_min_dwell:300,recovery_return_policy:'healthy_primary',recovery_primary_successes:5,recovery_primary_stable:120};
+  const saved={recovery_failures:5,recovery_successes:3,recovery_cooldown:300,recovery_min_dwell:300,recovery_return_policy:'healthy_primary',recovery_primary_successes:5,recovery_primary_stable:300,recovery_rescue_stable:20};
   context.recoveryWizard({settings:saved});assert.equal(field('Recovery preset').value,'stability');
   context.recoveryWizard({settings:{...saved,recovery_failures:6}});assert.equal(field('Recovery preset').value,'');
   console.log('PASS: persisted preset recognised on reopen; edited values show Custom');

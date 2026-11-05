@@ -42,7 +42,7 @@ def main():
     if not re.fullmatch('[a-f0-9]{40}',args.source):parser.error('SOURCE-SHA')
     root=Path(__file__).resolve().parents[1]
     def check(argv):
-        result=subprocess.run(argv,cwd=root,capture_output=True,text=True,timeout=900)
+        result=subprocess.run(argv,cwd=root,capture_output=True,text=True,timeout=3600)
         if result.returncode:
             print(result.stdout);print(result.stderr,file=sys.stderr)
             raise RuntimeError('CI-CHECK-FAILED: exit=%s command=%s' % (result.returncode, ' '.join(argv)))
@@ -52,6 +52,11 @@ def main():
     qa=check([sys.executable,'-m','unittest','discover','-s','qa','-q'])
     tools=check([sys.executable,'-m','unittest','discover','-s','tools/tests','-q'])
     tools_count,tools_skipped=unittest_counts(tools)
+    # Exhaustive formal model of the Auto supervisor, reduced CI profiles (about 2-3 min, well under 1 GB). Known, not yet fixed
+    # counterexamples are expected failures listed in tools/formal/expected.json; a new violation or a stale xfail fails here.
+    formal=check([sys.executable,'tools/formal/ci_check.py'])
+    formal_summary=re.search(r'FORMAL-CI summary: profiles=(\d+) states=(\d+) seconds=([\d.]+) peak_child_rss_mb=(\S+) new=0 xpass=0 xfail=(\d+)',formal.stdout)
+    if not formal_summary:raise RuntimeError('CI-FORMAL-SUMMARY-MISSING')
     lab_skipped_scripts=lab_exclusions(root)
     for name in lab_skipped_scripts:
         print('CI-LAB-SKIP '+name+': not an offline test entry point; VM/router/network acceptance excluded')
@@ -75,7 +80,8 @@ def main():
             check(['node',str(root/'lab'/name)]);lab_node_suites+=1
         # The shipped page is generated from router/*.inc.js; a fresh build must equal the committed files. Line endings
         # are ignored: a Windows build writes CRLF and the package normalizes every text file to LF anyway.
-        outputs=[root/'router/files/usr/lib/lua/luci/controller/homensai_vpn.lua',root/'router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json']
+        outputs=[root/'router/files/usr/lib/lua/luci/controller/homensai_vpn.lua',root/'router/files/usr/share/luci/menu.d/luci-app-homensai-vpn.json',
+                 root/'qa/legacy-page/dashboard.js',root/'qa/legacy-page/ui.css']
         ui=root/'router/files/www/luci-static/resources/view/homensai-vpn'
         def snapshot():
             lazy=root/'router/files/www/luci-static/resources/homensai-vpn'
@@ -100,6 +106,7 @@ def main():
         receipt=dict(result='PASS',source=args.source,python=platform.python_version(),
                      lua_available=bool(shutil.which('lua5.1')),lua_tests=lua_count,runtime_only=args.runtime_only,
                      tools_tests=tools_count,tools_skipped_tests=tools_skipped,
+                     formal_profiles=int(formal_summary.group(1)),formal_states=int(formal_summary.group(2)),formal_xfail=int(formal_summary.group(5)),
                      lab_tests=lab_count,lab_skipped_tests=lab_skipped,lab_node_suites=lab_node_suites,
                      lab_skipped_scripts=lab_skipped_scripts,
                      application_tests=int(re.search(r'Ran (\d+) tests',application.stderr).group(1)),

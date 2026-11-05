@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Regressions for the independently reproduced switching races and contradictory displays.
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class N {

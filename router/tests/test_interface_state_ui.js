@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const c={bi:en=>en,locale:'en'};vm.createContext(c);
 for(const name of ['ui_logic','auto_live_chart','design_views','analytics_panel'])vm.runInContext(fs.readFileSync('router/'+name+'.inc.js','utf8'),c);

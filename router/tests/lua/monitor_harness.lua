@@ -174,20 +174,21 @@ function T.fake_runner(options)
       if accept(data,host) then cb(data,nil,R.mono,R.mono+R.icmp_rtt/1000) else cb(nil,'timeout') end
     end)
   end
-  local function respond(address,path)
+  local function respond(address,path,agent)
     if R.https_status~=200 then return {status=R.https_status,body=''} end
-    if address=='1.1.1.1' then return {status=200,body='fl=1f\nh=one.one.one.one\nip='..(R.exit_ip or '93.184.216.34')..'\nts=1\nvisit_scheme=https\nhttp=http/1.1\nloc='..(R.exit_country or 'DE')..'\n'} end
-    if address=='8.8.8.8' then return {status=200,body='{"Status":0,"TC":false,"Answer":[{"name":"example.com.","type":1,"TTL":60,"data":"93.184.216.34"}]}'} end
+    -- uag=: Cloudflare echoes the request's User-Agent with the probe nonce (probe_trust.fresh)
+    if address=='1.1.1.1' then return {status=200,body='fl=1f\nh=one.one.one.one\nip='..(R.exit_ip or '93.184.216.34')..'\nts=1\nvisit_scheme=https\nuag='..tostring(agent)..'\nhttp=http/1.1\nloc='..(R.exit_country or 'DE')..'\n'} end
+    if address=='8.8.8.8' and not string.find(path,'^/dns%-query') then return {status=200,body='{"Status":0,"TC":false,"Answer":[{"name":"example.com.","type":1,"TTL":60,"data":"93.184.216.34"}]}'} end
     local packet=T.b64url_decode(string.match(path,'dns=([A-Za-z0-9_-]+)'))
     return {status=200,body=T.dns_answer(packet)}
   end
-  function R.https_get(device,address,hostname,path,seconds,cb)
-    R.last_https={device=device,address=address,hostname=hostname,path=path,seconds=seconds}
+  function R.https_get(device,address,hostname,path,seconds,cb,agent)
+    R.last_https={device=device,address=address,hostname=hostname,path=path,seconds=seconds,agent=agent}
     R.https_calls=(R.https_calls or 0)+1
     deliver(function()
       local fail=R.https_fail[address];if fail then cb(nil,fail);return end
-      if R.https_reply then cb(R.https_reply(address,path));return end
-      cb(respond(address,path))
+      if R.https_reply then cb(R.https_reply(address,path,agent));return end
+      cb(respond(address,path,agent))
     end)
   end
   -- files and locks used by the item-2/3 modules

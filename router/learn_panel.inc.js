@@ -62,21 +62,21 @@ var LEARN_LESSONS=[
     ],
     "body": [
       [
-        "The current terms appear until first acceptance on this router. Acceptance is followed by the introduction and the eight-step setup; training can be reopened later.",
-        "Условия текущей версии показываются до первого принятия на этом роутере. Далее открываются объяснение и мастер из восьми шагов; к обучению можно вернуться позже."
+        "On the first visit the first-run wizard opens: Router → Channels → Behaviour → Terms and start. The current terms are shown at its last step (or when you first turn Auto on) until you accept them yourself on this router; training can be opened at any time.",
+        "При первом входе открывается мастер первой настройки: «Роутер → Каналы → Поведение → Условия и запуск». Условия текущей версии показываются на его последнем шаге (или при первом включении Auto), пока вы сами не примете их на этом роутере; обучение можно открыть в любой момент."
       ],
       [
-        "Monitoring runs independently of Auto. On Overview, monitoring and Check VPN now are inside the top Auto card. A fresh monitor report is not proof that a client has internet.",
-        "Мониторинг работает отдельно от Auto. На «Обзоре» его индикатор и «Проверить VPN сейчас» находятся в верхнем блоке Auto. Свежий отчёт монитора ещё не доказывает доступность интернета у клиента."
+        "Monitoring runs independently of Auto. «Check now» is next to the Auto switch on Home (Console: Channels tab); the Monitoring service lamp is in Settings → System and diagnostics (Console: System tab). A fresh monitor report is not proof that a client has internet.",
+        "Мониторинг работает отдельно от Auto. «Проверить сейчас» находится рядом с переключателем Auto на «Главной» (в «Пульте» — вкладка «Каналы»); лампа «Служба мониторинга» — в «Настройки → Система и диагностика» (в «Пульте» — вкладка «Система»). Свежий отчёт монитора ещё не доказывает доступность интернета у клиента."
       ]
     ],
     "example": [
-      "A green monitoring lamp means fresh observations; Auto still needs an explicit Start.",
-      "Зелёный индикатор мониторинга означает свежие наблюдения; для Auto нужен отдельный явный запуск."
+      "A green monitoring lamp means fresh observations; Auto is still turned on separately with its switch.",
+      "Зелёный индикатор мониторинга означает свежие наблюдения; Auto всё равно включается отдельно своим переключателем."
     ],
     "tip": [
-      "Grey means waiting for the router, red means a proven failure: open Help.",
-      "Серый — ждём ответа роутера, красный — доказанный сбой: откройте «Помощь»."
+      "Grey means waiting for the router, red means a proven failure: open Help (\"? Help\" in the Simple view; Console: System tab).",
+      "Серый — ждём ответа роутера, красный — доказанный сбой: откройте «Помощь» («? Помощь» в виде «Простой»; в «Пульте» — вкладка «Система»)."
     ]
   },
   {
@@ -87,16 +87,16 @@ var LEARN_LESSONS=[
     ],
     "body": [
       [
-        "Settings → All application settings → 3 · Existing VPNs: choose two different configured clients. Each choice represents the profile already assigned to that client; two servers of one client are not two independent channels.",
-        "«Настройки → Все настройки приложения → 3 · Существующие VPN»: выберите два разных настроенных клиента. Каждый вариант — уже назначенный этому клиенту профиль; два сервера одного клиента не являются двумя независимыми каналами."
+        "Wizard step 2 «Channels», later Settings → Channels: primary and reserve (Console: Channels → Change the channel pair): choose two different configured clients. Each choice represents the profile already assigned to that client; two servers of one client are not two independent channels.",
+        "Шаг 2 мастера «Каналы», позже «Настройки → Каналы: основной и резерв» (в «Пульте» — «Каналы» → «Изменить пару каналов»): выберите два разных настроенных клиента. Каждый вариант — уже назначенный этому клиенту профиль; два сервера одного клиента не являются двумя независимыми каналами."
       ],
       [
         "To change a VPN server or protocol binding, use the stock VPN page and refresh Auto VPN. Saving the pair changes application metadata; it does not import keys or change server credentials.",
         "Для смены VPN-сервера или привязки протокола используйте штатную VPN-страницу и обновите Auto VPN. Сохранение пары меняет метаданные приложения, не импортирует ключи и не меняет данные провайдера."
       ],
       [
-        "Recovery policy is step 5. Speed tests (6) and Telegram (7) are optional. Review in step 8; saving never starts Auto.",
-        "Правила восстановления — шаг 5. Тесты скорости (6) и Telegram (7) необязательны. Проверьте итог на шаге 8; сохранение не включает Auto."
+        "How fast to switch, Router load and the optional Telegram reports are wizard step 3 «Behaviour»; speed test parameters are in Settings → Speed test: parameters. Review in step 4 «Terms and start»; Save without starting never starts Auto.",
+        "«Как быстро переключать», «Нагрузка на роутер» и необязательные отчёты Telegram — шаг 3 мастера «Поведение»; параметры теста скорости — в «Настройки → Тест скорости: параметры». Итог проверьте на шаге 4 «Условия и запуск»; «Сохранить без запуска» не включает Auto."
       ]
     ],
     "example": [
@@ -116,11 +116,11 @@ var LEARN_LESSONS=[
     ],
     "body": [
       [
-        "On Overview press “Step 1 · Check the VPNs now”. It tests right away which connected VPNs give internet. Fix problems first.",
-        "На «Обзоре» нажмите «Шаг 1 · Проверить VPN сейчас». Сразу проверит, какие подключённые VPN дают интернет. Сначала устраните проблемы."
+        "On Home (Console: Channels tab) press “Check now”. It tests right away which connected VPNs give internet. Fix problems first.",
+        "На «Главной» (в «Пульте» — вкладка «Каналы») нажмите «Проверить сейчас». Сразу проверит, какие подключённые VPN дают интернет. Сначала устраните проблемы."
       ],
       [
-        "Step 2: use the readiness list for your actual mode. Prepared-MT3000 router-probed IPv4 Auto checks the two channels on the router; a LAN helper is optional for additional client-path proof. A separate client-confirmed trial requires its own helper. Start Auto only when your mode is ready.",
+        "Step 2: use the readiness list for your actual mode. Prepared-MT3000 router-probed IPv4 Auto checks the two channels on the router; a LAN helper is optional for additional client-path proof. A separate client-confirmed trial requires its own helper. Turn Auto on only when your mode is ready.",
         "Шаг 2: выполните список готовности своего режима. Router-probed IPv4 Auto подготовленного MT3000 проверяет два канала самим роутером; LAN-помощник нужен только для дополнительной проверки пути клиента. Отдельный тест с подтверждением клиента требует помощника. Включайте Auto после готовности своего режима."
       ],
       [
@@ -128,8 +128,8 @@ var LEARN_LESSONS=[
         "Что такое LAN-помощник? Небольшой скрипт PowerShell 7 (обычный текст, его можно прочитать), который запускается на вашем компьютере с Windows, а не на роутере. Один раз установите PowerShell 7, положите два скачанных файла в одну папку и запустите, сначала выберите режим 1 (только проверка):"
       ],
       [
-        "The power button shows Auto ON/OFF. The route title and M/R diagram show the selected channel. Green means this channel carries your traffic, not independent proof of Internet; yellow means alive but not in use (or a short check or switch); red is a proven failure. During a manual switch the destination card blinks green. Inspect fresh channel checks for availability.",
-        "Большая кнопка показывает включение/выключение Auto. Заголовок маршрута и схема M/R показывают выбранный канал. Зелёный означает, что этот канал несёт ваш трафик, а не отдельное доказательство Интернета; жёлтый — канал жив, но не используется (или идёт короткая проверка либо переключение); красный — доказанный сбой. При ручном переключении карточка назначения мигает зелёным. Доступность смотрите в свежих проверках канала."
+        "The Auto switch says whether Auto is on or off. The chip «Traffic here» marks the channel carrying your traffic, «Standing by» the other one. A green channel lamp means the channel works, not independent proof of Internet for every client; yellow means a check or a switch; red means it does not respond; grey means no fresh data. Inspect fresh channel checks for availability.",
+        "Переключатель Auto показывает, включён Auto или выключен. Метка «Трафик здесь» отмечает канал, который несёт ваш трафик, «Ждёт в резерве» — другой. Зелёная лампа канала означает, что канал работает, а не отдельное доказательство Интернета для каждого клиента; жёлтая — идёт проверка или переключение; красная — канал не отвечает; серая — нет свежих данных. Доступность смотрите в свежих проверках канала."
       ]
     ],
     "cmds": [
@@ -160,21 +160,21 @@ var LEARN_LESSONS=[
   {
     "icon": "⑥",
     "title": [
-      "Reading the pages",
-      "Как читать страницы"
+      "Reading the two views",
+      "Как читать два вида страницы"
     ],
     "body": [
       [
-        "Overview starts with Auto and the VPN check. Manual primary/reserve controls follow the collapsed technical and switching-statistics blocks. A queued command remains pending until the router confirms it.",
-        "«Обзор» начинается с Auto и проверки VPN. Далее идут свёрнутые технические действия/статистика переключений и ручной выбор основного/резерва. Команда в очереди ожидает подтверждения роутера."
+        "Simple view: Home starts with the status and the Auto switch, then the two channel cards with «Switch here», Events and reasons, Last 24 hours and Tests; Settings holds everything needed rarely. Console view: the status strip with the Auto switch stays on top, and the tabs Channels, Auto, Servers, Log and System show the same readings in more detail. Switch views with ☰ / ▦ next to the language button. A queued command remains pending until the router confirms it.",
+        "Вид «Простой»: «Главная» начинается с состояния и переключателя Auto, дальше две карточки каналов с кнопкой «Переключить сюда», «События и причины», «За 24 часа» и «Проверки»; в «Настройках» — всё, что нужно редко. Вид «Пульт»: полоса состояния с переключателем Auto всегда сверху, а вкладки «Каналы», «Auto», «Серверы», «Журнал» и «Система» показывают те же данные подробнее. Вид переключается значками ☰ / ▦ рядом с кнопкой языка. Команда в очереди ожидает подтверждения роутера."
       ],
       [
-        "Channels and servers shows primary first and reserve second, server names/IP where observed, the response (ping by default, or the three-site HTTPS mean) and a 1–168h history within configured 1–7-day retention. Other servers and excess table rows expand with a triangle. A lower-delay recommendation does not switch traffic.",
-        "«Каналы и серверы» показывает сначала основной, затем резервный, имена/IP при наличии наблюдения, отклик (по умолчанию пинг, либо среднее трёх сайтов по HTTPS) и историю 1–168 ч в пределах настроенного хранения 1–7 дней. Другие серверы и лишние строки раскрываются треугольником. Рекомендация меньшей задержки сама не переключает трафик."
+        "The channel cards show primary first and reserve second with protocol, server and country where observed and the response (ping by default, or the three-site HTTPS mean); the 6-hour response chart is under Last 24 hours on Home and on the Channels tab of the Console. The Servers tab lists the servers of each channel with their ping (measured while Pick the best server is on). History is kept within the configured 1–7 days. A lower-delay server shown there does not switch the channel by itself.",
+        "Карточки каналов показывают сначала основной, затем резервный: протокол, сервер и страну при наличии наблюдения и отклик (по умолчанию пинг, либо среднее трёх сайтов по HTTPS); график отклика за 6 часов — в «За 24 часа» на «Главной» и на вкладке «Каналы» в «Пульте». Вкладка «Серверы» перечисляет серверы каждого канала с пингом (он меряется, пока включён «Подбирать лучший сервер»). История хранится в пределах настроенных 1–7 дней. Более быстрый сервер в этом списке сам канал не переключает."
       ],
       [
-        "The live log groups repeated states into time ranges; its clock updates every second, network checks keep their configured cadence. Events shows the latest 20 rows, with expansion, search and sorting. Setup step 2 or Monitoring settings selects 1–2000 live observations and 1–7 days of detail. M/R identifies primary/reserve and who initiated a transition; missing historical outcomes are explained, not invented.",
-        "Живой журнал объединяет повторы в диапазоны времени; часы обновляются раз в секунду, сетевые проверки сохраняют свой интервал. «События и ошибки» показывает последние 20 строк, раскрытие, поиск и сортировку. В шаге 2 мастера или настройках мониторинга выбираются 1–2000 наблюдений и 1–7 дней подробностей. M/R обозначает основной/резервный и инициатора перехода; для потерянных итогов указана причина, результат не выдумывается."
+        "Events and reasons on Home shows the latest 5 or 20 rows with the filters All, Switches, Problems and My actions; tap a row to read «why». The Log tab of the Console shows 20 rows and the live log; in the Simple view the live log is in Settings → System and diagnostics. Network checks keep their configured cadence. Settings → History and memory selects 1–2000 live log entries and 1–7 days of detail. Your own actions are marked «(you)»; missing historical outcomes are explained, not invented.",
+        "«События и причины» на «Главной» показывает последние 5 или 20 строк с фильтрами «Все», «Переходы», «Проблемы» и «Мои действия»; нажмите строку, чтобы прочитать «почему». Вкладка «Журнал» в «Пульте» показывает 20 строк и живой журнал; в виде «Простой» живой журнал находится в «Настройки → Система и диагностика». Сетевые проверки сохраняют свой интервал. В «Настройки → История и память» выбираются 1–2000 записей живого журнала и 1–7 дней подробностей. Ваши собственные действия отмечены «(вы)»; для потерянных итогов указана причина, результат не выдумывается."
       ]
     ],
     "example": [
@@ -182,8 +182,8 @@ var LEARN_LESSONS=[
       "Один отказ может содержать много неудачных проверок. График отказов считает эпизод один раз."
     ],
     "tip": [
-      "Speed tests are optional and use traffic; they live under Advanced settings → Tests.",
-      "Тесты скорости необязательны и расходуют трафик; они в «Расширенные настройки» → «Тесты»."
+      "Speed tests are optional and use traffic: Home → Tests → Speed test (Console: Servers tab); parameters in Settings → Speed test: parameters.",
+      "Тесты скорости необязательны и расходуют трафик: «Главная» → «Проверки» → «Тест скорости» (в «Пульте» — вкладка «Серверы»); параметры — в «Настройки → Тест скорости: параметры»."
     ]
   },
   {
@@ -194,8 +194,8 @@ var LEARN_LESSONS=[
     ],
     "body": [
       [
-        "Keep access to the router by cable or Wi-Fi and inspect the selected channel, current measurements and the recorded reason. Use Help → No internet.",
-        "Сохраните доступ к роутеру по кабелю или Wi-Fi и проверьте выбранный канал, свежие измерения и записанную причину. Откройте «Помощь» → «Нет интернета»."
+        "Keep access to the router by cable or Wi-Fi and inspect the selected channel, current measurements and the recorded reason. Open Help → “I have no internet”.",
+        "Сохраните доступ к роутеру по кабелю или Wi-Fi и проверьте выбранный канал, свежие измерения и записанную причину. Откройте «Помощь» → «У меня пропал интернет»."
       ],
       [
         "Switch manually only when the requested channel is confirmed ready and its action is available. Working on reserve alone is not a reason to force a return to a failed primary. Manual selection never turns Auto off: Auto keeps watching the channel you chose and moves traffic to the other one if it fails.",
@@ -263,8 +263,8 @@ var LEARN_LESSONS=[
       "Пример: в чате просят ваш токен «чтобы помочь». Не отправляйте."
     ],
     "tip": [
-      "You can come back to this training at any time from the menu.",
-      "К этому обучению можно вернуться в любой момент из меню."
+      "You can come back to this training at any time: Settings → Reference → Help and training (Console: System tab → Help, codes, training).",
+      "К этому обучению можно вернуться в любой момент: «Настройки → Справка → Помощь и обучение» (в «Пульте» — вкладка «Система» → «Помощь, коды, обучение»)."
     ]
   }
 ];
@@ -273,14 +273,14 @@ var LEARN_QUIZ=[
   {q:['Which ways to connect should you prepare for the first tests? (several answers)','Какие способы подключения нужно подготовить для первых тестов? (несколько ответов)'],o:[['A laptop on a LAN cable','Ноутбук на кабеле LAN',true],['A device on Wi-Fi','Устройство по Wi-Fi',true],['Only one device that you cannot lose','Только одно устройство, которое нельзя потерять',false],['Mobile data on the phone','Мобильный интернет на телефоне',true]]},
   {q:['What is the right order to start working?','Каков правильный порядок начала работы?'],o:[['Accept the terms, start the monitor, check the VPNs, then turn on Auto','Принять условия, запустить мониторинг, проверить VPN, затем включить Auto',true],['Turn on Auto first, check later','Сначала включить Auto, проверить потом',false],['Skip the terms and start Auto','Пропустить условия и сразу запустить Auto',false]]},
   {q:['What must pass before Auto can be started?','Что должно пройти перед запуском Auto?'],o:[['The readiness checks for the selected mode; the helper is mandatory only for a client-confirmed trial','Проверки готовности выбранного режима; помощник обязателен только для теста с подтверждением клиента',true],['A speed test','Тест скорости',false],['A Telegram message','Сообщение в Telegram',false]]},
-  {q:['What does Working on the reserve confirm?','Что подтверждает статус «Работаю на резерве»?'],o:[['The reserve route is selected; primary health is checked separately','Выбран резервный маршрут; исправность основного проверяется отдельно',true],['Everything is on the primary','Всё идёт через основной',false],['Auto is off','Auto выключен',false]]},
+  {q:['What does the status Reserve in use confirm?','Что подтверждает статус «Работает резерв»?'],o:[['The reserve route is selected; primary health is checked separately','Выбран резервный маршрут; исправность основного проверяется отдельно',true],['Everything is on the primary','Всё идёт через основной',false],['Auto is off','Auto выключен',false]]},
   {q:['Which of these is a secret that you never send to anyone? (several answers)','Что из этого — секрет, который никому нельзя отправлять? (несколько ответов)'],o:[['The Telegram bot token','Токен Telegram-бота',true],['The router password','Пароль роутера',true],['The country of a VPN server','Страна VPN-сервера',false]]},
-  {q:['The internet is gone. What do you do first?','Интернета нет. Что делаете сначала?'],o:[['Open the router page, inspect fresh checks and follow No internet Help','Открываете страницу роутера, проверяете свежие данные и справку «Нет интернета»',true],['Flash the router firmware','Прошиваете роутер',false],['Delete all VPN profiles','Удаляете все VPN-профили',false]]},
+  {q:['The internet is gone. What do you do first?','Интернета нет. Что делаете сначала?'],o:[['Open the router page, inspect fresh checks and follow the Help topic I have no internet','Открываете страницу роутера, проверяете свежие данные и справку «У меня пропал интернет»',true],['Flash the router firmware','Прошиваете роутер',false],['Delete all VPN profiles','Удаляете все VPN-профили',false]]},
   {q:['Which command only reads the state and is always safe?','Какая команда только читает состояние и всегда безопасна?'],o:[['homensai-vpn-emergency show','homensai-vpn-emergency show',true],['homensai-vpn-emergency stop-auto','homensai-vpn-emergency stop-auto',false],['homensai-vpn-emergency remove-guard','homensai-vpn-emergency remove-guard',false]]}
 ];
 LEARN_LESSONS[4].body.push(
- ['To choose a route manually, open Overview → Manual channel selection. Choose Primary or Reserve when its control is available, then wait for confirmed selection. A queued request is not completion; the destination card blinks green during the switch. Manual selection never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails.','Для ручного выбора откройте «Обзор» → «Ручное переключение канала». Выберите «Основной» или «Резервный», когда управление доступно, затем дождитесь подтверждённого выбора. Очередь запроса не означает завершение; во время переключения карточка назначения мигает зелёным. Ручной выбор никогда не выключает Auto: Auto продолжает следить за выбранным каналом и переносит трафик на другой, если этот откажет.'],
- ['Use the large Auto button to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. A retained-reserve outcome requires its separately offered recovery action.','Большая кнопка Auto запрашивает запуск или остановку. Дождитесь фактического итогового состояния. Выключение Auto не прекращает мониторинг; управляемая остановка может восстановить исходные правила и флаги интерфейсов. Если резерв удержан, используйте отдельно предложенное действие восстановления.']
+ ['To choose a route manually, press Switch here on the Primary or Reserve card (Home, or the Channels tab of the Console) when the button is available, then wait for confirmed selection. A queued request is not completion; the status shows the switch until the router confirms it. Manual selection never turns Auto off: Auto keeps watching the chosen channel and moves traffic to the other one if it fails.','Для ручного выбора нажмите «Переключить сюда» на карточке «Основной» или «Резерв» («Главная» или вкладка «Каналы» в «Пульте»), когда кнопка доступна, затем дождитесь подтверждённого выбора. Очередь запроса не означает завершение; состояние показывает переключение, пока роутер его не подтвердит. Ручной выбор никогда не выключает Auto: Auto продолжает следить за выбранным каналом и переносит трафик на другой, если этот откажет.'],
+ ['Use the Auto switch to request startup or shutdown. Wait for the actual final state. Turning Auto off does not stop monitoring; managed shutdown may restore the original routing/interface settings. If the reserve is retained, press Switch here on the Primary card when the primary works.','Переключатель Auto запрашивает включение или выключение. Дождитесь фактического итогового состояния. Выключение Auto не прекращает мониторинг; управляемая остановка может восстановить исходные правила и флаги интерфейсов. Если резерв удержан, нажмите «Переключить сюда» на карточке «Основной», когда основной работает.']
 );
 LEARN_QUIZ.push(
  {q:['Can you select a channel while Auto is on?','Можно ли выбрать канал при включённом Auto?'],o:[['Yes, when the manual control is available and the target passes its checks; Auto continues observing','Да, если ручное управление доступно и целевой канал прошёл проверки; Auto продолжает наблюдать',true],['Always stop Auto before any channel selection','Всегда выключать Auto перед любым выбором канала',false],['Channel selection deletes VPN profiles','Выбор канала удаляет VPN-профили',false]]},
@@ -293,9 +293,9 @@ var LEARN_QUESTION_GUIDANCE=[
  ['Keep a verified cable path and a second way to reach the intended router, plus mobile Internet for recovery. Two equal private IPs can identify different routers.','Подготовьте проверенный кабельный путь и второй способ попасть именно на нужный роутер, а также мобильный интернет для восстановления. Один частный IP может вести к разным роутерам.'],
  ['Read and accept the terms yourself, follow the explanation/setup, choose an existing pair and inspect fresh readiness before explicitly starting Auto.','Сами прочитайте и примите условия, пройдите объяснение/настройку, выберите существующую пару и проверьте свежую готовность перед явным запуском Auto.'],
  ['Readiness is mode-specific. Prepared router-probed Auto and a separate client-confirmed LAN trial require different evidence.','Готовность зависит от режима. Подготовленный router-probed Auto и отдельный LAN-тест с подтверждением клиента требуют разных доказательств.'],
- ['Orange in the Auto status means the reserve route is selected. It does not by itself prove the primary is broken; health is shown separately.','Оранжевый статус Auto означает выбранный резервный маршрут. Это само по себе не доказывает неисправность основного: его проверки показаны отдельно.'],
+ ['The yellow status Reserve in use means the reserve route carries traffic. It does not by itself prove the primary is broken; its card shows its own checks.','Жёлтый статус «Работает резерв» означает, что трафик идёт через резервный маршрут. Это само по себе не доказывает неисправность основного: его карточка показывает его собственные проверки.'],
  ['Passwords, bot tokens, VPN keys and complete backups are secrets. Server country is a display label, not an authentication secret.','Пароли, токены бота, VPN-ключи и полные резервные копии — секреты. Страна сервера является подписью, а не секретом доступа.'],
- ['First inspect the router and fresh checks, then use the No internet help. Reflashing and deleting profiles are not first diagnostic steps.','Сначала откройте роутер и свежие проверки, затем помощь «Нет интернета». Прошивка и удаление профилей не являются первым шагом диагностики.'],
+ ['First inspect the router and fresh checks, then use the Help topic I have no internet. Reflashing and deleting profiles are not first diagnostic steps.','Сначала откройте роутер и свежие проверки, затем помощь «У меня пропал интернет». Прошивка и удаление профилей не являются первым шагом диагностики.'],
  ['The show command reads the state. Stop-auto can change managed routing during recovery; remove-guard changes the owned traffic block.','Команда show читает состояние. Stop-auto при восстановлении может менять управляемый маршрут; remove-guard изменяет собственную блокировку трафика.'],
  ['Available manual controls can choose a verified channel while continuous Auto stays on. A queued command is not yet confirmed traffic selection.','Доступное ручное управление позволяет выбрать проверенный канал при работающем Auto. Поставленная в очередь команда ещё не означает подтверждённого выбора трафика.'],
  ['A successful check is an observation of a channel. Route changes have their own requested, pending and confirmed events.','Успешная проверка — наблюдение за каналом. Для смены маршрута есть отдельные события запроса, выполнения и подтверждения.'],

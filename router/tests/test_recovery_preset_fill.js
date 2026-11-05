@@ -14,8 +14,8 @@ const ctx={RECOVERY_PRESETS:JSON.parse(fs.readFileSync('router/files/usr/lib/hom
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('router/fool_guard.inc.js','utf8'),ctx);vm.runInContext(fs.readFileSync('router/recovery_panel.inc.js','utf8'),ctx);
 const field=label=>walk(modal).find(n=>n.attrs['aria-label']===label);
 const L={interval:'Check interval, seconds (10–300)',attempt_limit:'Maximum switching attempts (1–10)',attempt_window:'Attempt counting window, minutes (1–15)',failures:'Consecutive failures before switching (3–10)',
-  successes:'Reserve successes required (2–10)',cooldown:'Cooldown between attempts, seconds (60–1800)',min_dwell:'Minimum dwell time, seconds (60–3600)',primary_successes:'Primary successes before return (2–10)',primary_stable:'Primary stable interval, seconds (30–600)'};
-const defaults={interval:10,attempt_limit:3,attempt_window:15,failures:3,successes:2,cooldown:60,min_dwell:60,primary_successes:2,primary_stable:30};
+  successes:'Reserve successes required (2–10)',cooldown:'Cooldown between attempts, seconds (60–1800)',min_dwell:'Minimum dwell time, seconds (60–3600)',primary_successes:'Primary successes before return (2–10)',primary_stable:'Primary stable interval, seconds (30–600)',rescue_stable:'If the reserve failed, seconds (0–60)'};
+const defaults={interval:10,attempt_limit:3,attempt_window:15,failures:3,successes:2,cooldown:60,min_dwell:60,primary_successes:2,primary_stable:120,rescue_stable:10};  // 03.11.2026: 120 s + rescue 10 s
 ctx.recoveryWizard({settings:{interval:40,recovery_attempt_limit:6,recovery_attempt_window:9,recovery_failures:7}});
 assert.equal(field('Recovery preset').value,'');
 for(const name of Object.keys(ctx.RECOVERY_PRESETS)){

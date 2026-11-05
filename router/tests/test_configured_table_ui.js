@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 class N{constructor(tag,attrs={},children=[]){this.tag=tag;this.attrs=attrs;this.children=[].concat(children);this._text='';}getAttribute(k){return this.attrs[k]??null;}setAttribute(k,v){this.attrs[k]=v;}get textContent(){return this._text+this.children.map(x=>x instanceof N?x.textContent:String(x)).join('');}set textContent(v){this._text=v;this.children=[];}appendChild(n){this.children=this.children.filter(x=>x!==n);this.children.push(n);}closest(){return {dataset:{hvPage:'channels'}};}querySelectorAll(selector){if(selector==='tr')return this.children;if(selector==='tr:first-child th')return this.children[0].children;return [];}}
 const a={id:'a'},b={id:'b'},o={id:'o'},o2={id:'o2'},inventory={settings:{plan_source:'a',plan_target:'b'}};let active='b';

@@ -21,5 +21,17 @@ for(const language of ['en','ru']){
   // Auto off: no tunnel icons.
   s=fixture(2000,'a');s.auto_control={requested:'off',pair_phase:'STOPPED',requested_at:900};s.native_failover.state='STOPPED';
   assert.equal(icons(c.autoLightModel(s,inventory,now)).length,0);
+  // 03.11.2026: Auto off with healthy tunnels says nothing more; with a selected tunnel down the owner is told that Auto
+  // brings the pair up (the GL toggle does not while preparation keeps their autostart off).
+  l=c.autoLightModel(s,inventory,now);assert.equal(l.key,'off');assert.equal(l.hint,'');assert.equal(l.code,null);
+  const hint=language==='ru'?'Туннели поднимает Auto — нажмите Start.':'Auto brings the tunnels up — press Start.';
+  for(const down of [{administrative_state:'disabled'},{code:'VPN-001',dns_ok:false,https_success:0}]){
+    const d=fixture(2000,'a');d.auto_control=s.auto_control;d.native_failover.state='STOPPED';Object.assign(d.profiles[1],down);
+    l=c.autoLightModel(d,inventory,now);assert.equal(l.key,'off');assert.equal(l.hint,hint);assert.equal(l.code,'TUNNEL-DISCONNECTED');
+  }
+  const unbound=fixture(2000,'a');unbound.auto_control=s.auto_control;unbound.native_failover.state='STOPPED';unbound.profiles[1].interface=null;unbound.profiles[1].code='PROFILE-INACTIVE';
+  assert.equal(c.autoLightModel(unbound,inventory,now).hint,'','a profile without a GL interface is a setup problem, not a stopped tunnel');
+  const failed=fixture(2000,'a');failed.auto_control=s.auto_control;failed.native_failover.state='STOPPED';failed.profiles[1].code='VPN-003';
+  assert.equal(c.autoLightModel(failed,inventory,now).hint,'','a failing but connected tunnel is not "down"');
 }
 console.log('PASS: Auto tunnel icons - primary and reserve, green works, red failed, the carrying one marked (EN/RU)');

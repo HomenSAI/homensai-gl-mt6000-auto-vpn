@@ -1,5 +1,5 @@
 """Exercise real native attempt boundaries with fake vendor/kernel operations."""
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 import sys
 import tempfile
@@ -54,15 +54,24 @@ class ManualNativeBoundaryTests(unittest.TestCase):
         self.assertEqual(agent.read_json(native.STATE)['state'],'STOPPED-ON-RESERVE')
 
     def test_stop_after_committed_write_rolls_back_instead_of_claiming_manual_success(self):
-        original=native.journal_write;rotated=[]
+        original=native.journal_write;rotated=[];committed=[]
         def write(j):
             original(j)
-            if j.get('phase')=='COMMITTED' and not rotated:
+            if j.get('phase')=='COMMITTED':committed.append(True)
+        # K5 (formal model 03.11.2026): the COMMITTED write runs under the control lock, so the owner's Stop (which
+        # rotates the revision under that lock) lands right after the lock of the COMMITTED write is released.
+        real_lock=auto_control.control_lock
+        @contextmanager
+        def lock(directory=None):
+            with real_lock(directory):
+                yield
+            if committed and not rotated:
+                rotated.append(None)  # the Stop's own lock below must not rotate again
                 # uuid is shared by native and auto_control. The fixed native
                 # transaction fixture must not also freeze Stop's new epoch.
                 with patch.object(auto_control.uuid,'uuid4',return_value=MagicMock(hex='f'*32)):
-                    rotated.append(auto_control.current_revision(self.root,rotate=True))
-        with patch.object(native,'journal_write',side_effect=write):
+                    rotated[0]=auto_control.current_revision(self.root,rotate=True)
+        with patch.object(native,'journal_write',side_effect=write),patch.object(auto_control,'control_lock',side_effect=lock):
             with self.assertRaises(native.Refused):self.attempt()
         self.assertEqual(self.backend.current,self.before)
         self.assertNotEqual(rotated[0],self.revision)

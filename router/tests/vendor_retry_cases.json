@@ -1,0 +1,21 @@
+{
+  "_comment": "Shared by test_vendor_retry.py and lua/test_vendor_retry.lua: pair_auto.retry_wait == pair.retry_wait (seconds before a failover the vendor aborted may be dispatched again). RETRY_BASE 5 s doubling per consecutive abort after the last charged switch, capped at max(cooldown, min_dwell) (60 s by default); aborts older than 900 s or before the last charged switch do not count; damaged entries are dropped.",
+  "cases": [
+    {"name": "no aborts: at once", "settings": {}, "aborted": [], "events": [], "now": 5000, "wait": 0},
+    {"name": "missing key: at once", "settings": {}, "aborted": null, "events": [4000], "now": 5000, "wait": 0},
+    {"name": "one abort 1.5 s ago: 5 s backoff", "settings": {}, "aborted": [4998.5], "events": [4700], "now": 5000, "wait": 3.5},
+    {"name": "one abort, backoff over", "settings": {}, "aborted": [4995], "events": [4700], "now": 5000, "wait": 0},
+    {"name": "second consecutive abort: 10 s", "settings": {}, "aborted": [4990, 4998], "events": [4700], "now": 5000, "wait": 8},
+    {"name": "third consecutive abort: 20 s", "settings": {}, "aborted": [4970, 4980, 4998], "events": [4700], "now": 5000, "wait": 18},
+    {"name": "fourth consecutive abort: 40 s", "settings": {}, "aborted": [4900, 4950, 4970, 4990], "events": [], "now": 5000, "wait": 30},
+    {"name": "fifth and later: capped at the cooldown spacing", "settings": {}, "aborted": [4800, 4850, 4900, 4950, 4990], "events": [], "now": 5000, "wait": 50},
+    {"name": "cap follows a longer cooldown", "settings": {"recovery_cooldown": "300"}, "aborted": [4800, 4850, 4900, 4950, 4960, 4970, 4980, 4990], "events": [], "now": 5000, "wait": 290},
+    {"name": "cap follows a longer min_dwell", "settings": {"recovery_min_dwell": "120"}, "aborted": [4800, 4850, 4900, 4950, 4990], "events": [], "now": 5000, "wait": 70},
+    {"name": "a later charged switch ends the series", "settings": {}, "aborted": [4980, 4990], "events": [4995], "now": 5000, "wait": 0},
+    {"name": "only aborts after the last switch count", "settings": {}, "aborted": [4900, 4950, 4998], "events": [4960], "now": 5000, "wait": 3},
+    {"name": "aborts older than the ledger window do not count", "settings": {}, "aborted": [4000, 4050, 4099, 4998], "events": [], "now": 5000, "wait": 3},
+    {"name": "damaged entries are dropped", "settings": {}, "aborted": ["4998", true, -1, 4998], "events": [], "now": 5000, "wait": 3},
+    {"name": "not a list: no abort", "settings": {}, "aborted": {"x": 1}, "events": [], "now": 5000, "wait": 0},
+    {"name": "future stamp clipped to now", "settings": {}, "aborted": [5100], "events": [], "now": 5000, "wait": 5}
+  ]
+}

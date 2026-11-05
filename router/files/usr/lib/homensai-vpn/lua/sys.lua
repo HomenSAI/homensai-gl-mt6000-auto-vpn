@@ -392,6 +392,7 @@ local function probe_request_ok(r)
     and type(r.hostname)=='string' and string.find(r.hostname,'^[a-z0-9.-]+$')~=nil and #r.hostname<=64
     and type(r.path)=='string' and string.find(r.path,'^/[A-Za-z0-9_./?=&%-]*$')~=nil and #r.path<=512
     and type(r.seconds)=='number' and r.seconds%1==0 and r.seconds>=1 and r.seconds<=30
+    and (r.agent==nil or (type(r.agent)=='string' and #r.agent<=64 and string.find(r.agent,'^[A-Za-z0-9/_.-]+$')~=nil))
 end
 local function read_small(path,limit)
   local f=io.open(path,'rb');if not f then return nil end
@@ -402,6 +403,7 @@ local function present(path) local f=io.open(path,'rb');if f then f:close();retu
 local TIMEOUT_EXIT={[124]=true,[137]=true,[143]=true}  -- timeout(1) expiry / killed
 function M.curl_answer(code,headers,body)
   if code==nil or TIMEOUT_EXIT[code] or code==28 then return nil,'timeout' end
+  if require('probe_trust').CURL_UNTRUSTED[code] then return nil,'tls-untrusted' end
   if require('monitor_io').CURL_TLS[code] then return nil,'tls-error' end
   if code==63 and not headers then return nil,'invalid-response' end
   if (code~=0 and code~=63) or not headers then return nil,'transport-error' end
@@ -426,6 +428,10 @@ local function https_start(device,requests)
       '--interface',device,'--resolve',r.hostname..':443:'..r.address,
       '-H','Accept: application/dns-json, application/dns-message, text/plain',
       '--max-filesize','32769','-D',f.h,'-o',f.b,'-w','%{time_total}','https://'..r.hostname..r.path}
+    -- probe_trust: the host's pinned roots and the request nonce (monitor_io.https_get does the same)
+    local anchors=require('probe_trust').anchor_file(r.hostname)
+    if anchors then table.insert(argv,#argv,'--cacert');table.insert(argv,#argv,anchors) end
+    if r.agent then table.insert(argv,#argv,'-A');table.insert(argv,#argv,r.agent) end
     local words={}
     for k,a in ipairs(argv) do words[k]=quote(a) end
     local line=table.concat(words,' ')

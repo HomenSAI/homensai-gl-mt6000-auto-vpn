@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 // Owner rules (31 Oct 2026): a separately configurable ping (Settings, 10 s .. 5 min, default 1 min) and one shared
 // ping reading for every table, card and statistics view: the last measured value with its age, "42 ms (12 s ago)".
 // A dash only when the router never measured that channel; an old ping keeps its value and age.

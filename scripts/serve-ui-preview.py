@@ -14,11 +14,17 @@ ROOT=Path(__file__).resolve().parents[1]
 ASSETS=ROOT/'router/files/www/luci-static/resources/view/homensai-vpn'
 FIXTURE=ROOT/'qa/ui-preview'
 PREFIX='/router/files/www/luci-static/resources/view/homensai-vpn/'
+LAZY=ROOT/'router/files/www/luci-static/resources/homensai-vpn'
+LAZY_PREFIX='/router/files/www/luci-static/resources/homensai-vpn/'
 
 def resolve_public(path):
     path=unquote(urlsplit(path).path)
     if path in ('/','/qa/ui-preview/index.html'):return FIXTURE/'index.html'
     if path=='/qa/ui-preview/stub.js':return FIXTURE/'stub.js'
+    if path=='/qa/ui-preview/fixture-pair.js':return FIXTURE/'fixture-pair.js'
+    if path.startswith(LAZY_PREFIX):
+        target=(LAZY/path[len(LAZY_PREFIX):]).resolve()
+        if target.is_relative_to(LAZY.resolve()) and target.suffix.lower()=='.js' and target.is_file():return target
     if path.startswith(PREFIX):
         target=(ASSETS/path[len(PREFIX):]).resolve()
         if target.is_relative_to(ASSETS.resolve()) and target.suffix.lower() in ('.js','.css','.svg','.png','.woff','.woff2','.ttf') and target.is_file():return target

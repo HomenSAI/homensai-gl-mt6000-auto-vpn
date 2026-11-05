@@ -20,5 +20,8 @@ class PreviewTests(unittest.TestCase):
     def test_fixture_and_selected_asset_are_bounded(self):
         self.assertEqual(module.resolve_public('/?lang=ru'),module.FIXTURE/'index.html')
         self.assertTrue(module.resolve_public(module.PREFIX+'ui15.css').is_relative_to(module.ASSETS))
-        self.assertIn(b'autoWindowDeadline',module.preview_module())
+        self.assertIn(b"E('div',{'class':'hvx','id':'hvx'})",module.preview_module())  # the approved page (03.11.2026)
+        self.assertEqual(module.resolve_public('/qa/ui-preview/fixture-pair.js'),module.FIXTURE/'fixture-pair.js')
+        self.assertTrue(module.resolve_public(module.LAZY_PREFIX+'help208.js').is_relative_to(module.LAZY))
+        self.assertIsNone(module.resolve_public(module.LAZY_PREFIX+'../view/homensai-vpn/x.js'))
 if __name__=='__main__':unittest.main()

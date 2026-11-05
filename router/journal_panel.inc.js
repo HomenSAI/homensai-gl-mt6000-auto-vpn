@@ -470,7 +470,7 @@ var EVENT_SEVERITY={critical:[3,'Critical','Критичная','#d93025'],mediu
 var EVENT_SEVERITY_CODES=Object.create(null);
 [['critical','ROLLBACK-GIVEN-UP PAIR-RECOVERY-REQUIRED RECOVERY-REQUIRED STATE-FILE-DAMAGED STORAGE-001 CONFIG-001 LUA-CORE-UNAVAILABLE EXTERNAL-POLICY-CHANGE-GUARD-RETAINED ROLLBACK-UNVERIFIED-GUARD-RETAINED FOREIGN-GUARD-TABLE NFT-GUARD-UNAVAILABLE KILLSWITCH-NOT-ENABLED AUTO-OPTIONS-NOT-CLEARED WATCHDOG-DID-NOT-ARM CONTROL-REVISION-STALE SYSTEM-001 NATIVE-SYSTEM-001 PAIR-SYSTEM-001 STOPPED-NO-HEALTHY-PATH MANUAL-SUPERVISOR-UNAVAILABLE UNSUPPORTED-BOARD UNSUPPORTED-FIRMWARE TERMS-NOT-ACCEPTED RESTART-INTERRUPTED-SWITCH FAILED'],
  ['medium','RESERVE-FAILED-PRIMARY-VERIFIED RELEASE-PENDING AUTO-RESUME-PENDING'],
- ['low','OK RECOVERY OBSERVING OBSERVATION RUNNING IDLE STARTING QUEUED CLAIMED CANCELLED STOPPED DISABLED ARMED APPLYING WAIT-CLIENT RESTORING RETURNED TRIAL-REQUIRED PAIR-WATCHING PAIR-CONNECTING PAIR-WAITING-PROBES PAIR-WAITING-VENDOR PAIR-STOPPED PAIR-CLEANUP PAIR-READOPTED VENDOR-SETTLING VENDOR-FIRST-OBSERVATION CLIENT-STOP SERVICE-STOPPED RESTORE-PRIMARY TRIAL-PASSED TRIAL-ENDED OPERATOR-MANUAL OPERATOR-RETURN OPERATOR-TRIAL OPERATOR-HOLD-RESERVE SELECTED-BY-CONTROLLER LINK-UP EXTERNAL-POLICY-CHANGE-RELEASED RESTART-CLEAN RESTART-FIRST-START STOP-SUPERSEDED-START STOP-SUPERSEDED-MANUAL EVENT-ROUTER-OBSERVATION']].forEach(function(p){p[1].split(' ').forEach(function(c){EVENT_SEVERITY_CODES[c]=p[0];});});
+ ['low','OK RECOVERY OBSERVING OBSERVATION RUNNING IDLE STARTING QUEUED CLAIMED CANCELLED STOPPED DISABLED ARMED APPLYING WAIT-CLIENT RESTORING RETURNED TRIAL-REQUIRED PAIR-WATCHING PRIMARY-RECOVERED-BEFORE-SWITCH PAIR-CONNECTING PAIR-WAITING-PROBES PAIR-WAITING-VENDOR PAIR-STOPPED PAIR-CLEANUP PAIR-READOPTED VENDOR-SETTLING VENDOR-FIRST-OBSERVATION CLIENT-STOP SERVICE-STOPPED RESTORE-PRIMARY TRIAL-PASSED TRIAL-ENDED OPERATOR-MANUAL OPERATOR-RETURN OPERATOR-TRIAL OPERATOR-HOLD-RESERVE SELECTED-BY-CONTROLLER LINK-UP EXTERNAL-POLICY-CHANGE-RELEASED RESTART-CLEAN RESTART-FIRST-START STOP-SUPERSEDED-START STOP-SUPERSEDED-MANUAL EVENT-ROUTER-OBSERVATION']].forEach(function(p){p[1].split(' ').forEach(function(c){EVENT_SEVERITY_CODES[c]=p[0];});});
 /* codeSeverity(code) -> level or null (no rule): the exact codes, then the code families */
 function codeSeverity(code){
   if(typeof code!=='string'||!code)return null;
@@ -599,7 +599,7 @@ function journalDescriptionContent(entry,status,extra){
 }
 function journalProbeSnapshot(e,profile,status,code){
   if(!code&&(e.kind==='FAILURE'||e.state==='FAILURE'))return null;
-  if(!profile||['VPN-001','VPN-003','DNS-001','OK',null].indexOf(code)<0)return null;
+  if(!profile||['VPN-001','VPN-003','DNS-001','VPN-MTU','OK',null].indexOf(code)<0)return null;
   var expected=code==='OK'?null:code;
   function sameCode(r){return (r.code==='OK'?null:r.code||null)===expected;}
   function count(r){return Number.isInteger(r.https_success)&&r.https_success>=0&&r.https_success<=3;}
@@ -634,7 +634,7 @@ function journalRows(status,stored,now){
       var profile=typeof(e.profile||e.id)==='string'&&/^(openvpn|wireguard):[A-Za-z0-9_.:-]{1,80}$/.test(e.profile||e.id)?e.profile||e.id:null;
       if(state==='STOPPED'&&e.control_action==='start'&&Number.isFinite(e.control_time)&&e.control_time<=e.time&&e.time-e.control_time<=30){state='STARTING';if(code==='CLIENT-STOP')code=Array.isArray(e.codes)?e.codes.find(function(c){return c!=='CLIENT-STOP'&&safeCode(c);})||null:null;}
       var probe=journalProbeSnapshot(e,profile,status,code);
-      var family=state==='FAILURE'||['VPN-001','VPN-003','DNS-001'].indexOf(code)>=0?'failure':state==='RECOVERY'||code==='OK'?'recovery':null;
+      var family=state==='FAILURE'||['VPN-001','VPN-003','DNS-001','VPN-MTU'].indexOf(code)>=0?'failure':state==='RECOVERY'||code==='OK'?'recovery':null;
       var key=probe&&family?'measurement:'+profile+':'+probe.time+':'+family:group[0]+':'+(Number.isSafeInteger(e.sequence)?e.sequence:[e.time,profile,state,code].join(':'));
       if(seen[key])return;seen[key]=true;
       var failed=/FAIL|REFUS|ERROR|DEGRADED/.test(state)||!!code&&/^(DNS-|VPN-|SYSTEM-|CHECK-)|FAILED|ERROR|REFUSED/.test(code),level=failed?'error':/GAP|UNKNOWN|UNCONFIRMED|UNAVAILABLE|UNVERIFIED|CANCEL|INACTIVE/.test(state+' '+(code||''))?'warning':'ok';

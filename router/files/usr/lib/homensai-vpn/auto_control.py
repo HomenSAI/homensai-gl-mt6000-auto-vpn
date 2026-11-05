@@ -197,6 +197,13 @@ def trial_readiness(settings,consumed,selection,blockers,trial,now):
     return sorted(set(reasons))
 
 
+def _owner_resume_wanted():
+    try:
+        from boot_resume import wanted
+        return wanted()[0] is True
+    except (OSError,ValueError,TypeError,KeyError,AttributeError):return False
+
+
 def start(control_revision=None,trial_nonce=None,request_source=None):
     from native_switch import Linux, journal_read, deadline, Refused
     arrived=time.time()
@@ -229,6 +236,14 @@ def start(control_revision=None,trial_nonce=None,request_source=None):
     from preparation_control import auto_blocker,auto_prepare
     preparation_reason=auto_blocker()
     if preparation_reason:return {'accepted':False,'blockers':[preparation_reason]}
+    # 03.11.2026: the owner's Start first hands over a session HELD only by a change made outside the app,
+    # otherwise preparation (which refuses while a session is HELD) would block that hand-over for good.
+    # K1 tail (formal model 03.11.2026): also the boot/restart resume's programmatic Start of the owner's Auto (the
+    # owner's resume marker, no newer Stop latch: boot_resume.wanted); release_for_start keeps every other check.
+    if trial_nonce is None and (source=='manual' or source=='programmatic' and _owner_resume_wanted()):
+        from pair_auto import release_for_start
+        refused=release_for_start(control_revision,settings,arrived)
+        if refused:return {'accepted':False,'blockers':[refused]}
     # The Auto button sets up what it needs by itself; the owner does nothing else.
     if trial_nonce is None:
         prepared=auto_prepare(settings,control_revision)

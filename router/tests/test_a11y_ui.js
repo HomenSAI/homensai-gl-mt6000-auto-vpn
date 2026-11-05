@@ -1,3 +1,4 @@
+require('./legacy_reference');  // checks the legacy logic the approved page extracts (router/tests/legacy_reference.js)
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 // Accessibility checks of the generated page and of the A/B/C overviews (structure only; a real screen reader is not available offline).
 class N{constructor(t,a,c){this.tag=t;this.attrs=a||{};this.children=[].concat(c===undefined?[]:c).flat().filter(x=>x!=null);}
